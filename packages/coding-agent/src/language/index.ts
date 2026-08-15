@@ -9,6 +9,9 @@ export {
 export type {
   CreateLanguageIntelligenceOptions,
   LanguageDiagnostic,
+  LanguageDiagnosticDeltaRequest,
+  LanguageDiagnosticDeltaResult,
+  LanguageFileDiagnostics,
   LanguageIntelligence,
   LanguageIntelligenceLimits,
   LanguageLocation,

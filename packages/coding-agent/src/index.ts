@@ -348,6 +348,40 @@ export type {
   ResolvedProcessRecoveryLimits,
 } from "./process/index.js";
 export type { SearchToolOptions } from "./search.js";
+// bounded patch review (plan 026 Task 6): createCodingPatchReviewManifest +
+// assertCodingPatchAccepted bind decisions to digest + revision + identity
+export {
+  CodingPatchReviewError,
+  assertCodingPatchAccepted,
+  createCodingPatchReviewManifest,
+  resolveCodingReviewLimits,
+} from "./review.js";
+export type {
+  AssertCodingPatchAcceptedInput,
+  AssertCodingPatchAcceptedResult,
+  CodingPatchReview,
+  CodingPatchReviewCheckSummary,
+  CodingPatchReviewDiagnosticSummary,
+  CodingPatchReviewDiffstatEntry,
+  CodingPatchReviewErrorCode,
+  CodingPatchReviewIdentity,
+  CodingPatchReviewState,
+  CodingReviewArtifactInput,
+  CodingReviewLimits,
+  CreateCodingPatchReviewInput,
+  ResolvedCodingReviewLimits,
+  ReviewDiagnosticSeverity,
+} from "./review.js";
+export { diagnosticDelta, diagnosticIdentity, normalizeDiagnostics, resolveDiagnosticsLimits } from "./diagnostics.js";
+export type {
+  DiagnosticDelta,
+  DiagnosticDeltaRequest,
+  DiagnosticSeverity,
+  NormalizeDiagnosticsOptions,
+  NormalizedDiagnostic,
+  RawDiagnostic,
+  ResolvedDiagnosticsLimits,
+} from "./diagnostics.js";
 export { createRepoSearchTool } from "./search.js";
 export type {
   BashExecOptions,

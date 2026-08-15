@@ -2,6 +2,9 @@
 
 ## [0.2.6] - unreleased
 
+### Added
+- **Bounded patch review and diagnostics** (plan 026 Task 6): `createCodingPatchReviewManifest` builds a bounded manifest (repository/worktree identity, base/head, patch digest, changed paths, diffstat, check summaries, diagnostic summaries; caps revisions 8/32, diagnostics 500/5000, manifest 64 KiB/256 KiB) and a structural ArtifactService input embedding it in the artifact preview; `assertCodingPatchAccepted` derives pending/accepted/rejected/superseded bound to the exact artifact revision + digest + identity — any patch/repository/worktree/base/head change supersedes prior acceptance and stale acceptances are refused (newer revision attached after approval); acceptance never applies/commits/pushes/merges; raw patch bodies, commands, env, secrets never persisted (`ERR_PRISM_REVIEW_*`). `normalizeDiagnostics`/`diagnosticDelta` normalize host-parsed check diagnostics and LSP push/pull diagnostics into one bounded shape (`file:source:position:code` identity) with deterministic added/removed/unchanged deltas, per-file caps, containment, control-character stripping, and stale-version rejection. LSP stays opt-in: `LanguageIntelligence.syncDocument` (full-content didChange, monotonic versions) and `.diagnosticDelta` (resultId pull reuse, changed-files-only refresh) extend the standalone host-activated factory — no LSP server spawns from `createCodingTools`/`createAllTools` or any agent assembly.
+
 ### Deferred
 - **Forge breadth stays demand-gated** (plan 026 Task 4): no GitLab or Bitbucket adapter ships while no named consumer is recorded in the phase26 freeze manifest demand registry (`scripts/phase26-freeze-manifest.json`); `forge/gitlab.ts`/`bitbucket.ts` remain absent and the forge barrel exports no such adapter.
 

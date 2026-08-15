@@ -35,6 +35,10 @@ export class LspClient {
   private capabilities: Record<string, unknown> = {};
   /** file URI → latest diagnostics payload from publishDiagnostics */
   readonly diagnosticsByUri = new Map<string, unknown>();
+  /** file URI → monotonic document version (didOpen=1, each didChange += 1) */
+  readonly documentVersions = new Map<string, number>();
+  /** file URI → last pull-diagnostic resultId (textDocument/diagnostic) */
+  readonly pullResultIds = new Map<string, string>();
   private readonly onUnexpectedExit: () => void;
 
   constructor(
@@ -112,6 +116,64 @@ export class LspClient {
   notify(method: string, params: unknown): void {
     if (!this.child) return;
     this.write({ jsonrpc: "2.0", method, params });
+  }
+
+  /**
+   * Full-content textDocument/didChange (LSP 3.17; protocol-valid, no diff
+   * engine needed). Monotonic version: didOpen stamps 1, each didChange
+   * increments. No-op when the document was never opened.
+   */
+  didChange(uri: string, text: string): void {
+    const version = (this.documentVersions.get(uri) ?? 0) + 1;
+    this.documentVersions.set(uri, version);
+    this.notify("textDocument/didChange", {
+      textDocument: { uri, version },
+      contentChanges: [{ text }],
+    });
+  }
+
+  /** true when the server advertises textDocument/diagnostic (pull diagnostics). */
+  hasPullDiagnostics(): boolean {
+    const provider = this.capabilities.diagnosticProvider;
+    if (!provider || provider === false) return false;
+    return true;
+  }
+
+  /**
+   * Pull diagnostics for one opened document (textDocument/diagnostic) with
+   * resultId reuse: `kind: "full"` replaces the set, `kind: "unchanged"`
+   * reuses the previous payload. Returns the version at request time so the
+   * caller can drop stale responses. Falls back to the push cache when the
+   * server has no pull support.
+   */
+  async pullDiagnostics(uri: string, signal?: AbortSignal): Promise<{
+    kind: "full" | "unchanged";
+    diagnostics: unknown;
+    resultId?: string;
+    version: number;
+  }> {
+    const version = this.documentVersions.get(uri) ?? 1;
+    if (!this.hasPullDiagnostics()) {
+      return { kind: "full", diagnostics: this.diagnosticsByUri.get(uri) ?? [], version };
+    }
+    const previousResultId = this.pullResultIds.get(uri);
+    const result = (await this.request(
+      "textDocument/diagnostic",
+      { textDocument: { uri }, ...(previousResultId === undefined ? {} : { previousResultId }) },
+      signal,
+    )) as { kind?: string; items?: unknown; resultId?: string } | undefined;
+    if (!result || typeof result !== "object") {
+      return { kind: "full", diagnostics: this.diagnosticsByUri.get(uri) ?? [], version };
+    }
+    if (result.kind === "unchanged") {
+      const cached = this.diagnosticsByUri.get(uri) ?? [];
+      if (typeof result.resultId === "string") this.pullResultIds.set(uri, result.resultId);
+      return { kind: "unchanged", diagnostics: cached, resultId: result.resultId, version };
+    }
+    const items = Array.isArray(result.items) ? result.items : [];
+    this.diagnosticsByUri.set(uri, items);
+    if (typeof result.resultId === "string") this.pullResultIds.set(uri, result.resultId);
+    return { kind: "full", diagnostics: items, resultId: result.resultId, version };
   }
 
   hasCapability(key: string): boolean {
@@ -207,6 +269,7 @@ export class LspClient {
             textDocument: {
               hover: { contentFormat: ["plaintext", "markdown"] },
               publishDiagnostics: {},
+              diagnostic: { dynamicRegistration: false },
             },
           },
           workspaceFolders: [{ uri: this.spec.rootUri, name: "workspace" }],

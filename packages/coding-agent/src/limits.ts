@@ -161,6 +161,18 @@ export const HARD_MAX_INDEX_STALE_MAX_AGE_MS = 300_000;
 export const DEFAULT_MAX_INDEX_QUERY_TIMEOUT_MS = 30_000;
 export const HARD_MAX_INDEX_QUERY_TIMEOUT_MS = 120_000;
 
+/** Phase 26 Task 0 freeze: patch-review manifest and diagnostic delta caps. */
+export const DEFAULT_MAX_REVIEW_REVISIONS = 8;
+export const HARD_MAX_REVIEW_REVISIONS = 32;
+export const DEFAULT_MAX_REVIEW_DIAGNOSTICS = 500;
+export const HARD_MAX_REVIEW_DIAGNOSTICS = 5_000;
+export const DEFAULT_MAX_REVIEW_MANIFEST_BYTES = 64 * 1024;
+export const HARD_MAX_REVIEW_MANIFEST_BYTES = 256 * 1024;
+export const DEFAULT_MAX_REVIEW_DELTA_ENTRIES = 2_000;
+export const HARD_MAX_REVIEW_DELTA_ENTRIES = 10_000;
+export const DEFAULT_MAX_DIAGNOSTIC_MESSAGE_BYTES = 4 * 1024;
+export const HARD_MAX_DIAGNOSTIC_MESSAGE_BYTES = 16 * 1024;
+
 /** Forge (GitHub adapter) defaults and hard caps (Phase 9 Task 5). */
 export const DEFAULT_MAX_FORGE_PAGES_PER_OPERATION = 10;
 export const HARD_MAX_FORGE_PAGES_PER_OPERATION = 100;

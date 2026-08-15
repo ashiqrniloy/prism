@@ -1,9 +1,9 @@
 {
-  "$comment": "Phase 26 (0.2.6) Task 0 baseline, captured from the 0.2.5 release state (HEAD 306a545) before any 0.2.6 source edit. Inherits the 0.2.5 exit-gate figures from scripts/phase25-baseline.json. seams holds SHA-256 hashes for every single-editor allowed file of the phase26 freeze manifest plus roadmap.md: while the owning task token is pending the file must stay byte-identical (absent files stay absent); once the task is done, the freeze test asserts content markers instead. exitGate stays null until Task 8 records it green with blocked: false. Shared coordination files (package.json, plan 026, plans/README.md, docs/index.md, changelogs, barrels, docs with multiple editors) are not hash-locked; they are marker-checked per editor task.",
-  "captured": "2026-08-15T19:59:58.449Z",
+  "$comment": "Phase 26 (0.2.6) Task 0 baseline, captured from the 0.2.5 release state (HEAD b3bdd07) before any 0.2.6 source edit. Inherits the 0.2.5 exit-gate figures from scripts/phase25-baseline.json. seams holds SHA-256 hashes for every single-editor allowed file of the phase26 freeze manifest plus roadmap.md: while the owning task token is pending the file must stay byte-identical (absent files stay absent); once the task is done, the freeze test asserts content markers instead. exitGate stays null until Task 8 records it green with blocked: false. Shared coordination files (package.json, plan 026, plans/README.md, docs/index.md, changelogs, barrels, docs with multiple editors) are not hash-locked; they are marker-checked per editor task.",
+  "captured": "2026-08-15T20:28:52.410Z",
   "release": "0.2.6",
   "baselineRelease": "0.2.5",
-  "gitHead": "306a545",
+  "gitHead": "b3bdd07",
   "node": "v24.19.0",
   "platform": "linux",
   "inherited": {
@@ -89,8 +89,8 @@
       "status": "present"
     },
     "docs/coding-review-and-diagnostics.md": {
-      "sha256": null,
-      "status": "absent"
+      "sha256": "33ef3c4f1169be61c2bf91816608868fd7cde78f0cf193b74da3f6a77f4c0b33",
+      "status": "present"
     },
     "docs/coding-security.md": {
       "sha256": "7deee90cf442c6c5cd2eb62cd28a6d528601d4f0d8803eec05d1c0c6a59977d6",
@@ -101,11 +101,11 @@
       "status": "present"
     },
     "docs/language-intelligence.md": {
-      "sha256": "f35b59b59b974712ace772c82953c9952507e9cc36dcf6a540a74742252e09fb",
+      "sha256": "24e3d0c717ef1d7943088e0c64798db5db1d61997527f1f056c1f4b35cd92403",
       "status": "present"
     },
     "docs/work-artifacts-and-review.md": {
-      "sha256": "337af69ad2d828582036ff35fe36307f552b1d812727725c6a330065448baf6e",
+      "sha256": "e3410d1b82a89dc9423a1984287387a9fcce1411e442ddfd702e3b8754b52979",
       "status": "present"
     },
     "packages/ag-ui/src/__tests__/acp-recovery.test.ts": {
@@ -129,8 +129,8 @@
       "status": "present"
     },
     "packages/coding-agent/src/__tests__/language-diagnostics.test.ts": {
-      "sha256": null,
-      "status": "absent"
+      "sha256": "be98efeeb6601c70ac94e8aaa719e70b654a98f62fc063adf93de218bbd4f6fb",
+      "status": "present"
     },
     "packages/coding-agent/src/__tests__/process-pty.test.ts": {
       "sha256": "ebdba7460360fac6ea356551ab3c69bc02bae362a45ab0f23078c5bca6aa3a81",
@@ -141,8 +141,8 @@
       "status": "present"
     },
     "packages/coding-agent/src/__tests__/review.test.ts": {
-      "sha256": null,
-      "status": "absent"
+      "sha256": "aea22b8d806e9bca3673e100edafae0e27827fe86860b6cba4001e3b2684e26d",
+      "status": "present"
     },
     "packages/coding-agent/src/__tests__/workspace-lifecycle.test.ts": {
       "sha256": "d95543741656961615d2152cf6aa120f2b36e2c88b9f71df093c10995e20eeac",
@@ -157,8 +157,8 @@
       "status": "present"
     },
     "packages/coding-agent/src/diagnostics.ts": {
-      "sha256": null,
-      "status": "absent"
+      "sha256": "97996df4dc3b669d19b6adefdbd7d7d90374ac807304dd95eba4c95fc7bc7460",
+      "status": "present"
     },
     "packages/coding-agent/src/git-tools.ts": {
       "sha256": "ded1577ecba801c0641cf8bb6922337d8ceb247fc8babfa79182f72e52323e94",
@@ -169,19 +169,19 @@
       "status": "present"
     },
     "packages/coding-agent/src/language/client.ts": {
-      "sha256": "fb5cbc50a0d24df5ca7a6b11814cb49b7b76b2a059955c0818aca3adcf2ea690",
+      "sha256": "d1d8634b3cd9ac733ba087f9fe1ed1e804d9622e7d4dff49451e44f2b946a4f6",
       "status": "present"
     },
     "packages/coding-agent/src/language/index.ts": {
-      "sha256": "18a83f800a637170c41164cbf41e406f1589ea8f50fb37a53857412bedab0afe",
+      "sha256": "adc7da238334f4562ec903bad069a17dc1ff84c6a3db5c80191b76d89af15d17",
       "status": "present"
     },
     "packages/coding-agent/src/language/intelligence.ts": {
-      "sha256": "81bd47015dd6970e0f4e8535a1d57a078baeb230c45de1669fe58f81ba4e2c4a",
+      "sha256": "a95b9ccba49eab9f997c9f2177c40423b9a9a4a3638927f3ea7f5d476a672896",
       "status": "present"
     },
     "packages/coding-agent/src/language/types.ts": {
-      "sha256": "7448132f81e35aedabae14f51d630944dc74ff86cbddbc5c910d3b728872aab1",
+      "sha256": "5ccedb87cb32d598f6758829b98fdf48f23d410c05b4b29f94d1d5e5b21e0970",
       "status": "present"
     },
     "packages/coding-agent/src/lifecycle.ts": {
@@ -213,8 +213,8 @@
       "status": "present"
     },
     "packages/coding-agent/src/review.ts": {
-      "sha256": null,
-      "status": "absent"
+      "sha256": "ec1fd4447376abec97cea34bf6ed73ff8ab67f40ff32275bfde233637ef6f4e1",
+      "status": "present"
     },
     "packages/coding-agent/src/search.ts": {
       "sha256": "c03043ae94b4f80e0b4960e24d21feccd016fc3f9d5e5609b5169db308d27edc",
@@ -233,7 +233,7 @@
       "status": "absent"
     },
     "scripts/package-truth.json": {
-      "sha256": "e5430d10a09a5111e6adad468580cd2ca3b783aae89671918acc65eeec4b4f71",
+      "sha256": "8e16e1271e63ca5f24e8d7a450ba312e8b6d71b4643e3dde22b3e23ffa41e127",
       "status": "present"
     },
     "scripts/phase26-baseline.mjs": {

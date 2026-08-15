@@ -146,7 +146,39 @@ export interface LanguageIntelligence {
   diagnostics(file?: string, opts?: { signal?: AbortSignal }): Promise<readonly LanguageDiagnostic[]>;
   hover(loc: LanguageLocation, opts?: { signal?: AbortSignal }): Promise<{ text: string } | undefined>;
   rename(loc: LanguageLocation & { newName: string }, opts?: { signal?: AbortSignal }): Promise<LanguageWorkspaceEdit>;
+  /**
+   * Re-sync one file after an external edit: full-content didChange with a
+   * monotonic version. No-op when no host server handles the file's language
+   * (throws ERR_PRISM_LSP_UNSUPPORTED only when servers exist but none match).
+   */
+  syncDocument(file: string, opts?: { signal?: AbortSignal }): Promise<{ version: number }>;
+  /**
+   * Bounded push/pull diagnostic refresh for changed files. Generations are
+   * document versions; stale-version results never overwrite newer views.
+   */
+  diagnosticDelta(
+    request: LanguageDiagnosticDeltaRequest,
+    opts?: { signal?: AbortSignal },
+  ): Promise<LanguageDiagnosticDeltaResult>;
   dispose(): Promise<void>;
+}
+
+export interface LanguageDiagnosticDeltaRequest {
+  /** Workspace-relative files to refresh; bounded per request. */
+  readonly files: readonly string[];
+  /** Prior normalized view per file (generation + diagnostics); optional. */
+  readonly previous?: Readonly<Record<string, LanguageFileDiagnostics>>;
+}
+
+export interface LanguageFileDiagnostics {
+  readonly generation: number;
+  readonly diagnostics: readonly import("../diagnostics.js").NormalizedDiagnostic[];
+}
+
+export interface LanguageDiagnosticDeltaResult {
+  /** Per-file delta; stale files (previous generation >= new generation) are omitted. */
+  readonly files: Record<string, import("../diagnostics.js").DiagnosticDelta>;
+  readonly generation: number;
 }
 
 export interface CreateLanguageIntelligenceOptions {

@@ -12,8 +12,40 @@ const rootUri = process.env.FAKE_LSP_ROOT_URI ?? pathToFileURL(process.cwd()).hr
 const crashAfterInit = process.env.FAKE_LSP_CRASH_AFTER_INIT === "1";
 const diagDialect = process.env.FAKE_LSP_DIAG_DIALECT ?? "default";
 const diagCount = Number(process.env.FAKE_LSP_DIAG_COUNT ?? "1");
+const pullDiags = process.env.FAKE_LSP_PULL === "1";
 /** @type {Map<string, string>} */
 const openDocs = new Map();
+/** @type {Map<string, number>} */
+const docVersions = new Map();
+
+function buildDiags(uri) {
+  const version = docVersions.get(uri) ?? 1;
+  if (diagDialect === "alt") {
+    return [
+      {
+        range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } },
+        severity: 2,
+        message: `alt-warning-v${version}`,
+        source: "fake-alt",
+        code: "A1",
+      },
+    ];
+  }
+  return Array.from({ length: diagCount }, (_, i) => ({
+    range: { start: { line: i, character: 0 }, end: { line: i, character: 3 } },
+    severity: 1,
+    message:
+      diagCount === 1
+        ? version === 1
+          ? "fake-error"
+          : `fake-error-v${version}`
+        : version === 1
+          ? `fake-error-${i}`
+          : `fake-error-v${version}-${i}`,
+    source: "fake",
+    code: 101,
+  }));
+}
 
 function send(msg) {
   const body = Buffer.from(JSON.stringify(msg), "utf8");
@@ -42,6 +74,7 @@ function handle(msg) {
         hoverProvider: true,
         renameProvider: true,
         textDocumentSync: 1,
+        ...(pullDiags ? { diagnosticProvider: { identifier: "fake", interFileDependencies: false, workspaceDiagnostics: false } } : {}),
       },
     });
     return;
@@ -66,26 +99,38 @@ function handle(msg) {
     const doc = params?.textDocument;
     if (doc?.uri && typeof doc.text === "string") {
       openDocs.set(doc.uri, doc.text);
-      const diags =
-        diagDialect === "alt"
-          ? [
-              {
-                range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } },
-                severity: 2,
-                message: "alt-warning",
-                source: "fake-alt",
-                code: "A1",
-              },
-            ]
-          : Array.from({ length: diagCount }, (_, i) => ({
-              range: { start: { line: i, character: 0 }, end: { line: i, character: 3 } },
-              severity: 1,
-              message: diagCount === 1 ? "fake-error" : `fake-error-${i}`,
-              source: "fake",
-              code: 101,
-            }));
-      notify("textDocument/publishDiagnostics", { uri: doc.uri, diagnostics: diags });
+      docVersions.set(doc.uri, doc.version ?? 1);
+      notify("textDocument/publishDiagnostics", { uri: doc.uri, diagnostics: buildDiags(doc.uri) });
     }
+    return;
+  }
+
+  if (method === "textDocument/didChange") {
+    const doc = params?.textDocument;
+    const changes = params?.contentChanges;
+    if (doc?.uri) {
+      const version = doc.version ?? ((docVersions.get(doc.uri) ?? 1) + 1);
+      docVersions.set(doc.uri, version);
+      const last = Array.isArray(changes) ? changes[changes.length - 1] : undefined;
+      if (last && typeof last.text === "string") openDocs.set(doc.uri, last.text);
+      notify("textDocument/publishDiagnostics", { uri: doc.uri, diagnostics: buildDiags(doc.uri) });
+    }
+    return;
+  }
+
+  if (method === "textDocument/diagnostic") {
+    const uri = params?.textDocument?.uri;
+    if (!uri || !pullDiags) {
+      respond(id, null);
+      return;
+    }
+    const version = docVersions.get(uri) ?? 1;
+    const resultId = `rid-${version}`;
+    if (params?.previousResultId === resultId) {
+      respond(id, { kind: "unchanged", resultId });
+      return;
+    }
+    respond(id, { kind: "full", items: buildDiags(uri), resultId });
     return;
   }
 

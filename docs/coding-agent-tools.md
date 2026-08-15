@@ -358,6 +358,7 @@ Opt-in tools over a host-pinned Git executable (`gitPath`, default `/usr/bin/git
 | `git_apply` | `check` / `apply` / `reverse`; always `--check` before mutating apply. Apply requires clean/checkpoint; failures restore. |
 | `git_commit` | Explicit-path `add` + `commit --no-verify -F <tempfile>`; requires host `commitIdentity`. Allows dirty entries that are exactly the requested paths; unrelated dirt requires checkpoint. Never pushes. |
 | `git_pr_handoff` | Bounded `{ base, head, commits, changedPaths, diffstat, checks, artifact? }` for host PR creation. Never authenticates or opens a PR. |
+| `git_pr_handoff` (0.2.6 review) | Handoff output feeds `createCodingPatchReviewManifest` — the review binds to base/head, the patch artifact digest, check summaries, and diagnostic summaries (`diagnosticDelta` output) with pending/accepted/rejected/superseded states; see [Coding review and diagnostics](coding-review-and-diagnostics.md). |
 | `coding_check` | Included when `checks` are declared: model selects only a name; executable/args/env are host-fixed. |
 
 ```ts

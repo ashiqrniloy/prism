@@ -91,6 +91,10 @@ export const handler = createArtifactHandler({ service: artifacts, authorize: ho
 - Frozen caps (default / hard): artifacts per thread 64/256; revisions per artifact 32/128; record 8/64 KiB; preview 16/64 KiB; citations 32/128 and 2/8 KiB each; MIME 128/512 B; hash 256/1 KiB; compare exactly 2 revisions; delivery TTL 5 min/24 h; delivery token 4/16 KiB. Raising the revision cap may require raising `recordBytes` (aggregate backstop).
 - Compare is hash+metadata-bounded (hosts render content); no file bodies are persisted or transferred. With a wired body store, bodies live in the host's object store and are streamed through the adapter (bounded by `maxBodyBytes` 64 MiB/512 MiB, concurrent transfers 4/16, presign TTL 10 min/24 h); object-store outages surface typed `ERR_PRISM_S3_*` / `ERR_PRISM_ARTIFACT_BODY_*` errors, never silent success.
 
+## Coding patch review composition (0.2.6, plan 026)
+
+`@arnilo/prism-coding-agent` composes over this service for the coding patch review workflow: `createCodingPatchReviewManifest` builds a bounded manifest (repository/worktree identity, base/head, patch digest, changed paths, diffstat, check and diagnostic summaries) and returns a structural `ArtifactAttachInput` whose `preview.review` embeds the manifest and whose `hash` is the patch SHA-256; `assertCodingPatchAccepted` derives `pending|accepted|rejected|superseded` from the returned `ArtifactRecord` by binding to the exact artifact revision, digest, and identity — any patch/repository/worktree/base/head change supersedes a prior acceptance (a newer revision attached after approval makes the old acceptance stale and refused). Decisions never apply/commit/push/merge; the manifest never embeds a raw patch body. Full contract: [Coding review and diagnostics](coding-review-and-diagnostics.md).
+
 ## Related APIs
 
 - [Server](server.md): `createArtifactService` / `createArtifactHandler` mount alongside the Prism handler; ownership only from `authorize`.

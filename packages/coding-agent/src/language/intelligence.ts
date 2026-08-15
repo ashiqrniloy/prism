@@ -8,6 +8,7 @@ import { extname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertExecutionAllowed, ExecutionDeniedError } from "@arnilo/prism";
 import { atomicWriteUtf8File } from "../atomic-write.js";
+import { diagnosticDelta, type NormalizedDiagnostic } from "../diagnostics.js";
 import { withFileMutationQueue } from "../file-mutation-queue.js";
 import { resolveContainedMutationPath } from "../mutation-path.js";
 import { LspClient } from "./client.js";
@@ -163,6 +164,7 @@ export function createLanguageIntelligence(options: CreateLanguageIntelligenceOp
     client.notify("textDocument/didOpen", {
       textDocument: { uri, languageId, version: 1, text },
     });
+    client.documentVersions.set(uri, 1);
     set.add(uri);
   }
 
@@ -264,6 +266,65 @@ export function createLanguageIntelligence(options: CreateLanguageIntelligenceOp
       const contents = (result as { contents?: unknown }).contents;
       const text = hoverToText(contents);
       return text === undefined ? undefined : { text };
+    },
+
+    async syncDocument(file, opts) {
+      assertNotDisposed();
+      const { client, uri, abs } = await clientForFile(file, opts?.signal);
+      const text = await readFile(abs, "utf8");
+      if (opts?.signal?.aborted) {
+        throw new LanguageIntelligenceError("ERR_PRISM_LSP_TIMEOUT", "syncDocument aborted");
+      }
+      client.didChange(uri, text);
+      const version = client.documentVersions.get(uri) ?? 1;
+      return { version };
+    },
+
+    async diagnosticDelta(request, opts) {
+      assertNotDisposed();
+      if (!Array.isArray(request.files) || request.files.length === 0) {
+        throw new LanguageIntelligenceError("ERR_PRISM_LSP_UNSUPPORTED", "diagnosticDelta requires a non-empty files list");
+      }
+      if (request.files.length > limits.maxResultsPerQuery) {
+        throw new LanguageIntelligenceError(
+          "ERR_PRISM_LSP_LIMIT",
+          `diagnosticDelta files exceed ${limits.maxResultsPerQuery}`,
+        );
+      }
+      const previous = request.previous ?? {};
+      const files: Record<string, import("../diagnostics.js").DiagnosticDelta> = {};
+      let latestGeneration = 0;
+      for (const file of request.files) {
+        const { client, uri } = await clientForFile(file, opts?.signal);
+        const pulled = await client.pullDiagnostics(uri, opts?.signal);
+        // Stale-version guard: the pull result carries the version at request
+        // time; if the document advanced meanwhile, drop the response.
+        const currentVersion = client.documentVersions.get(uri) ?? 1;
+        if (pulled.version < currentVersion) continue;
+        const generation = currentVersion;
+        latestGeneration = Math.max(latestGeneration, generation);
+        const prior = previous[file];
+        if (prior && prior.generation > generation) continue; // stale previous view
+        const raw = normalizeDiagnostics(workspaceRoot, uri, pulled.diagnostics, limits.maxDiagnosticsPerFile);
+        const stamped: NormalizedDiagnostic[] = raw.map((diagnostic) => ({
+          file: diagnostic.file,
+          line: diagnostic.line,
+          character: diagnostic.character,
+          endLine: diagnostic.endLine,
+          endCharacter: diagnostic.endCharacter,
+          severity: diagnostic.severity,
+          message: diagnostic.message,
+          source: diagnostic.source ?? "lsp",
+          code: diagnostic.code,
+          generation,
+        }));
+        const delta = diagnosticDelta({
+          next: stamped,
+          previous: prior?.diagnostics,
+        });
+        files[file] = delta;
+      }
+      return { files, generation: latestGeneration };
     },
 
     async rename(loc, opts) {

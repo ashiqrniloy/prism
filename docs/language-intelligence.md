@@ -40,6 +40,21 @@ await lang.rename({ file: "src/a.ts", line: 10, character: 4, newName: "renamed"
 await lang.dispose();
 ```
 
+## Document synchronization and diagnostics (0.2.6, plan 026)
+
+LSP stays opt-in: `createLanguageIntelligence` is a standalone host-activated factory — nothing spawns on construction and no agent/tool assembly instantiates it.
+
+- `syncDocument(file)` — re-syncs a file after an external edit via full-content `textDocument/didChange` (protocol-valid LSP 3.17; no diff engine). Versions are monotonic per document: didOpen stamps 1, each didChange increments.
+- `diagnosticDelta({ files, previous })` — bounded diagnostic refresh for changed files only (never a whole-workspace pull). When the server advertises `diagnosticProvider`, the client uses pull diagnostics (`textDocument/diagnostic` with `previousResultId` reuse — `kind: full|unchanged`; the cached set is reused on `unchanged`); otherwise it reads the push cache (`textDocument/publishDiagnostics` always replaces the full set, `[]` clears). Results are normalized (`NormalizedDiagnostic`), generation-stamped with the document version, and diffed with `diagnosticDelta` into deterministic `added` / `removed` / `unchanged`. Stale views (a previous generation newer than the refresh) are dropped per file — a stale-version response never overwrites newer results. Refresh honors the standard LSP caps (message bytes, diagnostics/file, results/query, timeout, files per request).
+
+```ts
+await lang.syncDocument("src/app.ts");
+const delta = await lang.diagnosticDelta({
+  files: ["src/app.ts"],
+  previous: { "src/app.ts": { generation: 3, diagnostics: priorDiags } },
+});
+```
+
 ## Inputs / request
 
 `createLanguageIntelligence` options:
