@@ -12,7 +12,6 @@ import {
   type CodingProcessEvent,
   type CreateProcessSessionsOptions,
   type ProcessExitResult,
-  type ProcessPtyBackend,
   type ProcessPtyHandle,
   type ProcessSandboxHandle,
   type ProcessSession,
@@ -27,8 +26,6 @@ import {
 import {
   DEFAULT_MAX_TERMINAL_COLUMNS,
   DEFAULT_MAX_TERMINAL_ROWS,
-  HARD_MAX_TERMINAL_COLUMNS,
-  HARD_MAX_TERMINAL_ROWS,
 } from "../limits.js";
 
 /** Default TERM for PTY sessions (validated <= maxTerminalTermBytes). */

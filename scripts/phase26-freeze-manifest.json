@@ -856,5 +856,11 @@
   "untrusted_index"
  ],
  "supportMatrix": "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.2.6 changes none of it",
- "deviations": []
+ "deviations": [],
+ "regeneratedFiles": {
+  "$comment": "Files rewritten by the npm test chain itself (timestamps), so byte-identity is meaningless; seams are recorded and presence checked, hash comparison skipped.",
+  "scripts/package-truth.json": {
+   "by": "scripts/package-truth.mjs (generatedAt timestamp)"
+  }
+ }
 }

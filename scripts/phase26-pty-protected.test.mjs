@@ -37,7 +37,6 @@ if (!backendModule) {
 
 let root;
 let backend;
-let startCalls = 0;
 
 before(async () => {
   const mod = await import(pathToFileURL(backendModule).href);

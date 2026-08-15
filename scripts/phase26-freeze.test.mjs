@@ -92,9 +92,12 @@ test("pending items are byte-identical to the Task 0 baseline (single-editor fil
       if (editors.some(([sharedFile]) => sharedFile === file)) continue; // shared coordination file: marker-checked, not hash-locked
       const seam = baseline.seams[file];
       assert.ok(seam, `baseline records seam ${file} (item ${item.id})`);
+      const regenerated = file in (manifest.regeneratedFiles ?? {});
       if (token === "pending") {
         if (seam.status === "absent") assert.ok(!existsSync(url(`../${file}`)), `${file} must stay absent while ${item.task} is pending`);
-        else assert.equal(sha256(file), seam.sha256, `${file} byte-identical while ${item.task} is pending (task0 baseline)`);
+        else if (regenerated) {
+          assert.ok(existsSync(url(`../${file}`)), `${file} present (chain-regenerated, hash not locked)`);
+        } else assert.equal(sha256(file), seam.sha256, `${file} byte-identical while ${item.task} is pending (task0 baseline)`);
       } else {
         for (const marker of item.markers[file] ?? []) {
           assert.ok(readFileSync(url(`../${file}`), "utf8").includes(marker), `${file} contains marker ${marker} (${item.task} done)`);
@@ -156,7 +159,7 @@ test("demand registry: deferred adapters stay absent; demanded records a named c
       assert.ok(!forgeBarrel.toLowerCase().includes(provider), `forge barrel exports no ${provider} adapter while deferred`);
       assert.ok(entry.consumer === null, `deferred ${provider} has no consumer`);
     } else {
-      assert.ok(entry.consumer && entry.consumer.host && entry.consumer.date, `demanded ${provider} records a named consumer`);
+      assert.ok(entry.consumer?.host && entry.consumer?.date, `demanded ${provider} records a named consumer`);
       assert.ok(existsSync(url(`../${adapterFile}`)), `${adapterFile} exists when demanded`);
     }
   }

@@ -62,5 +62,5 @@ const out = {
   exitGate: null,
 };
 
-writeFileSync(url("./phase26-baseline.json"), JSON.stringify(out, null, 2) + "\n");
+writeFileSync(url("./phase26-baseline.json"), `${JSON.stringify(out, null, 2)}\n`);
 console.log(`phase26-baseline.json captured: ${seamFiles.size} seam files, git ${gitHead}`);

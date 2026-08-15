@@ -233,7 +233,7 @@ test("resize routes only when capability declared; bounds and rate limit enforce
 });
 
 test("no resize capability means no resize on the handle", async () => {
-  const { backend, state } = makeBackend({ resizeCapable: false });
+  const { backend } = makeBackend({ resizeCapable: false });
   const sessions = createProcessSessions({ cwd: root, ptyBackend: backend, limits: { maxLifetimeMs: 60_000 } });
   try {
     const p = await sessions.start({ command: "x", pty: true });
@@ -314,7 +314,7 @@ test("backend loss during wait marks the session unknown without fabricating exi
 });
 
 test("resize backend loss marks unknown and surfaces PTY_BACKEND", async () => {
-  const { backend, state } = makeBackend({ lostOnResize: true });
+  const { backend } = makeBackend({ lostOnResize: true });
   const sessions = createProcessSessions({ cwd: root, ptyBackend: backend, limits: { maxLifetimeMs: 60_000 } });
   try {
     const p = await sessions.start({ command: "x", pty: true });
