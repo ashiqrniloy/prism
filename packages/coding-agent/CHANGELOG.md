@@ -2,6 +2,9 @@
 
 ## [0.2.6] - unreleased
 
+### Added
+- **Host-indexed repository search** (plan 026 Task 2): `createIndexedRepositoryOperations` composes a host-owned `RepositoryIndexBackend` (`update/remove/search/status/dispose`) with the literal fallback; `repo_search` gains explicit `indexed_literal`/`semantic` modes behind `createRepoSearchTool({ modes })` with literal staying the default. Stale/failed/unsupported indexes fail closed with `ERR_PRISM_INDEX_*` (no silent downgrade); results are containment-checked, score-validated, snippet/result-capped, and labeled `untrusted_index` with provenance/freshness metadata. Update caps 1000 changes / 16 MiB per batch (hard 10000 / 64 MiB), stale window 60 s (hard 300 s), query timeout 30 s (hard 120 s). Benchmark: 100000-file fixture, query p95 ≤ 250 ms, 1000-file update ≤ 1 s, heap +64 MiB.
+
 ### Changed
 - **host-selected PTY backend** (plan 026 Task 1): `createProcessSessions` gains an optional `ptyBackend` — `pty: true` delegates only to the host backend with bounded terminal geometry/TERM (120×40 default, hard 500×200), attach timeout (30 s / 120 s), resize rate limit (60/min / 600/min), and backend metadata caps (4 KiB / 16 KiB); absent or `startProcess`-less backends fail closed with `ERR_PRISM_PROCESS_PTY_UNSUPPORTED` before spawn; backend failures surface as `ERR_PRISM_PROCESS_PTY_BACKEND` without embedded backend error text; bounds overflow as `ERR_PRISM_PROCESS_PTY_LIMIT`. Non-PTY sessions are byte-compatible with 0.2.5.
 

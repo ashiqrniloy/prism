@@ -285,7 +285,7 @@ Search text files under the workspace using literal substring match. Binary file
 | --- | --- | --- |
 | `query` | `string` | Literal substring (required). |
 | `path` | `string` | Workspace-relative start path. |
-| `mode` | `"literal"` | Literal only (default). `regex` removed in 0.0.18. |
+| `mode` | `"literal"` (default) \| `"indexed_literal"` \| `"semantic"` | Literal substring by default. Indexed modes exist only when the host enables them (`createRepoSearchTool({ modes })` with an indexed operations composite); missing capability, stale/failed index, or disabled mode returns a stable `ERR_PRISM_INDEX_*` error — never a silent fallback that changes query meaning. `regex` removed in 0.0.18. |
 | `caseSensitive` | `boolean` | Default false. |
 | `includeHidden` | `boolean` | Default false. |
 | `context` | `number` | Context lines before/after each match (default 5, hard 20). Ignored for non-content `outputMode`. |
@@ -297,7 +297,7 @@ Search text files under the workspace using literal substring match. Binary file
 - `files_with_matches`: unique matching paths only.
 - `count`: totals (`N matches in M files`) without line bodies.
 
-Metadata includes `matches`, `truncated`, scan/skip counts; non-content modes also expose `fileCount`.
+Metadata includes `matches`, `truncated`, scan/skip counts; non-content modes also expose `fileCount`. Indexed modes add `untrusted_index`, `indexMode`, `indexState`, `indexRevision`, `indexUpdatedAt` and per-match `[score N.NNN]` suffixes — index text is untrusted and must be re-read before mutation. Full contract: see [Indexed code search](indexed-code-search.md).
 
 ### `glob`
 

@@ -148,6 +148,19 @@ export const HARD_MAX_PTY_ATTACH_TIMEOUT_MS = 120_000;
 export const DEFAULT_MAX_PTY_BACKEND_METADATA_BYTES = 4 * 1024;
 export const HARD_MAX_PTY_BACKEND_METADATA_BYTES = 16 * 1024;
 
+/** Phase 26 Task 0 freeze: host index caps (indexed_literal/semantic repo_search). */
+export const DEFAULT_MAX_INDEX_UPDATE_FILES = 1_000;
+export const HARD_MAX_INDEX_UPDATE_FILES = 10_000;
+export const DEFAULT_MAX_INDEX_UPDATE_BYTES = 16 * 1024 * 1024;
+export const HARD_MAX_INDEX_UPDATE_BYTES = 64 * 1024 * 1024;
+/** Index result cap reuses the repository results caps (1000 / 10000). */
+export const DEFAULT_MAX_INDEX_SNIPPET_BYTES = 4 * 1024;
+export const HARD_MAX_INDEX_SNIPPET_BYTES = 16 * 1024;
+export const DEFAULT_MAX_INDEX_STALE_MAX_AGE_MS = 60_000;
+export const HARD_MAX_INDEX_STALE_MAX_AGE_MS = 300_000;
+export const DEFAULT_MAX_INDEX_QUERY_TIMEOUT_MS = 30_000;
+export const HARD_MAX_INDEX_QUERY_TIMEOUT_MS = 120_000;
+
 /** Forge (GitHub adapter) defaults and hard caps (Phase 9 Task 5). */
 export const DEFAULT_MAX_FORGE_PAGES_PER_OPERATION = 10;
 export const HARD_MAX_FORGE_PAGES_PER_OPERATION = 100;

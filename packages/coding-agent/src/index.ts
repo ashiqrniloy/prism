@@ -193,8 +193,22 @@ export {
 export type {
   RepoEntryKind,
   RepoListEntry,
+  RepoSearchMode,
+  IndexFileChange,
+  IndexFacade,
+  IndexLimitOptions,
+  IndexResourceDiagnostics,
+  IndexSearchHit,
+  IndexState,
+  IndexedRepositoryOptions,
   RepositoryGlobRequest,
   RepositoryGlobResult,
+  RepositoryIndexBackend,
+  RepositoryIndexQueryRequest,
+  RepositoryIndexQueryResult,
+  RepositoryIndexRemoveRequest,
+  RepositoryIndexStatus,
+  RepositoryIndexUpdateRequest,
   RepositoryLimitOptions,
   RepositoryListRequest,
   RepositoryListResult,
@@ -203,6 +217,7 @@ export type {
   RepositorySearchMatch,
   RepositorySearchRequest,
   RepositorySearchResult,
+  ResolvedIndexLimits,
   ResolvedRepositoryLimits,
   RepositoryWalk,
   RepositoryWalkEvent,
@@ -212,12 +227,16 @@ export {
   compileSearchPattern,
   createLocalRepositoryOperations,
   DEFAULT_REPO_EXCLUDE,
+  IndexError,
   isBinaryBuffer,
   RepositoryError,
   resolveRepoPath,
   resolveRepositoryLimits,
   toRepoRelative,
 } from "./repository.js";
+// host-indexed search seam (plan 026 Task 2): compose a host index with the
+// literal fallback; indexed_literal/semantic never fall back silently
+export { createIndexedRepositoryOperations, resolveIndexLimits } from "./repository.js";
 export type { GitAwareRepositoryOptions } from "./git-aware-repository.js";
 export { createGitAwareRepositoryOperations, parseGitLsFilesZ } from "./git-aware-repository.js";
 export type {

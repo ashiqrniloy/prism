@@ -8,3 +8,4 @@ export * from "./repository/list.js";
 export * from "./repository/search.js";
 export * from "./repository/glob.js";
 export * from "./repository/operations.js";
+export * from "./repository/indexed-search.js";

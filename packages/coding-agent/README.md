@@ -113,6 +113,8 @@ Helpers: `detectSupportedImageMimeType`, `detectSupportedImageMimeTypeFromFile`,
 
 Interactive terminals (0.2.6, plan 026): `createProcessSessions` takes an optional host-selected PTY `ptyBackend` — `pty: true` delegates only to it (bounded geometry/TERM, attach timeout, resize rate limit, backend metadata caps; `ERR_PRISM_PROCESS_PTY_*`); without a backend, PTY fails closed as unsupported before spawn and the non-PTY path is unchanged.
 
+Host-indexed search (0.2.6, plan 026): `createIndexedRepositoryOperations` composes a host index with the literal fallback; `indexed_literal`/`semantic` modes are explicit, stale/failed/unsupported indexes fail closed with `ERR_PRISM_INDEX_*` (no silent downgrade), and results are containment-checked and labeled `untrusted_index`. See docs/indexed-code-search.md.
+
 Option/operation types: `ToolsOptions`, `ShellToolOptions`/`BashOperations`, `ReadToolOptions`/`ReadOperations`/`ReadTextOptions`/`ReadTextResult`, `WriteToolOptions`/`WriteOperations`, `EditToolOptions`/`EditOperations`/`EditToolDetails`, `DeleteToolOptions`/`DeleteOperations`, `MoveToolOptions`/`MoveOperations`, `GlobToolOptions`, `ReadPathSet`.
 
 Text reads stop after one page or `maxScanBytes` instead of loading the file. Custom `ReadOperations` must implement bounded `readText` and `statFile`; custom `EditOperations` must implement `statFile` and honor the supplied read cap/signal. Successful truncated shell output is retained in an exclusive Unix `0600` temp file owned by the host; timeout, abort, output-limit, and spill failures remove unpublished spill files. Hosts should delete published `metadata.fullOutputPath` files after use.

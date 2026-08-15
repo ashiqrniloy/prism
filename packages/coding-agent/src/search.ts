@@ -8,6 +8,7 @@ import { HARD_MAX_SEARCH_CONTEXT_LINES, HARD_MAX_SEARCH_MATCHES, validateCodingL
 import {
   createLocalRepositoryOperations,
   RepositoryError,
+  type RepoSearchMode,
   type RepositoryLimitOptions,
   type RepositoryOperations,
   type RepoSearchOutputMode,
@@ -24,7 +25,15 @@ export interface SearchToolOptions {
   maxMatches?: number;
   maxContextLines?: number;
   exclude?: readonly string[];
+  /** Modes the tool exposes (default `["literal"]`); indexed modes require a host index via `operations`. */
+  modes?: readonly RepoSearchMode[];
 }
+
+const ALL_MODES: readonly RepoSearchMode[] = ["literal", "indexed_literal", "semantic"];
+const INDEX_MODE_LABEL: Record<"indexed_literal" | "semantic", string> = {
+  indexed_literal: "host-indexed literal match with relevance scores",
+  semantic: "host semantic search (requires a semantic-capable index backend)",
+};
 
 function errorResult(toolCallId: string, message: string): ToolResult {
   return {
@@ -42,7 +51,8 @@ function formatMatch(match: RepositorySearchMatch): string {
     lines.push(`${match.path}-${text}`);
   }
   const { text } = truncateLine(match.text, 500);
-  lines.push(`${match.path}:${match.line}:${match.column}:${text}`);
+  const score = match.score !== undefined ? ` [score ${match.score.toFixed(3)}]` : "";
+  lines.push(`${match.path}:${match.line}:${match.column}:${text}${score}`);
   for (const after of match.after) {
     const truncated = truncateLine(after, 500);
     lines.push(`${match.path}+${truncated.text}`);
@@ -102,7 +112,7 @@ function parseOutputMode(value: unknown): RepoSearchOutputMode {
 }
 
 function buildSearchMetadata(result: RepositorySearchResult, outputMode: RepoSearchOutputMode): Record<string, unknown> {
-  const base = {
+  const base: Record<string, unknown> = {
     outputMode,
     truncated: result.truncated,
     truncatedBy: result.truncatedBy,
@@ -113,10 +123,31 @@ function buildSearchMetadata(result: RepositorySearchResult, outputMode: RepoSea
     filesSkippedBinary: result.filesSkippedBinary,
     filesSkippedOversize: result.filesSkippedOversize,
   };
+  if (result.indexed !== undefined) {
+    base.untrusted_index = result.untrusted_index === true;
+    base.indexMode = result.indexed.mode;
+    base.indexState = result.indexed.state;
+    if (result.indexed.sourceRevision !== undefined) base.indexRevision = result.indexed.sourceRevision;
+    if (result.indexed.updatedAt !== undefined) base.indexUpdatedAt = result.indexed.updatedAt;
+  }
   if (outputMode === "content") {
     return { ...base, matches: result.matches };
   }
   return { ...base, fileCount: uniqueMatchPaths(result.matches).length };
+}
+
+function validateModes(modes: readonly RepoSearchMode[] | undefined): readonly RepoSearchMode[] {
+  if (modes === undefined) return ["literal"];
+  if (!Array.isArray(modes) || modes.length === 0) return ["literal"];
+  const seen = new Set<RepoSearchMode>();
+  for (const mode of modes) {
+    if (!ALL_MODES.includes(mode)) {
+      throw new Error(`unsupported search mode in options.modes: ${String(mode)}`);
+    }
+    seen.add(mode);
+  }
+  seen.add("literal"); // literal always stays available
+  return [...seen].sort((a, b) => ALL_MODES.indexOf(a) - ALL_MODES.indexOf(b));
 }
 
 export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): ToolDefinition {
@@ -127,11 +158,16 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
     exclude: options?.exclude ?? options?.repository?.exclude,
   });
   const ops = options?.operations ?? createLocalRepositoryOperations(limits);
+  const modes = validateModes(options?.modes);
+  const modeDescriptions = modes.map((m) => (m === "literal" ? "literal substring match only" : INDEX_MODE_LABEL[m])).join("; ");
+  const indexedEnabled = modes.some((m) => m !== "literal");
 
   return {
     name: "repo_search",
     effect: CODING_OBSERVATION_EFFECT,
-    description: `Search text files under the workspace using literal substring match. Use outputMode "files_with_matches" for paths only or "count" for totals without line bodies. Skips binary files, excluded basenames (default: ${limits.exclude.join(", ")}), and hidden names unless includeHidden is true. Does not follow symlinks. Caps matches/scanned bytes/time.`,
+    description: indexedEnabled
+      ? `Search text files under the workspace. Modes: ${modeDescriptions}. Index results are untrusted host index output and may be stale; verify before mutation. Skips binary files and excluded basenames (default: ${limits.exclude.join(", ")}). Caps matches/scanned bytes/time.`
+      : `Search text files under the workspace using literal substring match. Use outputMode "files_with_matches" for paths only or "count" for totals without line bodies. Skips binary files, excluded basenames (default: ${limits.exclude.join(", ")}), and hidden names unless includeHidden is true. Does not follow symlinks. Caps matches/scanned bytes/time.`,
     parameters: {
       type: "object",
       properties: {
@@ -142,8 +178,8 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
         },
         mode: {
           type: "string",
-          description: "Search mode: literal substring match only",
-          enum: ["literal"],
+          description: `Search mode: ${modeDescriptions}`,
+          enum: [...modes],
         },
         caseSensitive: {
           type: "boolean",
@@ -182,10 +218,10 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
       if (args.mode === "regex") {
         return errorResult(toolCallId, 'repo_search no longer supports mode "regex"; use literal substring search.');
       }
-      if (args.mode !== undefined && args.mode !== "literal") {
-        return errorResult(toolCallId, `unsupported search mode: ${String(args.mode)}`);
+      if (args.mode !== undefined && !modes.includes(args.mode as RepoSearchMode)) {
+        return errorResult(toolCallId, `unsupported search mode: ${String(args.mode)} (enabled: ${modes.join(", ")})`);
       }
-      const mode = "literal";
+      const mode = (args.mode ?? "literal") as RepoSearchMode;
       let outputMode: RepoSearchOutputMode;
       try {
         outputMode = parseOutputMode(args.outputMode);

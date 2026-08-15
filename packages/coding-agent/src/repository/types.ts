@@ -58,6 +58,8 @@ export interface RepositoryGlobResult {
   readonly offset: number;
 }
 
+export type RepoSearchMode = "literal" | "indexed_literal" | "semantic";
+
 export type RepoSearchOutputMode = "content" | "files_with_matches" | "count";
 
 export interface RepositorySearchMatch {
@@ -67,17 +69,28 @@ export interface RepositorySearchMatch {
   readonly text: string;
   readonly before: readonly string[];
   readonly after: readonly string[];
+  /** Host index relevance in [0,1]; present only for indexed_literal/semantic results. */
+  readonly score?: number;
 }
 
 export interface RepositorySearchResult {
   readonly matches: readonly RepositorySearchMatch[];
   readonly truncated: boolean;
-  readonly truncatedBy: "matches" | "scan" | "file" | "entries" | "files" | "depth" | "time" | "abort" | "pattern" | null;
+  readonly truncatedBy: "matches" | "scan" | "file" | "entries" | "files" | "depth" | "time" | "abort" | "pattern" | "index" | null;
   readonly scannedBytes: number;
   readonly scannedFiles: number;
   readonly scannedEntries: number;
   readonly filesSkippedBinary: number;
   readonly filesSkippedOversize: number;
+  /** Present only for indexed_literal/semantic queries: provenance and freshness. */
+  readonly indexed?: {
+    readonly mode: "indexed_literal" | "semantic";
+    readonly state: "empty" | "building" | "ready" | "stale" | "failed";
+    readonly sourceRevision?: string;
+    readonly updatedAt?: number;
+  };
+  /** True when match content came from a host index; index text is untrusted. */
+  readonly untrusted_index?: boolean;
 }
 
 export interface ResolvedRepositoryLimits {
@@ -130,7 +143,7 @@ export interface RepositorySearchRequest {
   readonly root: string;
   readonly query: string;
   readonly path?: string;
-  readonly mode?: "literal";
+  readonly mode?: RepoSearchMode;
   readonly outputMode?: RepoSearchOutputMode;
   readonly caseSensitive?: boolean;
   readonly includeHidden?: boolean;
