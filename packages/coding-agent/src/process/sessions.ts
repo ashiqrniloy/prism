@@ -12,15 +12,27 @@ import {
   type CodingProcessEvent,
   type CreateProcessSessionsOptions,
   type ProcessExitResult,
+  type ProcessPtyBackend,
+  type ProcessPtyHandle,
   type ProcessSandboxHandle,
   type ProcessSession,
   type ProcessSessionMetadata,
   type ProcessSessions,
   type ProcessSessionState,
   type ProcessStartRequest,
+  type ProcessTerminalRequest,
   ProcessSessionError,
   resolveProcessSessionLimits,
 } from "./types.js";
+import {
+  DEFAULT_MAX_TERMINAL_COLUMNS,
+  DEFAULT_MAX_TERMINAL_ROWS,
+  HARD_MAX_TERMINAL_COLUMNS,
+  HARD_MAX_TERMINAL_ROWS,
+} from "../limits.js";
+
+/** Default TERM for PTY sessions (validated <= maxTerminalTermBytes). */
+const DEFAULT_TERM = "xterm-256color";
 
 function ownershipKey(ownership: CreateProcessSessionsOptions["ownership"], identity: CreateProcessSessionsOptions["identity"]): string {
   if (ownership) {
@@ -50,6 +62,29 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+/**
+ * Start-budget for host PTY attachment (frozen cap). Timeout fails closed with
+ * ERR_PRISM_PROCESS_PTY_LIMIT; the underlying promise result is discarded.
+ */
+function withPtyAttachTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new ProcessSessionError("ERR_PRISM_PROCESS_PTY_LIMIT", `PTY attach timed out (${timeoutMs}ms)`)),
+      timeoutMs,
+    );
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 interface SessionRecord {
   id: string;
   owner: string;
@@ -66,6 +101,9 @@ interface SessionRecord {
   exitCode: number | null;
   child?: ChildProcessWithoutNullStreams;
   backend?: ProcessSandboxHandle;
+  pty?: ProcessPtyHandle;
+  ptyTerminal?: { columns: number; rows: number; term: string };
+  ptyResizeAt: number[];
   pid?: number;
   accumulator: OutputAccumulator;
   waiters: Array<(result: ProcessExitResult) => void>;
@@ -80,6 +118,8 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
   const policy = options.policy;
   const onEvent = options.onEvent;
   const sandbox = options.sandbox;
+  const ptyBackend = options.ptyBackend;
+  const ptyResizeCapable = ptyBackend?.capabilities?.resize === true;
   const sessions = new Map<string, SessionRecord>();
   let disposed = false;
   let sandboxLost = false;
@@ -116,6 +156,25 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
     }
   };
 
+  const resolveTerminal = (terminal: ProcessTerminalRequest | undefined): { columns: number; rows: number; term: string } => {
+    const columns = terminal?.columns ?? Math.min(DEFAULT_MAX_TERMINAL_COLUMNS, limits.maxTerminalColumns);
+    const rows = terminal?.rows ?? Math.min(DEFAULT_MAX_TERMINAL_ROWS, limits.maxTerminalRows);
+    const term = terminal?.term ?? DEFAULT_TERM;
+    if (!Number.isSafeInteger(columns) || columns < 1 || columns > limits.maxTerminalColumns) {
+      throw new ProcessSessionError("ERR_PRISM_PROCESS_PTY_LIMIT", `columns must be 1..${limits.maxTerminalColumns}`);
+    }
+    if (!Number.isSafeInteger(rows) || rows < 1 || rows > limits.maxTerminalRows) {
+      throw new ProcessSessionError("ERR_PRISM_PROCESS_PTY_LIMIT", `rows must be 1..${limits.maxTerminalRows}`);
+    }
+    if (Buffer.byteLength(term, "utf8") > limits.maxTerminalTermBytes) {
+      throw new ProcessSessionError(
+        "ERR_PRISM_PROCESS_PTY_LIMIT",
+        `term exceeds maxTerminalTermBytes (${limits.maxTerminalTermBytes})`,
+      );
+    }
+    return { columns, rows, term };
+  };
+
   const sweepExpired = (): void => {
     const now = Date.now();
     for (const record of sessions.values()) {
@@ -144,8 +203,10 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
     }
     const child = record.child;
     const backend = record.backend;
+    const pty = record.pty;
     record.child = undefined;
     record.backend = undefined;
+    record.pty = undefined;
     if (state === "released") {
       try {
         child?.stdout.removeAllListeners();
@@ -158,6 +219,7 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
         // best effort
       }
       void backend?.release().catch(() => undefined);
+      void pty?.release().catch(() => undefined);
     } else if (state === "killed" || state === "expired" || state === "unknown") {
       if (child?.pid) {
         try {
@@ -168,6 +230,9 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
       }
       if (backend) {
         void backend.kill().catch(() => undefined);
+      }
+      if (pty) {
+        void pty.kill().catch(() => undefined);
       }
     } else if (state === "exited" && child) {
       try {
@@ -272,6 +337,9 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
           exitedAt: record.exitedAt,
           state: record.state,
           releaseOnCancel: record.releaseOnCancel,
+          pty: record.ptyTerminal !== undefined,
+          terminal: record.ptyTerminal,
+          ptyBackendMetadata: record.pty?.metadata,
         };
       },
       async output(request) {
@@ -298,6 +366,13 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
         const buf = typeof data === "string" ? Buffer.from(data, "utf8") : Buffer.from(data);
         if (buf.byteLength > limits.maxInputBytes) {
           throw new ProcessSessionError("ERR_PRISM_PROCESS_LIMIT", `input exceeds maxInputBytes (${limits.maxInputBytes})`);
+        }
+        if (record.pty) {
+          if (buf.includes(0)) {
+            throw new ProcessSessionError("ERR_PRISM_PROCESS_POLICY", "NUL bytes are not permitted in PTY input");
+          }
+          await record.pty.write(buf);
+          return;
         }
         if (record.backend) {
           await record.backend.write(buf);
@@ -354,6 +429,10 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
           throw new ProcessSessionError("ERR_PRISM_PROCESS_STATE", `cannot signal in state ${record.state}`);
         }
         await assertPolicy("process_signal", record.command, record.args, record.workspace, record.owner);
+        if (record.pty) {
+          await record.pty.signal(name);
+          return;
+        }
         if (record.backend) {
           await record.backend.signal(name);
           return;
@@ -377,6 +456,15 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
           throw new ProcessSessionError("ERR_PRISM_PROCESS_STATE", `cannot kill in state ${record.state}`);
         }
         await assertPolicy("process_kill", record.command, record.args, record.workspace, record.owner);
+        if (record.pty) {
+          try {
+            await record.pty.kill();
+          } catch {
+            // still mark killed
+          }
+          terminateRecord(record, "killed", null);
+          return;
+        }
         if (record.backend) {
           try {
             await record.backend.kill();
@@ -392,6 +480,15 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
         if (record.state !== "running" && record.state !== "starting") {
           throw new ProcessSessionError("ERR_PRISM_PROCESS_STATE", `cannot release in state ${record.state}`);
         }
+        if (record.pty) {
+          try {
+            await record.pty.release();
+          } catch {
+            // still mark released
+          }
+          terminateRecord(record, "released", null);
+          return;
+        }
         if (record.backend) {
           try {
             await record.backend.release();
@@ -402,6 +499,44 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
         terminateRecord(record, "released", null);
       },
     };
+    if (ptyResizeCapable) {
+      handle.resize = async (dimensions) => {
+        assertAttached();
+        sweepExpired();
+        await checkSandboxAlive();
+        if (record.state !== "running") {
+          throw new ProcessSessionError("ERR_PRISM_PROCESS_STATE", `cannot resize in state ${record.state}`);
+        }
+        const columns = dimensions.columns;
+        const rows = dimensions.rows;
+        if (!Number.isSafeInteger(columns) || columns < 1 || columns > limits.maxTerminalColumns) {
+          throw new ProcessSessionError("ERR_PRISM_PROCESS_PTY_LIMIT", `columns must be 1..${limits.maxTerminalColumns}`);
+        }
+        if (!Number.isSafeInteger(rows) || rows < 1 || rows > limits.maxTerminalRows) {
+          throw new ProcessSessionError("ERR_PRISM_PROCESS_PTY_LIMIT", `rows must be 1..${limits.maxTerminalRows}`);
+        }
+        if (!record.pty || typeof record.pty.resize !== "function") {
+          throw new ProcessSessionError("ERR_PRISM_PROCESS_STATE", "session does not support resize");
+        }
+        const now = Date.now();
+        record.ptyResizeAt = record.ptyResizeAt.filter((t) => now - t < 60_000);
+        if (record.ptyResizeAt.length >= limits.maxTerminalResizesPerMinute) {
+          throw new ProcessSessionError(
+            "ERR_PRISM_PROCESS_PTY_LIMIT",
+            `resize rate exceeds maxTerminalResizesPerMinute (${limits.maxTerminalResizesPerMinute})`,
+          );
+        }
+        await assertPolicy("process_resize", record.command, record.args, record.workspace, record.owner);
+        record.ptyResizeAt.push(now);
+        try {
+          await record.pty.resize({ columns, rows });
+        } catch {
+          terminateRecord(record, "unknown", null);
+          throw new ProcessSessionError("ERR_PRISM_PROCESS_PTY_BACKEND", "PTY backend resize failed");
+        }
+        record.ptyTerminal = { ...record.ptyTerminal!, columns, rows };
+      };
+    }
     return handle;
   };
 
@@ -411,12 +546,13 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
       sweepExpired();
       await checkSandboxAlive();
 
-      if (request.pty) {
+      if (request.pty && (!ptyBackend || typeof ptyBackend.startPty !== "function")) {
         throw new ProcessSessionError("ERR_PRISM_PROCESS_PTY_UNSUPPORTED", "PTY not supported on this host");
       }
       if (!request.command || typeof request.command !== "string") {
         throw new ProcessSessionError("ERR_PRISM_PROCESS_POLICY", "command required");
       }
+      const ptyTerminal = request.pty ? resolveTerminal(request.terminal) : undefined;
 
       if (sandbox && typeof sandbox.startProcess !== "function") {
         throw new ProcessSessionError("ERR_PRISM_PROCESS_UNSUPPORTED", "sandbox adapter does not support startProcess");
@@ -466,6 +602,8 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
         expiresAt: Date.now() + lifetimeMs,
         state: "starting",
         exitCode: null,
+        ptyTerminal,
+        ptyResizeAt: [],
         accumulator,
         waiters: [],
         stdinClosed: false,
@@ -475,11 +613,55 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
       sessions.set(id, record);
 
       const onData = (buf: Buffer) => {
-        accumulator.append(buf);
+        // PTY hosts can deliver trailing bytes after the session already went
+        // terminal (host wait() resolving ahead of the last pty drain); ignore
+        // them instead of appending to a finished accumulator.
+        if (record.state === "running" || record.state === "starting") {
+          accumulator.append(buf);
+        }
       };
 
       try {
-        if (sandbox?.startProcess) {
+        if (request.pty) {
+          try {
+            const handle = await withPtyAttachTimeout(
+              ptyBackend!.startPty!({
+                file: request.command,
+                args,
+                cwd,
+                env: request.env,
+                columns: ptyTerminal!.columns,
+                rows: ptyTerminal!.rows,
+                term: ptyTerminal!.term,
+                onData,
+              }),
+              limits.maxPtyAttachTimeoutMs,
+            );
+            const metadataJson = handle.metadata !== undefined ? JSON.stringify(handle.metadata) : undefined;
+            if (metadataJson !== undefined && Buffer.byteLength(metadataJson, "utf8") > limits.maxPtyBackendMetadataBytes) {
+              throw new ProcessSessionError(
+                "ERR_PRISM_PROCESS_PTY_LIMIT",
+                `pty backend metadata exceeds maxPtyBackendMetadataBytes (${limits.maxPtyBackendMetadataBytes})`,
+              );
+            }
+            record.pty = handle;
+            record.state = "running";
+            void handle
+              .wait()
+              .then((result) => {
+                if (record.state !== "running" && record.state !== "starting") return;
+                terminateRecord(record, "exited", result.exitCode);
+              })
+              .catch(() => {
+                if (record.state !== "running" && record.state !== "starting") return;
+                terminateRecord(record, "unknown", null);
+              });
+          } catch (error) {
+            sessions.delete(id);
+            if (error instanceof ProcessSessionError) throw error;
+            throw new ProcessSessionError("ERR_PRISM_PROCESS_PTY_BACKEND", "PTY backend failed to start");
+          }
+        } else if (sandbox?.startProcess) {
           const handle = await sandbox.startProcess({
             file: request.command,
             args,
@@ -527,6 +709,7 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
         }
       } catch (error) {
         sessions.delete(id);
+        if (error instanceof ProcessSessionError) throw error;
         throw new ProcessSessionError("ERR_PRISM_PROCESS_UNSUPPORTED", error instanceof Error ? error.message : String(error));
       }
 
@@ -554,6 +737,13 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
         if (record.owner !== owner) continue;
         if (record.state !== "running" && record.state !== "starting") continue;
         if (release || record.releaseOnCancel) {
+          if (record.pty) {
+            try {
+              await record.pty.release();
+            } catch {
+              // continue
+            }
+          }
           if (record.backend) {
             try {
               await record.backend.release();
@@ -563,6 +753,13 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
           }
           terminateRecord(record, "released", null);
         } else {
+          if (record.pty) {
+            try {
+              await record.pty.kill();
+            } catch {
+              // continue
+            }
+          }
           if (record.backend) {
             try {
               await record.backend.kill();
@@ -594,6 +791,13 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
       disposed = true;
       for (const record of [...sessions.values()]) {
         if (record.state === "running" || record.state === "starting") {
+          if (record.pty) {
+            try {
+              await record.pty.kill();
+            } catch {
+              // best effort
+            }
+          }
           if (record.backend) {
             try {
               await record.backend.kill();

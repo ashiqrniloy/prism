@@ -17,7 +17,7 @@
 
 ## When to use it
 
-Use when a host needs attachable long-running processes (watch modes, language servers, interactive CLIs) that one-shot `shell` cannot model. Do not use as a job-control language or PTY emulator — `pty: true` fails closed with `ERR_PRISM_PROCESS_PTY_UNSUPPORTED` until a platform capability is wired. Pass a sandbox with `startProcess` for contained long-running work; omit `sandbox` for native spawn.
+Use when a host needs attachable long-running processes (watch modes, language servers, interactive CLIs) that one-shot `shell` cannot model. Do not use as a job-control language. `pty: true` (host-selected PTY) requires a `ptyBackend` passed to `createProcessSessions`; without one it fails closed before spawn with `ERR_PRISM_PROCESS_PTY_UNSUPPORTED`. Pass a sandbox with `startProcess` for contained long-running work; omit `sandbox` for native spawn.
 
 ```ts
 import { createProcessSessions } from "@arnilo/prism-coding-agent";
@@ -43,6 +43,7 @@ await sessions.dispose();
 | `ownership?` | `OwnershipScope` | Default owner key for sessions. |
 | `identity?` | `AgentIdentity` | When ownership omitted, owner key projects from identity. |
 | `sandbox?` | `ProcessSandboxBackend` | When set: require `startProcess` or fail closed; `status` loss → all running → `unknown`. |
+| `ptyBackend?` | `ProcessPtyBackend` | Host-selected interactive-terminal backend. `pty: true` delegates only here; absent backend → `ERR_PRISM_PROCESS_PTY_UNSUPPORTED` before spawn. Host supplies the PTY engine (e.g. node-pty); Prism never depends on one. |
 
 `ProcessStartRequest`:
 
@@ -51,7 +52,8 @@ await sessions.dispose();
 | `command` / `args?` | Executable + argv (not a shell string). |
 | `cwd?` | Relative/absolute path contained under registry `cwd`. |
 | `env?` | Extra env merged onto `process.env` (never in fingerprint). |
-| `pty?` | Default false; unsupported → `ERR_PRISM_PROCESS_PTY_UNSUPPORTED`. |
+| `pty?` | Default false. `true` requires the `ptyBackend` host option (delegated only to it); unsupported host → `ERR_PRISM_PROCESS_PTY_UNSUPPORTED` before spawn. |
+| `terminal?` | `{ columns, rows, term? }` for `pty: true`; defaults `120 × 40`, `xterm-256color`. Bounds: columns 1–120 (hard 500), rows 1–40 (hard 200), TERM ≤ 64 bytes (hard 256). |
 | `lifetimeMs?` | Bounded by `maxLifetimeMs`. |
 | `owner?` | Override owner string. |
 | `releaseOnCancel?` | If true, `cancelOwned` releases instead of killing. |
@@ -68,10 +70,23 @@ await sessions.dispose();
 | `cancelOwned(owner)` | Kill (default) or release owned running sessions. |
 | `markUnknown` | Backend-loss terminal state; never fabricates `exitCode`. |
 | `reconcile()` | Host resume: mark every running/starting session `unknown` (O(sessions)). |
+| `resize?` | Only when `ptyBackend.capabilities.resize` is true: bounded `{ columns, rows }` routed to the live terminal. |
 
 Events: `process_started`, `process_exited`, `process_killed`, `process_released`, `process_expired`, `process_unknown`.
 
-Errors: `ERR_PRISM_PROCESS_POLICY`, `ERR_PRISM_PROCESS_OWNERSHIP`, `ERR_PRISM_PROCESS_STATE`, `ERR_PRISM_PROCESS_LIMIT`, `ERR_PRISM_PROCESS_PTY_UNSUPPORTED`, `ERR_PRISM_PROCESS_UNSUPPORTED`.
+Errors: `ERR_PRISM_PROCESS_POLICY`, `ERR_PRISM_PROCESS_OWNERSHIP`, `ERR_PRISM_PROCESS_STATE`, `ERR_PRISM_PROCESS_LIMIT`, `ERR_PRISM_PROCESS_PTY_UNSUPPORTED`, `ERR_PRISM_PROCESS_PTY_BACKEND`, `ERR_PRISM_PROCESS_PTY_LIMIT`, `ERR_PRISM_PROCESS_UNSUPPORTED`.
+
+## Host-selected PTY backend contract
+
+`ptyBackend` is the host's interactive-terminal capability (plan 026 Task 1):
+
+- **Delegation only.** `pty: true` starts a session exclusively through `ptyBackend.startPty`; the native spawn path never allocates a terminal. A missing backend or one without `startPty` fails closed before any spawn (`ERR_PRISM_PROCESS_PTY_UNSUPPORTED`). The non-PTY path is byte-compatible with the 0.2.5 baseline.
+- **Contract.** `startPty({ file, args, cwd, env, columns, rows, term, onData })` returns `{ metadata?, write, signal, kill, release, wait, resize? }`. `capabilities.resize` is explicit — `resize` on the session exists only when declared; never duck-typed. `wait()` resolves on process exit (and rejects on backend loss); the host stops delivering `onData` once the session is terminal.
+- **Terminal data is untrusted output.** Control sequences are never parsed or emulated; the host (or an attached terminal client) interprets them. Input is raw terminal bytes; NUL is rejected with a policy error, other control bytes pass through as terminal data.
+- **Bounded attach.** `startPty` must settle within `maxPtyAttachTimeoutMs` (30 s default, 120 s hard); overflow removes the session record and fails with `ERR_PRISM_PROCESS_PTY_LIMIT`. Resize is rate-limited (60/min default, 600 hard) and fails with the same code. Backend `metadata` is bounded (`maxPtyBackendMetadataBytes`, 4 KiB default / 16 KiB hard).
+- **Backend loss.** A throwing `startPty` or a lost `wait()` surfaces as `ERR_PRISM_PROCESS_PTY_BACKEND` with a generic message (backend error text is never embedded); the session becomes `unknown` with `exitCode: null` — never fabricated.
+- **Parity.** Policy, cwd/ownership, cancel/expiry sweeps, input/lifetime/output caps, command fingerprint, events, and redaction behave exactly as non-PTY sessions; PTY sessions count against `maxSessions`.
+- **Recovery caveat (phase 26, task 5).** PTY sessions are not durable across restart: no serialized terminal fd or raw output is ever persisted. Restart recovery reports such sessions `unknown` unless a host `recoveryBackend` re-attaches them; there is no exact-process-survival claim.
 
 ## Request/response example
 

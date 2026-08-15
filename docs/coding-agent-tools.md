@@ -97,7 +97,7 @@ These are **out of scope** for the 0.0.21 package baseline (see roadmap Phase 9 
 
 - **No PDF / document reader** — text and supported images only via `read`.
 - **No trash / recycle daemon** — `delete` / `move` are permanent; host undo is not automatic.
-- **No PTY / interactive process control in `shell`** — `shell` stays one-shot; optional `createProcessSessions` covers long-running attach/input (PTY still unsupported — see [Process sessions](process-sessions.md)).
+- **No PTY / interactive process control in `shell`** — `shell` stays one-shot; optional `createProcessSessions` covers long-running attach/input with a host-selected PTY backend (`pty: true` requires the `ptyBackend` host option; without one it fails closed as unsupported — see [Process sessions](process-sessions.md)).
 - **LSP language-server tools** — not in default aggregators; optional `createLanguageIntelligence` is Phase 9 (see [Language intelligence](language-intelligence.md)).
 - **Managed process sessions** — not in default aggregators; optional `createProcessSessions` is Phase 9 (see [Process sessions](process-sessions.md)).
 - **GitHub forge adapter** — not in default aggregators; optional `createGitHubForge` is Phase 9 (see [Forge integration](forge-integration.md)); no octokit dependency, no multi-forge abstraction.

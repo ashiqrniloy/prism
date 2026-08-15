@@ -1,0 +1,273 @@
+{
+  "$comment": "Phase 26 (0.2.6) Task 0 baseline, captured from the 0.2.5 release state (HEAD 496d021) before any 0.2.6 source edit. Inherits the 0.2.5 exit-gate figures from scripts/phase25-baseline.json. seams holds SHA-256 hashes for every single-editor allowed file of the phase26 freeze manifest plus roadmap.md: while the owning task token is pending the file must stay byte-identical (absent files stay absent); once the task is done, the freeze test asserts content markers instead. exitGate stays null until Task 8 records it green with blocked: false. Shared coordination files (package.json, plan 026, plans/README.md, docs/index.md, changelogs, barrels, docs with multiple editors) are not hash-locked; they are marker-checked per editor task.",
+  "captured": "2026-08-15T16:03:05.245Z",
+  "release": "0.2.6",
+  "baselineRelease": "0.2.5",
+  "gitHead": "496d021",
+  "node": "v24.19.0",
+  "platform": "linux",
+  "inherited": {
+    "npmTest": {
+      "command": "PRISM_TEST_POSTGRES_URL=... npm test (npm run build && node --test dist/__tests__/*.test.js && node --test scripts/<phase gates incl. phase23 suites + phase24-truth + phase25-bounded-accumulation> && npm run test --workspaces --if-present)",
+      "tests": 3654,
+      "pass": 3654,
+      "fail": 0,
+      "skip": 0,
+      "note": "45 segments; dist/__tests__ 1598/1598 (0.2.4 baseline 3567/3534/33/0 -> +87: 76 Task 5 tests + 10 phase25-bounded-accumulation probe + 1 plan-025 Task 6 docs freeze test)"
+    },
+    "coverage": {
+      "core": {
+        "lines": 91.39,
+        "branches": 84.78,
+        "functions": 91.6
+      },
+      "gate": "60/70/75 core gate passed (exit 0) at the floor 90.53/84.2/90.54",
+      "note": "npm run test:coverage exit 0 (no PRISM_TEST_POSTGRES_URL, matching CI: postgres/enterprise/memory/nats durable legs skip so the protected visible-low proof holds, session-store-postgres 24.22 vs the 22.89 0.2.4 baseline); all 39 non-protected packages above scripts/coverage-thresholds.json (3pp margin); core raised from 90.53/84.2/90.54 by the 76 Task 5 behavior-backed tests (the env-set run measured 91.43/84.80/91.60)"
+    },
+    "threatSuites": {
+      "suites": 50,
+      "pass": 50,
+      "fail": 0,
+      "note": "security:threat-suites = phase8-11 + phase20-23 over built public entrypoints; the phase23-security T2 denominator proof reads the no-env coverage artifact (postgres 24.22 < 40)"
+    },
+    "packDryRun": {
+      "deterministic": true,
+      "packages": 50,
+      "runSha256": "cf9b12175cbc98c3",
+      "note": "two standalone npm run pack:dry-run runs byte-identical (diff empty after timestamp normalization)"
+    },
+    "releaseGate": {
+      "version": "0.2.5",
+      "packages": 50,
+      "errors": 0,
+      "breakingDeltas": 0,
+      "note": "plain pre-refresh gate at 0.2.4 (working tree): ONLY the version literal changed on @arnilo/prism (the d.ts const) — the 105 additive helper exports pass silently; migration.md 0.2.4 -> 0.2.5 note present; reviewed, --update-baseline (6 baseline files, 106 insertions/1 deletion), plain gate green; no --allow-break"
+    },
+    "node20": {
+      "version": "v20.20.2",
+      "packedImports": "14/14",
+      "note": "node20-compat CI job reproduction: node v20.20.2 --test dist/__tests__/install-smoke.test.js (the packed-imports suite: every documented core subpath + every first-party package + validator/tools/approval/capabilities/security regressions) 14 pass 0 fail"
+    },
+    "testPostgres": {
+      "tests": 91,
+      "pass": 91,
+      "fail": 0,
+      "note": "session-store-postgres 31 + memory 16 + enterprise-postgres 33 + phase7/phase12-restart-recovery/phase22-conformance 11 against dockerized postgres:16-alpine on 127.0.0.1:54329 (plan-023 container); incl. the Task 2 cross-store conformance legs (state-concurrency + run-ledger + session-store conformance) unchanged at 0.2.5"
+    },
+    "audit": {
+      "moderateOrHigher": 0
+    },
+    "secrets": {
+      "files": 1559,
+      "findings": 0,
+      "command": "git ls-files -z | xargs -0 node scripts/scan-secrets.mjs"
+    },
+    "sdkReady": {
+      "exitCode": 0,
+      "note": "PRISM_TEST_POSTGRES_URL=... npm run sdk:ready composite green: typecheck + lint + format:check (0 diagnostics, 0 format diffs) + npm test (3654/3654) + test:coverage (core 91.39/84.78/91.60, belowThreshold []) + pack:dry-run + release:evidence (58 surfaces, zero blocked) + release:gate (compat 0 breaking at 0.2.5)"
+    }
+  },
+  "seams": {
+    ".github/workflows/coding-journey.yml": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "CHANGELOG.md": {
+      "sha256": "d35cf2291f55f03a7c9b4b1a33895c4a19c91b0f078036f0c5f9e4771fef1d55",
+      "status": "present"
+    },
+    "docs/0.1.0-readiness.md": {
+      "sha256": "cf26374b89fd048ffce37681c010839d2b29a1d981bd0af3f67af9d216cfff22",
+      "status": "present"
+    },
+    "docs/_evidence/phase26-primitive-review.md": {
+      "sha256": "6708f24136569bdbfec938ab4c88e1150837463b2b51c01b64cfe7dfbe7ff641",
+      "status": "present"
+    },
+    "docs/browser-automation.md": {
+      "sha256": "1e51092c472d398581a5203ba4cf2a847cc0248086925a4fb06b2481ba4e63a2",
+      "status": "present"
+    },
+    "docs/coding-review-and-diagnostics.md": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "docs/coding-security.md": {
+      "sha256": "7deee90cf442c6c5cd2eb62cd28a6d528601d4f0d8803eec05d1c0c6a59977d6",
+      "status": "present"
+    },
+    "docs/indexed-code-search.md": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "docs/language-intelligence.md": {
+      "sha256": "f35b59b59b974712ace772c82953c9952507e9cc36dcf6a540a74742252e09fb",
+      "status": "present"
+    },
+    "docs/work-artifacts-and-review.md": {
+      "sha256": "337af69ad2d828582036ff35fe36307f552b1d812727725c6a330065448baf6e",
+      "status": "present"
+    },
+    "packages/ag-ui/src/acp/__tests__/acp-recovery.test.ts": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "packages/ag-ui/src/acp/agent.ts": {
+      "sha256": "8a653880a47ae466414139e579239a9a3f0afe3bf38cd4145b4d04d517dd9e27",
+      "status": "present"
+    },
+    "packages/ag-ui/src/acp/session-store.ts": {
+      "sha256": "2b7d2cc0e2813d43be0969b3213cfdef18685bd9df158f34a9a5d74d85896e65",
+      "status": "present"
+    },
+    "packages/ag-ui/src/acp/terminal-client.ts": {
+      "sha256": "ee8c841748729c667f4c3b31c49ff00e2e5a9faab040f55b7d9ee7d1e57c7ab2",
+      "status": "present"
+    },
+    "packages/coding-agent/src/__tests__/indexed-search.test.ts": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "packages/coding-agent/src/__tests__/language-diagnostics.test.ts": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "packages/coding-agent/src/__tests__/process-pty.test.ts": {
+      "sha256": "b063393e4d7cbb26d91e4696ae989e632b3fe565afb26ff4039c3847d310527e",
+      "status": "present"
+    },
+    "packages/coding-agent/src/__tests__/review.test.ts": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "packages/coding-agent/src/__tests__/workspace-lifecycle.test.ts": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "packages/coding-agent/src/checks.ts": {
+      "sha256": "03648a0c1b31e68e992fd6bf2db4acccd2018a461bcaa4379828c198451786e4",
+      "status": "present"
+    },
+    "packages/coding-agent/src/coding-checkpoint.ts": {
+      "sha256": "ff7c758562652a797c0dab557e388da89c5b0bd7c1124040488381eff3225e62",
+      "status": "present"
+    },
+    "packages/coding-agent/src/diagnostics.ts": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "packages/coding-agent/src/git-tools.ts": {
+      "sha256": "ded1577ecba801c0641cf8bb6922337d8ceb247fc8babfa79182f72e52323e94",
+      "status": "present"
+    },
+    "packages/coding-agent/src/git.ts": {
+      "sha256": "c9743b9565639934aff70fb2bf252062f2b028c11cf09036a41e113456e76055",
+      "status": "present"
+    },
+    "packages/coding-agent/src/language/client.ts": {
+      "sha256": "fb5cbc50a0d24df5ca7a6b11814cb49b7b76b2a059955c0818aca3adcf2ea690",
+      "status": "present"
+    },
+    "packages/coding-agent/src/language/index.ts": {
+      "sha256": "18a83f800a637170c41164cbf41e406f1589ea8f50fb37a53857412bedab0afe",
+      "status": "present"
+    },
+    "packages/coding-agent/src/language/intelligence.ts": {
+      "sha256": "81bd47015dd6970e0f4e8535a1d57a078baeb230c45de1669fe58f81ba4e2c4a",
+      "status": "present"
+    },
+    "packages/coding-agent/src/language/types.ts": {
+      "sha256": "7448132f81e35aedabae14f51d630944dc74ff86cbddbc5c910d3b728872aab1",
+      "status": "present"
+    },
+    "packages/coding-agent/src/lifecycle.ts": {
+      "sha256": "1b80979fe5f1bed5a3f241081979db21162112b513c20a4bb5033b7fb82e96e3",
+      "status": "present"
+    },
+    "packages/coding-agent/src/process/__tests__/process-recovery.test.ts": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "packages/coding-agent/src/process/recovery.ts": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "packages/coding-agent/src/repository.ts": {
+      "sha256": "6c3ef6c5f6ef5506385fcbba0dcfc8bd3adf09051253287935ee2433fade21c0",
+      "status": "present"
+    },
+    "packages/coding-agent/src/repository/indexed-search.ts": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "packages/coding-agent/src/repository/operations.ts": {
+      "sha256": "1c8686d9471e0877a1ad53b7569057c72eee625359a6d8dbbc80e23672586ab9",
+      "status": "present"
+    },
+    "packages/coding-agent/src/repository/search.ts": {
+      "sha256": "dd44139eb1bf992524b8879aed08e78dca86089f3b18b85addbc0d81471f5e11",
+      "status": "present"
+    },
+    "packages/coding-agent/src/repository/types.ts": {
+      "sha256": "ae2a4bf5de9408460b5d066c1e0b3ef097335d7f7857dd63c6423462f15bba84",
+      "status": "present"
+    },
+    "packages/coding-agent/src/review.ts": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "packages/coding-agent/src/search.ts": {
+      "sha256": "687721e628fb2490c6260fe8d71cc84fbc649df6c090d3fd60e73a26e2d74cfc",
+      "status": "present"
+    },
+    "packages/coding-agent/src/workspace-lifecycle.ts": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "roadmap.md": {
+      "sha256": "a26a9b060872e01214e83ee12f71e95bfd5e75fc1cb46609e4d0c30fa59f4518",
+      "status": "present"
+    },
+    "scripts/fixtures/phase26-coding-journey.mjs": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "scripts/package-truth.json": {
+      "sha256": "53335304841fbe5cd52fc3753c05a08ab822424e8541151c877d7068dfaa02eb",
+      "status": "present"
+    },
+    "scripts/phase26-baseline.mjs": {
+      "sha256": "de3bbbcd5a6120dfbec245fdcc35cfa7d55a12d606bd76a9c80f4468059ba5ae",
+      "status": "present"
+    },
+    "scripts/phase26-coding-journey-report.json": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "scripts/phase26-coding-journey.test.mjs": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "scripts/phase26-freeze.test.mjs": {
+      "sha256": "7ecd0e28680ee740a5783d22a283b7842d8e7a51a18da1d54b6afd955747fb6b",
+      "status": "present"
+    },
+    "scripts/phase26-index-benchmark.test.mjs": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "scripts/phase26-pty-protected.test.mjs": {
+      "sha256": "761dfbb60af1d18df9729bad7c2c16d9bf8eba439c0bb2016e4f5a9f8b753a95",
+      "status": "present"
+    },
+    "scripts/phase26-recovery-conformance.test.mjs": {
+      "sha256": null,
+      "status": "absent"
+    },
+    "scripts/release-skip-manifest.mjs": {
+      "sha256": "871a761cf3699f805d57ebd125413d71c0bb7f657b61efc94c8d0ab0783563fb",
+      "status": "present"
+    }
+  },
+  "exitGate": null
+}

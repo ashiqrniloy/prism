@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.6] - unreleased
+
+### Changed
+- **host-selected PTY backend** (plan 026 Task 1): `createProcessSessions` gains an optional `ptyBackend` — `pty: true` delegates only to the host backend with bounded terminal geometry/TERM (120×40 default, hard 500×200), attach timeout (30 s / 120 s), resize rate limit (60/min / 600/min), and backend metadata caps (4 KiB / 16 KiB); absent or `startProcess`-less backends fail closed with `ERR_PRISM_PROCESS_PTY_UNSUPPORTED` before spawn; backend failures surface as `ERR_PRISM_PROCESS_PTY_BACKEND` without embedded backend error text; bounds overflow as `ERR_PRISM_PROCESS_PTY_LIMIT`. Non-PTY sessions are byte-compatible with 0.2.5.
+
 ## [0.1.6] - 2026-08-11
 
 ### Changed
