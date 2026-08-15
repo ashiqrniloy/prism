@@ -98,6 +98,8 @@ if (!report.alreadyMerged && report.pushed) {
 
 ## Extension and configuration notes
 
+Forge breadth is demand-gated (plan 026 Task 4): GitLab and Bitbucket adapters stay deferred while no named consumer is recorded in the phase26 freeze manifest's demand registry (`scripts/phase26-freeze-manifest.json`). A deferred adapter has no source file, docs page, or export; activation requires recording a named host/consumer/date/use case and shipping at most one adapter (GitLab or Bitbucket) against the existing `ForgeOperations` contract. Unsupported provider operations fail with a stable typed error — no fake capability, no catalog/factory.
+
 Credentials resolve per call through the host resolver; GitHub App installation tokens and PATs are both supported (same `Bearer` REST header and `x-access-token` git header). Least-privilege guidance: App installation tokens with `contents: write` + `pull_requests: write` + `issues: read` cover the six operations; PATs should be fine-grained to the single repository and read/write scope needed. Policy denials propagate as the core `ExecutionDeniedError` (`ERR_PRISM_EXECUTION_DENIED`) — no forge request is attempted — so hosts can distinguish refusal from forge failure. Pagination is sequential (per-request `pagesPerOperation` cap); `requestConcurrency` is a validated ceiling, not a target. The adapter performs no DNS/egress control itself — sandboxed hosts route forge traffic through the Phase 9 egress policy (Task 6).
 
 ## Security and performance notes

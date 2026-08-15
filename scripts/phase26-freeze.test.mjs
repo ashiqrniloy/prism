@@ -97,6 +97,8 @@ test("pending items are byte-identical to the Task 0 baseline (single-editor fil
         if (seam.status === "absent") assert.ok(!existsSync(url(`../${file}`)), `${file} must stay absent while ${item.task} is pending`);
         else if (regenerated) {
           assert.ok(existsSync(url(`../${file}`)), `${file} present (chain-regenerated, hash not locked)`);
+        } else if (file === "roadmap.md" && isRoadmapExempted()) {
+          // coordination exemption: working tree is exactly a recorded user-authored roadmap edit
         } else assert.equal(sha256(file), seam.sha256, `${file} byte-identical while ${item.task} is pending (task0 baseline)`);
       } else {
         for (const marker of item.markers[file] ?? []) {
@@ -115,13 +117,28 @@ test("roadmap.md is byte-identical while task8 is pending (single editor)", () =
   const seam = baseline.seams["roadmap.md"];
   assert.ok(seam, "baseline records roadmap.md");
   if (manifest.tasks.task8 === "pending") {
-    assert.equal(sha256("roadmap.md"), seam.sha256, "roadmap.md byte-identical while task8 is pending");
+    if (!isRoadmapExempted()) {
+      assert.equal(sha256("roadmap.md"), seam.sha256, "roadmap.md byte-identical while task8 is pending");
+    }
   } else {
     for (const marker of itemById("docs-bump-exit").markers["roadmap.md"]) {
       assert.ok(readFileSync(url("../roadmap.md"), "utf8").includes(marker), `roadmap.md contains ${marker}`);
     }
   }
 });
+
+/** True when the current roadmap.md sha matches a recorded user-authored coordination exemption. */
+function isRoadmapExempted() {
+  const current = sha256("roadmap.md");
+  const exemptions = manifest.coordination?.roadmapExemptions ?? [];
+  for (const exemption of exemptions) {
+    assert.match(exemption?.sha256 ?? "", /^[0-9a-f]{64}$/, "roadmap exemption sha256 is a hex sha");
+    assert.ok(typeof exemption?.author === "string" && exemption.author.length > 0, "roadmap exemption records an author");
+    assert.ok(typeof exemption?.reason === "string" && exemption.reason.length > 0, "roadmap exemption records a reason");
+    if (exemption.sha256 === current) return true;
+  }
+  return false;
+}
 
 test("shared coordination markers: done tasks' markers present, pending tasks' plan checkboxes still open", () => {
   for (const [file, markersByTask] of Object.entries(manifest.sharedFiles)) {

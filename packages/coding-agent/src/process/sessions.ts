@@ -24,6 +24,23 @@ import {
   resolveProcessSessionLimits,
 } from "./types.js";
 import {
+  type ProcessRecoveryRecord,
+  type ProcessRecoveryRecordReport,
+  type ProcessRecoveryReport,
+  acquireRecordLease,
+  attachWithTimeout,
+  buildProcessRecoveryRecord,
+  deleteProcessRecoveryRecord,
+  loadProcessRecoveryRecord,
+  loadProcessRecoveryRecords,
+  PROCESS_RECOVERY_LEASE_NAMESPACE,
+  releaseRecordLease,
+  resolveProcessRecoveryLimits,
+  saveProcessRecoveryRecord,
+  validateBackendRef,
+} from "./recovery.js";
+import { ProcessRecoveryError } from "./recovery.js";
+import {
   DEFAULT_MAX_TERMINAL_COLUMNS,
   DEFAULT_MAX_TERMINAL_ROWS,
 } from "../limits.js";
@@ -106,6 +123,14 @@ interface SessionRecord {
   waiters: Array<(result: ProcessExitResult) => void>;
   stdinClosed: boolean;
   handle: ProcessSession;
+  /** Durable recovery bookkeeping (plan 026 Task 5); absent when durability is not configured. */
+  backendRef?: string;
+  recoveryFencingToken: number;
+  recoveryVersion: number;
+  /** Opaque lease claim token for renewal/release; never serialized, memory only. */
+  recoveryLeaseToken?: string;
+  /** Serializes durable transition writes per record so CAS order never inverts on slow stores. */
+  recoveryWriteChain?: Promise<void>;
 }
 
 export function createProcessSessions(options: CreateProcessSessionsOptions): ProcessSessions {
@@ -120,6 +145,23 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
   const sessions = new Map<string, SessionRecord>();
   let disposed = false;
   let sandboxLost = false;
+
+  // Durable process recovery (plan 026 Task 5): checkpoints + leases + ownerId
+  // activate the seam together; a partial recovery configuration fails closed
+  // at construction (no implicit activation, no half-durable state).
+  const checkpoints = options.checkpoints;
+  const leases = options.leases;
+  const ownerId = options.ownerId;
+  const recoveryBackend = options.recoveryBackend;
+  const recoveryLimits = resolveProcessRecoveryLimits(options.recoveryLimits);
+  const durable =
+    checkpoints !== undefined || leases !== undefined || ownerId !== undefined || recoveryBackend !== undefined;
+  if (durable && !(checkpoints && leases && ownerId)) {
+    throw new ProcessRecoveryError(
+      "ERR_PRISM_RECOVERY_UNSUPPORTED",
+      "durable process recovery requires checkpoints, leases, and ownerId together",
+    );
+  }
 
   const emit = (event: CodingProcessEvent): void => {
     onEvent?.(event);
@@ -188,6 +230,181 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
     for (const resolveWait of waiters) resolveWait(result);
   };
 
+  // Durable transition write: fire-and-forget CAS (fence/version conflicts mean
+  // another replica moved the record first — the newer state wins). The crash
+  // window between a terminal transition and its durable write converges on
+  // recovery to attach/terminal/unknown, never a duplicate spawn.
+  const persistTransition = (record: SessionRecord): void => {
+    if (!durable || record.recoveryVersion === 0) return;
+    const next = buildProcessRecoveryRecord({
+      id: record.id,
+      owner: record.owner,
+      workspace: record.workspace,
+      command: record.command,
+      args: record.args,
+      commandFingerprint: record.commandFingerprint,
+      policyDecision: record.policyDecision,
+      startedAt: record.startedAt,
+      state: record.state,
+      exitCode: record.exitCode,
+      releaseOnCancel: record.releaseOnCancel,
+      expiresAt: record.expiresAt,
+      ...(record.backendRef !== undefined ? { backendRef: record.backendRef } : {}),
+      ...(record.ptyTerminal !== undefined ? { pty: record.ptyTerminal } : {}),
+      fencingToken: record.recoveryFencingToken,
+    });
+    const expectedVersion = record.recoveryVersion;
+    record.recoveryVersion += 1;
+    const write = async (): Promise<void> => {
+      try {
+        await saveProcessRecoveryRecord({
+          checkpoints: checkpoints!,
+          record: next,
+          expectedVersion,
+          version: record.recoveryVersion,
+          ownership: options.ownership,
+        });
+      } catch {
+        // stale fence or store failure: the durable record keeps its last state
+        return;
+      }
+      void evictRecoveryOverflow();
+      // Terminal transition: release the record lease (clean shutdown makes
+      // recovery immediate). Live running/starting transitions renew it so a
+      // crashed replica's lease lapses within TTL while a live one stays
+      // fenced. Best effort on both.
+      if (isTerminalState(record.state)) {
+        if (record.recoveryLeaseToken) {
+          void releaseRecordLease({
+            leases: leases!,
+            id: record.id,
+            ownerId: ownerId!,
+            token: record.recoveryLeaseToken,
+            ownership: options.ownership,
+          });
+          record.recoveryLeaseToken = undefined;
+        }
+      } else if (record.recoveryLeaseToken) {
+        void leases!
+          .renewLease({
+            namespace: PROCESS_RECOVERY_LEASE_NAMESPACE,
+            key: `recover:${record.id}`,
+            ownerId: ownerId!,
+            token: record.recoveryLeaseToken,
+            ttlMs: recoveryLimits.leaseTtlMs,
+            ...options.ownership,
+          })
+          .catch(() => {
+            // lease lapsed or fenced elsewhere; recovery is attestation-gated
+          });
+      }
+    };
+    // Per-record chain: transition CAS writes must never invert order on slow
+    // stores (a later terminal write landing before the running write would
+    // fail its CAS and leave the record running forever).
+    record.recoveryWriteChain = (record.recoveryWriteChain ?? Promise.resolve()).then(write, write);
+  };
+
+  // Bound durable record growth: after a terminal transition, drop the oldest
+  // terminal records until at most maxRecords remain (running/starting records
+  // are never evicted). Best effort, bounded work.
+  const evictRecoveryOverflow = async (): Promise<void> => {
+    if (!durable) return;
+    try {
+      const page = await loadProcessRecoveryRecords({ checkpoints: checkpoints!, limits: { ...recoveryLimits, maxRecords: recoveryLimits.maxRecords + 1 }, ownership: options.ownership });
+      if (page.records.length <= recoveryLimits.maxRecords) return;
+      const overflow = page.records.length - recoveryLimits.maxRecords;
+      let evicted = 0;
+      for (const { record } of [...page.records].reverse()) {
+        if (evicted >= overflow) break;
+        if (record.state === "running" || record.state === "starting") continue;
+        await deleteProcessRecoveryRecord({ checkpoints: checkpoints!, id: record.id, ownership: options.ownership });
+        evicted += 1;
+      }
+    } catch {
+      // best effort: caps are enforced again on the next transition
+    }
+  };
+
+  const isTerminalState = (state: ProcessSessionState): boolean =>
+    state === "exited" || state === "killed" || state === "released" || state === "expired" || state === "unknown";
+
+  // Atomic starting|running -> unknown (never an exit code). Returns false when
+  // a fence/version conflict means another replica moved the record first.
+  const persistRecoveryUnknown = async (
+    current: ProcessRecoveryRecord,
+    version: number,
+    signal?: AbortSignal,
+  ): Promise<boolean> => {
+    const next = buildProcessRecoveryRecord({ ...current, state: "unknown", exitCode: null, updatedAt: nowIso() });
+    try {
+      await saveProcessRecoveryRecord({
+        checkpoints: checkpoints!,
+        record: next,
+        expectedVersion: version,
+        version: version + 1,
+        ownership: options.ownership,
+        signal,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Reattach an attested handle into the live registry. Recovered sessions
+  // expose control (input/signal/kill/release/resize/wait) through the handle;
+  // output streaming is not re-established after a restart — the host backend
+  // owns any buffered output behind its opaque ref.
+  const attachRecoveredHandle = (current: ProcessRecoveryRecord, handle: ProcessPtyHandle | ProcessSandboxHandle, version: number): void => {
+    const accumulator = new OutputAccumulator({
+      maxBytes: limits.maxOutputChunkBytes,
+      maxLines: 100_000,
+      maxTotalOutputBytes: limits.maxTotalOutputBytes,
+      tempFilePrefix: "prism-proc",
+    });
+    const record: SessionRecord = {
+      id: current.id,
+      owner: current.owner,
+      workspace: current.workspace,
+      command: current.command,
+      args: current.args,
+      commandFingerprint: current.commandFingerprint,
+      policyDecision: current.policyDecision,
+      startedAt: current.startedAt,
+      releaseOnCancel: current.releaseOnCancel,
+      expiresAt: current.expiresAt,
+      state: "running",
+      exitCode: null,
+      ptyTerminal: current.pty,
+      ptyResizeAt: [],
+      accumulator,
+      waiters: [],
+      stdinClosed: false,
+      handle: null as unknown as ProcessSession,
+      backendRef: current.backendRef,
+      recoveryFencingToken: current.fencingToken,
+      recoveryVersion: version,
+    };
+    if (current.pty !== undefined) {
+      record.pty = handle as ProcessPtyHandle;
+    } else {
+      record.backend = handle as ProcessSandboxHandle;
+    }
+    record.handle = makeHandle(record);
+    sessions.set(record.id, record);
+    void handle
+      .wait()
+      .then((result) => {
+        if (record.state !== "running" && record.state !== "starting") return;
+        terminateRecord(record, "exited", result.exitCode);
+      })
+      .catch(() => {
+        if (record.state !== "running" && record.state !== "starting") return;
+        terminateRecord(record, "unknown", null);
+      });
+  };
+
   const terminateRecord = (record: SessionRecord, state: ProcessSessionState, exitCode: number | null): void => {
     if (
       record.state === "exited" ||
@@ -249,6 +466,7 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
     } catch {
       // ignore
     }
+    persistTransition(record);
     settleWaiters(record);
     const type =
       state === "exited"
@@ -453,21 +671,28 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
           throw new ProcessSessionError("ERR_PRISM_PROCESS_STATE", `cannot kill in state ${record.state}`);
         }
         await assertPolicy("process_kill", record.command, record.args, record.workspace, record.owner);
-        if (record.pty) {
-          try {
-            await record.pty.kill();
-          } catch {
-            // still mark killed
-          }
+        const ptyHandle = record.pty;
+        const backendHandle = record.backend;
+        // Mark terminal synchronously FIRST: a backend kill may resolve the
+        // wait() promise, whose handler must not race into a fabricated
+        // 'exited' before the kill is recorded. The explicit call below is
+        // the existing parity double-kill; its result is ignored.
+        if (ptyHandle || backendHandle) {
           terminateRecord(record, "killed", null);
-          return;
-        }
-        if (record.backend) {
-          try {
-            await record.backend.kill();
-          } catch {
-            // still mark killed
+          if (ptyHandle) {
+            try {
+              await ptyHandle.kill();
+            } catch {
+              // still marked killed
+            }
+          } else {
+            try {
+              await backendHandle!.kill();
+            } catch {
+              // still marked killed
+            }
           }
+          return;
         }
         terminateRecord(record, "killed", null);
       },
@@ -477,21 +702,24 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
         if (record.state !== "running" && record.state !== "starting") {
           throw new ProcessSessionError("ERR_PRISM_PROCESS_STATE", `cannot release in state ${record.state}`);
         }
-        if (record.pty) {
-          try {
-            await record.pty.release();
-          } catch {
-            // still mark released
-          }
+        const ptyRelease = record.pty;
+        const backendRelease = record.backend;
+        if (ptyRelease || backendRelease) {
           terminateRecord(record, "released", null);
-          return;
-        }
-        if (record.backend) {
-          try {
-            await record.backend.release();
-          } catch {
-            // still mark released
+          if (ptyRelease) {
+            try {
+              await ptyRelease.release();
+            } catch {
+              // still marked released
+            }
+          } else {
+            try {
+              await backendRelease!.release();
+            } catch {
+              // still marked released
+            }
           }
+          return;
         }
         terminateRecord(record, "released", null);
       },
@@ -605,9 +833,59 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
         waiters: [],
         stdinClosed: false,
         handle: null as unknown as ProcessSession,
+        recoveryFencingToken: 0,
+        recoveryVersion: 0,
       };
       record.handle = makeHandle(record);
       sessions.set(id, record);
+
+      // Durable recovery: intent is persisted BEFORE spawn. The per-record lease
+      // fences replica coordination; the fencing token is stored in the record
+      // so every later CAS write is monotonic. On any write/fence failure the
+      // start fails closed (record removed, no half-durable process).
+      let recoveryLease: { token: string } | undefined;
+      if (durable) {
+        const lease = await acquireRecordLease({
+          leases: leases!,
+          id,
+          ownerId: ownerId!,
+          ttlMs: recoveryLimits.leaseTtlMs,
+          ownership: options.ownership,
+          signal: request.signal,
+        });
+        if (!lease) {
+          sessions.delete(id);
+          throw new ProcessRecoveryError("ERR_PRISM_RECOVERY_FENCE", "recovery lease for new session is held by another replica");
+        }
+        recoveryLease = { token: lease.token };
+        record.recoveryLeaseToken = lease.token;
+        record.recoveryFencingToken = lease.fencingToken;
+        const intent = buildProcessRecoveryRecord({
+          id,
+          owner,
+          workspace,
+          command: request.command,
+          args,
+          commandFingerprint: commandFingerprint(request.command, args),
+          policyDecision,
+          startedAt: record.startedAt,
+          state: "starting",
+          exitCode: null,
+          releaseOnCancel: record.releaseOnCancel,
+          expiresAt: record.expiresAt,
+          ...(ptyTerminal !== undefined ? { pty: ptyTerminal } : {}),
+          fencingToken: lease.fencingToken,
+        });
+        const saved = await saveProcessRecoveryRecord({
+          checkpoints: checkpoints!,
+          record: intent,
+          expectedVersion: 0,
+          version: 1,
+          ownership: options.ownership,
+          signal: request.signal,
+        });
+        record.recoveryVersion = saved.version;
+      }
 
       const onData = (buf: Buffer) => {
         // PTY hosts can deliver trailing bytes after the session already went
@@ -641,8 +919,10 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
                 `pty backend metadata exceeds maxPtyBackendMetadataBytes (${limits.maxPtyBackendMetadataBytes})`,
               );
             }
+            if (handle.ref !== undefined) record.backendRef = validateBackendRef(handle.ref, recoveryLimits);
             record.pty = handle;
             record.state = "running";
+            persistTransition(record);
             void handle
               .wait()
               .then((result) => {
@@ -656,6 +936,7 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
           } catch (error) {
             sessions.delete(id);
             if (error instanceof ProcessSessionError) throw error;
+            if (error instanceof ProcessRecoveryError) throw error;
             throw new ProcessSessionError("ERR_PRISM_PROCESS_PTY_BACKEND", "PTY backend failed to start");
           }
         } else if (sandbox?.startProcess) {
@@ -666,8 +947,10 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
             env: request.env,
             onData,
           });
+          if (handle.ref !== undefined) record.backendRef = validateBackendRef(handle.ref, recoveryLimits);
           record.backend = handle;
           record.state = "running";
+          persistTransition(record);
           void handle
             .wait()
             .then((result) => {
@@ -703,10 +986,27 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
             if (signal) terminateRecord(record, "killed", code);
             else terminateRecord(record, "exited", code);
           });
+          persistTransition(record);
         }
       } catch (error) {
         sessions.delete(id);
+        if (durable) {
+          // No half-durable process: drop the intent/running record and release
+          // the recovery lease. The host store is authoritative.
+          await deleteProcessRecoveryRecord({ checkpoints: checkpoints!, id, ownership: options.ownership, signal: request.signal });
+          if (recoveryLease) {
+            await releaseRecordLease({
+              leases: leases!,
+              id,
+              ownerId: ownerId!,
+              token: recoveryLease.token,
+              ownership: options.ownership,
+              signal: request.signal,
+            });
+          }
+        }
         if (error instanceof ProcessSessionError) throw error;
+        if (error instanceof ProcessRecoveryError) throw error;
         throw new ProcessSessionError("ERR_PRISM_PROCESS_UNSUPPORTED", error instanceof Error ? error.message : String(error));
       }
 
@@ -733,38 +1033,81 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
       for (const record of [...sessions.values()]) {
         if (record.owner !== owner) continue;
         if (record.state !== "running" && record.state !== "starting") continue;
+        const cancelPty = record.pty;
+        const cancelBackend = record.backend;
         if (release || record.releaseOnCancel) {
-          if (record.pty) {
-            try {
-              await record.pty.release();
-            } catch {
-              // continue
+          if (cancelPty || cancelBackend) {
+            terminateRecord(record, "released", null);
+            if (cancelPty) {
+              try {
+                await cancelPty.release();
+              } catch {
+                // continue
+              }
+            } else {
+              try {
+                await cancelBackend!.release();
+              } catch {
+                // continue
+              }
             }
+          } else {
+            terminateRecord(record, "released", null);
           }
-          if (record.backend) {
-            try {
-              await record.backend.release();
-            } catch {
-              // continue
-            }
-          }
-          terminateRecord(record, "released", null);
         } else {
-          if (record.pty) {
-            try {
-              await record.pty.kill();
-            } catch {
-              // continue
+          if (cancelPty || cancelBackend) {
+            terminateRecord(record, "killed", null);
+            if (cancelPty) {
+              try {
+                await cancelPty.kill();
+              } catch {
+                // continue
+              }
+            } else {
+              try {
+                await cancelBackend!.kill();
+              } catch {
+                // continue
+              }
             }
+          } else {
+            terminateRecord(record, "killed", null);
           }
-          if (record.backend) {
-            try {
-              await record.backend.kill();
-            } catch {
-              // continue
-            }
+        }
+      }
+      // Durable pass (plan 026 Task 5): cancellation of a recovered/unattached
+      // process either reaches the attached backend (above) or records unknown —
+      // never a fabricated exit. Lease + CAS guard every mutation so two replicas
+      // cannot cancel the same record into different outcomes.
+      if (durable) {
+        const { records } = await loadProcessRecoveryRecords({
+          checkpoints: checkpoints!,
+          limits: recoveryLimits,
+          ownership: options.ownership,
+        });
+        for (const { record, version } of records) {
+          if (record.owner !== owner) continue;
+          if (isTerminalState(record.state)) continue;
+          if (sessions.has(record.id)) continue; // handled by the live pass above
+          const lease = await acquireRecordLease({
+            leases: leases!,
+            id: record.id,
+            ownerId: ownerId!,
+            ttlMs: recoveryLimits.leaseTtlMs,
+            ownership: options.ownership,
+          });
+          if (!lease) continue; // another replica owns or is recovering it
+          try {
+            await persistRecoveryUnknown(record, version);
+          } finally {
+            await releaseRecordLease({
+              leases: leases!,
+              id: record.id,
+              ownerId: ownerId!,
+              token: lease.token,
+              ownership: options.ownership,
+            });
           }
-          terminateRecord(record, "killed", null);
         }
       }
     },
@@ -781,6 +1124,168 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
       assertNotDisposed();
       const markedUnknown = reconcileAllUnknown();
       return { markedUnknown };
+    },
+
+    async recover(recoverOptions?: { signal?: AbortSignal }): Promise<ProcessRecoveryReport> {
+      assertNotDisposed();
+      if (!durable) {
+        throw new ProcessRecoveryError("ERR_PRISM_RECOVERY_UNSUPPORTED", "durable process recovery is not configured on this host");
+      }
+      sweepExpired();
+      const { records } = await loadProcessRecoveryRecords({
+        checkpoints: checkpoints!,
+        limits: recoveryLimits,
+        ownership: options.ownership,
+        signal: recoverOptions?.signal,
+      });
+      const report: ProcessRecoveryRecordReport[] = [];
+      let attached = 0;
+      let terminal = 0;
+      let unknown = 0;
+      for (const { record } of records) {
+        const live = sessions.get(record.id);
+        if (live) {
+          // Already live in this registry: nothing to do, report the truth.
+          report.push({ id: record.id, outcome: "attached", state: live.state, exitCode: live.exitCode });
+          if (live.state === "running" || live.state === "starting") attached += 1;
+          else terminal += 1;
+          continue;
+        }
+        if (
+          record.state === "exited" ||
+          record.state === "killed" ||
+          record.state === "released" ||
+          record.state === "expired" ||
+          record.state === "unknown"
+        ) {
+          report.push({ id: record.id, outcome: "terminal", state: record.state, exitCode: record.exitCode });
+          terminal += 1;
+          continue;
+        }
+        // starting | running durable record without a live handle: attach-if-
+        // attested, else atomic unknown. Never fabricate an exit code.
+        const lease = await acquireRecordLease({
+          leases: leases!,
+          id: record.id,
+          ownerId: ownerId!,
+          ttlMs: recoveryLimits.leaseTtlMs,
+          ownership: options.ownership,
+          signal: recoverOptions?.signal,
+        });
+        if (!lease) {
+          // Another replica owns or is recovering this record.
+          report.push({ id: record.id, outcome: "unknown", state: record.state, exitCode: null });
+          unknown += 1;
+          continue;
+        }
+        try {
+          // Fresh CAS read under the lease: another replica may have moved the record.
+          const fresh = await loadProcessRecoveryRecord({
+            checkpoints: checkpoints!,
+            id: record.id,
+            limits: recoveryLimits,
+            ownership: options.ownership,
+            signal: recoverOptions?.signal,
+          });
+          if (!fresh) {
+            report.push({ id: record.id, outcome: "terminal", state: "unknown", exitCode: null, error: "ERR_PRISM_RECOVERY_UNKNOWN" });
+            terminal += 1;
+            continue;
+          }
+          const current = fresh.record;
+          if (
+            current.state === "exited" ||
+            current.state === "killed" ||
+            current.state === "released" ||
+            current.state === "expired" ||
+            current.state === "unknown"
+          ) {
+            report.push({ id: current.id, outcome: "terminal", state: current.state, exitCode: current.exitCode });
+            terminal += 1;
+            continue;
+          }
+          if (Date.now() >= current.expiresAt) {
+            // Lifetime lapsed while unrecovered: persist the expiry.
+            const expired = buildProcessRecoveryRecord({
+              ...current,
+              state: "expired",
+              exitCode: null,
+              updatedAt: nowIso(),
+            });
+            await saveProcessRecoveryRecord({
+              checkpoints: checkpoints!,
+              record: expired,
+              expectedVersion: fresh.version,
+              version: fresh.version + 1,
+              ownership: options.ownership,
+              signal: recoverOptions?.signal,
+            });
+            report.push({ id: current.id, outcome: "terminal", state: "expired", exitCode: null });
+            terminal += 1;
+            continue;
+          }
+          const active = [...sessions.values()].filter((s) => s.state === "running" || s.state === "starting").length;
+          if (active >= limits.maxSessions) {
+            // Cannot admit another live session: record unknown (fails closed).
+            await persistRecoveryUnknown(current, fresh.version, recoverOptions?.signal);
+            report.push({ id: current.id, outcome: "unknown", state: "unknown", exitCode: null });
+            unknown += 1;
+            continue;
+          }
+          let attachErrorCode: ProcessRecoveryRecordReport["error"];
+          if (current.backendRef !== undefined && recoveryBackend) {
+            try {
+              const handle = await attachWithTimeout(recoveryBackend, current.backendRef, recoveryLimits.attachTimeoutMs);
+              if (handle) {
+                attachRecoveredHandle(current, handle, fresh.version);
+                attached += 1;
+                report.push({ id: current.id, outcome: "attached", state: "running", exitCode: null });
+                continue;
+              }
+            } catch (attachError) {
+              attachErrorCode =
+                attachError instanceof ProcessRecoveryError
+                  ? attachError.code
+                  : ("ERR_PRISM_RECOVERY_UNKNOWN" as const);
+            }
+          }
+          // No ref, no backend, unattested attach, or attach failure: atomic unknown.
+          const saved = await persistRecoveryUnknown(current, fresh.version, recoverOptions?.signal);
+          if (!saved) {
+            // CAS/fence conflict: another replica moved the record; re-report its state.
+            const again = await loadProcessRecoveryRecord({
+              checkpoints: checkpoints!,
+              id: current.id,
+              limits: recoveryLimits,
+              ownership: options.ownership,
+              signal: recoverOptions?.signal,
+            });
+            const reported = again?.record;
+            report.push({
+              id: current.id,
+              outcome: reported && isTerminalState(reported.state) ? "terminal" : "unknown",
+              state: reported?.state ?? "unknown",
+              exitCode: reported?.exitCode ?? null,
+              error: attachErrorCode,
+            });
+            if (reported && isTerminalState(reported.state)) terminal += 1;
+            else unknown += 1;
+            continue;
+          }
+          report.push({ id: current.id, outcome: "unknown", state: "unknown", exitCode: null, error: attachErrorCode });
+          unknown += 1;
+        } finally {
+          await releaseRecordLease({
+            leases: leases!,
+            id: record.id,
+            ownerId: ownerId!,
+            token: lease.token,
+            ownership: options.ownership,
+            signal: recoverOptions?.signal,
+          });
+        }
+      }
+      return { records: report, attached, terminal, unknown };
     },
 
     async dispose(): Promise<void> {
@@ -815,6 +1320,16 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
           await record.accumulator.cleanupTempFile();
         } catch {
           // best effort
+        }
+        if (record.recoveryLeaseToken) {
+          void releaseRecordLease({
+            leases: leases!,
+            id: record.id,
+            ownerId: ownerId!,
+            token: record.recoveryLeaseToken,
+            ownership: options.ownership,
+          });
+          record.recoveryLeaseToken = undefined;
         }
       }
       sessions.clear();

@@ -184,11 +184,11 @@
    "title": "Durable ACP/live-task and managed-process recovery across restarts and replicas",
    "allowedFiles": [
     "packages/coding-agent/src/process/recovery.ts",
-    "packages/coding-agent/src/process/__tests__/process-recovery.test.ts",
+    "packages/coding-agent/src/__tests__/process-recovery.test.ts",
     "packages/ag-ui/src/acp/session-store.ts",
     "packages/ag-ui/src/acp/agent.ts",
     "packages/ag-ui/src/acp/terminal-client.ts",
-    "packages/ag-ui/src/acp/__tests__/acp-recovery.test.ts",
+    "packages/ag-ui/src/__tests__/acp-recovery.test.ts",
     "scripts/phase26-recovery-conformance.test.mjs"
    ],
    "markers": {
@@ -634,8 +634,8 @@
   "task1": "done",
   "task2": "done",
   "task3": "done",
-  "task4": "pending",
-  "task5": "pending",
+  "task4": "done",
+  "task5": "done",
   "task6": "pending",
   "task7": "pending",
   "task8": "pending"
@@ -768,8 +768,8 @@
    "task": "task5",
    "posture": "Lease + fence single-winner; attach only when attested else atomic unknown; no PID probing; cancellation never replays tools; records redacted/versioned; cross-store conformance without timing sleeps",
    "tests": [
-    "packages/coding-agent/src/process/__tests__/process-recovery.test.ts",
-    "packages/ag-ui/src/acp/__tests__/acp-recovery.test.ts",
+    "packages/coding-agent/src/__tests__/process-recovery.test.ts",
+    "packages/ag-ui/src/__tests__/acp-recovery.test.ts",
     "scripts/phase26-recovery-conformance.test.mjs"
    ]
   },
@@ -860,6 +860,11 @@
    "id": "D-T3-1",
    "what": "T3 stale-fence test mapping: the Task 0 manifest mapped T3's stale-fence test to scripts/phase26-recovery-conformance.test.mjs, which is a task5-owned single-editor file that must stay absent while task5 is pending. Flipping task3 done would fail the freeze threat-existence check. T3's mapped tests now reference only the task3-owned workspace-lifecycle.test.ts, whose lease/CAS fencing suite (held-lease rejection, ownership mismatch, monotonic fencing-token CAS) covers the stale-fence threat at unit level; the frozen Postgres two-replica fence leg ships in the task5 conformance file per plan 026 Task 3/5 test cases.",
    "review": "Manifest threat mapping adjusted to respect single-editor ownership; no cap, state machine, compat, or API change; the Postgres conformance leg remains frozen for task5."
+  },
+  {
+   "id": "D-T5-1",
+   "what": "Task 0 recorded the two new task5 test files under packages/coding-agent/src/process/__tests__/ and packages/ag-ui/src/acp/__tests__/, but no such test directories exist in either package: the package test scripts glob dist/__tests__/*.test.js, so tests under those paths would compile but never run. Both tests live in the packages' real test directories (packages/coding-agent/src/__tests__/process-recovery.test.ts and packages/ag-ui/src/__tests__/acp-recovery.test.ts); the manifest allowedFiles and baseline seams were updated to those paths. No cap, state machine, compat, or API change; the test content is unchanged.",
+   "review": "Path correction only; test discovery verified by running both suites from dist/__tests__."
   }
  ],
  "regeneratedFiles": {
@@ -867,5 +872,17 @@
   "scripts/package-truth.json": {
    "by": "scripts/package-truth.mjs (generatedAt timestamp)"
   }
+ },
+ "coordination": {
+  "$comment": "Coordination exemptions recorded outside task work. roadmap.md is task8's single-editor file (byte-identical while task8 is pending) unless the working-tree state is exactly a recorded user-authored exemption sha; any other roadmap.md change fails the freeze test.",
+  "roadmapExemptions": [
+   {
+    "at": "2026-08-16",
+    "author": "user",
+    "sha256": "9419b652f145051303c08ee43b16906476719f48b95e3e32bfa753eb9ea1232e",
+    "change": "roadmap.md 0.2.9 section: added bullet 'Deepseek API with stable cache prefix'",
+    "reason": "User-authored roadmap planning edit outside plan 026 task work; task 8 retains byte-identical editorial control of all further roadmap.md changes until the 0.2.6 bump."
+   }
+  ]
  }
 }

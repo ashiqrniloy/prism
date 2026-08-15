@@ -4,9 +4,10 @@ import { resolveAcpAgentCapabilities, resolveAcpClientCapabilities } from "../ca
 import { AcpError } from "../errors.js";
 import type { AgentApp, SessionUpdate } from "@agentclientprotocol/sdk";
 import { PROTOCOL_VERSION, agent, methods } from "@agentclientprotocol/sdk";
-import type { PersistedAcpSession } from "../session-store.js";
+import type { PersistedAcpSession, PersistedAcpRunRef } from "../session-store.js";
 import { ownershipKey, validatePersistedSession } from "../session-store.js";
 import { createAcpLifecycleMapper } from "../mapper.js";
+import { createAcpRunRecovery } from "./recovery.js";
 import {
   initialConfigValues,
   initialModeId,
@@ -92,6 +93,7 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
     active.ownership = entry.ownership;
     active.cwd = entry.cwd;
     active.additionalDirectories = entry.additionalDirectories;
+    if (entry.activeRun) active.activeRun = entry.activeRun; // plan 026 Task 5: restored run ref
     registerSession(sessions, limits, active); // T5: registry cap enforced on restore too
     restoredIds.add(entry.sessionId);
   }
@@ -100,6 +102,21 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
     validatePersistedSession(safe);
     await options.sessionStore!.save(safe); // store failure fails the request (host sees it)
   }
+  // Phase 26 Task 5: durable run recovery. Partial recovery configuration fails
+  // closed at construction (no implicit activation, no half-durable state).
+  const runRecovery = options.recovery
+    ? createAcpRunRecovery({
+        lifecycle: options.lifecycle,
+        checkpoints: options.recovery.checkpoints,
+        leases: options.recovery.leases,
+        ownerId: options.recovery.ownerId,
+        leaseTtlMs: options.recovery.leaseTtlMs,
+      })
+    : undefined;
+  if (options.recovery && (!options.recovery.checkpoints || !options.recovery.leases || !options.recovery.ownerId)) {
+    throw new Error("ACP run recovery requires checkpoints, leases, and ownerId together");
+  }
+
   const persist = (sessionId: string, active: ActiveSession, signal: AbortSignal): Promise<void> => {
     if (!active.cwd) throw new AcpError("ERR_PRISM_ACP_INPUT", "session has no working directory");
     return save(
@@ -110,10 +127,19 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
         configValues: Object.fromEntries(active.configValues),
         cwd: active.cwd,
         additionalDirectories: active.additionalDirectories ?? [],
+        ...(active.activeRun ? { activeRun: active.activeRun } : {}),
         updatedAt: new Date().toISOString(),
       },
       signal,
     );
+  };
+  // Bounded active-run reference persistence (plan 026 Task 5): advisory, so
+  // store failures never fail the prompt; the ref is re-validated on restore.
+  const persistRunRef = (active: ActiveSession) => (ref: PersistedAcpRunRef): void => {
+    active.activeRun = ref;
+    if (options.sessionStore && active.cwd) {
+      void persist(active.session.id, active, new AbortController().signal).catch(() => {});
+    }
   };
 
   // Lifecycle -> session/update forwarding (freeze lifecycleEventMapping). Updates are
@@ -245,6 +271,7 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
           limits,
           options,
           clientCapabilities,
+          persistRunRef(current),
         );
         return { stopReason: controller.signal.aborted ? "cancelled" : "end_turn" };
       } finally {
@@ -257,7 +284,23 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (authorization) {
         await restore(authorization, context.signal);
-        sessions.get(context.params.sessionId)?.controller?.abort(new Error("ACP session cancelled"));
+        const current = sessions.get(context.params.sessionId);
+        // Live abort always (0.2.5 parity).
+        current?.controller?.abort(new Error("ACP session cancelled"));
+        // Durable cancel (plan 026 Task 5): ownership/version/fence checked,
+        // terminal/idempotent; a recovered run that is not live here is still
+        // durably cancelled so it can never be resumed or replayed.
+        if (runRecovery && current?.activeRun) {
+          await runRecovery.cancel(
+            { runId: current.activeRun.runId, sessionId: current.activeRun.sessionId },
+            {
+              ownership: authorization.ownership,
+              agentId: current.agentId,
+              ...(current.activeRun.version !== undefined ? { expectedVersion: current.activeRun.version } : {}),
+              signal: context.signal,
+            },
+          );
+        }
       }
     })
     .onRequest(methods.agent.session.close, async (context) => {

@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.6] - unreleased
+
+### Added
+- **Durable ACP run recovery** (plan 026 Task 5): optional `recovery` seam (`checkpoints` + `leases` + `ownerId`, all three together; partial config fails closed) plus the existing `sessionStore` persist a bounded `activeRun` ref on `PersistedAcpSession` (frozen 512-byte cap, additive optional field — 0.1.6 records remain readable) while a durable run is live: running on first event, suspended with the durable version on approvals, terminal on finish/deny/error. Restore re-attaches the ref; `createAcpRunRecovery` (new export) re-resolves it against `AgentRunLifecycle.status` — suspended runs preserve pending approval ids, terminal runs report terminal, unprovable in-flight streams report `unknown` (never a restarted prompt). Durable cancellation is ownership/version/fence checked, terminal/idempotent, aborts no unrelated run, and never replays a pending/dispatched tool; `session/cancel` writes the marker for restored runs (new `prism.coding-agent.cancel.v1` namespace, CAS + lease fenced). Errors `ERR_PRISM_RECOVERY_*`; corrupt/oversized refs and markers fail closed.
+
 ## [0.1.6] - 2026-08-11
 
 ### Changed

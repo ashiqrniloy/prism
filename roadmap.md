@@ -340,6 +340,7 @@ Each milestone requires its own numbered plan. Plans that add or change a public
 ### 0.2.9 - Autonomous updates for packages other than core
 - Setup docs and skills such that only packages with updates get released
 - Not all packages are needed to be updated with the same version
+- Deepseek API with stable cache prefix
 
 ### Mandatory 0.2.x regression matrix
 

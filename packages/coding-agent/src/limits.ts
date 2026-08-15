@@ -186,6 +186,18 @@ export const HARD_MAX_WORKSPACE_LEASE_TTL_MS = 300_000;
 export const DEFAULT_MAX_WORKSPACE_CLEANUP_OPERATIONS = 100;
 export const HARD_MAX_WORKSPACE_CLEANUP_OPERATIONS = 1_000;
 
+/** Plan 026 Task 5: durable process/ACP recovery caps (frozen in the phase26 manifest). */
+export const DEFAULT_MAX_RECOVERY_RECORDS = 32;
+export const HARD_MAX_RECOVERY_RECORDS = 128;
+export const DEFAULT_MAX_RECOVERY_LEASE_TTL_MS = 30_000;
+export const HARD_MAX_RECOVERY_LEASE_TTL_MS = 300_000;
+export const DEFAULT_MAX_RECOVERY_ATTACH_TIMEOUT_MS = 30_000;
+export const HARD_MAX_RECOVERY_ATTACH_TIMEOUT_MS = 120_000;
+export const DEFAULT_MAX_RECOVERY_BACKEND_REF_BYTES = 1024;
+export const HARD_MAX_RECOVERY_BACKEND_REF_BYTES = 4 * 1024;
+export const DEFAULT_MAX_RECOVERY_RECORD_BYTES = 64 * 1024;
+export const HARD_MAX_RECOVERY_RECORD_BYTES = 256 * 1024;
+
 /** Validate one configurable coding resource limit. Invalid values fail instead of clamping. */
 export function validateCodingLimit(name: string, value: number, hardCap: number): number {
   if (!Number.isSafeInteger(value) || value < 1 || value > hardCap) {

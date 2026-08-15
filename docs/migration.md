@@ -1,5 +1,21 @@
 # Migration guide
 
+## 0.2.5 → 0.2.6 durable recovery, workspaces, and coding-agent readiness (additive)
+
+Release **0.2.6** (plan 026) adds the coding-agent readiness capabilities behind optional host-activated seams: host-selected PTY backends, the indexed/semantic repository-search seam, the ownership-scoped multi-repository/worktree lifecycle, durable process/ACP recovery, and the patch-review/diagnostics workflow. **Additive-only: no exported declaration removed or changed, no persisted 0.2.5 shape repurposed.**
+
+New durable records use **separate versioned checkpoint namespaces**, never the 0.2.5 shapes:
+
+- `prism.coding-agent.process.v1` (schemaVersion 1) — managed-process recovery records. Readers reject unknown schema versions and corrupt/foreign records fail closed (dropped, never recovered).
+- `prism.coding-agent.workspace.v1` (schemaVersion 1) — coding workspace lifecycle records.
+- `prism.coding-agent.cancel.v1` (schemaVersion 1) — durable ACP run-cancel markers.
+
+`CodingCheckpointMetadata` (schemaVersion 1, `prism.coding-agent`) is **never silently repurposed**; 0.2.5 readers reject unknown schema versions as before.
+
+**ACP active-run references (Task 5 decision: additive optional field).** `PersistedAcpSession` gains an optional bounded `activeRun` ref (frozen 512-byte cap) recorded while a durable run is live. The decision recorded here: an additive optional field, not a separate recovery namespace, because the ref is advisory metadata — the authoritative run status is always re-queried from `AgentRunLifecycle.status` at restore time, and 0.2.5 hosts safely ignore the field. `PersistedAcpSession.activeRun` stays optional; 0.2.5 records remain readable and a 0.2.5 host reading a 0.2.6 record does not lose required recovery state (the run state itself lives in the existing `prism.agent-run` records, which are untouched).
+
+**Downgrade to 0.2.5** is safe only after stopping 0.2.6 workers/replicas and marking any live 0.2.6 process/workspace records `unknown` (their leases expire within TTL); durable state never serializes a PTY fd, browser context, process object, controller, pending promise, raw terminal output, env, token, or credential, and no exact-process-survival claim is made (attach-if-attested, otherwise unknown).
+
 ## 0.2.4 → 0.2.5 maintainability and bounded performance (no migration)
 
 Release **0.2.5** (plan 025) is the maintainability-and-bounded-performance cut: the six remaining implementation god-modules split into cohesive internal family files behind preserved barrels (compat-preserving, no `exports`-map subpath), 21 pure persistence helpers moved into the dependency-free `session-store-codecs` package (ownership scope/assertion, checkpoint stale/encode/decode, branch cursors, lifecycle quota/reason/page-limit, search metadata/clipping, deepFreeze/string-array/throwIfAborted, feedback row mapping), the quadratic per-push `Buffer.concat` loops in language framing and tar parsing became chunk-array readers (linear; caps and fail-closed overflow byte-identical), two internal dead type aliases removed (`PostgresPersistenceCloseOptions`, `SqlitePersistenceCloseOptions` — never re-exported from their adapter indexes), and 76 behavior-backed coverage regressions closed the low-coverage core areas (core 91.43/84.80/91.60 lines/branches/functions). **No runtime contract change and no migration**: no exported declaration was removed or changed (the plain reviewed compat gate at 0.2.5 shows the version literal plus 105 additive internal-helper exports), no persisted shape/schema/default/behavior changed, no new runtime dependency. Store compatibility with 0.2.4: **compatible in both directions** — no migration step; rollback = restore the 0.2.4 manifests/tag (stores never change; the added exports disappear on downgrade). The 20 dead-but-compat-tracked exports deferred from Task 4 are the 0.3.0 breaking-cut removal list (see `docs/_evidence/phase25-dead-exports-triage.md`).

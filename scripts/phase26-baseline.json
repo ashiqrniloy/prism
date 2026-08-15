@@ -1,9 +1,9 @@
 {
-  "$comment": "Phase 26 (0.2.6) Task 0 baseline, captured from the 0.2.5 release state (HEAD da701dd) before any 0.2.6 source edit. Inherits the 0.2.5 exit-gate figures from scripts/phase25-baseline.json. seams holds SHA-256 hashes for every single-editor allowed file of the phase26 freeze manifest plus roadmap.md: while the owning task token is pending the file must stay byte-identical (absent files stay absent); once the task is done, the freeze test asserts content markers instead. exitGate stays null until Task 8 records it green with blocked: false. Shared coordination files (package.json, plan 026, plans/README.md, docs/index.md, changelogs, barrels, docs with multiple editors) are not hash-locked; they are marker-checked per editor task.",
-  "captured": "2026-08-15T19:12:38.683Z",
+  "$comment": "Phase 26 (0.2.6) Task 0 baseline, captured from the 0.2.5 release state (HEAD 306a545) before any 0.2.6 source edit. Inherits the 0.2.5 exit-gate figures from scripts/phase25-baseline.json. seams holds SHA-256 hashes for every single-editor allowed file of the phase26 freeze manifest plus roadmap.md: while the owning task token is pending the file must stay byte-identical (absent files stay absent); once the task is done, the freeze test asserts content markers instead. exitGate stays null until Task 8 records it green with blocked: false. Shared coordination files (package.json, plan 026, plans/README.md, docs/index.md, changelogs, barrels, docs with multiple editors) are not hash-locked; they are marker-checked per editor task.",
+  "captured": "2026-08-15T19:59:58.449Z",
   "release": "0.2.6",
   "baselineRelease": "0.2.5",
-  "gitHead": "da701dd",
+  "gitHead": "306a545",
   "node": "v24.19.0",
   "platform": "linux",
   "inherited": {
@@ -108,20 +108,20 @@
       "sha256": "337af69ad2d828582036ff35fe36307f552b1d812727725c6a330065448baf6e",
       "status": "present"
     },
-    "packages/ag-ui/src/acp/__tests__/acp-recovery.test.ts": {
-      "sha256": null,
-      "status": "absent"
+    "packages/ag-ui/src/__tests__/acp-recovery.test.ts": {
+      "sha256": "5acfe36d7b0cbc66c6547da27a1af549a118a22846878aba6d00b93d71ee65b9",
+      "status": "present"
     },
     "packages/ag-ui/src/acp/agent.ts": {
-      "sha256": "8a653880a47ae466414139e579239a9a3f0afe3bf38cd4145b4d04d517dd9e27",
+      "sha256": "e76b8309a0c717eda1f0c8cf2b1408e61f864f2642bc398c0040ebcafeff1569",
       "status": "present"
     },
     "packages/ag-ui/src/acp/session-store.ts": {
-      "sha256": "2b7d2cc0e2813d43be0969b3213cfdef18685bd9df158f34a9a5d74d85896e65",
+      "sha256": "38c5d9813390885de994bab3e8683e20867c0a3649c2b9eea48e68a4a53d1375",
       "status": "present"
     },
     "packages/ag-ui/src/acp/terminal-client.ts": {
-      "sha256": "ee8c841748729c667f4c3b31c49ff00e2e5a9faab040f55b7d9ee7d1e57c7ab2",
+      "sha256": "4d63ae772e61bd50f78d142a9671d5bb92a6f31656f1772f715569ff956b776b",
       "status": "present"
     },
     "packages/coding-agent/src/__tests__/indexed-search.test.ts": {
@@ -134,6 +134,10 @@
     },
     "packages/coding-agent/src/__tests__/process-pty.test.ts": {
       "sha256": "ebdba7460360fac6ea356551ab3c69bc02bae362a45ab0f23078c5bca6aa3a81",
+      "status": "present"
+    },
+    "packages/coding-agent/src/__tests__/process-recovery.test.ts": {
+      "sha256": "d7d159f441b58fab127d55e95d0061a6d05c361bc285f78dc4c5d8a64312a85b",
       "status": "present"
     },
     "packages/coding-agent/src/__tests__/review.test.ts": {
@@ -184,13 +188,9 @@
       "sha256": "1b80979fe5f1bed5a3f241081979db21162112b513c20a4bb5033b7fb82e96e3",
       "status": "present"
     },
-    "packages/coding-agent/src/process/__tests__/process-recovery.test.ts": {
-      "sha256": null,
-      "status": "absent"
-    },
     "packages/coding-agent/src/process/recovery.ts": {
-      "sha256": null,
-      "status": "absent"
+      "sha256": "19f63aa3097063d457b8a3328a374609ab300beeeab5db32b7a115d7284285ad",
+      "status": "present"
     },
     "packages/coding-agent/src/repository.ts": {
       "sha256": "ac3edbe9b9778989cf8d7ac89cad8bc3cd9937b35233b13605e80084245072b9",
@@ -225,7 +225,7 @@
       "status": "present"
     },
     "roadmap.md": {
-      "sha256": "a26a9b060872e01214e83ee12f71e95bfd5e75fc1cb46609e4d0c30fa59f4518",
+      "sha256": "9419b652f145051303c08ee43b16906476719f48b95e3e32bfa753eb9ea1232e",
       "status": "present"
     },
     "scripts/fixtures/phase26-coding-journey.mjs": {
@@ -233,7 +233,7 @@
       "status": "absent"
     },
     "scripts/package-truth.json": {
-      "sha256": "8730958cdd7e1c866a986955f9450b6ca3dba5a8b99f46fbc4d50311f67a4e04",
+      "sha256": "e5430d10a09a5111e6adad468580cd2ca3b783aae89671918acc65eeec4b4f71",
       "status": "present"
     },
     "scripts/phase26-baseline.mjs": {
@@ -249,7 +249,7 @@
       "status": "absent"
     },
     "scripts/phase26-freeze.test.mjs": {
-      "sha256": "1cf55297fd5b00436dce1ecb274a113673793df10ea5b483c436ea2b0a1f0b4e",
+      "sha256": "38287ad87dcf5fdcf8b09cd9aa2a9c0d7327b2a8d2aa1c0dc5ab7da3b1cd3a12",
       "status": "present"
     },
     "scripts/phase26-index-benchmark.test.mjs": {
@@ -261,8 +261,8 @@
       "status": "present"
     },
     "scripts/phase26-recovery-conformance.test.mjs": {
-      "sha256": null,
-      "status": "absent"
+      "sha256": "85f1a341fe8551ed817c0c7f9540270736b5a931e4c043011e15bdc609435b01",
+      "status": "present"
     },
     "scripts/release-skip-manifest.mjs": {
       "sha256": "871a761cf3699f805d57ebd125413d71c0bb7f657b61efc94c8d0ab0783563fb",

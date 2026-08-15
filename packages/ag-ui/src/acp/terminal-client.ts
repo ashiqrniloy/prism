@@ -7,6 +7,13 @@
  * when the client advertised `terminal`. Output payloads honor the frozen
  * Phase 9 `process.outputChunkBytes` cap (DEFAULT/HARD), requested as the
  * client-side `outputByteLimit` and verified on every response.
+ *
+ * Restart semantics (plan 026 Task 5): a host that survived a restart may
+ * report a terminal whose managed process is not attestable. The host-side
+ * terminal then reports `unknown` (exitCode null) and the agent must not
+ * fabricate an exit code, replay input, or auto-restart the command — the
+ * terminal stays pull-based until the host resolves it or the client releases
+ * it.
  */
 import { methods, type AgentContext, type CreateTerminalRequest } from "@agentclientprotocol/sdk";
 import { DEFAULT_MAX_PROCESS_OUTPUT_CHUNK_BYTES, HARD_MAX_PROCESS_OUTPUT_CHUNK_BYTES } from "@arnilo/prism-coding-agent";

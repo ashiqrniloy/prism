@@ -117,6 +117,8 @@ Host-indexed search (0.2.6, plan 026): `createIndexedRepositoryOperations` compo
 
 Durable workspace lifecycle (0.2.6, plan 026): `createCodingWorkspaceLifecycle` registers host repositories and creates/locks/verifies/removes linked worktrees per task, with CheckpointStore CAS records, LeaseStore fencing, credential-free remote fingerprints, and a cleanup policy refusing dirty/locked/unowned/mismatched trees unless allowed. See docs/coding-workspaces.md.
 
+Durable process recovery (0.2.6, plan 026): with `checkpoints` + `leases` + `ownerId`, `createProcessSessions` persists intent before spawn and CAS/fence-writes every transition; `recover()` is attach-if-attested via a host `recoveryBackend`, otherwise starting/running records atomically become `unknown` — no fabricated exit, no PID probing, replica-fenced so two replicas cannot both own a process. See docs/process-sessions.md.
+
 Option/operation types: `ToolsOptions`, `ShellToolOptions`/`BashOperations`, `ReadToolOptions`/`ReadOperations`/`ReadTextOptions`/`ReadTextResult`, `WriteToolOptions`/`WriteOperations`, `EditToolOptions`/`EditOperations`/`EditToolDetails`, `DeleteToolOptions`/`DeleteOperations`, `MoveToolOptions`/`MoveOperations`, `GlobToolOptions`, `ReadPathSet`.
 
 Text reads stop after one page or `maxScanBytes` instead of loading the file. Custom `ReadOperations` must implement bounded `readText` and `statFile`; custom `EditOperations` must implement `statFile` and honor the supplied read cap/signal. Successful truncated shell output is retained in an exclusive Unix `0600` temp file owned by the host; timeout, abort, output-limit, and spill failures remove unpublished spill files. Hosts should delete published `metadata.fullOutputPath` files after use.

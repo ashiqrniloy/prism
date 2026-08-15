@@ -32,6 +32,8 @@ export interface ProcessSandboxHandle {
   kill(): Promise<void>;
   release(): Promise<void>;
   wait(options?: { timeoutMs?: number; signal?: AbortSignal }): Promise<{ exitCode: number | null }>;
+  /** Opaque non-secret reattachment ref for durable process recovery (plan 026 Task 5). */
+  readonly ref?: string;
 }
 
 export interface ProcessSandboxStartRequest {
@@ -81,6 +83,8 @@ export interface ProcessPtyHandle {
   resize?(dimensions: ProcessTerminalResize): Promise<void>;
   /** Bounded host metadata (UTF-8 JSON bytes <= maxPtyBackendMetadataBytes), surfaced via session metadata(). */
   readonly metadata?: Readonly<Record<string, string>>;
+  /** Opaque non-secret reattachment ref for durable process recovery (plan 026 Task 5). */
+  readonly ref?: string;
   wait(options?: { timeoutMs?: number; signal?: AbortSignal }): Promise<{ exitCode: number | null }>;
 }
 
@@ -232,6 +236,8 @@ export interface ProcessStartRequest {
   readonly owner?: string;
   /** When true, run cancel releases instead of killing (default kill). */
   readonly releaseOnCancel?: boolean;
+  /** Abortable start: an aborted signal fails the start before spawn persists. */
+  readonly signal?: AbortSignal;
 }
 
 export interface ProcessOutputChunk {
@@ -300,6 +306,15 @@ export interface ProcessSessions {
    * Never fabricates exitCode. O(owned sessions).
    */
   reconcile(): Promise<{ readonly markedUnknown: number }>;
+  /**
+   * Durable process recovery (plan 026 Task 5): reconcile durable recovery
+   * records against the live registry — attach-if-attested via the host
+   * recovery backend, otherwise `starting|running` records atomically become
+   * `unknown`. Never fabricates an exit code and never probes PIDs. Requires
+   * `checkpoints` + `leases` + `ownerId` at construction, else
+   * ERR_PRISM_RECOVERY_UNSUPPORTED. O(owned records).
+   */
+  recover(options?: { signal?: AbortSignal }): Promise<import("./recovery.js").ProcessRecoveryReport>;
   dispose(): Promise<void>;
 }
 
@@ -322,4 +337,17 @@ export interface CreateProcessSessionsOptions {
    * `ERR_PRISM_PROCESS_PTY_UNSUPPORTED` before process creation.
    */
   readonly ptyBackend?: ProcessPtyBackend;
+  /**
+   * Phase 26 durable process recovery: intent is persisted before spawn and
+   * lifecycle transitions are CAS-written under LeaseStore fencing. All three
+   * of `checkpoints`, `leases`, and `ownerId` must be present together — a
+   * partial recovery configuration fails closed at construction. `recover()`
+   * is attach-if-attested via `recoveryBackend`; otherwise starting/running
+   * records atomically become unknown (no fabricated exit, no PID probing).
+   */
+  readonly checkpoints?: import("@arnilo/prism").CheckpointStore;
+  readonly leases?: import("@arnilo/prism").LeaseStore;
+  readonly ownerId?: string;
+  readonly recoveryBackend?: import("./recovery.js").ProcessRecoveryBackend;
+  readonly recoveryLimits?: import("./recovery.js").ProcessRecoveryLimits;
 }

@@ -8,8 +8,9 @@ import type { AgUiAuthorization } from "../../types.js";
 import type { AgUiLimitOptions } from "../../limits.js";
 import type { AgUiProjection } from "../../projection.js";
 import type { AgentContext, McpServer } from "@agentclientprotocol/sdk";
-import type { AgentRunLifecycle, AgentSession, OwnershipScope, PendingDecision, SecretRedactor } from "@arnilo/prism";
+import type { AgentRunLifecycle, AgentSession, CheckpointStore, LeaseStore, OwnershipScope, PendingDecision, SecretRedactor } from "@arnilo/prism";
 import type { CodingLifecycleEmitter } from "@arnilo/prism-coding-agent";
+import type { PersistedAcpRunRef } from "../session-store.js";
 
 export interface AcpAuthorization extends AgUiAuthorization {}
 
@@ -69,6 +70,19 @@ export interface CreatePrismAcpAgentOptions<Authorization extends AcpAuthorizati
   readonly sessions?: AcpSessionStoreSeams;
   /** Host-owned durable registry store (plan 018 Task 2); absent seam => in-memory 0.1.5 behavior. */
   readonly sessionStore?: AcpSessionStore;
+  /**
+   * Durable run recovery (plan 026 Task 5): with `sessionStore` wired, the
+   * agent persists a bounded active-run reference on live runs and restores it
+   * after restart; hosts re-resolve it with `createAcpRunRecovery` (exported
+   * from this barrel). The recovery seam here gates durable cancellation of
+   * restored runs. All three fields must be present together.
+   */
+  readonly recovery?: {
+    readonly checkpoints: CheckpointStore;
+    readonly leases: LeaseStore;
+    readonly ownerId: string;
+    readonly leaseTtlMs?: number;
+  };
   /** MCP seams; presence of `select` plus `transports` advertises mcpCapabilities per transport. */
   readonly mcp?: AcpMcpSeams;
   /** Capability policy seams (prompt media/embedded gates). */
@@ -97,6 +111,12 @@ export interface ActiveSession extends AcpSessionBinding {
   cwd?: string;
   /** Policy-checked additional roots at registration (phase 18 Task 2 persistence). */
   additionalDirectories?: readonly string[];
+  /**
+   * Bounded active-run reference (plan 026 Task 5): the durable run in flight
+   * for this session, persisted via the session store and restored on restart.
+   * Advisory only — authoritative status comes from AgentRunLifecycle.status.
+   */
+  activeRun?: PersistedAcpRunRef;
 }
 
 export type ElicitationPendingDecision = PendingDecision & { readonly kind: "elicitation" };

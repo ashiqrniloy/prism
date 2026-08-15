@@ -138,6 +138,46 @@ await sessions.dispose();
 - Command fingerprint is SHA-256 of `[command, ...args]` only (no env).
 - Docker reference adapter does not implement `startProcess` yet — fail closed until a capable runtime is wired.
 
+## Durable process recovery (plan 026 Task 5)
+
+Optional, host-activated: pass `checkpoints` + `leases` + `ownerId` (all three
+together; a partial recovery configuration fails closed at construction) and
+optionally `recoveryBackend` + `recoveryLimits`. With durability configured:
+
+- Intent is persisted BEFORE spawn into the versioned namespace
+  `prism.coding-agent.process.v1` (schemaVersion 1, category `coding-process`),
+  and every lifecycle transition (running, exited, killed, released, expired,
+  unknown) is a CheckpointStore CAS write under a monotonic LeaseStore fencing
+  token. Transition writes are serialized per record so CAS order never inverts
+  on slow stores.
+- `recover()` reconciles durable records against the live registry:
+  - records already live here report `attached` without mutation;
+  - terminal records report `terminal` with their exit code;
+  - `starting|running` records attach-if-attested: a `backendRef` (opaque
+    non-secret ref surfaced by a PTY/sandbox handle's optional `ref`) plus a
+    host `recoveryBackend.attach(ref)` (bounded attach timeout 30 s default /
+    120 s hard) may reattach; otherwise the record atomically becomes `unknown`
+    with exit code null — no PID probing, no fabricated exit, no duplicate
+    spawn. `recover()` without durability configured throws
+    `ERR_PRISM_RECOVERY_UNSUPPORTED`.
+- Recovered sessions are live registry sessions: input/signal/kill/release/
+  resize/wait reach the attached backend; output streaming is not re-established
+  after a restart (the host backend owns any buffered output behind its ref).
+- Replica coordination: every mutation takes a per-record lease (30 s default /
+  300 s hard); a crashed replica's lease lapses within TTL, a live one renews
+  on transitions and releases on terminal transitions. A held lease makes the
+  second replica report `unknown` without touching the record; CAS/fence
+  conflicts fail closed with `ERR_PRISM_RECOVERY_FENCE`.
+- `cancelOwned` after recovery either reaches the attached backend or records
+  the durable record unknown — never a fabricated exit.
+- Durable records are metadata only: no child/PTY handle, controller, promise,
+  raw output, env, token, or credential is ever serialized; forbidden fields,
+  corrupt, oversized, or cross-tenant records fail closed (dropped, never
+  recovered). Records are capped (32 default / 128 hard; oldest terminal
+  records evict beyond the cap; running records are never evicted).
+- Errors: `ERR_PRISM_RECOVERY_UNSUPPORTED` / `_LIMIT` / `_OWNERSHIP` / `_FENCE`
+  / `_UNKNOWN` / `_UNTRUSTED` / `_TIMEOUT` (`ProcessRecoveryError`).
+
 ## Security and performance notes
 
 | Cap | Default | Hard |

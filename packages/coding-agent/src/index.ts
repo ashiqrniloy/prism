@@ -325,6 +325,28 @@ export {
   ProcessSessionError,
   resolveProcessSessionLimits,
 } from "./process/index.js";
+// durable process/ACP recovery seam (plan 026 Task 5): recover() is
+// attach-if-attested and never fabricates an exit code; exports below
+export {
+  PROCESS_RECOVERY_CATEGORY,
+  PROCESS_RECOVERY_LEASE_NAMESPACE,
+  PROCESS_RECOVERY_NAMESPACE,
+  PROCESS_RECOVERY_SCHEMA_VERSION,
+  ProcessRecoveryError,
+  resolveProcessRecoveryLimits,
+  validateBackendRef,
+  validateProcessRecoveryRecord,
+} from "./process/index.js";
+export type {
+  ProcessRecoveryBackend,
+  ProcessRecoveryErrorCode,
+  ProcessRecoveryLimits,
+  ProcessRecoveryOutcome,
+  ProcessRecoveryRecord,
+  ProcessRecoveryRecordReport,
+  ProcessRecoveryReport,
+  ResolvedProcessRecoveryLimits,
+} from "./process/index.js";
 export type { SearchToolOptions } from "./search.js";
 export { createRepoSearchTool } from "./search.js";
 export type {

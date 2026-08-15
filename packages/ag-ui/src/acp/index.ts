@@ -17,7 +17,9 @@ export {
 export { type AcpErrorCode, AcpError } from "./errors.js";
 export { type AcpClientFilesystem, type AcpClientFilesystemOptions, createAcpClientFilesystem } from "./fs-client.js";
 // biome-ignore lint/style/useExportType: compat-surface parser keys per-name type modifiers as `type Name`; the frozen ag-ui baseline records this value-style statement shape, so it must not become `export type` (0.2.3 gate review)
-export { type AcpSessionStore, type PersistedAcpSession } from "./session-store.js";
+export { type AcpSessionStore, type PersistedAcpSession, type PersistedAcpRunRef } from "./session-store.js";
+export { validateActiveRunRef } from "./session-store.js";
+export * from "./agent/recovery.js";
 // biome-ignore lint/style/useExportType: same compat-surface statement-shape freeze as above
 export {
   type AcpConfigOption,

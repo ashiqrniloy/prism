@@ -31,6 +31,32 @@ const MAX_CONFIG_KEYS = 32;
 const MAX_CONFIG_KEY_BYTES = 128;
 const MAX_CONFIG_VALUE_BYTES = 4096;
 
+/** Frozen plan 026 Task 5 cap: the whole active-run ref (JSON) is at most 512 bytes. */
+export const MAX_ACTIVE_RUN_REF_BYTES = 512;
+const MAX_RUN_ID_BYTES = 128;
+const MAX_RUN_SESSION_ID_BYTES = 128;
+
+/**
+ * Additive optional active-run reference (plan 026 Task 5) recorded on a
+ * persisted ACP session. It is advisory metadata only: the authoritative run
+ * status is always re-queried from `AgentRunLifecycle.status` at restore time.
+ * 0.2.5 hosts safely ignore it; 0.2.6 hosts use it to report suspended runs
+ * (pending approval ids), terminal runs, or unprovable in-flight streams as
+ * unknown — never restarting the prompt automatically.
+ */
+export interface PersistedAcpRunRef {
+  /** Durable run id (`AgentRunRef.runId`). */
+  readonly runId: string;
+  /** Durable session id (`AgentRunRef.sessionId`). */
+  readonly sessionId: string;
+  /** Last observed live status: in-flight, suspended on approvals, or terminal. */
+  readonly status: "running" | "suspended" | "terminal";
+  /** Last observed durable run version (approval/decision epoch). */
+  readonly version?: number;
+  /** ISO 8601 timestamp of the last persisted status change. */
+  readonly updatedAt: string;
+}
+
 /** One persisted registry entry; the frozen shape written by `AcpSessionStore.save`. */
 export interface PersistedAcpSession {
   readonly sessionId: string;
@@ -46,6 +72,11 @@ export interface PersistedAcpSession {
   readonly additionalDirectories: readonly string[];
   /** ISO 8601 timestamp of last persisted state change. */
   readonly updatedAt: string;
+  /**
+   * Optional bounded active-run reference (plan 026 Task 5); absent for
+   * 0.2.5 records and for sessions with no durable run in flight.
+   */
+  readonly activeRun?: PersistedAcpRunRef;
 }
 
 /** Host-owned durability seam (plan 018 Task 2). Absent seam => in-memory 0.1.5 behavior. */
@@ -61,6 +92,40 @@ export interface AcpSessionStore {
 /** Canonical ownership key — the only valid key for persisted entries. */
 export function ownershipKey(ownership: OwnershipScope): string {
   return `${ownership.tenantId ?? ""}|${ownership.accountId ?? ""}|${ownership.userId ?? ""}`;
+}
+
+/** Validate one bounded active-run ref (frozen 512-byte cap; unknown fields fail closed). */
+export function validateActiveRunRef(ref: unknown): PersistedAcpRunRef {
+  if (typeof ref !== "object" || ref === null) throw new AcpError("ERR_PRISM_ACP_INPUT", "invalid activeRun ref");
+  const value = ref as Record<string, unknown>;
+  for (const forbidden of ["env", "token", "credential", "secret", "commandOutput", "rawOutput"]) {
+    if (forbidden in value) throw new AcpError("ERR_PRISM_ACP_INPUT", `forbidden field ${forbidden} in activeRun ref`);
+  }
+  const runId = value.runId as string | undefined;
+  const sessionId = value.sessionId as string | undefined;
+  const status = value.status as string | undefined;
+  const version = value.version as number | undefined;
+  const updatedAt = value.updatedAt as string | undefined;
+  if (typeof runId !== "string" || runId.length === 0 || Buffer.byteLength(runId, "utf8") > MAX_RUN_ID_BYTES) {
+    throw new AcpError("ERR_PRISM_ACP_LIMIT", `invalid activeRun runId (max ${MAX_RUN_ID_BYTES} bytes)`);
+  }
+  if (typeof sessionId !== "string" || sessionId.length === 0 || Buffer.byteLength(sessionId, "utf8") > MAX_RUN_SESSION_ID_BYTES) {
+    throw new AcpError("ERR_PRISM_ACP_LIMIT", `invalid activeRun sessionId (max ${MAX_RUN_SESSION_ID_BYTES} bytes)`);
+  }
+  if (status !== "running" && status !== "suspended" && status !== "terminal") {
+    throw new AcpError("ERR_PRISM_ACP_INPUT", "invalid activeRun status");
+  }
+  if (version !== undefined && (!Number.isSafeInteger(version) || version < 0)) {
+    throw new AcpError("ERR_PRISM_ACP_INPUT", "invalid activeRun version");
+  }
+  if (typeof updatedAt !== "string" || Number.isNaN(Date.parse(updatedAt))) {
+    throw new AcpError("ERR_PRISM_ACP_INPUT", "invalid activeRun updatedAt (ISO 8601)");
+  }
+  const refValue: PersistedAcpRunRef = { runId, sessionId, status, ...(version !== undefined ? { version } : {}), updatedAt };
+  if (Buffer.byteLength(JSON.stringify(refValue), "utf8") > MAX_ACTIVE_RUN_REF_BYTES) {
+    throw new AcpError("ERR_PRISM_ACP_LIMIT", `activeRun ref exceeds ${MAX_ACTIVE_RUN_REF_BYTES} bytes`);
+  }
+  return refValue;
 }
 
 /** Shape + byte-cap validation. Throws ERR_PRISM_ACP_LIMIT/ERR_PRISM_ACP_INPUT (save boundary fails the request). */
@@ -101,4 +166,5 @@ export function validatePersistedSession(entry: PersistedAcpSession): void {
   if (typeof updatedAt !== "string" || Number.isNaN(Date.parse(updatedAt))) {
     throw new AcpError("ERR_PRISM_ACP_INPUT", "invalid updatedAt (ISO 8601)");
   }
+  if (entry.activeRun !== undefined) validateActiveRunRef(entry.activeRun);
 }

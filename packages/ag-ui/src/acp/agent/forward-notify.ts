@@ -20,13 +20,32 @@ export async function forward<Authorization extends AcpAuthorization>(
   limits: ReturnType<typeof resolveAgUiLimits>,
   options: CreatePrismAcpAgentOptions<Authorization>,
   clientCapabilities: ResolvedAcpClientCapabilities,
+  onRunRef?: (ref: import("../session-store.js").PersistedAcpRunRef) => void,
 ): Promise<void> {
   const budget = current.budget ?? { events: 0, bytes: 0 };
   const mapper = createAcpEventMapper({ redactor: options.redactor, projection: options.projection, limits: options.limits });
-  for await (const event of source) {
-    for (const update of await mapper.map(event)) await notify(client, sessionId, update, budget, limits);
-    if (event.type !== "agent_suspended") continue;
-    const pending = event.interruption.pendingDecisions ?? [];
+  let lastRef: import("../session-store.js").PersistedAcpRunRef | undefined;
+  const announce = (ref: import("../session-store.js").PersistedAcpRunRef): void => {
+    lastRef = ref;
+    onRunRef?.(ref);
+  };
+  try {
+    for await (const event of source) {
+      if (!lastRef && "runId" in event && typeof event.runId === "string" && typeof event.sessionId === "string") {
+        announce({ runId: event.runId, sessionId: event.sessionId, status: "running", updatedAt: new Date().toISOString() });
+      }
+      for (const update of await mapper.map(event)) await notify(client, sessionId, update, budget, limits);
+      if (event.type === "agent_denied") {
+        announce({ runId: event.runId, sessionId: event.sessionId, status: "terminal", version: event.version, updatedAt: new Date().toISOString() });
+        continue;
+      }
+      if (event.type === "agent_finished") {
+        announce({ runId: event.runId, sessionId: event.sessionId, status: "terminal", updatedAt: new Date().toISOString() });
+        continue;
+      }
+      if (event.type !== "agent_suspended") continue;
+      announce({ runId: event.runId, sessionId: event.sessionId, status: "suspended", version: event.version, updatedAt: new Date().toISOString() });
+      const pending = event.interruption.pendingDecisions ?? [];
     const elicitations = pending.filter((decision): decision is ElicitationPendingDecision => decision.kind === "elicitation");
     const approvals = pending.filter((decision) => decision.kind === "tool_approval");
     if (elicitations.length > 0 && clientCapabilities.elicitation && approvals.length === 0) {
@@ -48,6 +67,7 @@ export async function forward<Authorization extends AcpAuthorization>(
         limits,
         options,
         clientCapabilities,
+        onRunRef,
       );
       return;
     }
@@ -67,8 +87,15 @@ export async function forward<Authorization extends AcpAuthorization>(
       limits,
       options,
       clientCapabilities,
+      onRunRef,
     );
     return;
+    }
+  } catch (error) {
+    if (lastRef) {
+      announce({ runId: lastRef.runId, sessionId: lastRef.sessionId, status: "terminal", updatedAt: new Date().toISOString() });
+    }
+    throw error;
   }
 }
 

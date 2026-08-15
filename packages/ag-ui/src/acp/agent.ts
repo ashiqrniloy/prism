@@ -8,3 +8,4 @@ export * from "./agent/forward-notify.js";
 export * from "./agent/permission-elicit.js";
 export * from "./agent/decision.js";
 export * from "./agent/abort-truncate.js";
+export * from "./agent/recovery.js";
