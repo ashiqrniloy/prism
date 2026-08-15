@@ -239,6 +239,29 @@ export {
 export { createIndexedRepositoryOperations, resolveIndexLimits } from "./repository.js";
 export type { GitAwareRepositoryOptions } from "./git-aware-repository.js";
 export { createGitAwareRepositoryOperations, parseGitLsFilesZ } from "./git-aware-repository.js";
+export {
+  createCodingWorkspaceLifecycle,
+  resolveWorkspaceLimits,
+  WORKSPACE_LOCK_REASON_PREFIX,
+  WORKSPACE_NAMESPACE,
+  WORKSPACE_SCHEMA_VERSION,
+  WORKSPACE_STATES,
+  WorkspaceError,
+} from "./workspace-lifecycle.js";
+export type {
+  CodingWorkspaceLifecycle,
+  CodingWorkspaceRecord,
+  CreateCodingWorkspaceLifecycleOptions,
+  ResolvedWorkspaceLimits,
+  WorkspaceCleanupPolicy,
+  WorkspaceCreateRequest,
+  WorkspaceErrorCode,
+  WorkspaceLimitOptions,
+  WorkspaceRepositoryRecord,
+  WorkspaceRepositoryRegistration,
+  WorkspaceRepositoryState,
+  WorkspaceState,
+} from "./workspace-lifecycle.js";
 export type {
   CreateLanguageIntelligenceOptions,
   LanguageDiagnostic,

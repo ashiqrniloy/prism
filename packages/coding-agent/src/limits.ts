@@ -173,6 +173,19 @@ export const HARD_MAX_FORGE_REQUEST_CONCURRENCY = 8;
 export const DEFAULT_MAX_FORGE_REQUEST_TIMEOUT_MS = 30_000;
 export const HARD_MAX_FORGE_REQUEST_TIMEOUT_MS = 120_000;
 
+/** Phase 26 Task 0 freeze: coding workspace lifecycle caps (multi-repo/worktree, plan 026 Task 3). */
+export const DEFAULT_MAX_WORKSPACE_REPOSITORIES = 4;
+export const HARD_MAX_WORKSPACE_REPOSITORIES = 16;
+/** Worktree cap reuses the git worktree caps (4 / 16). */
+export const DEFAULT_MAX_WORKSPACE_WORKTREES = DEFAULT_MAX_GIT_WORKTREES;
+export const HARD_MAX_WORKSPACE_WORKTREES = HARD_MAX_GIT_WORKTREES;
+export const DEFAULT_MAX_WORKSPACE_RECORD_BYTES = 64 * 1024;
+export const HARD_MAX_WORKSPACE_RECORD_BYTES = 256 * 1024;
+export const DEFAULT_MAX_WORKSPACE_LEASE_TTL_MS = 30_000;
+export const HARD_MAX_WORKSPACE_LEASE_TTL_MS = 300_000;
+export const DEFAULT_MAX_WORKSPACE_CLEANUP_OPERATIONS = 100;
+export const HARD_MAX_WORKSPACE_CLEANUP_OPERATIONS = 1_000;
+
 /** Validate one configurable coding resource limit. Invalid values fail instead of clamping. */
 export function validateCodingLimit(name: string, value: number, hardCap: number): number {
   if (!Number.isSafeInteger(value) || value < 1 || value > hardCap) {

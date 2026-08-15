@@ -352,6 +352,10 @@ export function buildCodingCheckpointMetadata(input: {
   readonly updatedAt?: string;
   readonly limits?: CodingCheckpointLimitOptions;
 }): CodingCheckpointMetadata {
+  // Durable multi-repository workspace identity (worktree paths, heads,
+  // remote fingerprints, lease fencing) lives in the versioned
+  // CodingWorkspaceRecord (plan 026 Task 3, workspace-lifecycle.ts), not in
+  // this v1 metadata; resume revalidates that workspace before reuse.
   const metadata: CodingCheckpointMetadata = {
     schemaVersion: CODING_CHECKPOINT_SCHEMA_VERSION,
     taskId: input.taskId,

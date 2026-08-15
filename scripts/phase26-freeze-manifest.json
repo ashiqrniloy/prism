@@ -633,7 +633,7 @@
   "task0": "done",
   "task1": "done",
   "task2": "done",
-  "task3": "pending",
+  "task3": "done",
   "task4": "pending",
   "task5": "pending",
   "task6": "pending",
@@ -750,8 +750,7 @@
    "task": "task3",
    "posture": "Canonicalized roots; CAS + lease fencing; main worktree immutable; dirty/locked/unowned refuse unless host-authorized; partial -> unknown reconcilable; credential URLs never stored",
    "tests": [
-    "packages/coding-agent/src/__tests__/workspace-lifecycle.test.ts",
-    "scripts/phase26-recovery-conformance.test.mjs"
+    "packages/coding-agent/src/__tests__/workspace-lifecycle.test.ts"
    ]
   },
   {
@@ -856,7 +855,13 @@
   "untrusted_index"
  ],
  "supportMatrix": "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.2.6 changes none of it",
- "deviations": [],
+ "deviations": [
+  {
+   "id": "D-T3-1",
+   "what": "T3 stale-fence test mapping: the Task 0 manifest mapped T3's stale-fence test to scripts/phase26-recovery-conformance.test.mjs, which is a task5-owned single-editor file that must stay absent while task5 is pending. Flipping task3 done would fail the freeze threat-existence check. T3's mapped tests now reference only the task3-owned workspace-lifecycle.test.ts, whose lease/CAS fencing suite (held-lease rejection, ownership mismatch, monotonic fencing-token CAS) covers the stale-fence threat at unit level; the frozen Postgres two-replica fence leg ships in the task5 conformance file per plan 026 Task 3/5 test cases.",
+   "review": "Manifest threat mapping adjusted to respect single-editor ownership; no cap, state machine, compat, or API change; the Postgres conformance leg remains frozen for task5."
+  }
+ ],
  "regeneratedFiles": {
   "$comment": "Files rewritten by the npm test chain itself (timestamps), so byte-identity is meaningless; seams are recorded and presence checked, hash comparison skipped.",
   "scripts/package-truth.json": {

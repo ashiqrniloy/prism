@@ -354,7 +354,7 @@ Opt-in tools over a host-pinned Git executable (`gitPath`, default `/usr/bin/git
 | `git_status` | `status --porcelain=v2 -z --branch` → structured branch + entries + `dirty`. |
 | `git_diff` | Bounded `--no-ext-diff --no-textconv` diff; oversized output may spill via `artifactWriter`. |
 | `git_branch` | `validate` / `list` / `create` / `switch` with `git check-ref-format --branch`. Switch refuses unrelated dirty trees unless `createCheckpoint=true`. |
-| `git_worktree` | `list` / `add` / `remove` within finite worktree caps. |
+| `git_worktree` | `list` / `add` / `lock` / `unlock` / `remove` within finite worktree caps; list exposes `locked`/`lockReason` from porcelain. One-shot tool: durable multi-repository worktree lifecycle (create/verify/cleanup with ownership, fencing, and cleanup policy) lives in `createCodingWorkspaceLifecycle` — see [Coding workspaces](coding-workspaces.md). |
 | `git_apply` | `check` / `apply` / `reverse`; always `--check` before mutating apply. Apply requires clean/checkpoint; failures restore. |
 | `git_commit` | Explicit-path `add` + `commit --no-verify -F <tempfile>`; requires host `commitIdentity`. Allows dirty entries that are exactly the requested paths; unrelated dirt requires checkpoint. Never pushes. |
 | `git_pr_handoff` | Bounded `{ base, head, commits, changedPaths, diffstat, checks, artifact? }` for host PR creation. Never authenticates or opens a PR. |

@@ -8,6 +8,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { sha256Hex } from "./artifacts.js";
 import {
   type BoundGitRunner,
   type CreateGitRunnerOptions,
@@ -123,6 +124,23 @@ export interface PrHandoff {
   readonly artifact?: ArtifactReference;
 }
 
+/** One entry from `git worktree list --porcelain -z` (plan 026 Task 3). */
+export interface GitWorktreeEntry {
+  path: string;
+  head?: string;
+  branch?: string;
+  /** Porcelain `locked` record present. */
+  locked?: boolean;
+  /** Lock reason text when the porcelain record carries one. */
+  lockReason?: string;
+}
+
+export interface GitFingerprint {
+  /** SHA-256 of the credential-free remote URL plus default branch; never the URL itself. */
+  readonly remoteFingerprint: string;
+  readonly defaultBranch?: string;
+}
+
 export interface GitOperations {
   status(options?: { includeIgnored?: boolean; signal?: AbortSignal }): Promise<GitStatusResult>;
   diff(options?: {
@@ -137,12 +155,18 @@ export interface GitOperations {
     signal?: AbortSignal;
   }): Promise<{ refs?: string[]; name?: string; checkpoint?: string }>;
   worktree(options: {
-    action: "list" | "add" | "remove";
+    action: "list" | "add" | "remove" | "lock" | "unlock";
     path?: string;
     branch?: string;
     force?: boolean;
+    reason?: string;
     signal?: AbortSignal;
-  }): Promise<{ worktrees: readonly { path: string; head?: string; branch?: string }[]; path?: string }>;
+  }): Promise<{ worktrees: readonly GitWorktreeEntry[]; path?: string }>;
+  /**
+   * Repository identity for durable correlation: credential-free remote
+   * fingerprint plus default branch. Runs bounded read-only git queries only.
+   */
+  fingerprint(options?: { signal?: AbortSignal }): Promise<GitFingerprint>;
   apply(options: {
     patch: string;
     action: "check" | "apply" | "reverse";
@@ -400,12 +424,13 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
   }
 
   async function worktree(request: {
-    action: "list" | "add" | "remove";
+    action: "list" | "add" | "remove" | "lock" | "unlock";
     path?: string;
     branch?: string;
     force?: boolean;
+    reason?: string;
     signal?: AbortSignal;
-  }): Promise<{ worktrees: readonly { path: string; head?: string; branch?: string }[]; path?: string }> {
+  }): Promise<{ worktrees: readonly GitWorktreeEntry[]; path?: string }> {
     if (request.action === "list") {
       const result = await gitRequireOk(
         runner,
@@ -418,8 +443,8 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
         "git worktree list",
       );
       const records = gitText(result).split("\0").filter(Boolean);
-      const worktrees: Array<{ path: string; head?: string; branch?: string }> = [];
-      let current: { path: string; head?: string; branch?: string } | undefined;
+      const worktrees: GitWorktreeEntry[] = [];
+      let current: GitWorktreeEntry | undefined;
       for (const record of records) {
         if (record.startsWith("worktree ")) {
           if (current) worktrees.push(current);
@@ -428,6 +453,10 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
           current.head = record.slice("HEAD ".length);
         } else if (current && record.startsWith("branch ")) {
           current.branch = record.slice("branch ".length);
+        } else if (current && record.startsWith("locked")) {
+          current.locked = true;
+          const reason = record.slice("locked".length).trim();
+          if (reason) current.lockReason = reason;
         }
       }
       if (current) worktrees.push(current);
@@ -435,6 +464,23 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
         return { worktrees: worktrees.slice(0, limits.maxWorktrees) };
       }
       return { worktrees };
+    }
+
+    if (request.action === "lock" || request.action === "unlock") {
+      if (!request.path) throw new GitError("worktree path is required");
+      if (request.path.includes("\0") || request.path.startsWith("-")) {
+        throw new GitError("worktree path must not start with '-' or contain NUL");
+      }
+      const args = ["worktree", request.action];
+      if (request.action === "lock" && request.reason) {
+        if (request.reason.includes("\0") || Buffer.byteLength(request.reason, "utf8") > 1024) {
+          throw new GitError("worktree lock reason must be bounded and NUL-free");
+        }
+        args.push("--reason", request.reason);
+      }
+      args.push("--", request.path);
+      await gitRequireOk(runner, { args, cwd, signal: request.signal, maxOutputBytes: limits.maxOutputBytes }, `git worktree ${request.action}`);
+      return { worktrees: (await worktree({ action: "list", signal: request.signal })).worktrees, path: request.path };
     }
 
     if (request.action === "add") {
@@ -463,6 +509,22 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
     args.push("--", request.path);
     await gitRequireOk(runner, { args, cwd, signal: request.signal, maxOutputBytes: limits.maxOutputBytes }, "git worktree remove");
     return { worktrees: (await worktree({ action: "list", signal: request.signal })).worktrees, path: request.path };
+  }
+
+  async function fingerprint(options?: { signal?: AbortSignal }): Promise<GitFingerprint> {
+    const optional = async (args: readonly string[]): Promise<string | undefined> => {
+      const result = await runner.exec({ args, cwd, signal: options?.signal, maxOutputBytes: 64 * 1024 });
+      if (result.exitCode !== 0) return undefined;
+      const text = gitText(result).trim();
+      return text.length > 0 ? text : undefined;
+    };
+    const remoteUrl = await optional(["config", "--get", "remote.origin.url"]);
+    const originHead = await optional(["symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD"]);
+    const initDefault = await optional(["config", "--get", "init.defaultBranch"]);
+    const defaultBranch = originHead ? originHead.replace(/^origin\//, "") : initDefault;
+    const redacted = redactRemoteUrl(remoteUrl ?? "");
+    const fingerprintSource = Buffer.from(`${redacted}\0${defaultBranch ?? ""}`, "utf8");
+    return { remoteFingerprint: sha256Hex(fingerprintSource), defaultBranch };
   }
 
   async function apply(request: {
@@ -758,7 +820,23 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
     return handoff;
   }
 
-  return { status, diff, branch, worktree, apply, commit, prHandoff };
+  return { status, diff, branch, worktree, fingerprint, apply, commit, prHandoff };
+}
+
+/** Strip credentials from a remote URL, keeping scheme and host/path (plan 026 Task 3). */
+export function redactRemoteUrl(url: string): string {
+  if (typeof url !== "string" || url.length === 0) return "";
+  let rest = url;
+  let scheme = "";
+  const schemeMatch = /^([a-z][a-z0-9+.-]*:\/\/)/i.exec(url);
+  if (schemeMatch) {
+    scheme = schemeMatch[1]!;
+    rest = url.slice(scheme.length);
+  }
+  const at = rest.lastIndexOf("@");
+  const slash = rest.indexOf("/");
+  if (at >= 0 && (slash < 0 || at < slash)) rest = rest.slice(at + 1);
+  return scheme + rest;
 }
 
 export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js";

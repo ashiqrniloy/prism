@@ -1,9 +1,9 @@
 {
-  "$comment": "Phase 26 (0.2.6) Task 0 baseline, captured from the 0.2.5 release state (HEAD 3cfadfa) before any 0.2.6 source edit. Inherits the 0.2.5 exit-gate figures from scripts/phase25-baseline.json. seams holds SHA-256 hashes for every single-editor allowed file of the phase26 freeze manifest plus roadmap.md: while the owning task token is pending the file must stay byte-identical (absent files stay absent); once the task is done, the freeze test asserts content markers instead. exitGate stays null until Task 8 records it green with blocked: false. Shared coordination files (package.json, plan 026, plans/README.md, docs/index.md, changelogs, barrels, docs with multiple editors) are not hash-locked; they are marker-checked per editor task.",
-  "captured": "2026-08-15T17:36:04.926Z",
+  "$comment": "Phase 26 (0.2.6) Task 0 baseline, captured from the 0.2.5 release state (HEAD da701dd) before any 0.2.6 source edit. Inherits the 0.2.5 exit-gate figures from scripts/phase25-baseline.json. seams holds SHA-256 hashes for every single-editor allowed file of the phase26 freeze manifest plus roadmap.md: while the owning task token is pending the file must stay byte-identical (absent files stay absent); once the task is done, the freeze test asserts content markers instead. exitGate stays null until Task 8 records it green with blocked: false. Shared coordination files (package.json, plan 026, plans/README.md, docs/index.md, changelogs, barrels, docs with multiple editors) are not hash-locked; they are marker-checked per editor task.",
+  "captured": "2026-08-15T19:12:38.683Z",
   "release": "0.2.6",
   "baselineRelease": "0.2.5",
-  "gitHead": "3cfadfa",
+  "gitHead": "da701dd",
   "node": "v24.19.0",
   "platform": "linux",
   "inherited": {
@@ -97,7 +97,7 @@
       "status": "present"
     },
     "docs/indexed-code-search.md": {
-      "sha256": "c415375873f365f52f277851103e261d0067562fd5f735f8e7371f68fa4f200a",
+      "sha256": "a1062e4a22c3c314fac298e8effe8d4a7a80051abc14dae84d5dfbb78114e4e2",
       "status": "present"
     },
     "docs/language-intelligence.md": {
@@ -125,7 +125,7 @@
       "status": "present"
     },
     "packages/coding-agent/src/__tests__/indexed-search.test.ts": {
-      "sha256": "96a8f99b9722bb53b1cabd02d3b3427151e319fae20b46e5e013d593dff4f952",
+      "sha256": "f9ab730bf0d55b208e2e63e9118c8142b3b15a1059f4e160b79bc7ec4aa743ac",
       "status": "present"
     },
     "packages/coding-agent/src/__tests__/language-diagnostics.test.ts": {
@@ -141,15 +141,15 @@
       "status": "absent"
     },
     "packages/coding-agent/src/__tests__/workspace-lifecycle.test.ts": {
-      "sha256": null,
-      "status": "absent"
+      "sha256": "d95543741656961615d2152cf6aa120f2b36e2c88b9f71df093c10995e20eeac",
+      "status": "present"
     },
     "packages/coding-agent/src/checks.ts": {
       "sha256": "03648a0c1b31e68e992fd6bf2db4acccd2018a461bcaa4379828c198451786e4",
       "status": "present"
     },
     "packages/coding-agent/src/coding-checkpoint.ts": {
-      "sha256": "ff7c758562652a797c0dab557e388da89c5b0bd7c1124040488381eff3225e62",
+      "sha256": "1fb5e6e1fdd83273ea1be73183ac0593aaa4fcf90da4f7f44fc4dedb95a2ed2a",
       "status": "present"
     },
     "packages/coding-agent/src/diagnostics.ts": {
@@ -161,7 +161,7 @@
       "status": "present"
     },
     "packages/coding-agent/src/git.ts": {
-      "sha256": "c9743b9565639934aff70fb2bf252062f2b028c11cf09036a41e113456e76055",
+      "sha256": "313cec816a97516b4903313e83fed32a01bcd881a5c35be891f43ed104fe8712",
       "status": "present"
     },
     "packages/coding-agent/src/language/client.ts": {
@@ -197,7 +197,7 @@
       "status": "present"
     },
     "packages/coding-agent/src/repository/indexed-search.ts": {
-      "sha256": "4dbe93da0afee5c4255a97fdbca0d8877217241fd8b1c25df8597d16bf429c4a",
+      "sha256": "86c3f6e2b96a69537a56ff2780a3851eb1f7b3c90b247f793827ad0c295eb27f",
       "status": "present"
     },
     "packages/coding-agent/src/repository/operations.ts": {
@@ -221,8 +221,8 @@
       "status": "present"
     },
     "packages/coding-agent/src/workspace-lifecycle.ts": {
-      "sha256": null,
-      "status": "absent"
+      "sha256": "99338420962b69e0a65bd4cf0808337a835c038d571de772052af8012d304008",
+      "status": "present"
     },
     "roadmap.md": {
       "sha256": "a26a9b060872e01214e83ee12f71e95bfd5e75fc1cb46609e4d0c30fa59f4518",
@@ -233,7 +233,7 @@
       "status": "absent"
     },
     "scripts/package-truth.json": {
-      "sha256": "a30137068331ca35a82a6e86b62d05898f79d26972af9d3c6d40b854cadb6806",
+      "sha256": "8730958cdd7e1c866a986955f9450b6ca3dba5a8b99f46fbc4d50311f67a4e04",
       "status": "present"
     },
     "scripts/phase26-baseline.mjs": {

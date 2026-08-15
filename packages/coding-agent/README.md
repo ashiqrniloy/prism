@@ -115,6 +115,8 @@ Interactive terminals (0.2.6, plan 026): `createProcessSessions` takes an option
 
 Host-indexed search (0.2.6, plan 026): `createIndexedRepositoryOperations` composes a host index with the literal fallback; `indexed_literal`/`semantic` modes are explicit, stale/failed/unsupported indexes fail closed with `ERR_PRISM_INDEX_*` (no silent downgrade), and results are containment-checked and labeled `untrusted_index`. See docs/indexed-code-search.md.
 
+Durable workspace lifecycle (0.2.6, plan 026): `createCodingWorkspaceLifecycle` registers host repositories and creates/locks/verifies/removes linked worktrees per task, with CheckpointStore CAS records, LeaseStore fencing, credential-free remote fingerprints, and a cleanup policy refusing dirty/locked/unowned/mismatched trees unless allowed. See docs/coding-workspaces.md.
+
 Option/operation types: `ToolsOptions`, `ShellToolOptions`/`BashOperations`, `ReadToolOptions`/`ReadOperations`/`ReadTextOptions`/`ReadTextResult`, `WriteToolOptions`/`WriteOperations`, `EditToolOptions`/`EditOperations`/`EditToolDetails`, `DeleteToolOptions`/`DeleteOperations`, `MoveToolOptions`/`MoveOperations`, `GlobToolOptions`, `ReadPathSet`.
 
 Text reads stop after one page or `maxScanBytes` instead of loading the file. Custom `ReadOperations` must implement bounded `readText` and `statFile`; custom `EditOperations` must implement `statFile` and honor the supplied read cap/signal. Successful truncated shell output is retained in an exclusive Unix `0600` temp file owned by the host; timeout, abort, output-limit, and spill failures remove unpublished spill files. Hosts should delete published `metadata.fullOutputPath` files after use.
