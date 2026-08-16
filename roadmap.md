@@ -307,16 +307,18 @@ Each milestone requires its own numbered plan. Plans that add or change a public
 
 ### 0.2.6 — Fully featured coding-agent readiness
 
-- [x] **Host-selected PTY/interactive terminal backend.** Add a process-session adapter only after primitive review; keep non-interactive execution as default and unsupported hosts fail closed.
-- [x] **Scalable indexed code-search seam.** Preserve bounded literal search as default; add an optional incremental index/semantic backend contract for large monorepos with explicit resource, trust, and stale-index semantics.
-- [x] **Multi-worktree and multi-repository lifecycle.** Define ownership, cleanup, branch isolation, checkpoint identity, and artifact correlation across repositories/worktrees.
-- [x] **Forge breadth on demand.** Add GitLab/Bitbucket only for named consumers, behind existing forge primitives; no broad catalog. (Deferred by the demand gate at 0.2.6: no named consumer recorded; the demand registry in `scripts/phase26-freeze-manifest.json` records activation requirements.)
-- [x] **Durable coding-session recovery.** Make ACP/live tasks and managed process metadata recoverable across restart/replicas or explicitly return unknown/unsupported; preserve cancellation and approval/effect correlation.
-- [x] **Patch/review and diagnostics workflow.** Add bounded review artifacts, incremental LSP/check diagnostics, and clear accepted/rejected patch state without a second agent runtime.
-- [x] **Coding release journey.** Gate a real Docker/browser/provider/forge coding task covering edit, shell, approval, restart, recovery, review, and cancellation.
+- [ ] **Host-selected PTY/interactive terminal backend.** Add a process-session adapter only after primitive review; keep non-interactive execution as default and unsupported hosts fail closed.
+- [ ] **Scalable indexed code-search seam.** Preserve bounded literal search as default; add an optional incremental index/semantic backend contract for large monorepos with explicit resource, trust, and stale-index semantics.
+- [ ] **Multi-worktree and multi-repository lifecycle.** Define ownership, cleanup, branch isolation, checkpoint identity, and artifact correlation across repositories/worktrees.
+- [ ] **Forge breadth on demand.** Add GitLab/Bitbucket only for named consumers, behind existing forge primitives; no broad catalog.
+- [ ] **Durable coding-session recovery.** Make ACP/live tasks and managed process metadata recoverable across restart/replicas or explicitly return unknown/unsupported; preserve cancellation and approval/effect correlation.
+- [ ] **Patch/review and diagnostics workflow.** Add bounded review artifacts, incremental LSP/check diagnostics, and clear accepted/rejected patch state without a second agent runtime.
+- [ ] **Coding release journey.** Gate a real Docker/browser/provider/forge coding task covering edit, shell, approval, restart, recovery, review, and cancellation.
   - Acceptance: each capability has a threat model, limits, ownership tests, no implicit activation, package budget, docs/index entry, and protected end-to-end evidence; sandbox fixes from 0.2.0 are prerequisite.
 
 ### 0.2.7 — Enterprise ERP production readiness
+
+State management and Eval framework. Subagents.
 
 - [ ] **Transactional outbox/inbox.** Provide host-owned primitives for committing ERP mutation intent with application state and idempotently dispatching/consuming effects; retain at-least-once semantics and explicit unknown outcome.
 - [ ] **Saga compensation and reconciliation.** Add durable compensation plans, forward/rollback status, retry policy, manual intervention, and immutable evidence for multi-step business workflows.
@@ -363,7 +365,7 @@ Before 0.2.x closes, automated tests must prove:
 
 Everything in this section was previously scheduled for 0.2.x and is intentionally deferred. No implementation starts until 0.2.x exit gates pass.
 
-### 0.3.0 — Protected live matrix, provider catalog, and umbrella membership
+### 0.3.1 — Protected live matrix, provider catalog, and umbrella membership
 
 - [ ] **Record the protected live-canary matrix** as a named, env-gated, fail-loud gate: real OIDC IdP + JWKS rotation, OPA bundle pinning, MCP OAuth AS including DCR/refresh/revoke, S3-compatible store with KMS, NATS JetStream, keychain, supported providers, Docker sandbox, and Playwright browser. Missing required credentials are blocked release evidence, not silent skips.
   - Acceptance: `npm run test:live` (or equivalent) emits `canary-report.json`; protected CI supplies environments and gates release publication.
