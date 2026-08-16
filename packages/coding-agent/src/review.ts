@@ -179,9 +179,10 @@ const CONTROL_PATTERN = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g;
  * artifact input whose `preview.review` embeds the manifest (digest binding).
  * Never embeds a raw patch body, command, env, or secret.
  */
-export function createCodingPatchReviewManifest(
-  input: CreateCodingPatchReviewInput,
-): { review: CodingPatchReview; artifactInput: CodingReviewArtifactInput } {
+export function createCodingPatchReviewManifest(input: CreateCodingPatchReviewInput): {
+  review: CodingPatchReview;
+  artifactInput: CodingReviewArtifactInput;
+} {
   const limits = resolveCodingReviewLimits(input.limits);
   if (!ID_PATTERN.test(input.threadId)) {
     throw new CodingPatchReviewError("ERR_PRISM_REVIEW_INPUT", "threadId must match [A-Za-z0-9][A-Za-z0-9._:-]*");
@@ -249,13 +250,19 @@ export function createCodingPatchReviewManifest(
     return { file, severity: diag.severity, count: diag.count, generation: diag.generation };
   });
   if (changedPaths.length > limits.maxRevisions * 250) {
-    throw new CodingPatchReviewError("ERR_PRISM_REVIEW_LIMIT", `changedPaths exceed the bounded manifest budget (${limits.maxRevisions * 250})`);
+    throw new CodingPatchReviewError(
+      "ERR_PRISM_REVIEW_LIMIT",
+      `changedPaths exceed the bounded manifest budget (${limits.maxRevisions * 250})`,
+    );
   }
   if (checks.length > limits.maxRevisions) {
     throw new CodingPatchReviewError("ERR_PRISM_REVIEW_LIMIT", `checks exceed ${limits.maxRevisions}`);
   }
   if (diffstat.length > limits.maxRevisions * 250) {
-    throw new CodingPatchReviewError("ERR_PRISM_REVIEW_LIMIT", `diffstat exceeds the bounded manifest budget (${limits.maxRevisions * 250})`);
+    throw new CodingPatchReviewError(
+      "ERR_PRISM_REVIEW_LIMIT",
+      `diffstat exceeds the bounded manifest budget (${limits.maxRevisions * 250})`,
+    );
   }
   if (diagnostics.length > limits.maxDiagnostics) {
     throw new CodingPatchReviewError("ERR_PRISM_REVIEW_LIMIT", `diagnostic summaries exceed ${limits.maxDiagnostics}`);

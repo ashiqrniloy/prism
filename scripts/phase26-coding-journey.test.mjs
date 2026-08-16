@@ -110,30 +110,26 @@ before(() => {
   consumer = packed;
   if (packed.installStatus !== 0) return;
   if (process.env.PRISM_LIVE_PLAYWRIGHT === "1") {
-    playwrightInstall = spawnSync(
-      "npm",
-      ["install", "--no-save", "--no-audit", "--no-fund", "playwright-core@1.61.0"],
-      { cwd: packed.consumer, encoding: "utf8", timeout: 300_000 },
-    );
+    playwrightInstall = spawnSync("npm", ["install", "--no-save", "--no-audit", "--no-fund", "playwright-core@1.61.0"], {
+      cwd: packed.consumer,
+      encoding: "utf8",
+      timeout: 300_000,
+    });
   }
   copyFileSync(join(repoRoot, "scripts/fixtures/phase26-coding-journey.mjs"), join(packed.consumer, "journey.mjs"));
   const suffix = `j${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
   journeyWorkspace = mkdtempSync(join(tmpdir(), "prism-journey-ws-"));
-  run = spawnSync(
-    process.execPath,
-    ["journey.mjs"],
-    {
-      cwd: packed.consumer,
-      encoding: "utf8",
-      timeout: WALL_HARD_MS,
-      env: {
-        ...process.env,
-        PRISM_JOURNEY_SUFFIX: suffix,
-        PRISM_JOURNEY_WORKSPACE: journeyWorkspace,
-        PRISM_PHASE26_JOURNEY_REPORT: REPORT_PATH,
-      },
+  run = spawnSync(process.execPath, ["journey.mjs"], {
+    cwd: packed.consumer,
+    encoding: "utf8",
+    timeout: WALL_HARD_MS,
+    env: {
+      ...process.env,
+      PRISM_JOURNEY_SUFFIX: suffix,
+      PRISM_JOURNEY_WORKSPACE: journeyWorkspace,
+      PRISM_PHASE26_JOURNEY_REPORT: REPORT_PATH,
     },
-  );
+  });
   run.durationMs = Date.now() - fixtureStartedMs;
   if (run.status === null && run.signal === "SIGTERM") {
     run.timedOut = true;
@@ -176,10 +172,30 @@ describe("protected real coding-agent journey", () => {
     assert.equal(report.journey.state, "pass");
     assert.equal(report.blocked, false);
     assert.ok(report.cleanupMs <= CLEANUP_HARD_MS, `cleanup ${report.cleanupMs}ms exceeds the hard ceiling ${CLEANUP_HARD_MS}ms`);
-    assert.ok(report.journey.legs.every((leg) => leg.state === "pass"), `blocked leg: ${JSON.stringify(report.journey.legs)}`);
-    assert.ok(report.cleanups.every((c) => c.state === "pass"), `blocked cleanup: ${JSON.stringify(report.cleanups)}`);
-    for (const name of ["provider", "docker", "workspace", "agent-edit", "check-diagnostics", "patch-review", "process-recovery", "durable-cancel", "forge", "browser"]) {
-      assert.ok(report.journey.legs.some((leg) => leg.id === name), `leg ${name} must have run`);
+    assert.ok(
+      report.journey.legs.every((leg) => leg.state === "pass"),
+      `blocked leg: ${JSON.stringify(report.journey.legs)}`,
+    );
+    assert.ok(
+      report.cleanups.every((c) => c.state === "pass"),
+      `blocked cleanup: ${JSON.stringify(report.cleanups)}`,
+    );
+    for (const name of [
+      "provider",
+      "docker",
+      "workspace",
+      "agent-edit",
+      "check-diagnostics",
+      "patch-review",
+      "process-recovery",
+      "durable-cancel",
+      "forge",
+      "browser",
+    ]) {
+      assert.ok(
+        report.journey.legs.some((leg) => leg.id === name),
+        `leg ${name} must have run`,
+      );
     }
     const text = JSON.stringify(report);
     assert.doesNotMatch(text, /(PRISM_[A-Z0-9_]+)=/, "report must record env names, never values");

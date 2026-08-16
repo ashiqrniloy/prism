@@ -286,10 +286,7 @@ export function createLanguageIntelligence(options: CreateLanguageIntelligenceOp
         throw new LanguageIntelligenceError("ERR_PRISM_LSP_UNSUPPORTED", "diagnosticDelta requires a non-empty files list");
       }
       if (request.files.length > limits.maxResultsPerQuery) {
-        throw new LanguageIntelligenceError(
-          "ERR_PRISM_LSP_LIMIT",
-          `diagnosticDelta files exceed ${limits.maxResultsPerQuery}`,
-        );
+        throw new LanguageIntelligenceError("ERR_PRISM_LSP_LIMIT", `diagnosticDelta files exceed ${limits.maxResultsPerQuery}`);
       }
       const previous = request.previous ?? {};
       const files: Record<string, import("../diagnostics.js").DiagnosticDelta> = {};

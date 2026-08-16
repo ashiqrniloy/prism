@@ -479,7 +479,11 @@ export async function createGitOperations(options: CreateGitOperationsOptions): 
         args.push("--reason", request.reason);
       }
       args.push("--", request.path);
-      await gitRequireOk(runner, { args, cwd, signal: request.signal, maxOutputBytes: limits.maxOutputBytes }, `git worktree ${request.action}`);
+      await gitRequireOk(
+        runner,
+        { args, cwd, signal: request.signal, maxOutputBytes: limits.maxOutputBytes },
+        `git worktree ${request.action}`,
+      );
       return { worktrees: (await worktree({ action: "list", signal: request.signal })).worktrees, path: request.path };
     }
 

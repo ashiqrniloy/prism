@@ -146,7 +146,10 @@ export class LspClient {
    * caller can drop stale responses. Falls back to the push cache when the
    * server has no pull support.
    */
-  async pullDiagnostics(uri: string, signal?: AbortSignal): Promise<{
+  async pullDiagnostics(
+    uri: string,
+    signal?: AbortSignal,
+  ): Promise<{
     kind: "full" | "unchanged";
     diagnostics: unknown;
     resultId?: string;

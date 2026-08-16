@@ -69,7 +69,10 @@ test("phase26 index benchmark: 100k-file fixture, p95 query and batch update bou
   const fixtureBytes = JSON.stringify([...entries]).length;
   assert.equal(entries.size, 100000, "fixture holds 100000 files");
   const heapDelta = process.memoryUsage().heapUsed - before;
-  assert.ok(heapDelta <= HEAP_DELTA_BYTES, `fixture peak heap +${(heapDelta / 1024 / 1024).toFixed(1)}MiB <= 64MiB (fixture ${fixtureBytes} bytes)`);
+  assert.ok(
+    heapDelta <= HEAP_DELTA_BYTES,
+    `fixture peak heap +${(heapDelta / 1024 / 1024).toFixed(1)}MiB <= 64MiB (fixture ${fixtureBytes} bytes)`,
+  );
 
   const backend = makeIndexBackend(entries);
   const composite = createIndexedRepositoryOperations(process.cwd(), {

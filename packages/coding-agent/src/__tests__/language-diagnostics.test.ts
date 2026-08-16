@@ -5,11 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import {
-  diagnosticDelta,
-  normalizeDiagnostics,
-  type NormalizedDiagnostic,
-} from "../diagnostics.js";
+import { diagnosticDelta, normalizeDiagnostics, type NormalizedDiagnostic } from "../diagnostics.js";
 import { createLanguageIntelligence, LanguageIntelligenceError } from "../language/intelligence.js";
 
 const FAKE_LSP = fileURLToPath(new URL("./fixtures/fake-lsp.mjs", import.meta.url));
@@ -114,11 +110,20 @@ test("diagnosticDelta: deterministic added/removed/unchanged across generations"
   const g2 = [diag("src/a.ts"), diag("src/b.ts"), diag("src/c.ts")];
   const delta = diagnosticDelta({ next: g2, previous: g1 });
   assert.equal(delta.generation, 1);
-  assert.deepEqual(delta.added.map((d) => d.file), ["src/c.ts"]);
+  assert.deepEqual(
+    delta.added.map((d) => d.file),
+    ["src/c.ts"],
+  );
   // g1-only entries: a.ts at line 3 ('keep') and b.ts (line 0 in g1) — b.ts
   // is identical in both, so only the line-3 entry is removed
-  assert.deepEqual(delta.removed.map((d) => d.message), ["keep"]);
-  assert.deepEqual(delta.unchanged.map((d) => d.file), ["src/a.ts", "src/b.ts"]);
+  assert.deepEqual(
+    delta.removed.map((d) => d.message),
+    ["keep"],
+  );
+  assert.deepEqual(
+    delta.unchanged.map((d) => d.file),
+    ["src/a.ts", "src/b.ts"],
+  );
   // deterministic: same inputs, same delta
   const again = diagnosticDelta({ next: g2, previous: g1 });
   assert.deepEqual(again, delta);
@@ -153,10 +158,14 @@ test("syncDocument sends full-content didChange with monotonic versions", async 
       assert.equal(v2.version, 3);
       // push diagnostics carry the versioned message from the fake server
       // (async publish — poll briefly for the latest version)
-      const after = await waitFor(async () => {
-        const diags = await lang.diagnostics("a.ts");
-        return diags[0]?.message;
-      }, (message) => message === "fake-error-v3", 2000);
+      const after = await waitFor(
+        async () => {
+          const diags = await lang.diagnostics("a.ts");
+          return diags[0]?.message;
+        },
+        (message) => message === "fake-error-v3",
+        2000,
+      );
       assert.equal(after, "fake-error-v3");
     } finally {
       await lang.dispose();
@@ -174,6 +183,17 @@ test("diagnosticDelta: push path replacement and delta across generations", asyn
     try {
       await lang.diagnostics("a.ts"); // open, push diags (v1)
       await lang.syncDocument("a.ts"); // v2: server replaces the set
+      // The fake server's v2 push publish is async — poll for it like the
+      // syncDocument test above (load-sensitive guard, ponytail: ceiling is
+      // the 2000ms waitFor deadline).
+      await waitFor(
+        async () => {
+          const diags = await lang.diagnostics("a.ts");
+          return diags[0]?.message;
+        },
+        (message) => message === "fake-error-v2",
+        2000,
+      );
       const delta = await lang.diagnosticDelta({ files: ["a.ts"] });
       const file = delta.files["a.ts"]!;
       assert.equal(delta.generation, 2);
@@ -227,7 +247,10 @@ test("diagnosticDelta: pull path uses resultId full/unchanged reuse", async () =
       assert.equal(first.files["a.ts"]?.added.length, 1);
       assert.equal(first.generation, 1);
       // unchanged reuse: server answers kind=unchanged for the same resultId
-      const second = await lang.diagnosticDelta({ files: ["a.ts"], previous: { "a.ts": { generation: 1, diagnostics: first.files["a.ts"]!.added } } });
+      const second = await lang.diagnosticDelta({
+        files: ["a.ts"],
+        previous: { "a.ts": { generation: 1, diagnostics: first.files["a.ts"]!.added } },
+      });
       assert.equal(second.files["a.ts"]?.added.length, 0);
       assert.equal(second.files["a.ts"]?.unchanged.length, 1);
     } finally {

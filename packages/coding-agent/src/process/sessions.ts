@@ -40,10 +40,7 @@ import {
   validateBackendRef,
 } from "./recovery.js";
 import { ProcessRecoveryError } from "./recovery.js";
-import {
-  DEFAULT_MAX_TERMINAL_COLUMNS,
-  DEFAULT_MAX_TERMINAL_ROWS,
-} from "../limits.js";
+import { DEFAULT_MAX_TERMINAL_COLUMNS, DEFAULT_MAX_TERMINAL_ROWS } from "../limits.js";
 
 /** Default TERM for PTY sessions (validated <= maxTerminalTermBytes). */
 const DEFAULT_TERM = "xterm-256color";
@@ -154,8 +151,7 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
   const ownerId = options.ownerId;
   const recoveryBackend = options.recoveryBackend;
   const recoveryLimits = resolveProcessRecoveryLimits(options.recoveryLimits);
-  const durable =
-    checkpoints !== undefined || leases !== undefined || ownerId !== undefined || recoveryBackend !== undefined;
+  const durable = checkpoints !== undefined || leases !== undefined || ownerId !== undefined || recoveryBackend !== undefined;
   if (durable && !(checkpoints && leases && ownerId)) {
     throw new ProcessRecoveryError(
       "ERR_PRISM_RECOVERY_UNSUPPORTED",
@@ -206,10 +202,7 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
       throw new ProcessSessionError("ERR_PRISM_PROCESS_PTY_LIMIT", `rows must be 1..${limits.maxTerminalRows}`);
     }
     if (Buffer.byteLength(term, "utf8") > limits.maxTerminalTermBytes) {
-      throw new ProcessSessionError(
-        "ERR_PRISM_PROCESS_PTY_LIMIT",
-        `term exceeds maxTerminalTermBytes (${limits.maxTerminalTermBytes})`,
-      );
+      throw new ProcessSessionError("ERR_PRISM_PROCESS_PTY_LIMIT", `term exceeds maxTerminalTermBytes (${limits.maxTerminalTermBytes})`);
     }
     return { columns, rows, term };
   };
@@ -311,7 +304,11 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
   const evictRecoveryOverflow = async (): Promise<void> => {
     if (!durable) return;
     try {
-      const page = await loadProcessRecoveryRecords({ checkpoints: checkpoints!, limits: { ...recoveryLimits, maxRecords: recoveryLimits.maxRecords + 1 }, ownership: options.ownership });
+      const page = await loadProcessRecoveryRecords({
+        checkpoints: checkpoints!,
+        limits: { ...recoveryLimits, maxRecords: recoveryLimits.maxRecords + 1 },
+        ownership: options.ownership,
+      });
       if (page.records.length <= recoveryLimits.maxRecords) return;
       const overflow = page.records.length - recoveryLimits.maxRecords;
       let evicted = 0;
@@ -331,11 +328,7 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
 
   // Atomic starting|running -> unknown (never an exit code). Returns false when
   // a fence/version conflict means another replica moved the record first.
-  const persistRecoveryUnknown = async (
-    current: ProcessRecoveryRecord,
-    version: number,
-    signal?: AbortSignal,
-  ): Promise<boolean> => {
+  const persistRecoveryUnknown = async (current: ProcessRecoveryRecord, version: number, signal?: AbortSignal): Promise<boolean> => {
     const next = buildProcessRecoveryRecord({ ...current, state: "unknown", exitCode: null, updatedAt: nowIso() });
     try {
       await saveProcessRecoveryRecord({
@@ -356,7 +349,11 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
   // expose control (input/signal/kill/release/resize/wait) through the handle;
   // output streaming is not re-established after a restart — the host backend
   // owns any buffered output behind its opaque ref.
-  const attachRecoveredHandle = (current: ProcessRecoveryRecord, handle: ProcessPtyHandle | ProcessSandboxHandle, version: number): void => {
+  const attachRecoveredHandle = (
+    current: ProcessRecoveryRecord,
+    handle: ProcessPtyHandle | ProcessSandboxHandle,
+    version: number,
+  ): void => {
     const accumulator = new OutputAccumulator({
       maxBytes: limits.maxOutputChunkBytes,
       maxLines: 100_000,
@@ -1243,10 +1240,7 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
                 continue;
               }
             } catch (attachError) {
-              attachErrorCode =
-                attachError instanceof ProcessRecoveryError
-                  ? attachError.code
-                  : ("ERR_PRISM_RECOVERY_UNKNOWN" as const);
+              attachErrorCode = attachError instanceof ProcessRecoveryError ? attachError.code : ("ERR_PRISM_RECOVERY_UNKNOWN" as const);
             }
           }
           // No ref, no backend, unattested attach, or attach failure: atomic unknown.

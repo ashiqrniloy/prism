@@ -638,7 +638,7 @@
   "task5": "done",
   "task6": "done",
   "task7": "done",
-  "task8": "pending"
+  "task8": "done"
  },
  "demand": {
   "$comment": "Forge breadth on demand. status 'deferred' means NO adapter source, docs page, or export may exist and the freeze test asserts absence. Activation: record a named consumer (host/consumer/date/use case) below and flip status to 'demanded'; exactly one adapter may then ship.",

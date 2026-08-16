@@ -25,12 +25,7 @@ import {
   validateCodingLimit,
 } from "../limits.js";
 import { isPathInsideRoot } from "./path.js";
-import type {
-  RepositoryOperations,
-  RepositorySearchMatch,
-  RepositorySearchRequest,
-  RepositorySearchResult,
-} from "./types.js";
+import type { RepositoryOperations, RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult } from "./types.js";
 
 /** Frozen index state machine: empty | building | ready | stale | failed. */
 export type IndexState = "empty" | "building" | "ready" | "stale" | "failed";
@@ -131,8 +126,16 @@ export interface IndexLimitOptions {
 
 export function resolveIndexLimits(options?: IndexLimitOptions): ResolvedIndexLimits {
   return {
-    maxUpdateFiles: validateCodingLimit("maxUpdateFiles", options?.maxUpdateFiles ?? DEFAULT_MAX_INDEX_UPDATE_FILES, HARD_MAX_INDEX_UPDATE_FILES),
-    maxUpdateBytes: validateCodingLimit("maxUpdateBytes", options?.maxUpdateBytes ?? DEFAULT_MAX_INDEX_UPDATE_BYTES, HARD_MAX_INDEX_UPDATE_BYTES),
+    maxUpdateFiles: validateCodingLimit(
+      "maxUpdateFiles",
+      options?.maxUpdateFiles ?? DEFAULT_MAX_INDEX_UPDATE_FILES,
+      HARD_MAX_INDEX_UPDATE_FILES,
+    ),
+    maxUpdateBytes: validateCodingLimit(
+      "maxUpdateBytes",
+      options?.maxUpdateBytes ?? DEFAULT_MAX_INDEX_UPDATE_BYTES,
+      HARD_MAX_INDEX_UPDATE_BYTES,
+    ),
     maxResults: validateCodingLimit("maxResults", options?.maxResults ?? DEFAULT_MAX_REPO_RESULTS, HARD_MAX_REPO_RESULTS),
     maxSnippetBytes: validateCodingLimit(
       "maxSnippetBytes",
@@ -427,7 +430,13 @@ export function createIndexedRepositoryOperations(
           }
         }
         try {
-          if (updates.length > 0) await backend.update({ repositoryId: request.repositoryId, worktreeId: request.worktreeId, sourceRevision: request.sourceRevision, changes: updates });
+          if (updates.length > 0)
+            await backend.update({
+              repositoryId: request.repositoryId,
+              worktreeId: request.worktreeId,
+              sourceRevision: request.sourceRevision,
+              changes: updates,
+            });
           if (removals.length > 0) await backend.remove({ paths: removals });
         } catch {
           throw new IndexError("ERR_PRISM_INDEX_FAILED", "index update failed");

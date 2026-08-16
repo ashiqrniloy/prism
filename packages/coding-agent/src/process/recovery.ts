@@ -131,11 +131,7 @@ export interface ResolvedProcessRecoveryLimits {
 export function resolveProcessRecoveryLimits(limits?: ProcessRecoveryLimits): ResolvedProcessRecoveryLimits {
   return {
     maxRecords: validateCodingLimit("maxRecords", limits?.maxRecords ?? DEFAULT_MAX_RECOVERY_RECORDS, HARD_MAX_RECOVERY_RECORDS),
-    leaseTtlMs: validateCodingLimit(
-      "leaseTtlMs",
-      limits?.leaseTtlMs ?? DEFAULT_MAX_RECOVERY_LEASE_TTL_MS,
-      HARD_MAX_RECOVERY_LEASE_TTL_MS,
-    ),
+    leaseTtlMs: validateCodingLimit("leaseTtlMs", limits?.leaseTtlMs ?? DEFAULT_MAX_RECOVERY_LEASE_TTL_MS, HARD_MAX_RECOVERY_LEASE_TTL_MS),
     attachTimeoutMs: validateCodingLimit(
       "attachTimeoutMs",
       limits?.attachTimeoutMs ?? DEFAULT_MAX_RECOVERY_ATTACH_TIMEOUT_MS,
@@ -154,15 +150,7 @@ export function resolveProcessRecoveryLimits(limits?: ProcessRecoveryLimits): Re
   };
 }
 
-const STATE_SET: ReadonlySet<string> = new Set([
-  "starting",
-  "running",
-  "exited",
-  "killed",
-  "released",
-  "expired",
-  "unknown",
-]);
+const STATE_SET: ReadonlySet<string> = new Set(["starting", "running", "exited", "killed", "released", "expired", "unknown"]);
 
 /** Bounded validation of one recovery record. Corrupt/oversized/foreign records fail closed. */
 export function validateProcessRecoveryRecord(record: unknown, limits: ResolvedProcessRecoveryLimits): ProcessRecoveryRecord {
@@ -501,7 +489,11 @@ export async function attachWithTimeout(
         },
         (error) => {
           clearTimeout(timer);
-          reject(error instanceof ProcessRecoveryError ? error : new ProcessRecoveryError("ERR_PRISM_RECOVERY_UNKNOWN", "recovery attach failed"));
+          reject(
+            error instanceof ProcessRecoveryError
+              ? error
+              : new ProcessRecoveryError("ERR_PRISM_RECOVERY_UNKNOWN", "recovery attach failed"),
+          );
         },
       );
   });
@@ -510,9 +502,6 @@ export async function attachWithTimeout(
 /** True when a checkpoint load/save failure is an ownership conflict (fail closed as OWNERSHIP). */
 export function isOwnershipConflict(error: unknown): boolean {
   return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === "ERR_PRISM_LEASE_CONFLICT"
+    typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "ERR_PRISM_LEASE_CONFLICT"
   );
 }

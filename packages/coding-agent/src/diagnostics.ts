@@ -110,10 +110,7 @@ export function diagnosticIdentity(diagnostic: NormalizedDiagnostic): string {
  * Out-of-workspace paths, control characters, and non-finite positions are
  * rejected per entry; overflow charges the per-file cap.
  */
-export function normalizeDiagnostics(
-  raw: readonly RawDiagnostic[],
-  options: NormalizeDiagnosticsOptions,
-): readonly NormalizedDiagnostic[] {
+export function normalizeDiagnostics(raw: readonly RawDiagnostic[], options: NormalizeDiagnosticsOptions): readonly NormalizedDiagnostic[] {
   const limits: ResolvedDiagnosticsLimits = resolveDiagnosticsLimits({
     maxDiagnosticsPerFile: options.maxDiagnosticsPerFile,
     maxMessageBytes: options.maxMessageBytes,
@@ -142,7 +139,12 @@ export function normalizeDiagnostics(
     const endLine = finiteInt(entry.endLine, line);
     const endCharacter = finiteInt(entry.endCharacter, character);
     // negative or non-finite positions are rejected, never clamped
-    if (!Number.isSafeInteger(line) || !Number.isSafeInteger(character) || !Number.isSafeInteger(endLine) || !Number.isSafeInteger(endCharacter)) {
+    if (
+      !Number.isSafeInteger(line) ||
+      !Number.isSafeInteger(character) ||
+      !Number.isSafeInteger(endLine) ||
+      !Number.isSafeInteger(endCharacter)
+    ) {
       continue;
     }
     if (endLine < line || (endLine === line && endCharacter < character)) {

@@ -52,7 +52,20 @@ function makeBackend(options: FakeOptions = {}): { backend: RepositoryIndexBacke
   const entries = new Map<string, string>();
   const calls: BackendCalls = { updates: [], removes: [], searches: [], statusCalls: 0, disposed: 0 };
   const now = options.updatedAt ?? Date.now();
-  const { state, sourceRevision, noSourceRevision, noUpdatedAt, semantic, searchImpl, statusThrows, updateThrows, removeThrows, searchThrows, slowSearchMs, abortAware } = options;
+  const {
+    state,
+    sourceRevision,
+    noSourceRevision,
+    noUpdatedAt,
+    semantic,
+    searchImpl,
+    statusThrows,
+    updateThrows,
+    removeThrows,
+    searchThrows,
+    slowSearchMs,
+    abortAware,
+  } = options;
   const backend: RepositoryIndexBackend = {
     capabilities: { semantic: semantic ?? true },
     async update(request: RepositoryIndexUpdateRequest) {
@@ -187,9 +200,18 @@ test("semantic mode requires explicit capability and explicit allow", async () =
 });
 
 test("stale semantics: failed/empty/building/aged/missing-revision all fail closed", async () => {
-  await expectIndexError(makeComposite({ state: "failed" }).composite.search({ root, query: "q", mode: "indexed_literal" }), "ERR_PRISM_INDEX_FAILED");
-  await expectIndexError(makeComposite({ state: "empty" }).composite.search({ root, query: "q", mode: "indexed_literal" }), "ERR_PRISM_INDEX_STALE");
-  await expectIndexError(makeComposite({ state: "building" }).composite.search({ root, query: "q", mode: "indexed_literal" }), "ERR_PRISM_INDEX_STALE");
+  await expectIndexError(
+    makeComposite({ state: "failed" }).composite.search({ root, query: "q", mode: "indexed_literal" }),
+    "ERR_PRISM_INDEX_FAILED",
+  );
+  await expectIndexError(
+    makeComposite({ state: "empty" }).composite.search({ root, query: "q", mode: "indexed_literal" }),
+    "ERR_PRISM_INDEX_STALE",
+  );
+  await expectIndexError(
+    makeComposite({ state: "building" }).composite.search({ root, query: "q", mode: "indexed_literal" }),
+    "ERR_PRISM_INDEX_STALE",
+  );
   // age: default staleMaxAgeMs is 60s; updatedAt 61s ago must be stale
   await expectIndexError(
     makeComposite({ updatedAt: Date.now() - 61_000 }).composite.search({ root, query: "q", mode: "indexed_literal" }),
@@ -197,7 +219,10 @@ test("stale semantics: failed/empty/building/aged/missing-revision all fail clos
   );
   // host may widen the window
   const widened = makeComposite({ updatedAt: Date.now() - 61_000, staleMaxAgeMs: 300_000 });
-  assert.equal(((await widened.composite.search({ root, query: "q", mode: "indexed_literal" })) as RepositorySearchResult).untrusted_index, true);
+  assert.equal(
+    ((await widened.composite.search({ root, query: "q", mode: "indexed_literal" })) as RepositorySearchResult).untrusted_index,
+    true,
+  );
   // requireSourceRevision with missing revision
   await expectIndexError(
     makeComposite({ noSourceRevision: true, requireSourceRevision: true }).composite.search({ root, query: "q", mode: "indexed_literal" }),
@@ -291,10 +316,7 @@ test("hostile backend: duplicate paths deduped, snippets bounded, results capped
 
 test("backend throws, timeout, and abort fail closed without leaking backend text", async () => {
   const throwing = makeComposite({ searchThrows: true });
-  const error = await expectIndexError(
-    throwing.composite.search({ root, query: "q", mode: "indexed_literal" }),
-    "ERR_PRISM_INDEX_FAILED",
-  );
+  const error = await expectIndexError(throwing.composite.search({ root, query: "q", mode: "indexed_literal" }), "ERR_PRISM_INDEX_FAILED");
   assert.ok(!error.message.includes("exploded"), "generic message never embeds backend error text");
 
   const slow = makeComposite({ slowSearchMs: 300, limits: { queryTimeoutMs: 40 } });
@@ -321,7 +343,10 @@ test("update lifecycle: add/edit route to update, delete/rename route to remove"
   assert.equal(calls.updates.length, 1);
   assert.equal(calls.removes.length, 1);
   assert.equal(calls.updates[0]!.changes.length, 3, "add+edit+rename-as-add");
-  assert.deepEqual(calls.updates[0]!.changes.map((c) => c.path), ["src/a.ts", "src/a.ts", "src/new.ts"]);
+  assert.deepEqual(
+    calls.updates[0]!.changes.map((c) => c.path),
+    ["src/a.ts", "src/a.ts", "src/new.ts"],
+  );
   assert.deepEqual(calls.removes[0]!.paths, ["src/gone.ts", "src/old.ts"]);
   assert.equal(calls.updates[0]!.repositoryId, "repo-1");
   assert.equal(calls.updates[0]!.worktreeId, "wt-1");
@@ -342,7 +367,10 @@ test("update caps: change count, byte budget, identity/revision bounds, bad path
     "ERR_PRISM_INDEX_LIMIT",
   );
 
-  await expectIndexError(composite.index.update({ sourceRevision: "r", changes: [{ path: "/abs", kind: "add" as const }] }), "ERR_PRISM_INDEX_UNTRUSTED");
+  await expectIndexError(
+    composite.index.update({ sourceRevision: "r", changes: [{ path: "/abs", kind: "add" as const }] }),
+    "ERR_PRISM_INDEX_UNTRUSTED",
+  );
   await expectIndexError(composite.index.update({ sourceRevision: "", changes: [] }), "ERR_PRISM_INDEX_LIMIT");
   await expectIndexError(
     composite.index.update({ sourceRevision: "r", repositoryId: "y".repeat(600), changes: [] }),

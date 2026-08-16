@@ -146,10 +146,26 @@ export interface ResolvedWorkspaceLimits {
 
 export function resolveWorkspaceLimits(options?: WorkspaceLimitOptions): ResolvedWorkspaceLimits {
   return {
-    maxRepositories: validateCodingLimit("maxRepositories", options?.maxRepositories ?? DEFAULT_MAX_WORKSPACE_REPOSITORIES, HARD_MAX_WORKSPACE_REPOSITORIES),
-    maxWorktrees: validateCodingLimit("maxWorktrees", options?.maxWorktrees ?? DEFAULT_MAX_WORKSPACE_WORKTREES, HARD_MAX_WORKSPACE_WORKTREES),
-    maxRecordBytes: validateCodingLimit("maxRecordBytes", options?.maxRecordBytes ?? DEFAULT_MAX_WORKSPACE_RECORD_BYTES, HARD_MAX_WORKSPACE_RECORD_BYTES),
-    leaseTtlMs: validateCodingLimit("leaseTtlMs", options?.leaseTtlMs ?? DEFAULT_MAX_WORKSPACE_LEASE_TTL_MS, HARD_MAX_WORKSPACE_LEASE_TTL_MS),
+    maxRepositories: validateCodingLimit(
+      "maxRepositories",
+      options?.maxRepositories ?? DEFAULT_MAX_WORKSPACE_REPOSITORIES,
+      HARD_MAX_WORKSPACE_REPOSITORIES,
+    ),
+    maxWorktrees: validateCodingLimit(
+      "maxWorktrees",
+      options?.maxWorktrees ?? DEFAULT_MAX_WORKSPACE_WORKTREES,
+      HARD_MAX_WORKSPACE_WORKTREES,
+    ),
+    maxRecordBytes: validateCodingLimit(
+      "maxRecordBytes",
+      options?.maxRecordBytes ?? DEFAULT_MAX_WORKSPACE_RECORD_BYTES,
+      HARD_MAX_WORKSPACE_RECORD_BYTES,
+    ),
+    leaseTtlMs: validateCodingLimit(
+      "leaseTtlMs",
+      options?.leaseTtlMs ?? DEFAULT_MAX_WORKSPACE_LEASE_TTL_MS,
+      HARD_MAX_WORKSPACE_LEASE_TTL_MS,
+    ),
     maxCleanupOperations: validateCodingLimit(
       "maxCleanupOperations",
       options?.maxCleanupOperations ?? DEFAULT_MAX_WORKSPACE_CLEANUP_OPERATIONS,
@@ -232,7 +248,11 @@ export function createCodingWorkspaceLifecycle(options: CreateCodingWorkspaceLif
     allowUnownedCleanup: options.policy?.allowUnownedCleanup === true,
     allowMismatchedCleanup: options.policy?.allowMismatchedCleanup === true,
   };
-  if (typeof options.ownerId !== "string" || options.ownerId.length === 0 || Buffer.byteLength(options.ownerId, "utf8") > MAX_OWNER_ID_BYTES) {
+  if (
+    typeof options.ownerId !== "string" ||
+    options.ownerId.length === 0 ||
+    Buffer.byteLength(options.ownerId, "utf8") > MAX_OWNER_ID_BYTES
+  ) {
     throw new WorkspaceError("ERR_PRISM_WORKSPACE_LIMIT", "ownerId must be a non-empty bounded string");
   }
   const registrations: ReadonlyMap<string, WorkspaceRepositoryRegistration> = new Map(
@@ -328,7 +348,10 @@ export function createCodingWorkspaceLifecycle(options: CreateCodingWorkspaceLif
 
   function validateArtifactRefs(refs: readonly ArtifactReference[]): void {
     if (!Array.isArray(refs) || refs.length > DEFAULT_MAX_CODING_ARTIFACTS) {
-      throw new WorkspaceError("ERR_PRISM_WORKSPACE_LIMIT", `artifact refs exceed ${DEFAULT_MAX_CODING_ARTIFACTS} (hard ${HARD_MAX_CODING_ARTIFACTS})`);
+      throw new WorkspaceError(
+        "ERR_PRISM_WORKSPACE_LIMIT",
+        `artifact refs exceed ${DEFAULT_MAX_CODING_ARTIFACTS} (hard ${HARD_MAX_CODING_ARTIFACTS})`,
+      );
     }
     for (const ref of refs) {
       if (!ref || !ARTIFACT_KINDS.has(ref.kind)) throw new WorkspaceError("ERR_PRISM_WORKSPACE_LIMIT", "invalid artifact kind");
@@ -359,7 +382,8 @@ export function createCodingWorkspaceLifecycle(options: CreateCodingWorkspaceLif
     if (typeof record.ownerId !== "string" || record.ownerId.length === 0 || record.ownerId.length > MAX_OWNER_ID_BYTES) {
       throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "malformed ownerId");
     }
-    if (!WORKSPACE_STATES.includes(record.state)) throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", `unknown workspace state: ${String(record.state)}`);
+    if (!WORKSPACE_STATES.includes(record.state))
+      throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", `unknown workspace state: ${String(record.state)}`);
     if (!Array.isArray(record.repositories) || record.repositories.length === 0 || record.repositories.length > limits.maxRepositories) {
       throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "malformed repository list");
     }
@@ -370,16 +394,20 @@ export function createCodingWorkspaceLifecycle(options: CreateCodingWorkspaceLif
       }
       if (seen.has(repo.repositoryId)) throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "duplicate repositoryId");
       seen.add(repo.repositoryId);
-      if (typeof repo.root !== "string" || !isAbsolute(repo.root)) throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "malformed repository root");
+      if (typeof repo.root !== "string" || !isAbsolute(repo.root))
+        throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "malformed repository root");
       if (typeof repo.remoteFingerprint !== "string" || !FINGERPRINT_HEX.test(repo.remoteFingerprint)) {
         throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "malformed remote fingerprint");
       }
       if (repo.defaultBranch !== undefined && (typeof repo.defaultBranch !== "string" || !BRANCH.test(repo.defaultBranch))) {
         throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "malformed default branch");
       }
-      if (typeof repo.branch !== "string" || !BRANCH.test(repo.branch)) throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "malformed branch");
-      if (typeof repo.base !== "string" || !SHA_HEX.test(repo.base)) throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "malformed base");
-      if (typeof repo.head !== "string" || !SHA_HEX.test(repo.head)) throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "malformed head");
+      if (typeof repo.branch !== "string" || !BRANCH.test(repo.branch))
+        throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "malformed branch");
+      if (typeof repo.base !== "string" || !SHA_HEX.test(repo.base))
+        throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "malformed base");
+      if (typeof repo.head !== "string" || !SHA_HEX.test(repo.head))
+        throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "malformed head");
       if (typeof repo.worktreeId !== "string" || !repo.worktreeId.startsWith(record.workspaceId)) {
         throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", "malformed worktreeId");
       }
@@ -416,7 +444,10 @@ export function createCodingWorkspaceLifecycle(options: CreateCodingWorkspaceLif
     return record;
   }
 
-  async function loadCheckpointRecord(workspaceId: string, signal?: AbortSignal): Promise<{
+  async function loadCheckpointRecord(
+    workspaceId: string,
+    signal?: AbortSignal,
+  ): Promise<{
     readonly record: CodingWorkspaceRecord;
     readonly version: number;
   } | null> {
@@ -437,7 +468,13 @@ export function createCodingWorkspaceLifecycle(options: CreateCodingWorkspaceLif
     return loaded ? loaded.record : null;
   }
 
-  async function saveRecord(record: CodingWorkspaceRecord, version: number, expectedVersion: number, fencingToken: number, signal?: AbortSignal): Promise<CodingWorkspaceRecord> {
+  async function saveRecord(
+    record: CodingWorkspaceRecord,
+    version: number,
+    expectedVersion: number,
+    fencingToken: number,
+    signal?: AbortSignal,
+  ): Promise<CodingWorkspaceRecord> {
     const encoded = Buffer.byteLength(JSON.stringify(record), "utf8");
     if (encoded > limits.maxRecordBytes) {
       throw new WorkspaceError("ERR_PRISM_WORKSPACE_LIMIT", `workspace record exceeds ${limits.maxRecordBytes} bytes`);
@@ -460,7 +497,8 @@ export function createCodingWorkspaceLifecycle(options: CreateCodingWorkspaceLif
 
   async function verifyRepositoryIdentity(repo: WorkspaceRepositoryRecord, signal?: AbortSignal): Promise<void> {
     const registration = registrations.get(repo.repositoryId);
-    if (!registration) throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", `repository ${repo.repositoryId} is not registered on this host`);
+    if (!registration)
+      throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", `repository ${repo.repositoryId} is not registered on this host`);
     let rootNow: string;
     try {
       rootNow = await realpath(registration.root);
@@ -472,12 +510,22 @@ export function createCodingWorkspaceLifecycle(options: CreateCodingWorkspaceLif
     }
     await assertWorktreeContained(repo.worktreePath);
     const fingerprint = await registration.git.fingerprint({ signal });
-    if (fingerprint.remoteFingerprint !== repo.remoteFingerprint || (fingerprint.defaultBranch ?? undefined) !== (repo.defaultBranch ?? undefined)) {
-      throw new WorkspaceError("ERR_PRISM_WORKSPACE_FINGERPRINT", `repository ${repo.repositoryId} remote/default-branch fingerprint changed`);
+    if (
+      fingerprint.remoteFingerprint !== repo.remoteFingerprint ||
+      (fingerprint.defaultBranch ?? undefined) !== (repo.defaultBranch ?? undefined)
+    ) {
+      throw new WorkspaceError(
+        "ERR_PRISM_WORKSPACE_FINGERPRINT",
+        `repository ${repo.repositoryId} remote/default-branch fingerprint changed`,
+      );
     }
     const listed = await registration.git.worktree({ action: "list", signal });
     const entry = listed.worktrees.find((worktree) => worktree.path === repo.worktreePath);
-    if (!entry) throw new WorkspaceError("ERR_PRISM_WORKSPACE_FINGERPRINT", `worktree ${repo.worktreePath} is not registered to repository ${repo.repositoryId}`);
+    if (!entry)
+      throw new WorkspaceError(
+        "ERR_PRISM_WORKSPACE_FINGERPRINT",
+        `worktree ${repo.worktreePath} is not registered to repository ${repo.repositoryId}`,
+      );
     if (entry.head && entry.head !== repo.head) {
       throw new WorkspaceError("ERR_PRISM_WORKSPACE_FINGERPRINT", `worktree ${repo.worktreePath} head changed`);
     }
@@ -517,11 +565,10 @@ export function createCodingWorkspaceLifecycle(options: CreateCodingWorkspaceLif
     if (existing) {
       const sameSet =
         existing.repositories.length === requested.length &&
-        requested.every(
-          (item) =>
-            existing.repositories.some(
-              (repo) => repo.repositoryId === item.repositoryId && repo.branch === item.branch && repo.state === "active",
-            ),
+        requested.every((item) =>
+          existing.repositories.some(
+            (repo) => repo.repositoryId === item.repositoryId && repo.branch === item.branch && repo.state === "active",
+          ),
         );
       if (existing.state === "active" && sameSet) return existing; // idempotent duplicate create
       throw new WorkspaceError("ERR_PRISM_WORKSPACE_FENCE", `workspace exists in state ${existing.state}; remove or clean it first`);
@@ -713,7 +760,8 @@ export function createCodingWorkspaceLifecycle(options: CreateCodingWorkspaceLif
 
   async function removeWorktree(repo: WorkspaceRepositoryRecord, signal?: AbortSignal): Promise<void> {
     const registration = registrations.get(repo.repositoryId);
-    if (!registration) throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", `repository ${repo.repositoryId} is not registered on this host`);
+    if (!registration)
+      throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", `repository ${repo.repositoryId} is not registered on this host`);
     if (repo.worktreePath === repo.root) {
       throw new WorkspaceError("ERR_PRISM_WORKSPACE_MAIN", `refusing to remove the main worktree of repository ${repo.repositoryId}`);
     }
@@ -729,7 +777,10 @@ export function createCodingWorkspaceLifecycle(options: CreateCodingWorkspaceLif
     if (!entry) {
       if (!existsOnDisk) {
         if (!policy.allowMissingCleanup) {
-          throw new WorkspaceError("ERR_PRISM_WORKSPACE_UNKNOWN", `worktree ${repo.worktreePath} is missing; cleanup refused (allowMissingCleanup)`);
+          throw new WorkspaceError(
+            "ERR_PRISM_WORKSPACE_UNKNOWN",
+            `worktree ${repo.worktreePath} is missing; cleanup refused (allowMissingCleanup)`,
+          );
         }
         return; // claimed as removed; nothing on disk or in git
       }

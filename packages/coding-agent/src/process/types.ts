@@ -189,11 +189,7 @@ export function resolveProcessSessionLimits(limits?: ProcessSessionLimits): Reso
       limits?.maxTerminalColumns ?? DEFAULT_MAX_TERMINAL_COLUMNS,
       HARD_MAX_TERMINAL_COLUMNS,
     ),
-    maxTerminalRows: validateCodingLimit(
-      "maxTerminalRows",
-      limits?.maxTerminalRows ?? DEFAULT_MAX_TERMINAL_ROWS,
-      HARD_MAX_TERMINAL_ROWS,
-    ),
+    maxTerminalRows: validateCodingLimit("maxTerminalRows", limits?.maxTerminalRows ?? DEFAULT_MAX_TERMINAL_ROWS, HARD_MAX_TERMINAL_ROWS),
     maxTerminalTermBytes: validateCodingLimit(
       "maxTerminalTermBytes",
       limits?.maxTerminalTermBytes ?? DEFAULT_MAX_TERMINAL_TERM_BYTES,

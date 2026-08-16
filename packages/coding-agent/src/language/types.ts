@@ -156,10 +156,7 @@ export interface LanguageIntelligence {
    * Bounded push/pull diagnostic refresh for changed files. Generations are
    * document versions; stale-version results never overwrite newer views.
    */
-  diagnosticDelta(
-    request: LanguageDiagnosticDeltaRequest,
-    opts?: { signal?: AbortSignal },
-  ): Promise<LanguageDiagnosticDeltaResult>;
+  diagnosticDelta(request: LanguageDiagnosticDeltaRequest, opts?: { signal?: AbortSignal }): Promise<LanguageDiagnosticDeltaResult>;
   dispose(): Promise<void>;
 }
 

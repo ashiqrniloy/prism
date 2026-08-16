@@ -44,16 +44,18 @@ interface FakePtyState {
   waitReject?: (error: Error) => void;
 }
 
-function makeBackend(overrides: {
-  resizeCapable?: boolean;
-  metadata?: Record<string, string>;
-  startError?: Error;
-  startDelayMs?: number;
-  startNeverSettles?: boolean;
-  waitRejectError?: Error;
-  lostOnResize?: boolean;
-  throwOnWrite?: boolean;
-} = {}): { backend: ProcessPtyBackend; state: FakePtyState } {
+function makeBackend(
+  overrides: {
+    resizeCapable?: boolean;
+    metadata?: Record<string, string>;
+    startError?: Error;
+    startDelayMs?: number;
+    startNeverSettles?: boolean;
+    waitRejectError?: Error;
+    lostOnResize?: boolean;
+    throwOnWrite?: boolean;
+  } = {},
+): { backend: ProcessPtyBackend; state: FakePtyState } {
   const state: FakePtyState = { startRequests: [], writes: [], resizes: [], signals: [], killed: 0, released: 0 };
   const handle: ProcessPtyHandle = {
     metadata: overrides.metadata,
@@ -105,11 +107,11 @@ function rejectCode(promise: Promise<unknown>, code: string): Promise<void> {
 test("pty:true without a backend rejects before spawn and leaves no session", async () => {
   const sessions = createProcessSessions({ cwd: root });
   try {
-    await rejectCode(
-      sessions.start({ command: process.execPath, args: ["-e", "1"], pty: true }),
-      "ERR_PRISM_PROCESS_PTY_UNSUPPORTED",
+    await rejectCode(sessions.start({ command: process.execPath, args: ["-e", "1"], pty: true }), "ERR_PRISM_PROCESS_PTY_UNSUPPORTED");
+    assert.throws(
+      () => sessions.get("proc_none"),
+      (err: unknown) => err instanceof ProcessSessionError,
     );
-    assert.throws(() => sessions.get("proc_none"), (err: unknown) => err instanceof ProcessSessionError);
   } finally {
     await sessions.dispose();
   }
@@ -278,15 +280,12 @@ test("backend start failure surfaces as PTY_BACKEND without backend error text",
   const { backend } = makeBackend({ startError: new Error("s3cr3t-credential-value leaked?") });
   const sessions = createProcessSessions({ cwd: root, ptyBackend: backend, limits: { maxLifetimeMs: 60_000 } });
   try {
-    await assert.rejects(
-      sessions.start({ command: "x", pty: true }),
-      (err: unknown) => {
-        assert.ok(err instanceof ProcessSessionError);
-        assert.equal(err.code, "ERR_PRISM_PROCESS_PTY_BACKEND");
-        assert.ok(!err.message.includes("s3cr3t"), "backend error text must not leak into the surfaced error");
-        return true;
-      },
-    );
+    await assert.rejects(sessions.start({ command: "x", pty: true }), (err: unknown) => {
+      assert.ok(err instanceof ProcessSessionError);
+      assert.equal(err.code, "ERR_PRISM_PROCESS_PTY_BACKEND");
+      assert.ok(!err.message.includes("s3cr3t"), "backend error text must not leak into the surfaced error");
+      return true;
+    });
   } finally {
     await sessions.dispose();
   }
@@ -295,7 +294,12 @@ test("backend start failure surfaces as PTY_BACKEND without backend error text",
 test("backend loss during wait marks the session unknown without fabricating exit", async () => {
   const events: CodingProcessEvent[] = [];
   const { backend, state } = makeBackend({ waitRejectError: new Error("backend gone") });
-  const sessions = createProcessSessions({ cwd: root, ptyBackend: backend, onEvent: (e) => events.push(e), limits: { maxLifetimeMs: 60_000 } });
+  const sessions = createProcessSessions({
+    cwd: root,
+    ptyBackend: backend,
+    onEvent: (e) => events.push(e),
+    limits: { maxLifetimeMs: 60_000 },
+  });
   try {
     const p = await sessions.start({ command: "x", pty: true });
     state.waitReject?.(new Error("backend gone"));
@@ -400,7 +404,10 @@ test("ownership and metadata bounds fail closed", async () => {
     const sessions2 = createProcessSessions({ cwd: root, ptyBackend: ok.backend, limits: { maxLifetimeMs: 60_000 } });
     try {
       const p = await sessions2.start({ command: "x", pty: true, owner: "alice" });
-      assert.throws(() => sessions2.get(p.id, "bob"), (err: unknown) => err instanceof ProcessSessionError);
+      assert.throws(
+        () => sessions2.get(p.id, "bob"),
+        (err: unknown) => err instanceof ProcessSessionError,
+      );
       await sessions2.cancelOwned("nobody");
       assert.equal(ok.state.killed, 0);
     } finally {

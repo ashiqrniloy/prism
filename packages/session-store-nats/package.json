@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-session-store-nats",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Optional NATS JetStream AgentEventSource adapter for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -29,7 +29,7 @@
     "@nats-io/transport-node": "^3.4.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.2.5"
+    "@arnilo/prism": "0.2.6"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

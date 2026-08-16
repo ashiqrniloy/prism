@@ -13,12 +13,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  createMemoryCheckpointStore,
-  createMemoryLeaseStore,
-  type CheckpointStore,
-  type LeaseStore,
-} from "@arnilo/prism";
+import { createMemoryCheckpointStore, createMemoryLeaseStore, type CheckpointStore, type LeaseStore } from "@arnilo/prism";
 import {
   createProcessSessions,
   ProcessRecoveryError,
@@ -140,11 +135,7 @@ function makeSessions(h: Harness, ownerId = "replica-1", recoveryLimits?: Record
 
 const ownership = { tenantId: "tenant-a" };
 
-async function waitForRecordState(
-  checkpoints: CheckpointStore,
-  id: string,
-  predicate: (state: string) => boolean,
-): Promise<void> {
+async function waitForRecordState(checkpoints: CheckpointStore, id: string, predicate: (state: string) => boolean): Promise<void> {
   const deadline = Date.now() + 2000;
   for (;;) {
     const loaded = await loadProcessRecoveryRecord({ checkpoints, id, limits: resolveProcessRecoveryLimits(), ownership });
@@ -171,11 +162,14 @@ describe("process recovery", () => {
     try {
       const dir = await mkdtemp(join(tmpdir(), "phase26-recovery-nodur-"));
       const sessions = createProcessSessions({ cwd: dir });
-      await assert.rejects(() => sessions.recover(), (error: unknown) => {
-        assert.ok(error instanceof ProcessRecoveryError);
-        assert.equal(error.code, "ERR_PRISM_RECOVERY_UNSUPPORTED");
-        return true;
-      });
+      await assert.rejects(
+        () => sessions.recover(),
+        (error: unknown) => {
+          assert.ok(error instanceof ProcessRecoveryError);
+          assert.equal(error.code, "ERR_PRISM_RECOVERY_UNSUPPORTED");
+          return true;
+        },
+      );
       await rm(dir, { recursive: true, force: true });
     } finally {
       await cleanup(h);

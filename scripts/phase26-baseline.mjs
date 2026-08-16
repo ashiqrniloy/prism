@@ -19,7 +19,9 @@ const phase25 = JSON.parse(readFileSync(url("./phase25-baseline.json"), "utf8"))
 const gitHead = execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
 
 function sha256(rel) {
-  return createHash("sha256").update(readFileSync(url(`../${rel}`))).digest("hex");
+  return createHash("sha256")
+    .update(readFileSync(url(`../${rel}`)))
+    .digest("hex");
 }
 
 /** Every single-editor allowed file (shared coordination files are not hash-locked). */
@@ -37,7 +39,18 @@ for (const file of [...seamFiles].sort()) {
   seams[file] = existsSync(url(`../${file}`)) ? { sha256: sha256(file), status: "present" } : { sha256: null, status: "absent" };
 }
 
-const inheritedKeys = ["npmTest", "coverage", "threatSuites", "packDryRun", "releaseGate", "node20", "testPostgres", "audit", "secrets", "sdkReady"];
+const inheritedKeys = [
+  "npmTest",
+  "coverage",
+  "threatSuites",
+  "packDryRun",
+  "releaseGate",
+  "node20",
+  "testPostgres",
+  "audit",
+  "secrets",
+  "sdkReady",
+];
 const inherited = {};
 for (const key of inheritedKeys) inherited[key] = phase25[key];
 

@@ -37,10 +37,22 @@ const rootPkg = JSON.parse(readFileSync(url("../package.json"), "utf8"));
 const plan = readFileSync(url("../plans/026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md"), "utf8");
 
 const TASKS = ["task0", "task1", "task2", "task3", "task4", "task5", "task6", "task7", "task8"];
-const ITEM_IDS = ["primitive-review", "pty-backend", "indexed-search", "workspace-lifecycle", "forge-breadth", "durable-recovery", "review-diagnostics", "coding-journey", "docs-bump-exit"];
+const ITEM_IDS = [
+  "primitive-review",
+  "pty-backend",
+  "indexed-search",
+  "workspace-lifecycle",
+  "forge-breadth",
+  "durable-recovery",
+  "review-diagnostics",
+  "coding-journey",
+  "docs-bump-exit",
+];
 
 function sha256(file) {
-  return createHash("sha256").update(readFileSync(url(`../${file}`))).digest("hex");
+  return createHash("sha256")
+    .update(readFileSync(url(`../${file}`)))
+    .digest("hex");
 }
 
 function itemById(id) {
@@ -53,8 +65,14 @@ test("manifest shape: release/line/type, items, tasks, threats, demand, policies
   assert.equal(manifest.release, "0.2.6");
   assert.equal(manifest.line, "0.2.x");
   assert.equal(manifest.type, "fully-featured-coding-agent-readiness");
-  assert.deepEqual(manifest.items.map((item) => item.id), ITEM_IDS);
-  assert.deepEqual(manifest.items.map((item) => item.task), TASKS);
+  assert.deepEqual(
+    manifest.items.map((item) => item.id),
+    ITEM_IDS,
+  );
+  assert.deepEqual(
+    manifest.items.map((item) => item.task),
+    TASKS,
+  );
   assert.deepEqual(Object.keys(manifest.tasks), TASKS);
   for (const token of Object.values(manifest.tasks)) assert.ok(["done", "pending"].includes(token));
   assert.ok(Array.isArray(manifest.deviations), "deviations log exists");
@@ -63,11 +81,28 @@ test("manifest shape: release/line/type, items, tasks, threats, demand, policies
   assert.equal(manifest.compatPolicy.allowBreakUsed, false);
   assert.ok(manifest.protectedPolicy.requiredSurfaces.length >= 5, "protected surfaces listed");
   assert.ok(manifest.protectedEnvs.length >= 5, "protected env names listed (names only, never values)");
-  assert.ok(manifest.stateMachines.pty && manifest.stateMachines.index && manifest.stateMachines.workspace && manifest.stateMachines.processRecovery && manifest.stateMachines.review && manifest.stateMachines.cancellation);
-  assert.ok(manifest.frozenCaps.terminal && manifest.frozenCaps.index && manifest.frozenCaps.workspace && manifest.frozenCaps.recovery && manifest.frozenCaps.review && manifest.frozenCaps.journey);
+  assert.ok(
+    manifest.stateMachines.pty &&
+      manifest.stateMachines.index &&
+      manifest.stateMachines.workspace &&
+      manifest.stateMachines.processRecovery &&
+      manifest.stateMachines.review &&
+      manifest.stateMachines.cancellation,
+  );
+  assert.ok(
+    manifest.frozenCaps.terminal &&
+      manifest.frozenCaps.index &&
+      manifest.frozenCaps.workspace &&
+      manifest.frozenCaps.recovery &&
+      manifest.frozenCaps.review &&
+      manifest.frozenCaps.journey,
+  );
   assert.ok(manifest.frozenErrors.existing.includes("ERR_PRISM_PROCESS_PTY_UNSUPPORTED"));
   assert.ok(manifest.frozenErrors.new.length >= 5);
-  assert.equal(manifest.supportMatrix, "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.2.6 changes none of it");
+  assert.equal(
+    manifest.supportMatrix,
+    "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.2.6 changes none of it",
+  );
 });
 
 test("Task 0 state: baseline captured, primitive review shipped, freeze test wired", () => {
@@ -75,13 +110,25 @@ test("Task 0 state: baseline captured, primitive review shipped, freeze test wir
   assert.equal(baseline.baselineRelease, "0.2.5");
   assert.equal(baseline.release, "0.2.6");
   assert.ok(baseline.inherited.npmTest && baseline.inherited.coverage, "0.2.5 exit figures inherited");
-  assert.ok(baseline.exitGate === null, "exitGate null until Task 8");
-  for (const file of ["docs/_evidence/phase26-primitive-review.md", "scripts/phase26-freeze-manifest.json", "scripts/phase26-baseline.json", "scripts/phase26-baseline.mjs", "scripts/phase26-freeze.test.mjs"]) {
+  if (manifest.tasks.task8 === "pending") {
+    assert.ok(baseline.exitGate === null, "exitGate null until Task 8");
+  } else {
+    assert.ok(baseline.exitGate?.green === true, "exitGate green at Task 8");
+  }
+  for (const file of [
+    "docs/_evidence/phase26-primitive-review.md",
+    "scripts/phase26-freeze-manifest.json",
+    "scripts/phase26-baseline.json",
+    "scripts/phase26-baseline.mjs",
+    "scripts/phase26-freeze.test.mjs",
+  ]) {
     assert.ok(existsSync(url(`../${file}`)), `${file} exists`);
   }
   const review = readFileSync(url("../docs/_evidence/phase26-primitive-review.md"), "utf8");
-  for (const marker of itemById("primitive-review").markers["docs/_evidence/phase26-primitive-review.md"]) assert.ok(review.includes(marker), `primitive review contains ${marker}`);
-  for (const negative of itemById("primitive-review").negativeMarkers["docs/_evidence/phase26-primitive-review.md"]) assert.ok(!review.includes(negative), `primitive review avoids markdown links (${negative})`);
+  for (const marker of itemById("primitive-review").markers["docs/_evidence/phase26-primitive-review.md"])
+    assert.ok(review.includes(marker), `primitive review contains ${marker}`);
+  for (const negative of itemById("primitive-review").negativeMarkers["docs/_evidence/phase26-primitive-review.md"])
+    assert.ok(!review.includes(negative), `primitive review avoids markdown links (${negative})`);
 });
 
 test("pending items are byte-identical to the Task 0 baseline (single-editor files)", () => {
@@ -192,7 +239,10 @@ test("threat model T1-T8 maps to task tests; mapped tests exist for done tasks",
     if (manifest.tasks[threat.task] === "done") {
       for (const testRef of threat.tests) {
         const testFile = testRef.split(" ")[0];
-        assert.ok(existsSync(url(`../${testFile}`)) || testFile === "scripts/phase26-freeze.test.mjs", `T${i} mapped test ${testFile} exists (${threat.task} done)`);
+        assert.ok(
+          existsSync(url(`../${testFile}`)) || testFile === "scripts/phase26-freeze.test.mjs",
+          `T${i} mapped test ${testFile} exists (${threat.task} done)`,
+        );
       }
     }
   }
@@ -201,7 +251,10 @@ test("threat model T1-T8 maps to task tests; mapped tests exist for done tasks",
 test("npm test wiring includes phase26-freeze.test.mjs after the phase25 segment", () => {
   const testScript = rootPkg.scripts.test;
   assert.ok(testScript.includes("scripts/phase26-freeze.test.mjs"), "phase26-freeze.test.mjs wired into npm test");
-  assert.ok(testScript.indexOf("scripts/phase26-freeze.test.mjs") > testScript.indexOf("scripts/phase25-bounded-accumulation.test.mjs"), "phase26 segment after phase25 segment");
+  assert.ok(
+    testScript.indexOf("scripts/phase26-freeze.test.mjs") > testScript.indexOf("scripts/phase25-bounded-accumulation.test.mjs"),
+    "phase26 segment after phase25 segment",
+  );
 });
 
 test("baseline seam coverage matches the manifest (every single-editor allowed file recorded)", () => {
@@ -222,8 +275,15 @@ test("baseline seam coverage matches the manifest (every single-editor allowed f
 });
 
 test("compat and migration tokens recorded; deviations never weaken the compat promise", () => {
-  assert.equal(manifest.compatPolicy.migrationNote, "docs/migration.md ## 0.2.5 -> 0.2.6 (additive-only; separate versioned record namespaces; ACP activeRun optional; no removal note needed unless a deviation is recorded)");
-  assert.ok(manifest.migrationTokens.includes("0.2.6") && manifest.migrationTokens.includes("ptyBackend") && manifest.migrationTokens.includes("createCodingWorkspaceLifecycle"));
+  assert.equal(
+    manifest.compatPolicy.migrationNote,
+    "docs/migration.md ## 0.2.5 -> 0.2.6 (additive-only; separate versioned record namespaces; ACP activeRun optional; no removal note needed unless a deviation is recorded)",
+  );
+  assert.ok(
+    manifest.migrationTokens.includes("0.2.6") &&
+      manifest.migrationTokens.includes("ptyBackend") &&
+      manifest.migrationTokens.includes("createCodingWorkspaceLifecycle"),
+  );
   for (const deviation of manifest.deviations) {
     assert.ok(deviation.id && deviation.what && deviation.review, "every deviation records id/what/review");
     assert.ok(!String(deviation.what).toLowerCase().includes("allow-break"), "deviations must not smuggle --allow-break");

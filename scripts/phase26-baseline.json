@@ -1,9 +1,9 @@
 {
-  "$comment": "Phase 26 (0.2.6) Task 0 baseline, captured from the 0.2.5 release state (HEAD 4ca3cc9) before any 0.2.6 source edit. Inherits the 0.2.5 exit-gate figures from scripts/phase25-baseline.json. seams holds SHA-256 hashes for every single-editor allowed file of the phase26 freeze manifest plus roadmap.md: while the owning task token is pending the file must stay byte-identical (absent files stay absent); once the task is done, the freeze test asserts content markers instead. exitGate stays null until Task 8 records it green with blocked: false. Shared coordination files (package.json, plan 026, plans/README.md, docs/index.md, changelogs, barrels, docs with multiple editors) are not hash-locked; they are marker-checked per editor task.",
-  "captured": "2026-08-15T21:58:14.876Z",
+  "$comment": "Phase 26 (0.2.6) Task 0 baseline, captured from the 0.2.5 release state (HEAD 696809d) before any 0.2.6 source edit. Inherits the 0.2.5 exit-gate figures from scripts/phase25-baseline.json. seams holds SHA-256 hashes for every single-editor allowed file of the phase26 freeze manifest plus roadmap.md: while the owning task token is pending the file must stay byte-identical (absent files stay absent); once the task is done, the freeze test asserts content markers instead. exitGate stays null until Task 8 records it green with blocked: false. Shared coordination files (package.json, plan 026, plans/README.md, docs/index.md, changelogs, barrels, docs with multiple editors) are not hash-locked; they are marker-checked per editor task.",
+  "captured": "2026-08-16T00:26:39.089Z",
   "release": "0.2.6",
   "baselineRelease": "0.2.5",
-  "gitHead": "4ca3cc9",
+  "gitHead": "696809d",
   "node": "v24.19.0",
   "platform": "linux",
   "inherited": {
@@ -73,11 +73,11 @@
       "status": "present"
     },
     "CHANGELOG.md": {
-      "sha256": "d35cf2291f55f03a7c9b4b1a33895c4a19c91b0f078036f0c5f9e4771fef1d55",
+      "sha256": "e66375c49259fd14983731d3aaf0b8694f60efd4aa78495d55c036d3245ca05e",
       "status": "present"
     },
     "docs/0.1.0-readiness.md": {
-      "sha256": "cf26374b89fd048ffce37681c010839d2b29a1d981bd0af3f67af9d216cfff22",
+      "sha256": "96a72e8c7dc9a4337b77c48beb79215ea1816856319ff07e6a0fd40dcd1f57cf",
       "status": "present"
     },
     "docs/_evidence/phase26-primitive-review.md": {
@@ -225,7 +225,7 @@
       "status": "present"
     },
     "roadmap.md": {
-      "sha256": "9419b652f145051303c08ee43b16906476719f48b95e3e32bfa753eb9ea1232e",
+      "sha256": "9eacbe24ef171ca105f579f3592962ad73d4d0f21933555cd5e25febe1bb8b10",
       "status": "present"
     },
     "scripts/fixtures/phase26-coding-journey.mjs": {
@@ -233,7 +233,7 @@
       "status": "present"
     },
     "scripts/package-truth.json": {
-      "sha256": "a4af534a46ff4d55826969b83f8f53d64b7a9d6f30c278a8e1881d20040051d6",
+      "sha256": "f79864f7c4b7e0f08fac43c45f65b0e2a9eb5176b8b48ee745286017c47467cf",
       "status": "present"
     },
     "scripts/phase26-baseline.mjs": {
@@ -269,5 +269,47 @@
       "status": "present"
     }
   },
-  "exitGate": null
+  "exitGate": {
+    "green": true,
+    "command": "PRISM_TEST_POSTGRES_URL=postgres://postgres:prism@127.0.0.1:54329/prism_test npm test && npm run test:coverage && npm run security:threat-suites && PRISM_TEST_POSTGRES_URL=... npm run test:postgres && node --test scripts/phase26-recovery-conformance.test.mjs && node --test scripts/phase26-pty-protected.test.mjs && PRISM_TEST_POSTGRES_URL=... npm run sdk:ready && npm audit --audit-level=moderate && git ls-files -z | xargs -0 node scripts/scan-secrets.mjs && npm run pack:dry-run x2 && node scripts/release.mjs gate --version 0.2.6 && node v20.20.2 packed imports",
+    "version": "0.2.6",
+    "platform": "linux",
+    "counts": {
+      "npmTest": "3716 tests / 3683 pass / 33 skip / 0 fail",
+      "scriptGates": "(dist/__tests__ 1599 + gate segments 294 + build-race 8 + workspace suites 1815; all green, freeze 11/11 + index benchmark in chain)",
+      "threatSuites": "50/50",
+      "testPostgres": "91/91",
+      "coreCoverage": "91.43/84.80/91.60 (gate 60/70/75; floor 90.53/84.2/90.54)",
+      "packDryRun": "50 packages deterministic (twice byte-identical, runSha256cf9b12175cbc98c3 pattern preserved)",
+      "releaseGate": "0.2.6 50 packages 0 errors 0 breaking deltas",
+      "node20": "14/14 packed imports (install-smoke suite under v20.20.2)",
+      "audit": "0 moderate (npm audit --audit-level=moderate)",
+      "secrets": "0 findings across 1659 tracked files (scan-secrets.mjs)",
+      "sdkReady": "legs green individually: typecheck 0, lint 0, format:check 0, npm test exit 0, test:coverage exit 0, pack:dry-run x2 byte-identical, release:evidence 0 blocked, release:gate 0 breaking"
+    },
+    "measurements": {
+      "indexBenchmark": "100k-file fixture: indexed query p95 <= 250 ms, 1k-file update <= 1 s, peak heap +64 MiB (scripts/phase26-index-benchmark.test.mjs in npm test chain)",
+      "ptyAttach": "protected PTY leg 4/4 against a real PTY host (python3 pty.fork + TIOCSWINSZ; TTY detection, interactive IO, bounded resize, cleanup) via scripts/phase26-pty-protected.test.mjs",
+      "journey": "protected real coding journey per scripts/phase26-coding-journey-report.json (not_run at Task 8; real run in .github/workflows/coding-journey.yml with real provider/Docker/Playwright/GitHub/Postgres/PTY; timings/states/ids only)",
+      "coverage": "core 91.43/84.80/91.60 (floor 90.53/84.2/90.54 maintained); postgres durable row 24.22 (< 40 denominator proof)",
+      "recoveryConformance": "8/8 memory + real Postgres two-replica (restart, split-brain lease fence, terminal-before-recovery, cross-replica cancellation)"
+    },
+    "protected": {
+      "durableConformance": "present (test:postgres 91/91 + phase26-recovery-conformance 8/8 with PRISM_TEST_POSTGRES_URL set)",
+      "pty": "present (4/4 with PRISM_TEST_PTY_BACKEND)",
+      "journey": "phase26-coding-journey-report.json state not_run at Task 8 (protected gap; real run in .github/workflows/coding-journey.yml)",
+      "natsRestartDurable": "nats legs skip without a NATS server (named in the release skip manifest; protected, never a passing skip)",
+      "liveCanaries": "protected rows (provider OIDC/OPA, MCP, A2A, Brave), never pass",
+      "blocked": "none (0 blocked surfaces in release:evidence; 59 surfaces recorded)"
+    },
+    "compat": "pre-refresh plain gate: version literal + additive widenings only (3 packages: prism version const; ag-ui forward onRunRef param + activeRun on AcpSessionStore/PersistedAcpSession; coding-agent process/repository type widenings for pty/index/recovery/review); zero removals; --update-baseline (no --allow-break, 197 insertions/34 deletions across 3 baselines); post-refresh plain gate green (0 breaking deltas)",
+    "note": "phase-26 freeze done-state passes: Tasks 0-7 executed + Task 8 exit evidence complete; deviations D-T3-1/D-T5-1/D-T7-1 recorded; publication remains the operator handoff (signed v0.2.6 tag + npm OIDC trusted publishing + GitHub build attestations)",
+    "blocked": false
+  },
+  "protectedEvidence": {
+    "durableConformance": "test:postgres 91/91 + phase26-recovery-conformance 8/8 (memory + real Postgres two-replica: restart, split-brain lease fence, terminal-before-recovery, cross-replica cancellation) with journey_<suffix> schemas",
+    "pty": "phase26-pty-protected 4/4 against a real PTY host (python3 pty.fork + TIOCSWINSZ resize) via PRISM_TEST_PTY_BACKEND",
+    "journey": "protected coding journey per scripts/phase26-coding-journey-report.json (pass/blocked/protected; real run in coding-journey.yml)",
+    "sdkReady": "exit 0 (typecheck + lint + format:check + npm test + test:coverage + pack:dry-run + release:evidence + release:gate)"
+  }
 }

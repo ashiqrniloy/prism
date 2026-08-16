@@ -109,7 +109,7 @@ function handle(msg) {
     const doc = params?.textDocument;
     const changes = params?.contentChanges;
     if (doc?.uri) {
-      const version = doc.version ?? ((docVersions.get(doc.uri) ?? 1) + 1);
+      const version = doc.version ?? (docVersions.get(doc.uri) ?? 1) + 1;
       docVersions.set(doc.uri, version);
       const last = Array.isArray(changes) ? changes[changes.length - 1] : undefined;
       if (last && typeof last.text === "string") openDocs.set(doc.uri, last.text);

@@ -236,8 +236,14 @@ try {
     writeFileSync(join(repoRoot, "counter.ts"), "export const count = 1;\n");
     git(repoRoot, ["add", "counter.ts"]);
     git(repoRoot, [
-      "-c", "user.name=prism-journey", "-c", "user.email=journey@prism.local",
-      "commit", "-q", "-m", `journey seed ${suffix}`,
+      "-c",
+      "user.name=prism-journey",
+      "-c",
+      "user.email=journey@prism.local",
+      "commit",
+      "-q",
+      "-m",
+      `journey seed ${suffix}`,
     ]);
     const gitPath = execFileSync("which", ["git"], { encoding: "utf8" }).trim() || "/usr/bin/git";
     gitOps = await createGitOperations({ cwd: repoRoot, gitPath });
@@ -399,8 +405,15 @@ try {
   await leg("patch-review", async () => {
     // The agent-driven edit becomes a real commit before the patch manifest.
     git(join(worktreePath), [
-      "-c", "user.name=prism-journey", "-c", "user.email=journey@prism.local",
-      "commit", "-q", "-a", "-m", `journey edit ${suffix}`,
+      "-c",
+      "user.name=prism-journey",
+      "-c",
+      "user.email=journey@prism.local",
+      "commit",
+      "-q",
+      "-a",
+      "-m",
+      `journey edit ${suffix}`,
     ]);
     const patch = git(repoRoot, ["diff", `main...${branch}`, "--", "counter.ts"]);
     const numstat = git(repoRoot, ["diff", "--numstat", `main...${branch}`])
@@ -591,7 +604,10 @@ try {
       if (final.records.length > 0 && final.records.every((r) => r.outcome === "terminal")) break;
       await new Promise((resolve) => setTimeout(resolve, 150));
     }
-    assert.ok(final?.records.every((r) => r.outcome === "terminal"), `records must be terminal after dispose: ${JSON.stringify(final)}`);
+    assert.ok(
+      final?.records.every((r) => r.outcome === "terminal"),
+      `records must be terminal after dispose: ${JSON.stringify(final)}`,
+    );
     await replicaD.dispose();
     ids.recovery = `split=${unattached.length}/attached=${restarted.attached}`;
     return { spawned: spawnedChildren, splitBrain: unattached.length, attached: restarted.attached };
@@ -628,15 +644,17 @@ try {
       .connectWith(app, async (connection) => {
         await connection.request(methods.agent.initialize, { protocolVersion: PROTOCOL_VERSION });
         const created = await connection.request(methods.agent.session.new, { cwd: worktreePath, mcpServers: [] });
-        await connection.request(methods.agent.session.prompt, {
-          sessionId: created.sessionId,
-          prompt: [
-            {
-              type: "text",
-              text: `Worktree: ${worktreePath}. Read counter.ts, then write counter.ts with exactly: export const count = 3;`,
-            },
-          ],
-        }).catch(() => undefined); // the run may end, be denied, or be cancelled — never replayed
+        await connection
+          .request(methods.agent.session.prompt, {
+            sessionId: created.sessionId,
+            prompt: [
+              {
+                type: "text",
+                text: `Worktree: ${worktreePath}. Read counter.ts, then write counter.ts with exactly: export const count = 3;`,
+              },
+            ],
+          })
+          .catch(() => undefined); // the run may end, be denied, or be cancelled — never replayed
       });
     const persisted = acpStore.entries.get(sessionId)?.activeRun;
     assert.ok(persisted, "active-run ref must be persisted for the run");
@@ -783,34 +801,34 @@ try {
   if (!env.PRISM_TEST_PTY_BACKEND) {
     console.log("PROTECTED JOURNEY leg pty skipped (no PRISM_TEST_PTY_BACKEND in the frozen profile)");
   } else {
-  await leg("pty", async () => {
-    const backendModule = await import(pathToFileURL(env.PRISM_TEST_PTY_BACKEND).href);
-    const ptyBackend = backendModule.createPtyBackend();
-    assert.ok(ptyBackend && typeof ptyBackend.startPty === "function", "PTY backend must expose startPty");
-    ptySessions = createProcessSessions({ cwd: repoRoot, ownership, ptyBackend });
-    const p = await ptySessions.start({
-      command: "sh",
-      args: [],
-      pty: true,
-      terminal: { columns: 80, rows: 24 },
+    await leg("pty", async () => {
+      const backendModule = await import(pathToFileURL(env.PRISM_TEST_PTY_BACKEND).href);
+      const ptyBackend = backendModule.createPtyBackend();
+      assert.ok(ptyBackend && typeof ptyBackend.startPty === "function", "PTY backend must expose startPty");
+      ptySessions = createProcessSessions({ cwd: repoRoot, ownership, ptyBackend });
+      const p = await ptySessions.start({
+        command: "sh",
+        args: [],
+        pty: true,
+        terminal: { columns: 80, rows: 24 },
+      });
+      let saw = "";
+      let cursor = 0;
+      await p.input(Buffer.from("echo PRISM_PTY_OK\n"));
+      for (let i = 0; i < 100; i += 1) {
+        const chunk = await p.output({ cursor, maxBytes: 64 });
+        saw += chunk.data;
+        cursor = chunk.cursor;
+        if (saw.includes("PRISM_PTY_OK")) break;
+        await new Promise((r) => setTimeout(r, 25));
+      }
+      assert.ok(saw.includes("PRISM_PTY_OK"), `PTY echo missing: ${saw.slice(0, 200)}`);
+      await p.kill();
+      const exit = await p.wait({ timeoutMs: 10_000 });
+      assert.ok(exit.state === "killed" || exit.state === "exited", `unexpected PTY terminal state ${exit.state}`);
+      ids.pty = "ok";
+      return { pty: "ok" };
     });
-    let saw = "";
-    let cursor = 0;
-    await p.input(Buffer.from("echo PRISM_PTY_OK\n"));
-    for (let i = 0; i < 100; i += 1) {
-      const chunk = await p.output({ cursor, maxBytes: 64 });
-      saw += chunk.data;
-      cursor = chunk.cursor;
-      if (saw.includes("PRISM_PTY_OK")) break;
-      await new Promise((r) => setTimeout(r, 25));
-    }
-    assert.ok(saw.includes("PRISM_PTY_OK"), `PTY echo missing: ${saw.slice(0, 200)}`);
-    await p.kill();
-    const exit = await p.wait({ timeoutMs: 10_000 });
-    assert.ok(exit.state === "killed" || exit.state === "exited", `unexpected PTY terminal state ${exit.state}`);
-    ids.pty = "ok";
-    return { pty: "ok" };
-  });
   }
 
   const wallMs = Date.now() - startedAt;
@@ -851,9 +869,7 @@ try {
   const cleanupMs = Date.now() - cleanupStartedAt;
 
   // ---------------------------------------------------------------- report
-  const release = JSON.parse(
-    readFileSync(join(import.meta.dirname, "node_modules", "@arnilo", "prism", "package.json"), "utf8"),
-  ).version;
+  const release = JSON.parse(readFileSync(join(import.meta.dirname, "node_modules", "@arnilo", "prism", "package.json"), "utf8")).version;
   const gate = {
     envs: [
       "PRISM_CODING_JOURNEY",

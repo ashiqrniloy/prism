@@ -8,7 +8,15 @@ import type { AgUiAuthorization } from "../../types.js";
 import type { AgUiLimitOptions } from "../../limits.js";
 import type { AgUiProjection } from "../../projection.js";
 import type { AgentContext, McpServer } from "@agentclientprotocol/sdk";
-import type { AgentRunLifecycle, AgentSession, CheckpointStore, LeaseStore, OwnershipScope, PendingDecision, SecretRedactor } from "@arnilo/prism";
+import type {
+  AgentRunLifecycle,
+  AgentSession,
+  CheckpointStore,
+  LeaseStore,
+  OwnershipScope,
+  PendingDecision,
+  SecretRedactor,
+} from "@arnilo/prism";
 import type { CodingLifecycleEmitter } from "@arnilo/prism-coding-agent";
 import type { PersistedAcpRunRef } from "../session-store.js";
 

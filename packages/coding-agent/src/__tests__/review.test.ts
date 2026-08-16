@@ -10,7 +10,9 @@ import {
 
 const SHA = (c: string): string => c.repeat(64);
 
-function reviewInput(overrides?: Partial<Parameters<typeof createCodingPatchReviewManifest>[0]>): Parameters<typeof createCodingPatchReviewManifest>[0] {
+function reviewInput(
+  overrides?: Partial<Parameters<typeof createCodingPatchReviewManifest>[0]>,
+): Parameters<typeof createCodingPatchReviewManifest>[0] {
   return {
     threadId: "thread-1",
     artifactId: "patch-1",
@@ -34,10 +36,7 @@ function reviewInput(overrides?: Partial<Parameters<typeof createCodingPatchRevi
   };
 }
 
-function recordFor(
-  review: CodingPatchReview,
-  overrides?: Partial<CodingReviewArtifactRecord>,
-): CodingReviewArtifactRecord {
+function recordFor(review: CodingPatchReview, overrides?: Partial<CodingReviewArtifactRecord>): CodingReviewArtifactRecord {
   return {
     id: review.artifactId,
     threadId: review.threadId,
@@ -118,7 +117,12 @@ test("caps charge before retention: diagnostics, checks, summaries, manifest byt
     () =>
       createCodingPatchReviewManifest(
         reviewInput({
-          diagnostics: Array.from({ length: 501 }, (_, i) => ({ file: `src/f${i}.ts`, severity: "warning" as const, count: 1, generation: 1 })),
+          diagnostics: Array.from({ length: 501 }, (_, i) => ({
+            file: `src/f${i}.ts`,
+            severity: "warning" as const,
+            count: 1,
+            generation: 1,
+          })),
         }),
       ),
     (e: unknown) => e instanceof CodingPatchReviewError && e.code === "ERR_PRISM_REVIEW_LIMIT",
@@ -209,7 +213,9 @@ test("superseded: identity changed despite matching digest (tampered preview)", 
   const preview: CodingPatchReview = { ...review, identity: { ...review.identity, defaultBranch: "other" } };
   const result = assertCodingPatchAccepted({
     review,
-    artifact: recordFor(review, { revisions: [{ version: 1, hash: review.patch.sha256, uri: review.patch.uri, preview: { review: preview } }] }),
+    artifact: recordFor(review, {
+      revisions: [{ version: 1, hash: review.patch.sha256, uri: review.patch.uri, preview: { review: preview } }],
+    }),
   });
   assert.equal(result.state, "superseded");
 });

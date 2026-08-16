@@ -130,21 +130,37 @@ describe("active-run reference validation", () => {
   });
 
   it("malformed refs fail closed", () => {
-    assert.throws(() => validateActiveRunRef({ runId: "", sessionId: "s", status: "running", updatedAt: iso }), (error: unknown) => error instanceof AcpError);
-    assert.throws(() => validateActiveRunRef({ runId: "r", sessionId: "s", status: "restarting", updatedAt: iso }), (error: unknown) => error instanceof AcpError);
-    assert.throws(() => validateActiveRunRef({ runId: "r", sessionId: "s", status: "running", version: -1, updatedAt: iso }), (error: unknown) => error instanceof AcpError);
-    assert.throws(() => validateActiveRunRef({ runId: "r", sessionId: "s", status: "running", updatedAt: "yesterday" }), (error: unknown) => error instanceof AcpError);
-    assert.throws(() => validateActiveRunRef(null), (error: unknown) => error instanceof AcpError);
     assert.throws(
-      () => validatePersistedSession({
-        sessionId: "acp-1",
-        ownership: { userId: "user-1" },
-        configValues: {},
-        cwd: "/tmp",
-        additionalDirectories: [],
-        updatedAt: iso,
-        activeRun: { runId: "r", sessionId: "s", status: "running", updatedAt: iso, env: "k0" },
-      } as unknown as PersistedAcpSession),
+      () => validateActiveRunRef({ runId: "", sessionId: "s", status: "running", updatedAt: iso }),
+      (error: unknown) => error instanceof AcpError,
+    );
+    assert.throws(
+      () => validateActiveRunRef({ runId: "r", sessionId: "s", status: "restarting", updatedAt: iso }),
+      (error: unknown) => error instanceof AcpError,
+    );
+    assert.throws(
+      () => validateActiveRunRef({ runId: "r", sessionId: "s", status: "running", version: -1, updatedAt: iso }),
+      (error: unknown) => error instanceof AcpError,
+    );
+    assert.throws(
+      () => validateActiveRunRef({ runId: "r", sessionId: "s", status: "running", updatedAt: "yesterday" }),
+      (error: unknown) => error instanceof AcpError,
+    );
+    assert.throws(
+      () => validateActiveRunRef(null),
+      (error: unknown) => error instanceof AcpError,
+    );
+    assert.throws(
+      () =>
+        validatePersistedSession({
+          sessionId: "acp-1",
+          ownership: { userId: "user-1" },
+          configValues: {},
+          cwd: "/tmp",
+          additionalDirectories: [],
+          updatedAt: iso,
+          activeRun: { runId: "r", sessionId: "s", status: "running", updatedAt: iso, env: "k0" },
+        } as unknown as PersistedAcpSession),
       (error: unknown) => error instanceof AcpError,
     );
   });

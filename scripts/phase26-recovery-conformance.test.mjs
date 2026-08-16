@@ -28,7 +28,9 @@ const blocked = !postgresUrl;
 
 /** PRISM_TEST_POSTGRES_URL is required: the protected recovery leg cannot run without Postgres. */
 if (blocked) {
-  console.error("BLOCKED GATE: PRISM_TEST_POSTGRES_URL is required (postgres://...); the phase26 recovery conformance leg cannot run without the durable Postgres store.");
+  console.error(
+    "BLOCKED GATE: PRISM_TEST_POSTGRES_URL is required (postgres://...); the phase26 recovery conformance leg cannot run without the durable Postgres store.",
+  );
   process.exit(1);
 }
 
@@ -198,10 +200,12 @@ describe("phase26 recovery conformance", () => {
           checkpoints: storesFor.checkpoints,
           leases: storesFor.leases,
           ptyBackend: makePtyBackend("pty-b"),
-          recoveryBackend: { attach: async (ref) => {
-            const handle = makePtyBackend("pty-b");
-            return await handle.startPty({ file: ref });
-          } },
+          recoveryBackend: {
+            attach: async (ref) => {
+              const handle = makePtyBackend("pty-b");
+              return await handle.startPty({ file: ref });
+            },
+          },
           recoveryLimits: { leaseTtlMs: 200, attachTimeoutMs: 5000 },
         });
         const report = await b.recover();

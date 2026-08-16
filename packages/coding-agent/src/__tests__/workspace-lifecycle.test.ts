@@ -184,7 +184,11 @@ async function expectCode(promise: Promise<unknown>, code: string): Promise<Work
 }
 
 /** Save a hostile record straight into the store, bypassing the lifecycle. */
-async function tamperRecord(h: Harness, workspaceId: string, mutate: (record: CodingWorkspaceRecord) => CodingWorkspaceRecord): Promise<void> {
+async function tamperRecord(
+  h: Harness,
+  workspaceId: string,
+  mutate: (record: CodingWorkspaceRecord) => CodingWorkspaceRecord,
+): Promise<void> {
   const existing = await h.checkpoints.loadCheckpoint({ namespace: WORKSPACE_NAMESPACE, key: workspaceId, tenantId: "tenant-a" });
   assert.ok(existing, "record exists");
   const record = mutate(existing.value as CodingWorkspaceRecord);
@@ -384,7 +388,10 @@ test("cleanup: clean remove closes the record", async () => {
   assert.ok(closed.cleanupAt);
   assert.equal(fakes.app!.worktrees.size, 0);
   assert.equal(fakes.api!.worktrees.size, 0);
-  assert.ok(fakes.app!.calls.some((c) => c.action === "unlock"), "own lock released before removal");
+  assert.ok(
+    fakes.app!.calls.some((c) => c.action === "unlock"),
+    "own lock released before removal",
+  );
   const again = await lifecycle.cleanup({ taskId: "task-10" });
   assert.equal(again.state, "closed");
 });

@@ -92,11 +92,25 @@ export class AcpRecoveryError extends Error {
 
 export interface AcpRunRecovery {
   /** Re-resolve a persisted active-run ref against durable run state. Never restarts a prompt. */
-  status(ref: AgentRunRef, options?: { readonly ownership?: OwnershipScope; readonly agentId?: string; readonly signal?: AbortSignal }): Promise<AcpRunStatusReport>;
+  status(
+    ref: AgentRunRef,
+    options?: { readonly ownership?: OwnershipScope; readonly agentId?: string; readonly signal?: AbortSignal },
+  ): Promise<AcpRunStatusReport>;
   /** Durable cancel: ownership/version/fence checked, terminal/idempotent, never replays tools. */
-  cancel(ref: AgentRunRef, options?: { readonly ownership?: OwnershipScope; readonly agentId?: string; readonly expectedVersion?: number; readonly signal?: AbortSignal }): Promise<AcpRunCancelResult>;
+  cancel(
+    ref: AgentRunRef,
+    options?: {
+      readonly ownership?: OwnershipScope;
+      readonly agentId?: string;
+      readonly expectedVersion?: number;
+      readonly signal?: AbortSignal;
+    },
+  ): Promise<AcpRunCancelResult>;
   /** Read-only cancel-marker check. */
-  isCancelled(ref: AgentRunRef, options?: { readonly ownership?: OwnershipScope; readonly signal?: AbortSignal }): Promise<{ readonly cancelled: boolean; readonly cancelledAt?: string }>;
+  isCancelled(
+    ref: AgentRunRef,
+    options?: { readonly ownership?: OwnershipScope; readonly signal?: AbortSignal },
+  ): Promise<{ readonly cancelled: boolean; readonly cancelledAt?: string }>;
 }
 
 function validateCancelMarker(value: unknown): AcpRunCancelMarker {
@@ -177,7 +191,11 @@ export function createAcpRunRecovery(options: CreateAcpRunRecoveryOptions): AcpR
       }
       let report: AcpRunStatusReport;
       try {
-        const { state, version } = await lifecycle.status(ref, { ownership: request.ownership, agentId: request.agentId, signal: request.signal });
+        const { state, version } = await lifecycle.status(ref, {
+          ownership: request.ownership,
+          agentId: request.agentId,
+          signal: request.signal,
+        });
         if (state.status === "suspended") {
           const pendingApprovalIds = (state.interruption?.pendingDecisions ?? [])
             .map((decision) => decision.approvalId)
@@ -219,7 +237,11 @@ export function createAcpRunRecovery(options: CreateAcpRunRecoveryOptions): AcpR
       if (request.expectedVersion !== undefined) {
         // Version check: the canceller's observed durable version must still hold.
         try {
-          const { version } = await lifecycle.status(ref, { ownership: request.ownership, agentId: request.agentId, signal: request.signal });
+          const { version } = await lifecycle.status(ref, {
+            ownership: request.ownership,
+            agentId: request.agentId,
+            signal: request.signal,
+          });
           if (version !== request.expectedVersion) {
             throw new AcpRecoveryError("ERR_PRISM_RECOVERY_FENCE", "run version moved since the activeRun ref was observed");
           }

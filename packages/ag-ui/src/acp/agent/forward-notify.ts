@@ -36,7 +36,13 @@ export async function forward<Authorization extends AcpAuthorization>(
       }
       for (const update of await mapper.map(event)) await notify(client, sessionId, update, budget, limits);
       if (event.type === "agent_denied") {
-        announce({ runId: event.runId, sessionId: event.sessionId, status: "terminal", version: event.version, updatedAt: new Date().toISOString() });
+        announce({
+          runId: event.runId,
+          sessionId: event.sessionId,
+          status: "terminal",
+          version: event.version,
+          updatedAt: new Date().toISOString(),
+        });
         continue;
       }
       if (event.type === "agent_finished") {
@@ -44,15 +50,41 @@ export async function forward<Authorization extends AcpAuthorization>(
         continue;
       }
       if (event.type !== "agent_suspended") continue;
-      announce({ runId: event.runId, sessionId: event.sessionId, status: "suspended", version: event.version, updatedAt: new Date().toISOString() });
+      announce({
+        runId: event.runId,
+        sessionId: event.sessionId,
+        status: "suspended",
+        version: event.version,
+        updatedAt: new Date().toISOString(),
+      });
       const pending = event.interruption.pendingDecisions ?? [];
-    const elicitations = pending.filter((decision): decision is ElicitationPendingDecision => decision.kind === "elicitation");
-    const approvals = pending.filter((decision) => decision.kind === "tool_approval");
-    if (elicitations.length > 0 && clientCapabilities.elicitation && approvals.length === 0) {
-      // Elicitation batch: one form elicitation per pending decision; accept carries the
-      // typed payload, decline/cancel deny (parity). Mixed batches stay on the shared path.
-      const responses = await Promise.all(elicitations.map((decision) => elicit(client, sessionId, event, decision, budget, limits)));
-      const decision = decisionForElicitation(responses, elicitations);
+      const elicitations = pending.filter((decision): decision is ElicitationPendingDecision => decision.kind === "elicitation");
+      const approvals = pending.filter((decision) => decision.kind === "tool_approval");
+      if (elicitations.length > 0 && clientCapabilities.elicitation && approvals.length === 0) {
+        // Elicitation batch: one form elicitation per pending decision; accept carries the
+        // typed payload, decline/cancel deny (parity). Mixed batches stay on the shared path.
+        const responses = await Promise.all(elicitations.map((decision) => elicit(client, sessionId, event, decision, budget, limits)));
+        const decision = decisionForElicitation(responses, elicitations);
+        await forward(
+          options.lifecycle.resumeStream(
+            { sessionId: event.sessionId, runId: event.runId },
+            { ...decision, expectedVersion: event.version },
+            { ownership: authorization.ownership, agentId: current.agentId, signal, overflow: "close" },
+          ),
+          current,
+          authorization,
+          sessionId,
+          client,
+          signal,
+          limits,
+          options,
+          clientCapabilities,
+          onRunRef,
+        );
+        return;
+      }
+      const response = await permission(client, sessionId, event, budget, limits);
+      const decision = decisionFor(response, event.interruption);
       await forward(
         options.lifecycle.resumeStream(
           { sessionId: event.sessionId, runId: event.runId },
@@ -70,26 +102,6 @@ export async function forward<Authorization extends AcpAuthorization>(
         onRunRef,
       );
       return;
-    }
-    const response = await permission(client, sessionId, event, budget, limits);
-    const decision = decisionFor(response, event.interruption);
-    await forward(
-      options.lifecycle.resumeStream(
-        { sessionId: event.sessionId, runId: event.runId },
-        { ...decision, expectedVersion: event.version },
-        { ownership: authorization.ownership, agentId: current.agentId, signal, overflow: "close" },
-      ),
-      current,
-      authorization,
-      sessionId,
-      client,
-      signal,
-      limits,
-      options,
-      clientCapabilities,
-      onRunRef,
-    );
-    return;
     }
   } catch (error) {
     if (lastRef) {

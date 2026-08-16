@@ -31,7 +31,9 @@ const backendModule = process.env.PRISM_TEST_PTY_BACKEND;
 const shell = process.env.PRISM_TEST_PTY_SHELL ?? "sh";
 
 if (!backendModule) {
-  console.error("BLOCKED GATE: PRISM_TEST_PTY_BACKEND is required (absolute path to a module exporting createPtyBackend()); the phase26 PTY protected leg cannot run without a host PTY engine.");
+  console.error(
+    "BLOCKED GATE: PRISM_TEST_PTY_BACKEND is required (absolute path to a module exporting createPtyBackend()); the phase26 PTY protected leg cannot run without a host PTY engine.",
+  );
   process.exit(1);
 }
 

@@ -135,12 +135,14 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
   };
   // Bounded active-run reference persistence (plan 026 Task 5): advisory, so
   // store failures never fail the prompt; the ref is re-validated on restore.
-  const persistRunRef = (active: ActiveSession) => (ref: PersistedAcpRunRef): void => {
-    active.activeRun = ref;
-    if (options.sessionStore && active.cwd) {
-      void persist(active.session.id, active, new AbortController().signal).catch(() => {});
-    }
-  };
+  const persistRunRef =
+    (active: ActiveSession) =>
+    (ref: PersistedAcpRunRef): void => {
+      active.activeRun = ref;
+      if (options.sessionStore && active.cwd) {
+        void persist(active.session.id, active, new AbortController().signal).catch(() => {});
+      }
+    };
 
   // Lifecycle -> session/update forwarding (freeze lifecycleEventMapping). Updates are
   // delivered only to sessions with an active prompt stream (no client handle otherwise)
