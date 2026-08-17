@@ -27,14 +27,14 @@
   },
   "dependencies": {
     "@arnilo/prism-session-store-codecs": "0.2.7",
-    "pg": "^8.22.0"
+    "pg": "^8.23.0"
   },
   "peerDependencies": {
     "@arnilo/prism": "0.2.7"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
-    "@types/pg": "^8.11.11"
+    "@types/pg": "^8.21.0"
   },
   "engines": {
     "node": ">=20"
