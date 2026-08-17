@@ -28,7 +28,7 @@
     "@arnilo/prism": "0.2.7",
     "@arnilo/prism-coding-agent": "0.2.7",
     "mammoth": "^1.8.0",
-    "pdf-parse": "^1.1.1"
+    "pdf-parse": "^2.4.5"
   },
   "peerDependenciesMeta": {
     "mammoth": {
@@ -42,7 +42,7 @@
     "@arnilo/prism": "file:../..",
     "@arnilo/prism-coding-agent": "file:../coding-agent",
     "mammoth": "^1.8.0",
-    "pdf-parse": "^1.1.1"
+    "pdf-parse": "^2.4.5"
   },
   "engines": {
     "node": ">=20"
