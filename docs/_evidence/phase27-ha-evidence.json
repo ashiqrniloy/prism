@@ -1,22 +1,22 @@
 {
-  "recorded": "2026-08-17T14:05:15.898Z",
-  "schema": "prism_ha_455a1ac10f45",
+  "recorded": "2026-08-17T20:10:49.683Z",
+  "schema": "prism_ha_040eea18d4cb",
   "ttlMs": 4000,
-  "tenantA": "tenant-a-b65bc0a9",
-  "opKey": "invoice-fab3e653",
+  "tenantA": "tenant-a-9df83e59",
+  "opKey": "invoice-35c6a242",
   "pid": {
-    "A": 2367240,
-    "B": 2369195,
-    "stale": 2369304,
+    "A": 3018413,
+    "B": 3020396,
+    "stale": 3020564,
     "race": [
-      2369433,
-      2369435
+      3020668,
+      3020673
     ]
   },
   "timings": {
-    "chargeCommitted": 1786975511062,
-    "leaseExpiredAt": 1786975515056,
-    "failoverMs": 4212,
+    "chargeCommitted": 1786997445030,
+    "leaseExpiredAt": 1786997449040,
+    "failoverMs": 4211,
     "ceilingMs": 9000
   },
   "final": {
@@ -25,22 +25,22 @@
       "lease": null,
       "checkpoint": {
         "namespace": "phase27.ha",
-        "key": "invoice-fab3e653",
+        "key": "invoice-35c6a242",
         "version": 2,
         "fencingToken": 1,
         "value": {
-          "opKey": "invoice-fab3e653",
+          "opKey": "invoice-35c6a242",
           "cursor": 1,
-          "tenantId": "tenant-a-b65bc0a9",
-          "messageId": "pay-tenant-a-b65bc0a9/invoice-fab3e653/charge",
+          "tenantId": "tenant-a-9df83e59",
+          "messageId": "pay-tenant-a-9df83e59/invoice-35c6a242/charge",
           "stepsDone": [
             "reserve"
           ],
           "schemaVersion": 1
         },
-        "tenantId": "tenant-a-b65bc0a9",
-        "createdAt": "2026-08-17T14:05:11.007Z",
-        "updatedAt": "2026-08-17T14:05:11.041Z"
+        "tenantId": "tenant-a-9df83e59",
+        "createdAt": "2026-08-17T20:10:44.984Z",
+        "updatedAt": "2026-08-17T20:10:45.013Z"
       },
       "outboxBefore": 1
     },
@@ -49,15 +49,15 @@
     "renewed": true,
     "finalCursor": 3,
     "finalVersion": 4,
-    "failoverMs": 4212,
+    "failoverMs": 4211,
     "outboxBefore": 1,
     "outboxAfter": 1,
     "replayReusedMessage": true
   },
   "commands": {
-    "A": "node scripts/phase27-ha-worker.mjs mode=start id=A schema=prism_ha_455a1ac10f45 opKey=invoice-fab3e653 tenant=tenant-a-b65bc0a9 ttlMs=4000 barrierDir=/tmp/phase27-ha-3znyP5/",
-    "B": "node scripts/phase27-ha-worker.mjs mode=resume id=B schema=prism_ha_455a1ac10f45 opKey=invoice-fab3e653 tenant=tenant-a-b65bc0a9 ttlMs=4000 t0=1786975511062",
-    "stale": "node scripts/phase27-ha-worker.mjs mode=stale schema=prism_ha_455a1ac10f45 opKey=invoice-fab3e653 tenant=tenant-a-b65bc0a9 oldVersion=3 oldExpected=2 oldFence=1 oldOwner=worker-A oldToken=stale-token"
+    "A": "node scripts/phase27-ha-worker.mjs mode=start id=A schema=prism_ha_040eea18d4cb opKey=invoice-35c6a242 tenant=tenant-a-9df83e59 ttlMs=4000 barrierDir=/tmp/phase27-ha-L1f2uJ/",
+    "B": "node scripts/phase27-ha-worker.mjs mode=resume id=B schema=prism_ha_040eea18d4cb opKey=invoice-35c6a242 tenant=tenant-a-9df83e59 ttlMs=4000 t0=1786997445030",
+    "stale": "node scripts/phase27-ha-worker.mjs mode=stale schema=prism_ha_040eea18d4cb opKey=invoice-35c6a242 tenant=tenant-a-9df83e59 oldVersion=3 oldExpected=2 oldFence=1 oldOwner=worker-A oldToken=stale-token"
   },
   "finalStates": {
     "checkpointCursor": 3,

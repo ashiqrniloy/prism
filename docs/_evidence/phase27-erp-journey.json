@@ -1,14 +1,14 @@
 {
-  "recorded": "2026-08-17T14:05:15.715Z",
+  "recorded": "2026-08-17T20:10:49.462Z",
   "schemaVersion": 1,
   "release": "0.2.7",
-  "schema": "prism_journey_35b7adc4d2f0",
-  "tenantA": "tenant-a-d0009aaa",
-  "tenantB": "tenant-b-0cefa14c",
+  "schema": "prism_journey_9f7c38b8be03",
+  "tenantA": "tenant-a-940c893b",
+  "tenantB": "tenant-b-60e7c7e4",
   "actors": {
-    "requester": "user-requester-3a52c8",
-    "approver1": "user-approver1-119223",
-    "approver2": "user-approver2-18fe4b",
+    "requester": "user-requester-83aa37",
+    "approver1": "user-approver1-137f72",
+    "approver2": "user-approver2-1446b3",
     "subagent": "agent (narrowed)"
   },
   "substitutes": [
@@ -20,54 +20,54 @@
   "timings": {
     "stages": {
       "setup": {
-        "start": 1786975508655,
-        "end": 1786975510700,
-        "ms": 2045
+        "start": 1786997443561,
+        "end": 1786997444688,
+        "ms": 1127
       },
       "policy-budget": {
-        "start": 1786975510700,
-        "end": 1786975510739,
-        "ms": 39
+        "start": 1786997444688,
+        "end": 1786997444723,
+        "ms": 35
       },
       "approval": {
-        "start": 1786975510739,
-        "end": 1786975510824,
+        "start": 1786997444723,
+        "end": 1786997444808,
         "ms": 85
       },
       "delivery": {
-        "start": 1786975510824,
-        "end": 1786975510837,
-        "ms": 13
+        "start": 1786997444808,
+        "end": 1786997444818,
+        "ms": 10
       },
       "saga": {
-        "start": 1786975510837,
-        "end": 1786975510858,
-        "ms": 21
+        "start": 1786997444818,
+        "end": 1786997444828,
+        "ms": 10
       },
       "audit": {
-        "start": 1786975510858,
-        "end": 1786975510953,
-        "ms": 95
+        "start": 1786997444828,
+        "end": 1786997444889,
+        "ms": 61
       },
       "legalhold-classification": {
-        "start": 1786975510953,
-        "end": 1786975510961,
-        "ms": 8
+        "start": 1786997444889,
+        "end": 1786997444895,
+        "ms": 6
       },
       "failover": {
-        "start": 1786975510961,
-        "end": 1786975515571,
-        "ms": 4610
+        "start": 1786997444895,
+        "end": 1786997449403,
+        "ms": 4508
       },
       "backup-restore": {
-        "start": 1786975515571,
-        "end": 1786975515714,
-        "ms": 143
+        "start": 1786997449403,
+        "end": 1786997449460,
+        "ms": 57
       },
       "score": {
-        "start": 1786975515714,
-        "end": 1786975515715,
-        "ms": 1
+        "start": 1786997449460,
+        "end": 1786997449462,
+        "ms": 2
       }
     }
   },
@@ -95,7 +95,7 @@
     "chain": {
       "verified": true,
       "tamperedDetected": true,
-      "nextDigest": "5c9789ab3cab204c867293bdd20bc63359f75f9cb37aa99ddad28fe6011c461d"
+      "nextDigest": "ec2e0a1271330a729f5dff89b39285487228e56b848e7736927a2d08d02863b1"
     },
     "noLeak": {
       "classifiedDenied": true,
@@ -106,13 +106,13 @@
       "resumedByPeer": true,
       "staleWriteRejected": true,
       "cursorPreserved": true,
-      "failoverMs": 3915
+      "failoverMs": 3993
     },
     "restore": {
       "factsMatch": true,
       "digestsMatch": true,
       "drEvidenceFresh": true,
-      "restoreMs": 143
+      "restoreMs": 57
     }
   },
   "scores": [
@@ -157,9 +157,9 @@
       "reason": "restore-equality"
     }
   ],
-  "factDigest": "e26fc497e90508ec45c3c804418b1cbaa9ec7785cd055ec935ce0edbbfbb2002",
-  "backupDigest": "8307d8e1b1fc3e07ee823b4714075a81afc76034cc34106e779a0bcc7740d706",
-  "restoreDigest": "8307d8e1b1fc3e07ee823b4714075a81afc76034cc34106e779a0bcc7740d706",
+  "factDigest": "1cb91a67b67a3b9f6769e920d2d52ab412b11ed877e6c33488c102e4336ef274",
+  "backupDigest": "323e7397f522f06ceaed200e749e94018bf2e03440e02f2f1f5a04cc902644b2",
+  "restoreDigest": "323e7397f522f06ceaed200e749e94018bf2e03440e02f2f1f5a04cc902644b2",
   "drEvidenceFile": "docs/_evidence/phase27-dr-evidence.json",
   "haEvidenceFile": "docs/_evidence/phase27-ha-evidence.json",
   "gates": {
