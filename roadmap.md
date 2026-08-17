@@ -338,15 +338,16 @@ State management and Eval framework. Subagents.
 - Vent
 - Ponytail and Caveman
 - Evaluate all of the coding tools to make sure it has all the capabilities required for coding agents to do the job in the most correct and efficient way.
-- Computer use package: Linux
+- Computer use pckage: Linux
 - Observational Memory implementation review: Local Memory Storage for the session??
-- Explore Memory Solution for Codebases
+- Implement Karpathy LLM Wiki extension. For Codebase and Personal Knowledge Management.
+- Debug workflow
 
 ### 0.2.9 - Misc
 - Setup docs and skills such that only packages with updates get released
 - Not all packages are needed to be updated with the same version
 - Deepseek API with stable cache prefix
-- Enterprise RAG Pipeline end to end with comprehensive capability
+- Enterprise RAG Pipeline end to end with comprehensive capability with Langchain level capability
 
 ### Mandatory 0.2.x regression matrix
 
