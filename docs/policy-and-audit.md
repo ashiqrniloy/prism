@@ -118,6 +118,40 @@ Policy is optional. Hosts wire `record*` helpers or `evaluateAndAppend` at permi
 - The OPA decision fetch (0.2.1) is DNS-pinned through the core `pinnedFetch` primitive: one resolve per request, every resolved address SSRF-checked before the connect (rebinding defense), redirects rejected outright, timeouts/retries unchanged, and private-answer denials surface `MediaContentError` (`ssrf_denied`) rather than a transport error.
 - Export never full-scans: page size is capped; raise hard caps only with Phase 8 freeze + tests + docs updates.
 
+## Multi-party approvals
+
+Immutable approval requests carry an action digest, requester, and required roles/quorum; verified host identities vote through an explicit `ApprovalAuthority`. Prism records decisions and enforces separation-of-duties, expiry, revocation, bounded delegation, rejection, and policy-revision pins — it never resolves identities or roles itself.
+
+| API / field | Meaning |
+| --- | --- |
+| `ApprovalAuthority` | Host-owned `policyRevision` + `resolveRoles(identity, request)` returning role grants (and delegation chains) |
+| `ApprovalRequest` | Immutable request: `action {kind, digest}`, `requirements [{role, quorum}]`, `separateFromRequester`, `expiresAt`, `delegationMaxDepth` |
+| `ApprovalRecord` | Request + `status` (`pending/approved/rejected/revoked/consumed`) + `revision` + immutable `decisions` + `policyRevision` |
+| `ApprovalStore.create/decide/revoke/consume/get/query` | Durable transitions; every transition records an `auditRef` |
+| `createMemoryApprovalStore({ authority })` | Single-process reference adapter sharing the pure transition logic |
+| `createPostgresApprovalStore({ pool, schema, authority })` | Cross-replica storage (migration `005_erp_approvals`, `@arnilo/prism-enterprise-postgres`) |
+
+Quorum rules:
+
+- Each requirement needs `quorum` **distinct approved principals** through that role. Same principal voting the same role twice is idempotent; changing a vote is a conflict.
+- A rejection is terminal and vetoes the request (`rejected`), so `consume` always denies.
+- `separateFromRequester: true` denies the requester (and any authority chain deriving from the requester) from deciding.
+- `delegationMaxDepth` bounds the persisted delegation chain (delegator first); grants cannot outlive the request, leave the tenant, or widen the action.
+- Pin: `ApprovalAuthority.policyRevision` must equal the record's revision; a policy bump invalidates outstanding approvals (release denied).
+
+Revocation semantics: `revoke` is only valid for `pending`/`approved` grants, is taken by a verified tenant actor with an `auditRef`, and is terminal. After consumption, revocation cannot undo the effect — the record stays `consumed` as provenance, and reconciliation is host work.
+
+Operator audit queries: `query({ tenantId, status })` pages by `(created_at, id)`; `get({ tenantId, requestId })` returns full immutable decisions with grants and delegation chains. Every decision and manual transition carries the host `auditRef`.
+
+```sql
+-- pending approvals that never released (example host view)
+SELECT id, policy_revision, expires_at, decisions
+FROM prism.prism_erp_approvals
+WHERE status = 'pending' AND expires_at < now();
+```
+
+Hosts own identity verification and the role source; Prism does not certify NIST compliance. NIST SP 800-53 AC-5 (separation of duties) and AC-6 (least privilege) are control guidance only, not certification claims.
+
 ## OPA external policy adapter (`@arnilo/prism-policy/opa`, 0.0.28)
 
 Optional `createOpaPolicyEvaluator` evaluates `PolicyEvaluateRequest`s against a host-pinned OPA REST endpoint (`POST /v1/data/<path>` with `{"input": <document>}`) and returns a core `PolicyEvaluator` for `evaluateAndAppend`. Native `fetch` only; no OPA SDK dependency.

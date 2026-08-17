@@ -1,5 +1,6 @@
 AGENT_RUN_STATE_NAMESPACE	export declare const AGENT_RUN_STATE_NAMESPACE = "prism.agent-run"
 AGENT_RUN_STATE_SCHEMA_VERSION	export declare const AGENT_RUN_STATE_SCHEMA_VERSION: 1
+ALLOW_FIELD_POLICY	export declare const ALLOW_FIELD_POLICY: FieldPolicy
 ARTIFACT_BODY_ERROR_CODES	export declare const ARTIFACT_BODY_ERROR_CODES: Readonly<Record<ArtifactBodyErrorCode, `ERR_PRISM_ARTIFACT_BODY_$
 ARTIFACT_CHECKPOINT_NAMESPACE	export declare const ARTIFACT_CHECKPOINT_NAMESPACE = "prism.artifact"
 AgentDecisionError	export declare class AgentDecisionError extends Error
@@ -18,6 +19,7 @@ AgentRunLifecycleStreamRequest	export type { AgentRunLifecycle, AgentRunLifecycl
 AgentRunStateError	export declare class AgentRunStateError extends Error
 AgentRunSuspended	export declare class AgentRunSuspended extends Error
 ApplyCacheControlOptions	export type { ApplyCacheControlOptions, CacheControlledContentBlock, CacheControlledMessage, CacheControlValue, CacheUsageReport, } from "./cache-helpers.js"
+ApplyFieldPolicyOptions	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
 ApplyRetentionInput	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 ApplyRetentionResult	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 ApprovalOutcome	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
@@ -38,6 +40,9 @@ ArtifactRevision	export type { ArtifactApproval, ArtifactApprovalState, Artifact
 AssembleProviderInputOptions	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
 AssertIdentityActiveOptions	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimits, IdentityVerifier, NarrowIdentityOptions, Principal, ResolvedIdentityLimits, } from "./identity.js"
 AudioContent	export type { AudioContent, DocumentContent, FileContent } from "./content.js"
+AuditFieldRedaction	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
+AuditFieldRedactorLike	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
+AuditFieldRedactorOptions	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
 BUILT_IN_LOOP_REVISIONS	export declare const BUILT_IN_LOOP_REVISIONS: Readonly<Record<string, string>>
 BatchedRunLedgerOptions	export type { BatchedRunLedgerOptions } from "./run-ledger.js"
 CACHE_TELEMETRY_OVERFLOW_KEY	export declare const CACHE_TELEMETRY_OVERFLOW_KEY = "__overflow__"
@@ -172,6 +177,12 @@ ExtensionEventHandler	export type { ExtensionErrorPolicy, ExtensionEventBus, Ext
 ExtensionKernel	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
 ExtensionKernelOptions	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
 ExtensionLoadPolicy	export type { ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+FIELD_POLICY_LIMITS	export declare const FIELD_POLICY_LIMITS: Readonly<
+FieldPolicy	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
+FieldPolicyAction	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
+FieldPolicyDecision	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
+FieldPolicyError	export declare class FieldPolicyError extends Error
+FieldPolicyInput	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
 FileContent	export type { AudioContent, DocumentContent, FileContent } from "./content.js"
 FoldToolResultsContext	export type { FoldToolResultsContext, ResolvedToolResultFoldOptions, ToolResultFoldInput, ToolResultFoldOptions, } from "./tool-result-fold.js"
 GuardrailError	export declare class GuardrailError extends Error
@@ -291,6 +302,7 @@ Principal	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimi
 PrismManifest	export type { ManifestContributionDeclaration, ManifestContributionKind, ManifestResourceDeclaration, PrismManifest } from "./manifests.js"
 PromptInstruction	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
 PromptTemplateOptions	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
+ProtectedFieldPolicyOptions	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
 ProviderAddUsageError	export declare class ProviderAddUsageError extends Error
 ProviderRegistry	export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js"
 ProviderRegistryOptions	export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js"
@@ -401,6 +413,7 @@ agentId	export declare function agentId(agent: Agent): string
 applyCacheControl	export declare function applyCacheControl(messages: readonly Message[], breakpoints: readonly PromptCacheBreakpoint[], options?: ApplyCacheControlOptions): readonly CacheControlledMessage[]
 applyContextBudget	export declare function applyContextBudget(options:
 applyExecutionDecision	export declare function applyExecutionDecision(action: ExecutionAction, decision: ExecutionDecision): ExecutionAction
+applyFieldPolicy	export declare function applyFieldPolicy<T>(value: T, policy: FieldPolicy, options: ApplyFieldPolicyOptions): T
 applyOpenAIChatStructuredOutput	export declare function applyOpenAIChatStructuredOutput(body: Record<string, unknown>, structuredOutput?: StructuredOutputOptions): void
 applyOpenAIResponsesStructuredOutput	export declare function applyOpenAIResponsesStructuredOutput(body: Record<string, unknown>, structuredOutput?: StructuredOutputOptions): void
 applyRestoredSkillBodies	export declare function applyRestoredSkillBodies(skills: readonly Skill[], bodies: readonly LoadedSkillBodiesEntry[]): readonly Skill[]
@@ -476,6 +489,7 @@ conversationThreadFromRecord	export declare function conversationThreadFromRecor
 createAgent	export declare function createAgent(config: AgentConfig): Agent
 createAgentRunLifecycle	export declare function createAgentRunLifecycle(options: AgentRunLifecycleOptions): AgentRunLifecycle
 createAgentSession	export declare function createAgentSession(config: AgentSessionConfig &
+createAuditFieldRedactor	export declare function createAuditFieldRedactor(policy: FieldPolicy, options?: AuditFieldRedactorOptions): AuditFieldRedactorLike
 createBatchedRunLedger	export declare function createBatchedRunLedger(target: RunLedger, options?: BatchedRunLedgerOptions): FlushableRunLedger
 createBoundedUploadCache	export declare function createBoundedUploadCache<T>(maxEntries?: number): BoundedUploadCache<T>
 createCacheTelemetry	export declare function createCacheTelemetry(options?: CacheTelemetryOptions): CacheTelemetry
@@ -512,6 +526,7 @@ createOpenAICompatibleProvider	export declare function createOpenAICompatiblePro
 createPathTrustPolicy	export declare function createPathTrustPolicy(options: PathTrustPolicyOptions): TrustPolicy
 createPersistenceMigrationContract	export declare function createPersistenceMigrationContract(): PersistenceMigrationContract
 createPersistenceSchemaModel	export declare function createPersistenceSchemaModel(): PersistenceSchemaModel
+createProtectedFieldPolicy	export declare function createProtectedFieldPolicy(options?: ProtectedFieldPolicyOptions): FieldPolicy
 createProviderProject	export declare function createProviderProject(options: ProviderAddOptions, runtime?: ProviderAddRuntime): Promise<ProviderAddResult>
 createProviderRegistry	export declare function createProviderRegistry(providers?: readonly AIProvider[], options?: ProviderRegistryOptions): ProviderRegistry
 createProviderRequestPolicyChain	export declare function createProviderRequestPolicyChain(policies: readonly ProviderRequestPolicy[]): ProviderRequestPolicy
@@ -681,14 +696,14 @@ readSseEvents	export declare function readSseEvents(body: ReadableStream<Uint8Ar
 rebuildSessionContext	export declare function rebuildSessionContext(reader: BranchReader, query: SessionBranchRead): Promise<SessionContextSnapshot>
 reconstructMissingToolCalls	export declare function reconstructMissingToolCalls(deltas: readonly ProviderEvent[], calls: readonly ToolCallContent[]): readonly ToolCallContent[]
 reconstructToolCallDeltas	export declare function reconstructToolCallDeltas(events: readonly ProviderEvent[]): readonly ToolCallContent[]
-redactAgentEvent	export declare function redactAgentEvent(event: AgentEvent, redactor?: SecretRedactor): AgentEvent
+redactAgentEvent	export declare function redactAgentEvent(event: AgentEvent, redactor?: SecretRedactor, fieldPolicy?: FieldPolicy, destination?: string, labelFor?: (key: string, path: string) => string | undefined): AgentEvent
 redactDeviceTelemetry	export declare function redactDeviceTelemetry<T>(redactor: SecretRedactor | undefined, telemetry: T): T
-redactMessage	export declare function redactMessage(message: Message, redactor?: SecretRedactor): Message
+redactMessage	export declare function redactMessage(message: Message, redactor?: SecretRedactor, fieldPolicy?: FieldPolicy, destination?: string, labelFor?: (key: string, path: string) => string | undefined): Message
 redactOAuthError	export declare function redactOAuthError(error: Error, secrets: readonly (string | undefined)[]): Error
-redactProviderRequest	export declare function redactProviderRequest(request: ProviderRequest, redactor?: SecretRedactor): ProviderRequest
-redactRunLedgerRecord	export declare function redactRunLedgerRecord<T extends RunLedgerRecord>(record: T, redactor?: SecretRedactor): T
+redactProviderRequest	export declare function redactProviderRequest(request: ProviderRequest, redactor?: SecretRedactor, fieldPolicy?: FieldPolicy, destination?: string, labelFor?: (key: string, path: string) => string | undefined): ProviderRequest
+redactRunLedgerRecord	export declare function redactRunLedgerRecord<T extends RunLedgerRecord>(record: T, redactor?: SecretRedactor, fieldPolicy?: FieldPolicy, destination?: string, labelFor?: (key: string, path: string) => string | undefined): T
 redactSecrets	export declare function redactSecrets<T>(value: T, secrets: readonly (string | undefined)[]): T
-redactSessionEntry	export declare function redactSessionEntry(entry: SessionEntry, redactor?: SecretRedactor): SessionEntry
+redactSessionEntry	export declare function redactSessionEntry(entry: SessionEntry, redactor?: SecretRedactor, fieldPolicy?: FieldPolicy, destination?: string, labelFor?: (key: string, path: string) => string | undefined): SessionEntry
 refreshOAuthCredential	export declare function refreshOAuthCredential(options:
 registerDiscoveredContributions	export declare function registerDiscoveredContributions(registries: ContributionRegistries, contributions: readonly DiscoveredContribution[]): void
 registerDiscoveredInstructionInjectors	export declare function registerDiscoveredInstructionInjectors(registries: ContributionRegistries, contributions: readonly DiscoveredContribution[], options?: LoadInstructionInjectorOptions): Promise<void>
@@ -779,7 +794,7 @@ validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(valu
 validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.2.6"
+version	export declare const version = "0.2.7"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]

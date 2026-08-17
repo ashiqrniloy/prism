@@ -1,0 +1,171 @@
+{
+  "recorded": "2026-08-17T14:05:15.715Z",
+  "schemaVersion": 1,
+  "release": "0.2.7",
+  "schema": "prism_journey_35b7adc4d2f0",
+  "tenantA": "tenant-a-d0009aaa",
+  "tenantB": "tenant-b-0cefa14c",
+  "actors": {
+    "requester": "user-requester-3a52c8",
+    "approver1": "user-approver1-119223",
+    "approver2": "user-approver2-18fe4b",
+    "subagent": "agent (narrowed)"
+  },
+  "substitutes": [
+    "in-memory WORM sink (host owns the immutable store in production)",
+    "in-memory SIEM sink (host owns the SIEM transport in production)",
+    "in-memory saga checkpoint/lease stores (saga engine durability is proven in its own suite)",
+    "logical pg-client backup/restore of ERP tables (comprehensive PITR is in phase27-dr-evidence.json)"
+  ],
+  "timings": {
+    "stages": {
+      "setup": {
+        "start": 1786975508655,
+        "end": 1786975510700,
+        "ms": 2045
+      },
+      "policy-budget": {
+        "start": 1786975510700,
+        "end": 1786975510739,
+        "ms": 39
+      },
+      "approval": {
+        "start": 1786975510739,
+        "end": 1786975510824,
+        "ms": 85
+      },
+      "delivery": {
+        "start": 1786975510824,
+        "end": 1786975510837,
+        "ms": 13
+      },
+      "saga": {
+        "start": 1786975510837,
+        "end": 1786975510858,
+        "ms": 21
+      },
+      "audit": {
+        "start": 1786975510858,
+        "end": 1786975510953,
+        "ms": 95
+      },
+      "legalhold-classification": {
+        "start": 1786975510953,
+        "end": 1786975510961,
+        "ms": 8
+      },
+      "failover": {
+        "start": 1786975510961,
+        "end": 1786975515571,
+        "ms": 4610
+      },
+      "backup-restore": {
+        "start": 1786975515571,
+        "end": 1786975515714,
+        "ms": 143
+      },
+      "score": {
+        "start": 1786975515714,
+        "end": 1786975515715,
+        "ms": 1
+      }
+    }
+  },
+  "facts": {
+    "atomic": {
+      "committedAtomically": true
+    },
+    "quorum": {
+      "distinctApprovers": 2,
+      "requesterDenied": true,
+      "subagentDenied": true,
+      "revokedDenied": true,
+      "provenance": true
+    },
+    "delivery": {
+      "singleLocalEffect": true,
+      "duplicateDelivered": true,
+      "businessMutationCount": 1
+    },
+    "compensation": {
+      "compensated": true,
+      "reconciled": true,
+      "terminalStatus": "completed"
+    },
+    "chain": {
+      "verified": true,
+      "tamperedDetected": true,
+      "nextDigest": "5c9789ab3cab204c867293bdd20bc63359f75f9cb37aa99ddad28fe6011c461d"
+    },
+    "noLeak": {
+      "classifiedDenied": true,
+      "crossTenantDenied": true,
+      "secretRedacted": true
+    },
+    "fencedFailover": {
+      "resumedByPeer": true,
+      "staleWriteRejected": true,
+      "cursorPreserved": true,
+      "failoverMs": 3915
+    },
+    "restore": {
+      "factsMatch": true,
+      "digestsMatch": true,
+      "drEvidenceFresh": true,
+      "restoreMs": 143
+    }
+  },
+  "scores": [
+    {
+      "id": "atomic-intent",
+      "score": 1,
+      "reason": "atomic-intent"
+    },
+    {
+      "id": "single-local-effect",
+      "score": 1,
+      "reason": "single-local-effect"
+    },
+    {
+      "id": "compensation-terminal",
+      "score": 1,
+      "reason": "compensation-terminal"
+    },
+    {
+      "id": "quorum-provenance",
+      "score": 1,
+      "reason": "quorum-provenance"
+    },
+    {
+      "id": "chain-verification",
+      "score": 1,
+      "reason": "chain-verification"
+    },
+    {
+      "id": "no-leak",
+      "score": 1,
+      "reason": "no-leak"
+    },
+    {
+      "id": "fenced-failover",
+      "score": 1,
+      "reason": "fenced-failover"
+    },
+    {
+      "id": "restore-equality",
+      "score": 1,
+      "reason": "restore-equality"
+    }
+  ],
+  "factDigest": "e26fc497e90508ec45c3c804418b1cbaa9ec7785cd055ec935ce0edbbfbb2002",
+  "backupDigest": "8307d8e1b1fc3e07ee823b4714075a81afc76034cc34106e779a0bcc7740d706",
+  "restoreDigest": "8307d8e1b1fc3e07ee823b4714075a81afc76034cc34106e779a0bcc7740d706",
+  "drEvidenceFile": "docs/_evidence/phase27-dr-evidence.json",
+  "haEvidenceFile": "docs/_evidence/phase27-ha-evidence.json",
+  "gates": {
+    "allInvariantsPass": true,
+    "drEvidenceFresh": true,
+    "restoreEquality": true
+  },
+  "blocker": "passing this protected journey does NOT satisfy the 0.3.0 live-service matrix"
+}

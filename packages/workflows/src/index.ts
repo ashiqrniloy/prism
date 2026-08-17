@@ -88,6 +88,8 @@ export {
   replayWorkflow,
 } from "./replay.js";
 export { resolveMaxFanOut, resumeWorkflow, runWorkflow, suspend } from "./run.js";
+export { defineSaga, resumeSaga, runSaga } from "./saga.js";
+export type { SagaDefinition, SagaRunResult, SagaStep } from "./saga.js";
 export {
   type CapabilityActorRef,
   createProactiveScheduleCapabilities,

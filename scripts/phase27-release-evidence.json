@@ -1,0 +1,97 @@
+{
+  "release": "0.2.7",
+  "milestone": "Enterprise ERP production readiness",
+  "recorded": "2026-08-17",
+  "schemaVersion": 1,
+  "commit": "099540531a35303c11a22b582a72677c1a0978fc",
+  "tools": { "node": "v24.19.0", "npm": "11.17.0" },
+  "packages": { "publishable": 50, "workspace": 49, "version": "0.2.7", "peerSpec": "0.2.7" },
+  "migrations": {
+    "count": 5,
+    "names": [
+      "001_enterprise_state",
+      "002_tool_effects",
+      "003_router_reservations",
+      "004_erp_messaging",
+      "005_erp_approvals"
+    ],
+    "rehearsal": "0.2.6-era schema upgraded to 0.2.7 (004+005 applied); rollback rehearsal restored v26 backup (0.2.7 tables absent, legacy rows preserved); production rollback is roll-forward repair only (no down migrations)"
+  },
+  "testTotals": {
+    "coreNpmTest": { "state": "pass", "count": 3716, "skip": 33, "fail": 0 },
+    "securityThreatSuites": { "state": "pass", "count": 50 },
+    "docsContract": { "state": "pass", "count": 140 },
+    "phase27Freeze": { "state": "pass", "count": 8 },
+    "phase27Release": { "state": "pass" },
+    "protectedSkips": "postgres/nats/live-provider/coding-security legs skip when required infrastructure is absent; blocked is never a passing skip"
+  },
+  "coverage": {
+    "core": { "lines": 91.09, "branches": 84.75, "functions": 91.56, "gate": "60/70/75" },
+    "policy": { "lines": 92.66, "threshold": 90.78 },
+    "evals": { "lines": 91.75, "threshold": 87.63 }
+  },
+  "budgets": {
+    "tarball": "re-baselined at Task 8 (packedBytes 891578); budget gate 10/10 pass",
+    "packageGraph": "50 publishable; zero accidental runtime dependency additions",
+    "classificationOverhead": "peak 99.8% of redactor-walk baseline (cap 110%)"
+  },
+  "timings": {
+    "haFailoverMs": 4097,
+    "haCeilingMs": 9000,
+    "drBackupMs": 122,
+    "drRestoreMs": 382,
+    "drRecoveryMs": 1163,
+    "drRpoSeconds": 0,
+    "drRtoSeconds": 1,
+    "erpJourneyMs": 4815,
+    "erpJourneyScorers": 8
+  },
+  "evidenceFiles": {
+    "releaseEvidence": "scripts/release-evidence.json",
+    "freezeManifest": "scripts/phase27-freeze-manifest.json",
+    "haEvidence": "docs/_evidence/phase27-ha-evidence.json",
+    "drEvidence": "docs/_evidence/phase27-dr-evidence.json",
+    "erpJourneyEvidence": "docs/_evidence/phase27-erp-journey.json",
+    "releaseDoc": "docs/release-0.2.7-evidence.md"
+  },
+  "secretScan": { "files": 4456, "findings": 0 },
+  "protectedSurfaces": {
+    "count": 19,
+    "blocked": 0,
+    "names": [
+      "enterprise-postgres suite (PRISM_TEST_POSTGRES_URL)",
+      "session-store-postgres suite (PRISM_TEST_POSTGRES_URL)",
+      "session-store-nats suite (PRISM_TEST_NATS_URL)",
+      "coding-security suite (unshare NETNS)",
+      "HA drill (phase27-ha.test.mjs, PRISM_TEST_POSTGRES_URL)",
+      "DR drill (phase27-dr.test.mjs, PRISM_DR_TARGET_URL + PRISM_PITR_URL)",
+      "ERP journey (phase27-erp-journey.test.mjs, PRISM_TEST_POSTGRES_URL)",
+      "live canaries (provider/MCP/A2A/web-search)"
+    ]
+  },
+  "erpJourneyResults": {
+    "allInvariantsPass": true,
+    "scorers": [
+      "atomic-intent",
+      "single-local-effect",
+      "compensation-terminal",
+      "quorum-provenance",
+      "chain-verification",
+      "no-leak",
+      "fenced-failover",
+      "restore-equality"
+    ],
+    "restoreDigestMatch": true,
+    "drEvidenceFresh": true
+  },
+  "knownLimitations": [
+    "exactly-once delivery is not claimed; outbox/inbox provide at-least-once with idempotent consumption and explicit unknown-outcome handling",
+    "no ERP vendor adapters, BPMN engine, event broker, ORM, or second workflow runtime were added",
+    "secret-manager adapters (Vault/AWS/Azure/GCP) remain deferred behind the demand gate (no named consumer)",
+    "audit export is the transport; Prism does not certify NIST/SIEM/WORM compliance programs",
+    "saga handlers, role source, identity proofing, and policy bumps remain host-owned by design",
+    "local substitutes (in-memory WORM/SIEM, in-memory saga stores, logical pg-client backup) are labelled in journey evidence and never converted into production claims"
+  ],
+  "blocker": "ERP production ready remains blocked until the 0.3.0 live-service matrix is recorded",
+  "operatorSignOff": "pending: release owner must verify protected profiles in an environment with the required infrastructure and record the 0.3.0 live-service matrix before claiming ERP production ready"
+}

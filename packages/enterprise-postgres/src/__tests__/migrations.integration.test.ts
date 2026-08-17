@@ -27,7 +27,7 @@ describeIntegration("enterprise PostgreSQL migrations", () => {
     return pool;
   }
 
-  it("migrates once, verifies complete catalog shape, and serializes three opens", async () => {
+  it("migrates once, verifies complete catalog shape, and serializes concurrent opens", async () => {
     const schema = uniqueSchema();
     const pool = createPool();
     await Promise.all([
@@ -45,15 +45,15 @@ describeIntegration("enterprise PostgreSQL migrations", () => {
     const history = await pool.query(
       `SELECT name, version, checksum FROM ${qualifyTable(schema, "prism_enterprise_migrations")} ORDER BY applied_at ASC, id ASC`,
     );
-    assert.equal(history.rowCount, 3);
+    assert.equal(history.rowCount, 5);
     assert.deepEqual(
       history.rows.map((row) => `${row.name}:${row.version}`),
-      ["001_enterprise_state:1", "002_tool_effects:2", "003_router_reservations:3"],
+      ["001_enterprise_state:1", "002_tool_effects:2", "003_router_reservations:3", "004_erp_messaging:4", "005_erp_approvals:5"],
     );
     for (const row of history.rows) assert.match(String(row.checksum), /^[a-f0-9]{64}$/);
   });
 
-  it("upgrades a checksum-valid v1 schema to tool effects without rewriting v1 history", async () => {
+  it("upgrades a checksum-valid v1 schema through messaging without rewriting v1 history", async () => {
     const schema = uniqueSchema();
     const pool = createPool();
     await pool.query(buildEnterpriseMigration001Ddl(schema));
@@ -68,7 +68,7 @@ describeIntegration("enterprise PostgreSQL migrations", () => {
     );
     assert.deepEqual(
       history.rows.map((row) => `${row.name}:${row.version}`),
-      ["001_enterprise_state:1", "002_tool_effects:2", "003_router_reservations:3"],
+      ["001_enterprise_state:1", "002_tool_effects:2", "003_router_reservations:3", "004_erp_messaging:4", "005_erp_approvals:5"],
     );
     assert.equal(
       (await pool.query("SELECT 1 FROM pg_tables WHERE schemaname = $1 AND tablename = 'prism_tool_effects'", [schema])).rowCount,

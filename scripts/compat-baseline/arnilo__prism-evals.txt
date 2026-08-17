@@ -20,6 +20,7 @@ Dataset	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, D
 DatasetItem	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonOptions, RunExperimentOptions, Sc
 DefineDatasetInput	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonOptions, RunExperimentOptions, Sc
 DefineScorerInput	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonOptions, RunExperimentOptions, Sc
+ERP_INVARIANT_SCHEMA_VERSION	export declare const ERP_INVARIANT_SCHEMA_VERSION = 1
 EvalDatasetError	export declare class EvalDatasetError extends EvalError
 EvalError	export declare class EvalError extends Error
 EvalScoreError	export declare class EvalScoreError extends EvalError
@@ -67,12 +68,14 @@ TraceResolverInput	export type { ComparisonCandidate, ComparisonRecord, Comparis
 appendEvaluationFeedback	export declare function appendEvaluationFeedback(input: AppendEvaluationFeedbackInput): Promise<RunFeedbackRecord>
 assertEvaluationThreshold	export declare function assertEvaluationThreshold(report: ExperimentReport | ComparisonReport, thresholds: EvaluationThresholds): void
 assertFiniteUnitInterval	export declare function assertFiniteUnitInterval(value: number, label: string): number
+createErpInvariantScorers	export declare function createErpInvariantScorers(): readonly Scorer<unknown, unknown>[]
 createMemoryEvaluationStore	export declare function createMemoryEvaluationStore(initial?: readonly EvaluationRecord[]): EvaluationStore
 createModelJudge	export declare function createModelJudge<TInput = unknown, TExpected = unknown>(options: ModelJudgeOptions<TInput, TExpected>): Scorer<TInput, TExpected>
 createPersistenceTraceResolver	export declare function createPersistenceTraceResolver(store: ProductionPersistenceStore): TraceResolver
 defaultToAgentInput	export declare function defaultToAgentInput(input: unknown): string | Message | readonly Message[]
 defineDataset	export declare function defineDataset<TInput = unknown, TExpected = unknown>(input: DefineDatasetInput<TInput, TExpected>): Dataset<TInput, TExpected>
 defineScorer	export declare function defineScorer<TInput = unknown, TExpected = unknown>(input: DefineScorerInput<TInput, TExpected>): Scorer<TInput, TExpected>
+erpInvariantDataset	export declare const erpInvariantDataset: Dataset<unknown, unknown>
 exactOwnershipMatches	export declare function exactOwnershipMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean
 mapPool	export declare function mapPool<T, R>(items: readonly T[], concurrency: number, worker: (item: T, index: number) => Promise<R>, signal?: AbortSignal): Promise<R[]>
 normalizeConcurrency	export declare function normalizeConcurrency(concurrency: number | undefined): number

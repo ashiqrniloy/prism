@@ -35,6 +35,7 @@ export {
   HARD_TRACE_PAGE_SIZE,
   HARD_TRACE_PAGES,
 } from "./limits.js";
+export { erpInvariantDataset, createErpInvariantScorers, ERP_INVARIANT_SCHEMA_VERSION } from "./erp-invariants.js";
 export { defaultToAgentInput, scoreRun, scoreRunLive } from "./score.js";
 export { defineScorer } from "./scorer.js";
 export { createMemoryEvaluationStore } from "./store.js";

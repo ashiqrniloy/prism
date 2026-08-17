@@ -1,5 +1,18 @@
 # Migration guide
 
+## 0.2.6 → 0.2.7 enterprise ERP production readiness (additive)
+
+Release **0.2.7** (plan 027) adds the enterprise ERP production-readiness primitives behind optional host-activated seams: the transactional outbox/inbox + bounded dispatcher, the durable saga compensation/reconciliation engine, multi-party separation-of-duties approvals, signed hash-chained audit export with WORM/SIEM sinks, field-level classification + fail-closed redaction, and the deterministic ERP invariant evals. **Additive-only: no exported declaration removed or changed, no persisted 0.2.6 shape repurposed.**
+
+New ERP tables use **separate forward-only migrations** (no down migrations exist; production rollback is roll-forward repair only):
+
+- `prism_erp_outbox` / `prism_erp_inbox` (migration `004_erp_messaging`, version 4) — transactional outbox/inbox with `FOR UPDATE SKIP LOCKED` claim, `ON CONFLICT DO NOTHING` idempotent append, claim-token CAS, and three partial indexes. Outbox append must run in the caller-owned `PoolClient` transaction with the business mutation (atomicity is the host's responsibility).
+- `prism_erp_approvals` (migration `005_erp_approvals`, version 5) — multi-party approval requests with decisions stored as JSONB, `FOR UPDATE` row locking for atomic quorum recomputation, rejection as any-party veto, expiry checked at every protected transition, and atomic grant consumption in the host transaction.
+
+Saga state persists as a surrogate `WorkflowCheckpointRecord` through the existing `WorkflowCheckpointAdapter` (private workflow id `__prism_saga__/<key>`) — no saga-specific SQL or 0.2.6 shape is repurposed. Audit export, field policy, and ERP invariant evals are stateless or in-memory and add no persisted shape. Secret-manager adapters (Vault/AWS/Azure/GCP) stay **deferred** behind the demand gate; no adapter ships and no ambient credential discovery is added.
+
+**Rollback notes.** Rollback = restore the 0.2.6 manifests/tag. The two new ERP migrations are forward-only; before downgrading, stop all 0.2.7 workers (outbox dispatcher, saga engine, audit exporter) and drop or ignore the `prism_erp_outbox`/`prism_erp_inbox`/`prism_erp_approvals` tables (they hold no 0.2.6 data). No 0.2.6 persisted shape changed, so an ordinary downgrade is store-safe; the added exports and ERP tables simply disappear. **"ERP production ready" remains blocked until the 0.3.0 live-service matrix is recorded** — this release adds the primitives and the protected journey evidence, not the live-service matrix.
+
 ## 0.2.5 → 0.2.6 durable recovery, workspaces, and coding-agent readiness (additive)
 
 Release **0.2.6** (plan 026) adds the coding-agent readiness capabilities behind optional host-activated seams: host-selected PTY backends, the indexed/semantic repository-search seam, the ownership-scoped multi-repository/worktree lifecycle, durable process/ACP recovery, and the patch-review/diagnostics workflow. **Additive-only: no exported declaration removed or changed, no persisted 0.2.5 shape repurposed.**

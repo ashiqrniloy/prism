@@ -1,6 +1,6 @@
 # @arnilo/prism-workflows
 
-Optional typed bounded DAG workflow orchestration for Prism. Defines acyclic and nested workflows, schedules dependency-ready nodes with a Kahn worker pool, supports bounded shared state and immutable-lineage replay, and emits package-local `WorkflowEvent`s. Agent nodes call public `AgentSession.run()` only. `RunWorkflowOptions.guardrails` routes tool nodes through core tool dispatch; see root [Guardrails](../../docs/guardrails.md) guide.
+Optional typed bounded DAG workflow orchestration for Prism. Defines acyclic and nested workflows, schedules dependency-ready nodes with a Kahn worker pool, supports bounded shared state and immutable-lineage replay, emits package-local `WorkflowEvent`s, and adds linear durable sagas with reverse compensation/reconciliation. Agent nodes call public `AgentSession.run()` only. `RunWorkflowOptions.guardrails` routes tool nodes through core tool dispatch; see root [Guardrails](../../docs/guardrails.md) guide.
 
 Included through `@arnilo/prism-sdk` and `@arnilo/prism-all`, or install explicitly when only workflow orchestration is needed.
 
@@ -51,6 +51,40 @@ const result = await runWorkflow(workflow, { topic: "hooks" }, {
 });
 ```
 
+### Durable linear saga
+
+```ts
+import { createMemoryLeaseStore } from "@arnilo/prism";
+import {
+  createMemoryWorkflowCheckpoints,
+  defineSaga,
+  runSaga,
+} from "@arnilo/prism-workflows";
+
+const invoiceSaga = defineSaga({
+  id: "post-invoice",
+  revision: "1",
+  steps: [{
+    id: "reserve-budget",
+    run: ({ operationId, input }) => reserve(input, operationId),
+    compensate: ({ operationId, output }) => release(output, operationId),
+    reconcile: ({ operationId, phase }) => lookupReservation(operationId, phase),
+  }],
+});
+
+const result = await runSaga(invoiceSaga, {
+  checkpoints: createMemoryWorkflowCheckpoints(), // use createWorkflowCheckpoints({ store: persistence.checkpoints }) in production
+  leases: createMemoryLeaseStore(),
+  ownerId: "worker-1",
+  tenantId: "tenant-1",
+  runId: "invoice-1",
+  input: { invoiceId: "inv-1" },
+  onEvent: (event) => metrics.record(event),
+});
+```
+
+Each step needs stable operation keys, `compensate`, and `reconcile`. Throw an error with `unknown: true` (or `code: "ERR_PRISM_SAGA_UNKNOWN"`) for an ambiguous external outcome; reconciliation runs before retry. `resumeSaga` takes over after lease expiry. Manual resolution requires current checkpoint version, active verified `AgentIdentity`, reason, and host audit reference. Compensation is not database rollback and delivery is not exactly-once.
+
 ## Node kinds
 
 | Kind | Factory | Behavior |
@@ -97,5 +131,8 @@ const result = await runWorkflow(workflow, { topic: "hooks" }, {
 - Suspended resume fails closed on tenant, schema, definition hash, validation, and stale/duplicate expected version; payloads are redacted before persistence.
 - Cancellation uses `AbortSignal` / active-run registry and aborts in-flight agent sessions.
 - Distributed workers use opaque lease tokens, ownership scopes, checkpoint CAS, and monotonic fencing tokens; stale workers cannot commit after takeover.
+- Sagas persist only bounded JSON state through `WorkflowCheckpointAdapter` over core `CheckpointStore`; step definitions and handlers remain host code. Forward and compensation cursors are durable, and only durably succeeded steps compensate in reverse order.
+- Saga retries are capped (default 3 / hard 10). Ambiguous forward or compensation outcomes require `reconcile`; unresolved outcomes stop at `manual_intervention` instead of guessing. Stable operation keys make host handlers idempotency-aware but do not claim exactly-once effects.
+- Saga records require tenant ownership. Input/output/error snapshots pass the configured `SecretRedactor` before checkpointing or compensation; manual resolution checks active verified identity, exact checkpoint version, bounded reason, and an audit reference; Prism records the reference but the host owns the audit ledger.
 
 See [Workflows](../../docs/workflows.md) and [Workflow orchestration primitives](../../docs/workflow-orchestration-primitives.md).

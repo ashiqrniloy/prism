@@ -131,6 +131,9 @@ Wire those values where they matter: provider adapters receive the resolved cred
 
 ## Security and performance notes
 
+- 0.2.7 (plan 027 Task 8) adds field-level classification and fail-closed redaction at data boundaries: `applyFieldPolicy` walks JSON-like values with explicit `allow`/`redact`/`tokenize`/`deny` decisions, the protected default denies unknown fields on outbound/persisted boundaries, and labels come from per-boundary `labelFor` hints — never auto-discovered. Policy errors, cycles, unsupported types, and budget breaches fail closed without echoing values; the audit seam transforms before canonical hashing and retains only `{path, reason}` provenance; the telemetry seam drops attributes on policy error. See [Data classification and field-level redaction](data-classification.md) for the full contract, boundary matrix, limits, and the recorded overhead vs the pre-existing redaction walk.
+
+
 - Fail closed: unknown providers, unknown tools, denied tools, invalid tool arguments, missing skill tool dependencies, trust failures, permission failures, append conflicts, and validator failures should stop the unsafe action.
 - Prism does not sandbox host tools, extensions, provider adapters, credential resolvers, or custom middleware. Use OS/container/process isolation when code is untrusted.
 - Redaction is exact known-secret replacement only. It is not arbitrary secret detection, entropy scanning, or DLP.
@@ -234,3 +237,4 @@ Every durable `AgentEventSource` page/subscribe and tool-effect claim rechecks e
 - [Database persistence](database-persistence.md): production schema, ownership, indexes, retention, and adapter readiness checklist.
 - [Enterprise PostgreSQL state](enterprise-postgres-state.md): durable policy/evaluation/work/router state and database-role boundary.
 - [Provider caching](provider-caching.md): cache keys and provider-owned header safety rules.
+- [Data classification and field-level redaction](data-classification.md): the field policy contract, protected default, and fail-closed boundary matrix (plan 027 Task 8).

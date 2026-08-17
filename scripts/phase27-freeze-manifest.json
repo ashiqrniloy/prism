@@ -1,0 +1,429 @@
+{
+  "$comment": "Task 0 freeze for plan 027. Environment names only; no credentials or connection-string values. Future tasks must amend this manifest before changing frozen scope.",
+  "release": "0.2.7",
+  "line": "0.2.x",
+  "type": "enterprise-erp-production-readiness",
+  "baseline": {
+    "release": "0.2.6",
+    "gitHead": "099540531a35303c11a22b582a72677c1a0978fc",
+    "node": "v24.19.0",
+    "platform": "linux",
+    "evidence": "docs/release-0.2.7-evidence.md"
+  },
+  "tasks": {
+    "task0": "done",
+    "task1": "done",
+    "task2": "done",
+    "task3": "done",
+    "task4": "done",
+    "task5": "done",
+    "task6": "done",
+    "task7": "done",
+    "task8": "done",
+    "task9": "done",
+    "task10": "done"
+  },
+  "packageBudget": {
+    "publishable": 50,
+    "workspace": 49,
+    "rootRuntimeDependencies": 0,
+    "runtimeDependencyEntries": 65,
+    "workspaceRuntimeEdges": 52,
+    "lockfilePackageEntries": 345,
+    "newRuntimeDependencyNames": 0,
+    "newPackages": 0
+  },
+  "compatPolicy": {
+    "additiveOnly": true,
+    "noExactlyOnceClaim": true,
+    "noImplicitCredentialDiscovery": true,
+    "migration": "forward-only Postgres migrations; rollback is a rehearsed operator procedure",
+    "overallProductionReadyBlockedUntil": "0.3.0 live-service matrix"
+  },
+  "demand": {
+    "vault": {
+      "provider": "HashiCorp Vault",
+      "status": "deferred",
+      "consumer": null,
+      "reason": "No named deployment consumer, secret shape, auth bootstrap, owner, or protected test path in the repository; existing credentials-node vault.ts is an encrypted local vault, not a Vault API adapter."
+    },
+    "aws-secrets-manager": {
+      "provider": "AWS Secrets Manager",
+      "status": "deferred",
+      "consumer": null,
+      "reason": "No named deployment consumer, secret shape, auth bootstrap, owner, or protected test path."
+    },
+    "azure-key-vault": {
+      "provider": "Azure Key Vault",
+      "status": "deferred",
+      "consumer": null,
+      "reason": "Azure provider uses a host-supplied Entra/resource-key callback; no Key Vault consumer or protected path exists."
+    },
+    "gcp-secret-manager": {
+      "provider": "GCP Secret Manager",
+      "status": "deferred",
+      "consumer": null,
+      "reason": "Google/Vertex providers use host-supplied credentials; no Secret Manager consumer or protected path exists."
+    }
+  },
+  "apiFreeze": [
+    {
+      "id": "messaging",
+      "owner": "@arnilo/prism-enterprise-postgres",
+      "exports": [
+        "createPostgresErpMessaging",
+        "ErpOutboxStore.append(client, input)",
+        "ErpInboxStore.record(client, input)",
+        "ErpOutboxDispatcher.claim/acknowledge/retry/markUnknown/deadLetter/replay"
+      ],
+      "migration": "004_erp_messaging",
+      "atomicity": "append and record accept caller-owned PoolClient; business mutation and local marker share caller transaction",
+      "manualActions": "deadLetter/replay require non-empty auditRef and host-verified authorizedBy identity matching tenant"
+    },
+    {
+      "id": "saga",
+      "owner": "@arnilo/prism-workflows",
+      "exports": [
+        "defineSaga",
+        "runSaga",
+        "resumeSaga",
+        "SagaDefinition",
+        "SagaStep",
+        "SagaRunResult"
+      ],
+      "storage": "existing WorkflowCheckpointAdapter over CheckpointStore plus existing LeaseStore; no workflow-specific SQL"
+    },
+    {
+      "id": "approvals",
+      "owner": "@arnilo/prism-policy + @arnilo/prism-enterprise-postgres",
+      "exports": [
+        "ApprovalRequest",
+        "ApprovalRequirement",
+        "ApprovalDecision",
+        "ApprovalRecord",
+        "ApprovalStore",
+        "createPostgresApprovalStore"
+      ],
+      "migration": "005_erp_approvals",
+      "authority": "verified host AgentIdentity only; policy actor refs never model/subagent claims",
+      "atomicity": "decide/revoke lock one request row (FOR UPDATE) and revision-check terminal transition in one transaction; consume joins a caller-owned transaction with the protected action",
+      "manualActions": "decide/revoke/consume require auditRef; hosts own identity verification and role source"
+    },
+    {
+      "id": "audit-export",
+      "owner": "@arnilo/prism-policy",
+      "exports": [
+        "createAuditExporter",
+        "verifyAuditBatch",
+        "AuditSigner",
+        "AuditWormSink",
+        "AuditSiemSink",
+        "AuditCursorStore",
+        "createMemoryAuditCursorStore",
+        "AUDIT_EXPORT_HARD_LIMITS",
+        "canonicalJson",
+        "canonicalJsonBytes",
+        "AuditExportError",
+        "AuditPageSource",
+        "AuditRedactionPolicy",
+        "AuditExportItem",
+        "AuditCursor",
+        "AuditWormAck",
+        "AuditSiemWrite",
+        "AuditSiemStatus",
+        "AuditExportBatchInput/Result",
+        "VerifyAuditBatchInput/Result"
+      ],
+      "storage": "existing policy records and cursor semantics; host owns immutable WORM/SIEM/KMS transport",
+      "manualActions": "WORM ack {batchId,digest} must match or the cursor never advances; SIEM failure records replayable pending status; retryPendingSiem requires host-supplied artifact bytes matching the pending digest; failed batches replay a bounded in-memory uncommitted page with the same batch id; a cursor CAS race after WORM acknowledgment is surfaced and not retried."
+    },
+    {
+      "id": "field-policy",
+      "owner": "@arnilo/prism",
+      "exports": [
+        "FieldPolicy",
+        "FieldPolicyInput",
+        "FieldPolicyDecision",
+        "applyFieldPolicy",
+        "createProtectedFieldPolicy",
+        "createAuditFieldRedactor",
+        "ALLOW_FIELD_POLICY",
+        "FieldPolicyError",
+        "FIELD_POLICY_LIMITS"
+      ],
+      "behavior": "optional for legacy callers; protected profile supplies deny/redact-on-unknown policy; no automatic sensitive-data discovery",
+      "status": "done",
+      "files": [
+        "src/field-policy.ts",
+        "src/redaction.ts",
+        "packages/observability-opentelemetry/src/instrumentation.ts",
+        "src/__tests__/field-policy.test.ts",
+        "docs/data-classification.md"
+      ],
+      "seams": [
+        "prompt",
+        "tool",
+        "artifact",
+        "audit",
+        "telemetry",
+        "persistence",
+        "export"
+      ],
+      "manualActions": [
+        "protected profile supplies deny/redact-on-unknown; labels are explicit labelFor hints only (no auto-discovery)",
+        "secret redaction runs first at egress seams; policy pass second (defense in depth)",
+        "audit transformation precedes canonical hashing; only {path, reason} provenance survives",
+        "telemetry policy errors drop the attribute, never echo the value",
+        "existing callers without policy are unchanged (identity fast path)"
+      ]
+    },
+    {
+      "id": "erp-evals",
+      "owner": "@arnilo/prism-evals",
+      "exports": [
+        "erpInvariantDataset",
+        "createErpInvariantScorers"
+      ],
+      "behavior": "structured facts only; scorer failure is a hard gate, not a weighted-average loss",
+      "status": "done",
+      "files": [
+        "packages/evals/src/erp-invariants.ts",
+        "packages/evals/src/__tests__/erp-invariants.test.ts",
+        "scripts/phase27-erp-journey.test.mjs",
+        "docs/evaluations.md"
+      ],
+      "manualActions": [
+        "scorers consume structured facts only (JSON in result.text); never model prose, secrets, or classified payloads",
+        "every invariant is a hard 0/1 gate; a single failure fails the journey (no weighted average)",
+        "journey requires PRISM_TEST_POSTGRES_URL (protected skip otherwise, never a passing skip)",
+        "journey fails if docs/_evidence/phase27-dr-evidence.json is missing or stale (DR drill must run first)",
+        "passing the protected journey does NOT satisfy the 0.3.0 live-service matrix"
+      ]
+    },
+    {
+      "id": "ha-dr",
+      "owner": "existing core/persistence packages",
+      "exports": [],
+      "behavior": "reuse existing CheckpointStore, LeaseStore, lifecycle, migration, and host backup APIs; scripts/docs only"
+    },
+    {
+      "id": "secret-managers",
+      "owner": "platform security",
+      "exports": [],
+      "behavior": "no adapter or export until one demand entry changes from deferred to demanded"
+    }
+  ],
+  "frozenCaps": {
+    "outboxBacklogClaimP95Ms": 100,
+    "outboxBatchRows": 1000,
+    "sagaMaxSteps": 100,
+    "approvalMaxActors": 100,
+    "auditMaxRecordsPerBatch": 1000,
+    "auditMaxBytesPerBatch": 10485760,
+    "classificationMaxOverheadPercent": 10,
+    "leaseTtlMsDefault": 30000,
+    "leaseTtlMsHard": 300000,
+    "failoverExtraMs": 5000,
+    "restore": "measured RPO/RTO required; no invented target"
+  },
+  "classificationFixtureBytes": {
+    "prompt": 4164,
+    "toolArguments": 2114,
+    "toolResult": 9095,
+    "artifactMetadata": 3692,
+    "auditRecord": 4243,
+    "telemetry": 1760,
+    "exportPage100": 10726
+  },
+  "protectedPolicy": {
+    "missingRequiredInfrastructure": "blocked",
+    "missingRequiredInfrastructureIsPassingSkip": false,
+    "environmentNamesOnly": true,
+    "requiredEnvNames": [
+      "PRISM_TEST_POSTGRES_URL",
+      "PRISM_TEST_NATS_URL",
+      "PRISM_LIVE_PROVIDER_TESTS",
+      "PRISM_LIVE_CANARIES",
+      "PRISM_CODING_JOURNEY",
+      "PRISM_DR_TARGET_URL",
+      "PRISM_PITR_URL"
+    ],
+    "currentPostgres": "measured: 2026-08-17",
+    "currentNats": "blocked: real NATS environment unset",
+    "currentBackupRestore": "measured: 2026-08-17"
+  },
+  "threats": [
+    {
+      "id": "ERP-T1",
+      "task": "task1",
+      "also": "task9",
+      "tests": [
+        "packages/enterprise-postgres/src/__tests__/erp-messaging.integration.test.ts",
+        "scripts/phase27-erp-journey.test.mjs"
+      ]
+    },
+    {
+      "id": "ERP-T2",
+      "task": "task1",
+      "also": "task9",
+      "tests": [
+        "packages/enterprise-postgres/src/__tests__/erp-messaging.integration.test.ts",
+        "scripts/phase27-erp-journey.test.mjs"
+      ]
+    },
+    {
+      "id": "ERP-T3",
+      "task": "task2",
+      "tests": [
+        "packages/workflows/src/__tests__/saga.test.ts"
+      ]
+    },
+    {
+      "id": "ERP-T4",
+      "task": "task3",
+      "also": "task9",
+      "tests": [
+        "packages/policy/src/__tests__/approvals.test.ts",
+        "packages/enterprise-postgres/src/__tests__/approvals.integration.test.ts",
+        "scripts/phase27-erp-journey.test.mjs"
+      ]
+    },
+    {
+      "id": "ERP-T5",
+      "task": "task4",
+      "also": "task9",
+      "tests": [
+        "packages/policy/test/audit-export.test.ts",
+        "scripts/phase27-erp-journey.test.mjs"
+      ]
+    },
+    {
+      "id": "ERP-T6",
+      "task": "task5",
+      "tests": [
+        "packages/credentials-node/test/secret-manager-contract.test.ts"
+      ]
+    },
+    {
+      "id": "ERP-T7",
+      "task": "task6",
+      "also": "task9",
+      "tests": [
+        "scripts/phase27-ha.test.mjs",
+        "scripts/phase27-erp-journey.test.mjs"
+      ]
+    },
+    {
+      "id": "ERP-T8",
+      "task": "task7",
+      "tests": [
+        "scripts/phase27-dr.test.mjs"
+      ]
+    },
+    {
+      "id": "ERP-T9",
+      "task": "task8",
+      "also": "task9",
+      "tests": [
+        "src/__tests__/field-policy.test.ts",
+        "scripts/phase27-erp-journey.test.mjs"
+      ]
+    },
+    {
+      "id": "ERP-T10",
+      "task": "task9",
+      "also": "task8",
+      "tests": [
+        "scripts/phase27-erp-journey.test.mjs",
+        "packages/evals/test/erp-invariants.test.ts"
+      ]
+    }
+  ],
+  "rejectedApproaches": [
+    "generic ERP framework",
+    "new event bus or queue broker",
+    "second workflow engine or scheduler",
+    "global correctness registry",
+    "generic state manager",
+    "cloud SDK catalog",
+    "implicit process.env/metadata/CLI credential discovery",
+    "exactly-once delivery or execution claim",
+    "raw private-key storage in Prism",
+    "model/subagent output as authorization"
+  ],
+  "measuredBackupRestore": {
+    "artifactBytes": 108291,
+    "backupMs": 122,
+    "restoreMs": 382,
+    "recoveryMs": 1163,
+    "rpoSeconds": 0,
+    "rtoSeconds": 1,
+    "tablesVerified": 14
+  },
+  "measuredClassification": {
+    "capPercent": 10,
+    "baseline": "pre-existing boundary walk (redactSecrets) measured interleaved A/B, fastest of 3 runs",
+    "fixtures": {
+      "prompt_4164": {
+        "policyMs": 112.81,
+        "baselineMs": 113.94,
+        "pct": 99.0
+      },
+      "toolArguments_2114": {
+        "policyMs": 87.33,
+        "baselineMs": 91.14,
+        "pct": 95.8
+      },
+      "toolResult_9095": {
+        "policyMs": 98.69,
+        "baselineMs": 101.63,
+        "pct": 97.1
+      },
+      "artifactMetadata_3692": {
+        "policyMs": 102.58,
+        "baselineMs": 103.65,
+        "pct": 99.0
+      },
+      "auditRecord_4243": {
+        "policyMs": 115.33,
+        "baselineMs": 115.58,
+        "pct": 99.8
+      },
+      "telemetry_1760": {
+        "policyMs": 70.71,
+        "baselineMs": 72.41,
+        "pct": 97.7
+      },
+      "exportPage100_10726": {
+        "policyMs": 86.17,
+        "baselineMs": 87.97,
+        "pct": 98.0
+      }
+    },
+    "peakPct": 99.8,
+    "note": "vs native JSON.stringify the policy pass is ~1.0-1.3x on the frozen fixtures (a JS policy gateway cannot beat a native serializer); the frozen 10% cap is defined and enforced against the walking work boundaries already performed"
+  },
+  "measuredErpJourney": {
+    "recorded": "2026-08-17",
+    "durationMs": 4815,
+    "scorers": 8,
+    "allPassed": true,
+    "stages": [
+      "policy-budget",
+      "approval",
+      "delivery",
+      "saga",
+      "audit",
+      "legalhold-classification",
+      "failover",
+      "backup-restore",
+      "score"
+    ],
+    "substitutes": 4,
+    "factDigest": "a21273fd5c428da7",
+    "restoreDigestMatch": true,
+    "drEvidenceFresh": true,
+    "evidenceFile": "docs/_evidence/phase27-erp-journey.json",
+    "blocker": "0.3.0 live-service matrix not yet recorded"
+  }
+}

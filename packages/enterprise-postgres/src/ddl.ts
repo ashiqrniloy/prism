@@ -10,6 +10,9 @@ export const ENTERPRISE_TABLE_NAMES = [
   "prism_model_router_budgets",
   "prism_model_router_rates",
   "prism_model_router_circuits",
+  "prism_erp_outbox",
+  "prism_erp_inbox",
+  "prism_erp_approvals",
 ] as const;
 
 /** Required query/cleanup indexes verified from the PostgreSQL catalog on open. */
@@ -29,6 +32,11 @@ export const ENTERPRISE_INDEX_NAMES = [
   "prism_model_router_budgets_expiry_idx",
   "prism_model_router_rates_expiry_idx",
   "prism_model_router_circuits_expiry_idx",
+  "prism_erp_outbox_claim_idx",
+  "prism_erp_outbox_lease_idx",
+  "prism_erp_inbox_created_idx",
+  "prism_erp_approvals_status_idx",
+  "prism_erp_approvals_created_idx",
 ] as const;
 
 /** One canonical enterprise schema migration. Only validated schema identifiers enter this SQL text. */
@@ -226,5 +234,74 @@ export function buildEnterpriseMigration003Ddl(schema: string): string {
   return `
 ALTER TABLE ${table("prism_model_router_budgets")}
   ADD COLUMN IF NOT EXISTS reservations JSONB NOT NULL DEFAULT '[]'::jsonb;
+`;
+}
+
+/** Adds tenant-scoped transactional messaging state without mutating earlier migrations. */
+export function buildEnterpriseMigration004Ddl(schema: string): string {
+  const table = (name: string) => qualifyTable(schema, name);
+  return `
+CREATE TABLE IF NOT EXISTS ${table("prism_erp_outbox")} (
+  tenant_id TEXT NOT NULL,
+  message_id TEXT NOT NULL,
+  topic TEXT NOT NULL,
+  payload JSONB NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'dispatched', 'retryable', 'completed', 'unknown', 'dead_letter')),
+  attempt INTEGER NOT NULL CHECK (attempt >= 0),
+  version INTEGER NOT NULL CHECK (version >= 1),
+  claim_token TEXT,
+  lease_expires_at TIMESTAMPTZ,
+  next_attempt_at TIMESTAMPTZ NOT NULL,
+  last_error JSONB,
+  last_action_ref TEXT,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (tenant_id, message_id)
+);
+CREATE INDEX IF NOT EXISTS prism_erp_outbox_claim_idx
+  ON ${table("prism_erp_outbox")} (tenant_id, next_attempt_at, created_at, message_id)
+  WHERE status IN ('pending', 'retryable');
+CREATE INDEX IF NOT EXISTS prism_erp_outbox_lease_idx
+  ON ${table("prism_erp_outbox")} (tenant_id, status, lease_expires_at, updated_at, message_id)
+  WHERE status = 'dispatched';
+
+CREATE TABLE IF NOT EXISTS ${table("prism_erp_inbox")} (
+  tenant_id TEXT NOT NULL,
+  consumer TEXT NOT NULL,
+  message_id TEXT NOT NULL,
+  recorded_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (tenant_id, consumer, message_id)
+);
+CREATE INDEX IF NOT EXISTS prism_erp_inbox_created_idx
+  ON ${table("prism_erp_inbox")} (tenant_id, consumer, recorded_at, message_id);
+`;
+}
+
+/** Adds multi-party approval records without mutating earlier migrations. */
+export function buildEnterpriseMigration005Ddl(schema: string): string {
+  const table = (name: string) => qualifyTable(schema, name);
+  return `
+CREATE TABLE IF NOT EXISTS ${table("prism_erp_approvals")} (
+  id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  requester JSONB NOT NULL,
+  action JSONB NOT NULL,
+  requirements JSONB NOT NULL,
+  separate_from_requester BOOLEAN NOT NULL,
+  delegation_max_depth INTEGER NOT NULL,
+  policy_revision TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected', 'revoked', 'consumed')),
+  revision INTEGER NOT NULL CHECK (revision >= 1),
+  decisions JSONB NOT NULL DEFAULT '[]'::jsonb,
+  last_action_ref TEXT,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (tenant_id, id)
+);
+CREATE INDEX IF NOT EXISTS prism_erp_approvals_status_idx
+  ON ${table("prism_erp_approvals")} (tenant_id, status, created_at, id);
+CREATE INDEX IF NOT EXISTS prism_erp_approvals_created_idx
+  ON ${table("prism_erp_approvals")} (tenant_id, created_at, id);
 `;
 }

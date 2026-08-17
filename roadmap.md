@@ -320,29 +320,33 @@ Each milestone requires its own numbered plan. Plans that add or change a public
 
 State management and Eval framework. Subagents.
 
-- [ ] **Transactional outbox/inbox.** Provide host-owned primitives for committing ERP mutation intent with application state and idempotently dispatching/consuming effects; retain at-least-once semantics and explicit unknown outcome.
-- [ ] **Saga compensation and reconciliation.** Add durable compensation plans, forward/rollback status, retry policy, manual intervention, and immutable evidence for multi-step business workflows.
-- [ ] **Multi-party and separation-of-duties approvals.** Support role/quorum rules, requester/approver separation, expiry, revocation, delegated authority, and complete audit provenance.
-- [ ] **Tamper-evident audit export.** Add signed/hash-chained export with WORM/object-store and SIEM sink seams; preserve redaction, legal hold, retention, and tenant boundaries.
-- [ ] **Secret-manager adapters.** Add Vault/AWS/Azure/GCP adapters only behind one credential-source contract and named deployment demand; never read ambient environment implicitly.
-- [ ] **HA registries and recovery.** Remove process-local correctness dependencies from enterprise ACP/conversation/workflow paths; define lease, failover, cursor, and split-brain behavior.
-- [ ] **Backup, restore, and migration rollback evidence.** Document and test PostgreSQL/session/artifact recovery, schema rollback/refusal, point-in-time objectives, and disaster-recovery drills.
-- [ ] **Field-level data classification and redaction.** Apply policy-driven classification to prompts, tool args/results, artifacts, audit, telemetry, and exports with fail-closed defaults.
-- [ ] **ERP release journey.** Exercise identity, policy, budget reservation, SoD approval, outbox mutation, compensation, audit export, legal hold, replica failover, and restore.
+- [x] **Transactional outbox/inbox.** Provide host-owned primitives for committing ERP mutation intent with application state and idempotently dispatching/consuming effects; retain at-least-once semantics and explicit unknown outcome.
+- [x] **Saga compensation and reconciliation.** Add durable compensation plans, forward/rollback status, retry policy, manual intervention, and immutable evidence for multi-step business workflows.
+- [x] **Multi-party and separation-of-duties approvals.** Support role/quorum rules, requester/approver separation, expiry, revocation, delegated authority, and complete audit provenance.
+- [x] **Tamper-evident audit export.** Add signed/hash-chained export with WORM/object-store and SIEM sink seams; preserve redaction, legal hold, retention, and tenant boundaries.
+- [x] **Secret-manager adapters.** Add Vault/AWS/Azure/GCP adapters only behind one credential-source contract and named deployment demand; never read ambient environment implicitly.
+- [x] **HA registries and recovery.** Remove process-local correctness dependencies from enterprise ACP/conversation/workflow paths; define lease, failover, cursor, and split-brain behavior.
+- [x] **Backup, restore, and migration rollback evidence.** Document and test PostgreSQL/session/artifact recovery, schema rollback/refusal, point-in-time objectives, and disaster-recovery drills.
+- [x] **Field-level data classification and redaction.** Apply policy-driven classification to prompts, tool args/results, artifacts, audit, telemetry, and exports with fail-closed defaults.
+- [x] **ERP release journey.** Exercise identity, policy, budget reservation, SoD approval, outbox mutation, compensation, audit export, legal hold, replica failover, and restore.
   - Acceptance: atomicity/recovery invariants are documented and tested; no exactly-once claim; security/performance/storage budgets pass. “ERP production ready” remains blocked until the 0.3.0 live-service matrix is recorded.
   
 ### 0.2.8 - Coding agent capabilities
 
 - Background observer (Observational Memory, Recall, Tool use, Skill activation, Input token suppression)
+- Impeccable
 - Vent
 - Ponytail and Caveman
 - Evaluate all of the coding tools to make sure it has all the capabilities required for coding agents to do the job in the most correct and efficient way.
 - Computer use package: Linux
+- Observational Memory implementation review: Local Memory Storage for the session??
+- Explore Memory Solution for Codebases
 
-### 0.2.9 - Autonomous updates for packages other than core
+### 0.2.9 - Misc
 - Setup docs and skills such that only packages with updates get released
 - Not all packages are needed to be updated with the same version
 - Deepseek API with stable cache prefix
+- Enterprise RAG Pipeline end to end with comprehensive capability
 
 ### Mandatory 0.2.x regression matrix
 
@@ -365,34 +369,12 @@ Before 0.2.x closes, automated tests must prove:
 
 Everything in this section was previously scheduled for 0.2.x and is intentionally deferred. No implementation starts until 0.2.x exit gates pass.
 
-### 0.3.1 — Protected live matrix, provider catalog, and umbrella membership
+### 0.3.1 — Review
 
-- [ ] **Record the protected live-canary matrix** as a named, env-gated, fail-loud gate: real OIDC IdP + JWKS rotation, OPA bundle pinning, MCP OAuth AS including DCR/refresh/revoke, S3-compatible store with KMS, NATS JetStream, keychain, supported providers, Docker sandbox, and Playwright browser. Missing required credentials are blocked release evidence, not silent skips.
-  - Acceptance: `npm run test:live` (or equivalent) emits `canary-report.json`; protected CI supplies environments and gates release publication.
-- [ ] **Live NATS JetStream suite.** Add `test:nats` against a real server, covering append/subscribe/reconnect, dedupe window, restart-stable durable consumers/cursors, cleanup, and failover; retain fake-seam tests in default suite.
-- [ ] **New OpenAI-compatible providers.** Add only demanded ecosystems (xAI, Mistral, DeepSeek, Groq, Together, Cohere, Fireworks, Cerebras, Friendli, NovitaAI candidates) as thin packages over existing compatible bases with model discovery, bounded transports, strict completion, cache support, conformance, docs, and package budgets.
-- [ ] **Umbrella membership fix.** Make `prism-providers` the documented complete first-party model-provider family or define a stable narrower rule; make `prism-all` membership intentional, including decisions for document-reader, OpenAPI tools, NATS, Caveman, and Ponytail.
-  - Acceptance: dependency closure matches claims; release/pack/installation tests pass; core gains no runtime dependency.
+Code review fixes
 
-### 0.3.1 — Delegated coding-agent adapters (Cursor, Antigravity)
+### 0.3.2 - Evaluation framework
 
-- [ ] **Generic delegated-agent contract** after primitive review: prompt in → `AgentEvent` stream out, with redaction, ownership, approval/effect mapping, durable correlation, and host cancellation. Extract only because both adapters are planned.
-- [ ] **`@arnilo/prism-cursor`.** Wrap Cursor's full agent SDK as a delegated coding agent, never an `AIProvider`; support host-selected local/cloud runtime and fail closed when optional SDK/credentials are absent.
-- [ ] **`@arnilo/prism-antigravity`.** Wrap Python sidecar or Go `localharness`, map steps to Prism events, and treat Gemini/Vertex model-only use as already covered by Prism providers.
-- [ ] **Docs, conformance, and observability hooks.** Add redaction, ownership, approval, cancellation, restart, payload-bound, and package-budget tests plus `docs/delegated-agents.md` and navigation.
-  - Acceptance: adapters run behind Prism identity/policy/approval/effect contracts; tool payloads are redacted; cross-tenant isolation and cancellation hold; no implicit activation.
-
-### 0.3.2 — Enterprise adapter breadth (demand-gated)
-
-- [ ] **Cedar policy adapter** behind `PolicyEvaluator` for a named integration.
-- [ ] **Second `ArtifactBodyStore` adapter** such as Alibaba OSS or Azure Blob; add multipart SigV4 only when the current upload ceiling is demonstrated.
-- [ ] **OpenAPI pagination beyond cursor** for demanded offset/Link-header APIs.
-  - Acceptance: each adapter passes conformance, redaction, ownership, bounds, live-service, and budget gates; demand and operational owner are recorded.
-
-### 0.3.3 — Delegated-agent observability
-
-- [ ] Add OpenTelemetry spans for delegated runs/steps/tool calls through `observability-opentelemetry`, correlated by request/run IDs with redacted and bounded attributes.
-  - Acceptance: spans and failure/cancellation status pass conformance without raw tool payload leakage.
 
 ## Consolidated Compromises (from plans 001–012)
 

@@ -45,6 +45,7 @@ Set `enabled: false` or omit both `tracer` and `meter` for a no-op adapter.
 - GenAI duration/token instruments use seconds/tokens and controlled labels; token usage is recorded once per provider operation.
 - Run errors and detach close attributable outstanding spans exactly once.
 - Exporter failures are isolated: instrumentation catches errors and forwards them to `onExporterError` without affecting the run.
+- Optional `fieldPolicy` (0.2.7, plan 027 Task 8): a structural `(input) => decision` applied to exported span attributes and events before they reach the sink — `allow` keeps, `redact` masks with `[REDACTED]`, `deny` drops, `tokenize` hashes; a policy error drops the attribute without ever echoing the value. Pair it with the root package's `createProtectedFieldPolicy` for fail-closed telemetry classification.
 
 ## Profile inclusion
 

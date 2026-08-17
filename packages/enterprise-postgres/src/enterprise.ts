@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 import { createEnterpriseStateCleanup } from "./cleanup.js";
 import { createPostgresEvaluationStore } from "./evaluations.js";
+import { createPostgresErpMessaging } from "./erp-messaging.js";
 import { EnterprisePostgresError, asEnterprisePostgresError } from "./errors.js";
 import { validateIdentifier } from "./identifiers.js";
 import { applyEnterpriseMigrations } from "./migrations.js";
@@ -49,6 +50,7 @@ export async function createPostgresEnterpriseState(options: PostgresEnterpriseS
       workIdempotency: createPostgresIdempotencyStore(pool, schema),
       toolEffects: createPostgresToolEffectStore(pool, schema),
       modelRouter: createPostgresModelRouterStateStore(pool, schema),
+      erpMessaging: createPostgresErpMessaging({ pool, schema }),
       cleanup,
       async close() {
         if (ownsPool && !closed) {

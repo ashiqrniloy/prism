@@ -1,893 +1,893 @@
 {
- "$comment": "Phase 26 (0.2.6) fully-featured-coding-agent-readiness scope gate and evidence record. Machine-readable source of truth for plans/026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md: the nine implementation items (primitive review; host-selected PTY backend; indexed/semantic search seam; multi-worktree/repository workspace lifecycle; demand-gated forge breadth; durable process/ACP recovery; bounded patch review + incremental diagnostics; protected real coding journey; docs finalization + 0.2.6 bump + exit gate) with per-task evidence tokens, allowed files, content markers, the demand registry (gitlab-forge and bitbucket-forge deferred at Task 0 — activation requires a named consumer), the frozen state machines and caps, the T1-T8 threat model mapped to task tests, the additive-only compat policy (expected deltas: version literal 0.2.5 -> 0.2.6 plus additive exports; removedOrChanged 0; no --allow-break without an amended migration-backed decision), the protected-gate policy (missing credentials/infrastructure records blocked and fails the release gate, never a passing skip), migration tokens, and the deviation log. Baseline evidence for the exit gate lives in scripts/phase26-baseline.json (exitGate null until Task 8 records it green). Support matrix stays frozen at scripts/phase12-freeze-manifest.json; 0.2.6 changes none of it.",
- "release": "0.2.6",
- "line": "0.2.x",
- "type": "fully-featured-coding-agent-readiness",
- "baseline": "0.2.5 (plan 025 exit gate green 2026-08-15; signed tag v0.2.5 + npm OIDC publication pending operator handoff; 50 publishable manifests; audit 0; HEAD 496d021)",
- "items": [
-  {
-   "id": "primitive-review",
-   "task": "task0",
-   "title": "Primitive review, capability freeze, demand registry, threat model, baseline, owners, migration, budgets",
-   "allowedFiles": [
-    "docs/_evidence/phase26-primitive-review.md",
-    "scripts/phase26-freeze-manifest.json",
-    "scripts/phase26-baseline.json",
-    "scripts/phase26-baseline.mjs",
-    "scripts/phase26-freeze.test.mjs"
-   ],
-   "markers": {
-    "docs/_evidence/phase26-primitive-review.md": [
-     "## 1. Primitive Inventory",
-     "## 4. Threat Model (T1–T8)",
-     "D8 — Budget, docs, exit (Task 8)"
-    ],
-    "scripts/phase26-freeze-manifest.json": [
-     "\"demand\"",
-     "\"threats\"",
-     "\"protectedPolicy\""
-    ],
-    "scripts/phase26-baseline.json": [
-     "\"baselineRelease\": \"0.2.5\"",
-     "\"seams\""
-    ],
-    "scripts/phase26-baseline.mjs": [
-     "phase25-baseline.json"
-    ],
-    "scripts/phase26-freeze.test.mjs": [
-     "phase26-freeze-manifest.json",
-     "byte-identical"
-    ]
-   },
-   "negativeMarkers": {
-    "docs/_evidence/phase26-primitive-review.md": [
-     "]("
-    ]
-   },
-   "securityTests": [
-    "T8 implicit activation -> phase26-freeze.test.mjs",
-    "T8 budget drift -> scripts/budget-gate.test.mjs"
-   ],
-   "rationale": "Task 0 of plan 026: inventory existing primitives (ProcessSessions, OutputAccumulator, ExecutionPolicy, CheckpointStore, LeaseStore, ToolEffectStore, AgentRunLifecycle, AcpSessionStore, RepositoryOperations, GitOperations, coding checkpoints, ArtifactService, LanguageIntelligence, lifecycle events, browser/sandbox primitives, packed journey, release evidence), approve only generic gaps, freeze states/caps/errors/demand/protected envs, capture the 0.2.5 baseline with seam hashes, and wire the freeze test into npm test. No source edited."
-  },
-  {
-   "id": "pty-backend",
-   "task": "task1",
-   "title": "Host-selected PTY and interactive ProcessSession backend",
-   "allowedFiles": [
-    "packages/coding-agent/src/__tests__/process-pty.test.ts",
-    "scripts/phase26-pty-protected.test.mjs"
-   ],
-   "markers": {
-    "packages/coding-agent/src/__tests__/process-pty.test.ts": [
-     "ptyBackend",
-     "ERR_PRISM_PROCESS_PTY_UNSUPPORTED"
-    ],
-    "scripts/phase26-pty-protected.test.mjs": [
-     "PRISM_TEST_PTY_BACKEND"
-    ]
-   },
-   "securityTests": [
-    "T1 hostile terminal -> process-pty.test.ts",
-    "T1 backend loss -> process-pty.test.ts",
-    "T1 redaction -> process-pty.test.ts"
-   ],
-   "rationale": "Task 1 of plan 026 (roadmap bullet 1): optional host ptyBackend with bounded resize and terminal metadata routed through the existing ProcessSessions state machine; pty:true without backend keeps ERR_PRISM_PROCESS_PTY_UNSUPPORTED before spawn; non-PTY path byte-compatible. Process types/sessions/index/limits/docs are shared coordination files (multiple editors)."
-  },
-  {
-   "id": "indexed-search",
-   "task": "task2",
-   "title": "Scalable incremental indexed and semantic repository-search seam",
-   "allowedFiles": [
-    "packages/coding-agent/src/repository/indexed-search.ts",
-    "packages/coding-agent/src/repository/types.ts",
-    "packages/coding-agent/src/repository/operations.ts",
-    "packages/coding-agent/src/repository/search.ts",
-    "packages/coding-agent/src/repository.ts",
-    "packages/coding-agent/src/search.ts",
-    "packages/coding-agent/src/__tests__/indexed-search.test.ts",
-    "scripts/phase26-index-benchmark.test.mjs",
-    "docs/indexed-code-search.md"
-   ],
-   "markers": {
-    "packages/coding-agent/src/repository/indexed-search.ts": [
-     "untrusted_index",
-     "indexed_literal"
-    ],
-    "packages/coding-agent/src/search.ts": [
-     "indexed_literal"
-    ],
-    "packages/coding-agent/src/__tests__/indexed-search.test.ts": [
-     "stale",
-     "untrusted_index"
-    ],
-    "scripts/phase26-index-benchmark.test.mjs": [
-     "100000",
-     "p95"
-    ],
-    "docs/indexed-code-search.md": [
-     "stale-index",
-     "untrusted_index"
-    ]
-   },
-   "securityTests": [
-    "T2 hostile index -> indexed-search.test.ts",
-    "T2 stale semantics -> indexed-search.test.ts",
-    "T2 scale -> phase26-index-benchmark.test.mjs"
-   ],
-   "rationale": "Task 2 of plan 026 (roadmap bullet 2): host index contract (update/remove/search/status/dispose) with states empty|building|ready|stale|failed; repo_search stays bounded literal by default; indexed_literal/semantic modes explicit; no silent downgrade; results validated, containment-checked, labeled untrusted_index."
-  },
-  {
-   "id": "workspace-lifecycle",
-   "task": "task3",
-   "title": "Ownership-scoped multi-repository and worktree lifecycle",
-   "allowedFiles": [
-    "packages/coding-agent/src/workspace-lifecycle.ts",
-    "packages/coding-agent/src/git.ts",
-    "packages/coding-agent/src/git-tools.ts",
-    "packages/coding-agent/src/coding-checkpoint.ts",
-    "packages/coding-agent/src/lifecycle.ts",
-    "packages/coding-agent/src/__tests__/workspace-lifecycle.test.ts"
-   ],
-   "markers": {
-    "packages/coding-agent/src/workspace-lifecycle.ts": [
-     "createCodingWorkspaceLifecycle",
-     "ERR_PRISM_WORKSPACE_"
-    ],
-    "packages/coding-agent/src/git.ts": [
-     "worktree"
-    ],
-    "packages/coding-agent/src/coding-checkpoint.ts": [
-     "workspace"
-    ],
-    "packages/coding-agent/src/__tests__/workspace-lifecycle.test.ts": [
-     "lease",
-     "dirty",
-     "main"
-    ]
-   },
-   "securityTests": [
-    "T3 path escape -> workspace-lifecycle.test.ts",
-    "T3 cleanup refusal -> workspace-lifecycle.test.ts",
-    "T3 stale fence -> phase26-recovery-conformance.test.mjs"
-   ],
-   "rationale": "Task 3 of plan 026 (roadmap bullet 3): checkpoint/lease-backed coding workspace lifecycle over existing GitOperations; versioned record namespace; main worktree immutable; dirty/locked/unowned cleanup refuses unless host-authorized; identity/fingerprint revalidation on resume; Postgres conformance leg shared with Task 5."
-  },
-  {
-   "id": "forge-breadth",
-   "task": "task4",
-   "title": "Demand-gated forge breadth (GitLab or Bitbucket only)",
-   "allowedFiles": [],
-   "markers": {},
-   "negativeMarkers": {
-    "packages/coding-agent/src/forge/gitlab.ts": [],
-    "packages/coding-agent/src/forge/bitbucket.ts": []
-   },
-   "demandFiles": {
-    "gitlab": [
-     "packages/coding-agent/src/forge/gitlab.ts",
-     "packages/coding-agent/src/forge/index.ts"
-    ],
-    "bitbucket": [
-     "packages/coding-agent/src/forge/bitbucket.ts",
-     "packages/coding-agent/src/forge/index.ts"
-    ]
-   },
-   "securityTests": [
-    "T4 deferral gate -> phase26-freeze.test.mjs"
-   ],
-   "rationale": "Task 4 of plan 026 (roadmap bullet 4): at most one adapter behind a named consumer in the demand registry; deferred at Task 0 so no adapter source, docs page, or export may exist; activation flips demand status first and records the consumer."
-  },
-  {
-   "id": "durable-recovery",
-   "task": "task5",
-   "title": "Durable ACP/live-task and managed-process recovery across restarts and replicas",
-   "allowedFiles": [
-    "packages/coding-agent/src/process/recovery.ts",
-    "packages/coding-agent/src/__tests__/process-recovery.test.ts",
-    "packages/ag-ui/src/acp/session-store.ts",
-    "packages/ag-ui/src/acp/agent.ts",
-    "packages/ag-ui/src/acp/terminal-client.ts",
-    "packages/ag-ui/src/__tests__/acp-recovery.test.ts",
-    "scripts/phase26-recovery-conformance.test.mjs"
-   ],
-   "markers": {
-    "packages/coding-agent/src/process/recovery.ts": [
-     "recover",
-     "ERR_PRISM_RECOVERY_"
-    ],
-    "packages/ag-ui/src/acp/session-store.ts": [
-     "activeRun"
-    ],
-    "packages/ag-ui/src/acp/agent.ts": [
-     "recover"
-    ],
-    "packages/ag-ui/src/acp/terminal-client.ts": [
-     "unknown"
-    ],
-    "packages/ag-ui/src/acp/__tests__/acp-recovery.test.ts": [
-     "unknown",
-     "activeRun"
-    ],
-    "scripts/phase26-recovery-conformance.test.mjs": [
-     "PRISM_TEST_POSTGRES_URL",
-     "replica"
-    ]
-   },
-   "securityTests": [
-    "T5 split-brain -> phase26-recovery-conformance.test.mjs",
-    "T5 fabricated exit -> process-recovery.test.ts",
-    "T5 duplicate approval/effect -> acp-recovery.test.ts"
-   ],
-   "rationale": "Task 5 of plan 026 (roadmap bullet 5): metadata-only durable records via CheckpointStore + LeaseStore fencing; attach-if-attested else atomic unknown; ACP activeRun references; durable cancellation never replays tools; core files (contracts-run-state, agent-run-state, checkpoints, leases, tool-effects, agent-run-lifecycle) are preservedSurface and may only change via a recorded deviation."
-  },
-  {
-   "id": "review-diagnostics",
-   "task": "task6",
-   "title": "Bounded patch review and incremental LSP/check diagnostics workflow",
-   "allowedFiles": [
-    "packages/coding-agent/src/review.ts",
-    "packages/coding-agent/src/diagnostics.ts",
-    "packages/coding-agent/src/checks.ts",
-    "packages/coding-agent/src/language/types.ts",
-    "packages/coding-agent/src/language/intelligence.ts",
-    "packages/coding-agent/src/language/client.ts",
-    "packages/coding-agent/src/language/index.ts",
-    "packages/coding-agent/src/__tests__/review.test.ts",
-    "packages/coding-agent/src/__tests__/language-diagnostics.test.ts",
-    "docs/coding-review-and-diagnostics.md",
-    "docs/work-artifacts-and-review.md",
-    "docs/language-intelligence.md"
-   ],
-   "markers": {
-    "packages/coding-agent/src/review.ts": [
-     "createCodingPatchReviewManifest",
-     "superseded",
-     "ERR_PRISM_REVIEW_"
-    ],
-    "packages/coding-agent/src/diagnostics.ts": [
-     "diagnosticDelta",
-     "added"
-    ],
-    "packages/coding-agent/src/language/intelligence.ts": [
-     "syncDocument",
-     "diagnosticDelta"
-    ],
-    "packages/coding-agent/src/language/client.ts": [
-     "didChange"
-    ],
-    "packages/coding-agent/src/__tests__/review.test.ts": [
-     "superseded",
-     "digest"
-    ],
-    "packages/coding-agent/src/__tests__/language-diagnostics.test.ts": [
-     "didChange",
-     "version"
-    ],
-    "docs/coding-review-and-diagnostics.md": [
-     "superseded",
-     "patch digest"
-    ],
-    "docs/work-artifacts-and-review.md": [
-     "patch review"
-    ]
-   },
-   "securityTests": [
-    "T6 stale acceptance -> review.test.ts",
-    "T6 diagnostic overflow -> language-diagnostics.test.ts",
-    "T6 raw body leak -> review.test.ts"
-   ],
-   "rationale": "Task 6 of plan 026 (roadmap bullet 6): review manifest binds decisions to artifact revision + patch digest + repository/worktree/base/head; LSP didChange sync with monotonic versions + push/pull refresh + normalized diagnosticDelta; host check parsers; ArtifactService remains the approval store (server/src/artifacts.ts untouched unless a recorded deviation)."
-  },
-  {
-   "id": "coding-journey",
-   "task": "task7",
-   "title": "Protected real coding-agent release journey",
-   "allowedFiles": [
-    "scripts/phase26-coding-journey.test.mjs",
-    "scripts/fixtures/phase26-coding-journey.mjs",
-    "scripts/release-skip-manifest.mjs",
-    ".github/workflows/coding-journey.yml",
-    "docs/coding-security.md",
-    "docs/browser-automation.md",
-    "scripts/phase26-coding-journey-report.json"
-   ],
-   "markers": {
-    "scripts/phase26-coding-journey.test.mjs": [
-     "PRISM_CODING_JOURNEY",
-     "PRISM_TEST_POSTGRES_URL"
-    ],
-    "scripts/fixtures/phase26-coding-journey.mjs": [
-     "createProcessSessions",
-     "createGitHubForge"
-    ],
-    "scripts/release-skip-manifest.mjs": [
-     "phase26-coding-journey"
-    ],
-    ".github/workflows/coding-journey.yml": [
-     "phase26-coding-journey"
-    ],
-    "docs/coding-security.md": [
-     "protected coding journey"
-    ],
-    "docs/browser-automation.md": [
-     "protected coding journey"
-    ],
-    "scripts/phase26-coding-journey-report.json": [
-     "blocked"
-    ]
-   },
-   "securityTests": [
-    "T7 credential leak -> phase26-coding-journey.test.mjs leak scan",
-    "T7 cleanup failure -> phase26-coding-journey.test.mjs",
-    "T7 missing infra -> release-skip-manifest.mjs blocked"
-   ],
-   "rationale": "Task 7 of plan 026 (roadmap bullet 7): packed-consumer protected journey over real Docker/browser/provider/forge/Postgres/PTY with unique run suffix, idempotent cleanup, restart/replica recovery, cancellation, and blocked-not-green release accounting. scripts/phase26-coding-journey-report.json is generated evidence (absent until the journey runs)."
-  },
-  {
-   "id": "docs-bump-exit",
-   "task": "task8",
-   "title": "Documentation finalization, 0.2.6 bump, compatibility review, and exit gate",
-   "allowedFiles": [
-    "CHANGELOG.md",
-    "docs/0.1.0-readiness.md",
-    "roadmap.md",
-    "scripts/package-truth.json"
-   ],
-   "markers": {
-    "CHANGELOG.md": [
-     "0.2.6"
-    ],
-    "docs/0.1.0-readiness.md": [
-     "0.2.6"
-    ],
-    "roadmap.md": [
-     "- [x] **Host-selected PTY/interactive terminal backend.**"
-    ],
-    "scripts/package-truth.json": [
-     "0.2.6"
-    ]
-   },
-   "securityTests": [
-    "T8 protected evidence accounting -> release-skip-manifest.mjs",
-    "T8 compat break -> release-gate.test.mjs"
-   ],
-   "rationale": "Task 8 of plan 026: docs/navigation finalization, scripted 0.2.5 -> 0.2.6 bump across 50 manifests, additive compat review, full default + protected gate run, phase26-baseline.json exitGate green with blocked false, signed v0.2.6 + npm OIDC operator handoff. roadmap.md is byte-immutable until this task (single editor)."
-  }
- ],
- "sharedFiles": {
-  "$comment": "Coordination files with multiple editors. Once ANY editor task is done the file is editable; the freeze test asserts the per-editor content markers below whenever the owning task is done (markers are substring checks against file content). roadmap.md is NOT listed here: it has a single editor (task8) and stays byte-identical to the baseline hash until task8 is done.",
-  "package.json": {
-   "task0": [
-    "phase26-freeze.test.mjs"
-   ],
-   "task8": [
-    "\"version\": \"0.2.6\""
-   ]
-  },
-  "plans/026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md": {
-   "task0": [
-    "- [x] Task 0"
-   ],
-   "task1": [
-    "- [x] Task 1"
-   ],
-   "task2": [
-    "- [x] Task 2"
-   ],
-   "task3": [
-    "- [x] Task 3"
-   ],
-   "task4": [
-    "- [x] Task 4"
-   ],
-   "task5": [
-    "- [x] Task 5"
-   ],
-   "task6": [
-    "- [x] Task 6"
-   ],
-   "task7": [
-    "- [x] Task 7"
-   ],
-   "task8": [
-    "- [x] Task 8"
-   ]
-  },
-  "plans/README.md": {
-   "task0": [
-    "026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md"
-   ],
-   "task8": [
-    "026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md",
-    "| complete |"
-   ]
-  },
-  "docs/index.md": {
-   "task1": [
-    "host-selected PTY"
-   ],
-   "task2": [
-    "Indexed code search"
-   ],
-   "task3": [
-    "Coding workspaces"
-   ],
-   "task5": [
-    "recovery"
-   ],
-   "task6": [
-    "Coding review and diagnostics"
-   ],
-   "task7": [
-    "protected coding journey"
-   ],
-   "task8": [
-    "**0.2.6**"
-   ]
-  },
-  "packages/coding-agent/README.md": {
-   "task1": [
-    "host-selected PTY"
-   ],
-   "task2": [
-    "indexed"
-   ],
-   "task3": [
-    "workspace lifecycle"
-   ],
-   "task5": [
-    "recovery"
-   ],
-   "task6": [
-    "patch review"
-   ],
-   "task8": [
-    "0.2.6"
-   ]
-  },
-  "packages/coding-agent/CHANGELOG.md": {
-   "task1": [
-    "host-selected PTY"
-   ],
-   "task2": [
-    "indexed"
-   ],
-   "task3": [
-    "workspace lifecycle"
-   ],
-   "task5": [
-    "recovery"
-   ],
-   "task6": [
-    "patch review"
-   ],
-   "task8": [
-    "0.2.6"
-   ]
-  },
-  "packages/ag-ui/README.md": {
-   "task5": [
-    "recovery"
-   ],
-   "task8": [
-    "0.2.6"
-   ]
-  },
-  "packages/ag-ui/CHANGELOG.md": {
-   "task5": [
-    "recovery"
-   ],
-   "task8": [
-    "0.2.6"
-   ]
-  },
-  "packages/coding-agent/src/index.ts": {
-   "task1": [
-    "ptyBackend"
-   ],
-   "task2": [
-    "indexed"
-   ],
-   "task3": [
-    "createCodingWorkspaceLifecycle"
-   ],
-   "task5": [
-    "recover"
-   ],
-   "task6": [
-    "createCodingPatchReviewManifest"
-   ]
-  },
-  "packages/coding-agent/src/limits.ts": {
-   "task1": [
-    "MAX_TERMINAL"
-   ],
-   "task2": [
-    "MAX_INDEX"
-   ],
-   "task3": [
-    "MAX_WORKSPACE"
-   ],
-   "task6": [
-    "MAX_REVIEW"
-   ]
-  },
-  "packages/coding-agent/src/process/types.ts": {
-   "task1": [
-    "ptyBackend"
-   ],
-   "task5": [
-    "recovery"
-   ]
-  },
-  "packages/coding-agent/src/process/sessions.ts": {
-   "task1": [
-    "ptyBackend"
-   ],
-   "task5": [
-    "recover"
-   ]
-  },
-  "packages/coding-agent/src/process/index.ts": {
-   "task1": [
-    "pty"
-   ],
-   "task5": [
-    "recovery"
-   ]
-  },
-  "docs/coding-agent-tools.md": {
-   "task1": [
-    "host-selected PTY"
-   ],
-   "task2": [
-    "indexed_literal"
-   ],
-   "task3": [
-    "worktree lifecycle"
-   ],
-   "task6": [
-    "diagnosticDelta"
-   ]
-  },
-  "docs/coding-workspaces.md": {
-   "task3": [
-    "ownership"
-   ],
-   "task5": [
-    "fencing"
-   ]
-  },
-  "docs/process-sessions.md": {
-   "task1": [
-    "host-selected PTY"
-   ],
-   "task5": [
-    "recovery"
-   ]
-  },
-  "docs/migration.md": {
-   "task5": [
-    "0.2.5 → 0.2.6"
-   ],
-   "task8": [
-    "## 0.2.5 → 0.2.6"
-   ]
-  },
-  "docs/forge-integration.md": {
-   "task4": [
-    "GitLab"
-   ],
-   "task7": [
-    "protected coding journey"
-   ]
-  },
-  "docs/release-and-install.md": {
-   "task7": [
-    "Protected coding journey"
-   ],
-   "task8": [
-    "0.2.6"
-   ]
-  },
-  "scripts/phase26-freeze-manifest.json": {
-   "task0": [
-    "\"task0\": \"done\""
-   ],
-   "task1": [
-    "\"task1\": \"done\""
-   ],
-   "task2": [
-    "\"task2\": \"done\""
-   ],
-   "task3": [
-    "\"task3\": \"done\""
-   ],
-   "task4": [
-    "\"task4\": \"done\""
-   ],
-   "task5": [
-    "\"task5\": \"done\""
-   ],
-   "task6": [
-    "\"task6\": \"done\""
-   ],
-   "task7": [
-    "\"task7\": \"done\""
-   ],
-   "task8": [
-    "\"task8\": \"done\""
-   ]
-  },
-  "scripts/phase26-baseline.json": {
-   "task0": [
-    "\"baselineRelease\": \"0.2.5\""
-   ],
-   "task8": [
-    "\"green\": true"
-   ]
-  }
- },
- "tasks": {
-  "task0": "done",
-  "task1": "done",
-  "task2": "done",
-  "task3": "done",
-  "task4": "done",
-  "task5": "done",
-  "task6": "done",
-  "task7": "done",
-  "task8": "done"
- },
- "demand": {
-  "$comment": "Forge breadth on demand. status 'deferred' means NO adapter source, docs page, or export may exist and the freeze test asserts absence. Activation: record a named consumer (host/consumer/date/use case) below and flip status to 'demanded'; exactly one adapter may then ship.",
-  "gitlab-forge": {
-   "status": "deferred",
-   "consumer": null,
-   "activation": "named host/consumer/date/use case recorded in this manifest entry"
-  },
-  "bitbucket-forge": {
-   "status": "deferred",
-   "consumer": null,
-   "activation": "named host/consumer/date/use case recorded in this manifest entry"
-  }
- },
- "stateMachines": {
-  "pty": "capability explicit (ptyBackend present + resize capability) | unsupported (absent backend -> ERR_PRISM_PROCESS_PTY_UNSUPPORTED before spawn)",
-  "index": "empty | building | ready | stale | failed",
-  "workspace": "active | cleaning | closed | unknown",
-  "processRecovery": "starting | running | exited | killed | released | expired | unknown (recovery adds attach-if-attested, else atomic unknown; no fabricated exit)",
-  "review": "pending | accepted | rejected | superseded",
-  "cancellation": "ownership/version/fence checked, terminal, idempotent, never replays a pending or dispatched tool"
- },
- "frozenCaps": {
-  "$comment": "default / hard pairs frozen at Task 0; measured evidence lands in scripts/phase26-baseline.json and per-task benchmarks. Existing process/repo/LSP caps are reused unchanged where noted.",
-  "terminal": {
-   "columns": "120 / 500",
-   "rows": "40 / 200",
-   "termBytes": "64 / 256",
-   "resizesPerMinute": "60 / 600",
-   "attachTimeoutMs": "30000 / 120000",
-   "backendMetadataBytes": "4096 / 16384",
-   "reuse": "process session/input/lifetime/output caps unchanged"
-  },
-  "index": {
-   "updateFiles": "1000 / 10000",
-   "updateBytes": "16777216 / 67108864",
-   "results": "1000 / 10000 (reuse repo results caps)",
-   "snippetBytes": "4096 / 16384",
-   "staleMaxAgeMs": "60000 / 300000",
-   "queryTimeoutMs": "30000 / 120000",
-   "benchmark": "100000-file metadata fixture; indexed query p95 <= 250ms; 1000-file batch update <= 1s; peak heap +64MiB"
-  },
-  "workspace": {
-   "repositoriesPerTask": "4 / 16",
-   "worktrees": "4 / 16 (reuse git caps)",
-   "recordBytes": "65536 / 262144",
-   "leaseTtlMs": "30000 / 300000",
-   "cleanupOperations": "100 / 1000"
-  },
-  "recovery": {
-   "leaseTtlMs": "30000 / 300000",
-   "records": "32 / 128",
-   "attachTimeoutMs": "30000 / 120000",
-   "recordBytes": "within checkpoint hard limits",
-   "acpActiveRunBytes": "512 max"
-  },
-  "review": {
-   "revisions": "8 / 32",
-   "manifestBytes": "65536 / 262144",
-   "diagnostics": "500 / 5000 (reuse LSP caps)",
-   "deltaEntries": "2000 / 10000"
-  },
-  "journey": {
-   "wallMs": "1200000 / 2400000",
-   "cleanupMs": "300000 / 900000",
-   "evidence": "timings, states, ids/hashes only; no prompts, source bodies, terminal output, tokens, or browser storage"
-  }
- },
- "frozenErrors": {
-  "existing": [
-   "ERR_PRISM_PROCESS_UNSUPPORTED",
-   "ERR_PRISM_PROCESS_PTY_UNSUPPORTED",
-   "ERR_PRISM_PROCESS_LIMIT",
-   "ERR_PRISM_LSP_*",
-   "ERR_PRISM_LIMIT"
+  "$comment": "Phase 26 (0.2.6) fully-featured-coding-agent-readiness scope gate and evidence record. Machine-readable source of truth for plans/026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md: the nine implementation items (primitive review; host-selected PTY backend; indexed/semantic search seam; multi-worktree/repository workspace lifecycle; demand-gated forge breadth; durable process/ACP recovery; bounded patch review + incremental diagnostics; protected real coding journey; docs finalization + 0.2.6 bump + exit gate) with per-task evidence tokens, allowed files, content markers, the demand registry (gitlab-forge and bitbucket-forge deferred at Task 0 \u2014 activation requires a named consumer), the frozen state machines and caps, the T1-T8 threat model mapped to task tests, the additive-only compat policy (expected deltas: version literal 0.2.5 -> 0.2.6 plus additive exports; removedOrChanged 0; no --allow-break without an amended migration-backed decision), the protected-gate policy (missing credentials/infrastructure records blocked and fails the release gate, never a passing skip), migration tokens, and the deviation log. Baseline evidence for the exit gate lives in scripts/phase26-baseline.json (exitGate null until Task 8 records it green). Support matrix stays frozen at scripts/phase12-freeze-manifest.json; 0.2.6 changes none of it.",
+  "release": "0.2.6",
+  "line": "0.2.x",
+  "type": "fully-featured-coding-agent-readiness",
+  "baseline": "0.2.5 (plan 025 exit gate green 2026-08-15; signed tag v0.2.5 + npm OIDC publication pending operator handoff; 50 publishable manifests; audit 0; HEAD 496d021)",
+  "items": [
+    {
+      "id": "primitive-review",
+      "task": "task0",
+      "title": "Primitive review, capability freeze, demand registry, threat model, baseline, owners, migration, budgets",
+      "allowedFiles": [
+        "docs/_evidence/phase26-primitive-review.md",
+        "scripts/phase26-freeze-manifest.json",
+        "scripts/phase26-baseline.json",
+        "scripts/phase26-baseline.mjs",
+        "scripts/phase26-freeze.test.mjs"
+      ],
+      "markers": {
+        "docs/_evidence/phase26-primitive-review.md": [
+          "## 1. Primitive Inventory",
+          "## 4. Threat Model (T1\u2013T8)",
+          "D8 \u2014 Budget, docs, exit (Task 8)"
+        ],
+        "scripts/phase26-freeze-manifest.json": [
+          "\"demand\"",
+          "\"threats\"",
+          "\"protectedPolicy\""
+        ],
+        "scripts/phase26-baseline.json": [
+          "\"baselineRelease\": \"0.2.5\"",
+          "\"seams\""
+        ],
+        "scripts/phase26-baseline.mjs": [
+          "phase25-baseline.json"
+        ],
+        "scripts/phase26-freeze.test.mjs": [
+          "phase26-freeze-manifest.json",
+          "byte-identical"
+        ]
+      },
+      "negativeMarkers": {
+        "docs/_evidence/phase26-primitive-review.md": [
+          "]("
+        ]
+      },
+      "securityTests": [
+        "T8 implicit activation -> phase26-freeze.test.mjs",
+        "T8 budget drift -> scripts/budget-gate.test.mjs"
+      ],
+      "rationale": "Task 0 of plan 026: inventory existing primitives (ProcessSessions, OutputAccumulator, ExecutionPolicy, CheckpointStore, LeaseStore, ToolEffectStore, AgentRunLifecycle, AcpSessionStore, RepositoryOperations, GitOperations, coding checkpoints, ArtifactService, LanguageIntelligence, lifecycle events, browser/sandbox primitives, packed journey, release evidence), approve only generic gaps, freeze states/caps/errors/demand/protected envs, capture the 0.2.5 baseline with seam hashes, and wire the freeze test into npm test. No source edited."
+    },
+    {
+      "id": "pty-backend",
+      "task": "task1",
+      "title": "Host-selected PTY and interactive ProcessSession backend",
+      "allowedFiles": [
+        "packages/coding-agent/src/__tests__/process-pty.test.ts",
+        "scripts/phase26-pty-protected.test.mjs"
+      ],
+      "markers": {
+        "packages/coding-agent/src/__tests__/process-pty.test.ts": [
+          "ptyBackend",
+          "ERR_PRISM_PROCESS_PTY_UNSUPPORTED"
+        ],
+        "scripts/phase26-pty-protected.test.mjs": [
+          "PRISM_TEST_PTY_BACKEND"
+        ]
+      },
+      "securityTests": [
+        "T1 hostile terminal -> process-pty.test.ts",
+        "T1 backend loss -> process-pty.test.ts",
+        "T1 redaction -> process-pty.test.ts"
+      ],
+      "rationale": "Task 1 of plan 026 (roadmap bullet 1): optional host ptyBackend with bounded resize and terminal metadata routed through the existing ProcessSessions state machine; pty:true without backend keeps ERR_PRISM_PROCESS_PTY_UNSUPPORTED before spawn; non-PTY path byte-compatible. Process types/sessions/index/limits/docs are shared coordination files (multiple editors)."
+    },
+    {
+      "id": "indexed-search",
+      "task": "task2",
+      "title": "Scalable incremental indexed and semantic repository-search seam",
+      "allowedFiles": [
+        "packages/coding-agent/src/repository/indexed-search.ts",
+        "packages/coding-agent/src/repository/types.ts",
+        "packages/coding-agent/src/repository/operations.ts",
+        "packages/coding-agent/src/repository/search.ts",
+        "packages/coding-agent/src/repository.ts",
+        "packages/coding-agent/src/search.ts",
+        "packages/coding-agent/src/__tests__/indexed-search.test.ts",
+        "scripts/phase26-index-benchmark.test.mjs",
+        "docs/indexed-code-search.md"
+      ],
+      "markers": {
+        "packages/coding-agent/src/repository/indexed-search.ts": [
+          "untrusted_index",
+          "indexed_literal"
+        ],
+        "packages/coding-agent/src/search.ts": [
+          "indexed_literal"
+        ],
+        "packages/coding-agent/src/__tests__/indexed-search.test.ts": [
+          "stale",
+          "untrusted_index"
+        ],
+        "scripts/phase26-index-benchmark.test.mjs": [
+          "100000",
+          "p95"
+        ],
+        "docs/indexed-code-search.md": [
+          "stale-index",
+          "untrusted_index"
+        ]
+      },
+      "securityTests": [
+        "T2 hostile index -> indexed-search.test.ts",
+        "T2 stale semantics -> indexed-search.test.ts",
+        "T2 scale -> phase26-index-benchmark.test.mjs"
+      ],
+      "rationale": "Task 2 of plan 026 (roadmap bullet 2): host index contract (update/remove/search/status/dispose) with states empty|building|ready|stale|failed; repo_search stays bounded literal by default; indexed_literal/semantic modes explicit; no silent downgrade; results validated, containment-checked, labeled untrusted_index."
+    },
+    {
+      "id": "workspace-lifecycle",
+      "task": "task3",
+      "title": "Ownership-scoped multi-repository and worktree lifecycle",
+      "allowedFiles": [
+        "packages/coding-agent/src/workspace-lifecycle.ts",
+        "packages/coding-agent/src/git.ts",
+        "packages/coding-agent/src/git-tools.ts",
+        "packages/coding-agent/src/coding-checkpoint.ts",
+        "packages/coding-agent/src/lifecycle.ts",
+        "packages/coding-agent/src/__tests__/workspace-lifecycle.test.ts"
+      ],
+      "markers": {
+        "packages/coding-agent/src/workspace-lifecycle.ts": [
+          "createCodingWorkspaceLifecycle",
+          "ERR_PRISM_WORKSPACE_"
+        ],
+        "packages/coding-agent/src/git.ts": [
+          "worktree"
+        ],
+        "packages/coding-agent/src/coding-checkpoint.ts": [
+          "workspace"
+        ],
+        "packages/coding-agent/src/__tests__/workspace-lifecycle.test.ts": [
+          "lease",
+          "dirty",
+          "main"
+        ]
+      },
+      "securityTests": [
+        "T3 path escape -> workspace-lifecycle.test.ts",
+        "T3 cleanup refusal -> workspace-lifecycle.test.ts",
+        "T3 stale fence -> phase26-recovery-conformance.test.mjs"
+      ],
+      "rationale": "Task 3 of plan 026 (roadmap bullet 3): checkpoint/lease-backed coding workspace lifecycle over existing GitOperations; versioned record namespace; main worktree immutable; dirty/locked/unowned cleanup refuses unless host-authorized; identity/fingerprint revalidation on resume; Postgres conformance leg shared with Task 5."
+    },
+    {
+      "id": "forge-breadth",
+      "task": "task4",
+      "title": "Demand-gated forge breadth (GitLab or Bitbucket only)",
+      "allowedFiles": [],
+      "markers": {},
+      "negativeMarkers": {
+        "packages/coding-agent/src/forge/gitlab.ts": [],
+        "packages/coding-agent/src/forge/bitbucket.ts": []
+      },
+      "demandFiles": {
+        "gitlab": [
+          "packages/coding-agent/src/forge/gitlab.ts",
+          "packages/coding-agent/src/forge/index.ts"
+        ],
+        "bitbucket": [
+          "packages/coding-agent/src/forge/bitbucket.ts",
+          "packages/coding-agent/src/forge/index.ts"
+        ]
+      },
+      "securityTests": [
+        "T4 deferral gate -> phase26-freeze.test.mjs"
+      ],
+      "rationale": "Task 4 of plan 026 (roadmap bullet 4): at most one adapter behind a named consumer in the demand registry; deferred at Task 0 so no adapter source, docs page, or export may exist; activation flips demand status first and records the consumer."
+    },
+    {
+      "id": "durable-recovery",
+      "task": "task5",
+      "title": "Durable ACP/live-task and managed-process recovery across restarts and replicas",
+      "allowedFiles": [
+        "packages/coding-agent/src/process/recovery.ts",
+        "packages/coding-agent/src/__tests__/process-recovery.test.ts",
+        "packages/ag-ui/src/acp/session-store.ts",
+        "packages/ag-ui/src/acp/agent.ts",
+        "packages/ag-ui/src/acp/terminal-client.ts",
+        "packages/ag-ui/src/__tests__/acp-recovery.test.ts",
+        "scripts/phase26-recovery-conformance.test.mjs"
+      ],
+      "markers": {
+        "packages/coding-agent/src/process/recovery.ts": [
+          "recover",
+          "ERR_PRISM_RECOVERY_"
+        ],
+        "packages/ag-ui/src/acp/session-store.ts": [
+          "activeRun"
+        ],
+        "packages/ag-ui/src/acp/agent.ts": [
+          "recover"
+        ],
+        "packages/ag-ui/src/acp/terminal-client.ts": [
+          "unknown"
+        ],
+        "packages/ag-ui/src/acp/__tests__/acp-recovery.test.ts": [
+          "unknown",
+          "activeRun"
+        ],
+        "scripts/phase26-recovery-conformance.test.mjs": [
+          "PRISM_TEST_POSTGRES_URL",
+          "replica"
+        ]
+      },
+      "securityTests": [
+        "T5 split-brain -> phase26-recovery-conformance.test.mjs",
+        "T5 fabricated exit -> process-recovery.test.ts",
+        "T5 duplicate approval/effect -> acp-recovery.test.ts"
+      ],
+      "rationale": "Task 5 of plan 026 (roadmap bullet 5): metadata-only durable records via CheckpointStore + LeaseStore fencing; attach-if-attested else atomic unknown; ACP activeRun references; durable cancellation never replays tools; core files (contracts-run-state, agent-run-state, checkpoints, leases, tool-effects, agent-run-lifecycle) are preservedSurface and may only change via a recorded deviation."
+    },
+    {
+      "id": "review-diagnostics",
+      "task": "task6",
+      "title": "Bounded patch review and incremental LSP/check diagnostics workflow",
+      "allowedFiles": [
+        "packages/coding-agent/src/review.ts",
+        "packages/coding-agent/src/diagnostics.ts",
+        "packages/coding-agent/src/checks.ts",
+        "packages/coding-agent/src/language/types.ts",
+        "packages/coding-agent/src/language/intelligence.ts",
+        "packages/coding-agent/src/language/client.ts",
+        "packages/coding-agent/src/language/index.ts",
+        "packages/coding-agent/src/__tests__/review.test.ts",
+        "packages/coding-agent/src/__tests__/language-diagnostics.test.ts",
+        "docs/coding-review-and-diagnostics.md",
+        "docs/work-artifacts-and-review.md",
+        "docs/language-intelligence.md"
+      ],
+      "markers": {
+        "packages/coding-agent/src/review.ts": [
+          "createCodingPatchReviewManifest",
+          "superseded",
+          "ERR_PRISM_REVIEW_"
+        ],
+        "packages/coding-agent/src/diagnostics.ts": [
+          "diagnosticDelta",
+          "added"
+        ],
+        "packages/coding-agent/src/language/intelligence.ts": [
+          "syncDocument",
+          "diagnosticDelta"
+        ],
+        "packages/coding-agent/src/language/client.ts": [
+          "didChange"
+        ],
+        "packages/coding-agent/src/__tests__/review.test.ts": [
+          "superseded",
+          "digest"
+        ],
+        "packages/coding-agent/src/__tests__/language-diagnostics.test.ts": [
+          "didChange",
+          "version"
+        ],
+        "docs/coding-review-and-diagnostics.md": [
+          "superseded",
+          "patch digest"
+        ],
+        "docs/work-artifacts-and-review.md": [
+          "patch review"
+        ]
+      },
+      "securityTests": [
+        "T6 stale acceptance -> review.test.ts",
+        "T6 diagnostic overflow -> language-diagnostics.test.ts",
+        "T6 raw body leak -> review.test.ts"
+      ],
+      "rationale": "Task 6 of plan 026 (roadmap bullet 6): review manifest binds decisions to artifact revision + patch digest + repository/worktree/base/head; LSP didChange sync with monotonic versions + push/pull refresh + normalized diagnosticDelta; host check parsers; ArtifactService remains the approval store (server/src/artifacts.ts untouched unless a recorded deviation)."
+    },
+    {
+      "id": "coding-journey",
+      "task": "task7",
+      "title": "Protected real coding-agent release journey",
+      "allowedFiles": [
+        "scripts/phase26-coding-journey.test.mjs",
+        "scripts/fixtures/phase26-coding-journey.mjs",
+        "scripts/release-skip-manifest.mjs",
+        ".github/workflows/coding-journey.yml",
+        "docs/coding-security.md",
+        "docs/browser-automation.md",
+        "scripts/phase26-coding-journey-report.json"
+      ],
+      "markers": {
+        "scripts/phase26-coding-journey.test.mjs": [
+          "PRISM_CODING_JOURNEY",
+          "PRISM_TEST_POSTGRES_URL"
+        ],
+        "scripts/fixtures/phase26-coding-journey.mjs": [
+          "createProcessSessions",
+          "createGitHubForge"
+        ],
+        "scripts/release-skip-manifest.mjs": [
+          "phase26-coding-journey"
+        ],
+        ".github/workflows/coding-journey.yml": [
+          "phase26-coding-journey"
+        ],
+        "docs/coding-security.md": [
+          "protected coding journey"
+        ],
+        "docs/browser-automation.md": [
+          "protected coding journey"
+        ],
+        "scripts/phase26-coding-journey-report.json": [
+          "blocked"
+        ]
+      },
+      "securityTests": [
+        "T7 credential leak -> phase26-coding-journey.test.mjs leak scan",
+        "T7 cleanup failure -> phase26-coding-journey.test.mjs",
+        "T7 missing infra -> release-skip-manifest.mjs blocked"
+      ],
+      "rationale": "Task 7 of plan 026 (roadmap bullet 7): packed-consumer protected journey over real Docker/browser/provider/forge/Postgres/PTY with unique run suffix, idempotent cleanup, restart/replica recovery, cancellation, and blocked-not-green release accounting. scripts/phase26-coding-journey-report.json is generated evidence (absent until the journey runs)."
+    },
+    {
+      "id": "docs-bump-exit",
+      "task": "task8",
+      "title": "Documentation finalization, 0.2.6 bump, compatibility review, and exit gate",
+      "allowedFiles": [
+        "CHANGELOG.md",
+        "docs/0.1.0-readiness.md",
+        "roadmap.md",
+        "scripts/package-truth.json"
+      ],
+      "markers": {
+        "CHANGELOG.md": [
+          "0.2.7"
+        ],
+        "docs/0.1.0-readiness.md": [
+          "0.2.7"
+        ],
+        "roadmap.md": [
+          "- [x] **Host-selected PTY/interactive terminal backend.**"
+        ],
+        "scripts/package-truth.json": [
+          "0.2.7"
+        ]
+      },
+      "securityTests": [
+        "T8 protected evidence accounting -> release-skip-manifest.mjs",
+        "T8 compat break -> release-gate.test.mjs"
+      ],
+      "rationale": "Task 8 of plan 026: docs/navigation finalization, scripted 0.2.5 -> 0.2.6 bump across 50 manifests, additive compat review, full default + protected gate run, phase26-baseline.json exitGate green with blocked false, signed v0.2.6 + npm OIDC operator handoff. roadmap.md is byte-immutable until this task (single editor)."
+    }
   ],
-  "new": [
-   "ERR_PRISM_PROCESS_PTY_BACKEND, ERR_PRISM_PROCESS_PTY_LIMIT (Task 1)",
-   "ERR_PRISM_INDEX_* (unsupported, stale, failed, limit, timeout, untrusted-scope) (Task 2)",
-   "ERR_PRISM_WORKSPACE_* (unknown, limit, ownership, fence, dirty, locked, main, path-escape, fingerprint) (Task 3)",
-   "ERR_PRISM_RECOVERY_* (unknown, unsupported, ownership, fence, corrupt, limit, attach) (Task 5)",
-   "ERR_PRISM_REVIEW_* (superseded, stale, ownership, digest, limit, diagnostics) (Task 6)"
-  ]
- },
- "threats": [
-  {
-   "id": "T1",
-   "title": "Hostile terminal: escape/control sequences, oversized dimensions/TERM/input, resize flood, secret leakage, backend loss/spoofing",
-   "task": "task1",
-   "posture": "PTY output stays untrusted data; caps enforced before backend calls; wrong owner/policy -> no backend mutation; absent/unsupported backend -> pre-spawn error; redaction on errors/events/metadata",
-   "tests": [
-    "packages/coding-agent/src/__tests__/process-pty.test.ts",
-    "scripts/phase26-pty-protected.test.mjs"
-   ]
+  "sharedFiles": {
+    "$comment": "Coordination files with multiple editors. Once ANY editor task is done the file is editable; the freeze test asserts the per-editor content markers below whenever the owning task is done (markers are substring checks against file content). roadmap.md is NOT listed here: it has a single editor (task8) and stays byte-identical to the baseline hash until task8 is done.",
+    "package.json": {
+      "task0": [
+        "phase26-freeze.test.mjs"
+      ],
+      "task8": [
+        "\"version\": \"0.2.7\""
+      ]
+    },
+    "plans/026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md": {
+      "task0": [
+        "- [x] Task 0"
+      ],
+      "task1": [
+        "- [x] Task 1"
+      ],
+      "task2": [
+        "- [x] Task 2"
+      ],
+      "task3": [
+        "- [x] Task 3"
+      ],
+      "task4": [
+        "- [x] Task 4"
+      ],
+      "task5": [
+        "- [x] Task 5"
+      ],
+      "task6": [
+        "- [x] Task 6"
+      ],
+      "task7": [
+        "- [x] Task 7"
+      ],
+      "task8": [
+        "- [x] Task 8"
+      ]
+    },
+    "plans/README.md": {
+      "task0": [
+        "026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md"
+      ],
+      "task8": [
+        "026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md",
+        "| complete |"
+      ]
+    },
+    "docs/index.md": {
+      "task1": [
+        "host-selected PTY"
+      ],
+      "task2": [
+        "Indexed code search"
+      ],
+      "task3": [
+        "Coding workspaces"
+      ],
+      "task5": [
+        "recovery"
+      ],
+      "task6": [
+        "Coding review and diagnostics"
+      ],
+      "task7": [
+        "protected coding journey"
+      ],
+      "task8": [
+        "**0.2.7**"
+      ]
+    },
+    "packages/coding-agent/README.md": {
+      "task1": [
+        "host-selected PTY"
+      ],
+      "task2": [
+        "indexed"
+      ],
+      "task3": [
+        "workspace lifecycle"
+      ],
+      "task5": [
+        "recovery"
+      ],
+      "task6": [
+        "patch review"
+      ],
+      "task8": [
+        "0.2.6"
+      ]
+    },
+    "packages/coding-agent/CHANGELOG.md": {
+      "task1": [
+        "host-selected PTY"
+      ],
+      "task2": [
+        "indexed"
+      ],
+      "task3": [
+        "workspace lifecycle"
+      ],
+      "task5": [
+        "recovery"
+      ],
+      "task6": [
+        "patch review"
+      ],
+      "task8": [
+        "0.2.6"
+      ]
+    },
+    "packages/ag-ui/README.md": {
+      "task5": [
+        "recovery"
+      ],
+      "task8": [
+        "0.2.6"
+      ]
+    },
+    "packages/ag-ui/CHANGELOG.md": {
+      "task5": [
+        "recovery"
+      ],
+      "task8": [
+        "0.2.6"
+      ]
+    },
+    "packages/coding-agent/src/index.ts": {
+      "task1": [
+        "ptyBackend"
+      ],
+      "task2": [
+        "indexed"
+      ],
+      "task3": [
+        "createCodingWorkspaceLifecycle"
+      ],
+      "task5": [
+        "recover"
+      ],
+      "task6": [
+        "createCodingPatchReviewManifest"
+      ]
+    },
+    "packages/coding-agent/src/limits.ts": {
+      "task1": [
+        "MAX_TERMINAL"
+      ],
+      "task2": [
+        "MAX_INDEX"
+      ],
+      "task3": [
+        "MAX_WORKSPACE"
+      ],
+      "task6": [
+        "MAX_REVIEW"
+      ]
+    },
+    "packages/coding-agent/src/process/types.ts": {
+      "task1": [
+        "ptyBackend"
+      ],
+      "task5": [
+        "recovery"
+      ]
+    },
+    "packages/coding-agent/src/process/sessions.ts": {
+      "task1": [
+        "ptyBackend"
+      ],
+      "task5": [
+        "recover"
+      ]
+    },
+    "packages/coding-agent/src/process/index.ts": {
+      "task1": [
+        "pty"
+      ],
+      "task5": [
+        "recovery"
+      ]
+    },
+    "docs/coding-agent-tools.md": {
+      "task1": [
+        "host-selected PTY"
+      ],
+      "task2": [
+        "indexed_literal"
+      ],
+      "task3": [
+        "worktree lifecycle"
+      ],
+      "task6": [
+        "diagnosticDelta"
+      ]
+    },
+    "docs/coding-workspaces.md": {
+      "task3": [
+        "ownership"
+      ],
+      "task5": [
+        "fencing"
+      ]
+    },
+    "docs/process-sessions.md": {
+      "task1": [
+        "host-selected PTY"
+      ],
+      "task5": [
+        "recovery"
+      ]
+    },
+    "docs/migration.md": {
+      "task5": [
+        "0.2.5 \u2192 0.2.6"
+      ],
+      "task8": [
+        "## 0.2.5 \u2192 0.2.6"
+      ]
+    },
+    "docs/forge-integration.md": {
+      "task4": [
+        "GitLab"
+      ],
+      "task7": [
+        "protected coding journey"
+      ]
+    },
+    "docs/release-and-install.md": {
+      "task7": [
+        "Protected coding journey"
+      ],
+      "task8": [
+        "0.2.6"
+      ]
+    },
+    "scripts/phase26-freeze-manifest.json": {
+      "task0": [
+        "\"task0\": \"done\""
+      ],
+      "task1": [
+        "\"task1\": \"done\""
+      ],
+      "task2": [
+        "\"task2\": \"done\""
+      ],
+      "task3": [
+        "\"task3\": \"done\""
+      ],
+      "task4": [
+        "\"task4\": \"done\""
+      ],
+      "task5": [
+        "\"task5\": \"done\""
+      ],
+      "task6": [
+        "\"task6\": \"done\""
+      ],
+      "task7": [
+        "\"task7\": \"done\""
+      ],
+      "task8": [
+        "\"task8\": \"done\""
+      ]
+    },
+    "scripts/phase26-baseline.json": {
+      "task0": [
+        "\"baselineRelease\": \"0.2.5\""
+      ],
+      "task8": [
+        "\"green\": true"
+      ]
+    }
   },
-  {
-   "id": "T2",
-   "title": "Malicious or stale index: cross-tenant/cross-root results, prompt-injection snippets, malformed scores/ids, silent semantic downgrade, unbounded query/update",
-   "task": "task2",
-   "posture": "Results validated, containment-checked, labeled untrusted_index; stale/failed/unsupported -> stable error; no implicit fallback that changes query meaning; byte/result/timeout caps",
-   "tests": [
-    "packages/coding-agent/src/__tests__/indexed-search.test.ts",
-    "scripts/phase26-index-benchmark.test.mjs"
-   ]
+  "tasks": {
+    "task0": "done",
+    "task1": "done",
+    "task2": "done",
+    "task3": "done",
+    "task4": "done",
+    "task5": "done",
+    "task6": "done",
+    "task7": "done",
+    "task8": "done"
   },
-  {
-   "id": "T3",
-   "title": "Workspace lifecycle: cross-tenant path/symlink escape, main-worktree removal, dirty/locked force cleanup, identity/fingerprint collision, stale fence writes",
-   "task": "task3",
-   "posture": "Canonicalized roots; CAS + lease fencing; main worktree immutable; dirty/locked/unowned refuse unless host-authorized; partial -> unknown reconcilable; credential URLs never stored",
-   "tests": [
-    "packages/coding-agent/src/__tests__/workspace-lifecycle.test.ts"
-   ]
+  "demand": {
+    "$comment": "Forge breadth on demand. status 'deferred' means NO adapter source, docs page, or export may exist and the freeze test asserts absence. Activation: record a named consumer (host/consumer/date/use case) below and flip status to 'demanded'; exactly one adapter may then ship.",
+    "gitlab-forge": {
+      "status": "deferred",
+      "consumer": null,
+      "activation": "named host/consumer/date/use case recorded in this manifest entry"
+    },
+    "bitbucket-forge": {
+      "status": "deferred",
+      "consumer": null,
+      "activation": "named host/consumer/date/use case recorded in this manifest entry"
+    }
   },
-  {
-   "id": "T4",
-   "title": "Forge: token leak into argv/logs/events/artifacts, duplicate mutation, wrong repository, rate-limit/stale-head races, redirect/SSRF, cross-tenant use",
-   "task": "task4",
-   "posture": "Per-call least-privilege credentials via env injection; ToolEffectStore idempotency; lookup-before-create; stale head refused; bounded transport; deferral when no demand",
-   "tests": [
-    "scripts/phase26-freeze.test.mjs (deferral gate)"
-   ]
+  "stateMachines": {
+    "pty": "capability explicit (ptyBackend present + resize capability) | unsupported (absent backend -> ERR_PRISM_PROCESS_PTY_UNSUPPORTED before spawn)",
+    "index": "empty | building | ready | stale | failed",
+    "workspace": "active | cleaning | closed | unknown",
+    "processRecovery": "starting | running | exited | killed | released | expired | unknown (recovery adds attach-if-attested, else atomic unknown; no fabricated exit)",
+    "review": "pending | accepted | rejected | superseded",
+    "cancellation": "ownership/version/fence checked, terminal, idempotent, never replays a pending or dispatched tool"
   },
-  {
-   "id": "T5",
-   "title": "Recovery split-brain: duplicate attach/input/kill/cancel, stale fence, orphan process, fabricated exit, duplicate approval/effect, credential fields in records",
-   "task": "task5",
-   "posture": "Lease + fence single-winner; attach only when attested else atomic unknown; no PID probing; cancellation never replays tools; records redacted/versioned; cross-store conformance without timing sleeps",
-   "tests": [
-    "packages/coding-agent/src/__tests__/process-recovery.test.ts",
-    "packages/ag-ui/src/__tests__/acp-recovery.test.ts",
-    "scripts/phase26-recovery-conformance.test.mjs"
-   ]
+  "frozenCaps": {
+    "$comment": "default / hard pairs frozen at Task 0; measured evidence lands in scripts/phase26-baseline.json and per-task benchmarks. Existing process/repo/LSP caps are reused unchanged where noted.",
+    "terminal": {
+      "columns": "120 / 500",
+      "rows": "40 / 200",
+      "termBytes": "64 / 256",
+      "resizesPerMinute": "60 / 600",
+      "attachTimeoutMs": "30000 / 120000",
+      "backendMetadataBytes": "4096 / 16384",
+      "reuse": "process session/input/lifetime/output caps unchanged"
+    },
+    "index": {
+      "updateFiles": "1000 / 10000",
+      "updateBytes": "16777216 / 67108864",
+      "results": "1000 / 10000 (reuse repo results caps)",
+      "snippetBytes": "4096 / 16384",
+      "staleMaxAgeMs": "60000 / 300000",
+      "queryTimeoutMs": "30000 / 120000",
+      "benchmark": "100000-file metadata fixture; indexed query p95 <= 250ms; 1000-file batch update <= 1s; peak heap +64MiB"
+    },
+    "workspace": {
+      "repositoriesPerTask": "4 / 16",
+      "worktrees": "4 / 16 (reuse git caps)",
+      "recordBytes": "65536 / 262144",
+      "leaseTtlMs": "30000 / 300000",
+      "cleanupOperations": "100 / 1000"
+    },
+    "recovery": {
+      "leaseTtlMs": "30000 / 300000",
+      "records": "32 / 128",
+      "attachTimeoutMs": "30000 / 120000",
+      "recordBytes": "within checkpoint hard limits",
+      "acpActiveRunBytes": "512 max"
+    },
+    "review": {
+      "revisions": "8 / 32",
+      "manifestBytes": "65536 / 262144",
+      "diagnostics": "500 / 5000 (reuse LSP caps)",
+      "deltaEntries": "2000 / 10000"
+    },
+    "journey": {
+      "wallMs": "1200000 / 2400000",
+      "cleanupMs": "300000 / 900000",
+      "evidence": "timings, states, ids/hashes only; no prompts, source bodies, terminal output, tokens, or browser storage"
+    }
   },
-  {
-   "id": "T6",
-   "title": "Patch review: TOCTOU between review and apply, stale acceptance after patch/identity change, diagnostic spoof/overflow, path escape, secret leakage",
-   "task": "task6",
-   "posture": "Decisions bind to digest + revision + repository/worktree/base/head; change -> superseded; diagnostics versioned/bounded; raw patch/check bodies never persisted; projection allow-list gated",
-   "tests": [
-    "packages/coding-agent/src/__tests__/review.test.ts",
-    "packages/coding-agent/src/__tests__/language-diagnostics.test.ts"
-   ]
+  "frozenErrors": {
+    "existing": [
+      "ERR_PRISM_PROCESS_UNSUPPORTED",
+      "ERR_PRISM_PROCESS_PTY_UNSUPPORTED",
+      "ERR_PRISM_PROCESS_LIMIT",
+      "ERR_PRISM_LSP_*",
+      "ERR_PRISM_LIMIT"
+    ],
+    "new": [
+      "ERR_PRISM_PROCESS_PTY_BACKEND, ERR_PRISM_PROCESS_PTY_LIMIT (Task 1)",
+      "ERR_PRISM_INDEX_* (unsupported, stale, failed, limit, timeout, untrusted-scope) (Task 2)",
+      "ERR_PRISM_WORKSPACE_* (unknown, limit, ownership, fence, dirty, locked, main, path-escape, fingerprint) (Task 3)",
+      "ERR_PRISM_RECOVERY_* (unknown, unsupported, ownership, fence, corrupt, limit, attach) (Task 5)",
+      "ERR_PRISM_REVIEW_* (superseded, stale, ownership, digest, limit, diagnostics) (Task 6)"
+    ]
   },
-  {
-   "id": "T7",
-   "title": "Journey: credential/artifact leak, failed cleanup (open PR/branch/worktree/container/context/unknown process), skipped-required-infra passes as green",
-   "task": "task7",
-   "posture": "Secrets late-bound and excluded from report/stdout/artifacts; cleanup idempotent and required; missing infra -> blocked fails release; leak scan gates evidence",
-   "tests": [
-    "scripts/phase26-coding-journey.test.mjs"
-   ]
-  },
-  {
-   "id": "T8",
-   "title": "Implicit activation/resource abuse: optional capability active by default, unbounded sessions/index/records/journey, import-time sweeper, package budget drift",
-   "task": "task0",
-   "posture": "All seams default unavailable/deny; caps frozen per task; freeze test locks pending files byte-identical; budget gate + protected accounting",
-   "tests": [
-    "scripts/phase26-freeze.test.mjs",
-    "scripts/budget-gate.test.mjs",
-    "scripts/release-skip-manifest.mjs"
-   ]
-  }
- ],
- "compatPolicy": {
-  "additiveOnly": true,
-  "expectedDeltas": [
-   "version literal 0.2.5 -> 0.2.6",
-   "additive exports: PTY backend/handle, indexed-search seam, workspace lifecycle, process/ACP recovery, review manifest + diagnostics, (forge adapter only if demanded)"
+  "threats": [
+    {
+      "id": "T1",
+      "title": "Hostile terminal: escape/control sequences, oversized dimensions/TERM/input, resize flood, secret leakage, backend loss/spoofing",
+      "task": "task1",
+      "posture": "PTY output stays untrusted data; caps enforced before backend calls; wrong owner/policy -> no backend mutation; absent/unsupported backend -> pre-spawn error; redaction on errors/events/metadata",
+      "tests": [
+        "packages/coding-agent/src/__tests__/process-pty.test.ts",
+        "scripts/phase26-pty-protected.test.mjs"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Malicious or stale index: cross-tenant/cross-root results, prompt-injection snippets, malformed scores/ids, silent semantic downgrade, unbounded query/update",
+      "task": "task2",
+      "posture": "Results validated, containment-checked, labeled untrusted_index; stale/failed/unsupported -> stable error; no implicit fallback that changes query meaning; byte/result/timeout caps",
+      "tests": [
+        "packages/coding-agent/src/__tests__/indexed-search.test.ts",
+        "scripts/phase26-index-benchmark.test.mjs"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Workspace lifecycle: cross-tenant path/symlink escape, main-worktree removal, dirty/locked force cleanup, identity/fingerprint collision, stale fence writes",
+      "task": "task3",
+      "posture": "Canonicalized roots; CAS + lease fencing; main worktree immutable; dirty/locked/unowned refuse unless host-authorized; partial -> unknown reconcilable; credential URLs never stored",
+      "tests": [
+        "packages/coding-agent/src/__tests__/workspace-lifecycle.test.ts"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Forge: token leak into argv/logs/events/artifacts, duplicate mutation, wrong repository, rate-limit/stale-head races, redirect/SSRF, cross-tenant use",
+      "task": "task4",
+      "posture": "Per-call least-privilege credentials via env injection; ToolEffectStore idempotency; lookup-before-create; stale head refused; bounded transport; deferral when no demand",
+      "tests": [
+        "scripts/phase26-freeze.test.mjs (deferral gate)"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Recovery split-brain: duplicate attach/input/kill/cancel, stale fence, orphan process, fabricated exit, duplicate approval/effect, credential fields in records",
+      "task": "task5",
+      "posture": "Lease + fence single-winner; attach only when attested else atomic unknown; no PID probing; cancellation never replays tools; records redacted/versioned; cross-store conformance without timing sleeps",
+      "tests": [
+        "packages/coding-agent/src/__tests__/process-recovery.test.ts",
+        "packages/ag-ui/src/__tests__/acp-recovery.test.ts",
+        "scripts/phase26-recovery-conformance.test.mjs"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Patch review: TOCTOU between review and apply, stale acceptance after patch/identity change, diagnostic spoof/overflow, path escape, secret leakage",
+      "task": "task6",
+      "posture": "Decisions bind to digest + revision + repository/worktree/base/head; change -> superseded; diagnostics versioned/bounded; raw patch/check bodies never persisted; projection allow-list gated",
+      "tests": [
+        "packages/coding-agent/src/__tests__/review.test.ts",
+        "packages/coding-agent/src/__tests__/language-diagnostics.test.ts"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Journey: credential/artifact leak, failed cleanup (open PR/branch/worktree/container/context/unknown process), skipped-required-infra passes as green",
+      "task": "task7",
+      "posture": "Secrets late-bound and excluded from report/stdout/artifacts; cleanup idempotent and required; missing infra -> blocked fails release; leak scan gates evidence",
+      "tests": [
+        "scripts/phase26-coding-journey.test.mjs"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Implicit activation/resource abuse: optional capability active by default, unbounded sessions/index/records/journey, import-time sweeper, package budget drift",
+      "task": "task0",
+      "posture": "All seams default unavailable/deny; caps frozen per task; freeze test locks pending files byte-identical; budget gate + protected accounting",
+      "tests": [
+        "scripts/phase26-freeze.test.mjs",
+        "scripts/budget-gate.test.mjs",
+        "scripts/release-skip-manifest.mjs"
+      ]
+    }
   ],
-  "removedOrChanged": 0,
-  "allowBreakUsed": false,
-  "updateBaseline": true,
-  "migrationNote": "docs/migration.md ## 0.2.5 -> 0.2.6 (additive-only; separate versioned record namespaces; ACP activeRun optional; no removal note needed unless a deviation is recorded)"
- },
- "protectedPolicy": {
-  "unchangedFrom": "phase23",
-  "requiredSurfaces": [
-   "test:postgres durable conformance (PRISM_TEST_POSTGRES_URL)",
-   "phase26 recovery/workspace cross-store conformance (PRISM_TEST_POSTGRES_URL)",
-   "phase26 PTY protected leg (PRISM_TEST_PTY_BACKEND)",
-   "phase26 indexed benchmark leg (100000-file fixture)",
-   "phase26 real coding journey (Docker + Playwright + provider + forge + Postgres)",
-   "demanded forge protected leg (disposable provider repository) - only when demand flips",
-   "live canaries (OIDC/OPA, MCP, A2A, Brave)"
+  "compatPolicy": {
+    "additiveOnly": true,
+    "expectedDeltas": [
+      "version literal 0.2.5 -> 0.2.6",
+      "additive exports: PTY backend/handle, indexed-search seam, workspace lifecycle, process/ACP recovery, review manifest + diagnostics, (forge adapter only if demanded)"
+    ],
+    "removedOrChanged": 0,
+    "allowBreakUsed": false,
+    "updateBaseline": true,
+    "migrationNote": "docs/migration.md ## 0.2.5 -> 0.2.6 (additive-only; separate versioned record namespaces; ACP activeRun optional; no removal note needed unless a deviation is recorded)"
+  },
+  "protectedPolicy": {
+    "unchangedFrom": "phase23",
+    "requiredSurfaces": [
+      "test:postgres durable conformance (PRISM_TEST_POSTGRES_URL)",
+      "phase26 recovery/workspace cross-store conformance (PRISM_TEST_POSTGRES_URL)",
+      "phase26 PTY protected leg (PRISM_TEST_PTY_BACKEND)",
+      "phase26 indexed benchmark leg (100000-file fixture)",
+      "phase26 real coding journey (Docker + Playwright + provider + forge + Postgres)",
+      "demanded forge protected leg (disposable provider repository) - only when demand flips",
+      "live canaries (OIDC/OPA, MCP, A2A, Brave)"
+    ],
+    "absentEvidence": "blocked and fails the release gate (never a passing skip)"
+  },
+  "protectedEnvs": [
+    "PRISM_TEST_POSTGRES_URL",
+    "PRISM_TEST_DOCKER_BIN",
+    "PRISM_TEST_DOCKER_IMAGE",
+    "PRISM_LIVE_PLAYWRIGHT",
+    "PRISM_CODING_FORGE_REPOSITORY",
+    "PRISM_CODING_PROVIDER",
+    "PRISM_TEST_PTY_BACKEND",
+    "PRISM_CODING_JOURNEY"
   ],
-  "absentEvidence": "blocked and fails the release gate (never a passing skip)"
- },
- "protectedEnvs": [
-  "PRISM_TEST_POSTGRES_URL",
-  "PRISM_TEST_DOCKER_BIN",
-  "PRISM_TEST_DOCKER_IMAGE",
-  "PRISM_LIVE_PLAYWRIGHT",
-  "PRISM_CODING_FORGE_REPOSITORY",
-  "PRISM_CODING_PROVIDER",
-  "PRISM_TEST_PTY_BACKEND",
-  "PRISM_CODING_JOURNEY"
- ],
- "releasePolicy": {
-  "auditLevelTarget": "moderate",
-  "signedTag": "v0.2.6",
-  "provenance": "npm OIDC trusted publishing plus GitHub build attestations on tarballs and SBOM (release.yml publish job)",
-  "publication": "explicit operator action after evidence review; never automatic"
- },
- "migrationTokens": [
-  "0.2.6",
-  "ptyBackend",
-  "createCodingWorkspaceLifecycle",
-  "recover",
-  "activeRun",
-  "createCodingPatchReviewManifest",
-  "diagnosticDelta",
-  "untrusted_index"
- ],
- "supportMatrix": "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.2.6 changes none of it",
- "deviations": [
-  {
-   "id": "D-T3-1",
-   "what": "T3 stale-fence test mapping: the Task 0 manifest mapped T3's stale-fence test to scripts/phase26-recovery-conformance.test.mjs, which is a task5-owned single-editor file that must stay absent while task5 is pending. Flipping task3 done would fail the freeze threat-existence check. T3's mapped tests now reference only the task3-owned workspace-lifecycle.test.ts, whose lease/CAS fencing suite (held-lease rejection, ownership mismatch, monotonic fencing-token CAS) covers the stale-fence threat at unit level; the frozen Postgres two-replica fence leg ships in the task5 conformance file per plan 026 Task 3/5 test cases.",
-   "review": "Manifest threat mapping adjusted to respect single-editor ownership; no cap, state machine, compat, or API change; the Postgres conformance leg remains frozen for task5."
+  "releasePolicy": {
+    "auditLevelTarget": "moderate",
+    "signedTag": "v0.2.6",
+    "provenance": "npm OIDC trusted publishing plus GitHub build attestations on tarballs and SBOM (release.yml publish job)",
+    "publication": "explicit operator action after evidence review; never automatic"
   },
-  {
-   "id": "D-T5-1",
-   "what": "Task 0 recorded the two new task5 test files under packages/coding-agent/src/process/__tests__/ and packages/ag-ui/src/acp/__tests__/, but no such test directories exist in either package: the package test scripts glob dist/__tests__/*.test.js, so tests under those paths would compile but never run. Both tests live in the packages' real test directories (packages/coding-agent/src/__tests__/process-recovery.test.ts and packages/ag-ui/src/__tests__/acp-recovery.test.ts); the manifest allowedFiles and baseline seams were updated to those paths. No cap, state machine, compat, or API change; the test content is unchanged.",
-   "review": "Path correction only; test discovery verified by running both suites from dist/__tests__."
+  "migrationTokens": [
+    "0.2.6",
+    "ptyBackend",
+    "createCodingWorkspaceLifecycle",
+    "recover",
+    "activeRun",
+    "createCodingPatchReviewManifest",
+    "diagnosticDelta",
+    "untrusted_index"
+  ],
+  "supportMatrix": "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.2.6 changes none of it",
+  "deviations": [
+    {
+      "id": "D-T3-1",
+      "what": "T3 stale-fence test mapping: the Task 0 manifest mapped T3's stale-fence test to scripts/phase26-recovery-conformance.test.mjs, which is a task5-owned single-editor file that must stay absent while task5 is pending. Flipping task3 done would fail the freeze threat-existence check. T3's mapped tests now reference only the task3-owned workspace-lifecycle.test.ts, whose lease/CAS fencing suite (held-lease rejection, ownership mismatch, monotonic fencing-token CAS) covers the stale-fence threat at unit level; the frozen Postgres two-replica fence leg ships in the task5 conformance file per plan 026 Task 3/5 test cases.",
+      "review": "Manifest threat mapping adjusted to respect single-editor ownership; no cap, state machine, compat, or API change; the Postgres conformance leg remains frozen for task5."
+    },
+    {
+      "id": "D-T5-1",
+      "what": "Task 0 recorded the two new task5 test files under packages/coding-agent/src/process/__tests__/ and packages/ag-ui/src/acp/__tests__/, but no such test directories exist in either package: the package test scripts glob dist/__tests__/*.test.js, so tests under those paths would compile but never run. Both tests live in the packages' real test directories (packages/coding-agent/src/__tests__/process-recovery.test.ts and packages/ag-ui/src/__tests__/acp-recovery.test.ts); the manifest allowedFiles and baseline seams were updated to those paths. No cap, state machine, compat, or API change; the test content is unchanged.",
+      "review": "Path correction only; test discovery verified by running both suites from dist/__tests__."
+    },
+    {
+      "id": "D-T7-1",
+      "what": "Task 7's packed journey integration exposed a shape mismatch in the Task 6 review helper: the server ArtifactRecord carries the artifact id as `id` (src/artifacts.ts), while assertCodingPatchAccepted compared `artifact.artifactId` which never exists on the real record, throwing ERR_PRISM_REVIEW_OWNERSHIP for every real attach. Fixed review.ts to read `artifact.id` (CodingReviewArtifactRecord.id, documented against ArtifactRecord.id) and updated review.test.ts recordFor/ownership mocks to the real shape; no cap/state-machine/API change to the manifest surface. review.ts + review.test.ts are outside Task 7's frozen allowedFiles, so this deviation records the amendment.",
+      "review": "Real-record integration proof: the patch-review journey leg (server createArtifactService over Postgres + assertCodingPatchAccepted) now derives pending -> accepted -> superseded against the actual ArtifactRecord shape; unit suite 13/13."
+    }
+  ],
+  "regeneratedFiles": {
+    "$comment": "Files rewritten by the npm test chain itself (timestamps), so byte-identity is meaningless; seams are recorded and presence checked, hash comparison skipped.",
+    "scripts/package-truth.json": {
+      "by": "scripts/package-truth.mjs (generatedAt timestamp)"
+    }
   },
-  {
-   "id": "D-T7-1",
-   "what": "Task 7's packed journey integration exposed a shape mismatch in the Task 6 review helper: the server ArtifactRecord carries the artifact id as `id` (src/artifacts.ts), while assertCodingPatchAccepted compared `artifact.artifactId` which never exists on the real record, throwing ERR_PRISM_REVIEW_OWNERSHIP for every real attach. Fixed review.ts to read `artifact.id` (CodingReviewArtifactRecord.id, documented against ArtifactRecord.id) and updated review.test.ts recordFor/ownership mocks to the real shape; no cap/state-machine/API change to the manifest surface. review.ts + review.test.ts are outside Task 7's frozen allowedFiles, so this deviation records the amendment.",
-   "review": "Real-record integration proof: the patch-review journey leg (server createArtifactService over Postgres + assertCodingPatchAccepted) now derives pending -> accepted -> superseded against the actual ArtifactRecord shape; unit suite 13/13."
+  "coordination": {
+    "$comment": "Coordination exemptions recorded outside task work. roadmap.md is task8's single-editor file (byte-identical while task8 is pending) unless the working-tree state is exactly a recorded user-authored exemption sha; any other roadmap.md change fails the freeze test.",
+    "roadmapExemptions": [
+      {
+        "at": "2026-08-16",
+        "author": "user",
+        "sha256": "9419b652f145051303c08ee43b16906476719f48b95e3e32bfa753eb9ea1232e",
+        "change": "roadmap.md 0.2.9 section: added bullet 'Deepseek API with stable cache prefix'",
+        "reason": "User-authored roadmap planning edit outside plan 026 task work; task 8 retains byte-identical editorial control of all further roadmap.md changes until the 0.2.6 bump."
+      }
+    ]
   }
- ],
- "regeneratedFiles": {
-  "$comment": "Files rewritten by the npm test chain itself (timestamps), so byte-identity is meaningless; seams are recorded and presence checked, hash comparison skipped.",
-  "scripts/package-truth.json": {
-   "by": "scripts/package-truth.mjs (generatedAt timestamp)"
-  }
- },
- "coordination": {
-  "$comment": "Coordination exemptions recorded outside task work. roadmap.md is task8's single-editor file (byte-identical while task8 is pending) unless the working-tree state is exactly a recorded user-authored exemption sha; any other roadmap.md change fails the freeze test.",
-  "roadmapExemptions": [
-   {
-    "at": "2026-08-16",
-    "author": "user",
-    "sha256": "9419b652f145051303c08ee43b16906476719f48b95e3e32bfa753eb9ea1232e",
-    "change": "roadmap.md 0.2.9 section: added bullet 'Deepseek API with stable cache prefix'",
-    "reason": "User-authored roadmap planning edit outside plan 026 task work; task 8 retains byte-identical editorial control of all further roadmap.md changes until the 0.2.6 bump."
-   }
-  ]
- }
 }

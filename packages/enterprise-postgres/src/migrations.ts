@@ -6,13 +6,15 @@ import {
   buildEnterpriseMigration001Ddl,
   buildEnterpriseMigration002Ddl,
   buildEnterpriseMigration003Ddl,
+  buildEnterpriseMigration004Ddl,
+  buildEnterpriseMigration005Ddl,
 } from "./ddl.js";
 import { EnterprisePostgresError, asEnterprisePostgresError } from "./errors.js";
 import { ENTERPRISE_MIGRATION_LOCK_NAMESPACE, qualifyTable, schemaAdvisoryLockKey } from "./identifiers.js";
 
 interface EnterpriseMigration {
-  readonly name: "001_enterprise_state" | "002_tool_effects" | "003_router_reservations";
-  readonly version: "1" | "2" | "3";
+  readonly name: "001_enterprise_state" | "002_tool_effects" | "003_router_reservations" | "004_erp_messaging" | "005_erp_approvals";
+  readonly version: "1" | "2" | "3" | "4" | "5";
   readonly checksum: string;
   readonly ddl: (schema: string) => string;
 }
@@ -63,6 +65,18 @@ const MIGRATIONS: readonly EnterpriseMigration[] = [
     version: "3",
     checksum: createHash("sha256").update(buildEnterpriseMigration003Ddl("prism"), "utf8").digest("hex"),
     ddl: buildEnterpriseMigration003Ddl,
+  },
+  {
+    name: "004_erp_messaging",
+    version: "4",
+    checksum: createHash("sha256").update(buildEnterpriseMigration004Ddl("prism"), "utf8").digest("hex"),
+    ddl: buildEnterpriseMigration004Ddl,
+  },
+  {
+    name: "005_erp_approvals",
+    version: "5",
+    checksum: createHash("sha256").update(buildEnterpriseMigration005Ddl("prism"), "utf8").digest("hex"),
+    ddl: buildEnterpriseMigration005Ddl,
   },
 ];
 
@@ -212,6 +226,57 @@ const EXPECTED_TABLES: readonly ExpectedTable[] = [
     ],
     primaryKey: ["tenant_id", "account_key", "user_key", "principal_id", "provider", "model"],
   },
+  {
+    name: "prism_erp_outbox",
+    columns: [
+      { name: "tenant_id", type: "text", nullable: false },
+      { name: "message_id", type: "text", nullable: false },
+      { name: "topic", type: "text", nullable: false },
+      { name: "payload", type: "jsonb", nullable: false },
+      { name: "status", type: "text", nullable: false },
+      { name: "attempt", type: "integer", nullable: false },
+      { name: "version", type: "integer", nullable: false },
+      { name: "claim_token", type: "text", nullable: true },
+      { name: "lease_expires_at", type: "timestamp with time zone", nullable: true },
+      { name: "next_attempt_at", type: "timestamp with time zone", nullable: false },
+      { name: "last_error", type: "jsonb", nullable: true },
+      { name: "last_action_ref", type: "text", nullable: true },
+      { name: "created_at", type: "timestamp with time zone", nullable: false },
+      { name: "updated_at", type: "timestamp with time zone", nullable: false },
+    ],
+    primaryKey: ["tenant_id", "message_id"],
+  },
+  {
+    name: "prism_erp_inbox",
+    columns: [
+      { name: "tenant_id", type: "text", nullable: false },
+      { name: "consumer", type: "text", nullable: false },
+      { name: "message_id", type: "text", nullable: false },
+      { name: "recorded_at", type: "timestamp with time zone", nullable: false },
+    ],
+    primaryKey: ["tenant_id", "consumer", "message_id"],
+  },
+  {
+    name: "prism_erp_approvals",
+    columns: [
+      { name: "id", type: "text", nullable: false },
+      { name: "tenant_id", type: "text", nullable: false },
+      { name: "requester", type: "jsonb", nullable: false },
+      { name: "action", type: "jsonb", nullable: false },
+      { name: "requirements", type: "jsonb", nullable: false },
+      { name: "separate_from_requester", type: "boolean", nullable: false },
+      { name: "delegation_max_depth", type: "integer", nullable: false },
+      { name: "policy_revision", type: "text", nullable: false },
+      { name: "status", type: "text", nullable: false },
+      { name: "revision", type: "integer", nullable: false },
+      { name: "decisions", type: "jsonb", nullable: false },
+      { name: "last_action_ref", type: "text", nullable: true },
+      { name: "created_at", type: "timestamp with time zone", nullable: false },
+      { name: "updated_at", type: "timestamp with time zone", nullable: false },
+      { name: "expires_at", type: "timestamp with time zone", nullable: false },
+    ],
+    primaryKey: ["tenant_id", "id"],
+  },
 ];
 
 const EXPECTED_INDEXES: readonly ExpectedIndex[] = [
@@ -295,6 +360,33 @@ const EXPECTED_INDEXES: readonly ExpectedIndex[] = [
     table: "prism_model_router_circuits",
     columns: [...ROUTER_OWNER_COLUMNS.map((column) => column.name), "expires_at"],
     partial: true,
+  },
+  {
+    name: "prism_erp_outbox_claim_idx",
+    table: "prism_erp_outbox",
+    columns: ["tenant_id", "next_attempt_at", "created_at", "message_id"],
+    partial: true,
+  },
+  {
+    name: "prism_erp_outbox_lease_idx",
+    table: "prism_erp_outbox",
+    columns: ["tenant_id", "status", "lease_expires_at", "updated_at", "message_id"],
+    partial: true,
+  },
+  {
+    name: "prism_erp_inbox_created_idx",
+    table: "prism_erp_inbox",
+    columns: ["tenant_id", "consumer", "recorded_at", "message_id"],
+  },
+  {
+    name: "prism_erp_approvals_status_idx",
+    table: "prism_erp_approvals",
+    columns: ["tenant_id", "status", "created_at", "id"],
+  },
+  {
+    name: "prism_erp_approvals_created_idx",
+    table: "prism_erp_approvals",
+    columns: ["tenant_id", "created_at", "id"],
   },
 ];
 

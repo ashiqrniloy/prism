@@ -1,4 +1,70 @@
 export { PolicyError } from "./errors.js";
+export { CanonicalJsonError, canonicalJson, canonicalJsonBytes } from "./canonical.js";
+export {
+  AUDIT_EXPORT_HARD_LIMITS,
+  AuditExportError,
+  createAuditExporter,
+  createMemoryAuditCursorStore,
+  verifyAuditBatch,
+} from "./audit-export.js";
+export type {
+  AuditCursor,
+  AuditCursorSaveInput,
+  AuditCursorStore,
+  AuditExportBatchInput,
+  AuditExportBatchResult,
+  AuditExportItem,
+  AuditExporter,
+  AuditExporterOptions,
+  AuditPage,
+  AuditPageSource,
+  AuditPublicKey,
+  AuditRedaction,
+  AuditRedactionPolicy,
+  AuditSiemPending,
+  AuditSiemSink,
+  AuditSiemStatus,
+  AuditSiemWrite,
+  AuditSigner,
+  AuditWormAck,
+  AuditWormSink,
+  AuditWormWrite,
+  VerifyAuditBatchInput,
+  VerifyAuditBatchResult,
+} from "./audit-export.js";
+export {
+  APPROVAL_HARD_LIMITS,
+  createMemoryApprovalStore,
+  evaluateApproval,
+  prepareApprovalConsume,
+  prepareApprovalCreate,
+  prepareApprovalDecision,
+  prepareApprovalRevoke,
+} from "./approvals.js";
+export type {
+  ApprovalAction,
+  ApprovalActorRef,
+  ApprovalAuthority,
+  ApprovalConsumeInput,
+  ApprovalCreateInput,
+  ApprovalDecideInput,
+  ApprovalDecision,
+  ApprovalDecisionValue,
+  ApprovalGetInput,
+  ApprovalQuery,
+  ApprovalQueryClient,
+  ApprovalRecord,
+  ApprovalRequest,
+  ApprovalRequirement,
+  ApprovalRevokeInput,
+  ApprovalRoleGrant,
+  ApprovalStatus,
+  ApprovalStore,
+  MemoryApprovalStoreOptions,
+  PreparedApprovalCreate,
+  PreparedApprovalDecision,
+  PreparedApprovalTransition,
+} from "./approvals.js";
 export type { CreatePolicyEvaluatorOptions, EvaluateAndAppendOptions } from "./evaluator.js";
 export { createPolicyEvaluator, evaluateAndAppend } from "./evaluator.js";
 export type { ExportPolicyDecisionsOptions } from "./export.js";

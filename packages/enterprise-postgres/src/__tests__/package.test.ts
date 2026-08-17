@@ -10,6 +10,8 @@ import {
   buildEnterpriseMigration001Ddl,
   buildEnterpriseMigration002Ddl,
   buildEnterpriseMigration003Ddl,
+  buildEnterpriseMigration004Ddl,
+  buildEnterpriseMigration005Ddl,
 } from "../ddl.js";
 import { createPostgresEnterpriseState } from "../enterprise.js";
 import { EnterprisePostgresError } from "../errors.js";
@@ -25,11 +27,15 @@ import { applyEnterpriseMigrations, assertEnterpriseMigrationHistory } from "../
 const migrationChecksum = createHash("sha256").update(buildEnterpriseMigration001Ddl("prism"), "utf8").digest("hex");
 const toolEffectsMigrationChecksum = createHash("sha256").update(buildEnterpriseMigration002Ddl("prism"), "utf8").digest("hex");
 const reservationsMigrationChecksum = createHash("sha256").update(buildEnterpriseMigration003Ddl("prism"), "utf8").digest("hex");
+const messagingMigrationChecksum = createHash("sha256").update(buildEnterpriseMigration004Ddl("prism"), "utf8").digest("hex");
+const approvalsMigrationChecksum = createHash("sha256").update(buildEnterpriseMigration005Ddl("prism"), "utf8").digest("hex");
 
 describe("enterprise PostgreSQL package", () => {
   it("has inert public import and strict identifier/config validation", async () => {
     const loaded = await import("../index.js");
     assert.equal(loaded.packageName, "@arnilo/prism-enterprise-postgres");
+    assert.equal(typeof loaded.createPostgresErpMessaging, "function");
+    assert.equal(typeof loaded.createPostgresApprovalStore, "function");
     assert.doesNotThrow(() => validateIdentifier("prism_1"));
     assert.throws(() => validateIdentifier(`prism"; DROP SCHEMA prism; --`), EnterprisePostgresError);
     assert.equal(quoteIdentifier("prism"), '"prism"');
@@ -39,7 +45,7 @@ describe("enterprise PostgreSQL package", () => {
   });
 
   it("declares every fixed table/index and canonical migration checksum", () => {
-    const ddl = `${buildEnterpriseMigration001Ddl("prism")}\n${buildEnterpriseMigration002Ddl("prism")}\n${buildEnterpriseMigration003Ddl("prism")}`;
+    const ddl = `${buildEnterpriseMigration001Ddl("prism")}\n${buildEnterpriseMigration002Ddl("prism")}\n${buildEnterpriseMigration003Ddl("prism")}\n${buildEnterpriseMigration004Ddl("prism")}\n${buildEnterpriseMigration005Ddl("prism")}`;
     for (const table of ENTERPRISE_TABLE_NAMES) {
       assert.match(ddl, new RegExp(`CREATE TABLE IF NOT EXISTS "prism"\\."${table}"`));
     }
@@ -50,6 +56,8 @@ describe("enterprise PostgreSQL package", () => {
     assert.equal(migrationChecksum.length, 64);
     assert.equal(toolEffectsMigrationChecksum.length, 64);
     assert.equal(reservationsMigrationChecksum.length, 64);
+    assert.equal(messagingMigrationChecksum.length, 64);
+    assert.equal(approvalsMigrationChecksum.length, 64);
     assert.match(
       ddl,
       /ALTER TABLE "prism"\."prism_model_router_budgets"\n {2}ADD COLUMN IF NOT EXISTS reservations JSONB NOT NULL DEFAULT '\[\]'::jsonb;/,
@@ -66,6 +74,8 @@ describe("enterprise PostgreSQL package", () => {
         { name: "001_enterprise_state", version: "1", checksum: migrationChecksum },
         { name: "002_tool_effects", version: "2", checksum: toolEffectsMigrationChecksum },
         { name: "003_router_reservations", version: "3", checksum: reservationsMigrationChecksum },
+        { name: "004_erp_messaging", version: "4", checksum: messagingMigrationChecksum },
+        { name: "005_erp_approvals", version: "5", checksum: approvalsMigrationChecksum },
       ]),
     );
     assert.throws(() => assertEnterpriseMigrationHistory([{ name: "unknown", version: "1", checksum: migrationChecksum }]));
@@ -134,6 +144,8 @@ describe("enterprise PostgreSQL package", () => {
     assert.equal(typeof state.policy.append, "function");
     assert.equal(typeof state.evaluations.query, "function");
     assert.equal(typeof state.toolEffects.begin, "function");
+    assert.equal(typeof state.erpMessaging.outbox.append, "function");
+    assert.equal(typeof state.erpMessaging.dispatcher.claim, "function");
     assert.equal(typeof state.modelRouter.consumeRate, "function");
     const owned = await createPostgresEnterpriseState({ connectionString: "postgres://127.0.0.1:1/prism", skipMigrations: true });
     await assert.doesNotReject(() => owned.close());

@@ -11,6 +11,7 @@ import {
   providerToolCall,
   toolCallContent,
 } from "@arnilo/prism";
+import type { DelegationTelemetry } from "../instrumentation.js";
 import { createInMemoryTelemetry, createOpenTelemetryInstrumentation, wrapOpenTelemetryApi } from "../instrumentation.js";
 
 test("disabled instrumentation is a no-op", () => {
@@ -334,4 +335,46 @@ test("blocked tool records duration metric without started span", async () => {
   });
   assert.equal(memory.spans.length, 0);
   assert.ok(memory.metrics.some((metric) => metric.name === "gen_ai.execute_tool.duration" && metric.attributes.outcome === "blocked"));
+});
+
+test("field policy filters or masks exported span attributes (plan 027 Task 8)", () => {
+  const memory = createInMemoryTelemetry();
+  const telemetry = createOpenTelemetryInstrumentation({
+    tracer: memory.tracer,
+    meter: memory.meter,
+    fieldPolicy: (input) => {
+      if (input.path === "prism.delegation.child") return { action: "deny", reason: "no-child-leak" };
+      if (input.path === "gen_ai.tool.name") return { action: "redact" };
+      return { action: "allow" };
+    },
+  });
+  telemetry.handleDelegation({ type: "started", runId: "r1", delegationId: "d1", childId: "child-secret-id" });
+  telemetry.handleAgentEvent({
+    type: "tool_execution_started",
+    sessionId: "s1",
+    runId: "r1",
+    call: { id: "c1", name: "secret-tool-name" },
+  } as unknown as AgentEvent);
+  const allAttrs = memory.spans.flatMap((span) => Object.entries(span.attributes));
+  assert.equal(
+    allAttrs.some(([k]) => k === "prism.delegation.child"),
+    false,
+    "denied attribute must be dropped",
+  );
+  const toolName = allAttrs.find(([k]) => k === "gen_ai.tool.name");
+  assert.equal(toolName?.[1], "[REDACTED]", "redacted attribute must be masked");
+});
+
+test("telemetry field policy errors drop the attribute and never echo the value", () => {
+  const memory = createInMemoryTelemetry();
+  const telemetry = createOpenTelemetryInstrumentation({
+    tracer: memory.tracer,
+    meter: memory.meter,
+    fieldPolicy: () => {
+      throw new Error("policy exploded");
+    },
+  });
+  telemetry.handleDelegation({ type: "started", runId: "r2", delegationId: "d2", childId: "secret-value" } satisfies DelegationTelemetry);
+  const attrs = memory.spans.flatMap((span) => Object.entries(span.attributes));
+  assert.ok(!JSON.stringify(attrs).includes("secret-value"), "no value may reach the sink on policy error");
 });

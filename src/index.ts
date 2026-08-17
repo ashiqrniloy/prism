@@ -431,6 +431,25 @@ export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js";
 export { createProviderRegistry, createProviderResolver } from "./providers.js";
 export type { SecretRedactor } from "./redaction.js";
 export {
+  ALLOW_FIELD_POLICY,
+  applyFieldPolicy,
+  createAuditFieldRedactor,
+  createProtectedFieldPolicy,
+  FieldPolicyError,
+  FIELD_POLICY_LIMITS,
+} from "./field-policy.js";
+export type {
+  ApplyFieldPolicyOptions,
+  AuditFieldRedaction,
+  AuditFieldRedactorLike,
+  AuditFieldRedactorOptions,
+  FieldPolicy,
+  FieldPolicyAction,
+  FieldPolicyDecision,
+  FieldPolicyInput,
+  ProtectedFieldPolicyOptions,
+} from "./field-policy.js";
+export {
   createSecretRedactor,
   errorToErrorInfo,
   redactAgentEvent,
@@ -600,5 +619,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.2.6";
+export const version = "0.2.7";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

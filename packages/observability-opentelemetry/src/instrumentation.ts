@@ -39,6 +39,24 @@ export interface TraceReference {
   readonly runId: string;
   readonly traceId: string;
 }
+export interface TelemetryFieldPolicyInput {
+  readonly path: string;
+  readonly label?: string;
+  readonly kind: "string" | "number" | "boolean" | "null" | "array" | "object";
+  readonly destination: string;
+  readonly direction: "inbound" | "outbound";
+  readonly tenantId?: string;
+  readonly purpose?: string;
+}
+
+export interface TelemetryFieldPolicyDecision {
+  readonly action: "allow" | "redact" | "tokenize" | "deny";
+  readonly reason?: string;
+}
+
+/** Structural match for the root package's `FieldPolicy` (no package dependency). */
+export type TelemetryFieldPolicy = (input: TelemetryFieldPolicyInput) => TelemetryFieldPolicyDecision;
+
 export interface OpenTelemetryInstrumentationOptions {
   readonly enabled?: boolean;
   readonly tracer?: PrismTracer;
@@ -47,6 +65,8 @@ export interface OpenTelemetryInstrumentationOptions {
   readonly onTraceReference?: (reference: TraceReference) => void;
   readonly maxTraceReferences?: number;
   readonly onExporterError?: (error: unknown) => void;
+  /** Field policy applied to exported span attributes/events; deny drops, redact masks, tokenize hashes. */
+  readonly fieldPolicy?: TelemetryFieldPolicy;
 }
 
 export interface RunFeedbackTelemetry {
@@ -178,6 +198,42 @@ type ActiveSpan = { span: PrismSpan; sessionId: string; runId: string };
 const key = (...parts: (string | number)[]) => parts.join(":");
 const attrs = (value: Record<string, string>) => value;
 
+/** Applies the telemetry field policy to one attribute record; unchanged when absent. */
+function policyAttrs(
+  input: Record<string, string | number | boolean>,
+  policy: TelemetryFieldPolicy | undefined,
+  destination: string,
+): Record<string, string | number | boolean> {
+  if (!policy) return input;
+  const out: Record<string, string | number | boolean> = {};
+  for (const [path, value] of Object.entries(input)) {
+    const kind = typeof value as TelemetryFieldPolicyInput["kind"];
+    let decision: TelemetryFieldPolicyDecision;
+    try {
+      decision = policy({ path, kind, destination, direction: "outbound" });
+    } catch {
+      continue; // policy error on telemetry: drop the attribute, never echo the value
+    }
+    if (decision.action === "allow") out[path] = value;
+    else if (decision.action === "redact") out[path] = "[REDACTED]";
+    else if (decision.action === "tokenize" && typeof value === "string") out[path] = `tok_${hashToken(path, value)}`;
+    // deny (and unparseable) attributes are dropped
+  }
+  return out;
+}
+
+let tokenSeq = 0;
+function hashToken(path: string, value: string): string {
+  let hash = 0x811c9dc5;
+  const text = `${path}\u0000${value}`;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  tokenSeq += 1;
+  return `${(hash >>> 0).toString(16).padStart(8, "0")}${tokenSeq.toString(36)}`;
+}
+
 export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrumentationOptions = {}): OpenTelemetryInstrumentation {
   const enabled = options.enabled !== false && Boolean(options.tracer ?? options.meter);
   const tracer = options.tracer;
@@ -239,7 +295,11 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
   ) => {
     if (!tracer) return;
     finish(spanKey, "error", "Duplicate span start");
-    active.set(spanKey, { runId, sessionId, span: tracer.startSpan(name, { kind, parent: parent(runId), attributes }) });
+    active.set(spanKey, {
+      runId,
+      sessionId,
+      span: tracer.startSpan(name, { kind, parent: parent(runId), attributes: policyAttrs(attributes, options.fieldPolicy, "telemetry") }),
+    });
   };
 
   const handleAgentEvent = (event: AgentEvent) => {
@@ -392,10 +452,11 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
 
   const recordRunEvent = (runId: string, eventName: string, attributes: Record<string, string | number | boolean>) =>
     safe(() => {
+      const filtered = policyAttrs(attributes, options.fieldPolicy, "telemetry");
       const span = parent(runId);
-      if (span?.addEvent) span.addEvent(eventName, attributes);
+      if (span?.addEvent) span.addEvent(eventName, filtered);
       else if (tracer) {
-        const ended = tracer.startSpan(eventName, { kind: "internal", attributes: { "prism.run_id": runId, ...attributes } });
+        const ended = tracer.startSpan(eventName, { kind: "internal", attributes: { "prism.run_id": runId, ...filtered } });
         ended.setStatus("ok");
         ended.end();
       }

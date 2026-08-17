@@ -387,6 +387,12 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "withoutStructuredOutput",
   "version",
   "waitForRetry",
+  "ALLOW_FIELD_POLICY",
+  "applyFieldPolicy",
+  "createAuditFieldRedactor",
+  "createProtectedFieldPolicy",
+  "FieldPolicyError",
+  "FIELD_POLICY_LIMITS",
 ];
 
 const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [
@@ -677,6 +683,15 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "TrustPolicy",
   "TrustRequest",
   "ToolElicitationRequest",
+  "ApplyFieldPolicyOptions",
+  "AuditFieldRedaction",
+  "AuditFieldRedactorLike",
+  "AuditFieldRedactorOptions",
+  "FieldPolicy",
+  "FieldPolicyAction",
+  "FieldPolicyDecision",
+  "FieldPolicyInput",
+  "ProtectedFieldPolicyOptions",
 ];
 
 // Parse `src/index.ts` into { value, type } export identifier sets. Mirrors the

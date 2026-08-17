@@ -158,6 +158,51 @@ const page = await state.evaluations.query({ tenantId: "t1", userId: "u1", statu
 
 Memory evaluation storage remains suitable for development and deterministic tests; it is not cross-replica production storage. PostgreSQL bounds each evaluation row to 64 KiB (reason/error 8 KiB each and metadata 32 KiB).
 
+## ERP invariant evals (0.2.7)
+
+Plan 027 adds two frozen exports to this package for the deterministic ERP release journey: `erpInvariantDataset` and `createErpInvariantScorers`. Scorers consume **structured journey facts only** — never model prose, credentials, or classified payloads. Each of the eight invariants is a hard 0/1 gate; no weighted average can hide an atomicity or security failure.
+
+### Fact schema
+
+The protected runner (`scripts/phase27-erp-journey.test.mjs`) carries the journey facts as JSON in `result.text`. Every scorer isolates its facts block and returns 1 only when every required fact is present and truthy:
+
+| Invariant (scorer id) | Facts block | Required facts |
+|---|---|---|
+| `atomic-intent` | `atomic` | `committedAtomically` |
+| `single-local-effect` | `delivery` | `singleLocalEffect`, `duplicateDelivered`, `businessMutationCount` |
+| `compensation-terminal` | `compensation` | `compensated`, `reconciled`, `terminalStatus` |
+| `quorum-provenance` | `quorum` | `distinctApprovers`, `requesterDenied`, `subagentDenied`, `revokedDenied`, `provenance` |
+| `chain-verification` | `chain` | `verified`, `tamperedDetected`, `nextDigest` |
+| `no-leak` | `noLeak` | `classifiedDenied`, `crossTenantDenied`, `secretRedacted` |
+| `fenced-failover` | `fencedFailover` | `resumedByPeer`, `staleWriteRejected`, `cursorPreserved`, `failoverMs` |
+| `restore-equality` | `restore` | `factsMatch`, `digestsMatch`, `drEvidenceFresh`, `restoreMs` |
+
+### Hard-gate usage
+
+```ts
+import { createErpInvariantScorers, erpInvariantDataset, scoreRun } from "@arnilo/prism-evals";
+
+const scorers = createErpInvariantScorers();
+const records = await scoreRun({
+  result,                  // AgentRunResult whose .text is the JSON journey facts
+  scorers,
+  datasetId: erpInvariantDataset.id,
+});
+if (records.some((record) => record.status !== "scored" || record.score !== 1)) {
+  process.exitCode = 1; // a single failing invariant fails the whole gate
+}
+```
+
+### Execution command and substitutes
+
+```sh
+# Protected run (requires a disposable PostgreSQL instance):
+PRISM_TEST_POSTGRES_URL=postgresql://... node --test scripts/phase27-erp-journey.test.mjs
+```
+
+The journey reuses the two-replica failover worker (`scripts/phase27-ha-worker.mjs`) and asserts the comprehensive DR drill evidence (`docs/_evidence/phase27-dr-evidence.json`) is present and not stale. Local substitutes are labelled in the journey evidence and never converted into production claims: an in-memory WORM/SIEM sink (host owns the immutable store in production), in-memory saga checkpoint/lease stores (saga durability is proven in its own suite), and a logical pg-client backup/restore of the ERP tables (comprehensive PITR is in the DR drill evidence). Passing this protected journey **does not** satisfy the 0.3.0 live-service matrix.
+
+
 ## Related APIs
 
 - [Agent/session runtime](agent-session-runtime.md): `AgentRunResult` and `session.run()`

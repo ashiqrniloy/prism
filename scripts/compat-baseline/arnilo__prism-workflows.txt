@@ -42,6 +42,9 @@ JoinNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition,
 MAX_ACTIVE_WORKFLOW_RUNS	export declare const MAX_ACTIVE_WORKFLOW_RUNS = 512
 NestedWorkflowNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, NestedWorkflowNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, WorkflowDefinition, WorkflowEvent, WorkflowEventBus, WorkflowEventInput, Wo
 RunWorkflowOptions	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, NestedWorkflowNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, WorkflowDefinition, WorkflowEvent, WorkflowEventBus, WorkflowEventInput, Wo
+SagaDefinition	export type { SagaDefinition, SagaRunResult, SagaStep } from "./saga.js"
+SagaRunResult	export type { SagaDefinition, SagaRunResult, SagaStep } from "./saga.js"
+SagaStep	export type { SagaDefinition, SagaRunResult, SagaStep } from "./saga.js"
 ToolNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, NestedWorkflowNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, WorkflowDefinition, WorkflowEvent, WorkflowEventBus, WorkflowEventInput, Wo
 WORKFLOW_CHECKPOINT_SCHEMA_VERSION	export declare const WORKFLOW_CHECKPOINT_SCHEMA_VERSION: 1
 WorkflowAbortError	export declare class WorkflowAbortError extends Error
@@ -107,6 +110,7 @@ createWorkflowCommands	export declare function createWorkflowCommands(input: Cre
 createWorkflowCoordinator	export declare function createWorkflowCoordinator(options: WorkflowCoordinatorOptions): WorkflowCoordinator
 createWorkflowEventBus	export declare function createWorkflowEventBus(options: WorkflowEventMergeOptions): WorkflowEventBus
 createWorkflowSchedules	export declare function createWorkflowSchedules(options: CreateWorkflowSchedulesOptions): WorkflowSchedules
+defineSaga	export declare function defineSaga(input: SagaDefinition): SagaDefinition
 defineWorkflow	export declare function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition
 enqueueWorkflow	export declare function enqueueWorkflow(workflow: WorkflowDefinition, input: unknown, options: EnqueueWorkflowOptions): Promise<
 errorCode	export declare function errorCode(error: unknown): string | number | undefined
@@ -144,9 +148,11 @@ replayWorkflow	export declare function replayWorkflow(workflow: WorkflowDefiniti
 resolveListLimit	export declare function resolveListLimit(limit?: number): number
 resolveMaxFanOut	export declare function resolveMaxFanOut(workflow: WorkflowDefinition, node: WorkflowNodeDefinition): number
 resultFromRecord	export declare function resultFromRecord(workflowId: string, record: WorkflowCheckpointRecord): WorkflowRunResult
+resumeSaga	export declare function resumeSaga(definition: SagaDefinition, options: SagaResumeOptions): Promise<SagaRunResult>
 resumeWorkflow	export declare function resumeWorkflow(workflow: WorkflowDefinition, ref:
 runCheckpointAdapterConformance	export declare function runCheckpointAdapterConformance(label: string, create: () => WorkflowCheckpointAdapter | Promise<WorkflowCheckpointAdapter>): Promise<void>
 runNode	export declare function runNode(state: SchedulerState, nodeId: string, options: RunWorkflowOptions, bus: WorkflowEventBus, emit: (event: WorkflowEventInput) => void, activeSessions: Map<string, AgentSession>): Promise<void>
+runSaga	export declare function runSaga(definition: SagaDefinition, options: SagaRunOptions): Promise<SagaRunResult>
 runWorkflow	export declare function runWorkflow(workflow: WorkflowDefinition, input: unknown, options?: RunWorkflowOptions): Promise<WorkflowRunResult>
 sampleValue	export declare function sampleValue(overrides?: Partial<WorkflowCheckpointValue>): WorkflowCheckpointValue
 skipNode	export declare function skipNode(state: SchedulerState, nodeId: string, reason: string, emit: (event: WorkflowEventInput) => void): void

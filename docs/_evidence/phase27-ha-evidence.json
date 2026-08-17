@@ -1,0 +1,69 @@
+{
+  "recorded": "2026-08-17T14:05:15.898Z",
+  "schema": "prism_ha_455a1ac10f45",
+  "ttlMs": 4000,
+  "tenantA": "tenant-a-b65bc0a9",
+  "opKey": "invoice-fab3e653",
+  "pid": {
+    "A": 2367240,
+    "B": 2369195,
+    "stale": 2369304,
+    "race": [
+      2369433,
+      2369435
+    ]
+  },
+  "timings": {
+    "chargeCommitted": 1786975511062,
+    "leaseExpiredAt": 1786975515056,
+    "failoverMs": 4212,
+    "ceilingMs": 9000
+  },
+  "final": {
+    "ok": true,
+    "inspect": {
+      "lease": null,
+      "checkpoint": {
+        "namespace": "phase27.ha",
+        "key": "invoice-fab3e653",
+        "version": 2,
+        "fencingToken": 1,
+        "value": {
+          "opKey": "invoice-fab3e653",
+          "cursor": 1,
+          "tenantId": "tenant-a-b65bc0a9",
+          "messageId": "pay-tenant-a-b65bc0a9/invoice-fab3e653/charge",
+          "stepsDone": [
+            "reserve"
+          ],
+          "schemaVersion": 1
+        },
+        "tenantId": "tenant-a-b65bc0a9",
+        "createdAt": "2026-08-17T14:05:11.007Z",
+        "updatedAt": "2026-08-17T14:05:11.041Z"
+      },
+      "outboxBefore": 1
+    },
+    "acquired": true,
+    "fence": 2,
+    "renewed": true,
+    "finalCursor": 3,
+    "finalVersion": 4,
+    "failoverMs": 4212,
+    "outboxBefore": 1,
+    "outboxAfter": 1,
+    "replayReusedMessage": true
+  },
+  "commands": {
+    "A": "node scripts/phase27-ha-worker.mjs mode=start id=A schema=prism_ha_455a1ac10f45 opKey=invoice-fab3e653 tenant=tenant-a-b65bc0a9 ttlMs=4000 barrierDir=/tmp/phase27-ha-3znyP5/",
+    "B": "node scripts/phase27-ha-worker.mjs mode=resume id=B schema=prism_ha_455a1ac10f45 opKey=invoice-fab3e653 tenant=tenant-a-b65bc0a9 ttlMs=4000 t0=1786975511062",
+    "stale": "node scripts/phase27-ha-worker.mjs mode=stale schema=prism_ha_455a1ac10f45 opKey=invoice-fab3e653 tenant=tenant-a-b65bc0a9 oldVersion=3 oldExpected=2 oldFence=1 oldOwner=worker-A oldToken=stale-token"
+  },
+  "finalStates": {
+    "checkpointCursor": 3,
+    "checkpointVersion": 4,
+    "outboxMessages": 1,
+    "leaseOwnerAfter": null
+  },
+  "passed": true
+}

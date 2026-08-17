@@ -1,0 +1,179 @@
+#!/usr/bin/env node
+// Plan 027 Task 10 — release closeout contract (stdlib-only, no infrastructure).
+// Asserts the 0.2.7 release graph is synchronized, documented, migration-stable,
+// secret-clean, evidence-linked, and that the 0.3.0 production-ready blocker
+// remains explicit. A single failure blocks the release.
+import assert from "node:assert/strict";
+import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { describe, test } from "node:test";
+import { scanSecrets } from "./scan-secrets.mjs";
+
+const ROOT = join(import.meta.dirname, "..");
+const readJson = (p) => JSON.parse(readFileSync(join(ROOT, p), "utf8"));
+const readText = (p) => readFileSync(join(ROOT, p), "utf8");
+const truth = readJson("scripts/package-truth.json");
+const freeze = readJson("scripts/phase27-freeze-manifest.json");
+const releaseEvidence = readJson("scripts/release-evidence.json");
+const finalEvidence = readJson("scripts/phase27-release-evidence.json");
+
+const DOCS_027 = ["audit-export", "operations", "disaster-recovery", "data-classification", "evaluations"];
+const ERP_JOURNEY_EVIDENCE = "docs/_evidence/phase27-erp-journey.json";
+const HA_EVIDENCE = "docs/_evidence/phase27-ha-evidence.json";
+const DR_EVIDENCE = "docs/_evidence/phase27-dr-evidence.json";
+const ROADMAP = "roadmap.md";
+const EVIDENCE_DOC = "docs/release-0.2.7-evidence.md";
+const BLOCKER = "0.3.0 live-service matrix";
+
+describe("Plan 027 Task 10 release closeout", () => {
+  test("release metadata is exactly 0.2.7 across the 50-package graph", () => {
+    assert.equal(truth.counts.publishable, 50, "exactly 50 publishable packages");
+    assert.equal(truth.counts.workspace, 49, "49 workspace packages");
+    assert.equal(truth.root.version, "0.2.7", "root manifest is 0.2.7");
+    assert.equal(truth.peerPolicy.spec, "0.2.7", "peer policy spec is 0.2.7");
+    // package-lock root version matches.
+    const lock = readJson("package-lock.json");
+    assert.equal(lock.version, "0.2.7", "package-lock.json root version is 0.2.7");
+    // release.mjs validates every manifest version + peer range + lockfile entry
+    // (release:check with --allow-dirty already passed for 0.2.7); the deeper
+    // per-package peer/version contract is enforced by phase24-truth + phase27-freeze.
+  });
+
+  test("no accidental runtime dependency drift; package graph unchanged", () => {
+    assert.equal(truth.counts.publishable, finalEvidence.packages.publishable);
+    assert.equal(truth.counts.publishable, freeze.packageBudget.publishable);
+    assert.equal(freeze.packageBudget.publishable, 50);
+    // The four secret-manager providers remain deferred (no adapter shipped).
+    for (const [id, provider] of Object.entries(freeze.demand)) {
+      assert.equal(provider.status, "deferred", `${id} stays deferred`);
+      assert.equal(provider.consumer, null, `${id} has no consumer`);
+    }
+  });
+
+  test("enterprise migrations are registered and stable (001-005)", () => {
+    const migrationsJs = readText("packages/enterprise-postgres/dist/migrations.js");
+    const expected = ["001_enterprise_state", "002_tool_effects", "003_router_reservations", "004_erp_messaging", "005_erp_approvals"];
+    for (const name of expected) {
+      assert.ok(migrationsJs.includes(name), `migration ${name} is registered`);
+    }
+    // No 006+ migration exists yet (additive-only; future migrations append).
+    assert.ok(!/006_/.test(migrationsJs), "no speculative 006 migration");
+  });
+
+  test("all 0.2.7 docs pages are linked exactly once in docs/index.md", () => {
+    const index = readText("docs/index.md");
+    for (const page of DOCS_027) {
+      const links = index.match(new RegExp(`\\]\\([^)]*${page}\\.md\\)`, "g")) ?? [];
+      assert.equal(links.length, 1, `docs/index.md links ${page}.md exactly once (got ${links.length})`);
+    }
+  });
+
+  test("roadmap 0.2.7 checkboxes are complete and the 0.3.0 blocker is explicit", () => {
+    const roadmap = readText(ROADMAP);
+    // The 0.2.7 section must have every checkbox checked.
+    const section = roadmap.slice(roadmap.indexOf("0.2.7 — Enterprise ERP"), roadmap.indexOf("0.2.8"));
+    const unchecked = section.match(/- \[ \]/g);
+    assert.equal(unchecked, null, `roadmap 0.2.7 has no unchecked tasks (got ${unchecked?.length ?? 0})`);
+    assert.ok(section.includes(BLOCKER), "roadmap 0.2.7 records the 0.3.0 blocker");
+    assert.ok(roadmap.includes("blocked until the 0.3.0 live-service matrix"), "roadmap states ERP production ready is blocked");
+  });
+
+  test("phase27 evidence files exist and are not stale", () => {
+    for (const file of [ERP_JOURNEY_EVIDENCE, HA_EVIDENCE, DR_EVIDENCE]) {
+      assert.ok(existsSync(join(ROOT, file)), `${file} exists`);
+    }
+    const journey = readJson(ERP_JOURNEY_EVIDENCE);
+    assert.equal(journey.gates.allInvariantsPass, true, "ERP journey all invariants pass");
+    assert.equal(journey.gates.drEvidenceFresh, true, "ERP journey DR evidence is fresh");
+    assert.equal(journey.gates.restoreEquality, true, "ERP journey restore equality holds");
+    assert.equal(journey.blocker.includes("0.3.0"), true, "journey evidence records the 0.3.0 blocker");
+    const ha = readJson(HA_EVIDENCE);
+    const haFailover = ha.timings?.failoverMs ?? ha.failoverMs;
+    const haCeiling = ha.timings?.ceilingMs ?? ha.ceilingMs;
+    assert.ok(haFailover > 0 && haFailover <= haCeiling, `HA failover ${haFailover} within ceiling ${haCeiling}`);
+    const dr = readJson(DR_EVIDENCE);
+    assert.equal(dr.passed, true, "DR drill passed");
+    const recorded = Date.parse(dr.recorded ?? "");
+    assert.ok(Number.isFinite(recorded) && recorded <= Date.now(), "DR evidence recorded date is not in the future");
+    assert.ok((dr.backup?.artifactBytes ?? 0) > 0, "DR backup artifact recorded");
+    assert.ok((dr.pitr?.rpoSeconds ?? -1) >= 0, "DR RPO recorded");
+  });
+
+  test("release evidence manifest has no unexplained blocked surfaces and every skip is explained", () => {
+    assert.equal(releaseEvidence.release, "0.2.7", "release-evidence is for 0.2.7");
+    // Blocked surfaces are allowed only when missing infrastructure is named (requiredEnv);
+    // an unexplained blocked surface (no requiredEnv) fails the closeout. The publish-time
+    // release:gate (checkReleaseEvidence) separately enforces zero blocked surfaces once
+    // the operator sets every required env.
+    const unexplainedBlocked = releaseEvidence.surfaces.filter((s) => s.state === "blocked" && !s.requiredEnv);
+    assert.equal(unexplainedBlocked.length, 0, `unexplained blocked surfaces (got: ${unexplainedBlocked.map((s) => s.name).join(", ")})`);
+    const unexplained = releaseEvidence.surfaces.filter((s) => s.state === "skip" && (!s.reason || !s.requiredEnv));
+    assert.equal(unexplained.length, 0, `no unexplained skips (got: ${unexplained.map((s) => s.name).join(", ")})`);
+    // Protected surfaces must name their required env, never echo values.
+    for (const surface of releaseEvidence.surfaces.filter((s) => s.state === "protected")) {
+      assert.ok(surface.reason, `${surface.name} has a protected reason`);
+    }
+  });
+
+  test("evidence doc links every task result and the 0.3.0 blocker", () => {
+    const doc = readText(EVIDENCE_DOC);
+    for (let i = 0; i <= 10; i++) {
+      assert.ok(doc.includes(`Task ${i} result`), `evidence doc has Task ${i} result`);
+    }
+    assert.ok(doc.includes(BLOCKER), "evidence doc records the 0.3.0 blocker");
+    assert.ok(doc.includes("at-least-once"), "evidence doc states delivery semantics");
+    // No exactly-once *claim* (the word may appear only to disclaim it).
+    assert.ok(!/provides exactly-once|exactly-once semantics|exactly-once guarantee/i.test(doc), "no exactly-once claim");
+  });
+
+  test("final release manifest is consistent", () => {
+    assert.equal(finalEvidence.release, "0.2.7");
+    assert.equal(finalEvidence.packages.publishable, 50);
+    assert.equal(finalEvidence.packages.version, "0.2.7");
+    assert.equal(finalEvidence.migrations.count, 5);
+    assert.equal(finalEvidence.erpJourneyResults.allInvariantsPass, true);
+    assert.equal(finalEvidence.protectedSurfaces.blocked, 0);
+    assert.equal(finalEvidence.secretScan.findings, 0);
+    assert.ok(finalEvidence.blocker.includes("0.3.0"), "final manifest states the 0.3.0 blocker");
+    assert.ok(finalEvidence.knownLimitations.length >= 5, "final manifest records known limitations");
+  });
+
+  test("secret scan is clean across source, evidence, scripts, docs, and generated artifacts", async () => {
+    const result = await scanSecrets([
+      "src",
+      "packages",
+      "scripts",
+      "docs",
+      "plans",
+      "packages/enterprise-postgres/dist",
+      "packages/policy/dist",
+      "packages/workflows/dist",
+      "packages/evals/dist",
+    ]);
+    assert.equal(result.findings, 0, `secret scan found ${result.findings} findings`);
+    assert.ok(result.files > 1000, `secret scan covered ${result.files} files`);
+  });
+
+  test("no connection-string values leak into evidence or plan docs", () => {
+    const envNames = freeze.protectedPolicy.requiredEnvNames;
+    for (const file of [
+      EVIDENCE_DOC,
+      ERP_JOURNEY_EVIDENCE,
+      HA_EVIDENCE,
+      DR_EVIDENCE,
+      "plans/027-Release-0-2-7-Enterprise-ERP-Production-Readiness.md",
+    ]) {
+      const text = readText(file);
+      for (const name of envNames) {
+        assert.ok(!text.includes(`${name}=postgresql://`), `${file} does not leak ${name}=postgresql://`);
+        assert.ok(!text.includes(`${name}=postgres://`), `${file} does not leak ${name}=postgres://`);
+      }
+    }
+  });
+
+  test("terminology avoids certification and premature ERP production-ready claims", () => {
+    const doc = readText(EVIDENCE_DOC);
+    assert.ok(!/NIST[- ]certified|SIEM[- ]certified|WORM[- ]certified/i.test(doc), "no compliance certification claims");
+    assert.ok(!/ERP is production ready/i.test(doc), "no premature ERP production-ready claim");
+  });
+});

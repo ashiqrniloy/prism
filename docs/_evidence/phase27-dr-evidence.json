@@ -1,0 +1,105 @@
+{
+  "recorded": "2026-08-17T09:09:07.357Z",
+  "schema": "prism_dr_seed",
+  "drill": "scripts/phase27-dr.test.mjs — standard PostgreSQL tools only (pg_dump/pg_restore/pg_basebackup/psql inside the source and PITR containers); no custom backup format, scheduler, or encryption",
+  "commands": {
+    "backup": "pg_dump -F c (custom format) via the source container",
+    "restore": "pg_restore --no-owner --no-privileges into the confirmed disposable target database",
+    "migration": "applyEnterpriseMigrations (existing runner) applied 004/005 over the raw-001-003 legacy schema",
+    "rollback": "pg_restore of the pre-upgrade backup into a fresh database (disposable-environment rollback rehearsal; production prefers roll-forward repair)",
+    "pitr": "pg_basebackup + archived WAL replay to recovery_target_time between two known writes"
+  },
+  "guards": [
+    "guard: source and target databases differ",
+    "guard: confirm-target token present",
+    "guard: target host is loopback",
+    "guard: target looks like a disposable restore db",
+    "guard: sufficient free space on the artifact dir"
+  ],
+  "seed": {
+    "tenantCount": 2,
+    "rows": {
+      "prism_sessions": 2,
+      "prism_session_entries": 4,
+      "prism_checkpoints": 8,
+      "prism_leases": 2,
+      "prism_legal_holds": 2,
+      "prism_tenant_quotas": 2,
+      "prism_policy_decisions": 4,
+      "prism_evaluations": 2,
+      "prism_work_idempotency": 2,
+      "prism_tool_effects": 4,
+      "prism_model_router_budgets": 2,
+      "prism_erp_outbox": 4,
+      "prism_erp_inbox": 2,
+      "prism_erp_approvals": 4
+    },
+    "outboxPerTenant": {
+      "tenant-a": 2,
+      "tenant-b": 2
+    },
+    "checkpointsPerTenant": 4,
+    "approvalsPerTenant": 2,
+    "tenantQuotas": 2
+  },
+  "backup": {
+    "tool": "pg_dump --format=custom",
+    "artifactBytes": 108291,
+    "artifactSha256": "bd47292fb2bbf4f39ca35e1d651e44fa180f9c65629526a6793cc9bd90841b63",
+    "durationMs": 122,
+    "tablesInArchive": 234
+  },
+  "restore": {
+    "tool": "pg_restore --no-owner --no-privileges",
+    "durationMs": 382,
+    "targetDatabase": "prism_dr_target",
+    "countMatches": true,
+    "digestMatches": true
+  },
+  "migration": {
+    "legacy": {
+      "policy": 1,
+      "work": 1,
+      "effects": 1,
+      "migrations": 3
+    },
+    "upgraded": {
+      "migrations": 5,
+      "outboxRows": 0,
+      "approvalRows": 0,
+      "policyRows": 1
+    },
+    "preservedLegacyRows": true,
+    "newTablesInitializedEmpty": true,
+    "rollback": {
+      "restoredPolicyRows": 1,
+      "excludes027Tables": true,
+      "lossWindow": "writes between the pre-upgrade backup and the rollback restore are lost (restore is the last resort; forward repair is preferred)"
+    }
+  },
+  "pitr": {
+    "m1Time": "2026-08-17T09:09:02.619Z",
+    "m2Time": "2026-08-17T09:09:02.757Z",
+    "recoveryTarget": "2026-08-17 09:09:02.688+00",
+    "archivedWalSegments": 1,
+    "includesEarlierWrite": true,
+    "excludesLaterWrite": true,
+    "recoveryMs": 1163,
+    "rpoSeconds": 0,
+    "rtoSeconds": 1,
+    "note": "RPO/RTO measured in this disposable environment; managed backup, encryption, and cross-region replication are operator-owned and NOT claimed"
+  },
+  "protectedPolicy": {
+    "currentBackupRestore": "measured: 2026-08-17T09:09:07.358Z",
+    "missingRequiredInfrastructureBehavior": "fail (never a passing skip)"
+  },
+  "redaction": {
+    "urls": [
+      "postgresql://postgres:***@localhost:55432/postgres",
+      "postgresql://postgres:***@localhost:55432/prism_dr_target",
+      "postgresql://postgres:***@localhost:55436/postgres"
+    ],
+    "passwordsAndCanariesNeverEmitted": true
+  },
+  "passed": true
+}

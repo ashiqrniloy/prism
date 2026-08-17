@@ -1,4 +1,6 @@
 import type { AgentEvent, ErrorInfo, Message, ProviderRequest, RunLedgerRecord, SessionEntry } from "./contracts.js";
+import type { FieldPolicy } from "./field-policy.js";
+import { applyFieldPolicy } from "./field-policy.js";
 
 const REDACTED = "[REDACTED]";
 // Depth bound matching agent-run-state.ts; hostile deep structures yield a placeholder
@@ -13,24 +15,68 @@ export function createSecretRedactor(secrets: readonly (string | undefined)[]): 
   return { redact: (value) => redactSecrets(value, secrets) };
 }
 
-export function redactMessage(message: Message, redactor?: SecretRedactor): Message {
-  return redactor?.redact(message) ?? message;
+/** Applies a field policy after secret redaction; identity when absent (compat). */
+function afterSecrets<T>(
+  value: T,
+  redactor: SecretRedactor | undefined,
+  policy: FieldPolicy | undefined,
+  destination: string,
+  labelFor: ((key: string, path: string) => string | undefined) | undefined,
+): T {
+  const secretRedacted = redactor?.redact(value) ?? value;
+  return policy
+    ? applyFieldPolicy(secretRedacted, policy, { destination, direction: "outbound", ...(labelFor ? { labelFor } : {}) })
+    : secretRedacted;
 }
 
-export function redactAgentEvent(event: AgentEvent, redactor?: SecretRedactor): AgentEvent {
-  return redactor?.redact(event) ?? event;
+export function redactMessage(
+  message: Message,
+  redactor?: SecretRedactor,
+  fieldPolicy?: FieldPolicy,
+  destination = "prompt",
+  labelFor?: (key: string, path: string) => string | undefined,
+): Message {
+  return afterSecrets(message, redactor, fieldPolicy, destination, labelFor);
 }
 
-export function redactSessionEntry(entry: SessionEntry, redactor?: SecretRedactor): SessionEntry {
-  return redactor?.redact(entry) ?? entry;
+export function redactAgentEvent(
+  event: AgentEvent,
+  redactor?: SecretRedactor,
+  fieldPolicy?: FieldPolicy,
+  destination = "telemetry",
+  labelFor?: (key: string, path: string) => string | undefined,
+): AgentEvent {
+  return afterSecrets(event, redactor, fieldPolicy, destination, labelFor);
 }
 
-export function redactProviderRequest(request: ProviderRequest, redactor?: SecretRedactor): ProviderRequest {
-  return redactor?.redact(request) ?? request;
+export function redactSessionEntry(
+  entry: SessionEntry,
+  redactor?: SecretRedactor,
+  fieldPolicy?: FieldPolicy,
+  destination = "persistence",
+  labelFor?: (key: string, path: string) => string | undefined,
+): SessionEntry {
+  return afterSecrets(entry, redactor, fieldPolicy, destination, labelFor);
 }
 
-export function redactRunLedgerRecord<T extends RunLedgerRecord>(record: T, redactor?: SecretRedactor): T {
-  return redactor?.redact(record) ?? record;
+export function redactProviderRequest(
+  request: ProviderRequest,
+  redactor?: SecretRedactor,
+  fieldPolicy?: FieldPolicy,
+  destination = "prompt",
+  labelFor?: (key: string, path: string) => string | undefined,
+): ProviderRequest {
+  return afterSecrets(request, redactor, fieldPolicy, destination, labelFor);
+}
+
+export function redactRunLedgerRecord<T extends RunLedgerRecord>(
+  record: T,
+  redactor?: SecretRedactor,
+  fieldPolicy?: FieldPolicy,
+  destination = "run-ledger",
+  labelFor?: (key: string, path: string) => string | undefined,
+): T {
+  return afterSecrets(record, redactor, fieldPolicy, destination, labelFor);
 }
 
 export function resolveRedactor(redactor?: SecretRedactor, secrets?: readonly (string | undefined)[]): SecretRedactor | undefined {

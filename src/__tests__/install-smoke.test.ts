@@ -802,16 +802,16 @@ describe("install smoke (fresh offline tarball install)", () => {
     );
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.6.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.7.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.2.6.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.2.7.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.2.6.tgz"),
-      `expected 'arnilo-prism-0.2.6.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.2.7.tgz"),
+      `expected 'arnilo-prism-0.2.7.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.2.6.tgz", "arnilo-prism-compaction-0.2.6.tgz", "arnilo-prism-all-0.2.6.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.2.7.tgz", "arnilo-prism-compaction-0.2.7.tgz", "arnilo-prism-all-0.2.7.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });
@@ -829,7 +829,7 @@ describe("peer-version policy (plan 024 Task 3, Decision A: exact pins)", () => 
   it("a mismatched exact pin fails clearly with npm ERESOLVE naming the conflicting peer", () => {
     // Fake next-version adapter: real coding-agent source with version + core
     // peer bumped forward one — the only difference from the real tarball.
-    const fakeVersion = "0.2.7";
+    const fakeVersion = "0.2.8";
     const fakeDir = join(stage, "fake");
     cpSync(join(repoRoot, "packages", "coding-agent"), fakeDir, { recursive: true });
     const manifestPath = join(fakeDir, "package.json");
@@ -850,7 +850,7 @@ describe("peer-version policy (plan 024 Task 3, Decision A: exact pins)", () => 
     writeFileSync(join(consumer, "package.json"), JSON.stringify({ name: "prism-peer-mix-consumer", type: "module" }, null, 2));
     const coreInstall = run(
       "npm",
-      ["install", join(stage, "arnilo-prism-0.2.6.tgz"), "--offline", "--no-audit", "--no-fund", "--no-update-notifier"],
+      ["install", join(stage, "arnilo-prism-0.2.7.tgz"), "--offline", "--no-audit", "--no-fund", "--no-update-notifier"],
       consumer,
     );
     assert.equal(coreInstall.status, 0, coreInstall.stdout + coreInstall.stderr);

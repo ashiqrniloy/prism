@@ -11,6 +11,7 @@ packages. Prism defines contracts, not apps.
 - **Agent/session runtime**: `createAgent`/`createAgentSession`, run prompts,
   dispatch host tools, subscribe to normalized `AgentEvent` streams, abort runs,
   compact, and navigate branches.
+- **Field-level classification (0.2.7)**: `applyFieldPolicy` + the fail-closed protected default walk JSON-like values across prompt/tool/artifact/audit/telemetry/persistence/export boundaries with `allow`/`redact`/`tokenize`/`deny` decisions, explicit per-boundary `labelFor` hints, bounded traversal, and sparse-copy allocation; seams at the egress redaction functions, the audit-export redactor hook, and the OpenTelemetry attribute policy. See [docs/data-classification.md](docs/data-classification.md).
 - **Providers and models**: provider/model registries, provider event helpers,
   credential redaction helpers, mock provider, and an optional
   OpenAI-compatible provider subpath. Cache support is provider-specific:
