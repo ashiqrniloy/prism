@@ -1,10 +1,10 @@
 {
-  "recordedAt": "2026-08-14T10:13:07.139Z",
-  "reconnectP95Ms": 199,
+  "recordedAt": "2026-08-17T18:50:17.916Z",
+  "reconnectP95Ms": 97,
   "reconnectSamples": [
-    199,
-    194,
-    169
+    97,
+    94,
+    97
   ],
   "reconnectCeilingMs": 2000,
   "postgres": {
@@ -12,24 +12,24 @@
     "major": 16,
     "image": "pgvector/pgvector:pg16"
   },
-  "contentionP95Ms": 8.19,
+  "contentionP95Ms": 9.7,
   "contentionSamples": [
-    6.58,
-    8.19,
-    8,
-    5.56,
-    6.07,
-    7.03,
-    6.34,
-    6.41,
-    6.69,
-    6.41,
-    5.6,
-    6.45,
-    5.45,
-    6.53,
-    6.6,
-    6.39
+    2.51,
+    2.4,
+    5.95,
+    6.26,
+    3.63,
+    8.74,
+    3.69,
+    2.81,
+    3.21,
+    2.18,
+    4.47,
+    3.06,
+    9.7,
+    6.21,
+    5.62,
+    2.47
   ],
   "contentionCeilingMs": 50
 }

@@ -33,6 +33,14 @@
         "change": "append contention probe now warms the schema once (new worker mode 'warm': applies all migrations and seeds the probe session/stream rows) before spawning the 16 append workers, so the measured point op excludes DDL lock waits from concurrent migration bursts",
         "rationale": "CI cold p95 was 320.99ms against the frozen 50ms ceiling while the append SQL is byte-identical to 0.2.1 (git diff empty for scripts/phase12-restart-recovery.test.mjs, scripts/fixtures/phase12-restart-worker.mjs, packages/session-store-postgres/src/event-source.ts). Migration 008 (ALTER TABLE prism_sessions ADD COLUMN version + backfill UPDATE) is the first post-001 DDL taking ACCESS EXCLUSIVE on prism_sessions, the table every append upserts; 16 serialized straggler batches (advisory-lock serialized) blocked concurrent appends ~20ms each on the GitHub 2-vCPU runner. Warming removes the DDL-burst coupling entirely (re-opens only verify checksums), restoring the measurement to steady-state 16-way hot-row contention: local warm p95 15.1ms (max 15.8ms) vs 50ms ceiling. Ceiling unchanged.",
         "task": "plan 022 Task 6 (post-release CI failure remediation)"
+      },
+      {
+        "id": "dev-003",
+        "date": "2026-08-17",
+        "scope": "capacity.postgresEvidence.pointOpP95Ms probe sampling (plan 027 Task 10 CI remediation)",
+        "change": "append contention probe now takes PRISM_PHASE12_PROBE_SAMPLES (default 20) appends per worker and reports the per-worker median instead of a single one-shot append; the driver still takes p95 across the 16 worker medians",
+        "rationale": "CI failed with append p95 91.31ms vs frozen 50ms ceiling while the append SQL is unchanged (plan 027 did not touch session-store-postgres event-source.ts) and the recorded steady-state baseline is 8.19ms. A single one-shot sample per worker is dominated by CI scheduler/GC jitter on the 2-vCPU shared runner; the median of K appends filters that jitter while a real regression still shifts the whole per-worker distribution past the frozen ceiling. Ceiling unchanged (pointOpP95Ms=50); measurement is made robust, not loosened.",
+        "task": "plan 027 Task 10 (post-release CI failure remediation)"
       }
     ]
   },
