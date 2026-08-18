@@ -1,9 +1,9 @@
-import { assertIdentityActive } from "@arnilo/prism";
 import { randomUUID } from "node:crypto";
+import { assertIdentityActive } from "@arnilo/prism";
 import type { Pool, PoolClient } from "pg";
 import { decodeBoundedJson, encodeBoundedJson } from "./codecs.js";
 import { EnterprisePostgresError } from "./errors.js";
-import { validateIdentifier, qualifyTable } from "./identifiers.js";
+import { qualifyTable, validateIdentifier } from "./identifiers.js";
 import { asTimestamp, deepFreeze, requiredText, storeError } from "./records.js";
 import type {
   ErpInboxRecordInput,

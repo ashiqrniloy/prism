@@ -15,9 +15,10 @@
  *
  * Usage: PRISM_TEST_ACP_CLIENT=1 node scripts/acp-client-smoke.mjs
  */
+
+import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { Readable, Writable } from "node:stream";
-import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 

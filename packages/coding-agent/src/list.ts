@@ -58,6 +58,7 @@ export function createRepoListTool(cwd: string, options?: ListToolOptions): Tool
 
   return {
     name: "repo_list",
+    kind: "read",
     effect: CODING_OBSERVATION_EFFECT,
     description: `List repository entries under the workspace with deterministic relative paths. Prefer glob when you already know a filename pattern (*.ts, **/src/**). Prefer repo_search to find text inside files. Skips hidden names and excluded basenames (default: ${limits.exclude.join(", ")}) unless overridden. Does not follow symlinks. Results paginate with offset/maxResults (default ${limits.maxResults}). Depth default ${limits.maxDepth}.`,
     parameters: {

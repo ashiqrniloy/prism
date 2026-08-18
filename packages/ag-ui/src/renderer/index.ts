@@ -6,31 +6,32 @@
  * A2UI caps as the server painter.
  */
 import { type AGUIEvent } from "@ag-ui/core";
-import { AgUiError } from "../errors.js";
 import { type AgUiA2UiLimitOptions, resolveAgUiA2UiLimits } from "../a2ui.js";
+import { AgUiError } from "../errors.js";
 import { DEFAULT_AG_UI_LIMITS } from "../limits.js";
-import { renderA2UiSurface, DEFAULT_A2UI_CATALOG, type A2UiCatalog, type Dom, type DomNode } from "./bind.js";
+import { type A2UiCatalog, DEFAULT_A2UI_CATALOG, type Dom, type DomNode, renderA2UiSurface } from "./bind.js";
 import {
+  A2UI_VERSION,
+  type A2UiRenderError,
+  type A2UiSurfaceModel,
   A2UiSurfaceState,
   readA2UiBatch,
   reduceA2UiOps,
   resolvePointer,
-  A2UI_VERSION,
-  type A2UiRenderError,
-  type A2UiSurfaceModel,
 } from "./core.js";
+
+export type { A2UiCatalog, A2UiComponentRenderer, A2UiRenderContext, Dom, DomNode, RenderA2UiSurfaceOptions } from "./bind.js";
 export type {
   A2UiComponentModel,
+  A2UiReduceResult,
   A2UiRenderError,
   A2UiSurfaceModel,
-  A2UiReduceResult,
 } from "./core.js";
-export type { A2UiCatalog, A2UiComponentRenderer, A2UiRenderContext, Dom, DomNode, RenderA2UiSurfaceOptions } from "./bind.js";
 
-// Synapta FR (0.0.27): the DOM-free A2UI core as values, so hosts can drive
+// Host FR (0.0.27): the DOM-free A2UI core as values, so hosts can drive
 // the validated surface state machine without mounting a renderer. Same
 // exports as dist/renderer/core.js; behavior and frozen caps unchanged.
-export { A2UiSurfaceState, readA2UiBatch, reduceA2UiOps, resolvePointer, A2UI_VERSION };
+export { A2UI_VERSION, A2UiSurfaceState, readA2UiBatch, reduceA2UiOps, resolvePointer };
 
 export interface CreateA2UiRendererOptions {
   /** AG-UI event stream: SSE via `@ag-ui/client`, or any AsyncIterable. */

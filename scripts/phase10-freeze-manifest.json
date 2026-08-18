@@ -60,7 +60,8 @@
       "ERR_PRISM_ACP_LIMIT",
       "ERR_PRISM_ACP_POLICY",
       "ERR_PRISM_ACP_CAPABILITY",
-      "ERR_PRISM_ACP_MCP"
+      "ERR_PRISM_ACP_MCP",
+      "ERR_PRISM_ACP_RUN"
      ],
      "newOptionKeys": [
       "coding",
@@ -86,7 +87,7 @@
       "resolvePointer",
       "A2UI_VERSION"
      ],
-     "note": "Synapta FR (0.0.27): DOM-free A2UI core values re-exported from the renderer subpath entry; behavior and frozen A2UI caps unchanged."
+     "note": "Host FR (0.0.27): DOM-free A2UI core values re-exported from the renderer subpath entry; behavior and frozen A2UI caps unchanged."
     }
    }
   },
@@ -99,6 +100,8 @@
       "WorktreeChangedEvent",
       "PermissionDeniedEvent",
       "ConfigurationChangedEvent",
+      "PlanChangedEvent",
+      "PlanRemovedEvent",
       "CodingLifecycleEmitter",
       "createCodingLifecycleEmitter",
       "CodingLifecycleLimits",
@@ -116,7 +119,9 @@
       "file_changed",
       "worktree_changed",
       "permission_denied",
-      "configuration_changed"
+      "configuration_changed",
+      "plan_changed",
+      "plan_removed"
      ],
      "deferredEvents": [
       "check_started",
@@ -215,6 +220,8 @@
   "worktree_changed": "projection-gated agent_message_chunk",
   "permission_denied": "tool_call_update (status failed); never includes raw tool args",
   "configuration_changed": "session/update config_option_update carrying the full bounded option set (ConfigOptionUpdate verified in SDK 1.3.0); Task 7 verifies wire gating and falls back to agent_message_chunk if the SDK rejects the update kind for a client",
+  "plan_changed": "session/update plan_update with plan { type: items, planId = planPath, entries (content/priority/status) } — complete list per update, redacted + byte-capped; only when the client advertised ClientCapabilities.plan (UNSTABLE gate in the agent wiring; mapper stays capability-agnostic); writeCodingPlanFile emits it (plan write/update)",
+  "plan_removed": "session/update plan_removed with planId = planPath; same UNSTABLE gate; no coding-agent helper deletes plans today — hosts emit it through their CodingLifecycleEmitter when they remove a plan file",
   "deferred": "check_started, check_finished, task_created, task_completed, compaction_started, compaction_finished, subagent_started, subagent_stopped -> no ACP update kind, no consumer; not shipped"
  },
  "permissionMatrix": {
@@ -243,6 +250,16 @@
    "locationsPerUpdate": {
     "default": 32,
     "hard": 128
+   },
+   "imageBytes": {
+    "default": 262144,
+    "hard": 1048576,
+    "notes": "F8: projected tool-result image payload (base64) cap; oversize dropped, never truncated."
+   },
+   "commandsPerUpdate": {
+    "default": 32,
+    "hard": 128,
+    "notes": "F9: available_commands_update count cap."
    },
    "additionalDirectories": {
     "default": 8,

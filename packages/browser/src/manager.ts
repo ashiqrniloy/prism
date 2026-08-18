@@ -5,6 +5,7 @@
  */
 import { setTimeout as sleep } from "node:timers/promises";
 import {
+  type CdpMode,
   cdpEmulationClearDeviceMetrics,
   cdpEmulationSetDeviceMetrics,
   cdpEmulationSetUserAgent,
@@ -14,7 +15,6 @@ import {
   cdpRuntimeEnable,
   createPageCdpSession,
   resolveCdpMode,
-  type CdpMode,
 } from "./cdp.js";
 import {
   type BrowserDownloadOptions,
@@ -28,13 +28,13 @@ import { BrowserError } from "./errors.js";
 import { evaluateInPage } from "./evaluate.js";
 import {
   type BrowserLimitOptions,
-  type ResolvedBrowserLimits,
-  resolveBrowserLimits,
   HARD_MAX_DEVICE_SCALE_FACTOR,
   HARD_MAX_EMULATE_DIMENSION,
   HARD_MAX_EMULATE_UA_BYTES,
   HARD_MAX_THROTTLE_KBPS,
   HARD_MAX_THROTTLE_LATENCY_MS,
+  type ResolvedBrowserLimits,
+  resolveBrowserLimits,
 } from "./limits.js";
 import {
   assertBrowserUrlAllowed,

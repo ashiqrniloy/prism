@@ -1,6 +1,6 @@
 /**
  * Phase 18 Task 2 — durable ACP session store behind a host-owned seam
- * (plan 018, closeout acp-session-store, demanded by Clay 2026-08-11).
+ * (plan 018, closeout acp-session-store, demanded by a consuming app 2026-08-11).
  *
  * The agent's active-session registry is an in-memory Map (cap 32 default /
  * 128 hard) that dies with the process. This seam lets a host persist

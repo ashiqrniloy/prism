@@ -16,14 +16,15 @@
  */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-agent";
+import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import { createMemoryToolEffectStore, createSecretRedactor, createToolRegistry, dispatchToolCall } from "@arnilo/prism";
-import { createCodingApprovalPolicy } from "@arnilo/prism-coding-security";
+import { createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
 import {
+  createCodingLifecycleEmitter,
   createDeleteTool,
   createGitAwareRepositoryOperations,
   createGitHubForge,
@@ -33,8 +34,7 @@ import {
   createReadPathSet,
   createWriteTool,
 } from "@arnilo/prism-coding-agent";
-import { createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
-import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
+import { createCodingApprovalPolicy } from "@arnilo/prism-coding-security";
 
 const SECRET = "packed-coding-secret";
 const redactor = createSecretRedactor([SECRET]);

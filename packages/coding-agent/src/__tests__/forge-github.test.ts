@@ -3,8 +3,8 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import { test } from "node:test";
 import type { ExecutionPolicy } from "@arnilo/prism";
 import { createMemoryToolEffectStore } from "@arnilo/prism";
-import type { GitExecResult } from "../git-exec.js";
 import { createGitHubForge, ForgeError } from "../forge/index.js";
+import type { GitExecResult } from "../git-exec.js";
 
 const IDENTITY = {
   tenantId: "tenant-1",

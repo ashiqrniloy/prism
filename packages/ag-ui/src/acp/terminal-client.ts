@@ -15,7 +15,7 @@
  * terminal stays pull-based until the host resolves it or the client releases
  * it.
  */
-import { methods, type AgentContext, type CreateTerminalRequest } from "@agentclientprotocol/sdk";
+import { type AgentContext, type CreateTerminalRequest, methods } from "@agentclientprotocol/sdk";
 import { DEFAULT_MAX_PROCESS_OUTPUT_CHUNK_BYTES, HARD_MAX_PROCESS_OUTPUT_CHUNK_BYTES } from "@arnilo/prism-coding-agent";
 import { AcpError } from "./errors.js";
 

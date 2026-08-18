@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { randomUUID } from "node:crypto";
-import { performance } from "node:perf_hooks";
 import { readFile } from "node:fs/promises";
+import { performance } from "node:perf_hooks";
 import { Pool } from "pg";
 import { createPostgresEnterpriseState } from "../../packages/enterprise-postgres/dist/index.js";
 

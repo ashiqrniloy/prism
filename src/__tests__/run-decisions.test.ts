@@ -1,19 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { loadAgentRunState } from "../agent-run-state.js";
+import type { CheckpointStore } from "../contracts-core.js";
 import {
   AgentDecisionError,
+  type AgentRunResult,
   createAgent,
   createMemoryCheckpointStore,
   createMemorySessionStore,
+  type JsonObject,
   providerDone,
   providerTextDelta,
   resumeAgentRun,
   toolCallContent,
-  type AgentRunResult,
-  type JsonObject,
 } from "../index.js";
-import { loadAgentRunState } from "../agent-run-state.js";
-import type { CheckpointStore } from "../contracts-core.js";
 
 function parallelProvider() {
   let turn = 0;

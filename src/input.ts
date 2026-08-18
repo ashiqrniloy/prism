@@ -27,9 +27,9 @@ import type { MiddlewareRegistry } from "./middleware.js";
 import type { SecretRedactor } from "./redaction.js";
 import { redactMessage } from "./redaction.js";
 import { loadTextResource } from "./resources.js";
-import { type LoadedSkillSet, type SkillsDisclosure, skillMessages as buildSkillMessages } from "./skill-disclosure.js";
-import { foldToolResultHistory, foldToolResults, type ResolvedToolResultFoldOptions } from "./tool-result-fold.js";
+import { skillMessages as buildSkillMessages, type LoadedSkillSet, type SkillsDisclosure } from "./skill-disclosure.js";
 import { composeSystemPrompt } from "./system-prompts.js";
+import { foldToolResultHistory, foldToolResults, type ResolvedToolResultFoldOptions } from "./tool-result-fold.js";
 
 export type AgentInput = string | Message | readonly Message[];
 

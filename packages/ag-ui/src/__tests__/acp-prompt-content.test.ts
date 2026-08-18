@@ -10,9 +10,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
-import { createSecretRedactor } from "@arnilo/prism";
 import type { AgentSession } from "@arnilo/prism";
-import { createAcpEventMapper, createPrismAcpAgent, type CreatePrismAcpAgentOptions } from "../acp/index.js";
+import { createSecretRedactor } from "@arnilo/prism";
+import { type CreatePrismAcpAgentOptions, createAcpEventMapper, createPrismAcpAgent } from "../acp/index.js";
 
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB").toString("base64");
 const WAV = Buffer.from("RIFFxxxxWAVEfmt").toString("base64");

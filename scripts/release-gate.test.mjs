@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import { publishArgs } from "./release.mjs";
 import {
   assertTarballAllowDeny,
   baselineName,
@@ -13,7 +14,6 @@ import {
   parseSurface,
   serializeSurface,
 } from "./release-gates.mjs";
-import { publishArgs } from "./release.mjs";
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), "prism-gate-"));

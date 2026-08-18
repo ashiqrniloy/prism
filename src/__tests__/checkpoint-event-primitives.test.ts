@@ -5,8 +5,8 @@ import {
   createEventMultiplexer,
   createMemoryCheckpointStore,
   createMemoryLeaseStore,
-  EventMultiplexerError,
   EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE,
+  EventMultiplexerError,
   LeaseConflictError,
 } from "../index.js";
 

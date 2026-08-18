@@ -1,4 +1,6 @@
 /** helpers (0.2.5 plan 025 Task 1 split). Moved verbatim from agent-session.ts; public surface unchanged behind the barrel. */
+
+import { singleShotLoop } from "../agent-loops.js";
 import type {
   CompactionOptions,
   ContentBlock,
@@ -11,10 +13,9 @@ import type {
   ToolCallContent,
   Usage,
 } from "../contracts.js";
-import type { AgentInput } from "../input.js";
 import { createId } from "../ids.js";
+import type { AgentInput } from "../input.js";
 import { reconstructToolCallDeltas } from "../provider-events.js";
-import { singleShotLoop } from "../agent-loops.js";
 
 export function providerContent(event: Extract<ProviderEvent, { type: "content_delta" | "tool_call" }>): ContentBlock {
   return event.type === "content_delta" ? event.content : event.call;

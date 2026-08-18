@@ -1,9 +1,10 @@
 /** Repository path family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from repository.ts; public surface unchanged behind the barrel. */
-import { DEFAULT_BINARY_SNIFF_BYTES } from "../limits.js";
+
 import type { Dirent } from "node:fs";
-import { isAbsolute, relative, resolve, sep } from "node:path";
 import { realpath } from "node:fs/promises";
+import { isAbsolute, relative, resolve, sep } from "node:path";
+import { DEFAULT_BINARY_SNIFF_BYTES } from "../limits.js";
 import { resolveToCwd } from "../path-utils.js";
 import type { RepoEntryKind } from "./types.js";
 import { RepositoryError } from "./types.js";

@@ -40,11 +40,11 @@ import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-c
 import { ProviderTransportError, readBoundedResponseJson } from "@arnilo/prism/providers/transport";
 import { createAzureOpenAIProvider } from "@arnilo/prism-provider-azure";
 import { createBedrockProvider, signAwsRequest } from "@arnilo/prism-provider-bedrock";
-import { createVertexProvider } from "@arnilo/prism-provider-vertex";
-import { createOpenRouterProvider } from "@arnilo/prism-provider-openrouter";
-import { createZaiProvider } from "@arnilo/prism-provider-zai";
 import { createNeuralWattProvider } from "@arnilo/prism-provider-neuralwatt";
 import { createOpenAIResponsesProvider, listOpenAIModels } from "@arnilo/prism-provider-openai";
+import { createOpenRouterProvider } from "@arnilo/prism-provider-openrouter";
+import { createVertexProvider } from "@arnilo/prism-provider-vertex";
+import { createZaiProvider } from "@arnilo/prism-provider-zai";
 
 const BLOCKER_IDS = [
   "strict-completion",

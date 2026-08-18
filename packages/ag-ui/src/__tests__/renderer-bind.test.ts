@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { EventType, type AGUIEvent } from "@ag-ui/core";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { createA2UiRenderer } from "../renderer/index.js";
-import { DEFAULT_A2UI_CATALOG, renderA2UiSurface, type Dom, type DomNode } from "../renderer/bind.js";
-import { A2UiSurfaceState, reduceA2UiOps } from "../renderer/core.js";
+import { type AGUIEvent, EventType } from "@ag-ui/core";
 import { resolveAgUiA2UiLimits } from "../a2ui.js";
 import { DEFAULT_AG_UI_LIMITS } from "../limits.js";
+import { DEFAULT_A2UI_CATALOG, type Dom, type DomNode, renderA2UiSurface } from "../renderer/bind.js";
+import { A2UiSurfaceState, reduceA2UiOps } from "../renderer/core.js";
+import { createA2UiRenderer } from "../renderer/index.js";
 
 const limits = resolveAgUiA2UiLimits({});
 

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { PersistencePage } from "@arnilo/prism";
 import {
   APPROVAL_HARD_LIMITS,
@@ -18,7 +19,6 @@ import {
   prepareApprovalDecision,
   prepareApprovalRevoke,
 } from "@arnilo/prism-policy";
-import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { decodeBoundedJson, encodeBoundedJson } from "./codecs.js";
 import { EnterprisePostgresError } from "./errors.js";
@@ -30,8 +30,8 @@ import {
   encodeRecordCursor,
   optionalText,
   requiredText,
-  storeError,
   type StoreOwner,
+  storeError,
 } from "./records.js";
 
 const STATUSES = new Set<ApprovalStatus>(["pending", "approved", "rejected", "revoked", "consumed"]);

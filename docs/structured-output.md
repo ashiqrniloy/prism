@@ -2,17 +2,17 @@
 
 ## What it does
 
-Structured output in Prism is the `Artifact*` contract seam: a host-defined type `T` threaded through host-supplied `parser` → `validator` → `repairer` callbacks inside the `generateValidateReviseLoop` agent loop. Prism never instantiates `T`. The only way to get typed output from a loop is `ArtifactParser<T>`; Prism has no `WorkflowStep`/`NodeSchema`/`synapta*` types and no domain control-flow vocabulary — the seam is generic over an opaque host `T`.
+Structured output in Prism is the `Artifact*` contract seam: a host-defined type `T` threaded through host-supplied `parser` → `validator` → `repairer` callbacks inside the `generateValidateReviseLoop` agent loop. Prism never instantiates `T`. The only way to get typed output from a loop is `ArtifactParser<T>`; Prism has no `WorkflowStep`/`NodeSchema`/host-domain types and no domain control-flow vocabulary — the seam is generic over an opaque host `T`.
 
 An artifact loop generates provider text, parses it to `T`, validates `T` against a host schema, and on validation failure runs a repairer to build a follow-up input that asks the model to fix the artifact — repeating up to `maxRevisions` times. The result of every validation and the terminal `artifact_finished`/`artifact_failed` outcomes are observable through `AgentEvent` artifact variants.
 
 ## When to use it
 
-Use `generateValidateReviseLoop` (with host `parser`/`validator`/`repairer`) when a run should produce an artifact that must satisfy a host-owned schema before it is considered complete: structured JSON output, a generated file passing lint, a typed response conforming to a Synapta-defined model. Wrap your existing schema/validation library behind the `Artifact*` callbacks.
+Use `generateValidateReviseLoop` (with host `parser`/`validator`/`repairer`) when a run should produce an artifact that must satisfy a host-owned schema before it is considered complete: structured JSON output, a generated file passing lint, a typed response conforming to a host-defined model. Wrap your existing schema/validation library behind the `Artifact*` callbacks.
 
 When the model declares `capabilities.structuredOutput` and the host opts into native mode, pass `structuredOutput` on `RunOptions.providerOptions` or on the `generate-validate-revise` loop options so capable providers map the schema to their wire format (`response_format` / Responses `text.format`) and valid output can finish in one turn without repair revisions.
 
-Do not use it to re-implement provider calls, retry, abort, store, or event emission — those stay runtime-owned and are exposed to the loop only through `LoopContext`. Do not use it for runs that need tool calls during revision turns — use `singleShotLoop` or a custom `AgentLoopStrategy` instead. Do not put Synapta domain types into Prism; map them to `ArtifactValidation` in your callbacks.
+Do not use it to re-implement provider calls, retry, abort, store, or event emission — those stay runtime-owned and are exposed to the loop only through `LoopContext`. Do not use it for runs that need tool calls during revision turns — use `singleShotLoop` or a custom `AgentLoopStrategy` instead. Do not put host domain types into Prism; map them to `ArtifactValidation` in your callbacks.
 
 ## Inputs / request
 
@@ -90,7 +90,7 @@ See [Agent events § Artifact event ordering](agent-events.md#artifact-event-ord
 
 ## Implementation example
 
-A Synapta-style host maps its own schema to `ArtifactValidation` via the callbacks — no Synapta type is imported by Prism:
+A host maps its own schema to `ArtifactValidation` via the callbacks — no host type is imported by Prism:
 
 ```ts
 import {
@@ -104,7 +104,7 @@ import {
   type ArtifactRepairer,
 } from "@arnilo/prism";
 
-// Host owns this schema (Synapta's own type). Prism never imports it.
+// Host owns this schema (the host's own type). Prism never imports it.
 interface ReleaseNote { readonly title: string; readonly body: string }
 
 const parser: ArtifactParser<ReleaseNote> = (text) => {
@@ -143,7 +143,7 @@ await agent.createSession().run("Produce the JSON release note.", {
 
 ## End-to-end third-party integration
 
-A third-party host (for example, Synapta) can mix first-party and own providers, register tools, select skills, load `AGENTS.md`/`SYSTEM.md`, and opt a run into the artifact loop — all without importing any `synapta*` types into Prism and without any `workflow`/`node`/`step` vocabulary in the core contracts.
+A third-party host can mix first-party and own providers, register tools, select skills, load `AGENTS.md`/`SYSTEM.md`, and opt a run into the artifact loop — all without importing any host-domain types into Prism and without any `workflow`/`node`/`step` vocabulary in the core contracts.
 
 ```ts
 import {
@@ -160,7 +160,7 @@ import {
 } from "@arnilo/prism";
 import { loadSystemPromptFiles } from "@arnilo/prism/node/system-prompts";
 
-// Host-owned schema (Synapta's own type). Prism never imports it.
+// Host-owned schema (the host's own type). Prism never imports it.
 interface ReleaseNote { readonly title: string; readonly body: string }
 
 // Map the host schema to ArtifactValidation. The callbacks are generic at the
@@ -229,7 +229,7 @@ Key cross-seam points:
 - `systemPrompt` is loaded from `AGENTS.md`/`SYSTEM.md` via the Node loader; the runtime itself is file-name agnostic. See [System prompts](system-prompts.md).
 - The `validator`/`parser`/`repairer` callbacks are typed as `Artifact*<unknown>` at the loop boundary; the host's `ReleaseNote` type is cast inside the callback body. Prism threads an opaque value and never instantiates it.
 - Every `artifact_*` event payload is redacted through the active `SecretRedactor`, so secrets echoed in `errors[].message` or `metadata` are scrubbed before subscribers see them. See [Credentials and redaction](credentials-and-redaction.md).
-- For a runnable, network-free version that also demonstrates tool dispatch and redaction, see [`examples/synapta-style-artifact-loop.ts`](../examples/synapta-style-artifact-loop.ts).
+- For a runnable, network-free version that also demonstrates tool dispatch and redaction, see [`examples/host-artifact-loop.ts`](../examples/host-artifact-loop.ts).
 
 ## Extension and configuration notes
 
@@ -244,8 +244,8 @@ Key cross-seam points:
 
 ## Security and performance notes
 
-- Prism never instantiates `T`; it only threads the host-supplied value through parser→validator→repairer. No Synapta type is imported by `src/`.
-- Boundary lock: `src/` imports no `synapta*` package, and the `Artifact*` / `AgentLoop*` / `LoopContext` contract field names contain no `workflow`/`node`/`step` domain vocabulary. Hosts map their own schema names to `ArtifactValidation.errors[].path`.
+- Prism never instantiates `T`; it only threads the host-supplied value through parser→validator→repairer. No host type is imported by `src/`.
+- Boundary lock: `src/` imports no host-domain package, and the `Artifact*` / `AgentLoop*` / `LoopContext` contract field names contain no `workflow`/`node`/`step` domain vocabulary. Hosts map their own schema names to `ArtifactValidation.errors[].path`.
 - `ArtifactValidation.errors[].message` and `metadata` may echo model text; every `artifact_*` event payload is redacted through `redactAgentEvent` / the active `SecretRedactor`. The generic walker handles nested objects/arrays and replaces cyclic references with `"[Circular]"` without throwing.
 - A run makes at most `maxRevisions + 1` provider turns; it cannot loop forever on an always-failing validator. Each revision costs one provider turn plus one store append.
 - No new dependency is required to use structured output — host callbacks wrap whatever schema/validation library the host already uses.

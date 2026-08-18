@@ -8,9 +8,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
+import type { AgentRunLifecycle, AgentSession } from "@arnilo/prism";
 import { createSecretRedactor } from "@arnilo/prism";
 import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-agent";
-import type { AgentRunLifecycle, AgentSession } from "@arnilo/prism";
 import { createAcpLifecycleMapper, createPrismAcpAgent } from "../acp/index.js";
 
 const authorization = { ownership: { userId: "user-1" } };
@@ -92,6 +92,57 @@ describe("createAcpLifecycleMapper (freeze lifecycleEventMapping)", () => {
     const mapper = createAcpLifecycleMapper();
     assert.deepEqual(await mapper.map({ type: "configuration_changed", keys: ["verbose"] }), []);
   });
+
+  it("maps plan_changed to a complete plan_update and plan_removed to plan_removed (F5)", async () => {
+    const mapper = createAcpLifecycleMapper();
+    assert.deepEqual(
+      await mapper.map({
+        type: "plan_changed",
+        planPath: "plans/task-1.md",
+        todos: [
+          { id: "a", text: "Write plan", done: true },
+          { id: "b", text: "Verify", done: false },
+        ],
+      }),
+      [
+        {
+          sessionUpdate: "plan_update",
+          plan: {
+            type: "items",
+            planId: "plans/task-1.md",
+            entries: [
+              { content: "Write plan", priority: "medium", status: "completed" },
+              { content: "Verify", priority: "medium", status: "pending" },
+            ],
+          },
+        },
+      ],
+    );
+    assert.deepEqual(await mapper.map({ type: "plan_removed", planPath: "plans/task-1.md" }), [
+      { sessionUpdate: "plan_removed", planId: "plans/task-1.md" },
+    ]);
+  });
+
+  it("redacts and byte-caps plan entries (F5)", async () => {
+    const mapper = createAcpLifecycleMapper({ redactor: createSecretRedactor(["TOKEN"]) });
+    const output = await mapper.map({
+      type: "plan_changed",
+      planPath: "plans/secret.md",
+      todos: [{ id: "a", text: "do TOKEN", done: false }],
+    });
+    const update = output[0] as { plan: { planId: string; entries: Array<{ content: string }> } };
+    assert.equal(update.plan.planId, "plans/secret.md");
+    assert.equal(update.plan.entries[0]?.content, "do [REDACTED]");
+
+    const capped = createAcpLifecycleMapper({ limits: { maxTextBytes: 16 } });
+    const output2 = await capped.map({
+      type: "plan_changed",
+      planPath: "p.md",
+      todos: [{ id: "a", text: "x".repeat(200), done: false }],
+    });
+    const entry = (output2[0] as { plan: { entries: Array<{ content: string }> } }).plan.entries[0]!;
+    assert.ok(entry.content.length <= 16, "plan entry text is byte-capped");
+  });
 });
 
 describe("ACP lifecycle wiring (Task 7)", () => {
@@ -120,6 +171,52 @@ describe("ACP lifecycle wiring (Task 7)", () => {
       await connection.request(methods.agent.session.prompt, { sessionId: created.sessionId, prompt: [{ type: "text", text: "go" }] });
     });
     assert.deepEqual(updates, [{ sessionUpdate: "tool_call_update", toolCallId: "tool-1", locations: [{ path: "/workspace/src/a.ts" }] }]);
+  });
+
+  it("emits plan updates only to clients that advertised the UNSTABLE plan capability (F5)", async () => {
+    for (const advertise of [false, true]) {
+      const emitter = createCodingLifecycleEmitter();
+      const updates: Array<{ sessionUpdate: string }> = [];
+      const acpAgent = createPrismAcpAgent({
+        authorize: () => authorization,
+        sessionFactory: () => ({
+          session: {
+            id: "plan-session",
+            async *stream() {
+              emitter.emit({ type: "plan_changed", planPath: "plans/task-1.md", todos: [{ id: "a", text: "go", done: false }] });
+              emitter.emit({ type: "plan_removed", planPath: "plans/task-1.md" });
+              yield { type: "message_delta", sessionId: "plan-session", runId: "run", content: { type: "text", text: "done" } };
+            },
+          } as unknown as AgentSession,
+        }),
+        lifecycle: {} as AgentRunLifecycle,
+        coding: { lifecycle: emitter },
+      });
+      const acpClient = client().onNotification(methods.client.session.update, ({ params }) => {
+        if (params.update.sessionUpdate === "plan_update" || params.update.sessionUpdate === "plan_removed") {
+          updates.push(params.update as never);
+        }
+      });
+      await acpClient.connectWith(acpAgent, async (connection) => {
+        await connection.request(methods.agent.initialize, {
+          protocolVersion: PROTOCOL_VERSION,
+          clientCapabilities: advertise ? { plan: {} } : {},
+        });
+        const created = await connection.request(methods.agent.session.new, { cwd: "/w", mcpServers: [] });
+        await connection.request(methods.agent.session.prompt, {
+          sessionId: created.sessionId,
+          prompt: [{ type: "text", text: "go" }],
+        });
+      });
+      if (advertise) {
+        assert.deepEqual(
+          updates.map((update) => update.sessionUpdate),
+          ["plan_update", "plan_removed"],
+        );
+      } else {
+        assert.deepEqual(updates, [], "no plan updates without the UNSTABLE advertisement");
+      }
+    }
   });
 
   it("broadcasts configuration_changed as config_option_update with the full per-session set", async () => {

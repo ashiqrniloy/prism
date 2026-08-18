@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
-  assertIdentityActive,
   type AgentIdentity,
+  assertIdentityActive,
   type LeaseRecord,
   type LeaseStore,
   type OwnershipScope,
@@ -9,8 +9,8 @@ import {
 } from "@arnilo/prism";
 import { WorkflowDefinitionError, WorkflowRuntimeError } from "./errors.js";
 import { DEFAULT_MAX_CHECKPOINT_BYTES, HARD_MAX_CHECKPOINT_BYTES } from "./limits.js";
-import { combineSignals, errorCode, errorMessage, nowIso, sleep, stableStringify, utf8ByteLength } from "./util.js";
 import type { WorkflowCheckpointAdapter, WorkflowCheckpointRecord, WorkflowCheckpointValue } from "./types.js";
+import { combineSignals, errorCode, errorMessage, nowIso, sleep, stableStringify, utf8ByteLength } from "./util.js";
 
 const SAGA_NAMESPACE = "prism.workflow.saga";
 const SAGA_SCHEMA_VERSION = 1 as const;

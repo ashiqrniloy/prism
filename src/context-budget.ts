@@ -2,11 +2,11 @@ import type { ContextBlock, InputAssemblyLayout, Message, ProviderRequest, Skill
 import {
   capSkillCatalog,
   type LoadedSkillSet,
+  type SkillRenderContext,
+  type SkillsDisclosure,
   selectSkillsForPrompt,
   skillHasRenderableBody,
   skillPromptText,
-  type SkillRenderContext,
-  type SkillsDisclosure,
 } from "./skill-disclosure.js";
 
 /** Assembler-time input budget. At least one max required when present. */

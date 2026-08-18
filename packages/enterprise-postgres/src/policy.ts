@@ -1,15 +1,15 @@
 import type { PersistencePage } from "@arnilo/prism";
 import {
-  PolicyError,
-  preparePolicyDecision,
-  requireOwnership,
-  resolvePolicyLimits,
   type PolicyActorRef,
   type PolicyDecisionOutcome,
   type PolicyDecisionRecord,
   type PolicyDecisionStore,
+  PolicyError,
   type PolicyTarget,
+  preparePolicyDecision,
   type ResolvedPolicyLimits,
+  requireOwnership,
+  resolvePolicyLimits,
 } from "@arnilo/prism-policy";
 import type { Pool } from "pg";
 import { decodeBoundedJson, encodeBoundedJson } from "./codecs.js";
@@ -23,8 +23,8 @@ import {
   isSqlState,
   optionalText,
   requiredText,
-  storeError,
   type StoreOwner,
+  storeError,
 } from "./records.js";
 
 const OUTCOMES = new Set<PolicyDecisionOutcome>(["allow", "deny", "modify", "approval"]);

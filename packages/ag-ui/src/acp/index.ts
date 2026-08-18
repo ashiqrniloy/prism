@@ -1,3 +1,4 @@
+export * from "./agent/recovery.js";
 export {
   type AcpAuthorization,
   type AcpCodingContext,
@@ -9,17 +10,24 @@ export {
 export {
   type AcpCapabilitiesOptions,
   type AcpCapabilitiesSource,
+  type AcpCommand,
+  type AcpCommandsSeam,
   type AcpMcpSeams,
   type AcpSessionStoreSeams,
   type AcpSessionSummary,
+  type AcpUsageSeam,
   resolveAcpAgentCapabilities,
 } from "./capabilities.js";
-export { type AcpErrorCode, AcpError } from "./errors.js";
+export { type CodingToolProjectionOptions, createCodingToolProjection } from "./coding-projection.js";
+export { AcpError, type AcpErrorCode } from "./errors.js";
 export { type AcpClientFilesystem, type AcpClientFilesystemOptions, createAcpClientFilesystem } from "./fs-client.js";
-// biome-ignore lint/style/useExportType: compat-surface parser keys per-name type modifiers as `type Name`; the frozen ag-ui baseline records this value-style statement shape, so it must not become `export type` (0.2.3 gate review)
-export { type AcpSessionStore, type PersistedAcpSession, type PersistedAcpRunRef } from "./session-store.js";
-export { validateActiveRunRef } from "./session-store.js";
-export * from "./agent/recovery.js";
+export {
+  type AcpEventMapper,
+  type AcpEventMapperOptions,
+  type AcpLifecycleMapper,
+  createAcpEventMapper,
+  createAcpLifecycleMapper,
+} from "./mapper.js";
 // biome-ignore lint/style/useExportType: same compat-surface statement-shape freeze as above
 export {
   type AcpConfigOption,
@@ -28,8 +36,7 @@ export {
   type AcpSessionMode,
 } from "./modes.js";
 export { type AcpPromptMedia, type AcpPromptOptions, type AcpPromptResult, projectAcpPrompt } from "./prompt.js";
-export { type AcpLifecycleMapper, createAcpLifecycleMapper } from "./mapper.js";
-export { type AcpEventMapper, type AcpEventMapperOptions, createAcpEventMapper } from "./mapper.js";
+export { type AcpSessionStore, type PersistedAcpRunRef, type PersistedAcpSession, validateActiveRunRef } from "./session-store.js";
 export {
   type AcpClientTerminal,
   type AcpClientTerminals,

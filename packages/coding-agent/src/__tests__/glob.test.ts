@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import { createCodingTools, createGlobTool, createReadOnlyTools } from "../index.js";
 import { expandGlobBraces, matchGlobPattern, validateGlobPattern } from "../glob-match.js";
+import { createCodingTools, createGlobTool, createReadOnlyTools } from "../index.js";
 import { createLocalRepositoryOperations } from "../repository.js";
 
 let counter = 0;

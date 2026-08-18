@@ -7,8 +7,8 @@ import {
   assertSerializedRequestCoversContent,
   assertToolCallDeltasReconstruct,
 } from "@arnilo/prism/testing/provider-conformance";
-import { createOpenAIFileUploadManager } from "../uploads.js";
 import { createOpenAIProviderPackage, createOpenAIResponsesProvider, listOpenAIModels, mapOpenAIModel } from "../index.js";
+import { createOpenAIFileUploadManager } from "../uploads.js";
 
 const request: ProviderRequest = {
   model: { provider: "openai", model: "gpt-5.1" },

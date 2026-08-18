@@ -1,10 +1,10 @@
 # Prism Adoption Issues — Bug Reports and Feature Requests
 
-Upstream feedback for [ashiqrniloy/prism](https://github.com/ashiqrniloy/prism), prepared during the Clay coding-agent/ACP adoption evaluation. Each item is written so it can be filed directly as a GitHub issue.
+Upstream feedback for [ashiqrniloy/prism](https://github.com/ashiqrniloy/prism), prepared during a coding-agent/ACP adoption evaluation. Each item is written so it can be filed directly as a GitHub issue.
 
-- **Evaluated versions**: `@arnilo/prism` and all first-party packages at **0.2.6** (npm latest; repo `main` is 0.2.7-dev), `@agentclientprotocol/sdk@1.3.0` (pinned regular dependency of `@arnilo/prism-ag-ui`), official Rust crate `agent-client-protocol@2.0.0` on the Clay side.
+- **Evaluated versions**: `@arnilo/prism` and all first-party packages at **0.2.6** (npm latest; repo `main` is 0.2.7-dev), `@agentclientprotocol/sdk@1.3.0` (pinned regular dependency of `@arnilo/prism-ag-ui`), official Rust crate `agent-client-protocol@2.0.0` on the client side.
 - **Scope**: `@arnilo/prism` core, `@arnilo/prism-coding-agent`, `@arnilo/prism-coding-security`, `@arnilo/prism-ag-ui` (especially the `/acp` subpath), `@arnilo/prism-mcp`, `@arnilo/prism-session-store-sqlite`.
-- **Context**: Clay is an editor that will run Prism as an external ACP agent over stdio JSON-RPC, using the official ACP client crates. Nothing below blocks the Phase 0 spike; B1–B4 and F1–F3 shape Clay's UI contracts and should land before editor integration.
+- **Context**: The client is an editor that will run Prism as an external ACP agent over stdio JSON-RPC, using the official ACP client crates. Nothing below blocks the Phase 0 spike; B1–B4 and F1–F3 shape the client's UI contracts and should land before editor integration.
 
 ## Bugs
 
@@ -46,7 +46,7 @@ Upstream feedback for [ashiqrniloy/prism](https://github.com/ashiqrniloy/prism),
 
 ## Feature requests
 
-Ordered by value to Clay (the ACP-client editor).
+Ordered by value to the ACP-client editor.
 
 ### F1 — Map thinking/reasoning content to `agent_thought_chunk`
 
@@ -98,7 +98,7 @@ Ordered by value to Clay (the ACP-client editor).
 ### F10 — Windows sandbox backend (tracking)
 
 - **Package**: `@arnilo/prism-coding-security`
-- **Request**: `createNativeSandbox` fails closed outside Linux. Tracking request only: Clay targets Windows long-term; a Windows sandbox backend (Job objects / AppContainer) or a documented Docker fallback policy would let Windows agent hosts keep `shell` enabled instead of deny-by-default.
+- **Request**: `createNativeSandbox` fails closed outside Linux. Tracking request only: the client targets Windows long-term; a Windows sandbox backend (Job objects / AppContainer) or a documented Docker fallback policy would let Windows agent hosts keep `shell` enabled instead of deny-by-default.
 
 ## Verified non-issues (no report needed)
 

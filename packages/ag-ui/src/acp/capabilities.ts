@@ -10,7 +10,8 @@
  * mcpCapabilities.acp, sessionCapabilities.fork, auth, providers, nes,
  * positionEncoding — all UNSTABLE v2 surface, never advertised in 0.0.27.
  */
-import type { AgentCapabilities, ClientCapabilities, McpServer } from "@agentclientprotocol/sdk";
+import type { AgentCapabilities, ClientCapabilities, ContentBlock, McpServer } from "@agentclientprotocol/sdk";
+import type { SessionEntry } from "@arnilo/prism";
 import type { AcpSessionBinding } from "./agent.js";
 
 /** One row of `session/list`; maps onto SDK `SessionInfo` (cwd is schema-required). */
@@ -46,11 +47,29 @@ export interface AcpSessionStoreSeams {
     readonly cwd: string;
     readonly signal: AbortSignal;
   }) => AcpSessionBinding | Promise<AcpSessionBinding>;
+  /** F2: optional transcript source. When present, `session/load` and `session/resume`
+   *  replay bounded, redacted `user_message_chunk`/`agent_message_chunk` text updates
+   *  (≤ `maxReplayEvents` chunks, each ≤ `maxTextBytes`) before returning `sessionState`.
+   *  Absent seam = no replay, behavior unchanged. */
+  readonly transcript?: (input: {
+    readonly sessionId: string;
+    readonly signal: AbortSignal;
+  }) => readonly SessionEntry[] | Promise<readonly SessionEntry[]>;
   /** Policy seam: returns the allowed subset of requested additional directories (order preserved). */
   readonly additionalDirectories?: (input: {
     readonly directories: readonly string[];
     readonly signal: AbortSignal;
   }) => readonly string[] | Promise<readonly string[]>;
+  /** F6: host-owned session title (e.g., a first-prompt summary). Resolved on
+   *  `session/new` (when a prompt is present) and `session/prompt`; a defined
+   *  value that differs from the last emitted title produces `session_info_update`.
+   *  Best-effort: `undefined` or a throw means no title and no update — the
+   *  request never fails on title resolution. The host owns title storage. */
+  readonly title?: (input: {
+    readonly sessionId: string;
+    readonly prompt?: readonly ContentBlock[];
+    readonly signal: AbortSignal;
+  }) => string | undefined | Promise<string | undefined>;
 }
 
 /** MCP seams. `mcpCapabilities.{http,sse}` are advertised per transport only when `select` is present. */
@@ -61,6 +80,34 @@ export interface AcpMcpSeams {
   readonly transports?: readonly ("http" | "sse")[];
 }
 
+/** Host-reported context window for truthful `usage_update` (B1). Absent/undefined/throw => the update is omitted. */
+export interface AcpUsageSeam {
+  /**
+   * Return the model's context window in tokens. `model` is the provider model id
+   * from the finished turn's metadata. `undefined` (or a throw) omits the update
+   * entirely — the mapper never fabricates `size`.
+   */
+  readonly contextWindow?: (input: {
+    readonly model?: string;
+    readonly signal: AbortSignal;
+  }) => number | undefined | Promise<number | undefined>;
+}
+
+/** One slash command advertised to the client (F9). Maps onto SDK `AvailableCommand`. */
+export interface AcpCommand {
+  readonly name: string;
+  readonly description: string;
+  readonly input?: { readonly hint: string };
+}
+
+/** Host-owned slash-command list (F9). Absent seam ⇒ no `available_commands_update`. */
+export interface AcpCommandsSeam {
+  readonly list: (input: {
+    readonly sessionId: string;
+    readonly signal: AbortSignal;
+  }) => readonly AcpCommand[] | Promise<readonly AcpCommand[]>;
+}
+
 /** Capability policy seams that do not own protocol handlers. */
 export interface AcpCapabilitiesOptions {
   readonly prompt?: {
@@ -69,6 +116,8 @@ export interface AcpCapabilitiesOptions {
     /** Present => `promptCapabilities.embeddedContext` is advertised. */
     readonly embedded?: (input: { readonly signal: AbortSignal }) => boolean | Promise<boolean>;
   };
+  /** Present => `usage_update` carries the host-reported context window; absent => the update is omitted. */
+  readonly usage?: AcpUsageSeam;
 }
 
 /** The subset of agent options that drives capability advertisement. */
@@ -115,6 +164,8 @@ export interface ResolvedAcpClientCapabilities {
   readonly terminal: boolean;
   readonly configOptionBoolean: boolean;
   readonly elicitation: boolean;
+  /** UNSTABLE plan surface (F5): plan_update/plan_removed only for advertising clients. */
+  readonly plan: boolean;
 }
 
 export function resolveAcpClientCapabilities(client?: ClientCapabilities): ResolvedAcpClientCapabilities {
@@ -124,5 +175,6 @@ export function resolveAcpClientCapabilities(client?: ClientCapabilities): Resol
     terminal: client?.terminal ?? false,
     configOptionBoolean: client?.session?.configOptions?.boolean != null,
     elicitation: client?.elicitation != null,
+    plan: client?.plan != null,
   };
 }

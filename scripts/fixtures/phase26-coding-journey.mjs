@@ -29,11 +29,12 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { createServer } from "node:http";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import {
   createAgent,
   createAgentRunLifecycle,
@@ -44,6 +45,8 @@ import {
   dispatchToolCall,
 } from "@arnilo/prism";
 import { collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
+import { ACP_RUN_CANCEL_NAMESPACE, createAcpRunRecovery, createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
+import { createBrowserManager, createBrowserTools } from "@arnilo/prism-browser";
 import {
   assertCodingPatchAccepted,
   createCodingCheckTool,
@@ -59,11 +62,8 @@ import {
   normalizeDiagnostics,
 } from "@arnilo/prism-coding-agent";
 import { createCodingApprovalPolicy, createDockerSandbox } from "@arnilo/prism-coding-security";
-import { createPrismAcpAgent, createAcpRunRecovery, ACP_RUN_CANCEL_NAMESPACE } from "@arnilo/prism-ag-ui/acp";
 import { createArtifactService } from "@arnilo/prism-server";
 import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres";
-import { createBrowserManager, createBrowserTools } from "@arnilo/prism-browser";
-import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 
 const env = process.env;
 const suffix = env.PRISM_JOURNEY_SUFFIX ?? `j${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;

@@ -1,5 +1,5 @@
-import type { JsonObject, Skill, SkillRegistry, ToolDefinition, ToolExecutionContext, ToolResult } from "./contracts.js";
 import { estimateTextBytes } from "./context-budget.js";
+import type { JsonObject, Skill, SkillRegistry, ToolDefinition, ToolExecutionContext, ToolResult } from "./contracts.js";
 import { HARD_MAX_SKILL_INSTRUCTION_BYTES, type LoadedSkillSet } from "./skill-disclosure.js";
 
 export const DEFAULT_LOAD_SKILL_TOOL_NAME = "load_skill" as const;

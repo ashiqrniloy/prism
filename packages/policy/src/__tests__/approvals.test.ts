@@ -3,15 +3,15 @@ import { describe, it } from "node:test";
 import type { AgentIdentity } from "@arnilo/prism";
 import {
   APPROVAL_HARD_LIMITS,
-  createMemoryApprovalStore,
-  evaluateApproval,
-  PolicyError,
-  prepareApprovalDecision,
   type ApprovalActorRef,
   type ApprovalAuthority,
   type ApprovalRecord,
   type ApprovalRoleGrant,
   type ApprovalStore,
+  createMemoryApprovalStore,
+  evaluateApproval,
+  PolicyError,
+  prepareApprovalDecision,
 } from "../index.js";
 
 const NOW = Date.parse("2026-08-17T00:00:00.000Z");

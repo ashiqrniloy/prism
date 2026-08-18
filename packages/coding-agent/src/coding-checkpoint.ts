@@ -10,6 +10,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import type { JsonObject } from "@arnilo/prism";
 import { sha256Hex } from "./artifacts.js";
+import type { CodingLifecycleEvent } from "./lifecycle.js";
 import {
   DEFAULT_MAX_CHECK_SUMMARY_BYTES,
   DEFAULT_MAX_CODING_ARTIFACT_BYTES,
@@ -290,6 +291,8 @@ export async function writeCodingPlanFile(input: {
   readonly planPath: string;
   readonly markdown: string;
   readonly limits?: CodingCheckpointLimitOptions;
+  /** F5: advisory plan event (telemetry — never throws into the write path). */
+  readonly onEvent?: (event: CodingLifecycleEvent) => void;
 }): Promise<CodingArtifactRef> {
   const limits = resolveCodingCheckpointLimits(input.limits);
   assertByteLimit("plan", input.markdown, limits.maxPlanBytes);
@@ -297,6 +300,17 @@ export async function writeCodingPlanFile(input: {
   await mkdir(dirname(absolute), { recursive: true });
   const bytes = Buffer.from(input.markdown, "utf8");
   await writeFile(absolute, bytes, { mode: 0o600 });
+  if (input.onEvent) {
+    try {
+      input.onEvent({
+        type: "plan_changed",
+        planPath: input.planPath,
+        todos: parseCodingPlanTodos(input.markdown, limits),
+      });
+    } catch {
+      // Telemetry must never fail a successful plan write.
+    }
+  }
   return createCodingArtifactRef({
     kind: "plan",
     uri: `file://${absolute}`,

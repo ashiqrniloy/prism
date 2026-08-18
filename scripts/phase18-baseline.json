@@ -1,5 +1,5 @@
 {
-  "$comment": "0.1.6 Task 0 baseline evidence (plan 018, 2026-08-11): captured at HEAD fc914aa (signed v0.1.5 tag) with all five closeouts deferred. Seam hashes are the pre-change truth for the phase-18 state machine: while a closeout's task is pending its allowed files must stay byte-identical; a deferred closeout's files are immutable until demand evidence lands in phase18-freeze-manifest.json. The closeout inventory mirrors the manifest (same ids/tasks/status). exitGate records the Task 7 0.1.6 evidence once Tasks 1-7 land.",
+  "$comment": "0.1.6 Task 0 baseline evidence (plan 018, 2026-08-11): captured at HEAD fc914aa (signed v0.1.5 tag) with all five closeouts deferred. Seam hashes are the pre-change truth for the phase-18 state machine: while a closeout's task is pending its allowed files must stay byte-identical; a deferred closeout's files are immutable until demand evidence lands in phase18-freeze-manifest.json. The closeout inventory mirrors the manifest (same ids/tasks/status). exitGate records the Task 7 0.1.6 evidence once Tasks 1-7 land. [2026-08-18] manifestCount refreshed 49->50 workspace / 50->51 publishable: plan 028 shipped the spawnable ACP agent package @arnilo/prism-acp-agent.",
   "captured": "2026-08-11",
   "release": "0.1.5",
   "node": "v24.18.0",
@@ -31,15 +31,15 @@
     "result": "green; compat baseline exists at 0.1.5, 0 breaking declaration deltas"
   },
   "manifestCount": {
-    "publishable": 49,
-    "workspacePackages": 48,
+    "publishable": 50,
+    "workspacePackages": 49,
     "rootPackage": "@arnilo/prism",
     "categories": {
       "provider": 14,
       "prism": 9,
-      "capability": 25
+      "capability": 26
     },
-    "canonicalStatement": "49 publishable manifests = root @arnilo/prism + 48 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 25 capability packages); a shipped doc-reader closeout grows this to 50 = root + 49 workspace",
+    "canonicalStatement": "50 publishable manifests = root @arnilo/prism + 49 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 26 capability packages; the 0.1.6 plan 018 doc-reader closeout adds @arnilo/prism-document-reader when demanded, 49 -> 50)",
     "regenerate": "ls -d packages/*/ | wc -l ; ls -d packages/provider-*/ | wc -l ; ls -d packages/prism-*/ | wc -l"
   },
   "closeouts": [

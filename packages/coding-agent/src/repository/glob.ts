@@ -1,5 +1,8 @@
 /** Repository glob family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from repository.ts; public surface unchanged behind the barrel. */
+
+import { lstat } from "node:fs/promises";
+import { expandGlobBraces, matchGlobPattern, validateGlobPattern } from "../glob-match.js";
 import {
   HARD_MAX_REPO_DEPTH,
   HARD_MAX_REPO_ENTRIES,
@@ -7,12 +10,10 @@ import {
   validateCodingLimit,
   validateCodingLimitAllowZero,
 } from "../limits.js";
-import { expandGlobBraces, matchGlobPattern, validateGlobPattern } from "../glob-match.js";
-import { lstat } from "node:fs/promises";
+import { resolveRepoPath } from "./path.js";
 import type { RepositoryGlobRequest, RepositoryGlobResult, ResolvedRepositoryLimits } from "./types.js";
 import { RepositoryError } from "./types.js";
 import type { RepositoryWalk } from "./walk.js";
-import { resolveRepoPath } from "./path.js";
 
 export async function globLocal(
   request: RepositoryGlobRequest,

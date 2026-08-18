@@ -5,10 +5,10 @@ import type {
   A2AAgentEventTask,
   A2AAuthorization,
   A2AAuthorizer,
+  A2ALimits,
   A2AMessage,
   A2APartPolicy,
   A2APushProvider,
-  A2ALimits,
   A2ATask,
   A2ATaskEvent,
   A2ATaskEventPayload,
@@ -16,8 +16,8 @@ import type {
   A2ATextPart,
   ResolvedA2ALimits,
 } from "@arnilo/prism-supervisor";
-import { createAgUiEventMapper, truncateUtf8 } from "./ag-ui-mapper.js";
 import type { AgUiA2UiOptions } from "./a2ui.js";
+import { createAgUiEventMapper, truncateUtf8 } from "./ag-ui-mapper.js";
 import { AgUiError } from "./errors.js";
 import type { AgUiInputOptions, AgUiPreparedInput } from "./handler.js";
 import { assertBoundedJson, defaultAgUiInput, type ParsedAgUiInput, parseAgUiInput } from "./input.js";

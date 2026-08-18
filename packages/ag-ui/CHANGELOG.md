@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.8] - 2026-08-18
+
+### Added
+- ACP adoption fixes (plan 028): `createCodingToolProjection`, image `toolResult`, slash-command seam, usage/title/transcript seams, `ERR_PRISM_ACP_RUN`, `acpImageBytes`/`acpCommandsPerUpdate`.
+
 ## [0.2.6] - unreleased
 
 ### Added
@@ -44,7 +49,7 @@
 - Elicitation (Phase 10): when the client advertised `elicitation` at initialize and the suspension is an all-elicitation batch, each pending decision surfaces as `elicitation/create` (form mode, bounded schema + redacted reason); accept carries the typed payload as `RunDecision.elicitation`, decline/cancel/errors deny (`reject_once`) — no widening of the approval vocabulary. Without the advertisement, elicitation decisions stay on the shared approval path (four options). Permission parity unchanged and locked by existing tests: four-outcome mapping, sticky `allow_for_run`/`reject_for_run`, cancel → deny, unrecognized ids deny.
 - Conformance, smoke, example, benchmarks (Phase 10): `scripts/phase10-conformance.test.mjs` (in `npm test`) runs a composed scenario (initialize matrix, session/new with dirs+MCP+modes+config, fs/terminal client methods, lifecycle updates, four-outcome permission, mode/config switches, duplicate-resume rejection, reconnect load/resume, list paging, delete) plus adversarial cases (unadvertised methods → method-not-found, UNSTABLE acp MCP transport, host select denial, oversize config, garbage cursor, unknown mode, oversize media, secret redaction) over the real `@arnilo/prism-ag-ui/acp` subpath. `scripts/acp-client-smoke.mjs` is an operator-gated real-transport smoke (`PRISM_TEST_ACP_CLIENT=1`; fails closed without it) that drives the agent over the SDK's ndJsonStream stdio transport — read-only prompt, one edit via `allow_once`, narrowing mode switch, reconnect load — with policy never disabled. `examples/acp-coding-host.ts` demonstrates the full host seam set (runs in the demo gate). `scripts/benchmark-0.0.27.mjs` records p95 for fs round trip, terminal chunk ack, mode switch, prompt first update, and prompt end; `scripts/budgets.json` gains the `phase10` section (freeze p95Targets) and `budget-gate.test.mjs` checks the recorded `scripts/benchmark-0.0.27.json` evidence.
 - Documentation (Phase 10): new `docs/acp.md` is the full ACP coding-host reference (seam = capability, event mapping table, caps, security); `docs/ag-ui.md` shrinks ACP to a summary + link; `docs/migration.md` gains the 0.0.26 → 0.0.27 section; `docs/index.md` lists ACP under frontend interoperability; `docs/agent-events.md`, `docs/coding-agent-tools.md`, `docs/coding-security.md`, `docs/mcp-tools.md`, `docs/host-security.md` gain ACP pointers; package README ACP section updated.
-- A2UI renderer core values exported from the `@arnilo/prism-ag-ui/renderer` subpath entry (Synapta FR): `A2UiSurfaceState`, `reduceA2UiOps`, `readA2UiBatch`, `resolvePointer`, `A2UI_VERSION` — framework hosts can drive the validated DOM-free surface state machine without mounting a renderer or importing `dist/` directly; `createA2UiRenderer` behavior and the frozen A2UI limits unchanged.
+- A2UI renderer core values exported from the `@arnilo/prism-ag-ui/renderer` subpath entry (host FR): `A2UiSurfaceState`, `reduceA2UiOps`, `readA2UiBatch`, `resolvePointer`, `A2UI_VERSION` — framework hosts can drive the validated DOM-free surface state machine without mounting a renderer or importing `dist/` directly; `createA2UiRenderer` behavior and the frozen A2UI limits unchanged.
 
 ## [0.0.26] - 2026-08-06
 

@@ -6,17 +6,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  client,
-  methods,
-  PROTOCOL_VERSION,
   type AgentContext,
+  client,
   type ListSessionsRequest,
   type ListSessionsResponse,
   type McpServer,
+  methods,
+  PROTOCOL_VERSION,
 } from "@agentclientprotocol/sdk";
 import type { AgentRunLifecycle, AgentSession } from "@arnilo/prism";
-import { createPrismAcpAgent, type AcpAuthorization, type AcpCodingSeams, type CreatePrismAcpAgentOptions } from "../acp/index.js";
 import type { AcpMcpSeams, AcpSessionStoreSeams } from "../acp/index.js";
+import { type AcpAuthorization, type AcpCodingSeams, type CreatePrismAcpAgentOptions, createPrismAcpAgent } from "../acp/index.js";
 import type { AgUiLimitOptions } from "../limits.js";
 
 const authorization = { ownership: { userId: "user-1" } };

@@ -8,21 +8,20 @@
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { createMemoryCheckpointStore, createMemoryLeaseStore } from "@arnilo/prism";
 import type { CheckpointStore, LeaseStore } from "@arnilo/prism";
-import type { GitFingerprint, GitOperations, GitWorktreeEntry } from "../git.js";
-import type { ArtifactReference } from "../git.js";
-import {
-  WORKSPACE_NAMESPACE,
-  WORKSPACE_LOCK_REASON_PREFIX,
-  WorkspaceError,
-  createCodingWorkspaceLifecycle,
-} from "../workspace-lifecycle.js";
+import { createMemoryCheckpointStore, createMemoryLeaseStore } from "@arnilo/prism";
+import type { ArtifactReference, GitFingerprint, GitOperations, GitWorktreeEntry } from "../git.js";
 import type { CodingWorkspaceRecord, WorkspaceRepositoryRegistration } from "../workspace-lifecycle.js";
+import {
+  createCodingWorkspaceLifecycle,
+  WORKSPACE_LOCK_REASON_PREFIX,
+  WORKSPACE_NAMESPACE,
+  WorkspaceError,
+} from "../workspace-lifecycle.js";
 
 interface FakeWorktree extends GitWorktreeEntry {
   dirExists: boolean;

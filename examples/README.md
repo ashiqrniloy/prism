@@ -133,7 +133,7 @@ Each demo prints a single JSON line with its result.
   status/view commands; recall fails closed on invalid ids.
 - `observational-memory-lifecycle.ts` — **demo**: `createObservationalMemory().attach()` →
   turn → projection/recall/branch page (mock workers, no network).
-- `synapta-style-artifact-loop.ts` — **demo**: third-party host mixing first-party
+- `host-artifact-loop.ts` — **demo**: third-party host mixing first-party
   and own providers/tools/skills, `AGENTS.md`/`SYSTEM.md` system prompts, and the
   `generate-validate-revise` artifact loop with host-owned schema validation.
 - `external-app-db-backed.ts` — **demo**: end-to-end external app with a DB-backed

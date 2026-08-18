@@ -1,9 +1,9 @@
 import {
+  type AgentIdentity,
   createMemoryAgentEventSource,
   createMemoryToolEffectStore,
   createToolRegistry,
   dispatchToolCall,
-  type AgentIdentity,
   type OwnershipScope,
   type ToolDefinition,
   type ToolResult,

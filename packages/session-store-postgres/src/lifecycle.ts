@@ -11,8 +11,8 @@ import {
   assertOwnershipRequired,
   assertOwnershipScope,
   assertHoldReason as assertReason,
-  lifecyclePageLimit as pageLimit,
   ownershipScope as ownership,
+  lifecyclePageLimit as pageLimit,
   rowToTenantQuota as rowToQuota,
 } from "@arnilo/prism-session-store-codecs";
 import type { Pool } from "pg";

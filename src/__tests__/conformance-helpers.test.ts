@@ -14,8 +14,8 @@ import type {
 import {
   createDefaultCompactionStrategy,
   createMemoryAgentEventSource,
-  createMemoryToolEffectStore,
   createMemorySessionStore,
+  createMemoryToolEffectStore,
   createToolRegistry,
   SESSION_APPEND_CONFLICT_CODE,
   SessionAppendConflictError,

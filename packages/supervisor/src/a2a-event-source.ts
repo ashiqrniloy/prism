@@ -1,6 +1,6 @@
 import type { AgentEventSource, AgentRunRef, DurableAgentEventRecord } from "@arnilo/prism";
-import { A2AError } from "./errors.js";
 import type { A2AAuthorization, A2ATask, A2ATaskEvent } from "./a2a-types.js";
+import { A2AError } from "./errors.js";
 
 export type A2ATaskEventPayload =
   | { readonly task: A2ATask }

@@ -1,19 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { loadAgentRunState } from "../agent-run-state.js";
 import {
   AgentLoopStateError,
+  type AgentLoopStrategy,
   agentFingerprint,
   createAgent,
   createMemoryCheckpointStore,
   createMemorySessionStore,
+  type JsonValue,
   providerDone,
   providerTextDelta,
   resumeAgentRun,
   toolCallContent,
-  type AgentLoopStrategy,
-  type JsonValue,
 } from "../index.js";
-import { loadAgentRunState } from "../agent-run-state.js";
 
 /** Minimal custom loop: one provider turn, dispatch any calls, one more provider turn. */
 function customLoop(hooks: boolean, state: { turns: number; restored?: JsonValue }): AgentLoopStrategy {

@@ -1,8 +1,8 @@
 /** respond (0.2.5 plan 025 Task 1 split). Moved verbatim from handler.ts; public surface unchanged behind the barrel. */
 import { AgentRunStateError } from "@arnilo/prism";
+import type { ResolvedPrismServerLimits } from "../limits.js";
 import type { CreatePrismHandlerOptions } from "../types.js";
 import { PrismServerError } from "../types.js";
-import type { ResolvedPrismServerLimits } from "../limits.js";
 import { JSON_HEADERS } from "./consts.js";
 
 export function json(value: unknown, status: number, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions): Response {

@@ -1,6 +1,6 @@
 export {
-  createNatsAgentEventSource,
   type ClosableNatsAgentEventSource,
+  createNatsAgentEventSource,
   type NatsAgentEventSourceOptions,
 } from "./event-source.js";
 export {

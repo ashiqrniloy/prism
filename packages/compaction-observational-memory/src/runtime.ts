@@ -18,9 +18,9 @@ import {
 import { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
 import { type MemoryWorkerLimitOptions, type ResolvedMemoryWorkerLimits, resolveMemoryWorkerLimits, truncateWorkerText } from "./limits.js";
 import {
+  assertNoRemovedFlatKeys,
   type ObservationalMemorySettings,
   type ObservationalMemorySettingsInput,
-  assertNoRemovedFlatKeys,
   resolveObservationalMemorySettings,
 } from "./settings.js";
 import { OBSERVATIONS_DROPPED, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED } from "./types.js";

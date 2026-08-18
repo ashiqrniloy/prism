@@ -1,5 +1,5 @@
 {
-  "$comment": "Task 0 freeze for plan 027. Environment names only; no credentials or connection-string values. Future tasks must amend this manifest before changing frozen scope.",
+  "$comment": "Task 0 freeze for plan 027. Environment names only; no credentials or connection-string values. Future tasks must amend this manifest before changing frozen scope. [2026-08-18] packageBudget refreshed for the 0.2.8 tree: plan 028 adds @arnilo/prism-acp-agent (newPackages 1); its three runtime deps reuse existing dependency names (newRuntimeDependencyNames 0).",
   "release": "0.2.7",
   "line": "0.2.x",
   "type": "enterprise-erp-production-readiness",
@@ -24,14 +24,14 @@
     "task10": "done"
   },
   "packageBudget": {
-    "publishable": 50,
-    "workspace": 49,
+    "publishable": 51,
+    "workspace": 50,
     "rootRuntimeDependencies": 0,
-    "runtimeDependencyEntries": 65,
-    "workspaceRuntimeEdges": 52,
-    "lockfilePackageEntries": 345,
+    "runtimeDependencyEntries": 69,
+    "workspaceRuntimeEdges": 55,
+    "lockfilePackageEntries": 347,
     "newRuntimeDependencyNames": 0,
-    "newPackages": 0
+    "newPackages": 1
   },
   "compatPolicy": {
     "additiveOnly": true,
@@ -367,7 +367,7 @@
       "prompt_4164": {
         "policyMs": 112.81,
         "baselineMs": 113.94,
-        "pct": 99.0
+        "pct": 99
       },
       "toolArguments_2114": {
         "policyMs": 87.33,
@@ -382,7 +382,7 @@
       "artifactMetadata_3692": {
         "policyMs": 102.58,
         "baselineMs": 103.65,
-        "pct": 99.0
+        "pct": 99
       },
       "auditRecord_4243": {
         "policyMs": 115.33,
@@ -397,7 +397,7 @@
       "exportPage100_10726": {
         "policyMs": 86.17,
         "baselineMs": 87.97,
-        "pct": 98.0
+        "pct": 98
       }
     },
     "peakPct": 99.8,

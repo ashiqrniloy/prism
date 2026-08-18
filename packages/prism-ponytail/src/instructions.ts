@@ -1,6 +1,6 @@
-import type { UpstreamPonytailInstructions } from "./upstream-hooks.js";
 import type { PonytailMode } from "./types.js";
 import { MAX_INJECTED_INSTRUCTION_BYTES } from "./upstream.js";
+import type { UpstreamPonytailInstructions } from "./upstream-hooks.js";
 
 export function buildPonytailInstructions(api: UpstreamPonytailInstructions, mode: PonytailMode): string | undefined {
   if (mode === "off") return undefined;

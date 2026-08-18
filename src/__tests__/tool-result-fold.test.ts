@@ -4,12 +4,12 @@ import {
   assembleProviderInput,
   DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS,
   DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES,
-  foldToolResultHistory,
   foldedToolResultHeader,
-  resolveToolResultFold,
-  TOOL_RESULT_FOLD_TURN_METADATA_KEY,
+  foldToolResultHistory,
   type Message,
   type ModelConfig,
+  resolveToolResultFold,
+  TOOL_RESULT_FOLD_TURN_METADATA_KEY,
   type ToolResult,
 } from "../index.js";
 

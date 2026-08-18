@@ -18,8 +18,8 @@ import {
   createSandboxCodingTools,
   createSandboxReadOnlyComposition,
   createSandboxReadOnlyTools,
-  resolveSandboxCapabilities,
   type DisposableSandbox,
+  resolveSandboxCapabilities,
   type SandboxAdapter,
   SandboxCodingCompositionError,
 } from "../index.js";

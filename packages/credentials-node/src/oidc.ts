@@ -24,8 +24,8 @@ import {
   IdentityError,
   type IdentityLimits,
   type IdentityVerifier,
-  pinnedFetch,
   type Principal,
+  pinnedFetch,
   resolveIdentityLimits,
   type SsrfPolicy,
 } from "@arnilo/prism";

@@ -56,7 +56,7 @@ npm install @arnilo/prism @arnilo/prism-provider-openai    # core + one provider
 npm install @arnilo/prism-base                              # core + compaction + validation
 npm install @arnilo/prism-code @arnilo/prism-provider-openai # coding-agent profile
 npm install @arnilo/prism-sdk @arnilo/prism-provider-openai  # application profile
-npm install @arnilo/prism-all                               # broad umbrella (20 direct / 43 transitive packages)
+npm install @arnilo/prism-all                               # broad umbrella (21 direct / 44 transitive packages)
 npm install @arnilo/prism-server @arnilo/prism-workflows    # optional Web API boundary
 npm install @arnilo/prism-supervisor                         # optional local delegation + A2A 1.0
 npm install @arnilo/prism-web-tools                          # optional bounded Brave/Exa/Firecrawl research
@@ -183,7 +183,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-base` | profile: core + compaction + JSON Schema validation |
 | `@arnilo/prism-code` | profile: base + coding tools/security + MCP |
 | `@arnilo/prism-sdk` | profile: base + workflows + MCP + credentials + OpenTelemetry |
-| `@arnilo/prism-all` | broad umbrella: 20 first-party packages (43 transitive) across runtime, capability, provider, and persistence — omits document-reader, OpenAPI tools, NATS, Caveman, and Ponytail |
+| `@arnilo/prism-all` | broad umbrella: 21 first-party packages (44 transitive) across runtime, capability, provider, and persistence — omits document-reader, OpenAPI tools, NATS, Caveman, and Ponytail |
 
 ## Scripts
 

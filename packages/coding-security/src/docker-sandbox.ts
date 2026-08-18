@@ -11,6 +11,7 @@ import {
   dockerOutputText,
   runDockerCli,
 } from "./docker-cli.js";
+import { type EgressAttestation, EgressError } from "./egress/index.js";
 import type {
   DisposableSandbox,
   SandboxCapabilities,
@@ -23,7 +24,6 @@ import type {
 } from "./sandbox.js";
 import { type DockerSandboxLimitOptions, type ResolvedDockerSandboxLimits, resolveDockerSandboxLimits } from "./sandbox-limits.js";
 import { createImportTarStream, SandboxTarError, summarizeTarStream } from "./sandbox-tar.js";
-import { EgressError, type EgressAttestation } from "./egress/index.js";
 
 const IMAGE_DIGEST_RE = /@sha256:[a-f0-9]{64}$/i;
 const ENV_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;

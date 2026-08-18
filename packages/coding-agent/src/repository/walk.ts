@@ -1,11 +1,11 @@
 /** Repository walk family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from repository.ts; public surface unchanged behind the barrel. */
 import type { Dir, Dirent } from "node:fs";
-import { join } from "node:path";
 import { lstat, opendir } from "node:fs/promises";
+import { join } from "node:path";
+import { assertDeadline, assertNotAborted, isPathInsideRoot, kindFromDirent, shouldSkipName, toRepoRelative } from "./path.js";
 import type { RepoListEntry } from "./types.js";
 import { RepositoryError } from "./types.js";
-import { assertDeadline, assertNotAborted, isPathInsideRoot, kindFromDirent, shouldSkipName, toRepoRelative } from "./path.js";
 
 export interface RepositoryWalkLimits {
   maxDepth: number;

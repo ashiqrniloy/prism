@@ -14,25 +14,26 @@
  * canonicalized and containment-checked under host-approved roots; remote
  * identity is stored as a credential-free fingerprint, never a URL.
  */
+
+import { createHash } from "node:crypto";
 import { access, realpath } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import type { ArtifactReference, GitOperations } from "./git.js";
 import {
-  HARD_MAX_CODING_ARTIFACTS,
-  HARD_MAX_WORKSPACE_CLEANUP_OPERATIONS,
-  HARD_MAX_WORKSPACE_LEASE_TTL_MS,
-  HARD_MAX_WORKSPACE_RECORD_BYTES,
-  HARD_MAX_WORKSPACE_REPOSITORIES,
-  HARD_MAX_WORKSPACE_WORKTREES,
   DEFAULT_MAX_CODING_ARTIFACTS,
   DEFAULT_MAX_WORKSPACE_CLEANUP_OPERATIONS,
   DEFAULT_MAX_WORKSPACE_LEASE_TTL_MS,
   DEFAULT_MAX_WORKSPACE_RECORD_BYTES,
   DEFAULT_MAX_WORKSPACE_REPOSITORIES,
   DEFAULT_MAX_WORKSPACE_WORKTREES,
+  HARD_MAX_CODING_ARTIFACTS,
+  HARD_MAX_WORKSPACE_CLEANUP_OPERATIONS,
+  HARD_MAX_WORKSPACE_LEASE_TTL_MS,
+  HARD_MAX_WORKSPACE_RECORD_BYTES,
+  HARD_MAX_WORKSPACE_REPOSITORIES,
+  HARD_MAX_WORKSPACE_WORKTREES,
   validateCodingLimit,
 } from "./limits.js";
-import { createHash } from "node:crypto";
-import type { ArtifactReference, GitOperations } from "./git.js";
 
 /** Separate versioned namespace: never collides with coding checkpoint v1 keys. */
 export const WORKSPACE_NAMESPACE = "prism.coding-agent.workspace.v1" as const;

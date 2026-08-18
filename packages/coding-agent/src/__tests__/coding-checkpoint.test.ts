@@ -109,6 +109,35 @@ describe("coding plan markdown", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("emits plan_changed with the parsed todos when onEvent is wired (F5)", async () => {
+    const root = await mkdtemp(join(tmpdir(), "prism-coding-plan-"));
+    try {
+      const planPath = codingPlanPathForTask("task-1");
+      const markdown = createCodingPlanMarkdown({
+        title: "Durable plan",
+        taskId: "task-1",
+        todos: [
+          { id: "a", text: "Write plan", done: true },
+          { id: "b", text: "Verify" },
+        ],
+      });
+      const events: Array<{ type: string; planPath?: string; todos?: unknown }> = [];
+      await writeCodingPlanFile({ workspaceRoot: root, planPath, markdown, onEvent: (event) => events.push(event as never) });
+      assert.deepEqual(events, [
+        {
+          type: "plan_changed",
+          planPath,
+          todos: [
+            { id: "a", text: "Write plan", done: true },
+            { id: "b", text: "Verify", done: false },
+          ],
+        },
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("coding checkpoint metadata", () => {

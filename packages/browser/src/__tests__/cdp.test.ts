@@ -4,17 +4,17 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { BrowserError, createBrowserManager, resolveBrowserLimits, type CreateBrowserManagerOptions } from "../index.js";
 import {
   cdpAvailable,
-  createPageCdpSession,
   cdpEmulationClearDeviceMetrics,
   cdpEmulationSetDeviceMetrics,
   cdpEmulationSetUserAgent,
   cdpNetworkEmulateConditions,
   cdpNetworkSetBlockedUrls,
+  createPageCdpSession,
   resolveCdpMode,
 } from "../cdp.js";
+import { BrowserError, type CreateBrowserManagerOptions, createBrowserManager, resolveBrowserLimits } from "../index.js";
 import {
   DEFAULT_MAX_BLOCKED_URL_PATTERNS,
   DEFAULT_MAX_CONSOLE_ENTRIES,

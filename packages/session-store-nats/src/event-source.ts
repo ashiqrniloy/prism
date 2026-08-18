@@ -1,9 +1,9 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import {
-  AgentEventSourceError,
   type AgentEventEnvelope,
   type AgentEventRecord,
   type AgentEventSource,
+  AgentEventSourceError,
   type AgentEventSourceOptions,
   type AgentEventSourcePage,
   type AgentEventSourceRead,

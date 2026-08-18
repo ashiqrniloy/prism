@@ -14,15 +14,15 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { client, methods, PROTOCOL_VERSION, type ClientContext } from "@agentclientprotocol/sdk";
+import { type ClientContext, client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import type { AgentRunLifecycle, AgentSession, SecretRedactor } from "@arnilo/prism";
 import {
-  createPrismAcpAgent,
-  AcpError,
   type AcpConfigOptionsSeam,
+  AcpError,
   type AcpModesSeam,
   type AcpSessionStore,
   type CreatePrismAcpAgentOptions,
+  createPrismAcpAgent,
   type PersistedAcpSession,
 } from "../acp/index.js";
 import { validatePersistedSession } from "../acp/session-store.js";
@@ -65,6 +65,7 @@ function makeAgent(
   const configOptionsSeam: AcpConfigOptionsSeam = {
     options: [
       { type: "boolean", id: "verbose", name: "Verbose", defaultValue: false },
+      { type: "boolean", id: "quiet", name: "Quiet", defaultValue: false },
       {
         type: "select",
         id: "depth",
@@ -120,7 +121,7 @@ describe("ACP durable session store (phase 18 Task 2)", () => {
     assert.equal(store.saves.length, 3, "new + setMode + setConfigOption each persist");
     const entry = store.entries.get(sessionId)!;
     assert.equal(entry.modeId, "edit");
-    assert.deepEqual(entry.configValues, { verbose: true, depth: "shallow" });
+    assert.deepEqual(entry.configValues, { verbose: true, quiet: false, depth: "shallow" });
     assert.equal(entry.ownership.userId, "user-1");
     assert.equal(entry.cwd, "/w");
 
@@ -147,9 +148,9 @@ describe("ACP durable session store (phase 18 Task 2)", () => {
       await connection.request(methods.agent.session.setMode, { sessionId, modeId: "edit" });
       const updated = (await connection.request(methods.agent.session.setConfigOption, {
         sessionId,
-        configId: "depth",
-        type: "select",
-        value: "deep",
+        configId: "quiet",
+        type: "boolean",
+        value: true,
       })) as { configOptions: Array<{ id: string; currentValue: boolean | string }> };
       assert.deepEqual(
         updated.configOptions.find((o: { id: string }) => o.id === "verbose")?.currentValue,

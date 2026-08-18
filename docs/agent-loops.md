@@ -232,7 +232,7 @@ await session.run(input, { loop: twoShotLoop });
 - `generateValidateReviseLoop` makes at most `1 + maxRevisions + maxToolRounds` provider turns when bounded tools are enabled (otherwise `maxRevisions + 1`); it cannot loop forever. Each revision costs one provider turn plus one store append.
 - Bounded artifact tool calls run sequentially through `dispatchToolCall` (permission + validation + execute); their assistant call and result are persisted before the next provider request. `singleShotLoop` retains its bounded parallel worker pool and original call-order transcript behavior.
 - The loop is a plain object/factory; no class hierarchy, no background work, no extra dependencies. `LoopContext` is a single object literal of bound arrows built once per run.
-- The Synapta-free boundary is guarded by tests: `src/` imports no `synapta*` package, and the `Artifact*`/`AgentLoop*`/`LoopContext` contracts contain no `workflow`/`node`/`step` field names. Hosts supply their own schema; no host domain type is imported by `src/`.
+- The host-domain-free boundary is guarded by tests: `src/` imports no host-domain package, and the `Artifact*`/`AgentLoop*`/`LoopContext` contracts contain no `workflow`/`node`/`step` field names. Hosts supply their own schema; no host domain type is imported by `src/`.
 
 ## Guardrails
 
@@ -241,7 +241,7 @@ Built-in loops and custom loops that use `LoopContext.generate()` / `LoopContext
 ## Related APIs
 - [Agent/session runtime](agent-session-runtime.md): `RuntimeAgentSession.run()` builds the `LoopContext` and delegates to the resolved loop.
 - [Agent events](agent-events.md): the `artifact_*` event variants and ordering emitted by `generateValidateReviseLoop`.
-- [Structured output](structured-output.md): the `ArtifactParser<T>`/`ArtifactValidator<T>`/`ArtifactRepairer<T>` seam (host-defined `T`, Prism never instantiates it) and a Synapta-style schema→`ArtifactValidation` mapping example.
+- [Structured output](structured-output.md): the `ArtifactParser<T>`/`ArtifactValidator<T>`/`ArtifactRepairer<T>` seam (host-defined `T`, Prism never instantiates it) and a host schema→`ArtifactValidation` mapping example.
 - [Public contracts](public-contracts.md): `AgentLoopStrategy`, `AgentLoopOptions`, `LoopContext`, `ProviderTurnResult`, and the `Artifact*` contracts.
 - [Input and prompt assembly](input-and-prompt-assembly.md): `assembleProviderInput()`, the primitive behind `LoopContext.assemble`.
 - [Tools](tools.md): `dispatchToolCall()`, the primitive behind `LoopContext.dispatchToolCall`.

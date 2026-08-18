@@ -7,15 +7,14 @@
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { type CodingCheckToolOptions, createCodingCheckTool, type NamedCheckDefinition } from "./checks.js";
 import {
-  classifyGitApplyEffect,
-  classifyGitBranchEffect,
-  classifyGitWorktreeEffect,
   CODING_LOCAL_EFFECT,
   CODING_OBSERVATION_EFFECT,
   CODING_UNSUPPORTED_EFFECT,
+  classifyGitApplyEffect,
+  classifyGitBranchEffect,
+  classifyGitWorktreeEffect,
 } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
-import type { CodingLifecycleEvent } from "./lifecycle.js";
 import {
   type ArtifactWriter,
   type CreateGitOperationsOptions,
@@ -24,6 +23,7 @@ import {
   type GitOperations,
   type PrHandoff,
 } from "./git.js";
+import type { CodingLifecycleEvent } from "./lifecycle.js";
 
 export interface GitToolsOptions {
   readonly executionPolicy?: ExecutionPolicy;

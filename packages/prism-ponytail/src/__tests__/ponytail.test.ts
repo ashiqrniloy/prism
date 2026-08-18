@@ -11,9 +11,9 @@ import { readPonytailConfig, writePonytailDefaultMode } from "../config.js";
 import { createPonytailExtension } from "../extension.js";
 import { buildPonytailInstructions } from "../instructions.js";
 import { PONYTAIL_MODE_TYPE, resolveModeFromEntries } from "../mode.js";
-import { PONYTAIL_SKILL_NAMES, loadUpstreamSkills } from "../skills.js";
-import { loadUpstreamHooks } from "../upstream-hooks.js";
+import { loadUpstreamSkills, PONYTAIL_SKILL_NAMES } from "../skills.js";
 import { MAX_CONFIG_FILE_BYTES } from "../upstream.js";
+import { loadUpstreamHooks } from "../upstream-hooks.js";
 
 const fixtureRoot = resolve(import.meta.dirname, "../../fixtures/upstream-full");
 const minimalRoot = resolve(import.meta.dirname, "../../fixtures/upstream-minimal");

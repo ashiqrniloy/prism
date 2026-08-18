@@ -26,9 +26,9 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 const url = (path) => new URL(path, import.meta.url);
 // Task 1 (0.2.5) split contracts-core.ts + agent-session.ts into a barrel + a sibling

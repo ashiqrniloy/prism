@@ -1,8 +1,8 @@
 /** Contracts-core session family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */
 import type { AgentEvent } from "../contracts-protocol.js";
-import type { OwnershipScope, PersistencePage, PersistenceQuery } from "./persistence.js";
 import type { Message, ModelConfig } from "./content.js";
+import type { OwnershipScope, PersistencePage, PersistenceQuery } from "./persistence.js";
 
 export type SessionEntryKind = "message" | "event" | "summary" | "metadata" | "model_change" | "label" | "custom" | "compaction";
 

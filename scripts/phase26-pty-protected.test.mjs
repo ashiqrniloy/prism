@@ -20,11 +20,11 @@
  * release profile; it is not part of `npm test`.
  */
 import assert from "node:assert/strict";
-import { pathToFileURL } from "node:url";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
+import { pathToFileURL } from "node:url";
 import { createProcessSessions } from "../packages/coding-agent/dist/index.js";
 
 const backendModule = process.env.PRISM_TEST_PTY_BACKEND;

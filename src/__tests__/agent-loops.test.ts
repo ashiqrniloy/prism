@@ -121,8 +121,27 @@ describe("agent loop strategies", () => {
       assert.equal(generateCalls, 2);
       assert.equal(toolResults.length, 1);
       assert.equal(toolResults[0]?.name, "echo");
+      // Natural end (no pending calls): no finish reason.
+      assert.equal(ctx.finishReason, undefined);
       assert.equal(ctx.history.filter((message) => message.role === "assistant").length, 2);
       assert.equal(ctx.history.filter((message) => message.role === "tool").length, 1);
+    });
+
+    it("records finishReason turn_limit when the tool-round ceiling ends the run (F4)", async () => {
+      const ctx = stubCtx({
+        input: "Hi",
+        maxToolRounds: 1,
+        generate: async () =>
+          ({
+            content: [{ type: "text", text: "calling" }],
+            calls: [toolCallContent("c1", "echo", {})],
+            messageId: "m1",
+            started: true,
+          }) as ProviderTurnResult,
+        dispatchToolCall: async (call) => ({ toolCallId: call.id, name: call.name, value: call.arguments }),
+      });
+      await singleShotLoop.run(ctx);
+      assert.equal(ctx.finishReason, "turn_limit");
     });
 
     it("keeps multi-round tool transcript chronological in history and requests", async () => {
@@ -358,6 +377,35 @@ describe("agent loop strategies", () => {
           "agent_finished",
         ],
       );
+      // Natural end: no finishReason on agent_finished.
+      const finishedEvent = events.at(-1);
+      assert.equal(finishedEvent?.type, "agent_finished");
+      if (finishedEvent?.type === "agent_finished") assert.equal(finishedEvent.finishReason, undefined);
+    });
+
+    it("emits agent_finished with finishReason turn_limit when maxToolRounds is exhausted (F4)", async () => {
+      let calls = 0;
+      const agent = createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider: {
+          id: "mock",
+          async *generate() {
+            calls += 1;
+            yield { type: "tool_call" as const, call: toolCallContent("c-loop", "echo", {}) };
+            yield providerDone();
+          },
+        },
+        tools: [{ name: "echo", parameters: { type: "object" }, execute: () => ({ toolCallId: "c-loop", name: "echo", value: {} }) }],
+        limits: { maxToolRounds: 1 },
+      });
+      const session = agent.createSession({ id: "s-turn-limit" });
+      const reader = collect(session.subscribe());
+      const result = await session.run("Hi");
+      const events = await reader;
+      assert.equal(result.status, "succeeded");
+      assert.equal(calls, 2, "one dispatch round, then the ceiling stops the run cleanly");
+      const finished = events.find((event): event is Extract<AgentEvent, { type: "agent_finished" }> => event.type === "agent_finished");
+      assert.equal(finished?.finishReason, "turn_limit");
     });
 
     it("uses ToolDefinition.exclusive to serialize a runtime turn", async () => {

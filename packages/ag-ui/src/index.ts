@@ -1,4 +1,11 @@
-export { type AgUiEventMapper, type AgUiEventMapperOptions, createAgUiEventMapper } from "./ag-ui-mapper.js";
+export {
+  type AgUiA2AAdapter,
+  type AgUiA2APartProjectionInput,
+  type AgUiA2ASelection,
+  type AgUiA2ASelectionInput,
+  type CreateAgUiA2AAdapterOptions,
+  createAgUiA2AAdapter,
+} from "./a2a.js";
 export { type AgUiA2AServer, type AgUiA2AServerTaskInput, type CreateAgUiA2AServerOptions, createAgUiA2AServer } from "./a2a-server.js";
 export {
   A2UI_ACTIVITY_TYPE,
@@ -9,7 +16,6 @@ export {
   type AgUiA2UiLimitOptions,
   type AgUiA2UiOptions,
   type AgUiA2UiPainter,
-  type ResolvedAgUiA2UiLimits,
   createAgUiA2UiPainter,
   DEFAULT_MAX_A2UI_COMPONENT_DEPTH,
   DEFAULT_MAX_A2UI_OPERATION_BYTES,
@@ -20,43 +26,22 @@ export {
   HARD_MAX_A2UI_OPERATION_BYTES,
   HARD_MAX_A2UI_OPS_PER_MESSAGE,
   HARD_MAX_A2UI_SURFACES_PER_RUN,
+  type ResolvedAgUiA2UiLimits,
   resolveAgUiA2UiLimits,
 } from "./a2ui.js";
+export { type AgUiEventMapper, type AgUiEventMapperOptions, createAgUiEventMapper } from "./ag-ui-mapper.js";
 export {
-  type AgUiA2AAdapter,
-  type AgUiA2APartProjectionInput,
-  type AgUiA2ASelection,
-  type AgUiA2ASelectionInput,
-  type CreateAgUiA2AAdapterOptions,
-  createAgUiA2AAdapter,
-} from "./a2a.js";
-export { AgUiError, type AgUiErrorCode } from "./errors.js";
+  type AgUiMcpAppEffectContext,
+  deriveAppEffectKey,
+  hashJson,
+  type ReconcileAppEffectInput,
+  reconcileAppEffect,
+} from "./effect-recovery.js";
 export {
   type CreateReasoningEncryptedValueOptions,
   createReasoningEncryptedValue,
 } from "./encrypted-value.js";
-export {
-  type AgUiMcpAppAuthorizationInput,
-  type AgUiMcpAppCallContext,
-  type AgUiMcpAppSandbox,
-  type CreateAgUiMcpAppHandlerOptions,
-  createAgUiMcpAppHandler,
-  createAgUiMcpAppSandbox,
-} from "./mcp-apps.js";
-export {
-  type AgUiMcpAppEffectContext,
-  type ReconcileAppEffectInput,
-  deriveAppEffectKey,
-  hashJson,
-  reconcileAppEffect,
-} from "./effect-recovery.js";
-export {
-  type AgUiMcpAdapter,
-  type AgUiMcpPrepareInput,
-  type AgUiMcpToolSelectionInput,
-  type CreateAgUiMcpAdapterOptions,
-  createAgUiMcpAdapter,
-} from "./mcp.js";
+export { AgUiError, type AgUiErrorCode } from "./errors.js";
 export {
   type AgUiAuthorizationInput,
   type AgUiFrontendToolHandoff,
@@ -134,14 +119,31 @@ export {
   type ResolvedAgUiLimits,
   resolveAgUiLimits,
 } from "./limits.js";
+export {
+  type AgUiMcpAdapter,
+  type AgUiMcpPrepareInput,
+  type AgUiMcpToolSelectionInput,
+  type CreateAgUiMcpAdapterOptions,
+  createAgUiMcpAdapter,
+} from "./mcp.js";
+export {
+  type AgUiMcpAppAuthorizationInput,
+  type AgUiMcpAppCallContext,
+  type AgUiMcpAppSandbox,
+  type CreateAgUiMcpAppHandlerOptions,
+  createAgUiMcpAppHandler,
+  createAgUiMcpAppSandbox,
+} from "./mcp-apps.js";
 export type {
   AgUiActivityDelta,
   AgUiActivitySnapshot,
   AgUiCustomProjection,
+  AgUiProjectedImage,
+  AgUiProjectedToolResult,
   AgUiProjection,
-  Awaitable,
   AgUiRawProjection,
   AgUiReasoningProjection,
+  Awaitable,
 } from "./projection.js";
 export { type CoWorkProjectionOptions, projectAgUiJson, projectAgUiPatch, projectCoWorkEvent } from "./projection.js";
 export {
@@ -157,6 +159,21 @@ export {
   HARD_MAX_PROJECTOR_MESSAGES,
   jsonDiff,
 } from "./projectors.js";
+// Task 14: reference renderer subpath (@arnilo/prism-ag-ui/renderer).
+// Type-only re-exports; runtime DOM code stays behind the subpath so the main
+// entry remains runtime-agnostic.
+export type {
+  A2UiCatalog,
+  A2UiComponentModel,
+  A2UiComponentRenderer,
+  A2UiRenderContext,
+  A2UiRenderError,
+  A2UiRenderer,
+  A2UiSurfaceModel,
+  CreateA2UiRendererOptions,
+  Dom,
+  DomNode,
+} from "./renderer/index.js";
 export {
   type AgentEventSourceAgUiReplayOptions,
   type AgUiReplay,
@@ -174,21 +191,5 @@ export {
   type PersistenceAgUiReplayOptions,
 } from "./replay.js";
 export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js";
-
-// Task 14: reference renderer subpath (@arnilo/prism-ag-ui/renderer).
-// Type-only re-exports; runtime DOM code stays behind the subpath so the main
-// entry remains runtime-agnostic.
-export type {
-  A2UiCatalog,
-  A2UiComponentModel,
-  A2UiComponentRenderer,
-  A2UiRenderContext,
-  A2UiRenderError,
-  A2UiRenderer,
-  A2UiSurfaceModel,
-  CreateA2UiRendererOptions,
-  Dom,
-  DomNode,
-} from "./renderer/index.js";
 
 export const packageName = "@arnilo/prism-ag-ui";

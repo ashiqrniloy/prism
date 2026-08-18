@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
-import { Pool } from "pg";
 import type { AgentIdentity } from "@arnilo/prism";
+import { Pool } from "pg";
 import { createPostgresEnterpriseState } from "../enterprise.js";
 import { EnterprisePostgresError } from "../errors.js";
 import { qualifyTable } from "../identifiers.js";

@@ -9,8 +9,8 @@ import {
   type NestedRunOutcome,
   type PermissionPolicy,
   type PermissionRequest,
-  resumeAgentRun,
   type ResumeNestedRun,
+  resumeAgentRun,
 } from "@arnilo/prism";
 import { SupervisorDeniedError, SupervisorError, SupervisorLimitError, SupervisorValidationError } from "./errors.js";
 import { narrowSupervisorLimits, resolveSupervisorLimits } from "./limits.js";

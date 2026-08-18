@@ -784,9 +784,9 @@ toolCallFromArgumentsText	export declare function toolCallFromArgumentsText(id: 
 toolEffectArgumentsHash	export declare function toolEffectArgumentsHash(argumentsValue: JsonObject): string
 toolElicitationRequest	export declare function toolElicitationRequest(tool: ToolDefinition | undefined, args: JsonObject, context: ToolExecutionContext):
 tryParseJsonObjectArguments	export declare function tryParseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): ParseJsonObjectArgumentsResult
-type OAuthTokenSuccessPayload	export { abortableSleep, pollDeviceCodeToken, redactOAuthError, throwIfAborted, type OAuthTokenSuccessPayload, type PollDeviceCodeTokenOptions, } from "./oauth-device-code.js"
-type PinnedFetchOptions	export { boundResponse, defaultResolver, isLoopbackAddress, isLoopbackHostname, normalizeHostname, pinnedFetch, raceAbort, requestPinned, resolvePinnedAddress, type PinnedFetchOptions, } from "./pinned-fetch.js"
-type PollDeviceCodeTokenOptions	export { abortableSleep, pollDeviceCodeToken, redactOAuthError, throwIfAborted, type OAuthTokenSuccessPayload, type PollDeviceCodeTokenOptions, } from "./oauth-device-code.js"
+type OAuthTokenSuccessPayload	export { abortableSleep, type OAuthTokenSuccessPayload, type PollDeviceCodeTokenOptions, pollDeviceCodeToken, redactOAuthError, throwIfAborted, } from "./oauth-device-code.js"
+type PinnedFetchOptions	export { boundResponse, defaultResolver, isLoopbackAddress, isLoopbackHostname, normalizeHostname, type PinnedFetchOptions, pinnedFetch, raceAbort, requestPinned, resolvePinnedAddress, } from "./pinned-fetch.js"
+type PollDeviceCodeTokenOptions	export { abortableSleep, type OAuthTokenSuccessPayload, type PollDeviceCodeTokenOptions, pollDeviceCodeToken, redactOAuthError, throwIfAborted, } from "./oauth-device-code.js"
 usage	export declare const usage = "Usage: prism [--mode print|json|rpc] [-p prompt] [options]\n prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]\n prism providers add <name> [--base-url <url>] [--env-key <name>] [--model <id>] [--force]\n\nOptions:\n -p, --prompt <text> Prompt to run in print/json mode\n --provider <name> Explicit provider id (mock is built in for smoke tests)\n --model <name> Explicit model name\n --session <id> Session id\n --system <text> System ins
 useCaseCredentialProviderId	export declare function useCaseCredentialProviderId(resolved: ResolvedUseCaseModel | undefined, binding?: Pick<UseCaseModelBinding, "provider">): string | undefined
 validateElicitationPayload	export declare function validateElicitationPayload(agent: Agent, state: StoredAgentRunState, target: PendingDecision, payload: JsonObject, signal?: AbortSignal): Promise<void>
@@ -794,7 +794,7 @@ validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(valu
 validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.2.7"
+version	export declare const version = "0.2.8"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]

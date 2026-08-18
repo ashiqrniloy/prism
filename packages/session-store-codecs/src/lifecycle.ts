@@ -2,8 +2,8 @@ import {
   DEFAULT_LIFECYCLE_PAGE_SIZE,
   HARD_LIFECYCLE_PAGE_SIZE,
   HARD_MAX_HOLD_REASON_BYTES,
-  type TenantQuota,
   PersistenceLifecycleError,
+  type TenantQuota,
 } from "@arnilo/prism";
 
 export function rowToTenantQuota(row: Record<string, unknown>): TenantQuota {

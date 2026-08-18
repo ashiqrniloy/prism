@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-policy",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Optional policy-decision ledger and cursor-paginated audit export for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -29,7 +29,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.2.7"
+    "@arnilo/prism": "0.2.8"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

@@ -8,18 +8,18 @@
 
 import { lstat } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { createBoundGitRunner, gitText, type BoundGitRunner, type CreateGitRunnerOptions, GitError } from "./git-exec.js";
+import { type BoundGitRunner, type CreateGitRunnerOptions, createBoundGitRunner, GitError, gitText } from "./git-exec.js";
 import { DEFAULT_MAX_LS_FILES_OUTPUT_BYTES, HARD_MAX_LS_FILES_OUTPUT_BYTES, validateCodingLimit } from "./limits.js";
 import {
   createLocalRepositoryOperations,
-  RepositoryError,
-  toRepoRelative,
   type RepoListEntry,
+  RepositoryError,
   type RepositoryLimitOptions,
   type RepositoryOperations,
   type RepositoryWalk,
   type RepositoryWalkEvent,
   type RepositoryWalkLimits,
+  toRepoRelative,
 } from "./repository.js";
 
 export interface GitAwareRepositoryOptions {

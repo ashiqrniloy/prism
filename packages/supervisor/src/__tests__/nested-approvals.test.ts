@@ -6,13 +6,13 @@ import {
   createMemoryCheckpointStore,
   createMemorySessionStore,
   type JsonObject,
+  type PermissionPolicy,
   providerDone,
   providerTextDelta,
-  type PermissionPolicy,
   resumeAgentRun,
   toolCallContent,
 } from "@arnilo/prism";
-import { createSupervisor, SupervisorDeniedError, type Supervisor } from "../index.js";
+import { createSupervisor, type Supervisor, SupervisorDeniedError } from "../index.js";
 
 const ownership = { tenantId: "tenant", userId: "user" };
 

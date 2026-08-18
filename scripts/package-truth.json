@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-08-17T22:22:04.026Z",
+  "generatedAt": "2026-08-18T20:18:59.663Z",
   "root": {
     "name": "@arnilo/prism",
-    "version": "0.2.7"
+    "version": "0.2.8"
   },
   "counts": {
-    "publishable": 50,
-    "workspace": 49,
+    "publishable": 51,
+    "workspace": 50,
     "provider": 14,
     "prismFamily": 9,
-    "capability": 26,
-    "codeWithPeer": 43,
+    "capability": 27,
+    "codeWithPeer": 44,
     "pureManifest": 6
   },
   "providers": [
@@ -41,6 +41,7 @@
     "@arnilo/prism-sdk"
   ],
   "capability": [
+    "@arnilo/prism-acp-agent",
     "@arnilo/prism-ag-ui",
     "@arnilo/prism-browser",
     "@arnilo/prism-coding-agent",
@@ -91,6 +92,7 @@
     },
     "prism-all": {
       "deps": [
+        "@arnilo/prism-acp-agent",
         "@arnilo/prism-ag-ui",
         "@arnilo/prism-browser",
         "@arnilo/prism-code",
@@ -112,7 +114,7 @@
         "@arnilo/prism-web-tools",
         "@arnilo/prism-work-tools"
       ],
-      "closure": 43,
+      "closure": 44,
       "omits": [
         "@arnilo/prism-caveman",
         "@arnilo/prism-document-reader",
@@ -164,6 +166,7 @@
       "@arnilo/prism-provider-zai"
     ],
     "prism-all": [
+      "@arnilo/prism-acp-agent",
       "@arnilo/prism-ag-ui",
       "@arnilo/prism-base",
       "@arnilo/prism-browser",
@@ -211,7 +214,7 @@
   },
   "peerPolicy": {
     "decision": "A",
-    "spec": "0.2.7",
+    "spec": "0.2.8",
     "atomicUpgrade": true
   }
 }

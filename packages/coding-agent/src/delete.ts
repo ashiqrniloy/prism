@@ -62,6 +62,7 @@ export function createDeleteTool(cwd: string, options?: DeleteToolOptions): Tool
 
   return {
     name: "delete",
+    kind: "delete",
     effect: CODING_LOCAL_EFFECT,
     description:
       "High-risk: permanently delete a single file or empty directory in the workspace. Non-empty directories are rejected unless recursive: true (opt-in per call; recursive refuses symlinked-directory traversal and enforces a per-call fan-out cap, default 10,000 entries). No trash/recycle — host undo is not automatic. Prefer edit/write when content can be fixed in place.",

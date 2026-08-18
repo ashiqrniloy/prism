@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { EventType, type AGUIEvent } from "@ag-ui/core";
 import { describe, it } from "node:test";
-// Synapta FR (0.0.27): the DOM-free core must be importable from the
-// `@arnilo/prism-ag-ui/renderer` subpath entry, not just dist/renderer/core.js.
-import { A2UI_VERSION, A2UiSurfaceState, createA2UiRenderer, readA2UiBatch, reduceA2UiOps, resolvePointer } from "../renderer/index.js";
+import { type AGUIEvent, EventType } from "@ag-ui/core";
 import { resolveAgUiA2UiLimits } from "../a2ui.js";
 import { DEFAULT_AG_UI_LIMITS } from "../limits.js";
+// Host FR (0.0.27): the DOM-free core must be importable from the
+// `@arnilo/prism-ag-ui/renderer` subpath entry, not just dist/renderer/core.js.
+import { A2UI_VERSION, A2UiSurfaceState, createA2UiRenderer, readA2UiBatch, reduceA2UiOps, resolvePointer } from "../renderer/index.js";
 
 const limits = resolveAgUiA2UiLimits({});
 

@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   assertCodingPatchAccepted,
-  CodingPatchReviewError,
-  createCodingPatchReviewManifest,
   type CodingPatchReview,
+  CodingPatchReviewError,
   type CodingReviewArtifactRecord,
+  createCodingPatchReviewManifest,
 } from "../review.js";
 
 const SHA = (c: string): string => c.repeat(64);

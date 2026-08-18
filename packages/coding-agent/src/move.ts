@@ -1,6 +1,6 @@
 import { access, constants } from "node:fs";
-import { dirname } from "node:path";
 import { lstat, rename, unlink } from "node:fs/promises";
+import { dirname } from "node:path";
 import { promisify } from "node:util";
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import type { MutationStat } from "./delete.js";
@@ -60,6 +60,7 @@ export function createMoveTool(cwd: string, options?: MoveToolOptions): ToolDefi
 
   return {
     name: "move",
+    kind: "move",
     effect: CODING_LOCAL_EFFECT,
     description:
       "High-risk: move or rename a file within the workspace. Set overwrite=true to replace an existing destination file only (directories/non-empty dest rejected). Does not create parent directories. No trash — host undo is not automatic.",

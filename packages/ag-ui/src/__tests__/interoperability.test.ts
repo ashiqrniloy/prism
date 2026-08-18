@@ -1,16 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { EventType } from "@ag-ui/core";
-import { type ToolDefinition, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
+import { createAgent, providerDone, providerTextDelta, type ToolDefinition, toolCallContent } from "@arnilo/prism";
 import type { McpAppsBridge, McpToolBridge } from "@arnilo/prism-mcp";
 import type { A2AClient, A2AStreamEvent, A2ATask } from "@arnilo/prism-supervisor";
-import { createAgent } from "@arnilo/prism";
 import {
   createAgUiA2AAdapter,
+  createAgUiHandler,
   createAgUiMcpAdapter,
   createAgUiMcpAppHandler,
   createAgUiMcpAppSandbox,
-  createAgUiHandler,
 } from "../index.js";
 
 const authorization = { ownership: { tenantId: "tenant-1", userId: "user-1" } };

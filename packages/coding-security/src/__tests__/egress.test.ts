@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { createServer as createHttpServer, request as httpRequest } from "node:http";
 import { createServer as createNetServer, connect as netConnect } from "node:net";
 import { test } from "node:test";
+import { buildDockerCreateArgsForTest } from "../docker-sandbox.js";
+import type { EgressAuditRecord } from "../index.js";
 import {
   assertEgressAttestation,
   assertPinned,
@@ -13,8 +15,6 @@ import {
   isPrivateAddress,
   resolveEgressLimits,
 } from "../index.js";
-import { buildDockerCreateArgsForTest } from "../docker-sandbox.js";
-import type { EgressAuditRecord } from "../index.js";
 
 const DIGEST = `sha256:${"a".repeat(64)}`;
 const IMAGE = `registry.example/prism-code@${DIGEST}`;

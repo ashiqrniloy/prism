@@ -1,11 +1,12 @@
 /** Repository search family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from repository.ts; public surface unchanged behind the barrel. */
-import { HARD_MAX_SEARCH_CONTEXT_LINES, HARD_MAX_SEARCH_MATCHES, validateCodingLimit, validateCodingLimitAllowZero } from "../limits.js";
+
 import { lstat, open } from "node:fs/promises";
+import { HARD_MAX_SEARCH_CONTEXT_LINES, HARD_MAX_SEARCH_MATCHES, validateCodingLimit, validateCodingLimitAllowZero } from "../limits.js";
+import { assertDeadline, assertNotAborted, isBinaryBuffer, resolveRepoPath } from "./path.js";
 import type { RepositorySearchMatch, RepositorySearchRequest, RepositorySearchResult, ResolvedRepositoryLimits } from "./types.js";
 import { RepositoryError } from "./types.js";
 import type { RepositoryWalk } from "./walk.js";
-import { assertDeadline, assertNotAborted, isBinaryBuffer, resolveRepoPath } from "./path.js";
 
 export function compileSearchPattern(
   query: string,

@@ -1,5 +1,5 @@
 {
-  "$comment": "0.1.7 Task 0 baseline evidence (plan 019, 2026-08-11): captured at HEAD 2ebc08e (signed v0.1.6 tag) with all four items pending. Seam hashes are the pre-change truth for the phase-19 state machine: while an item's task is pending its allowed files must stay byte-identical; absent files must stay absent. The item inventory mirrors the manifest (same ids/tasks/scopes). preservedSurface hashes are immutable for the whole phase. asyncHooks records the Task 4 verification evidence once Task 4 lands. exitGate records the Task 6 0.1.7 evidence once Tasks 1-6 land. Refreshed 2026-08-13 (plan 022 Task 1): prism_model_router_budgets reservations moved memory router state out of the 0.1.7 preserved surface; the other three preserved files are unchanged and their hashes still match the 0.1.7 capture. preservedSurface state.ts hash refreshed 2026-08-13 twice during 0.2.2: Task 1 (reservation implementation) to bc7c0d69..., then the Task 6 exit-gate biome format --write pass (no content change) to b07d06e0...",
+  "$comment": "0.1.7 Task 0 baseline evidence (plan 019, 2026-08-11): captured at HEAD 2ebc08e (signed v0.1.6 tag) with all four items pending. Seam hashes are the pre-change truth for the phase-19 state machine: while an item's task is pending its allowed files must stay byte-identical; absent files must stay absent. The item inventory mirrors the manifest (same ids/tasks/scopes). preservedSurface hashes are immutable for the whole phase. asyncHooks records the Task 4 verification evidence once Task 4 lands. exitGate records the Task 6 0.1.7 evidence once Tasks 1-6 land. Refreshed 2026-08-13 (plan 022 Task 1): prism_model_router_budgets reservations moved memory router state out of the 0.1.7 preserved surface; the other three preserved files are unchanged and their hashes still match the 0.1.7 capture. preservedSurface state.ts hash refreshed 2026-08-13 twice during 0.2.2: Task 1 (reservation implementation) to bc7c0d69..., then the Task 6 exit-gate biome format --write pass (no content change) to b07d06e0... [2026-08-18] manifestCount refreshed 49->50 workspace / 50->51 publishable: plan 028 shipped the spawnable ACP agent package @arnilo/prism-acp-agent.",
   "captured": "2026-08-11",
   "release": "0.1.6",
   "node": "v24.18.0",
@@ -31,15 +31,15 @@
     "result": "green; compat baseline exists at 0.1.6, 0 breaking declaration deltas"
   },
   "manifestCount": {
-    "publishable": 50,
-    "workspacePackages": 49,
+    "publishable": 51,
+    "workspacePackages": 50,
     "rootPackage": "@arnilo/prism",
     "categories": {
       "provider": 14,
       "prism": 9,
-      "capability": 26
+      "capability": 27
     },
-    "canonicalStatement": "50 publishable manifests = root @arnilo/prism + 49 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 26 capability packages); 0.1.7 adds no package, the count stays 50",
+    "canonicalStatement": "51 publishable manifests = root @arnilo/prism + 50 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 27 capability packages; the 0.2.8 plan 028 acp-agent closeout added @arnilo/prism-acp-agent)",
     "regenerate": "ls -d packages/*/ | wc -l ; ls -d packages/provider-*/ | wc -l ; ls -d packages/prism-*/ | wc -l"
   },
   "items": [

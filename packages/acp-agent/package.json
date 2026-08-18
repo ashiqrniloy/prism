@@ -1,0 +1,67 @@
+{
+  "name": "@arnilo/prism-acp-agent",
+  "version": "0.2.8",
+  "description": "Spawnable ACP agent: serves createPrismAcpAgent over stdio from a config file.",
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "bin": {
+    "prism-acp-agent": "dist/bin/prism-acp-agent.js"
+  },
+  "files": [
+    "dist",
+    "!dist/**/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/src/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "1.3.0",
+    "@arnilo/prism-coding-agent": "0.2.8",
+    "@arnilo/prism-session-store-sqlite": "0.2.8"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "0.2.8",
+    "@arnilo/prism-ag-ui": "0.2.8"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../..",
+    "@arnilo/prism-ag-ui": "file:../ag-ui"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/acp-agent"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/acp-agent#readme",
+  "keywords": [
+    "prism",
+    "acp",
+    "agent",
+    "stdio",
+    "mcp"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

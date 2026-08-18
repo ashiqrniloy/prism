@@ -3,7 +3,7 @@
 // Aggregates every test surface into scripts/release-evidence.json with state
 // pass/skip/blocked/protected. Records env var NAMES only, never values
 // (the manifest is retained and uploaded by CI).
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dirname, "..");

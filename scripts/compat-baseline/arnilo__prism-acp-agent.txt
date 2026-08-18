@@ -1,0 +1,7 @@
+ConfigError	export declare class ConfigError extends Error
+PrismAcpAgentConfig	export type { PrismAcpAgentConfig } from "./config.js"
+createSpawnableAgent	export declare function createSpawnableAgent(options: CreateSpawnableAgentOptions): AgentApp
+loadConfig	export declare function loadConfig(path: string): PrismAcpAgentConfig
+parseConfig	export declare function parseConfig(text: string, baseDir: string, source?: string): PrismAcpAgentConfig
+selectMcpServers	export declare function selectMcpServers(allow: readonly string[], servers: readonly McpServer[]): boolean
+validateConfig	export declare function validateConfig(raw: unknown, baseDir: string, source: string): PrismAcpAgentConfig

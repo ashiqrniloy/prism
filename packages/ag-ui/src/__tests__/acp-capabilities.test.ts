@@ -104,6 +104,7 @@ test("client capabilities default closed and read per field", () => {
     terminal: false,
     configOptionBoolean: false,
     elicitation: false,
+    plan: false,
   });
   assert.deepEqual(
     resolveAcpClientCapabilities({
@@ -111,6 +112,7 @@ test("client capabilities default closed and read per field", () => {
       terminal: true,
       session: { configOptions: { boolean: {} } },
       elicitation: {},
+      plan: {},
     }),
     {
       fsReadTextFile: true,
@@ -118,6 +120,7 @@ test("client capabilities default closed and read per field", () => {
       terminal: true,
       configOptionBoolean: true,
       elicitation: true,
+      plan: true,
     },
   );
   assert.deepEqual(resolveAcpClientCapabilities({ fs: { readTextFile: true } }), {
@@ -126,5 +129,6 @@ test("client capabilities default closed and read per field", () => {
     terminal: false,
     configOptionBoolean: false,
     elicitation: false,
+    plan: false,
   });
 });

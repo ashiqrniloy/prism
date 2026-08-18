@@ -4,8 +4,8 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { BrowserError, createBrowserManager, createBrowserTools } from "../index.js";
 import { boundedJson, evaluateInPage } from "../evaluate.js";
+import { BrowserError, createBrowserManager, createBrowserTools } from "../index.js";
 import { FakeBrowser, FakeCdpSession } from "./fake-playwright.js";
 
 const testNetwork = { requireContainedProxy: false as const };

@@ -163,7 +163,7 @@ suspend	export declare function suspend<ResumeInput = unknown>(input:
 sweepActiveWorkflowRuns	export declare function sweepActiveWorkflowRuns(): number
 throwIfAborted	export declare function throwIfAborted(signal?: AbortSignal): void
 toolNode	export declare function toolNode(config: Omit<ToolNodeDefinition, "kind">): ToolNodeDefinition
-type ActiveWorkflowRun	export { type ActiveWorkflowRun, abortActiveWorkflowRun, ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE, getActiveWorkflowRun, listActiveWorkflowRuns, MAX_ACTIVE_WORKFLOW_RUNS, registerActiveWorkflowRun, sweepActiveWorkflowRuns, unregisterActiveWorkflowRun, } from "./active-runs.js"
+type ActiveWorkflowRun	export { ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE, type ActiveWorkflowRun, abortActiveWorkflowRun, getActiveWorkflowRun, listActiveWorkflowRuns, MAX_ACTIVE_WORKFLOW_RUNS, registerActiveWorkflowRun, sweepActiveWorkflowRuns, unregisterActiveWorkflowRun, } from "./active-runs.js"
 type CancelWorkflowRunInput	export { type CancelWorkflowRunInput, type CancelWorkflowRunResult, cancelWorkflowRun, getWorkflowRun, listWorkflowRuns, } from "./status.js"
 type CancelWorkflowRunResult	export { type CancelWorkflowRunInput, type CancelWorkflowRunResult, cancelWorkflowRun, getWorkflowRun, listWorkflowRuns, } from "./status.js"
 type CapabilityActorRef	export { type CapabilityActorRef, createProactiveScheduleCapabilities, type EnableCapabilityInput, type ProactiveScheduleCapabilities, type ProactiveScheduleCapabilitiesOptions, type ScheduleCapabilityEvent, type ScheduleCapabilityToken, } from "./schedule-capabilities.js"

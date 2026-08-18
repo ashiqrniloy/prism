@@ -2,22 +2,22 @@
   "spdxVersion": "SPDX-2.3",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "name": "@arnilo/prism@0.0.24",
-  "documentNamespace": "http://spdx.org/spdxdocs/@arnilo%2fprism-0.0.24-37df3580-99cf-486e-8b6d-c1217b83fa6f",
+  "name": "@arnilo/prism@0.2.8",
+  "documentNamespace": "http://spdx.org/spdxdocs/@arnilo%2fprism-0.2.8-73b394e0-de40-48f3-b583-daea99fcb446",
   "creationInfo": {
-    "created": "2026-08-04T21:13:41.998Z",
+    "created": "2026-08-18T18:40:00.469Z",
     "creators": [
-      "Tool: npm/cli-11.16.0"
+      "Tool: npm/cli-11.17.0"
     ]
   },
   "documentDescribes": [
-    "SPDXRef-Package-arnilo.prism-0.0.24"
+    "SPDXRef-Package-arnilo.prism-0.2.8"
   ],
   "packages": [
     {
       "name": "@arnilo/prism",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "",
       "description": "Agent harness for AI providers, agents, sessions, and tools.",
       "primaryPackagePurpose": "LIBRARY",
@@ -29,7 +29,7 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism@0.2.8"
         }
       ]
     },
@@ -364,6 +364,126 @@
       ]
     },
     {
+      "name": "@nats-io/jetstream",
+      "SPDXID": "SPDXRef-Package-nats-io.jetstream-3.4.0",
+      "versionInfo": "3.4.0",
+      "packageFileName": "node_modules/@nats-io/jetstream",
+      "description": "jetstream library - this library implements all the base functionality for NATS JetStream for javascript clients",
+      "downloadLocation": "https://registry.npmjs.org/@nats-io/jetstream/-/jetstream-3.4.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40nats-io/jetstream@3.4.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "1b31d0a1d349f78dbe4792d16fc3ee679ba05565563118ae7f15182cb55691729fc035d837e3b0a3477b2ff6fd3bb04fcab6d80fb8d05800baf9956e5daf46cb"
+        }
+      ]
+    },
+    {
+      "name": "@nats-io/nats-core",
+      "SPDXID": "SPDXRef-Package-nats-io.nats-core-3.4.0",
+      "versionInfo": "3.4.0",
+      "packageFileName": "node_modules/@nats-io/nats-core",
+      "description": "nats-core library - this library implements all the base functionality for NATS javascript clients",
+      "downloadLocation": "https://registry.npmjs.org/@nats-io/nats-core/-/nats-core-3.4.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40nats-io/nats-core@3.4.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "40c0ccf3a114366fb0b9d94a0baec72daaff2871d052f2462df6f88db6a18dede9524dcaf5a7de724f5fc2cc41645d1e505a31e93fd303a9bfb7e950a9ff90b1"
+        }
+      ]
+    },
+    {
+      "name": "@nats-io/nkeys",
+      "SPDXID": "SPDXRef-Package-nats-io.nkeys-2.0.3",
+      "versionInfo": "2.0.3",
+      "packageFileName": "node_modules/@nats-io/nkeys",
+      "description": "A public-key signature system based on Ed25519 for the NATS ecosystem in javascript",
+      "downloadLocation": "https://registry.npmjs.org/@nats-io/nkeys/-/nkeys-2.0.3.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40nats-io/nkeys@2.0.3"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "255b79e86b84e99f3d294908e135d46d223d7e621f02693a3cc3e49e28e6b8bef619c0fe5202289937115a236fbc92b1034d6c05b9883d2b6a26ce5c311042dc"
+        }
+      ]
+    },
+    {
+      "name": "@nats-io/nuid",
+      "SPDXID": "SPDXRef-Package-nats-io.nuid-3.0.0",
+      "versionInfo": "3.0.0",
+      "packageFileName": "node_modules/@nats-io/nuid",
+      "description": "NUID - A highly performant unique identifier generator.",
+      "downloadLocation": "https://registry.npmjs.org/@nats-io/nuid/-/nuid-3.0.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://nats.io/nuid.js",
+      "licenseDeclared": "Apache-2.0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40nats-io/nuid@3.0.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "41b5d90ebc66625ae7e400f4ea061c5139841f0c67f7a1c140c224ed74e30e511cc7a14fcd50413e3a7800c461d6512fe81e2227a5dbfd4cfad49ba03d715142"
+        }
+      ]
+    },
+    {
+      "name": "@nats-io/transport-node",
+      "SPDXID": "SPDXRef-Package-nats-io.transport-node-3.4.0",
+      "versionInfo": "3.4.0",
+      "packageFileName": "node_modules/@nats-io/transport-node",
+      "description": "Node.js client for NATS, a lightweight, high-performance cloud native messaging system",
+      "downloadLocation": "https://registry.npmjs.org/@nats-io/transport-node/-/transport-node-3.4.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://nats.io",
+      "licenseDeclared": "Apache-2.0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40nats-io/transport-node@3.4.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "847eeeede8c805314424867cac870cac7248eb097e1e1a4ee6c545b35fa9a665daf11b81dbe2e1d7e5304f3679c5334d9b54ca711918cbedaa095e7aaa9f11c4"
+        }
+      ]
+    },
+    {
       "name": "@opentelemetry/api",
       "SPDXID": "SPDXRef-Package-opentelemetry.api-1.9.1",
       "versionInfo": "1.9.1",
@@ -532,6 +652,30 @@
       ]
     },
     {
+      "name": "@xmldom/xmldom",
+      "SPDXID": "SPDXRef-Package-xmldom.xmldom-0.8.13",
+      "versionInfo": "0.8.13",
+      "packageFileName": "node_modules/@xmldom/xmldom",
+      "description": "A pure JavaScript W3C standard-based (XML DOM Level 2 Core) DOMParser and XMLSerializer module.",
+      "downloadLocation": "https://registry.npmjs.org/@xmldom/xmldom/-/xmldom-0.8.13.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/xmldom/xmldom",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40xmldom/xmldom@0.8.13"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "291633c5ea5cd781bf084a4419cdd89fe24a680793eb7b26943afebe307c8d17e04c1048f70463fe791010efae715f29f08f5b7ca2d6a77eee1e016b6e7b4fbf"
+        }
+      ]
+    },
+    {
       "name": "accepts",
       "SPDXID": "SPDXRef-Package-accepts-2.0.0",
       "versionInfo": "2.0.0",
@@ -600,6 +744,30 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "f2252a979d04511fae51c7514371c3a9ae84572a3776870bf20e5627714d7169aeeb621b90652e7bfa44c8b056f1518a2ae7133e0a9e92ce1f214d43038ca8c1"
+        }
+      ]
+    },
+    {
+      "name": "argparse",
+      "SPDXID": "SPDXRef-Package-argparse-1.0.10",
+      "versionInfo": "1.0.10",
+      "packageFileName": "node_modules/argparse",
+      "description": "Very powerful CLI arguments parser. Native port of argparse - python's options parsing library",
+      "downloadLocation": "https://registry.npmjs.org/argparse/-/argparse-1.0.10.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/argparse@1.0.10"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "a39468cbab4d1b848bfc53a408037a4738e26a4652db944b605adc32db49a9b75df015ab9c0f9f1b3e7b88de4f6f4ea9bc11af979810d01e3c74996c957be84e"
         }
       ]
     },
@@ -696,6 +864,30 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "d56d3b70cf604ba0dc2e97ab65f1528fe6d62ed68f1923875a13e21b35e6bd525b44b746f36b07fca9fc12d5b556a595039e0029fda1e64e416e721bc05de1eb"
+        }
+      ]
+    },
+    {
+      "name": "bluebird",
+      "SPDXID": "SPDXRef-Package-bluebird-3.4.7",
+      "versionInfo": "3.4.7",
+      "packageFileName": "node_modules/bluebird",
+      "description": "Full featured Promises/A+ implementation with exceptionally good performance",
+      "downloadLocation": "https://registry.npmjs.org/bluebird/-/bluebird-3.4.7.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/petkaantonov/bluebird",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/bluebird@3.4.7"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "883dfcf7c491eec5954476e242ffac1d4b479ccbc2d68de75b9ac072a9eadee3a7d3b0d2029a596149081ac943cfa8170bb1dfba73deed85418281090123dc1c"
         }
       ]
     },
@@ -988,6 +1180,30 @@
       ]
     },
     {
+      "name": "core-util-is",
+      "SPDXID": "SPDXRef-Package-core-util-is-1.0.3",
+      "versionInfo": "1.0.3",
+      "packageFileName": "node_modules/core-util-is",
+      "description": "The `util.is*` functions introduced in Node v0.12.",
+      "downloadLocation": "https://registry.npmjs.org/core-util-is/-/core-util-is-1.0.3.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/core-util-is@1.0.3"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "65006f8b50dca49e060ea6a78ee719d878f7c043b9a590d2f3d0566e472bbddc64b09a2bc140c365a997f65745929f5ac369660432e090e6c40380d6349f4561"
+        }
+      ]
+    },
+    {
       "name": "cors",
       "SPDXID": "SPDXRef-Package-cors-2.8.6",
       "versionInfo": "2.8.6",
@@ -1176,6 +1392,54 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "b2fb5c7694bc0a0272a808c44085dd6f73a3845555623cc600f3bc5860a645bae697ae123f0fe3243e06a04f7c691eebdb90345dc82b2b7174db2c3d47fbe143"
+        }
+      ]
+    },
+    {
+      "name": "dingbat-to-unicode",
+      "SPDXID": "SPDXRef-Package-dingbat-to-unicode-1.0.1",
+      "versionInfo": "1.0.1",
+      "packageFileName": "node_modules/dingbat-to-unicode",
+      "description": "Mapping from Dingbat fonts, such as Symbol, Webdings and Wingdings, to Unicode code points",
+      "downloadLocation": "https://registry.npmjs.org/dingbat-to-unicode/-/dingbat-to-unicode-1.0.1.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/mwilliamson/dingbat-to-unicode#readme",
+      "licenseDeclared": "BSD-2-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/dingbat-to-unicode@1.0.1"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "f7c974b16f3b653e7ca54e22eb5c1ad8e1f0c5b89849bbb1b02068cda567617da20a7af76cb3377c87acd7f7a3ee1d5874e2ae2adfcc2ecef4e9356700b03ae7"
+        }
+      ]
+    },
+    {
+      "name": "duck",
+      "SPDXID": "SPDXRef-Package-duck-0.1.12",
+      "versionInfo": "0.1.12",
+      "packageFileName": "node_modules/duck",
+      "description": "Rich matchers inspired by Hamcrest. Useful for generating helpful assertion failure messages in tests.",
+      "downloadLocation": "https://registry.npmjs.org/duck/-/duck-0.1.12.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "BSD",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/duck@0.1.12"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "c2472d95ad4ee957cff3d810f89ff20deb0cd12ec1ed72d78ca1b35f130354583bb849fbd3a9e202dc98a2f29bcaad684fd6300dc972ef6d7f8945a873c31546"
         }
       ]
     },
@@ -1972,6 +2236,30 @@
       ]
     },
     {
+      "name": "immediate",
+      "SPDXID": "SPDXRef-Package-immediate-3.0.6",
+      "versionInfo": "3.0.6",
+      "packageFileName": "node_modules/immediate",
+      "description": "A cross browser microtask library",
+      "downloadLocation": "https://registry.npmjs.org/immediate/-/immediate-3.0.6.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/immediate@3.0.6"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "5d7385b72a838cd0c043155f631b85ee0f4897f21b5a69a5420d8c60a387f04c484f5aa0eb1738cf24b71da10401382cd5bb5fcf1ab5e5c894898ee08d25d119"
+        }
+      ]
+    },
+    {
       "name": "inherits",
       "SPDXID": "SPDXRef-Package-inherits-2.0.4",
       "versionInfo": "2.0.4",
@@ -2092,6 +2380,30 @@
       ]
     },
     {
+      "name": "isarray",
+      "SPDXID": "SPDXRef-Package-isarray-1.0.0",
+      "versionInfo": "1.0.0",
+      "packageFileName": "node_modules/isarray",
+      "description": "Array#isArray for older browsers",
+      "downloadLocation": "https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/juliangruber/isarray",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/isarray@1.0.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "54b82121634ce842d0ce8ef3c26720d0d99357258a623bc878cf37ca3a74c110d39949eb33aefc7d06dc281a3a9f6089105d2cce81bfff2b60f932a56bcf402d"
+        }
+      ]
+    },
+    {
       "name": "isexe",
       "SPDXID": "SPDXRef-Package-isexe-2.0.0",
       "versionInfo": "2.0.0",
@@ -2208,6 +2520,174 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "7d08685dd72f737576f31ec2ec132ce0fe7e90d96051445eda39944f54fffe8051303aeacb540f7a52629b0646a3b1e0f553d5dc4415e419eae216c5cb6bdeb4"
+        }
+      ]
+    },
+    {
+      "name": "jszip",
+      "SPDXID": "SPDXRef-Package-jszip-3.10.1",
+      "versionInfo": "3.10.1",
+      "packageFileName": "node_modules/jszip",
+      "description": "Create, read and edit .zip files with JavaScript http://stuartk.com/jszip",
+      "downloadLocation": "https://registry.npmjs.org/jszip/-/jszip-3.10.1.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "(MIT OR GPL-3.0-or-later)",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/jszip@3.10.1"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "c570ef79cc93a462eba85aef92b512a31c5f248e401fb53ccf1c6d55c969b14b4c0aae09436f742d8f005b973b1a09ebfd8fe82be6d031ba8adaa9ad937a4de2"
+        }
+      ]
+    },
+    {
+      "name": "readable-stream",
+      "SPDXID": "SPDXRef-Package-readable-stream-2.3.8",
+      "versionInfo": "2.3.8",
+      "packageFileName": "node_modules/jszip/node_modules/readable-stream",
+      "description": "Streams3, a user-land copy of the stream library from Node.js",
+      "downloadLocation": "https://registry.npmjs.org/readable-stream/-/readable-stream-2.3.8.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/readable-stream@2.3.8"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "f29d00524e173838087b04a2d25f04a63b3e1159d688aecda03204194d07844efe67263c0f520c63ba1dbb9951ac55c683bd4bd79286f10acf9ae9b8e514ed74"
+        }
+      ]
+    },
+    {
+      "name": "safe-buffer",
+      "SPDXID": "SPDXRef-Package-safe-buffer-5.1.2",
+      "versionInfo": "5.1.2",
+      "packageFileName": "node_modules/jszip/node_modules/safe-buffer",
+      "description": "Safer Node.js Buffer API",
+      "downloadLocation": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.1.2.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/feross/safe-buffer",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/safe-buffer@5.1.2"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "19dd94641243917958ec66c9c5fb04f3f9ef2a45045351b7f1cd6c88de903fa6bd3d3f4c98707c1a7a6c71298c252a05f0b388aedf2e77fc0fb688f2b381bafa"
+        }
+      ]
+    },
+    {
+      "name": "string_decoder",
+      "SPDXID": "SPDXRef-Package-string_decoder-1.1.1",
+      "versionInfo": "1.1.1",
+      "packageFileName": "node_modules/jszip/node_modules/string_decoder",
+      "description": "The string_decoder module from Node core",
+      "downloadLocation": "https://registry.npmjs.org/string_decoder/-/string_decoder-1.1.1.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/nodejs/string_decoder",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/string_decoder@1.1.1"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "9ff4a19ef0e2e851db6d57ef8aba3e5a88e2173bfeb3c30f30705ccd578f7d4a4324bc282d3d21b759786300426e2f29240bde104767907c8fc933ff9b345fc2"
+        }
+      ]
+    },
+    {
+      "name": "lie",
+      "SPDXID": "SPDXRef-Package-lie-3.3.0",
+      "versionInfo": "3.3.0",
+      "packageFileName": "node_modules/lie",
+      "description": "A basic but performant promise implementation",
+      "downloadLocation": "https://registry.npmjs.org/lie/-/lie-3.3.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/lie@3.3.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "51a88c27379646512e8f302ec392e8918d4be5e70d41864a7e6c99f4bef00c76ffa797ad29ac5786884172bc341186f2f86fcd039daf452378377f5dc47008c1"
+        }
+      ]
+    },
+    {
+      "name": "lop",
+      "SPDXID": "SPDXRef-Package-lop-0.4.2",
+      "versionInfo": "0.4.2",
+      "packageFileName": "node_modules/lop",
+      "description": "Create parsers using parser combinators with helpful error messages",
+      "downloadLocation": "https://registry.npmjs.org/lop/-/lop-0.4.2.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "BSD-2-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/lop@0.4.2"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "45e7c82d50d0e032a8459b09e0f8f6d93c44de89833b8ef21699080680cace4a8f4484ace54d5c9c0760ff9e7cdd83e458f68b2181ce2913104af8c5b0edba73"
+        }
+      ]
+    },
+    {
+      "name": "mammoth",
+      "SPDXID": "SPDXRef-Package-mammoth-1.12.1",
+      "versionInfo": "1.12.1",
+      "packageFileName": "node_modules/mammoth",
+      "description": "Convert Word documents from docx to simple HTML and Markdown",
+      "downloadLocation": "https://registry.npmjs.org/mammoth/-/mammoth-1.12.1.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "BSD-2-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/mammoth@1.12.1"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "9c21fd28a8d68b78d0fa2f1b50ab3b935cab5ed4841a95a017c218933b0531c6e7fb94ba9786d91016f2c7684e404ac58973ee02cf513daeaa8d7571872c7ff2"
         }
       ]
     },
@@ -2500,6 +2980,30 @@
       ]
     },
     {
+      "name": "node-ensure",
+      "SPDXID": "SPDXRef-Package-node-ensure-0.0.0",
+      "versionInfo": "0.0.0",
+      "packageFileName": "node_modules/node-ensure",
+      "description": "Async module-loading library and protocol for bundlers/loaders targeting isomorphic apps and Node.js.",
+      "downloadLocation": "https://registry.npmjs.org/node-ensure/-/node-ensure-0.0.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/bauerca/node-ensure",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/node-ensure@0.0.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "0d123ad21ce8da828dd666b472473a9d05a51d4ebd447eb1374b234138cca4284f7d362f29975c4057dd60ad9159b25c2b2522cd2232fe5f0e4c6c4c00cd500f"
+        }
+      ]
+    },
+    {
       "name": "object-assign",
       "SPDXID": "SPDXRef-Package-object-assign-4.1.1",
       "versionInfo": "4.1.1",
@@ -2596,6 +3100,54 @@
       ]
     },
     {
+      "name": "option",
+      "SPDXID": "SPDXRef-Package-option-0.2.4",
+      "versionInfo": "0.2.4",
+      "packageFileName": "node_modules/option",
+      "description": "The option type, also known as the maybe type, for JavaScript",
+      "downloadLocation": "https://registry.npmjs.org/option/-/option-0.2.4.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "BSD-2-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/option@0.2.4"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "a6412a6c3ca5f28bb9729abe56c9d06defd6944cb9a92ef13f3312d54e793821bd28fbf0143e3acc36f14088f77a025215cdc3f9785838f533cf8f73400572ec"
+        }
+      ]
+    },
+    {
+      "name": "pako",
+      "SPDXID": "SPDXRef-Package-pako-1.0.11",
+      "versionInfo": "1.0.11",
+      "packageFileName": "node_modules/pako",
+      "description": "zlib port to javascript - fast, modularized, with browser support",
+      "downloadLocation": "https://registry.npmjs.org/pako/-/pako-1.0.11.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/nodeca/pako",
+      "licenseDeclared": "(MIT AND Zlib)",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/pako@1.0.11"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "e212c1f0fcb8cd971ee6ce3277d5f3a29ab056fff218d855d4197c353982ab5efadc778adbe130553bfe95e19e2f5dc39e1db07dbaa8c153d70883b4cf8b5a63"
+        }
+      ]
+    },
+    {
       "name": "parseurl",
       "SPDXID": "SPDXRef-Package-parseurl-1.3.3",
       "versionInfo": "1.3.3",
@@ -2616,6 +3168,30 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "0a2c9e3b1153fc96723799b4cfd3df5f0e1208127a4b2833d43a65d30aa39610c418604fd469ec51510bd29eb78681b57dc8f77c7ca75e2f4d60ee2758e2fea9"
+        }
+      ]
+    },
+    {
+      "name": "path-is-absolute",
+      "SPDXID": "SPDXRef-Package-path-is-absolute-1.0.1",
+      "versionInfo": "1.0.1",
+      "packageFileName": "node_modules/path-is-absolute",
+      "description": "Node.js 0.12 path.isAbsolute() ponyfill",
+      "downloadLocation": "https://registry.npmjs.org/path-is-absolute/-/path-is-absolute-1.0.1.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/path-is-absolute@1.0.1"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "0156f0dd42767bd6eaeb8bd2692f409b47e37b53daf296c6a934ec9977da2223299ebe4394385f24eb8b8fd49ff7964f5430147ab0df124f3c30f98f7bb50242"
         }
       ]
     },
@@ -2664,6 +3240,30 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "a9172e21d3faf4d3e6e2a6c008af9a0e8808e42043322d6329ed2bcb9ad2409cfc2552ec0bb8d5f17a622631912cba25dcdf91e6284661cacf2d39e8ea901d04"
+        }
+      ]
+    },
+    {
+      "name": "pdf-parse",
+      "SPDXID": "SPDXRef-Package-pdf-parse-1.1.4",
+      "versionInfo": "1.1.4",
+      "packageFileName": "node_modules/pdf-parse",
+      "description": "Pure javascript cross-platform module to extract text from PDFs.",
+      "downloadLocation": "https://registry.npmjs.org/pdf-parse/-/pdf-parse-1.1.4.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/mehmet-kozan/pdf-parse",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/pdf-parse@1.1.4"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "5d121170b824e999d46ec1ec617131330fa4aeb3c4f35849e8540f2dd04d86105e7ea210297bbf59e4e0341192c0fadf534bfe5021309fb0280143ac54a1c5bd"
         }
       ]
     },
@@ -3028,6 +3628,30 @@
       ]
     },
     {
+      "name": "process-nextick-args",
+      "SPDXID": "SPDXRef-Package-process-nextick-args-2.0.1",
+      "versionInfo": "2.0.1",
+      "packageFileName": "node_modules/process-nextick-args",
+      "description": "process.nextTick but always with args",
+      "downloadLocation": "https://registry.npmjs.org/process-nextick-args/-/process-nextick-args-2.0.1.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/calvinmetcalf/process-nextick-args",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/process-nextick-args@2.0.1"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "de8b943a9421b60adb39ad7b27bfaec4e4e92136166863fbfc0868477f80fbfd5ef6c92bcde9468bf757cc4632bdbc6e6c417a5a7db2a6c7132a22891459f56a"
+        }
+      ]
+    },
+    {
       "name": "proxy-addr",
       "SPDXID": "SPDXRef-Package-proxy-addr-2.0.7",
       "versionInfo": "2.0.7",
@@ -3388,6 +4012,30 @@
       ]
     },
     {
+      "name": "setimmediate",
+      "SPDXID": "SPDXRef-Package-setimmediate-1.0.5",
+      "versionInfo": "1.0.5",
+      "packageFileName": "node_modules/setimmediate",
+      "description": "A shim for the setImmediate efficient script yielding API",
+      "downloadLocation": "https://registry.npmjs.org/setimmediate/-/setimmediate-1.0.5.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/setimmediate@1.0.5"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "3004c9759a7cb0ba8397febc2df4266cff3328f2d0355e81219a0882bb1c14343e46cbcafc1c5e0d03a0cb128aa21d32ffc87706a5459c2a90fe077eade8885c"
+        }
+      ]
+    },
+    {
       "name": "setprototypeof",
       "SPDXID": "SPDXRef-Package-setprototypeof-1.2.0",
       "versionInfo": "1.2.0",
@@ -3628,6 +4276,30 @@
       ]
     },
     {
+      "name": "sprintf-js",
+      "SPDXID": "SPDXRef-Package-sprintf-js-1.0.3",
+      "versionInfo": "1.0.3",
+      "packageFileName": "node_modules/sprintf-js",
+      "description": "JavaScript sprintf implementation",
+      "downloadLocation": "https://registry.npmjs.org/sprintf-js/-/sprintf-js-1.0.3.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "BSD-3-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/sprintf-js@1.0.3"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "0fd70f824bcb955deddc8ccbd03d182ef180f40864e0f72f57051b3747521abd5a3f436bb780049d351bb86beab840b4980eb81aab757f38ab951b3989b5f1f2"
+        }
+      ]
+    },
+    {
       "name": "statuses",
       "SPDXID": "SPDXRef-Package-statuses-2.0.2",
       "versionInfo": "2.0.2",
@@ -3820,6 +4492,30 @@
       ]
     },
     {
+      "name": "tweetnacl",
+      "SPDXID": "SPDXRef-Package-tweetnacl-1.0.3",
+      "versionInfo": "1.0.3",
+      "packageFileName": "node_modules/tweetnacl",
+      "description": "Port of TweetNaCl cryptographic library to JavaScript",
+      "downloadLocation": "https://registry.npmjs.org/tweetnacl/-/tweetnacl-1.0.3.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://tweetnacl.js.org",
+      "licenseDeclared": "Unlicense",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/tweetnacl@1.0.3"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "eabb7e44deda3a2d6718cc82e176b90dd622ba497651609b7097eded887145e046403ece00cf0f6f1c3a60ca38af676234403c1449aedf660e9fdae16a2139cb"
+        }
+      ]
+    },
+    {
       "name": "type-is",
       "SPDXID": "SPDXRef-Package-type-is-2.1.0",
       "versionInfo": "2.1.0",
@@ -3864,6 +4560,30 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "f0561abbdea8dcd28e85b8ca8bfa8dbc6fd6e63873c646dd9b9b23f406d9ff94f9b16aa7de12602df1b1dbbb11299593bf2cc23fc74b4414dfe6d05349155434"
+        }
+      ]
+    },
+    {
+      "name": "underscore",
+      "SPDXID": "SPDXRef-Package-underscore-1.13.8",
+      "versionInfo": "1.13.8",
+      "packageFileName": "node_modules/underscore",
+      "description": "JavaScript's functional programming helper library.",
+      "downloadLocation": "https://registry.npmjs.org/underscore/-/underscore-1.13.8.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://underscorejs.org",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/underscore@1.13.8"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "0d7b43dd9b4443373b33c9b8717a2dc8747e1404b5f02eb86ac058639bea65ec5f62bc8d3670dcd365b884a837add42ea8e61ab358e4b1e5f4fa76578d35e7bd"
         }
       ]
     },
@@ -4060,6 +4780,30 @@
       ]
     },
     {
+      "name": "xmlbuilder",
+      "SPDXID": "SPDXRef-Package-xmlbuilder-10.1.1",
+      "versionInfo": "10.1.1",
+      "packageFileName": "node_modules/xmlbuilder",
+      "description": "An XML builder for node.js",
+      "downloadLocation": "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-10.1.1.tgz",
+      "filesAnalyzed": false,
+      "homepage": "http://github.com/oozcitak/xmlbuilder-js",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/xmlbuilder@10.1.1"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "3b2ceb7052cbfe76fa7cc1876e2443b8fba9f658c1c9cb1d0b2a70bb28390001efc96cc67c2849a425cc1bcf0019320c161199f5171c14dd5eea5860de19302a"
+        }
+      ]
+    },
+    {
       "name": "xtend",
       "SPDXID": "SPDXRef-Package-xtend-4.0.2",
       "versionInfo": "4.0.2",
@@ -4132,9 +4876,27 @@
       ]
     },
     {
+      "name": "@arnilo/prism-acp-agent",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-acp-agent-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-acp-agent",
+      "description": "Spawnable ACP agent: serves createPrismAcpAgent over stdio from a config file.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/acp-agent#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-acp-agent@0.2.8"
+        }
+      ]
+    },
+    {
       "name": "@arnilo/prism-ag-ui",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-ag-ui-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-ag-ui-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-ag-ui",
       "description": "Optional bounded AG-UI event mapper for Prism agent events.",
       "downloadLocation": "NOASSERTION",
@@ -4145,14 +4907,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-ag-ui@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-ag-ui@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-browser",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-browser-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-browser-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-browser",
       "description": "Optional Prism browser tools over a host-supplied Playwright Browser: open, snapshot, act, and close with run-owned contexts, egress policy, and upload/download/screenshot quarantine.",
       "downloadLocation": "NOASSERTION",
@@ -4163,14 +4925,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-browser@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-browser@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-coding-agent",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-coding-agent-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-coding-agent-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-coding-agent",
       "description": "Optional coding-agent tools (shell, read, write, edit, repo_list, repo_search, glob, delete, move, opt-in Git/check/ask-user-decision, and durable plan/checkpoint helpers) package for Prism.",
       "downloadLocation": "NOASSERTION",
@@ -4181,14 +4943,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-coding-agent@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-coding-agent@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-coding-security",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-coding-security-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-coding-security-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-coding-security",
       "description": "Optional execution approval, path containment, and disposable Docker/OCI sandbox adapters for Prism coding tools.",
       "downloadLocation": "NOASSERTION",
@@ -4199,14 +4961,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-coding-security@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-coding-security@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-compaction-llm",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-compaction-llm-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-compaction-llm-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-compaction-llm",
       "description": "LLM-backed compaction strategy package for Prism.",
       "downloadLocation": "NOASSERTION",
@@ -4217,14 +4979,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-compaction-llm@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-compaction-llm@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-compaction-observational-memory",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-compaction-observational-memory-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-compaction-observational-memory-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-compaction-observational-memory",
       "description": "Observational memory compaction package for Prism.",
       "downloadLocation": "NOASSERTION",
@@ -4235,14 +4997,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-compaction-observational-memory@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-compaction-observational-memory@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-credentials-node",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-credentials-node-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-credentials-node-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-credentials-node",
       "description": "Optional encrypted-file and system-keychain credential stores for Prism.",
       "downloadLocation": "NOASSERTION",
@@ -4253,14 +5015,32 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-credentials-node@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-credentials-node@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-document-reader",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-document-reader-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-document-reader",
+      "description": "Optional bounded PDF/Office literal-text extraction adapter for the Prism coding read tool (host-selected parser wiring, fails closed without its optional peer parsers).",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-document-reader@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-enterprise-postgres",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-enterprise-postgres",
       "description": "Optional PostgreSQL enterprise state infrastructure for Prism.",
       "downloadLocation": "NOASSERTION",
@@ -4271,14 +5051,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-enterprise-postgres@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-enterprise-postgres@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-evals",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-evals-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-evals-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-evals",
       "description": "Bounded deterministic, trace, model-judge, pairwise, and CI evaluations for Prism runs.",
       "downloadLocation": "NOASSERTION",
@@ -4289,14 +5069,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-evals@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-evals@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-mcp",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-mcp-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-mcp-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-mcp",
       "description": "Bounded MCP tools, resources, prompts, client callbacks, and authorized Streamable HTTP sessions.",
       "downloadLocation": "NOASSERTION",
@@ -4307,14 +5087,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-mcp@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-mcp@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-memory",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-memory-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-memory-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-memory",
       "description": "Optional working memory and semantic recall primitives with Embedder/VectorStore contracts for Prism.",
       "downloadLocation": "NOASSERTION",
@@ -4325,14 +5105,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-memory@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-memory@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-model-router",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-model-router-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-model-router-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-model-router",
       "description": "Optional model governance router: allow-list, residency, budgets, fallback, circuits, and redacted diagnostics.",
       "downloadLocation": "NOASSERTION",
@@ -4343,14 +5123,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-model-router@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-model-router@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-observability-opentelemetry",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-observability-opentelemetry-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-observability-opentelemetry-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-observability-opentelemetry",
       "description": "Optional OpenTelemetry adapter for Prism agent events.",
       "downloadLocation": "NOASSERTION",
@@ -4361,14 +5141,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-observability-opentelemetry@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-observability-opentelemetry@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-policy",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-policy-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-policy-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-policy",
       "description": "Optional policy-decision ledger and cursor-paginated audit export for Prism.",
       "downloadLocation": "NOASSERTION",
@@ -4379,16 +5159,16 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-policy@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-policy@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-all",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-all-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-all-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-all",
-      "description": "Complete Prism umbrella: every first-party runtime, capability, provider, and persistence package.",
+      "description": "Broad Prism umbrella: 21 first-party runtime, capability, provider, and persistence packages (44 transitive; omits document-reader, OpenAPI tools, NATS, Caveman, Ponytail).",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
       "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-all#readme",
@@ -4397,14 +5177,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-all@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-all@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-base",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-base-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-base-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-base",
       "description": "Base Prism profile: core runtime, compaction strategies, and JSON Schema tool validation.",
       "downloadLocation": "NOASSERTION",
@@ -4415,14 +5195,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-base@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-base@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-caveman",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-caveman-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-caveman-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-caveman",
       "description": "Caveman behavior integration for Prism.",
       "downloadLocation": "NOASSERTION",
@@ -4433,14 +5213,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-caveman@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-caveman@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-code",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-code-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-code-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-code",
       "description": "Prism coding-agent profile with base runtime, coding tools, execution security, and MCP.",
       "downloadLocation": "NOASSERTION",
@@ -4451,14 +5231,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-code@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-code@0.2.8"
         }
       ]
     },
     {
       "name": "@arnilo/prism-compaction",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-compaction-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-compaction-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-compaction",
       "description": "Umbrella package: installs all first-party Prism compaction strategies. Imports come from the individual @arnilo/prism-compaction-* packages.",
       "downloadLocation": "NOASSERTION",
@@ -4469,475 +5249,25 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-compaction@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-compaction@0.2.8"
         }
       ]
     },
     {
-      "name": "@arnilo/prism-ponytail",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-ponytail-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-ponytail",
-      "description": "Ponytail behavior integration for Prism.",
+      "name": "@arnilo/prism-openapi-tools",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-openapi-tools-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-openapi-tools",
+      "description": "Optional OpenAPI 3.1 tools adapter for Prism: compile host-selected operations into bounded ToolDefinitions.",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-ponytail#readme",
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-openapi-tools#readme",
       "licenseDeclared": "MIT",
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-ponytail@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-providers",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-providers",
-      "description": "Umbrella package: installs all first-party Prism provider adapters, including Anthropic, Google, and AI SDK interoperability.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-providers#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-providers@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-sdk",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-sdk-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-sdk",
-      "description": "Prism application SDK profile with workflows, MCP, Node credentials, and OpenTelemetry.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-sdk#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-sdk@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-ai-sdk",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-ai-sdk-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-ai-sdk",
-      "description": "Optional AI SDK LanguageModelV4 adapter for Prism AIProvider streams.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-ai-sdk#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-ai-sdk@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-alibaba",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-alibaba-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-alibaba",
-      "description": "Alibaba Cloud (Model Studio / DashScope, incl. Coding Plan) provider package for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-alibaba#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-alibaba@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-anthropic",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-anthropic-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-anthropic",
-      "description": "Anthropic Messages provider package for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-anthropic#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-anthropic@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-azure",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-azure-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-azure",
-      "description": "Azure OpenAI / Foundry enterprise provider for Prism (host Entra workload identity).",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-azure#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-azure@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-bedrock",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-bedrock-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-bedrock",
-      "description": "Amazon Bedrock enterprise provider for Prism (host IAM/IRSA credentials + region/VPC endpoint).",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-bedrock#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-bedrock@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-google",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-google-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-google",
-      "description": "Google Gemini generateContent provider package for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-google#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-google@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-kimi",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-kimi-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-kimi",
-      "description": "Kimi provider package for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-kimi#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-kimi@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-neuralwatt",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-neuralwatt-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-neuralwatt",
-      "description": "NeuralWatt provider package for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-neuralwatt#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-neuralwatt@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-ollama",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-ollama-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-ollama",
-      "description": "Ollama Cloud provider package for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-ollama#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-ollama@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-openai",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-openai-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-openai",
-      "description": "OpenAI provider package for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-openai#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-openai@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-opencode-go",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-opencode-go-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-opencode-go",
-      "description": "OpenCode Go provider package for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-opencode-go#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-opencode-go@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-openrouter",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-openrouter-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-openrouter",
-      "description": "OpenRouter provider package for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-openrouter#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-openrouter@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-vertex",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-vertex-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-vertex",
-      "description": "Google Vertex AI enterprise provider for Prism (host ADC/workload identity; separate from consumer Google package).",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-vertex#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-vertex@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-provider-zai",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-zai-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-provider-zai",
-      "description": "Z.AI provider package for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-zai#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-zai@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-rag",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-rag-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-rag",
-      "description": "Optional bounded text and Markdown RAG primitives for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/rag#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-rag@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-server",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-server-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-server",
-      "description": "Optional framework-free Web Request-to-Response handler for explicitly selected Prism agents and workflows.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/server#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-server@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-session-store-codecs",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-session-store-codecs-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-session-store-codecs",
-      "description": "Shared row codecs for Prism SQL session stores; the only store-specific seam is the redacted-boolean representation.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/session-store-codecs#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-session-store-codecs@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-session-store-postgres",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-session-store-postgres",
-      "description": "Optional PostgreSQL SessionStore, RunLedger, and ProductionPersistenceStore adapter for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/session-store-postgres#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-session-store-postgres@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-session-store-sqlite",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-session-store-sqlite",
-      "description": "Optional SQLite SessionStore, RunLedger, and ProductionPersistenceStore adapter for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/session-store-sqlite#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-session-store-sqlite@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-supervisor",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-supervisor-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-supervisor",
-      "description": "Bounded supervisor delegation and A2A 1.0 durable task, rich-part, reconnect, and push interoperability.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/supervisor#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-supervisor@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-tool-validator-json-schema",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-tool-validator-json-schema-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-tool-validator-json-schema",
-      "description": "Optional JSON Schema tool argument validator for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/tool-validator-json-schema#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-tool-validator-json-schema@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-web-tools",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-web-tools-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-web-tools",
-      "description": "Optional bounded Brave, Exa, and Firecrawl web research tools for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/web-tools#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-web-tools@0.0.24"
-        }
-      ]
-    },
-    {
-      "name": "@arnilo/prism-work-tools",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-work-tools-0.0.24",
-      "versionInfo": "0.0.24",
-      "packageFileName": "node_modules/@arnilo/prism-work-tools",
-      "description": "Optional identity-scoped Microsoft 365 and Google Workspace work connector tools for Prism.",
-      "downloadLocation": "NOASSERTION",
-      "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/work-tools#readme",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-work-tools@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-openapi-tools@0.2.8"
         }
       ]
     },
@@ -4945,7 +5275,7 @@
       "name": "@types/node",
       "SPDXID": "SPDXRef-Package-types.node-22.20.1",
       "versionInfo": "22.20.1",
-      "packageFileName": "packages/work-tools/node_modules/@types/node",
+      "packageFileName": "packages/prism-openapi-tools/node_modules/@types/node",
       "description": "TypeScript definitions for node",
       "downloadLocation": "https://registry.npmjs.org/@types/node/-/node-22.20.1.tgz",
       "filesAnalyzed": false,
@@ -4969,7 +5299,7 @@
       "name": "undici-types",
       "SPDXID": "SPDXRef-Package-undici-types-6.21.0",
       "versionInfo": "6.21.0",
-      "packageFileName": "packages/work-tools/node_modules/undici-types",
+      "packageFileName": "packages/prism-openapi-tools/node_modules/undici-types",
       "description": "A stand-alone types package for Undici",
       "downloadLocation": "https://registry.npmjs.org/undici-types/-/undici-types-6.21.0.tgz",
       "filesAnalyzed": false,
@@ -4990,9 +5320,495 @@
       ]
     },
     {
+      "name": "@arnilo/prism-ponytail",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-ponytail-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-ponytail",
+      "description": "Ponytail behavior integration for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-ponytail#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-ponytail@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-providers",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-providers",
+      "description": "Umbrella package: installs 11 of the 14 first-party Prism provider adapters (omits Azure, Bedrock, Vertex — added separately by @arnilo/prism-all), including Anthropic, Google, and AI SDK interoperability.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-providers#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-providers@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-sdk",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-sdk-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-sdk",
+      "description": "Prism application SDK profile with workflows, MCP, Node credentials, and OpenTelemetry.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-sdk#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-sdk@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-ai-sdk",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-ai-sdk-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-ai-sdk",
+      "description": "Optional AI SDK LanguageModelV4 adapter for Prism AIProvider streams.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-ai-sdk#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-ai-sdk@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-alibaba",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-alibaba-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-alibaba",
+      "description": "Alibaba Cloud (Model Studio / DashScope, incl. Coding Plan) provider package for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-alibaba#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-alibaba@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-anthropic",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-anthropic-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-anthropic",
+      "description": "Anthropic Messages provider package for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-anthropic#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-anthropic@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-azure",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-azure-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-azure",
+      "description": "Azure OpenAI / Foundry enterprise provider for Prism (host Entra workload identity).",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-azure#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-azure@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-bedrock",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-bedrock-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-bedrock",
+      "description": "Amazon Bedrock enterprise provider for Prism (host IAM/IRSA credentials + region/VPC endpoint).",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-bedrock#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-bedrock@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-google",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-google-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-google",
+      "description": "Google Gemini generateContent provider package for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-google#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-google@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-kimi",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-kimi-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-kimi",
+      "description": "Kimi provider package for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-kimi#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-kimi@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-neuralwatt",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-neuralwatt-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-neuralwatt",
+      "description": "NeuralWatt provider package for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-neuralwatt#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-neuralwatt@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-ollama",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-ollama-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-ollama",
+      "description": "Ollama Cloud provider package for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-ollama#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-ollama@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-openai",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-openai-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-openai",
+      "description": "OpenAI provider package for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-openai#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-openai@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-opencode-go",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-opencode-go-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-opencode-go",
+      "description": "OpenCode Go provider package for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-opencode-go#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-opencode-go@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-openrouter",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-openrouter-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-openrouter",
+      "description": "OpenRouter provider package for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-openrouter#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-openrouter@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-vertex",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-vertex-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-vertex",
+      "description": "Google Vertex AI enterprise provider for Prism (host ADC/workload identity; separate from consumer Google package).",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-vertex#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-vertex@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-provider-zai",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-provider-zai-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-provider-zai",
+      "description": "Z.AI provider package for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/provider-zai#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-provider-zai@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-rag",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-rag-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-rag",
+      "description": "Optional bounded text and Markdown RAG primitives for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/rag#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-rag@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-server",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-server-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-server",
+      "description": "Optional framework-free Web Request-to-Response handler for explicitly selected Prism agents and workflows.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/server#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-server@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-session-store-codecs",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-session-store-codecs-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-session-store-codecs",
+      "description": "Shared row codecs for Prism SQL session stores; the only store-specific seam is the redacted-boolean representation.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/session-store-codecs#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-session-store-codecs@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-session-store-nats",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-session-store-nats-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-session-store-nats",
+      "description": "Optional NATS JetStream AgentEventSource adapter for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/session-store-nats#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-session-store-nats@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-session-store-postgres",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-session-store-postgres",
+      "description": "Optional PostgreSQL SessionStore, RunLedger, and ProductionPersistenceStore adapter for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/session-store-postgres#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-session-store-postgres@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-session-store-sqlite",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-session-store-sqlite",
+      "description": "Optional SQLite SessionStore, RunLedger, and ProductionPersistenceStore adapter for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/session-store-sqlite#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-session-store-sqlite@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-supervisor",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-supervisor-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-supervisor",
+      "description": "Bounded supervisor delegation and A2A 1.0 durable task, rich-part, reconnect, and push interoperability.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/supervisor#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-supervisor@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-tool-validator-json-schema",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-tool-validator-json-schema-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-tool-validator-json-schema",
+      "description": "Optional JSON Schema tool argument validator for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/tool-validator-json-schema#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-tool-validator-json-schema@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-web-tools",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-web-tools-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-web-tools",
+      "description": "Optional bounded Brave, Exa, and Firecrawl web research tools for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/web-tools#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-web-tools@0.2.8"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-work-tools",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-work-tools-0.2.8",
+      "versionInfo": "0.2.8",
+      "packageFileName": "node_modules/@arnilo/prism-work-tools",
+      "description": "Optional identity-scoped Microsoft 365 and Google Workspace work connector tools for Prism.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/work-tools#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-work-tools@0.2.8"
+        }
+      ]
+    },
+    {
       "name": "@arnilo/prism-workflows",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-workflows-0.0.24",
-      "versionInfo": "0.0.24",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-workflows-0.2.8",
+      "versionInfo": "0.2.8",
       "packageFileName": "node_modules/@arnilo/prism-workflows",
       "description": "Optional bounded DAG workflows with durable coordination, schedules, composition, state, and replay.",
       "downloadLocation": "NOASSERTION",
@@ -5003,7 +5819,7 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-workflows@0.0.24"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-workflows@0.2.8"
         }
       ]
     }
@@ -5011,252 +5827,272 @@
   "relationships": [
     {
       "spdxElementId": "SPDXRef-DOCUMENT",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DESCRIBES"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-ai-sdk-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-ai-sdk-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-alibaba-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-alibaba-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-anthropic-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-anthropic-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-azure-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-azure-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-bedrock-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-bedrock-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-google-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-google-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-kimi-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-kimi-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-neuralwatt-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-neuralwatt-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-ollama-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-ollama-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-openai-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-openai-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-opencode-go-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-opencode-go-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-openrouter-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-openrouter-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-vertex-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-vertex-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-zai-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-zai-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-compaction-llm-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-compaction-llm-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-compaction-observational-memory-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-compaction-observational-memory-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-observability-opentelemetry-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-observability-opentelemetry-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-tool-validator-json-schema-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-tool-validator-json-schema-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-codecs-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-codecs-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-nats-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-credentials-node-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-credentials-node-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-evals-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-workflows-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-evals-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-agent-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-workflows-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-security-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-agent-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-memory-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-security-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-rag-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-memory-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-server-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-rag-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-supervisor-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-server-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-web-tools-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-supervisor-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-work-tools-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-web-tools-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-policy-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-work-tools-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-model-router-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-policy-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-model-router-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-browser-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-ag-ui-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-browser-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-all-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-ag-ui-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-base-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-acp-agent-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-caveman-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-document-reader-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-code-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-all-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-compaction-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-base-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-ponytail-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-caveman-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-code-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-sdk-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-compaction-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-openapi-tools-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-ponytail-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-sdk-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-biomejs.biome-2.5.5",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-types.node-26.1.1",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-typescript-7.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
@@ -5350,613 +6186,693 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
+      "spdxElementId": "SPDXRef-Package-agentclientprotocol.sdk-1.3.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-agent-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-ag-ui-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
       "spdxElementId": "SPDXRef-Package-zod-4.4.3",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.2.8",
       "relationshipType": "PREREQUISITE_FOR"
     },
     {
       "spdxElementId": "SPDXRef-Package-ag-ui.core-0.0.57",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-agentclientprotocol.sdk-1.3.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-agent-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ag-ui.client-0.0.57",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-supervisor-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-supervisor-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-code-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-code-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-sdk-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-sdk-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-evals-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-evals-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-memory-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-memory-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-rag-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-rag-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-server-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-server-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-supervisor-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-supervisor-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-web-tools-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-web-tools-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-browser-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-browser-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-ag-ui-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-ag-ui-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-policy-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-acp-agent-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-model-router-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-policy-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-azure-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-model-router-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-bedrock-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-azure-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-vertex-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-bedrock-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-work-tools-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-vertex-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-base-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-work-tools-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-all-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-compaction-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-base-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-base-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-tool-validator-json-schema-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-base-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-compaction-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-base-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-browser-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-tool-validator-json-schema-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-base-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-browser-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-evals-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-browser-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-evals-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-browser-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-playwright-core-1.61.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-browser-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-browser-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-caveman-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-caveman-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-base-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-code-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-base-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-code-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-agent-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-code-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-agent-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-code-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-security-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-code-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-security-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-code-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-code-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-code-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-diff-9.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-agent-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-agent-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-agent-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-agent-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-evals-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-agent-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-evals-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-agent-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-workflows-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-agent-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-workflows-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-agent-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-security-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-security-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-agent-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-security-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-agent-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-security-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-compaction-llm-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-compaction-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-compaction-llm-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-compaction-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-compaction-observational-memory-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-compaction-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-compaction-observational-memory-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-compaction-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-compaction-llm-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-compaction-llm-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-compaction-observational-memory-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-compaction-observational-memory-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-openai-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-compaction-observational-memory-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-openai-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-compaction-observational-memory-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-napi-rs.keyring-1.3.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-credentials-node-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-credentials-node-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-credentials-node-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-credentials-node-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-evals-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-document-reader-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-agent-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-document-reader-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-mammoth-1.12.1",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-document-reader-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-pdf-parse-1.1.4",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-document-reader-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-evals-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-model-router-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-model-router-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-policy-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-policy-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-work-tools-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-work-tools-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-pg-8.22.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-types.pg-8.20.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-enterprise-postgres-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-evals-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-evals-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-modelcontextprotocol.sdk-1.30.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-zod-4.4.3",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-pg-8.22.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-types.pg-8.20.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-model-router-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-model-router-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-observability-opentelemetry-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-observability-opentelemetry-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-opentelemetry.api-1.9.1",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-observability-opentelemetry-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-observability-opentelemetry-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-policy-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ponytail-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-ai-sdk.provider-4.0.4",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-ai-sdk-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-ai-sdk-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-alibaba-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-anthropic-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-azure-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-bedrock-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-google-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-kimi-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-neuralwatt-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-ollama-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-openai-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-opencode-go-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-openrouter-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-vertex-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-zai-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-ai-sdk-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-alibaba-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-anthropic-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-google-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-kimi-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-neuralwatt-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-ollama-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-openai-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-opencode-go-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-openrouter-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-zai-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-rag-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-memory-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-rag-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-base-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-sdk-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-credentials-node-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-sdk-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-sdk-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-observability-opentelemetry-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-sdk-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-workflows-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-sdk-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-server-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-server-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-workflows-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-server-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-codecs-0.0.24",
-      "relationshipType": "PREREQUISITE_FOR"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-codecs-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-pg-8.22.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-types.pg-8.20.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-codecs-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-better-sqlite3-12.11.1",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-types.better-sqlite3-7.6.13",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-supervisor-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-ajv-8.20.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-tool-validator-json-schema-0.0.24",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-tool-validator-json-schema-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-web-tools-0.0.24",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-tools-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-openapi-tools-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-types.node-22.20.1",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-tools-0.0.24",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-openapi-tools-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.0.24",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-workflows-0.0.24",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-policy-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ponytail-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-ai-sdk.provider-4.0.4",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-ai-sdk-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-ai-sdk-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-alibaba-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-anthropic-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-azure-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-bedrock-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-google-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-kimi-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-neuralwatt-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-ollama-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-openai-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-opencode-go-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-openrouter-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-vertex-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-provider-zai-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-ai-sdk-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-alibaba-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-anthropic-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-google-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-kimi-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-neuralwatt-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-ollama-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-openai-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-opencode-go-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-openrouter-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-provider-zai-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-rag-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-memory-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-rag-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-base-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-sdk-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-credentials-node-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-sdk-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-sdk-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-observability-opentelemetry-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-sdk-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-workflows-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-sdk-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-server-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-server-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-workflows-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-server-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-codecs-0.2.8",
+      "relationshipType": "PREREQUISITE_FOR"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-nats-io.jetstream-3.4.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-nats-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-nats-io.transport-node-3.4.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-nats-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-nats-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-codecs-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-pg-8.22.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-types.pg-8.20.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-postgres-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-session-store-codecs-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-better-sqlite3-12.11.1",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-types.better-sqlite3-7.6.13",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-session-store-sqlite-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-supervisor-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-ajv-8.20.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-tool-validator-json-schema-0.2.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-tool-validator-json-schema-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-web-tools-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-tools-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-types.node-22.20.1",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-tools-0.2.8",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-workflows-0.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
@@ -6060,6 +6976,41 @@
       "relationshipType": "OPTIONAL_DEPENDENCY_OF"
     },
     {
+      "spdxElementId": "SPDXRef-Package-nats-io.nats-core-3.4.0",
+      "relatedSpdxElement": "SPDXRef-Package-nats-io.jetstream-3.4.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-nats-io.nkeys-2.0.3",
+      "relatedSpdxElement": "SPDXRef-Package-nats-io.nats-core-3.4.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-nats-io.nuid-3.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-nats-io.nats-core-3.4.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-tweetnacl-1.0.3",
+      "relatedSpdxElement": "SPDXRef-Package-nats-io.nkeys-2.0.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-nats-io.nats-core-3.4.0",
+      "relatedSpdxElement": "SPDXRef-Package-nats-io.transport-node-3.4.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-nats-io.nkeys-2.0.3",
+      "relatedSpdxElement": "SPDXRef-Package-nats-io.transport-node-3.4.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-nats-io.nuid-3.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-nats-io.transport-node-3.4.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
       "spdxElementId": "SPDXRef-Package-types.node-26.1.1",
       "relatedSpdxElement": "SPDXRef-Package-types.better-sqlite3-7.6.13",
       "relationshipType": "DEPENDENCY_OF"
@@ -6117,6 +7068,11 @@
     {
       "spdxElementId": "SPDXRef-Package-ajv-8.20.0",
       "relatedSpdxElement": "SPDXRef-Package-ajv-formats-3.0.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-sprintf-js-1.0.3",
+      "relatedSpdxElement": "SPDXRef-Package-argparse-1.0.10",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -6257,6 +7213,11 @@
     {
       "spdxElementId": "SPDXRef-Package-mimic-response-3.1.0",
       "relatedSpdxElement": "SPDXRef-Package-decompress-response-6.0.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-underscore-1.13.8",
+      "relatedSpdxElement": "SPDXRef-Package-duck-0.1.12",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -6565,6 +7526,136 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
+      "spdxElementId": "SPDXRef-Package-lie-3.3.0",
+      "relatedSpdxElement": "SPDXRef-Package-jszip-3.10.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-pako-1.0.11",
+      "relatedSpdxElement": "SPDXRef-Package-jszip-3.10.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-readable-stream-2.3.8",
+      "relatedSpdxElement": "SPDXRef-Package-jszip-3.10.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-setimmediate-1.0.5",
+      "relatedSpdxElement": "SPDXRef-Package-jszip-3.10.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-core-util-is-1.0.3",
+      "relatedSpdxElement": "SPDXRef-Package-readable-stream-2.3.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-inherits-2.0.4",
+      "relatedSpdxElement": "SPDXRef-Package-readable-stream-2.3.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-isarray-1.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-readable-stream-2.3.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-process-nextick-args-2.0.1",
+      "relatedSpdxElement": "SPDXRef-Package-readable-stream-2.3.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-safe-buffer-5.1.2",
+      "relatedSpdxElement": "SPDXRef-Package-readable-stream-2.3.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-string_decoder-1.1.1",
+      "relatedSpdxElement": "SPDXRef-Package-readable-stream-2.3.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-util-deprecate-1.0.2",
+      "relatedSpdxElement": "SPDXRef-Package-readable-stream-2.3.8",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-safe-buffer-5.1.2",
+      "relatedSpdxElement": "SPDXRef-Package-string_decoder-1.1.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-immediate-3.0.6",
+      "relatedSpdxElement": "SPDXRef-Package-lie-3.3.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-duck-0.1.12",
+      "relatedSpdxElement": "SPDXRef-Package-lop-0.4.2",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-option-0.2.4",
+      "relatedSpdxElement": "SPDXRef-Package-lop-0.4.2",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-underscore-1.13.8",
+      "relatedSpdxElement": "SPDXRef-Package-lop-0.4.2",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-xmldom.xmldom-0.8.13",
+      "relatedSpdxElement": "SPDXRef-Package-mammoth-1.12.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-argparse-1.0.10",
+      "relatedSpdxElement": "SPDXRef-Package-mammoth-1.12.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-base64-js-1.5.1",
+      "relatedSpdxElement": "SPDXRef-Package-mammoth-1.12.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-bluebird-3.4.7",
+      "relatedSpdxElement": "SPDXRef-Package-mammoth-1.12.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-dingbat-to-unicode-1.0.1",
+      "relatedSpdxElement": "SPDXRef-Package-mammoth-1.12.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-jszip-3.10.1",
+      "relatedSpdxElement": "SPDXRef-Package-mammoth-1.12.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-lop-0.4.2",
+      "relatedSpdxElement": "SPDXRef-Package-mammoth-1.12.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-path-is-absolute-1.0.1",
+      "relatedSpdxElement": "SPDXRef-Package-mammoth-1.12.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-underscore-1.13.8",
+      "relatedSpdxElement": "SPDXRef-Package-mammoth-1.12.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-xmlbuilder-10.1.1",
+      "relatedSpdxElement": "SPDXRef-Package-mammoth-1.12.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
       "spdxElementId": "SPDXRef-Package-mime-db-1.54.0",
       "relatedSpdxElement": "SPDXRef-Package-mime-types-3.0.2",
       "relationshipType": "DEPENDENCY_OF"
@@ -6582,6 +7673,11 @@
     {
       "spdxElementId": "SPDXRef-Package-wrappy-1.0.2",
       "relatedSpdxElement": "SPDXRef-Package-once-1.4.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-node-ensure-0.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-pdf-parse-1.1.4",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -7088,6 +8184,11 @@
       "spdxElementId": "SPDXRef-Package-zod-4.4.3",
       "relatedSpdxElement": "SPDXRef-Package-zod-to-json-schema-3.25.2",
       "relationshipType": "PREREQUISITE_FOR"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-undici-types-6.21.0",
+      "relatedSpdxElement": "SPDXRef-Package-types.node-22.20.1",
+      "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-undici-types-6.21.0",

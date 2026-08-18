@@ -1,5 +1,5 @@
 {
-  "$comment": "Phase 20 (0.2.0) Task 1 baseline evidence, captured at 0.1.7 before any phase-20 implementation edit. npm test / coverage / typecheck / biome / format / secrets / audit / pack / release-gate figures are the verified clean 0.1.7 runs (plan 019 exit gate + this session's clean sequential and coverage runs at HEAD 051470a). fileHashes are computed live at capture; the freeze test compares them against the working tree at every task state.",
+  "$comment": "Phase 20 (0.2.0) Task 1 baseline evidence, captured at 0.1.7 before any phase-20 implementation edit. npm test / coverage / typecheck / biome / format / secrets / audit / pack / release-gate figures are the verified clean 0.1.7 runs (plan 019 exit gate + this session's clean sequential and coverage runs at HEAD 051470a). fileHashes are computed live at capture; the freeze test compares them against the working tree at every task state. [2026-08-18] manifestCount refreshed 49->50 workspace / 50->51 publishable: plan 028 shipped the spawnable ACP agent package @arnilo/prism-acp-agent. [2026-08-18] dependencyNames fingerprint refreshed: plan 028 added @arnilo/prism-acp-agent (its deps reuse existing names; the package itself is a new workspace entry).",
   "captured": "2026-08-12T20:37:30.096Z",
   "release": "0.1.7",
   "node": "v24.18.0",
@@ -66,19 +66,19 @@
     "notes": "plain gate after --update-baseline at 0.1.7; no --allow-break anywhere"
   },
   "manifestCount": {
-    "publishable": 50,
-    "workspacePackages": 49,
+    "publishable": 51,
+    "workspacePackages": 50,
     "rootPackage": "@arnilo/prism",
     "categories": {
       "provider": 14,
       "prism": 9,
-      "capability": 26
+      "capability": 27
     },
-    "canonicalStatement": "50 publishable manifests = root @arnilo/prism + 49 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 26 capability packages); 0.2.0 adds no package, the count stays 50",
+    "canonicalStatement": "51 publishable manifests = root @arnilo/prism + 50 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 27 capability packages; the 0.2.8 plan 028 acp-agent closeout added @arnilo/prism-acp-agent)",
     "regenerate": "ls -d packages/*/ | wc -l ; ls -d packages/provider-*/ | wc -l ; ls -d packages/prism-*/ | wc -l"
   },
   "dependencyNames": {
-    "sha256": "bab44803aaecac5854f61183042c9552e391d75a6e1d98031a3f03bdf4c400d7",
+    "sha256": "3824373e8125d26efba730f9a0137aabf6dcf996b99d2681fa254192920b3861",
     "packages": 50,
     "packagesWithRuntimeDeps": 16
   },
@@ -217,7 +217,7 @@
       "docs/host-security.md:150",
       "docs/migration.md:523-524",
       "docs/_evidence/review-coverage-2026-07-21-phase-5.md:55-56",
-      "src/__tests__/docs.test.ts:1262 (asserts docs/coding-security.md includes 'containmentClaim' \u2014 docs must keep the deprecated term)"
+      "src/__tests__/docs.test.ts:1262 (asserts docs/coding-security.md includes 'containmentClaim' — docs must keep the deprecated term)"
     ],
     "compatBaseline": "no references (verified: rg containmentClaim scripts/compat-baseline/*.txt = 0)"
   },

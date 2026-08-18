@@ -9,8 +9,9 @@
  * that fail closed at creation when absent. Literal text only — no embedded
  * script execution, no macro evaluation, no external resource fetching.
  */
-import type { DocumentReader, DocumentReaderResult } from "@arnilo/prism-coding-agent";
+
 import type { SecretRedactor } from "@arnilo/prism";
+import type { DocumentReader, DocumentReaderResult } from "@arnilo/prism-coding-agent";
 
 export class DocumentReaderError extends Error {
   readonly code = "ERR_PRISM_DOCUMENT_READER";

@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 import type { AgentIdentity } from "@arnilo/prism";
+import { ModelRouterError } from "@arnilo/prism-model-router";
 import { Pool } from "pg";
 import { createPostgresEnterpriseState } from "../enterprise.js";
 import { EnterprisePostgresError } from "../errors.js";
-import { ModelRouterError } from "@arnilo/prism-model-router";
 import { qualifyTable } from "../identifiers.js";
 import { runEnterpriseStoreConformance } from "./enterprise-conformance.js";
 

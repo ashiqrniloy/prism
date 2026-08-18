@@ -10,12 +10,12 @@
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { createServer, request as httpRequest } from "node:http";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { createServer, request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 import { createMemoryToolEffectStore } from "../dist/index.js";
 import {
   createBoundGitRunner,

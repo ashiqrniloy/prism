@@ -5,8 +5,9 @@
  * edit tool goes through the four-outcome approval path, and the review mode
  * narrows the host tool set (the mode apply hook rejects edits).
  */
-import { ndJsonStream } from "@agentclientprotocol/sdk";
+
 import { Readable, Writable } from "node:stream";
+import { ndJsonStream } from "@agentclientprotocol/sdk";
 import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-agent";
 import { createPrismAcpAgent } from "../../packages/ag-ui/dist/acp/index.js";
 

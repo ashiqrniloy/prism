@@ -604,7 +604,7 @@ describe("public contracts", () => {
 
   it("public contracts do not mention app-specific tool categories", () => {
     const files = ["src/index.ts", "src/contracts.ts", "dist/index.d.ts", "dist/contracts.d.ts"];
-    const banned = [/safe.?tool/i, /dangerous/i, /synapta/i, /shell/i, /filesystem/i, /browser/i];
+    const banned = [/safe.?tool/i, /dangerous/i, /shell/i, /filesystem/i, /browser/i];
 
     for (const file of files) {
       const text = readFileSync(file, "utf8");

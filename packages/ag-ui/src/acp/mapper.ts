@@ -1,9 +1,10 @@
 import type { SessionUpdate, ToolCallContent, ToolCallLocation, ToolKind } from "@agentclientprotocol/sdk";
-import type { AgentEvent, ErrorInfo, ToolCallContent as PrismToolCall, SecretRedactor, ToolResult, Usage } from "@arnilo/prism";
+import type { AgentEvent, ToolCallContent as PrismToolCall, SecretRedactor, ToolResult, Usage } from "@arnilo/prism";
 import type { CodingLifecycleEvent, FileChangedEvent } from "@arnilo/prism-coding-agent";
 import { type AgUiLimitOptions, resolveAgUiLimits } from "../limits.js";
 import { type AgUiProjection, projectCoWorkEvent } from "../projection.js";
 import type { CoWorkEvent } from "../types.js";
+import type { AcpUsageSeam } from "./capabilities.js";
 
 /**
  * Maps shipped `CodingLifecycleEvent` values to stable ACP v1 session updates
@@ -79,6 +80,26 @@ export function createAcpLifecycleMapper(options: AcpEventMapperOptions = {}): A
         case "configuration_changed":
           // Agent-wired: needs the host configOptions seam + per-session values (config_option_update).
           return [];
+        case "plan_changed": {
+          // F5: complete entry list per update; the client replaces its plan wholesale.
+          const entries: Array<{
+            content: string;
+            priority: "high" | "medium" | "low";
+            status: "pending" | "in_progress" | "completed";
+          }> = event.todos.map((todo) => ({
+            content: text(todo.text),
+            priority: "medium",
+            status: todo.done ? "completed" : "pending",
+          }));
+          return [
+            {
+              sessionUpdate: "plan_update",
+              plan: { type: "items", planId: text(event.planPath), entries },
+            },
+          ];
+        }
+        case "plan_removed":
+          return [{ sessionUpdate: "plan_removed", planId: text(event.planPath) }];
         default:
           // process_released/expired/unknown are not shipped lifecycle mappings (freeze deferred).
           return [];
@@ -98,6 +119,12 @@ export interface AcpEventMapperOptions {
   /** Shared host allow-list; tool text is omitted unless explicitly projected. */
   readonly projection?: AgUiProjection;
   readonly limits?: AgUiLimitOptions;
+  /** Host-reported context window (B1); absent => `usage_update` is omitted, never `size = used`. */
+  readonly usage?: AcpUsageSeam;
+  /** Run signal forwarded to the usage seam. */
+  readonly signal?: AbortSignal;
+  /** Explicit tool kinds (B4); consulted before the name heuristic. */
+  readonly toolKinds?: ReadonlyMap<string, ToolKind>;
 }
 
 export interface AcpEventMapper {
@@ -110,7 +137,8 @@ export interface AcpEventMapper {
 export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEventMapper {
   const limits = resolveAgUiLimits(options.limits);
   let messageId: string | undefined;
-  let messageHasDelta = false;
+  let textDeltaSeen = false;
+  let thoughtDeltaSeen = false;
 
   const text = (value: string, maxBytes = limits.maxTextBytes) =>
     truncate(options.redactor?.redact(value) ?? value, Math.min(maxBytes, limits.maxEventBytes));
@@ -119,13 +147,13 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
     return {
       toolCallId: text(call.id),
       title: text(call.name),
-      kind: kind(call.name),
+      kind: kind(call.name, options.toolKinds),
       status: "in_progress" as const,
       ...(input ? { content: [content(input)] } : {}),
     };
   };
   const finish = async (id: string, name: string, status: "completed" | "failed", result?: ToolResult): Promise<SessionUpdate> => {
-    const output = result ? await projected(() => options.projection?.toolResult?.(result)) : undefined;
+    const output = result ? await projectedResult(result) : undefined;
     const locations = result ? await projectedLocations(result) : undefined;
     const diff = result ? await projectedDiff(result) : undefined;
     return {
@@ -133,7 +161,7 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
       toolCallId: text(id),
       title: text(name),
       status,
-      ...(output || diff ? { content: [...(output ? [content(output)] : []), ...(diff ? [diff] : [])] } : {}),
+      ...(output || diff ? { content: [...(output ? [output] : []), ...(diff ? [diff] : [])] } : {}),
       ...(locations ? { locations } : {}),
     };
   };
@@ -141,6 +169,35 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
     try {
       const value = await callback();
       return typeof value === "string" ? text(value) : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  /** B1: host-reported context window; absent/undefined/throw/invalid => omit the update (never `size = used`). */
+  const contextWindow = async (model?: string): Promise<number | undefined> => {
+    try {
+      const size = await options.usage?.contextWindow?.({ model, signal: options.signal ?? new AbortController().signal });
+      return typeof size === "number" && Number.isFinite(size) && size > 0 ? size : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  const usage = async (value: Usage, model: string | undefined): Promise<readonly SessionUpdate[]> => {
+    const used = value.totalTokens ?? (value.inputTokens ?? 0) + (value.outputTokens ?? 0);
+    const size = await contextWindow(model);
+    return size === undefined ? [] : [{ sessionUpdate: "usage_update", used: Math.max(0, used), size: Math.max(1, size) }];
+  };
+  /** Host allow-list for tool results: string → text content; `{ type: "image" }` → image content (F8). */
+  const projectedResult = async (result: ToolResult): Promise<ToolCallContent | undefined> => {
+    try {
+      const value = await options.projection?.toolResult?.(result);
+      if (typeof value === "string") return content(text(value));
+      if (!value || typeof value !== "object" || value.type !== "image") return undefined;
+      const { data, mimeType } = value;
+      if (typeof data !== "string" || data.length === 0 || typeof mimeType !== "string" || mimeType.length === 0) return undefined;
+      // Drop, don't truncate: a sliced base64 payload is corrupt. Redactor stays off binary data.
+      if (Buffer.byteLength(data, "utf8") > limits.acpImageBytes) return undefined;
+      return { type: "content", content: { type: "image", data, mimeType } };
     } catch {
       return undefined;
     }
@@ -202,21 +259,34 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
         case "message_started":
           if (event.message.role !== "assistant") return [];
           messageId = text(event.message.id ?? `${event.runId}:message`);
-          messageHasDelta = false;
+          textDeltaSeen = false;
+          thoughtDeltaSeen = false;
           return [];
         case "message_delta":
+          // F1: thinking deltas ride agent_thought_chunk (same messageId scheme as
+          // text); image/audio deltas stay dropped.
+          if (event.content.type === "thinking") {
+            messageId ??= `${text(event.runId)}:message`;
+            thoughtDeltaSeen = true;
+            return [thought(messageId ?? `${text(event.runId)}:message`, text(event.content.text))];
+          }
           if (event.content.type !== "text") return [];
           messageId ??= `${text(event.runId)}:message`;
-          messageHasDelta = true;
+          textDeltaSeen = true;
           return [message(messageId ?? `${text(event.runId)}:message`, text(event.content.text))];
         case "message_finished": {
           if (event.message.role !== "assistant") return [];
           const id = messageId ?? text(event.message.id ?? `${event.runId}:message`);
-          const updates = messageHasDelta
-            ? []
-            : event.message.content.flatMap((block) => (block.type === "text" ? [message(id, text(block.text))] : []));
+          // F1: emit finished blocks only for the kinds that had no live delta,
+          // so a mixed text+thinking message never loses either channel.
+          const updates = event.message.content.flatMap((block) => {
+            if (block.type === "text" && !textDeltaSeen) return [message(id, text(block.text))];
+            if (block.type === "thinking" && !thoughtDeltaSeen) return [thought(id, text(block.text))];
+            return [];
+          });
           messageId = undefined;
-          messageHasDelta = false;
+          textDeltaSeen = false;
+          thoughtDeltaSeen = false;
           return updates;
         }
         case "tool_execution_started":
@@ -232,12 +302,15 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
         case "tool_execution_blocked":
           return [await finish(event.toolCallId, event.name, "failed")];
         case "provider_turn_finished":
-          if (event.error) return [error(event.error, text)];
-          return event.usage ? [usage(event.usage)] : [];
+          // B2: a failed provider turn is a request-level condition, not transcript content;
+          // the agent's forward() throws ERR_PRISM_ACP_RUN when the run ends in a terminal
+          // `error` event (retryable turn failures stay silent here and may recover).
+          return event.usage ? await usage(event.usage, event.metadata.model.model) : [];
         case "agent_denied":
           return [message(`${text(event.runId)}:status`, "Run denied")];
         case "error":
-          return [error(event.error, text)];
+          // B2: run-level errors fail the prompt request (forward() throws); never a fake chunk.
+          return [];
         default:
           return [];
       }
@@ -249,20 +322,19 @@ function message(messageId: string, text: string): SessionUpdate {
   return { sessionUpdate: "agent_message_chunk", messageId, content: { type: "text", text } };
 }
 
+// F1: thinking content rides the SDK's agent_thought_chunk variant (a ContentChunk
+// with the thought text, same messageId scheme as text chunks).
+function thought(messageId: string, text: string): SessionUpdate {
+  return { sessionUpdate: "agent_thought_chunk", messageId, content: { type: "text", text } };
+}
+
 function content(text: string): ToolCallContent {
   return { type: "content", content: { type: "text", text } };
 }
 
-function error(value: ErrorInfo, text: (value: string, maxBytes?: number) => string): SessionUpdate {
-  return message("prism:error", `Agent error: ${text(value.message, 8 * 1024)}`);
-}
-
-function usage(value: Usage): SessionUpdate {
-  const used = value.totalTokens ?? (value.inputTokens ?? 0) + (value.outputTokens ?? 0);
-  return { sessionUpdate: "usage_update", used: Math.max(0, used), size: Math.max(1, used) };
-}
-
-function kind(name: string): ToolKind {
+function kind(name: string, toolKinds?: ReadonlyMap<string, ToolKind>): ToolKind {
+  const explicit = toolKinds?.get(name);
+  if (explicit) return explicit;
   if (name.includes("read")) return "read";
   if (name.includes("edit") || name.includes("write")) return "edit";
   if (name.includes("delete")) return "delete";

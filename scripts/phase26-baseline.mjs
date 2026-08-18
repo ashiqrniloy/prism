@@ -8,8 +8,9 @@
  * Re-run at Task 8 to record the exit gate (the script preserves an existing non-null
  * exitGate only if --keep-exit-gate is passed; otherwise exitGate resets to null).
  */
-import { createHash } from "node:crypto";
+
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 const url = (p) => new URL(p, import.meta.url);

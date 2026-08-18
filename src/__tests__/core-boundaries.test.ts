@@ -63,10 +63,13 @@ describe("core source boundaries", () => {
   });
 
   it("source imports and mentions no consuming-app packages", () => {
-    // Synapta is a consuming app, never a Prism dependency; no domain vocabulary
-    // crosses the boundary into any seam.
-    assert.equal(/from ["']synapta/.test(allSrcText), false, "src/ imports a synapta* package");
-    assert.equal(/\bsynapta\b/i.test(allSrcText), false, "src/ mentions synapta");
+    // Core imports only relative paths and node builtins; a consuming app is
+    // never a Prism dependency, so no bare package specifier may cross the
+    // boundary into any seam.
+    const bare = [...allSrcText.matchAll(/from "([^"]+)"/g)]
+      .map((m) => m[1])
+      .filter((spec) => !spec.startsWith("./") && !spec.startsWith("../") && !spec.startsWith("node:"));
+    assert.deepEqual(bare, [], `src/ imports non-relative, non-node specifiers: ${bare.join(", ")}`);
   });
 
   it("core has no runtime dependencies and no first-party provider dependency", () => {

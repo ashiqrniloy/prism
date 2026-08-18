@@ -42,12 +42,28 @@ export interface ConfigurationChangedEvent {
   readonly keys: readonly string[];
 }
 
+export interface PlanChangedEvent {
+  readonly type: "plan_changed";
+  /** Workspace-relative plan path; doubles as the plan id on the ACP wire. */
+  readonly planPath: string;
+  /** Complete todo list at this point (same shape as `CodingTodoItem`). */
+  readonly todos: readonly { readonly id: string; readonly text: string; readonly done: boolean }[];
+}
+
+export interface PlanRemovedEvent {
+  readonly type: "plan_removed";
+  /** Workspace-relative plan path; doubles as the plan id on the ACP wire. */
+  readonly planPath: string;
+}
+
 export type CodingLifecycleEvent =
   | CodingProcessEvent
   | FileChangedEvent
   | WorktreeChangedEvent
   | PermissionDeniedEvent
-  | ConfigurationChangedEvent;
+  | ConfigurationChangedEvent
+  | PlanChangedEvent
+  | PlanRemovedEvent;
 
 export const DEFAULT_LIFECYCLE_MAX_EVENT_BYTES = 16_384;
 export const HARD_LIFECYCLE_MAX_EVENT_BYTES = 65_536;
@@ -122,6 +138,8 @@ const FROZEN_EVENT_TYPES = new Set<string>([
   "worktree_changed",
   "permission_denied",
   "configuration_changed",
+  "plan_changed",
+  "plan_removed",
 ]);
 
 export interface CodingLifecycleEmitter {

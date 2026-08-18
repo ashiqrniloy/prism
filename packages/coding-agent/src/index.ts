@@ -46,25 +46,6 @@ export {
 } from "./ask-user-decision.js";
 export type { CodingCheckToolOptions, NamedCheckDefinition } from "./checks.js";
 export { createCodingCheckTool } from "./checks.js";
-export type { DeleteOperations, DeleteToolOptions, MutationStat } from "./delete.js";
-export { createDeleteTool } from "./delete.js";
-export type {
-  CodingLifecycleEvent,
-  CodingLifecycleLimits,
-  CodingLifecycleEmitter,
-  CreateCodingLifecycleEmitterOptions,
-  FileChangeOp,
-  FileChangedEvent,
-  WorktreeChangedEvent,
-  PermissionDeniedEvent,
-  ConfigurationChangedEvent,
-  ResolvedCodingLifecycleLimits,
-} from "./lifecycle.js";
-export {
-  createCodingLifecycleEmitter,
-  CodingLifecycleError,
-  resolveCodingLifecycleLimits,
-} from "./lifecycle.js";
 export type {
   CodingArtifactKind,
   CodingArtifactRef,
@@ -96,18 +77,45 @@ export {
   verifyCodingArtifactBytes,
   writeCodingPlanFile,
 } from "./coding-checkpoint.js";
+export type { DeleteOperations, DeleteToolOptions, MutationStat } from "./delete.js";
+export { createDeleteTool } from "./delete.js";
+export type {
+  DiagnosticDelta,
+  DiagnosticDeltaRequest,
+  DiagnosticSeverity,
+  NormalizeDiagnosticsOptions,
+  NormalizedDiagnostic,
+  RawDiagnostic,
+  ResolvedDiagnosticsLimits,
+} from "./diagnostics.js";
+export { diagnosticDelta, diagnosticIdentity, normalizeDiagnostics, resolveDiagnosticsLimits } from "./diagnostics.js";
 export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js";
 export { createEditTool } from "./edit.js";
 export type { CodingEffectReconciliation, CodingEffectReconciliationInput } from "./effects.js";
 export {
-  classifyGitApplyEffect,
-  classifyGitBranchEffect,
-  classifyGitWorktreeEffect,
   CODING_LOCAL_EFFECT,
   CODING_OBSERVATION_EFFECT,
   CODING_UNSUPPORTED_EFFECT,
+  classifyGitApplyEffect,
+  classifyGitBranchEffect,
+  classifyGitWorktreeEffect,
   reconcileCodingToolEffect,
 } from "./effects.js";
+export type {
+  CreateGitHubForgeOptions,
+  ForgeCheck,
+  ForgeCredential,
+  ForgeCredentialResolver,
+  ForgeCredentialResolverSource,
+  ForgeErrorCode,
+  ForgeHandoffReport,
+  ForgeIssueContext,
+  ForgeLimits,
+  ForgeOperations,
+  ForgePullRequest,
+  ResolvedForgeLimits,
+} from "./forge/index.js";
+export { createGitHubForge, ForgeError, resolveForgeLimits } from "./forge/index.js";
 export type {
   ArtifactReference,
   ArtifactWriter,
@@ -136,6 +144,8 @@ export {
   SAFE_GIT_CONFIG_ARGS,
   SAFE_GIT_ENV,
 } from "./git.js";
+export type { GitAwareRepositoryOptions } from "./git-aware-repository.js";
+export { createGitAwareRepositoryOperations, parseGitLsFilesZ } from "./git-aware-repository.js";
 export type { GitToolsOptions } from "./git-tools.js";
 export {
   createGitApplyTool,
@@ -147,6 +157,9 @@ export {
   createGitTools,
   createGitWorktreeTool,
 } from "./git-tools.js";
+export type { GlobToolOptions } from "./glob.js";
+export { createGlobTool } from "./glob.js";
+export { matchGlobPattern, validateGlobPattern } from "./glob-match.js";
 export type {
   CodingGoalVerifyApproval,
   RunCodingGoalVerifyOptions,
@@ -159,109 +172,6 @@ export {
   createCodingGoalVerifyWorkflow,
   runCodingGoalVerify,
 } from "./goal-verify.js";
-export type { GlobToolOptions } from "./glob.js";
-export { createGlobTool } from "./glob.js";
-export { matchGlobPattern, validateGlobPattern } from "./glob-match.js";
-export type { ListToolOptions } from "./list.js";
-export { createRepoListTool } from "./list.js";
-export type { MoveOperations, MoveToolOptions } from "./move.js";
-export { createMoveTool } from "./move.js";
-export type {
-  ReadOperations,
-  ReadTextOptions,
-  ReadTextResult,
-  ReadToolOptions,
-  TransformImage,
-  TransformImageInput,
-  DocumentReader,
-  DocumentReaderResult,
-} from "./read.js";
-export {
-  createReadTool,
-  DEFAULT_MAX_IMAGE_BYTES,
-  detectSupportedImageMimeType,
-  detectSupportedImageMimeTypeFromFile,
-} from "./read.js";
-export type { ReadPathSet } from "./read-path-set.js";
-export {
-  createReadPathSet,
-  createReadPathSetPersistence,
-  DEFAULT_MAX_PERSISTED_READ_PATHS,
-  DEFAULT_MAX_PERSISTED_READ_PATH_CHARS,
-  READ_PATH_SET_NAMESPACE,
-} from "./read-path-set.js";
-export type {
-  RepoEntryKind,
-  RepoListEntry,
-  RepoSearchMode,
-  IndexFileChange,
-  IndexFacade,
-  IndexLimitOptions,
-  IndexResourceDiagnostics,
-  IndexSearchHit,
-  IndexState,
-  IndexedRepositoryOptions,
-  RepositoryGlobRequest,
-  RepositoryGlobResult,
-  RepositoryIndexBackend,
-  RepositoryIndexQueryRequest,
-  RepositoryIndexQueryResult,
-  RepositoryIndexRemoveRequest,
-  RepositoryIndexStatus,
-  RepositoryIndexUpdateRequest,
-  RepositoryLimitOptions,
-  RepositoryListRequest,
-  RepositoryListResult,
-  RepositoryOperations,
-  RepoSearchOutputMode,
-  RepositorySearchMatch,
-  RepositorySearchRequest,
-  RepositorySearchResult,
-  ResolvedIndexLimits,
-  ResolvedRepositoryLimits,
-  RepositoryWalk,
-  RepositoryWalkEvent,
-  RepositoryWalkLimits,
-} from "./repository.js";
-export {
-  compileSearchPattern,
-  createLocalRepositoryOperations,
-  DEFAULT_REPO_EXCLUDE,
-  IndexError,
-  isBinaryBuffer,
-  RepositoryError,
-  resolveRepoPath,
-  resolveRepositoryLimits,
-  toRepoRelative,
-} from "./repository.js";
-// host-indexed search seam (plan 026 Task 2): compose a host index with the
-// literal fallback; indexed_literal/semantic never fall back silently
-export { createIndexedRepositoryOperations, resolveIndexLimits } from "./repository.js";
-export type { GitAwareRepositoryOptions } from "./git-aware-repository.js";
-export { createGitAwareRepositoryOperations, parseGitLsFilesZ } from "./git-aware-repository.js";
-export {
-  createCodingWorkspaceLifecycle,
-  resolveWorkspaceLimits,
-  WORKSPACE_LOCK_REASON_PREFIX,
-  WORKSPACE_NAMESPACE,
-  WORKSPACE_SCHEMA_VERSION,
-  WORKSPACE_STATES,
-  WorkspaceError,
-} from "./workspace-lifecycle.js";
-export type {
-  CodingWorkspaceLifecycle,
-  CodingWorkspaceRecord,
-  CreateCodingWorkspaceLifecycleOptions,
-  ResolvedWorkspaceLimits,
-  WorkspaceCleanupPolicy,
-  WorkspaceCreateRequest,
-  WorkspaceErrorCode,
-  WorkspaceLimitOptions,
-  WorkspaceRepositoryRecord,
-  WorkspaceRepositoryRegistration,
-  WorkspaceRepositoryState,
-  WorkspaceState,
-} from "./workspace-lifecycle.js";
 export type {
   CreateLanguageIntelligenceOptions,
   LanguageDiagnostic,
@@ -283,20 +193,26 @@ export {
   resolveLanguageIntelligenceLimits,
 } from "./language/index.js";
 export type {
-  CreateGitHubForgeOptions,
-  ForgeCheck,
-  ForgeCredential,
-  ForgeCredentialResolver,
-  ForgeCredentialResolverSource,
-  ForgeErrorCode,
-  ForgeHandoffReport,
-  ForgeIssueContext,
-  ForgeLimits,
-  ForgeOperations,
-  ForgePullRequest,
-  ResolvedForgeLimits,
-} from "./forge/index.js";
-export { createGitHubForge, ForgeError, resolveForgeLimits } from "./forge/index.js";
+  CodingLifecycleEmitter,
+  CodingLifecycleEvent,
+  CodingLifecycleLimits,
+  ConfigurationChangedEvent,
+  CreateCodingLifecycleEmitterOptions,
+  FileChangedEvent,
+  FileChangeOp,
+  PermissionDeniedEvent,
+  ResolvedCodingLifecycleLimits,
+  WorktreeChangedEvent,
+} from "./lifecycle.js";
+export {
+  CodingLifecycleError,
+  createCodingLifecycleEmitter,
+  resolveCodingLifecycleLimits,
+} from "./lifecycle.js";
+export type { ListToolOptions } from "./list.js";
+export { createRepoListTool } from "./list.js";
+export type { MoveOperations, MoveToolOptions } from "./move.js";
+export { createMoveTool } from "./move.js";
 export type {
   CodingProcessEvent,
   CreateProcessSessionsOptions,
@@ -307,37 +223,6 @@ export type {
   ProcessPtyBackend,
   ProcessPtyHandle,
   ProcessPtyStartRequest,
-  ProcessSandboxBackend,
-  ProcessSandboxHandle,
-  ProcessSandboxStartRequest,
-  ProcessSession,
-  ProcessSessionLimits,
-  ProcessSessionMetadata,
-  ProcessSessions,
-  ProcessSessionState,
-  ProcessStartRequest,
-  ProcessTerminalRequest,
-  ProcessTerminalResize,
-  ResolvedProcessSessionLimits,
-} from "./process/index.js";
-export {
-  createProcessSessions,
-  ProcessSessionError,
-  resolveProcessSessionLimits,
-} from "./process/index.js";
-// durable process/ACP recovery seam (plan 026 Task 5): recover() is
-// attach-if-attested and never fabricates an exit code; exports below
-export {
-  PROCESS_RECOVERY_CATEGORY,
-  PROCESS_RECOVERY_LEASE_NAMESPACE,
-  PROCESS_RECOVERY_NAMESPACE,
-  PROCESS_RECOVERY_SCHEMA_VERSION,
-  ProcessRecoveryError,
-  resolveProcessRecoveryLimits,
-  validateBackendRef,
-  validateProcessRecoveryRecord,
-} from "./process/index.js";
-export type {
   ProcessRecoveryBackend,
   ProcessRecoveryErrorCode,
   ProcessRecoveryLimits,
@@ -345,17 +230,107 @@ export type {
   ProcessRecoveryRecord,
   ProcessRecoveryRecordReport,
   ProcessRecoveryReport,
+  ProcessSandboxBackend,
+  ProcessSandboxHandle,
+  ProcessSandboxStartRequest,
+  ProcessSession,
+  ProcessSessionLimits,
+  ProcessSessionMetadata,
+  ProcessSessionState,
+  ProcessSessions,
+  ProcessStartRequest,
+  ProcessTerminalRequest,
+  ProcessTerminalResize,
   ResolvedProcessRecoveryLimits,
+  ResolvedProcessSessionLimits,
 } from "./process/index.js";
-export type { SearchToolOptions } from "./search.js";
-// bounded patch review (plan 026 Task 6): createCodingPatchReviewManifest +
-// assertCodingPatchAccepted bind decisions to digest + revision + identity
+// durable process/ACP recovery seam (plan 026 Task 5): recover() is
+// attach-if-attested and never fabricates an exit code; exports below
 export {
-  CodingPatchReviewError,
-  assertCodingPatchAccepted,
-  createCodingPatchReviewManifest,
-  resolveCodingReviewLimits,
-} from "./review.js";
+  createProcessSessions,
+  PROCESS_RECOVERY_CATEGORY,
+  PROCESS_RECOVERY_LEASE_NAMESPACE,
+  PROCESS_RECOVERY_NAMESPACE,
+  PROCESS_RECOVERY_SCHEMA_VERSION,
+  ProcessRecoveryError,
+  ProcessSessionError,
+  resolveProcessRecoveryLimits,
+  resolveProcessSessionLimits,
+  validateBackendRef,
+  validateProcessRecoveryRecord,
+} from "./process/index.js";
+export type {
+  DocumentReader,
+  DocumentReaderResult,
+  ReadOperations,
+  ReadTextOptions,
+  ReadTextResult,
+  ReadToolOptions,
+  TransformImage,
+  TransformImageInput,
+} from "./read.js";
+export {
+  createReadTool,
+  DEFAULT_MAX_IMAGE_BYTES,
+  detectSupportedImageMimeType,
+  detectSupportedImageMimeTypeFromFile,
+} from "./read.js";
+export type { ReadPathSet } from "./read-path-set.js";
+export {
+  createReadPathSet,
+  createReadPathSetPersistence,
+  DEFAULT_MAX_PERSISTED_READ_PATH_CHARS,
+  DEFAULT_MAX_PERSISTED_READ_PATHS,
+  READ_PATH_SET_NAMESPACE,
+} from "./read-path-set.js";
+export type {
+  IndexedRepositoryOptions,
+  IndexFacade,
+  IndexFileChange,
+  IndexLimitOptions,
+  IndexResourceDiagnostics,
+  IndexSearchHit,
+  IndexState,
+  RepoEntryKind,
+  RepoListEntry,
+  RepoSearchMode,
+  RepoSearchOutputMode,
+  RepositoryGlobRequest,
+  RepositoryGlobResult,
+  RepositoryIndexBackend,
+  RepositoryIndexQueryRequest,
+  RepositoryIndexQueryResult,
+  RepositoryIndexRemoveRequest,
+  RepositoryIndexStatus,
+  RepositoryIndexUpdateRequest,
+  RepositoryLimitOptions,
+  RepositoryListRequest,
+  RepositoryListResult,
+  RepositoryOperations,
+  RepositorySearchMatch,
+  RepositorySearchRequest,
+  RepositorySearchResult,
+  RepositoryWalk,
+  RepositoryWalkEvent,
+  RepositoryWalkLimits,
+  ResolvedIndexLimits,
+  ResolvedRepositoryLimits,
+} from "./repository.js";
+// host-indexed search seam (plan 026 Task 2): compose a host index with the
+// literal fallback; indexed_literal/semantic never fall back silently
+export {
+  compileSearchPattern,
+  createIndexedRepositoryOperations,
+  createLocalRepositoryOperations,
+  DEFAULT_REPO_EXCLUDE,
+  IndexError,
+  isBinaryBuffer,
+  RepositoryError,
+  resolveIndexLimits,
+  resolveRepoPath,
+  resolveRepositoryLimits,
+  toRepoRelative,
+} from "./repository.js";
 export type {
   AssertCodingPatchAcceptedInput,
   AssertCodingPatchAcceptedResult,
@@ -372,16 +347,15 @@ export type {
   ResolvedCodingReviewLimits,
   ReviewDiagnosticSeverity,
 } from "./review.js";
-export { diagnosticDelta, diagnosticIdentity, normalizeDiagnostics, resolveDiagnosticsLimits } from "./diagnostics.js";
-export type {
-  DiagnosticDelta,
-  DiagnosticDeltaRequest,
-  DiagnosticSeverity,
-  NormalizeDiagnosticsOptions,
-  NormalizedDiagnostic,
-  RawDiagnostic,
-  ResolvedDiagnosticsLimits,
-} from "./diagnostics.js";
+// bounded patch review (plan 026 Task 6): createCodingPatchReviewManifest +
+// assertCodingPatchAccepted bind decisions to digest + revision + identity
+export {
+  assertCodingPatchAccepted,
+  CodingPatchReviewError,
+  createCodingPatchReviewManifest,
+  resolveCodingReviewLimits,
+} from "./review.js";
+export type { SearchToolOptions } from "./search.js";
 export { createRepoSearchTool } from "./search.js";
 export type {
   BashExecOptions,
@@ -398,6 +372,29 @@ export {
   killProcessTree,
   waitForChildProcess,
 } from "./shell.js";
+export type {
+  CodingWorkspaceLifecycle,
+  CodingWorkspaceRecord,
+  CreateCodingWorkspaceLifecycleOptions,
+  ResolvedWorkspaceLimits,
+  WorkspaceCleanupPolicy,
+  WorkspaceCreateRequest,
+  WorkspaceErrorCode,
+  WorkspaceLimitOptions,
+  WorkspaceRepositoryRecord,
+  WorkspaceRepositoryRegistration,
+  WorkspaceRepositoryState,
+  WorkspaceState,
+} from "./workspace-lifecycle.js";
+export {
+  createCodingWorkspaceLifecycle,
+  resolveWorkspaceLimits,
+  WORKSPACE_LOCK_REASON_PREFIX,
+  WORKSPACE_NAMESPACE,
+  WORKSPACE_SCHEMA_VERSION,
+  WORKSPACE_STATES,
+  WorkspaceError,
+} from "./workspace-lifecycle.js";
 export type { WriteOperations, WriteToolOptions } from "./write.js";
 export { createWriteTool } from "./write.js";
 
@@ -429,6 +426,11 @@ export {
   DEFAULT_MAX_GIT_DIFF_LINES,
   DEFAULT_MAX_GIT_MESSAGE_BYTES,
   DEFAULT_MAX_GIT_OUTPUT_BYTES,
+  DEFAULT_MAX_GIT_PATCH_BYTES,
+  DEFAULT_MAX_GIT_PATHS,
+  DEFAULT_MAX_GIT_REF_BYTES,
+  DEFAULT_MAX_GIT_WORKTREES,
+  DEFAULT_MAX_LINES,
   DEFAULT_MAX_LS_FILES_OUTPUT_BYTES,
   DEFAULT_MAX_LSP_DIAGNOSTICS_PER_FILE,
   DEFAULT_MAX_LSP_MESSAGE_BYTES,
@@ -436,11 +438,6 @@ export {
   DEFAULT_MAX_LSP_RESULTS_PER_QUERY,
   DEFAULT_MAX_LSP_SERVERS,
   DEFAULT_MAX_LSP_TIMEOUT_MS,
-  DEFAULT_MAX_GIT_PATCH_BYTES,
-  DEFAULT_MAX_GIT_PATHS,
-  DEFAULT_MAX_GIT_REF_BYTES,
-  DEFAULT_MAX_GIT_WORKTREES,
-  DEFAULT_MAX_LINES,
   DEFAULT_MAX_PLAN_BYTES,
   DEFAULT_MAX_PR_COMMITS,
   DEFAULT_MAX_PR_HANDOFF_BYTES,
@@ -463,14 +460,14 @@ export {
   DEFAULT_MAX_SEARCH_PATTERN_BYTES,
   DEFAULT_MAX_SEARCH_SCAN_BYTES,
   DEFAULT_MAX_SEARCH_TIME_MS,
-  DEFAULT_MAX_TEXT_SCAN_BYTES,
-  DEFAULT_MAX_TODO_TEXT_BYTES,
-  DEFAULT_MAX_TODOS,
-  DEFAULT_MAX_TOTAL_OUTPUT_BYTES,
   DEFAULT_MAX_TERMINAL_COLUMNS,
   DEFAULT_MAX_TERMINAL_RESIZES_PER_MINUTE,
   DEFAULT_MAX_TERMINAL_ROWS,
   DEFAULT_MAX_TERMINAL_TERM_BYTES,
+  DEFAULT_MAX_TEXT_SCAN_BYTES,
+  DEFAULT_MAX_TODO_TEXT_BYTES,
+  DEFAULT_MAX_TODOS,
+  DEFAULT_MAX_TOTAL_OUTPUT_BYTES,
   DEFAULT_MAX_WRITE_BYTES,
   DEFAULT_SHELL_TIMEOUT_SECONDS,
   HARD_CHECK_TIMEOUT_MS,
@@ -496,6 +493,12 @@ export {
   HARD_MAX_GIT_DIFF_LINES,
   HARD_MAX_GIT_MESSAGE_BYTES,
   HARD_MAX_GIT_OUTPUT_BYTES,
+  HARD_MAX_GIT_PATCH_BYTES,
+  HARD_MAX_GIT_PATHS,
+  HARD_MAX_GIT_REF_BYTES,
+  HARD_MAX_GIT_WORKTREES,
+  HARD_MAX_IMAGE_BYTES,
+  HARD_MAX_LINES,
   HARD_MAX_LS_FILES_OUTPUT_BYTES,
   HARD_MAX_LSP_DIAGNOSTICS_PER_FILE,
   HARD_MAX_LSP_MESSAGE_BYTES,
@@ -503,12 +506,6 @@ export {
   HARD_MAX_LSP_RESULTS_PER_QUERY,
   HARD_MAX_LSP_SERVERS,
   HARD_MAX_LSP_TIMEOUT_MS,
-  HARD_MAX_GIT_PATCH_BYTES,
-  HARD_MAX_GIT_PATHS,
-  HARD_MAX_GIT_REF_BYTES,
-  HARD_MAX_GIT_WORKTREES,
-  HARD_MAX_IMAGE_BYTES,
-  HARD_MAX_LINES,
   HARD_MAX_PLAN_BYTES,
   HARD_MAX_PR_COMMITS,
   HARD_MAX_PR_HANDOFF_BYTES,
@@ -531,14 +528,14 @@ export {
   HARD_MAX_SEARCH_PATTERN_BYTES,
   HARD_MAX_SEARCH_SCAN_BYTES,
   HARD_MAX_SEARCH_TIME_MS,
-  HARD_MAX_TEXT_SCAN_BYTES,
-  HARD_MAX_TODO_TEXT_BYTES,
-  HARD_MAX_TODOS,
-  HARD_MAX_TOTAL_OUTPUT_BYTES,
   HARD_MAX_TERMINAL_COLUMNS,
   HARD_MAX_TERMINAL_RESIZES_PER_MINUTE,
   HARD_MAX_TERMINAL_ROWS,
   HARD_MAX_TERMINAL_TERM_BYTES,
+  HARD_MAX_TEXT_SCAN_BYTES,
+  HARD_MAX_TODO_TEXT_BYTES,
+  HARD_MAX_TODOS,
+  HARD_MAX_TOTAL_OUTPUT_BYTES,
   HARD_MAX_WRITE_BYTES,
   HARD_SHELL_TIMEOUT_SECONDS,
   LSP_RESTARTS_PER_SERVER,

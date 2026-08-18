@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { diagnosticDelta, normalizeDiagnostics, type NormalizedDiagnostic } from "../diagnostics.js";
+import { diagnosticDelta, type NormalizedDiagnostic, normalizeDiagnostics } from "../diagnostics.js";
 import { createLanguageIntelligence, LanguageIntelligenceError } from "../language/intelligence.js";
 
 const FAKE_LSP = fileURLToPath(new URL("./fixtures/fake-lsp.mjs", import.meta.url));

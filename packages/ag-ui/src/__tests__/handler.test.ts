@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { EventType } from "@ag-ui/core";
 import { HttpAgent } from "@ag-ui/client";
+import { EventType } from "@ag-ui/core";
 import {
   type AgentEventRecord,
   type AgentRunRef,

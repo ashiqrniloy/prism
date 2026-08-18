@@ -1,6 +1,6 @@
 /** Contracts-core loop family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */
-import type { AgentEvent, ProviderTurnResult, ToolResult } from "../contracts-protocol.js";
+import type { AgentEvent, AgentFinishReason, ProviderTurnResult, ToolResult } from "../contracts-protocol.js";
 import type { AgentInput } from "../input.js";
 import type { JsonValue, Message, ToolCallContent, Usage } from "./content.js";
 import type { ProviderRequest, StructuredOutputOptions } from "./provider.js";
@@ -14,6 +14,11 @@ export interface LoopContext {
   readonly input: AgentInput;
   readonly inputMessages: readonly Message[];
   readonly maxToolRounds: number;
+  /**
+   * Why the loop stopped, when a limit/ceiling ends the run cleanly (F4). Strategies set
+   * this at ceiling exits (e.g. `turn_limit`); the runtime copies it onto `agent_finished`.
+   */
+  finishReason?: AgentFinishReason;
   /** Maximum independent tool calls dispatched concurrently per provider turn. Default `1`. */
   readonly toolConcurrency: number;
   assemble(nextInput: AgentInput, toolResults?: readonly ToolResult[], turn?: number): Promise<ProviderRequest>;

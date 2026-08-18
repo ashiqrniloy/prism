@@ -9,9 +9,9 @@ import type {
 import { methods } from "@agentclientprotocol/sdk";
 import type { AgentEvent, JsonObject, RunDecision } from "@arnilo/prism";
 import { resolveAgUiLimits } from "../../limits.js";
-import type { AcpStreamBudget, ElicitationPendingDecision } from "./types.js";
-import { notify } from "./forward-notify.js";
 import { truncate } from "./abort-truncate.js";
+import { notify } from "./forward-notify.js";
+import type { AcpStreamBudget, ElicitationPendingDecision } from "./types.js";
 
 export async function permission(
   client: AgentContext,

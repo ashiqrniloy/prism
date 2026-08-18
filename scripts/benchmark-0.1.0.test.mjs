@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { loadBudgets, checkUpperBound } from "./budget-gates.mjs";
+import { checkUpperBound, loadBudgets } from "./budget-gates.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const freeze = JSON.parse(readFileSync(join(here, "phase12-freeze-manifest.json"), "utf8"));

@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { client, methods, PROTOCOL_VERSION, type AgentContext } from "@agentclientprotocol/sdk";
+import { type AgentContext, client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import type { AgentRunLifecycle, AgentSession } from "@arnilo/prism";
 import {
   type AcpClientFilesystem,

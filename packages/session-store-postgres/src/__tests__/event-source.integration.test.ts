@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
-import { assertAgentEventSourceConforms, type AgentEventRecord } from "@arnilo/prism";
+import { type AgentEventRecord, assertAgentEventSourceConforms } from "@arnilo/prism";
 import { Pool } from "pg";
 import { qualifyTable } from "../identifiers.js";
 import { createPostgresPersistence } from "../persistence.js";

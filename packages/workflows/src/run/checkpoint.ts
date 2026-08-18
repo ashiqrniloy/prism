@@ -1,5 +1,7 @@
 /** checkpoint (0.2.5 plan 025 Task 1 split). Moved verbatim from run.ts; public surface unchanged behind the barrel. */
 import type { JsonObject } from "@arnilo/prism";
+import { WorkflowCheckpointError } from "../errors.js";
+import { WORKFLOW_CHECKPOINT_SCHEMA_VERSION } from "../limits.js";
 import type {
   RunWorkflowOptions,
   WorkflowCheckpointRecord,
@@ -9,8 +11,6 @@ import type {
   WorkflowRunResult,
   WorkflowSuspension,
 } from "../types.js";
-import { WORKFLOW_CHECKPOINT_SCHEMA_VERSION } from "../limits.js";
-import { WorkflowCheckpointError } from "../errors.js";
 import { nowIso } from "../util.js";
 import type { SchedulerState } from "./main.js";
 

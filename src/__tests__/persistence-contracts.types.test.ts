@@ -1,8 +1,8 @@
 import { describe, it } from "node:test";
 import type {
   AgentDefinitionQuery,
-  AgentEventRecord,
   AgentEventQuery,
+  AgentEventRecord,
   AgentEventSource,
   BranchQuery,
   BranchReader,

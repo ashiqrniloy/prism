@@ -118,22 +118,13 @@ export function validateConfigOptionValue(option: AcpConfigOption, value: unknow
 }
 
 export function toSessionConfigOptions(seam: AcpConfigOptionsSeam, values: ReadonlyMap<string, boolean | string>): SessionConfigOption[] {
-  return seam.options.map((option) => {
-    const currentValue = values.get(option.id) ?? option.defaultValue;
-    const base = { id: option.id, name: option.name, ...(option.description ? { description: option.description } : {}) };
-    if (option.type === "boolean") {
+  // B3: only boolean options are advertised — select is not settable until the
+  // ACP spec defines a select capability, so advertising it would be a lie.
+  return seam.options
+    .filter((option) => option.type === "boolean")
+    .map((option) => {
+      const currentValue = values.get(option.id) ?? option.defaultValue;
+      const base = { id: option.id, name: option.name, ...(option.description ? { description: option.description } : {}) };
       return { ...base, type: "boolean", defaultValue: option.defaultValue, currentValue: currentValue as boolean };
-    }
-    return {
-      ...base,
-      type: "select",
-      defaultValue: option.defaultValue,
-      currentValue: currentValue as string,
-      options: option.options.map((choice) => ({
-        value: choice.value,
-        name: choice.name,
-        ...(choice.description ? { description: choice.description } : {}),
-      })),
-    };
-  });
+    });
 }

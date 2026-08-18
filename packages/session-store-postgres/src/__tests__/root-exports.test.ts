@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  type ClosablePostgresAgentEventSource,
   createPostgresAgentEventSource,
   createPostgresPersistence,
-  type ClosablePostgresAgentEventSource,
   type PostgresAgentEventSourceOptions,
 } from "../index.js";
 

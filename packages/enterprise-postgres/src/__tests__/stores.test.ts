@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ToolEffectError } from "@arnilo/prism";
 import type { AgentIdentity, ToolEffectKey } from "@arnilo/prism";
+import { ToolEffectError } from "@arnilo/prism";
 import { PolicyError } from "@arnilo/prism-policy";
 import { WorkToolError } from "@arnilo/prism-work-tools";
 import type { Pool } from "pg";
-import { createPostgresEvaluationStore } from "../evaluations.js";
 import { EnterprisePostgresError } from "../errors.js";
+import { createPostgresEvaluationStore } from "../evaluations.js";
 import { createPostgresPolicyDecisionStore } from "../policy.js";
-import { createPostgresIdempotencyStore } from "../work-idempotency.js";
 import { createPostgresToolEffectStore } from "../tool-effects.js";
+import { createPostgresIdempotencyStore } from "../work-idempotency.js";
 
 const identity: AgentIdentity = {
   tenantId: "tenant",

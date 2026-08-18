@@ -6,11 +6,11 @@ import {
   eligibleObservationTokenCount,
   foldObservationalMemoryLedger,
   isEligibleObservationSourceEntry,
-  observationsUncoveredByReflection,
+  type MemoryObservation,
   OBSERVATIONS_RECORDED,
+  observationsUncoveredByReflection,
   REFLECTIONS_RECORDED,
   unscannedEntries,
-  type MemoryObservation,
 } from "../index.js";
 
 const obs: MemoryObservation = {

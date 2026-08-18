@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AgentRunResult } from "@arnilo/prism";
-import { createErpInvariantScorers, erpInvariantDataset, ERP_INVARIANT_SCHEMA_VERSION, scoreRun } from "../index.js";
+import { createErpInvariantScorers, ERP_INVARIANT_SCHEMA_VERSION, erpInvariantDataset, scoreRun } from "../index.js";
 
 /**
  * Plan 027 Task 9 — ERP invariant scorers are deterministic hard gates.

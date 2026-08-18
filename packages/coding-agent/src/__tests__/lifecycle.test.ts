@@ -11,9 +11,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import type { ExecutionPolicy, ToolExecutionContext } from "@arnilo/prism";
+import { SAFE_GIT_CONFIG_ARGS, SAFE_GIT_ENV } from "../git-exec.js";
 import {
-  type CodingLifecycleEvent,
   CodingLifecycleError,
+  type CodingLifecycleEvent,
   createCodingLifecycleEmitter,
   createDeleteTool,
   createEditTool,
@@ -21,7 +22,6 @@ import {
   createMoveTool,
   createWriteTool,
 } from "../index.js";
-import { SAFE_GIT_CONFIG_ARGS, SAFE_GIT_ENV } from "../git-exec.js";
 
 let counter = 0;
 function ctx(signal?: AbortSignal): ToolExecutionContext {
@@ -117,6 +117,19 @@ test("process events pass through the emitter (reused CodingProcessEvent union)"
   };
   assert.equal(emitter.emit(event), true);
   assert.deepEqual(events, [event]);
+});
+
+test("plan_changed and plan_removed pass through the emitter (F5)", () => {
+  const { events, emitter } = collect();
+  const changed: CodingLifecycleEvent = {
+    type: "plan_changed",
+    planPath: "plans/task-1.md",
+    todos: [{ id: "check-1", text: "run check-1", done: true }],
+  };
+  const removed: CodingLifecycleEvent = { type: "plan_removed", planPath: "plans/task-1.md" };
+  assert.equal(emitter.emit(changed), true);
+  assert.equal(emitter.emit(removed), true);
+  assert.deepEqual(events, [changed, removed]);
 });
 
 test("write tool emits file_changed on success and permission_denied on policy denial", async () => {
@@ -256,7 +269,7 @@ test("frozen shipped event kinds match the freeze manifest lifecycle list", asyn
   const { readFile } = await import("node:fs/promises");
   const manifest = JSON.parse(await readFile(new URL("../../../../scripts/phase10-freeze-manifest.json", import.meta.url), "utf8"));
   const frozen = new Set(manifest.packages["@arnilo/prism-coding-agent"].modules.lifecycle.events as string[]);
-  // The emitter accepts the six CodingProcessEvent kinds (reused union) plus the four new kinds.
+  // The emitter accepts the six CodingProcessEvent kinds (reused union) plus the six shipped kinds.
   const accepted = [
     "process_started",
     "process_exited",
@@ -268,6 +281,8 @@ test("frozen shipped event kinds match the freeze manifest lifecycle list", asyn
     "worktree_changed",
     "permission_denied",
     "configuration_changed",
+    "plan_changed",
+    "plan_removed",
   ];
   assert.ok(
     [...frozen].every((t) => accepted.includes(t)),

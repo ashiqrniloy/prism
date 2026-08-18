@@ -81,6 +81,10 @@ export const DEFAULT_MAX_ACP_DIFF_BYTES = 64 * 1024;
 export const HARD_MAX_ACP_DIFF_BYTES = 1024 * 1024;
 export const DEFAULT_MAX_ACP_LOCATIONS_PER_UPDATE = 32;
 export const HARD_MAX_ACP_LOCATIONS_PER_UPDATE = 128;
+export const DEFAULT_MAX_ACP_IMAGE_BYTES = 256 * 1024;
+export const HARD_MAX_ACP_IMAGE_BYTES = 1024 * 1024;
+export const DEFAULT_MAX_ACP_COMMANDS_PER_UPDATE = 32;
+export const HARD_MAX_ACP_COMMANDS_PER_UPDATE = 128;
 
 export interface AgUiLimitOptions {
   readonly maxEventBytes?: number;
@@ -122,6 +126,8 @@ export interface AgUiLimitOptions {
   readonly acpConfigOptions?: number;
   readonly acpDiffBytes?: number;
   readonly acpLocationsPerUpdate?: number;
+  readonly acpImageBytes?: number;
+  readonly acpCommandsPerUpdate?: number;
 }
 
 export interface ResolvedAgUiLimits {
@@ -163,6 +169,8 @@ export interface ResolvedAgUiLimits {
   readonly acpConfigOptions: number;
   readonly acpDiffBytes: number;
   readonly acpLocationsPerUpdate: number;
+  readonly acpImageBytes: number;
+  readonly acpCommandsPerUpdate: number;
 }
 
 export const DEFAULT_AG_UI_LIMITS: ResolvedAgUiLimits = {
@@ -204,6 +212,8 @@ export const DEFAULT_AG_UI_LIMITS: ResolvedAgUiLimits = {
   acpConfigOptions: DEFAULT_MAX_ACP_CONFIG_OPTIONS,
   acpDiffBytes: DEFAULT_MAX_ACP_DIFF_BYTES,
   acpLocationsPerUpdate: DEFAULT_MAX_ACP_LOCATIONS_PER_UPDATE,
+  acpImageBytes: DEFAULT_MAX_ACP_IMAGE_BYTES,
+  acpCommandsPerUpdate: DEFAULT_MAX_ACP_COMMANDS_PER_UPDATE,
 };
 
 export const HARD_AG_UI_LIMITS: ResolvedAgUiLimits = {
@@ -245,6 +255,8 @@ export const HARD_AG_UI_LIMITS: ResolvedAgUiLimits = {
   acpConfigOptions: HARD_MAX_ACP_CONFIG_OPTIONS,
   acpDiffBytes: HARD_MAX_ACP_DIFF_BYTES,
   acpLocationsPerUpdate: HARD_MAX_ACP_LOCATIONS_PER_UPDATE,
+  acpImageBytes: HARD_MAX_ACP_IMAGE_BYTES,
+  acpCommandsPerUpdate: HARD_MAX_ACP_COMMANDS_PER_UPDATE,
 };
 
 export function resolveAgUiLimits(options: AgUiLimitOptions = {}): ResolvedAgUiLimits {

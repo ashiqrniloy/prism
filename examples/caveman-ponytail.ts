@@ -1,8 +1,5 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-
-import { createCavemanExtension } from "@arnilo/prism-caveman";
-import { createPonytailExtension } from "@arnilo/prism-ponytail";
 import {
   assembleProviderInput,
   createExtensionKernel,
@@ -13,10 +10,12 @@ import {
   createToolRegistry,
   dispatchToolCall,
   resolveActiveSkills,
-  toolCallContent,
   type SessionEntry,
   type Skill,
+  toolCallContent,
 } from "@arnilo/prism";
+import { createCavemanExtension } from "@arnilo/prism-caveman";
+import { createPonytailExtension } from "@arnilo/prism-ponytail";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const cavemanUpstream = join(here, "../packages/prism-caveman/fixtures/upstream-full");

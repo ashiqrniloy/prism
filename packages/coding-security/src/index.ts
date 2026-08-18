@@ -12,19 +12,6 @@ export {
 } from "./command-rules.js";
 export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js";
 export { createSecretRedactor, DockerCliError } from "./docker-cli.js";
-export {
-  buildNativeSpawnCommand,
-  createNativeSandbox,
-  NativeSandboxError,
-} from "./native-sandbox.js";
-export type {
-  CreateNativeSandboxOptions,
-  NativeSandboxLimitOptions,
-  NativeSpawnCommand,
-  NativeUnshareMode,
-  ResolvedNativeSandboxLimits,
-} from "./native-sandbox.js";
-export { resolveNativeSandboxLimits } from "./native-sandbox.js";
 export type {
   CreateDockerSandboxOptions,
   DockerNetworkConfig,
@@ -37,23 +24,6 @@ export {
   DockerSandboxError,
   resolveDockerCapabilities,
 } from "./docker-sandbox.js";
-export {
-  assertPathInsideRoots,
-  isPathInside,
-  isPathInsideReal,
-} from "./path-containment.js";
-export {
-  assertPinned,
-  createAllowListEgressProxy,
-  createEgressPolicy,
-  EGRESS_PRESETS,
-  EgressError,
-  isMetadataAddress,
-  isPrivateAddress,
-  normalizeAddress,
-  resolveEgressLimits,
-  resolvePinned,
-} from "./egress/index.js";
 export type {
   AddressResolver,
   CreateAllowListEgressProxyOptions,
@@ -72,6 +42,18 @@ export type {
   ResolvedEgressLimits,
 } from "./egress/index.js";
 export {
+  assertPinned,
+  createAllowListEgressProxy,
+  createEgressPolicy,
+  EGRESS_PRESETS,
+  EgressError,
+  isMetadataAddress,
+  isPrivateAddress,
+  normalizeAddress,
+  resolveEgressLimits,
+  resolvePinned,
+} from "./egress/index.js";
+export {
   DEFAULT_MAX_EGRESS_CONCURRENT_CONNECTIONS,
   DEFAULT_MAX_EGRESS_REDIRECT_HOPS,
   DEFAULT_MAX_EGRESS_REQUEST_BYTES,
@@ -85,6 +67,24 @@ export {
   HARD_MAX_EGRESS_RULES,
   HARD_MAX_EGRESS_TRANSFER_TIME_MS,
 } from "./egress/limits.js";
+export type {
+  CreateNativeSandboxOptions,
+  NativeSandboxLimitOptions,
+  NativeSpawnCommand,
+  NativeUnshareMode,
+  ResolvedNativeSandboxLimits,
+} from "./native-sandbox.js";
+export {
+  buildNativeSpawnCommand,
+  createNativeSandbox,
+  NativeSandboxError,
+  resolveNativeSandboxLimits,
+} from "./native-sandbox.js";
+export {
+  assertPathInsideRoots,
+  isPathInside,
+  isPathInsideReal,
+} from "./path-containment.js";
 export type {
   DisposableSandbox,
   SandboxAdapter,

@@ -15,7 +15,7 @@ A third helper, `discoverAgentBundles(options)` (same Node subpath), scans an ap
 
 Use `resolveAgentDefinition` when an app already holds a `AgentDefinition` (from an extension, a manifest, or hand-written config) and wants to turn it into an `Agent` against its registries — without wiring every field by hand.
 
-Use `discoverAgentBundles` + `resolveAgentBundle` when a host app keeps per-agent bundles on disk under an app-controlled config root (for example `.clay/extensions/prism/agents/<agentName>/AGENT.md`) and wants to honor them as first-class agents. The bundle layout is host-owned: Prism never picks the config root, never touches the user's home directory, and never auto-runs resolution — the host calls `discoverAgentBundles` and then `resolveAgentBundle` explicitly.
+Use `discoverAgentBundles` + `resolveAgentBundle` when a host app keeps per-agent bundles on disk under an app-controlled config root (for example `<appRoot>/extensions/prism/agents/<agentName>/AGENT.md`) and wants to honor them as first-class agents. The bundle layout is host-owned: Prism never picks the config root, never touches the user's home directory, and never auto-runs resolution — the host calls `discoverAgentBundles` and then `resolveAgentBundle` explicitly.
 
 Do not use the bundle loader to discover providers — provider/model packages stay config/package-driven (Phase 24; see [Provider packages](provider-packages.md)). Do not use it to auto-activate undeclared tools or skills: omitted `tools` / `skills` means no active capabilities by default; named bundle entries are explicit activation, and runtime skill selection can narrow further with `RunOptions.activeSkills`.
 

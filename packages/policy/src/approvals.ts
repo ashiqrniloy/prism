@@ -1,5 +1,5 @@
-import { type AgentIdentity, assertIdentityActive, type PersistencePage } from "@arnilo/prism";
 import { randomUUID } from "node:crypto";
+import { type AgentIdentity, assertIdentityActive, type PersistencePage } from "@arnilo/prism";
 import { PolicyError } from "./errors.js";
 import { assertNoUnrestrictedPayload } from "./prepare.js";
 import type { PolicyActorRef } from "./types.js";

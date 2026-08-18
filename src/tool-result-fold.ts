@@ -1,5 +1,5 @@
-import type { Message, ToolResult } from "./contracts.js";
 import { estimateTextBytes } from "./context-budget.js";
+import type { Message, ToolResult } from "./contracts.js";
 
 export const DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS = 2;
 export const DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES = 4_096;

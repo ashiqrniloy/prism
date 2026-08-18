@@ -23,8 +23,7 @@
  */
 import assert from "node:assert/strict";
 import { writeSync } from "node:fs";
-import { createPostgresEnterpriseState } from "../../packages/enterprise-postgres/dist/index.js";
-import { createPostgresPersistence } from "../../packages/session-store-postgres/dist/index.js";
+import { Pool } from "pg";
 import {
   createAgent,
   createAgentRunLifecycle,
@@ -35,7 +34,8 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "../../dist/index.js";
-import { Pool } from "pg";
+import { createPostgresEnterpriseState } from "../../packages/enterprise-postgres/dist/index.js";
+import { createPostgresPersistence } from "../../packages/session-store-postgres/dist/index.js";
 
 const input = JSON.parse(process.env.PRISM_PHASE12_WORKER_INPUT ?? "null");
 if (!input || typeof input !== "object" || !["run", "resume", "append", "warm"].includes(input.mode ?? "")) {

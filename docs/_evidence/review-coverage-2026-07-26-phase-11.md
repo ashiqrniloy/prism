@@ -208,7 +208,7 @@ into three behavior/invariant files (no test name asserts "phase N did X"):
 
 - `core-boundaries.test.ts` — source/contract scans: no provider-specific
   literals in core (was triplicated across phase11/12/12-primitives → 1), no
-  consuming-app (`synapta`) imports/mentions (was 7× across phase24/27/28/29/
+  consuming-app imports/mentions (was 7× across phase24/27/28/29/
   30/31/32 → 1), zero core runtime deps, no first-party provider import, no
   default observational-memory, generic cache kinds, domain-vocabulary scans on
   every anchored contract seam (resolver/loop/artifact/event/injector/

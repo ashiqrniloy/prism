@@ -1,30 +1,45 @@
 /** core (0.2.5 plan 025 Task 1 split). Moved verbatim from agent.ts; public surface unchanged behind the barrel. */
+
+import { randomUUID } from "node:crypto";
+import type { AgentApp, AgentContext, ContentBlock, SessionUpdate, StopReason } from "@agentclientprotocol/sdk";
+import { agent, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
+import type { AgentFinishReason } from "@arnilo/prism";
+import packageJson from "../../../package.json" with { type: "json" };
+import { resolveAgUiLimits } from "../../limits.js";
 import type { AcpCapabilitiesSource, ResolvedAcpClientCapabilities } from "../capabilities.js";
 import { resolveAcpAgentCapabilities, resolveAcpClientCapabilities } from "../capabilities.js";
 import { AcpError } from "../errors.js";
-import type { AgentApp, SessionUpdate } from "@agentclientprotocol/sdk";
-import { PROTOCOL_VERSION, agent, methods } from "@agentclientprotocol/sdk";
-import type { PersistedAcpSession, PersistedAcpRunRef } from "../session-store.js";
-import { ownershipKey, validatePersistedSession } from "../session-store.js";
 import { createAcpLifecycleMapper } from "../mapper.js";
-import { createAcpRunRecovery } from "./recovery.js";
 import {
   initialConfigValues,
   initialModeId,
   toSessionConfigOptions,
-  validateConfigOptionValue,
   validateConfigOptionsSeam,
+  validateConfigOptionValue,
   validateModeSeam,
 } from "../modes.js";
-import packageJson from "../../../package.json" with { type: "json" };
 import { projectAcpPrompt } from "../prompt.js";
-import { randomUUID } from "node:crypto";
-import { resolveAgUiLimits } from "../../limits.js";
-import type { AcpAuthorization, ActiveSession, CreatePrismAcpAgentOptions } from "./types.js";
-import { abortOn } from "./abort-truncate.js";
+import type { PersistedAcpRunRef, PersistedAcpSession } from "../session-store.js";
+import { ownershipKey, validatePersistedSession } from "../session-store.js";
+import { abortOn, truncate } from "./abort-truncate.js";
 import { buildAcpCoding } from "./coding.js";
 import { forward, notify, toPrismPrompt } from "./forward-notify.js";
+import { createAcpRunRecovery } from "./recovery.js";
 import { parseCursor, registerSession, resolveSessionInputs, session, sessionState, toSessionInfo } from "./registry.js";
+import type { AcpAuthorization, ActiveSession, CreatePrismAcpAgentOptions } from "./types.js";
+
+// F4: core finish reasons (generic vocabulary) map onto the SDK StopReason set.
+// Cancellation wins over any finish reason; absent reason = natural end.
+const STOP_REASON: Readonly<Record<AgentFinishReason, StopReason>> = {
+  turn_limit: "max_turn_requests",
+  token_limit: "max_tokens",
+  refusal: "refusal",
+};
+
+function stopReasonFor(finishReason: AgentFinishReason | undefined, aborted: boolean): StopReason {
+  if (aborted) return "cancelled";
+  return finishReason ? STOP_REASON[finishReason] : "end_turn";
+}
 
 export function createPrismAcpAgent<Authorization extends AcpAuthorization = AcpAuthorization>(
   options: CreatePrismAcpAgentOptions<Authorization>,
@@ -32,6 +47,39 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
   const limits = resolveAgUiLimits(options.limits);
   validateModeSeam(options.modes, limits);
   validateConfigOptionsSeam(options.configOptions, limits);
+
+  // F2: bounded, redacted transcript replay for session/load and session/resume.
+  // Text blocks of message entries with user/assistant roles map to the matching
+  // chunk kinds; replay stops at maxReplayEvents chunks and each chunk is
+  // truncated at maxTextBytes after the shared redactor. Counts against the
+  // stream caps via notify() — an oversized transcript fails the load/resume
+  // request closed rather than dumping unbounded history.
+  const replayText = (value: string) => truncate(options.redactor?.redact(value) ?? value, limits.maxTextBytes);
+  async function replayTranscript(client: AgentContext, sessionId: string, signal: AbortSignal): Promise<void> {
+    const seam = options.sessions?.transcript;
+    if (!seam) return;
+    const entries = await seam({ sessionId, signal });
+    const budget = { events: 0, bytes: 0 };
+    let emitted = 0;
+    for (const entry of entries) {
+      if (signal.aborted) return;
+      if (emitted >= limits.maxReplayEvents) return;
+      const message = entry.kind === "message" ? entry.message : undefined;
+      if (!message || (message.role !== "user" && message.role !== "assistant")) continue;
+      const messageId = replayText(message.id ?? entry.id);
+      for (const block of message.content) {
+        if (block.type !== "text" || emitted >= limits.maxReplayEvents) break;
+        const update: SessionUpdate = {
+          sessionUpdate: message.role === "user" ? "user_message_chunk" : "agent_message_chunk",
+          messageId,
+          content: { type: "text", text: replayText(block.text) },
+        };
+        await notify(client, sessionId, update, budget, limits);
+        emitted += 1;
+      }
+    }
+  }
+
   // ponytail: bounded in-memory registry (acp.sessions); swap for a host-owned store if replicas share sessions.
   const sessions = new Map<string, ActiveSession>();
   // ponytail: single-connection assumption — initialize may be called once per connection;
@@ -144,12 +192,90 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       }
     };
 
+  // F9: host slash commands. Best-effort — a throw or absent seam yields no update;
+  // session/new/load/resume never fail on commands. Count-capped + redacted.
+  const emitAvailableCommands = async (client: AgentContext, sessionId: string, signal: AbortSignal): Promise<void> => {
+    const list = options.commands?.list;
+    if (!list) return;
+    try {
+      const listed = await list({ sessionId, signal });
+      if (!Array.isArray(listed)) return;
+      const redact = (value: string) =>
+        truncate(options.redactor?.redact(value) ?? value, Math.min(limits.maxTextBytes, limits.maxEventBytes));
+      const availableCommands = [];
+      for (const cmd of listed) {
+        if (availableCommands.length >= limits.acpCommandsPerUpdate) break;
+        if (!cmd || typeof cmd.name !== "string" || typeof cmd.description !== "string") continue;
+        const name = redact(cmd.name);
+        if (!name) continue;
+        const entry: { name: string; description: string; input?: { hint: string } } = {
+          name,
+          description: redact(cmd.description),
+        };
+        if (cmd.input && typeof cmd.input.hint === "string") {
+          const hint = redact(cmd.input.hint);
+          if (hint) entry.input = { hint };
+        }
+        availableCommands.push(entry);
+      }
+      await notify(client, sessionId, { sessionUpdate: "available_commands_update", availableCommands }, { events: 0, bytes: 0 }, limits);
+    } catch {
+      // best-effort: commands never fail session start.
+    }
+  };
+
+  // F6: host-owned title seam. Best-effort — a throw or `undefined` yields no
+  // title and no update; emission failures never fail the request.
+  const titleSeam = options.sessions?.title;
+  const resolveSessionTitle = async (
+    sessionId: string,
+    prompt: readonly ContentBlock[] | undefined,
+    signal: AbortSignal,
+  ): Promise<string | undefined> => {
+    if (!titleSeam) return undefined;
+    try {
+      const title = await titleSeam({ sessionId, prompt, signal });
+      return typeof title === "string" && title.length > 0
+        ? truncate(options.redactor?.redact(title) ?? title, Math.min(limits.maxTextBytes, limits.maxEventBytes))
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  const emitSessionTitle = async (
+    active: ActiveSession,
+    client: AgentContext | undefined,
+    prompt: readonly ContentBlock[] | undefined,
+    signal: AbortSignal,
+  ): Promise<void> => {
+    const title = await resolveSessionTitle(active.session.id, prompt, signal);
+    if (title === undefined || title === active.title || !client) return;
+    active.title = title;
+    try {
+      // ponytail: session/new emits before any stream exists — the request-context
+      // client is the only handle; keep the update advisory (try/catch).
+      await notify(
+        client,
+        active.session.id,
+        { sessionUpdate: "session_info_update", title },
+        active.budget ?? { events: 0, bytes: 0 },
+        limits,
+      );
+    } catch {
+      // best-effort: title updates never fail session/new or session/prompt.
+    }
+  };
+
   // Lifecycle -> session/update forwarding (freeze lifecycleEventMapping). Updates are
   // delivered only to sessions with an active prompt stream (no client handle otherwise)
   // and count against that session's shared per-run notification budget.
   const lifecycleMapper = createAcpLifecycleMapper({ redactor: options.redactor, projection: options.projection, limits: options.limits });
   if (options.coding?.lifecycle) {
     options.coding.lifecycle.on((event) => {
+      if (event.type === "plan_changed" || event.type === "plan_removed") {
+        // F5: UNSTABLE plan surface — only for clients that advertised ClientCapabilities.plan.
+        if (!clientCapabilities.plan) return;
+      }
       if (event.type === "configuration_changed") {
         if (!options.configOptions) return;
         for (const [sessionId, active] of sessions) {
@@ -226,6 +352,7 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       active.additionalDirectories = inputs.additionalDirectories;
       registerSession(sessions, limits, active);
       if (options.sessionStore && binding.session.id) await persist(binding.session.id, active, context.signal); // store failure fails the request; the live session survives in memory
+      await emitAvailableCommands(context.client, binding.session.id, context.signal);
       return {
         sessionId: binding.session.id,
         ...sessionState(active, options, clientCapabilities),
@@ -256,8 +383,11 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       current.controller = controller;
       current.budget = { events: 0, bytes: 0 };
       current.client = context.client;
+      // F6: title resolution per prompt; emits session_info_update on change.
+      // (SDK v1 NewSessionRequest has no prompt field — the seam only fires here.)
+      await emitSessionTitle(current, context.client, context.params.prompt, controller.signal);
       try {
-        await forward(
+        const finishReason = await forward(
           current.session.stream(toPrismPrompt(projected), {
             ownership: authorization.ownership,
             redactor: options.redactor,
@@ -275,7 +405,7 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
           clientCapabilities,
           persistRunRef(current),
         );
-        return { stopReason: controller.signal.aborted ? "cancelled" : "end_turn" };
+        return { stopReason: stopReasonFor(finishReason, controller.signal.aborted) };
       } finally {
         current.controller = undefined;
         current.client = undefined;
@@ -322,18 +452,24 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       await restore(authorization, context.signal);
       const inputs = await resolveSessionInputs(context.params, options, limits, context.signal);
       const existing = sessions.get(context.params.sessionId);
-      if (existing && restoredIds.has(context.params.sessionId)) return sessionState(existing, options, clientCapabilities); // already restored by the durability seam (plan 018 Task 2)
+      if (existing && restoredIds.has(context.params.sessionId)) {
+        await emitAvailableCommands(context.client, existing.session.id, context.signal);
+        return sessionState(existing, options, clientCapabilities); // already restored by the durability seam (plan 018 Task 2)
+      }
       const binding = await options.sessions!.load!({
         sessionId: context.params.sessionId,
         cwd: context.params.cwd,
         signal: context.signal,
       });
+      // F2: replay the stored transcript (if the host wired the seam) before the session becomes current.
+      await replayTranscript(context.client, context.params.sessionId, context.signal);
       const active: ActiveSession = { ...binding, configValues: initialConfigValues(options.configOptions) };
       active.modeId = initialModeId(options.modes);
       active.ownership = authorization.ownership;
       active.cwd = context.params.cwd;
       active.additionalDirectories = inputs.additionalDirectories;
       registerSession(sessions, limits, active);
+      await emitAvailableCommands(context.client, active.session.id, context.signal);
       return sessionState(active, options, clientCapabilities);
     });
   }
@@ -344,18 +480,24 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       await restore(authorization, context.signal);
       const inputs = await resolveSessionInputs(context.params, options, limits, context.signal);
       const existing = sessions.get(context.params.sessionId);
-      if (existing && restoredIds.has(context.params.sessionId)) return sessionState(existing, options, clientCapabilities); // already restored by the durability seam (plan 018 Task 2)
+      if (existing && restoredIds.has(context.params.sessionId)) {
+        await emitAvailableCommands(context.client, existing.session.id, context.signal);
+        return sessionState(existing, options, clientCapabilities); // already restored by the durability seam (plan 018 Task 2)
+      }
       const binding = await options.sessions!.resume!({
         sessionId: context.params.sessionId,
         cwd: context.params.cwd,
         signal: context.signal,
       });
+      // F2: replay the stored transcript (if the host wired the seam) before the run resumes.
+      await replayTranscript(context.client, context.params.sessionId, context.signal);
       const active: ActiveSession = { ...binding, configValues: initialConfigValues(options.configOptions) };
       active.modeId = initialModeId(options.modes);
       active.ownership = authorization.ownership;
       active.cwd = context.params.cwd;
       active.additionalDirectories = inputs.additionalDirectories;
       registerSession(sessions, limits, active);
+      await emitAvailableCommands(context.client, active.session.id, context.signal);
       return sessionState(active, options, clientCapabilities);
     });
   }
@@ -409,11 +551,16 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       if (!authorization) throw new Error("Unauthorized ACP session");
       await restore(authorization, context.signal);
       const current = session(sessions, context.params.sessionId);
+      const option = options.configOptions!.options.find((candidate) => candidate.id === context.params.configId);
+      if (!option) throw new AcpError("ERR_PRISM_ACP_INPUT", `unknown config option '${context.params.configId}'`);
+      // B3: per-type capability gate — select is never settable until the ACP
+      // spec defines a select capability; boolean requires the advertisement.
+      if (option.type === "select") {
+        throw new AcpError("ERR_PRISM_ACP_CAPABILITY", "select options are not settable until the ACP spec defines a select capability");
+      }
       if (!clientCapabilities.configOptionBoolean) {
         throw new AcpError("ERR_PRISM_ACP_CAPABILITY", "client did not advertise session.configOptions.boolean");
       }
-      const option = options.configOptions!.options.find((candidate) => candidate.id === context.params.configId);
-      if (!option) throw new AcpError("ERR_PRISM_ACP_INPUT", `unknown config option '${context.params.configId}'`);
       const value = validateConfigOptionValue(option, context.params.value);
       await options.configOptions!.onChange?.({ sessionId: context.params.sessionId, configId: option.id, value, signal: context.signal });
       current.configValues.set(option.id, value);

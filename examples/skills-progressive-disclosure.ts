@@ -5,8 +5,8 @@ import {
   createSkillRegistry,
   createToolRegistry,
   dispatchToolCall,
-  toolCallContent,
   type Skill,
+  toolCallContent,
 } from "@arnilo/prism";
 
 function catalogSkills(count: number): Skill[] {

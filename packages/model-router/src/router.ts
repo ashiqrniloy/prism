@@ -1,7 +1,7 @@
 import {
-  assertIdentityActive,
   type AgentIdentity,
   type AIProvider,
+  assertIdentityActive,
   type ModelConfig,
   type ProviderRequest,
   type ProviderRequestPolicy,

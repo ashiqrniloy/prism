@@ -1,11 +1,11 @@
 import type { Extension, Message } from "@arnilo/prism";
 
-import { readInitialConfig, createCavemanCommands, type CavemanCommandContext } from "./commands.js";
+import { type CavemanCommandContext, createCavemanCommands, readInitialConfig } from "./commands.js";
 import type { CavemanConfig } from "./config.js";
-import type { CavemanExtensionOptions, CavemanLevel } from "./types.js";
 import { extractUserText, isDeactivationCommand, persistLevel, resolveLevelFromEntries } from "./mode.js";
 import { buildCavemanInstructions } from "./prompts.js";
 import { loadUpstreamSkills, requireCavemanSkills } from "./skills.js";
+import type { CavemanExtensionOptions, CavemanLevel } from "./types.js";
 import { resolveUpstreamRoot } from "./upstream.js";
 
 const INJECTOR_NAME = "caveman-mode";

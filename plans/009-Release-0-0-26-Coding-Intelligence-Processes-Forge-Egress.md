@@ -5,14 +5,14 @@ Baseline: `@arnilo/prism` **0.0.25** (Phase 8 exit gate passed 2026-08-06).
 Target: `@arnilo/prism` **0.0.26**.
 Prerequisite: Phase 8 complete; Phase 10 ACP expansion remains out of scope.
 Scope extension (2026-08-06): ships the three remaining Phase 8 deferred AG-UI interop items — A2A server-side exposure (Task 13), reference frontend renderer for AG-UI/A2UI surfaces (Task 14), and async `AgUiProjection` hooks (Task 15).
-Synapta FR coverage: FR-3, FR-4, FR-5 (`prism-ag-ui-a2ui-generative-ui.md`), FR-6, FR-7 (`prism-agent-event-source-export-and-location.md`).
+Consuming-app FR coverage: FR-3, FR-4, FR-5 (`prism-ag-ui-a2ui-generative-ui.md`), FR-6, FR-7 (`prism-agent-event-source-export-and-location.md`).
 
 ## Objectives
 
 - Supply the coding capabilities editors and autonomous coding loops need before exposing them through ACP (Phase 10 maps these primitives; it must not create a second filesystem/process/runtime).
 - Add ignore-aware repository enumeration, optional LSP-backed language intelligence, managed long-running process sessions, one reference forge adapter, and one reference allow-list egress composition.
 - Keep every capability optional and built over existing repository, execution-policy, sandbox, event, credential, approval, and tool-effect primitives; core stays dependency-free; no listener/server/proxy/indexer starts by import or discovery.
-- Cover the deferred Synapta feature requests in 0.0.26: FR-3 reasoning encrypted-value helper, FR-4 MCP Apps UI-initiated mutation retry through `ToolEffectStore`, FR-5 NATS JetStream `AgentEventSource`, and FR-6/FR-7 durable `AgentEventSource` root export + placement answer.
+- Cover the deferred consuming-app feature requests in 0.0.26: FR-3 reasoning encrypted-value helper, FR-4 MCP Apps UI-initiated mutation retry through `ToolEffectStore`, FR-5 NATS JetStream `AgentEventSource`, and FR-6/FR-7 durable `AgentEventSource` root export + placement answer.
 - Cover the three remaining Phase 8 deferred AG-UI interop items: A2A server-side exposure (remote A2A clients invoke a local AG-UI-fronted agent), a reference framework-free frontend renderer for AG-UI/A2UI surfaces, and async `AgUiProjection` hooks so hosts can call `session.entries()` directly — all opt-in, additive, and built over the shipped AG-UI handler/mapper/supervisor A2A handler.
 
 ## Non-goals

@@ -1,6 +1,6 @@
 import { type CredentialValueSource, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
-import { alibabaBaseUrl, type AlibabaBasePreset } from "./models.js";
+import { type AlibabaBasePreset, alibabaBaseUrl } from "./models.js";
 
 /**
  * DashScope OpenAI-compatible embeddings batch cap (text-embedding-v3/v4):

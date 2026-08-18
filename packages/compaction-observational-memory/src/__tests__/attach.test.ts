@@ -15,8 +15,8 @@ import {
 import {
   createObservationalMemory,
   createObservationalMemoryExtension,
-  type ObservationalMemorySettingsInput,
   OBSERVATIONS_RECORDED,
+  type ObservationalMemorySettingsInput,
 } from "../index.js";
 
 const model = { provider: "mock", model: "demo" };

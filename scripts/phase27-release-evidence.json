@@ -4,8 +4,16 @@
   "recorded": "2026-08-17",
   "schemaVersion": 1,
   "commit": "099540531a35303c11a22b582a72677c1a0978fc",
-  "tools": { "node": "v24.19.0", "npm": "11.17.0" },
-  "packages": { "publishable": 50, "workspace": 49, "version": "0.2.7", "peerSpec": "0.2.7" },
+  "tools": {
+    "node": "v24.19.0",
+    "npm": "11.17.0"
+  },
+  "packages": {
+    "publishable": 51,
+    "workspace": 50,
+    "version": "0.2.7",
+    "peerSpec": "0.2.7"
+  },
   "migrations": {
     "count": 5,
     "names": [
@@ -18,17 +26,44 @@
     "rehearsal": "0.2.6-era schema upgraded to 0.2.7 (004+005 applied); rollback rehearsal restored v26 backup (0.2.7 tables absent, legacy rows preserved); production rollback is roll-forward repair only (no down migrations)"
   },
   "testTotals": {
-    "coreNpmTest": { "state": "pass", "count": 3716, "skip": 33, "fail": 0 },
-    "securityThreatSuites": { "state": "pass", "count": 50 },
-    "docsContract": { "state": "pass", "count": 140 },
-    "phase27Freeze": { "state": "pass", "count": 8 },
-    "phase27Release": { "state": "pass" },
+    "coreNpmTest": {
+      "state": "pass",
+      "count": 3716,
+      "skip": 33,
+      "fail": 0
+    },
+    "securityThreatSuites": {
+      "state": "pass",
+      "count": 50
+    },
+    "docsContract": {
+      "state": "pass",
+      "count": 140
+    },
+    "phase27Freeze": {
+      "state": "pass",
+      "count": 8
+    },
+    "phase27Release": {
+      "state": "pass"
+    },
     "protectedSkips": "postgres/nats/live-provider/coding-security legs skip when required infrastructure is absent; blocked is never a passing skip"
   },
   "coverage": {
-    "core": { "lines": 91.09, "branches": 84.75, "functions": 91.56, "gate": "60/70/75" },
-    "policy": { "lines": 92.66, "threshold": 90.78 },
-    "evals": { "lines": 91.75, "threshold": 87.63 }
+    "core": {
+      "lines": 91.09,
+      "branches": 84.75,
+      "functions": 91.56,
+      "gate": "60/70/75"
+    },
+    "policy": {
+      "lines": 92.66,
+      "threshold": 90.78
+    },
+    "evals": {
+      "lines": 91.75,
+      "threshold": 87.63
+    }
   },
   "budgets": {
     "tarball": "re-baselined at Task 8 (packedBytes 891578); budget gate 10/10 pass",
@@ -54,7 +89,10 @@
     "erpJourneyEvidence": "docs/_evidence/phase27-erp-journey.json",
     "releaseDoc": "docs/release-0.2.7-evidence.md"
   },
-  "secretScan": { "files": 4456, "findings": 0 },
+  "secretScan": {
+    "files": 4456,
+    "findings": 0
+  },
   "protectedSurfaces": {
     "count": 19,
     "blocked": 0,

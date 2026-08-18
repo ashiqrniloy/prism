@@ -1,32 +1,16 @@
 /**
  * Managed ProcessSession registry — native spawn or optional sandbox startProcess.
  */
-import { createHash, randomBytes } from "node:crypto";
+
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import { createHash, randomBytes } from "node:crypto";
 import { isAbsolute, relative, resolve } from "node:path";
 import { assertExecutionAllowed, ExecutionDeniedError } from "@arnilo/prism";
+import { DEFAULT_MAX_TERMINAL_COLUMNS, DEFAULT_MAX_TERMINAL_ROWS } from "../limits.js";
 import { OutputAccumulator } from "../output-accumulator.js";
 import { resolveToCwd } from "../path-utils.js";
 import { killProcessTree } from "../shell.js";
 import {
-  type CodingProcessEvent,
-  type CreateProcessSessionsOptions,
-  type ProcessExitResult,
-  type ProcessPtyHandle,
-  type ProcessSandboxHandle,
-  type ProcessSession,
-  type ProcessSessionMetadata,
-  type ProcessSessions,
-  type ProcessSessionState,
-  type ProcessStartRequest,
-  type ProcessTerminalRequest,
-  ProcessSessionError,
-  resolveProcessSessionLimits,
-} from "./types.js";
-import {
-  type ProcessRecoveryRecord,
-  type ProcessRecoveryRecordReport,
-  type ProcessRecoveryReport,
   acquireRecordLease,
   attachWithTimeout,
   buildProcessRecoveryRecord,
@@ -34,13 +18,30 @@ import {
   loadProcessRecoveryRecord,
   loadProcessRecoveryRecords,
   PROCESS_RECOVERY_LEASE_NAMESPACE,
+  ProcessRecoveryError,
+  type ProcessRecoveryRecord,
+  type ProcessRecoveryRecordReport,
+  type ProcessRecoveryReport,
   releaseRecordLease,
   resolveProcessRecoveryLimits,
   saveProcessRecoveryRecord,
   validateBackendRef,
 } from "./recovery.js";
-import { ProcessRecoveryError } from "./recovery.js";
-import { DEFAULT_MAX_TERMINAL_COLUMNS, DEFAULT_MAX_TERMINAL_ROWS } from "../limits.js";
+import {
+  type CodingProcessEvent,
+  type CreateProcessSessionsOptions,
+  type ProcessExitResult,
+  type ProcessPtyHandle,
+  type ProcessSandboxHandle,
+  type ProcessSession,
+  ProcessSessionError,
+  type ProcessSessionMetadata,
+  type ProcessSessionState,
+  type ProcessSessions,
+  type ProcessStartRequest,
+  type ProcessTerminalRequest,
+  resolveProcessSessionLimits,
+} from "./types.js";
 
 /** Default TERM for PTY sessions (validated <= maxTerminalTermBytes). */
 const DEFAULT_TERM = "xterm-256color";

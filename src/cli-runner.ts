@@ -3,7 +3,7 @@ import { basename, dirname } from "node:path";
 import process from "node:process";
 import type { Readable, Writable } from "node:stream";
 import { type InitRuntime, initUsage, runInitCommand } from "./cli-init.js";
-import { providerAddUsage, runProviderAddCommand, type ProviderAddRuntime } from "./cli-provider-add.js";
+import { type ProviderAddRuntime, providerAddUsage, runProviderAddCommand } from "./cli-provider-add.js";
 import type {
   AgentSession,
   ContributionFileKind,

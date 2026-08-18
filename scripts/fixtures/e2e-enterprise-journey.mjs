@@ -18,6 +18,7 @@ import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import {
   createAgent,
+  createMemoryAgentEventSource,
   createMemoryCheckpointStore,
   createMemorySessionStore,
   createMemoryToolEffectStore,
@@ -29,10 +30,9 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "@arnilo/prism";
-import { createMemoryAgentEventSource } from "@arnilo/prism";
 import { createOidcIdentityVerifier } from "@arnilo/prism-credentials-node/oidc";
-import { createMemoryPolicyDecisionStore, createOpaPolicyEvaluator, createPolicyEvaluator, evaluateAndAppend } from "@arnilo/prism-policy";
 import { createOpenApiTools } from "@arnilo/prism-openapi-tools";
+import { createMemoryPolicyDecisionStore, createOpaPolicyEvaluator, createPolicyEvaluator, evaluateAndAppend } from "@arnilo/prism-policy";
 import { createArtifactService } from "@arnilo/prism-server";
 import { createS3ArtifactBodyStore } from "@arnilo/prism-server/artifact-bodies";
 

@@ -5,8 +5,8 @@
  * import surface of `./contracts.js` is unchanged.
  */
 export * from "./contracts-core.js";
-export * from "./contracts-run-state.js";
 export * from "./contracts-protocol.js";
+export * from "./contracts-run-state.js";
 
 /** Alias re-exports so `dist/contracts.d.ts` exposes implementer contract names. */
 export type AgentIdentity = import("./identity.js").AgentIdentity;

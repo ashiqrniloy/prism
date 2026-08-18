@@ -1,6 +1,6 @@
 # Release 0.0.25 — Durable custom loops and complete human-in-the-loop semantics
 
-Roadmap phase: Phase 8 (`roadmap.md`) plus Synapta feature requests FR-1 and FR-2 (`prism-ag-ui-a2ui-generative-ui.md`).
+Roadmap phase: Phase 8 (`roadmap.md`) plus consuming-app feature requests FR-1 and FR-2 (`prism-ag-ui-a2ui-generative-ui.md`).
 Baseline: `@arnilo/prism` **0.0.24** (Phase 7 exit gate passed 2026-08-04).
 Target: `@arnilo/prism` **0.0.25**.
 Prerequisite: Phase 7 complete; Phase 9 coding intelligence remains out of scope.
@@ -16,7 +16,7 @@ Prerequisite: Phase 7 complete; Phase 9 coding intelligence remains out of scope
 
 ## Non-goals
 
-- FR-3 reasoning encrypted-value helper (P2; not blocking Synapta).
+- FR-3 reasoning encrypted-value helper (P2; not blocking the consuming app).
 - FR-4 MCP Apps UI-initiated mutation retry through `ToolEffectStore` (P2; endorsed, deferred to a future release; `ToolEffectStore` from 0.0.24 already provides the claim/CAS lifecycle it needs).
 - FR-5 NATS JetStream `AgentEventSource` adapter (P2 optional; PostgreSQL source is the accepted interim).
 - WebSocket/binary AG-UI transport, A2A server-side exposure, and any frontend renderer work (explicitly not requested).
@@ -77,7 +77,7 @@ Prerequisite: Phase 7 complete; Phase 9 coding intelligence remains out of scope
         ],
       }, { ownership, expectedVersion });
       createAgUiHandler({
-        a2ui: { catalogId: "synapta-core", mode: "fixed-schema" },
+        a2ui: { catalogId: "host-core", mode: "fixed-schema" },
         projection: composeProjections(projection.messagesFromSession(), customProjection),
       });
       ```
@@ -550,7 +550,7 @@ Benchmark gate (Task 7): decision application + sticky matching p95 ≤ 5 ms at 
     - API Notes and Examples:
       ```ts
       createAgUiHandler({
-        a2ui: { catalogId: "synapta-core", mode: "fixed-schema", renderToolName: "render_a2ui" },
+        a2ui: { catalogId: "host-core", mode: "fixed-schema", renderToolName: "render_a2ui" },
       });
       // Tool result { a2ui_operations: [ { createSurface: { surfaceId, catalogId? } }, … ] }
       // → ACTIVITY_SNAPSHOT { activityType: "a2ui-surface" } then ACTIVITY_DELTA per later op.
@@ -728,5 +728,5 @@ Benchmark gate (Task 7): decision application + sticky matching p95 ≤ 5 ms at 
 ## Further Actions
 
 - Priority high: cut signed `v0.0.25` and run `sdk:ready` + publish dry-run from a clean single-flight checkout (operator).
-- Priority medium: FR-3 reasoning encrypted-value helper, FR-4 MCP Apps UI-initiated mutation retry, FR-5 NATS JetStream `AgentEventSource` (Synapta P2).
+- Priority medium: FR-3 reasoning encrypted-value helper, FR-4 MCP Apps UI-initiated mutation retry, FR-5 NATS JetStream `AgentEventSource` (consuming-app P2).
 - Priority low: async `AgUiProjection` hooks so `messagesFromSession` can call `session.entries()` without a sync `getMessages` callback.

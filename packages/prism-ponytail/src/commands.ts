@@ -2,9 +2,9 @@ import type { CommandDefinition, JsonObject } from "@arnilo/prism";
 
 import type { PonytailConfig } from "./config.js";
 import { writePonytailDefaultMode } from "./config.js";
-import type { UpstreamPonytailConfig } from "./upstream-hooks.js";
-import type { PonytailMode } from "./types.js";
 import type { PonytailSkillName } from "./skills.js";
+import type { PonytailMode } from "./types.js";
+import type { UpstreamPonytailConfig } from "./upstream-hooks.js";
 
 export interface PonytailCommandContext {
   readonly skills: ReadonlyMap<PonytailSkillName, { readonly name: string; readonly instructions?: string }>;

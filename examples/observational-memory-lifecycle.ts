@@ -1,13 +1,13 @@
 import {
+  type AIProvider,
   createAgent,
   createMemorySessionStore,
   createMockProvider,
   providerDone,
   providerTextDelta,
   providerToolCall,
-  toolCallContent,
-  type AIProvider,
   type SessionStore,
+  toolCallContent,
 } from "@arnilo/prism";
 import {
   buildObservationalMemoryProjection,

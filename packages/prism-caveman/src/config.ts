@@ -1,8 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-
-import type { CavemanLevel } from "./types.js";
 import { isCavemanLevel } from "./mode.js";
+import type { CavemanLevel } from "./types.js";
 import { MAX_CONFIG_FILE_BYTES, redactPaths, UpstreamResolveError } from "./upstream.js";
 
 export interface CavemanConfig {

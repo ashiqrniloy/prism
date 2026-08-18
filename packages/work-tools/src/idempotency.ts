@@ -1,5 +1,5 @@
-import { assertIdentityActive, type AgentIdentity } from "@arnilo/prism";
 import { randomUUID } from "node:crypto";
+import { type AgentIdentity, assertIdentityActive } from "@arnilo/prism";
 import { WorkToolError } from "./errors.js";
 import { DEFAULT_WORK_LIMITS, HARD_WORK_LIMITS } from "./limits.js";
 import type {

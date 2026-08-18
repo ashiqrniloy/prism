@@ -1,24 +1,4 @@
 export { resolveAgentDefinition } from "./agent-definitions.js";
-export {
-  abortableSleep,
-  pollDeviceCodeToken,
-  redactOAuthError,
-  throwIfAborted,
-  type OAuthTokenSuccessPayload,
-  type PollDeviceCodeTokenOptions,
-} from "./oauth-device-code.js";
-export {
-  boundResponse,
-  defaultResolver,
-  isLoopbackAddress,
-  isLoopbackHostname,
-  normalizeHostname,
-  pinnedFetch,
-  raceAbort,
-  requestPinned,
-  resolvePinnedAddress,
-  type PinnedFetchOptions,
-} from "./pinned-fetch.js";
 export type { AgentEventSourceErrorCode } from "./agent-event-source.js";
 export { AgentEventSourceError, createMemoryAgentEventSource } from "./agent-event-source.js";
 export {
@@ -86,8 +66,8 @@ export type {
 export {
   CACHE_TELEMETRY_OVERFLOW_KEY,
   CacheTelemetryError,
-  DEFAULT_CACHE_TELEMETRY_CAP,
   createCacheTelemetry,
+  DEFAULT_CACHE_TELEMETRY_CAP,
 } from "./cache-telemetry.js";
 export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
 export { CHECKPOINT_CONFLICT_CODE, CheckpointConflictError, createMemoryCheckpointStore } from "./checkpoints.js";
@@ -331,6 +311,25 @@ export {
   runFeedbackPageLimit,
 } from "./feedback.js";
 export type {
+  ApplyFieldPolicyOptions,
+  AuditFieldRedaction,
+  AuditFieldRedactorLike,
+  AuditFieldRedactorOptions,
+  FieldPolicy,
+  FieldPolicyAction,
+  FieldPolicyDecision,
+  FieldPolicyInput,
+  ProtectedFieldPolicyOptions,
+} from "./field-policy.js";
+export {
+  ALLOW_FIELD_POLICY,
+  applyFieldPolicy,
+  createAuditFieldRedactor,
+  createProtectedFieldPolicy,
+  FIELD_POLICY_LIMITS,
+  FieldPolicyError,
+} from "./field-policy.js";
+export type {
   GuardrailRunResult,
   RunGuardrailsOptions,
 } from "./guardrails.js";
@@ -386,6 +385,14 @@ export type { MockProviderOptions } from "./mock-provider.js";
 export { createMockProvider } from "./mock-provider.js";
 export type { ModelRegistry, ModelRegistryOptions } from "./models.js";
 export { createModelRegistry } from "./models.js";
+export {
+  abortableSleep,
+  type OAuthTokenSuccessPayload,
+  type PollDeviceCodeTokenOptions,
+  pollDeviceCodeToken,
+  redactOAuthError,
+  throwIfAborted,
+} from "./oauth-device-code.js";
 export { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
 export type {
   ApplyRetentionInput,
@@ -412,6 +419,18 @@ export {
   PersistenceLifecycleError,
 } from "./persistence-lifecycle.js";
 export {
+  boundResponse,
+  defaultResolver,
+  isLoopbackAddress,
+  isLoopbackHostname,
+  normalizeHostname,
+  type PinnedFetchOptions,
+  pinnedFetch,
+  raceAbort,
+  requestPinned,
+  resolvePinnedAddress,
+} from "./pinned-fetch.js";
+export {
   providerContentDelta,
   providerContinuationRequired,
   providerDone,
@@ -430,25 +449,6 @@ export { createProviderRequestPolicyChain, createSessionCachePolicy, mergeProvid
 export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js";
 export { createProviderRegistry, createProviderResolver } from "./providers.js";
 export type { SecretRedactor } from "./redaction.js";
-export {
-  ALLOW_FIELD_POLICY,
-  applyFieldPolicy,
-  createAuditFieldRedactor,
-  createProtectedFieldPolicy,
-  FieldPolicyError,
-  FIELD_POLICY_LIMITS,
-} from "./field-policy.js";
-export type {
-  ApplyFieldPolicyOptions,
-  AuditFieldRedaction,
-  AuditFieldRedactorLike,
-  AuditFieldRedactorOptions,
-  FieldPolicy,
-  FieldPolicyAction,
-  FieldPolicyDecision,
-  FieldPolicyInput,
-  ProtectedFieldPolicyOptions,
-} from "./field-policy.js";
 export {
   createSecretRedactor,
   errorToErrorInfo,
@@ -619,5 +619,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.2.7";
+export const version = "0.2.8";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

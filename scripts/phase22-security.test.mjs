@@ -29,8 +29,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createEventMultiplexer, EventMultiplexerError, SessionMetadataConflictError } from "@arnilo/prism";
 import { createMemoryModelRouterStateStore } from "@arnilo/prism-model-router";
-import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 import { createNatsAgentEventSource } from "@arnilo/prism-session-store-nats";
+import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 
 const BLOCKER_IDS = ["budget-reservation", "conversation-metadata-cas", "single-consumer", "nats-durable"];
 const blockerIds = new Set();

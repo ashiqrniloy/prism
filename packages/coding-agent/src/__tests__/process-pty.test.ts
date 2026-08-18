@@ -15,12 +15,12 @@ import { join } from "node:path";
 import { after, before, test } from "node:test";
 import type { ExecutionPolicy } from "@arnilo/prism";
 import {
-  createProcessSessions,
-  ProcessSessionError,
   type CodingProcessEvent,
+  createProcessSessions,
   type ProcessPtyBackend,
   type ProcessPtyHandle,
   type ProcessPtyStartRequest,
+  ProcessSessionError,
 } from "../process/index.js";
 
 let root: string;

@@ -439,6 +439,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
 
   return {
     name: "read",
+    kind: "read",
     effect: CODING_OBSERVATION_EFFECT,
     description: `Read the contents of a file. Supports text files and images (jpg, png, gif, webp, bmp); images are returned as image content. For text files, output is truncated to ${maxLines} lines or ${maxBytes / 1024}KB (whichever is hit first). When truncated, continue with the suggested offset until complete. Prefer repo_search to find text across many files.`,
     parameters: {

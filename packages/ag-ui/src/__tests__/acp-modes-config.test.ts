@@ -2,20 +2,22 @@
  * Phase 10 Task 5 — session modes and configuration options.
  * Modes: host table advertised on new/load/resume, set_mode validates + runs
  * the host apply hook + emits current_mode_update; unknown ids fail closed.
- * Config options: gated on the client's session.configOptions.boolean
- * advertisement, validated against declared type, onChange hook, and
- * config_option_update notifications with the full current-value set.
+ * Config options: gated per type on the client's session.configOptions.boolean
+ * advertisement (B3) — only boolean options are advertised; select options are
+ * never settable (ERR_PRISM_ACP_CAPABILITY) until the ACP spec defines a
+ * select capability. Values validated against declared type, onChange hook,
+ * and config_option_update notifications with the full current-value set.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { client, methods, PROTOCOL_VERSION, type ClientContext } from "@agentclientprotocol/sdk";
+import { type ClientContext, client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import type { AgentRunLifecycle, AgentSession } from "@arnilo/prism";
 import {
-  createPrismAcpAgent,
-  AcpError,
   type AcpConfigOptionsSeam,
+  AcpError,
   type AcpModesSeam,
   type CreatePrismAcpAgentOptions,
+  createPrismAcpAgent,
 } from "../acp/index.js";
 
 const authorization = { ownership: { userId: "user-1" } };
@@ -230,23 +232,12 @@ describe("ACP session modes and config options (Task 5)", () => {
     });
   });
 
-  it("returns configOptions with defaults on session/new when advertised", async () => {
+  it("returns configOptions with defaults on session/new when advertised (B3: boolean only)", async () => {
     const { app } = makeAgent();
     await connect(app, async (connection) => {
       const created = await connection.request(methods.agent.session.new, { cwd: "/w", mcpServers: [] });
       assert.deepEqual(created.configOptions, [
         { type: "boolean", id: "verbose", name: "Verbose", defaultValue: false, currentValue: false },
-        {
-          type: "select",
-          id: "depth",
-          name: "Depth",
-          defaultValue: "shallow",
-          currentValue: "shallow",
-          options: [
-            { value: "shallow", name: "Shallow" },
-            { value: "deep", name: "Deep" },
-          ],
-        },
       ]);
     });
   });
@@ -261,7 +252,7 @@ describe("ACP session modes and config options (Task 5)", () => {
         value: true,
       });
       assert.equal(response.configOptions[0].currentValue, true);
-      assert.equal(response.configOptions[1].currentValue, "shallow");
+      assert.equal(response.configOptions.length, 1); // B3: select options are not advertised
       assert.deepEqual(
         changed.map(({ sessionId: sid, configId, value }) => ({ sessionId: sid, configId, value })),
         [{ sessionId, configId: "verbose", value: true }],
@@ -271,18 +262,14 @@ describe("ACP session modes and config options (Task 5)", () => {
       assert.equal(update.update.sessionUpdate, "config_option_update");
       assert.equal(update.update.configOptions[0].currentValue, true);
 
-      // Select value persists too.
-      const second = await connection.request<import("@agentclientprotocol/sdk").SetSessionConfigOptionResponse>(
-        methods.agent.session.setConfigOption,
-        { sessionId, configId: "depth", type: "select", value: "deep" },
+      // B3: select options are never settable, even with the boolean advertisement.
+      await rejectsWith(
+        connection.request(methods.agent.session.setConfigOption, { sessionId, configId: "depth", type: "select", value: "deep" }),
+        "select options are not settable",
       );
-      assert.equal(second.configOptions[1].currentValue, "deep");
       assert.deepEqual(
         changed.map(({ sessionId: sid, configId, value }) => ({ sessionId: sid, configId, value })),
-        [
-          { sessionId, configId: "verbose", value: true },
-          { sessionId, configId: "depth", value: "deep" },
-        ],
+        [{ sessionId, configId: "verbose", value: true }],
       );
     });
   });
@@ -298,9 +285,10 @@ describe("ACP session modes and config options (Task 5)", () => {
         connection.request(methods.agent.session.setConfigOption, { sessionId, configId: "verbose", type: "select", value: "x" }),
         "expects a boolean",
       );
+      // B3: select options are gated before value validation.
       await rejectsWith(
         connection.request(methods.agent.session.setConfigOption, { sessionId, configId: "depth", type: "select", value: "sideways" }),
-        "no select value",
+        "select options are not settable",
       );
     });
   });
@@ -338,10 +326,10 @@ describe("ACP session modes and config options (Task 5)", () => {
     await connect(app, async (connection) => {
       const loaded = await connection.request(methods.agent.session.load, { sessionId: "l", cwd: "/w", mcpServers: [] });
       assert.equal(loaded.modes!.currentModeId, "review");
-      assert.equal(loaded.configOptions!.length, 2);
+      assert.equal(loaded.configOptions!.length, 1); // B3: boolean only
       const resumed = await connection.request(methods.agent.session.resume, { sessionId: "r", cwd: "/w" });
       assert.equal(resumed.modes!.currentModeId, "review");
-      assert.equal(resumed.configOptions!.length, 2);
+      assert.equal(resumed.configOptions!.length, 1); // B3: boolean only
     });
   });
 

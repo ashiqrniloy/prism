@@ -1,6 +1,7 @@
 /** decision (0.2.5 plan 025 Task 1 split). Moved verbatim from agent.ts; public surface unchanged behind the barrel. */
-import type { AgentEvent, RunDecision } from "@arnilo/prism";
+
 import type { RequestPermissionResponse } from "@agentclientprotocol/sdk";
+import type { AgentEvent, RunDecision } from "@arnilo/prism";
 
 const ACP_OUTCOMES = {
   "allow-once": "allow_once",

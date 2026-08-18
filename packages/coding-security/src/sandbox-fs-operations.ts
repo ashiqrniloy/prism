@@ -8,7 +8,6 @@
 import { posix } from "node:path";
 import {
   compileSearchPattern,
-  matchGlobPattern,
   type DeleteOperations,
   type EditOperations,
   HARD_MAX_EDIT_FILE_BYTES,
@@ -16,11 +15,12 @@ import {
   HARD_MAX_WRITE_BYTES,
   isBinaryBuffer,
   type MoveOperations,
+  matchGlobPattern,
   type ReadOperations,
   type ReadTextOptions,
   type ReadTextResult,
-  type RepositoryLimitOptions,
   type RepositoryGlobResult,
+  type RepositoryLimitOptions,
   type RepositoryListResult,
   type RepositoryOperations,
   type RepositorySearchMatch,

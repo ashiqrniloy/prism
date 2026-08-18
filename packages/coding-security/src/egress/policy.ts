@@ -1,8 +1,8 @@
 /** Allow-list egress policy: deny-all default, exact host/port/protocol rules, frozen presets. */
 
 import { createHash } from "node:crypto";
-import { EgressError } from "./types.js";
 import { DEFAULT_MAX_EGRESS_RULES, HARD_MAX_EGRESS_RULES } from "./limits.js";
+import { EgressError } from "./types.js";
 
 export type EgressProtocol = "http" | "https";
 

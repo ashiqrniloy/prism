@@ -32,11 +32,11 @@ function fixture() {
 const missing = async () => new Response("not found", { status: 404 });
 
 test("0.2.0 release graph is exact, publishable, and documented", () => {
-  const version = "0.2.7";
+  const version = "0.2.8";
   const release = loadRelease(process.cwd());
-  // 50 = root + 49 workspace packages (the 0.1.6 plan 018 optional @arnilo/prism-document-reader
-  // grew the graph 49 → 50; 0.2.0 adds no package).
-  assert.equal(release.packages.length, 50);
+  // 51 = root + 50 workspace packages (the 0.1.6 plan 018 optional @arnilo/prism-document-reader
+  // grew the graph 49 → 50; 0.2.8 plan 028 adds the spawnable ACP agent, 50 → 51).
+  assert.equal(release.packages.length, 51);
   assert.doesNotThrow(() => validateRelease(release, version));
   for (const pkg of release.packages) {
     const changelog = readFileSync(join(process.cwd(), pkg.path, "CHANGELOG.md"), "utf8");

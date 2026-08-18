@@ -1,9 +1,9 @@
 /** sse (0.2.5 plan 025 Task 1 split). Moved verbatim from handler.ts; public surface unchanged behind the barrel. */
 import type { AgentEvent, AgentEventEnvelope } from "@arnilo/prism";
+import type { WorkflowEvent } from "@arnilo/prism-workflows";
+import type { ResolvedPrismServerLimits } from "../limits.js";
 import type { CreatePrismHandlerOptions } from "../types.js";
 import { PrismServerError } from "../types.js";
-import type { ResolvedPrismServerLimits } from "../limits.js";
-import type { WorkflowEvent } from "@arnilo/prism-workflows";
 import { SSE_HEADERS } from "./consts.js";
 import { ownedSignal } from "./policy.js";
 

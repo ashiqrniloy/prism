@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createStaticSettingsProvider } from "@arnilo/prism";
 import {
-  type ObservationalMemorySettingsInput,
   defaultObservationalMemorySettings,
   HARD_MAX_WORKER_TURNS,
+  type ObservationalMemorySettingsInput,
   resolveObservationalMemorySettings,
 } from "../index.js";
 

@@ -1,4 +1,4 @@
-import { jetstream, jetstreamManager, JetStreamApiError } from "@nats-io/jetstream";
+import { JetStreamApiError, jetstream, jetstreamManager } from "@nats-io/jetstream";
 import type { NatsConnection } from "@nats-io/transport-node";
 
 /**

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { EventType, type AGUIEvent } from "@ag-ui/core";
 import { describe, it } from "node:test";
-import { A2UiSurfaceState, readA2UiBatch, reduceA2UiOps, resolvePointer, type A2UiSurfaceModel } from "../renderer/core.js";
+import { type AGUIEvent, EventType } from "@ag-ui/core";
 import { resolveAgUiA2UiLimits } from "../a2ui.js";
 import { DEFAULT_AG_UI_LIMITS } from "../limits.js";
+import { type A2UiSurfaceModel, A2UiSurfaceState, readA2UiBatch, reduceA2UiOps, resolvePointer } from "../renderer/core.js";
 
 const limits = resolveAgUiA2UiLimits({});
 

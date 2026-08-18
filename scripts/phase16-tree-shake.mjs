@@ -9,7 +9,7 @@
 // # with actual consumer code is the true measure. The reachability numbers are reported,
 // # not gated. Upgrade to an esbuild-bundled smoke import behind a 0.1.7 DX demand gate
 // # if a host wants a byte-accurate tree-shake budget.
-import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, normalize, relative } from "node:path";
 
 const distDir = new URL("../dist/", import.meta.url).pathname;

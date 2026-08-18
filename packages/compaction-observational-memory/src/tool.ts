@@ -1,6 +1,6 @@
 import { type JsonObject, redactSecrets, type SessionEntry, type ToolDefinition, type ToolResult } from "@arnilo/prism";
-import { DEFAULT_RECALL_PAGE_LIMIT } from "./limits.js";
 import { isMemoryId } from "./ids.js";
+import { DEFAULT_RECALL_PAGE_LIMIT } from "./limits.js";
 import { recallObservationalMemory, recallObservationalMemoryBranchPage } from "./recall.js";
 
 export type GetMemoryEntries = (sessionId: string) => Promise<readonly SessionEntry[]> | readonly SessionEntry[];

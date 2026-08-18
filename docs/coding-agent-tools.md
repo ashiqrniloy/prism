@@ -48,6 +48,8 @@ import { createCodingTools } from "@arnilo/prism-coding-agent";
 const tools = createToolRegistry(createCodingTools(process.cwd()));
 ```
 
+Every tool carries an explicit `kind` (`shell`→`execute`, `read`/`repo_list`→`read`, `write`/`edit`→`edit`, `repo_search`/`glob`→`search`, `delete`→`delete`, `move`→`move`) so ACP `tool_call` updates and other consumers can classify tools without name heuristics.
+
 ## When to use it
 
 Use this package when a host wants ready-made coding tools for an agent, session, or run, registered explicitly into a `ToolRegistry` and dispatched through the normal Prism tool harness. The tools perform **real** shell and filesystem operations on the host — they are not mocked or sandboxed. Use the individual factories when you need per-tool options or custom operation backends; use the aggregators when you want the default set.
@@ -578,5 +580,5 @@ Every configurable value is a positive safe integer (context may be zero); Prism
 - [Public contracts](public-contracts.md): `ToolDefinition`, `ToolResult`, `ToolExecutionContext`, `ContentBlock`, and `JsonObject` shapes.
 - [Host security guide](host-security.md): fail-closed checklist for permission policies, tool validation, and trust boundaries that must gate these tools.
 - [Tool conformance](tool-conformance.md): assertions for the tool-dispatch blocked-reason matrix these tools participate in.
-- [ACP coding-host interop](acp.md): host editors drive these tools through stable ACP v1 — client fs/terminal adapters, `CodingLifecycleEvent` emission (`file_changed` etc. via the `onEvent` options), and permission/elicitation through the shared four-outcome decision model.
+- [ACP coding-host interop](acp.md): host editors drive these tools through stable ACP v1 — client fs/terminal adapters, `CodingLifecycleEvent` emission (`file_changed` etc. via the `onEvent` options; `plan_changed` also fires from `writeCodingPlanFile`'s `onEvent`, F5), and permission/elicitation through the shared four-outcome decision model.
 - [LLM compaction package](compaction-llm.md): optional `createCodingCompactionStrategy()` retains bounded paths, patch intent, checks, plan/todo state, blockers, and next verification—not complete diffs or raw command output.

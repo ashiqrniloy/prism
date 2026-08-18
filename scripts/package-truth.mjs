@@ -5,8 +5,8 @@
 // workspace glob that matches no directory.
 //
 //   node scripts/package-truth.mjs [--out scripts/package-truth.json] [--root <dir>]
-import { readFileSync, readdirSync, writeFileSync, statSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");

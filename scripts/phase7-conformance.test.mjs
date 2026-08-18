@@ -3,9 +3,9 @@ import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 import { promisify } from "node:util";
+import { Pool } from "pg";
 import { createPostgresEnterpriseState } from "../packages/enterprise-postgres/dist/index.js";
 import { createPostgresPersistence } from "../packages/session-store-postgres/dist/index.js";
-import { Pool } from "pg";
 
 const exec = promisify(execFile);
 const url = process.env.PRISM_TEST_POSTGRES_URL;

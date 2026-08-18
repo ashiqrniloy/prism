@@ -15,7 +15,7 @@
  * handle is wired back into the live registry.
  */
 import { isAbsolute } from "node:path";
-import type { CheckpointStore, LeaseStore, LeaseRecord, OwnershipScope } from "@arnilo/prism";
+import type { CheckpointStore, LeaseRecord, LeaseStore, OwnershipScope } from "@arnilo/prism";
 import {
   DEFAULT_MAX_RECOVERY_ATTACH_TIMEOUT_MS,
   DEFAULT_MAX_RECOVERY_BACKEND_REF_BYTES,

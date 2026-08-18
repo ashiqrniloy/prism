@@ -1,5 +1,5 @@
-import { FOLDED_MEMORY } from "./types.js";
 import type { MemoryObservation, MemoryReflection } from "./types.js";
+import { FOLDED_MEMORY } from "./types.js";
 
 export const HARD_MAX_RENDERED_MEMORY_BYTES = 256 * 1024;
 export const HARD_MAX_FOLDED_PAYLOAD_BYTES = 512 * 1024;

@@ -1,10 +1,11 @@
 /** registry (0.2.5 plan 025 Task 1 split). Moved verbatim from agent.ts; public surface unchanged behind the barrel. */
-import { AcpError } from "../errors.js";
-import type { AcpSessionSummary, ResolvedAcpClientCapabilities } from "../capabilities.js";
+
 import type { McpServer, SessionConfigOption, SessionInfo, SessionModeState } from "@agentclientprotocol/sdk";
 import { resolveAgUiLimits } from "../../limits.js";
-import { toSessionConfigOptions, toSessionModeState } from "../modes.js";
+import type { AcpSessionSummary, ResolvedAcpClientCapabilities } from "../capabilities.js";
+import { AcpError } from "../errors.js";
 import { validateMcpServers } from "../mcp-config.js";
+import { toSessionConfigOptions, toSessionModeState } from "../modes.js";
 import type { AcpAuthorization, ActiveSession, CreatePrismAcpAgentOptions } from "./types.js";
 
 export function registerSession(

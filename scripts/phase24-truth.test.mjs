@@ -2,7 +2,7 @@
 // gate segment after phase23-quality-gates.test.mjs.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -28,16 +28,16 @@ test("committed artifact equals the generator output (regenerate via node script
 
 test("counts match manifests at the 0.2.4 truth baseline", () => {
   const t = computePackageTruth();
-  assert.equal(t.counts.publishable, 50);
-  assert.equal(t.counts.workspace, 49);
+  assert.equal(t.counts.publishable, 51);
+  assert.equal(t.counts.workspace, 50);
   assert.equal(t.counts.provider, 14);
   assert.equal(t.counts.prismFamily, 9);
-  assert.equal(t.counts.capability, 26);
-  assert.equal(t.counts.codeWithPeer, 43);
+  assert.equal(t.counts.capability, 27);
+  assert.equal(t.counts.codeWithPeer, 44);
   assert.equal(t.counts.pureManifest, 6);
   assert.equal(t.providers.length, 14);
   assert.equal(t.family.length, 9);
-  assert.equal(t.capability.length, 26);
+  assert.equal(t.capability.length, 27);
   assert.equal(t.peerPolicy.decision, "A");
   assert.equal(t.peerPolicy.spec, t.root.version);
 });
@@ -52,8 +52,8 @@ test("umbrella closures match manifests", () => {
     "@arnilo/prism-provider-vertex",
   ]);
   const all = t.umbrella["prism-all"];
-  assert.equal(all.deps.length, 20);
-  assert.equal(all.closure, 43, "20 direct deps expand through code/sdk/profile deps to 43 workspace packages");
+  assert.equal(all.deps.length, 21);
+  assert.equal(all.closure, 44, "21 direct deps expand through code/sdk/profile deps to 44 workspace packages");
   assert.equal(all.omits.length, 5);
   for (const name of [
     "@arnilo/prism-caveman",
@@ -69,7 +69,7 @@ test("umbrella closures match manifests", () => {
 test("profile closures match manifests", () => {
   const t = computePackageTruth();
   assert.equal(t.profiles["prism-providers"].length, 11);
-  assert.equal(t.profiles["prism-all"].length, 43);
+  assert.equal(t.profiles["prism-all"].length, 44);
   for (const name of ["@arnilo/prism-compaction", "@arnilo/prism-tool-validator-json-schema", "@arnilo/prism-compaction-llm"]) {
     assert.ok(t.profiles["prism-base"].includes(name), `prism-base closure includes ${name}`);
   }
@@ -89,7 +89,7 @@ test("peer policy Decision A: all 43 code packages peer the bare exact current v
     ...readManifest(join(dir, "package.json")),
   }));
   const codeWithPeer = pkgs.filter((p) => p.peerDependencies?.["@arnilo/prism"] !== undefined);
-  assert.equal(codeWithPeer.length, t.counts.codeWithPeer, "43 code packages with a core peer");
+  assert.equal(codeWithPeer.length, t.counts.codeWithPeer, "44 code packages with a core peer");
   const secondPeers = {};
   for (const p of codeWithPeer) {
     const spec = p.peerDependencies["@arnilo/prism"];
@@ -104,6 +104,7 @@ test("peer policy Decision A: all 43 code packages peer the bare exact current v
     }
   }
   assert.deepEqual(secondPeers, {
+    "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui"],
     "@arnilo/prism-ag-ui": ["@arnilo/prism-mcp", "@arnilo/prism-supervisor"],
     "@arnilo/prism-coding-agent": ["@arnilo/prism-workflows"],
     "@arnilo/prism-coding-security": ["@arnilo/prism-coding-agent"],

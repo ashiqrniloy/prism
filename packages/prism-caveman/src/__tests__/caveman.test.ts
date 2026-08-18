@@ -3,10 +3,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, it } from "node:test";
-
-import { createSessionEntry } from "@arnilo/prism";
+import { createSessionEntry, parseSkillFile } from "@arnilo/prism";
 import { createExtensionKernel } from "@arnilo/prism/testing/extension-conformance";
-import { parseSkillFile } from "@arnilo/prism";
 
 import { readCavemanConfig, writeCavemanConfig } from "../config.js";
 import { createCavemanExtension } from "../extension.js";

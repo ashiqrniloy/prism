@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 import { Pool } from "pg";
-import { ENTERPRISE_INDEX_NAMES, ENTERPRISE_TABLE_NAMES, buildEnterpriseMigration001Ddl } from "../ddl.js";
+import { buildEnterpriseMigration001Ddl, ENTERPRISE_INDEX_NAMES, ENTERPRISE_TABLE_NAMES } from "../ddl.js";
 import { createPostgresEnterpriseState } from "../enterprise.js";
 import { EnterprisePostgresError } from "../errors.js";
 import { qualifyTable, quoteIdentifier } from "../identifiers.js";

@@ -40,12 +40,21 @@ export interface AgUiCustomProjection {
 /** Value or promise of it; hooks may call async host APIs like `session.entries()`. */
 export type Awaitable<T> = T | Promise<T>;
 
+/** Opt-in image payload from `toolResult` (F8). Mapper wraps as ACP `content` + `ImageContent`. */
+export interface AgUiProjectedImage {
+  readonly type: "image";
+  readonly data: string;
+  readonly mimeType: string;
+}
+
+export type AgUiProjectedToolResult = string | AgUiProjectedImage;
+
 /** Host-owned allow-list. All callbacks receive redacted Prism values. Sync hooks keep exact behavior; async hooks are awaited in event order (never `Promise.all`). */
 export interface AgUiProjection {
   /** Return a safe display string to expose tool arguments; absent means omit them. */
   toolArguments?(call: ToolCallContent): Awaitable<string | undefined>;
-  /** Return a safe display string to expose a tool result; absent means status only. */
-  toolResult?(result: ToolResult): Awaitable<string | undefined>;
+  /** Return a safe display string or opt-in image payload to expose a tool result; absent means status only. */
+  toolResult?(result: ToolResult): Awaitable<AgUiProjectedToolResult | undefined>;
   /** Return safe file locations for a tool-call update; absent means no locations. */
   toolLocations?(result: ToolResult): Awaitable<readonly { path: string; line?: number }[] | undefined>;
   /** Return one safe file diff for a tool-call update; absent means no diff. */

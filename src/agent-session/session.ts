@@ -1,6 +1,20 @@
 /** session (0.2.5 plan 025 Task 1 split). Moved verbatim from agent-session.ts; public surface unchanged behind the barrel. */
+
+import {
+  ActiveDurableRun,
+  AgentRunSuspended,
+  decisionIdentityRef,
+  decisionScopesEqual,
+  nestedApprovalId,
+  nestedOutcomeToolResult,
+  pathsEqual,
+} from "../agent-approval.js";
+import { resolveLoop, resolveToolConcurrency } from "../agent-loops.js";
+import type { PendingToolCall, StoredAgentRunState } from "../agent-run-state.js";
+import { boundedLoopSnapshot, initialAgentRunState, publicState, saveAgentRunState, validateRunStateOptions } from "../agent-run-state.js";
+import { activeTools, policyList, toolElicitationRequest } from "../agent-tool-dispatch.js";
+import { createDefaultCompactionStrategy, isCompactionEntryData } from "../compaction.js";
 import type {
-  AIProvider,
   Agent,
   AgentEvent,
   AgentEventRecord,
@@ -10,6 +24,7 @@ import type {
   AgentRunStateOptions,
   AgentSession,
   AgentSessionConfig,
+  AIProvider,
   CompactionMiddlewarePayload,
   CompactionOptions,
   CompactionResult,
@@ -53,30 +68,19 @@ import {
   AgentRunError,
   AgentRunStateError,
   DEFAULT_MAX_PENDING_DECISIONS,
-  DEFAULT_MAX_PENDING_STEERS,
   DEFAULT_MAX_PENDING_STEER_BYTES,
+  DEFAULT_MAX_PENDING_STEERS,
   HARD_MAX_PENDING_DECISIONS,
   MAX_ATTRIBUTION_DEPTH,
 } from "../contracts.js";
-import {
-  ActiveDurableRun,
-  AgentRunSuspended,
-  decisionIdentityRef,
-  decisionScopesEqual,
-  nestedApprovalId,
-  nestedOutcomeToolResult,
-  pathsEqual,
-} from "../agent-approval.js";
+import { assertGuardrailsAllowed, GuardrailError, runGuardrails } from "../guardrails.js";
 import type { AgentIdentity } from "../identity.js";
 import { identityTelemetryAttributes, ownershipFromIdentity, resolveRunIdentity } from "../identity.js";
 import type { AgentInput } from "../input.js";
 import { assembleProviderInput } from "../input.js";
-import { GuardrailError, assertGuardrailsAllowed, runGuardrails } from "../guardrails.js";
-import type { LoadedSkillBodiesEntry } from "../skill-load.js";
-import { applyRestoredSkillBodies, snapshotLoadedSkillBodies, validateLoadedSkillBodies } from "../skill-load.js";
-import type { PendingToolCall, StoredAgentRunState } from "../agent-run-state.js";
-import { boundedLoopSnapshot, initialAgentRunState, publicState, saveAgentRunState, validateRunStateOptions } from "../agent-run-state.js";
-import { RunLimitError, RunLimitTracker, resolveRunLimits } from "../run-limits.js";
+import { createProviderTurnMetadata, readProviderHttpStatus } from "../observability.js";
+import { providerToolCallDeltaContent } from "../provider-events.js";
+import { createProviderRequestPolicyChain, normalizeProviderRequestPolicyResult } from "../provider-request-policy.js";
 import type { SecretRedactor } from "../redaction.js";
 import {
   errorToErrorInfo,
@@ -86,27 +90,23 @@ import {
   redactSecrets,
   redactSessionEntry,
 } from "../redaction.js";
+import { createDefaultRetryPolicy, waitForRetry } from "../retry.js";
+import { isFlushableRunLedger } from "../run-ledger.js";
+import { RunLimitError, RunLimitTracker, resolveRunLimits } from "../run-limits.js";
 import type { SessionContextSnapshot } from "../session-stores.js";
 import { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, rebuildSessionContext } from "../session-stores.js";
-import { activeTools, policyList, toolElicitationRequest } from "../agent-tool-dispatch.js";
-import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } from "../structured-output.js";
-import { canonicalToolEffectJson, toolEffectArgumentsHash } from "../tool-effects.js";
-import { composeSystemPrompt, mergeSystemPromptConfig } from "../system-prompts.js";
-import { createDefaultCompactionStrategy, isCompactionEntryData } from "../compaction.js";
-import { createDefaultRetryPolicy, waitForRetry } from "../retry.js";
 import { createLoadedSkillSet, resolveSkillsDisclosure } from "../skill-disclosure.js";
-import { createProviderRequestPolicyChain, normalizeProviderRequestPolicyResult } from "../provider-request-policy.js";
-import { createProviderTurnMetadata, readProviderHttpStatus } from "../observability.js";
-import { dispatchToolCall, resolveToolEffectDeclaration } from "../tools.js";
-import { isFlushableRunLedger } from "../run-ledger.js";
-import { providerToolCallDeltaContent } from "../provider-events.js";
+import type { LoadedSkillBodiesEntry } from "../skill-load.js";
+import { applyRestoredSkillBodies, snapshotLoadedSkillBodies, validateLoadedSkillBodies } from "../skill-load.js";
 import { resolveActiveSkills } from "../skills.js";
-import { resolveLoop, resolveToolConcurrency } from "../agent-loops.js";
+import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } from "../structured-output.js";
+import { composeSystemPrompt, mergeSystemPromptConfig } from "../system-prompts.js";
+import { canonicalToolEffectJson, toolEffectArgumentsHash } from "../tool-effects.js";
 import { resolveToolResultFold } from "../tool-result-fold.js";
+import { dispatchToolCall, resolveToolEffectDeclaration } from "../tools.js";
+import { createAgentSession } from "./create-agent.js";
 import { EventSubscriber } from "./event-subscriber.js";
 import {
-  ProviderTurnFailure,
-  SteerSoftInterrupt,
   bridgeAbort,
   createUsageAccumulator,
   errorFromInfo,
@@ -119,14 +119,15 @@ import {
   mergeGuardrails,
   mergeRetry,
   messageTextBytes,
+  ProviderTurnFailure,
   providerContent,
   randomId,
   reconstructMissingToolCalls,
+  SteerSoftInterrupt,
   throwIfAborted,
   throwIfAbortedSignal,
   withoutTrailingInput,
 } from "./helpers.js";
-import { createAgentSession } from "./create-agent.js";
 
 export class RuntimeAgentSession implements AgentSession {
   readonly id: string;
@@ -1010,7 +1011,14 @@ export class RuntimeAgentSession implements AgentSession {
             loopState: undefined,
           })
         : undefined;
-      this.emit({ type: "agent_finished", sessionId: this.id, runId, usage });
+      this.emit({
+        type: "agent_finished",
+        sessionId: this.id,
+        runId,
+        usage,
+        // F4: loop strategies record why a ceiling ended the run cleanly (e.g. turn_limit).
+        ...(ctx.finishReason ? { finishReason: ctx.finishReason } : {}),
+      });
       return this.buildRunResult({ runId, status: "succeeded", usage, runState });
     } catch (error) {
       if (error instanceof AgentRunSuspended) {

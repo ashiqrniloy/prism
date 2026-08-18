@@ -1,7 +1,7 @@
 # Phase 18 (0.1.6) primitive review and threat model — acp-session-store
 
 Evidence file for plan 018 Task 1 (demand-gated closeouts). Reviewed 2026-08-11.
-Demand record: closeout `acp-session-store` demanded by **Clay** (2026-08-11) —
+Demand record: closeout `acp-session-store` demanded by **a consuming app** (2026-08-11) —
 ACP sessions must survive agent restart (live registry state: session bindings,
 mode/config values); the in-memory registry is insufficient.
 
@@ -37,7 +37,7 @@ until a client explicitly calls `session/load`/`resume`; `modeId`/`configValues`
 of previously active sessions are gone (recomputed from defaults per
 `docs/acp.md:114`); `configuration_changed` broadcasts reach only
 post-restart registrations; `session/delete`/`cancel` state and per-session
-`updatedAt` are lost. Clay's resume-without-reload flow needs the registry
+`updatedAt` are lost. The consuming app's resume-without-reload flow needs the registry
 itself to survive restart.
 
 ## New primitive (one, generic, host-owned)

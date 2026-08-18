@@ -57,6 +57,7 @@ export function createGlobTool(cwd: string, options?: GlobToolOptions): ToolDefi
 
   return {
     name: "glob",
+    kind: "search",
     effect: CODING_OBSERVATION_EFFECT,
     description: `Find workspace files by glob pattern without shell find. Supports * (segment), ? (one char), and ** (directories). Brace expansion is rejected unless braceExpansion: true (bounded: max 128 alternatives / 4096 expanded bytes; unbalanced or nested braces are errors). Skips hidden names and excluded basenames (default: ${limits.exclude.join(", ")}) unless overridden. Does not follow symlinks. Results paginate with offset/maxResults (default ${limits.maxResults}). Depth default ${limits.maxDepth}. Prefer repo_list to enumerate directories and repo_search to find text inside files.`,
     parameters: {

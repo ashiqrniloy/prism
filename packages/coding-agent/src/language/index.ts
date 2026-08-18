@@ -1,5 +1,5 @@
-export { encodeLspFrame, LspFrameError, LspFrameReader } from "./framing.js";
 export { LspClient } from "./client.js";
+export { encodeLspFrame, LspFrameError, LspFrameReader } from "./framing.js";
 export {
   applyTextEdits,
   createLanguageIntelligence,

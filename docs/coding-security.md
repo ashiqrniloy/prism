@@ -210,6 +210,12 @@ The protected coding journey (0.2.6, plan 026 Task 7) exercises these boundaries
 
 The egress proxy is a policy enforcer, not a firewall: it cannot stop a container whose Docker network reaches the internet directly. Egress attestation (`denyDirectEgress: true`) is a claim the host must make true by network topology; the adapter records it as evidence and fails closed when it is absent or malformed. The proxy performs no TLS interception, no DNS rebinding of its own beyond pinning, and no content filtering; audit records contain no secrets. Frozen caps: 32 concurrent connections (hard 256), 64 MiB request/response bytes (hard 1 GiB), 600 s transfer time (hard 1 h), 128 rules (hard 1,024), 5 redirect hops (hard 10).
 
+## Windows hosts
+
+`createNativeSandbox` is Linux-only. On any other platform (including Windows) it throws at creation and does **not** fall back to an unsandboxed process — egress denial cannot be enforced by construction without a network namespace. Do not catch that error and enable `shell` on the host; keep `shell` disabled, or run the agent inside a Docker container using `createDockerSandbox` and the documented [allow-list egress](#allow-list-egress-composition) policy (`network: none` or an attested custom network). Host-mode tools (`read`/`write`/`edit` under `workspaceMode: "host"`) remain available; they never claim containment.
+
+A native Windows backend (Job objects / AppContainer) is tracked, not scheduled. Until one exists, Windows hosts that need isolation use Docker. Do not weaken the deny-by-default posture to compensate.
+
 ## Related APIs
 
 - [Coding agent tools](coding-agent-tools.md): durable plan/todo Markdown helpers and `state.coding` checkpoint metadata for restart/resume without a second runtime

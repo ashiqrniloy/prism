@@ -13,10 +13,10 @@
  */
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { test } from "node:test";
-import { packedFilePaths } from "./release-gates.mjs";
-import { fileURLToPath } from "node:url";
 import { join } from "node:path";
+import { test } from "node:test";
+import { fileURLToPath } from "node:url";
+import { packedFilePaths } from "./release-gates.mjs";
 
 const url = (path) => new URL(path, import.meta.url);
 // Task 1 (0.2.5) split contracts-core.ts + agent-session.ts into a barrel + a sibling

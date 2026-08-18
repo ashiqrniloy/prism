@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { createMemoryLeaseStore, createSecretRedactor, type AgentIdentity, type LeaseStore, type SecretRedactor } from "@arnilo/prism";
+import { type AgentIdentity, createMemoryLeaseStore, createSecretRedactor, type LeaseStore, type SecretRedactor } from "@arnilo/prism";
 import { createMemoryWorkflowCheckpoints, defineSaga, resumeSaga, runSaga } from "../index.js";
 
 const identity: AgentIdentity = {

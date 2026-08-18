@@ -8,23 +8,24 @@
  * ever produced (security test 'T5 fabricated exit'); corrupt/forbidden
  * records and ownership mismatches fail closed.
  */
-import { describe, it } from "node:test";
+
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createMemoryCheckpointStore, createMemoryLeaseStore, type CheckpointStore, type LeaseStore } from "@arnilo/prism";
+import { describe, it } from "node:test";
+import { type CheckpointStore, createMemoryCheckpointStore, createMemoryLeaseStore, type LeaseStore } from "@arnilo/prism";
 import {
-  createProcessSessions,
-  ProcessRecoveryError,
-  PROCESS_RECOVERY_NAMESPACE,
   acquireRecordLease,
+  createProcessSessions,
+  loadProcessRecoveryRecord,
+  PROCESS_RECOVERY_NAMESPACE,
   type ProcessPtyHandle,
   type ProcessRecoveryBackend,
-  loadProcessRecoveryRecord,
+  ProcessRecoveryError,
+  type ProcessSandboxHandle,
   resolveProcessRecoveryLimits,
   saveProcessRecoveryRecord,
-  type ProcessSandboxHandle,
 } from "../process/index.js";
 
 interface FakeHandle extends ProcessPtyHandle, ProcessSandboxHandle {

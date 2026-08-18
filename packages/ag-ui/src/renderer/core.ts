@@ -3,14 +3,14 @@
  * Pure state machine: A2UI v0.9 operations -> surface/component model.
  * No DOM, no framework, no host build step. Testable without a browser.
  */
-import { EventType, type AGUIEvent } from "@ag-ui/core";
+import { type AGUIEvent, EventType } from "@ag-ui/core";
 import {
   A2UI_ACTIVITY_TYPE,
   A2UI_OPERATIONS_KEY,
   A2UI_VERSION,
-  validateA2UiOp,
-  truncateA2UiText,
   type ResolvedAgUiA2UiLimits,
+  truncateA2UiText,
+  validateA2UiOp,
 } from "../a2ui.js";
 import { DEFAULT_AG_UI_LIMITS, type ResolvedAgUiLimits } from "../limits.js";
 

@@ -19,6 +19,21 @@ test("createCodingTools returns shell/read/write/edit/repo_list/repo_search/glob
     );
     // unique
     assert.equal(new Set(tools.map((t) => t.name)).size, tools.length);
+    // B4: every tool carries its explicit kind
+    assert.deepEqual(
+      tools.map((t) => [t.name, t.kind]),
+      [
+        ["shell", "execute"],
+        ["read", "read"],
+        ["write", "edit"],
+        ["edit", "edit"],
+        ["repo_list", "read"],
+        ["repo_search", "search"],
+        ["glob", "search"],
+        ["delete", "delete"],
+        ["move", "move"],
+      ],
+    );
     // every entry is a real ToolDefinition
     for (const t of tools) {
       assert.equal(typeof t.execute, "function");

@@ -4,10 +4,10 @@ import { randomUUID } from "node:crypto";
 import { createServer, request as httpRequest, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { connect as netConnect, type Socket } from "node:net";
 import type { Readable, Writable } from "node:stream";
-import { assertPinned, isPrivateAddress, resolvePinned, type AddressResolver } from "./dns-pin.js";
-import { resolveEgressLimits, type EgressLimitOptions, type ResolvedEgressLimits } from "./limits.js";
+import { type AddressResolver, assertPinned, isPrivateAddress, resolvePinned } from "./dns-pin.js";
+import { type EgressLimitOptions, type ResolvedEgressLimits, resolveEgressLimits } from "./limits.js";
 import type { EgressPolicy } from "./policy.js";
-import { EgressError, type EgressAuditRecord, type EgressErrorCode } from "./types.js";
+import { type EgressAuditRecord, EgressError, type EgressErrorCode } from "./types.js";
 
 export interface EgressProxyEndpoint {
   readonly host: string;

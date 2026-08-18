@@ -1,9 +1,9 @@
 import type { CommandDefinition, JsonObject } from "@arnilo/prism";
 
-import { readCavemanConfig, type CavemanConfig } from "./config.js";
-import type { CavemanLevel } from "./types.js";
+import { type CavemanConfig, readCavemanConfig } from "./config.js";
 import { normalizeLevelArg } from "./mode.js";
 import type { CavemanSkillName } from "./skills.js";
+import type { CavemanLevel } from "./types.js";
 
 export interface CavemanCommandContext {
   readonly skills: ReadonlyMap<CavemanSkillName, { readonly name: string; readonly instructions?: string }>;

@@ -10,7 +10,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { before, test } from "node:test";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import { createIndexedRepositoryOperations, IndexError } from "../repository/indexed-search.js";
 import type {
   IndexFileChange,
   RepositoryIndexBackend,
@@ -20,6 +19,7 @@ import type {
   RepositoryIndexStatus,
   RepositoryIndexUpdateRequest,
 } from "../repository/indexed-search.js";
+import { createIndexedRepositoryOperations, IndexError } from "../repository/indexed-search.js";
 import type { RepositorySearchResult } from "../repository.js";
 import { createLocalRepositoryOperations } from "../repository.js";
 import { createRepoSearchTool } from "../search.js";

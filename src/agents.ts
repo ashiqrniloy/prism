@@ -12,5 +12,6 @@
  * agents.d.ts and change the declared surface — the 0.1.4 promise is an
  * identical surface.
  */
-export { createAgent, createAgentSession } from "./agent-session.js";
+
 export { resumeAgentRun, resumeAgentRunStream } from "./agent-run-lifecycle.js";
+export { createAgent, createAgentSession } from "./agent-session.js";

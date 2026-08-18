@@ -13,15 +13,14 @@
  *   missing — never a green skip (0.2.3's blocked-not-skipped visibility rule).
  */
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
 import { randomUUID } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { Pool } from "pg";
-import { createMemoryAgentEventSource } from "../dist/index.js";
-import { createMemoryCheckpointStore } from "../dist/index.js";
+import { createMemoryAgentEventSource, createMemoryCheckpointStore } from "../dist/index.js";
 import { assertStateConcurrencyConforms } from "../dist/testing/state-concurrency-conformance.js";
-import { createPostgresPersistence } from "../packages/session-store-postgres/dist/index.js";
 import { createPostgresEnterpriseState } from "../packages/enterprise-postgres/dist/index.js";
+import { createPostgresPersistence } from "../packages/session-store-postgres/dist/index.js";
 
 const url = process.env.PRISM_TEST_POSTGRES_URL;
 const root = new URL("..", import.meta.url).pathname;

@@ -24,15 +24,15 @@ import {
 import { loadSystemPromptFiles } from "@arnilo/prism/node/system-prompts";
 import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
 
-// Phase 32 — Synapta-facing integration example and boundary lock.
+// Phase 32 — third-party host integration example and boundary lock.
 //
 // This demo proves that a third party can use Prism with its own providers,
 // tools, and skills plus optional first-party ones, opt a run into the
 // generate-validate-revise loop with its own schema validator, observe
-// artifact/refinement events, and keep all Synapta/domain types out of Prism.
+// artifact/refinement events, and keep all host/domain types out of Prism.
 // No network, no real credentials — everything runs against the mock provider.
 
-// Host-owned schema (Synapta's own type). Prism never imports it.
+// Host-owned schema (the host's own type). Prism never imports it.
 interface ReleaseNote {
   readonly title: string;
   readonly body: string;
@@ -125,8 +125,8 @@ async function setupTempPromptFiles(): Promise<{
   global: string;
   layers: Awaited<ReturnType<typeof loadSystemPromptFiles>>;
 }> {
-  const workspace = await mkdtemp(join(tmpdir(), "prism-synapta-ws-"));
-  const global = await mkdtemp(join(tmpdir(), "prism-synapta-global-"));
+  const workspace = await mkdtemp(join(tmpdir(), "prism-host-ws-"));
+  const global = await mkdtemp(join(tmpdir(), "prism-host-global-"));
   await mkdir(join(global, ".prism", "agent"), { recursive: true });
   // Include a fake secret in SYSTEM.md so the redactor has something to scrub.
   await writeFile(join(global, ".prism", "agent", "SYSTEM.md"), `Global rule: prefer concise JSON. Secret: ${FAKE_SECRET}`);

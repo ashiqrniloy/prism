@@ -1,5 +1,6 @@
 export { runComparison } from "./comparison.js";
 export { defineDataset } from "./dataset.js";
+export { createErpInvariantScorers, ERP_INVARIANT_SCHEMA_VERSION, erpInvariantDataset } from "./erp-invariants.js";
 export { EvalDatasetError, EvalError, EvalScoreError } from "./errors.js";
 export { runExperiment } from "./experiment.js";
 export type { AppendEvaluationFeedbackInput } from "./feedback.js";
@@ -35,7 +36,6 @@ export {
   HARD_TRACE_PAGE_SIZE,
   HARD_TRACE_PAGES,
 } from "./limits.js";
-export { erpInvariantDataset, createErpInvariantScorers, ERP_INVARIANT_SCHEMA_VERSION } from "./erp-invariants.js";
 export { defaultToAgentInput, scoreRun, scoreRunLive } from "./score.js";
 export { defineScorer } from "./scorer.js";
 export { createMemoryEvaluationStore } from "./store.js";

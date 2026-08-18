@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { EventSchemas, EventType } from "@ag-ui/core";
+import { createAgent, createMemorySessionStore, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
 import {
   A2UI_ACTIVITY_TYPE,
   A2UI_ERROR_EVENT,
@@ -10,7 +11,6 @@ import {
   resolveAgUiLimits,
 } from "../index.js";
 import { parseAgUiInput } from "../input.js";
-import { createAgent, createMemorySessionStore, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
 
 const catalogId = "https://a2ui.org/specification/v0_9/basic_catalog.json";
 

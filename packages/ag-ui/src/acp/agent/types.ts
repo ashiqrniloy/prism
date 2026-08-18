@@ -1,12 +1,5 @@
 /** types (0.2.5 plan 025 Task 1 split). Moved verbatim from agent.ts; public surface unchanged behind the barrel. */
-import type { AcpCapabilitiesOptions, AcpMcpSeams, AcpSessionStoreSeams } from "../capabilities.js";
-import type { AcpClientFilesystem } from "../fs-client.js";
-import type { AcpClientTerminals } from "../terminal-client.js";
-import type { AcpConfigOptionsSeam, AcpModesSeam } from "../modes.js";
-import type { AcpSessionStore } from "../session-store.js";
-import type { AgUiAuthorization } from "../../types.js";
-import type { AgUiLimitOptions } from "../../limits.js";
-import type { AgUiProjection } from "../../projection.js";
+
 import type { AgentContext, McpServer } from "@agentclientprotocol/sdk";
 import type {
   AgentRunLifecycle,
@@ -16,9 +9,17 @@ import type {
   OwnershipScope,
   PendingDecision,
   SecretRedactor,
+  ToolRegistry,
 } from "@arnilo/prism";
 import type { CodingLifecycleEmitter } from "@arnilo/prism-coding-agent";
-import type { PersistedAcpRunRef } from "../session-store.js";
+import type { AgUiLimitOptions } from "../../limits.js";
+import type { AgUiProjection } from "../../projection.js";
+import type { AgUiAuthorization } from "../../types.js";
+import type { AcpCapabilitiesOptions, AcpCommandsSeam, AcpMcpSeams, AcpSessionStoreSeams } from "../capabilities.js";
+import type { AcpClientFilesystem } from "../fs-client.js";
+import type { AcpConfigOptionsSeam, AcpModesSeam } from "../modes.js";
+import type { AcpSessionStore, PersistedAcpRunRef } from "../session-store.js";
+import type { AcpClientTerminals } from "../terminal-client.js";
 
 export interface AcpAuthorization extends AgUiAuthorization {}
 
@@ -26,6 +27,8 @@ export interface AcpSessionBinding {
   readonly session: AgentSession;
   /** Optional host assertion passed to the durable lifecycle. */
   readonly agentId?: string;
+  /** Optional tool registry; its `kind` metadata feeds ACP tool_call kinds (B4). */
+  readonly tools?: ToolRegistry;
 }
 
 /** Client-method adapters the host can wire into its coding tools (built per advertised capability). */
@@ -95,6 +98,8 @@ export interface CreatePrismAcpAgentOptions<Authorization extends AcpAuthorizati
   readonly mcp?: AcpMcpSeams;
   /** Capability policy seams (prompt media/embedded gates). */
   readonly capabilities?: AcpCapabilitiesOptions;
+  /** F9: host slash-command list. Presence emits `available_commands_update` on session start. */
+  readonly commands?: AcpCommandsSeam;
   /** Host mode table; presence returns `modes` on new/load/resume and enables `session/set_mode`. */
   readonly modes?: AcpModesSeam;
   /** Host config-option table; returned only when the client advertised session.configOptions.boolean. */
@@ -113,6 +118,8 @@ export interface ActiveSession extends AcpSessionBinding {
   client?: AgentContext;
   /** Shared per-run notification budget; lifecycle updates count against it. */
   budget?: AcpStreamBudget;
+  /** F6: last emitted title (dedupe for session_info_update); host owns storage. */
+  title?: string;
   /** Host-bound ownership at registration (phase 18 Task 2 persistence). */
   ownership?: OwnershipScope;
   /** Working directory at registration (phase 18 Task 2 persistence). */

@@ -1,5 +1,5 @@
-import type { ModelConfig, Usage } from "./contracts-core.js";
 import { cacheHitRate, cacheSavings } from "./cache-helpers.js";
+import type { ModelConfig, Usage } from "./contracts-core.js";
 
 /**
  * Prompt-cache telemetry surface (0.1.7, plan 019 Task 2).

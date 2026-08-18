@@ -235,9 +235,6 @@ function validateRequestUrl(url: URL, allowedOrigins: ReadonlySet<string>, allow
   }
 }
 
-// Lifted to the core pinnedFetch primitive in 0.2.1 (task 4); kept as re-exports
-// so existing importers of these MCP transport helpers keep working.
-export { isLoopbackHostname };
 export {
   boundResponse,
   defaultResolver,
@@ -247,3 +244,6 @@ export {
   requestPinned,
   resolvePinnedAddress,
 } from "@arnilo/prism";
+// Lifted to the core pinnedFetch primitive in 0.2.1 (task 4); kept as re-exports
+// so existing importers of these MCP transport helpers keep working.
+export { isLoopbackHostname };

@@ -1,15 +1,15 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import {
-  ENTERPRISE_INDEX_NAMES,
-  ENTERPRISE_TABLE_NAMES,
   buildEnterpriseMigration001Ddl,
   buildEnterpriseMigration002Ddl,
   buildEnterpriseMigration003Ddl,
   buildEnterpriseMigration004Ddl,
   buildEnterpriseMigration005Ddl,
+  ENTERPRISE_INDEX_NAMES,
+  ENTERPRISE_TABLE_NAMES,
 } from "./ddl.js";
-import { EnterprisePostgresError, asEnterprisePostgresError } from "./errors.js";
+import { asEnterprisePostgresError, EnterprisePostgresError } from "./errors.js";
 import { ENTERPRISE_MIGRATION_LOCK_NAMESPACE, qualifyTable, schemaAdvisoryLockKey } from "./identifiers.js";
 
 interface EnterpriseMigration {

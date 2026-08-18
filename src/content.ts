@@ -1,7 +1,7 @@
 import { lookup as dnsLookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import { pinnedFetch } from "./pinned-fetch.js";
 import type { ContentBlock, ImageContent, Message, ModelConfig, ResourceLoadContext, ResourceLoader } from "./contracts.js";
+import { pinnedFetch } from "./pinned-fetch.js";
 import { assertPermission } from "./security.js";
 
 /** Known model input capability tags for `ModelCapabilities.input`. */

@@ -8,7 +8,7 @@ import {
 import type { Pool, PoolClient } from "pg";
 import { EnterprisePostgresError } from "./errors.js";
 import { qualifyTable } from "./identifiers.js";
-import { asTimestamp, ownerParams, requireStoreOwner, requiredText, storeError, type StoreOwner } from "./records.js";
+import { asTimestamp, ownerParams, requiredText, requireStoreOwner, type StoreOwner, storeError } from "./records.js";
 
 const MAX_KEY_BYTES = 512;
 const MAX_WINDOW_MS = 31 * 24 * 60 * 60_000;

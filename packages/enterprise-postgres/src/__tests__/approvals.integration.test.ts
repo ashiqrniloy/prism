@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
-import { Pool } from "pg";
 import type { AgentIdentity } from "@arnilo/prism";
 import type { ApprovalAuthority, ApprovalRecord, ApprovalStore, PolicyActorRef } from "@arnilo/prism-policy";
-import { createPostgresApprovalStore, type PostgresApprovalStoreOptions } from "../index.js";
+import { Pool } from "pg";
 import { qualifyTable } from "../identifiers.js";
+import { createPostgresApprovalStore, type PostgresApprovalStoreOptions } from "../index.js";
 import { applyEnterpriseMigrations } from "../migrations.js";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;
@@ -49,7 +49,7 @@ function createInput(overrides: Partial<Parameters<ApprovalStore["create"]>[0]> 
     action: { kind: "invoice.release", digest: "digest-1" },
     requirements: [{ role: "finance-approver", quorum: 1 }],
     separateFromRequester: true,
-    expiresAt: "2026-08-18T00:00:00.000Z",
+    expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
     ...overrides,
   } as Parameters<ApprovalStore["create"]>[0];
 }

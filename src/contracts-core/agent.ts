@@ -1,20 +1,21 @@
 /** Contracts-core agent family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */
+
+import type { InputAssemblyLayout, RunLedger, ToolDefinition, ToolEffectStore, ToolRegistry } from "../contracts-protocol.js";
 import type { AgentRunStateOptions, AgentSession } from "../contracts-run-state.js";
 import type { ContributionRegistries } from "../contributions.js";
-import type { InputAssemblyLayout, RunLedger, ToolDefinition, ToolEffectStore, ToolRegistry } from "../contracts-protocol.js";
 import type { MiddlewareRegistry } from "../middleware.js";
-import type { PermissionPolicy, TrustPolicy } from "../security.js";
 import type { SecretRedactor } from "../redaction.js";
+import type { PermissionPolicy, TrustPolicy } from "../security.js";
 import type { ToolValidator } from "../tools.js";
-import type { AIProvider, ProviderRequestOptions, ProviderResolver } from "./provider.js";
-import type { AgentLoopOptions, AgentLoopStrategy, LoopContext } from "./loop.js";
 import type { CompactionOptions, RetryOptions } from "./compaction.js";
 import type { ContentBlock, ErrorInfo, JsonObject, Message, ModelConfig } from "./content.js";
 import type { ExtensionAPI, ProviderRequestPolicy, SystemPromptConfig } from "./extensions.js";
-import type { Guardrails, RunLimits } from "./run-limits.js";
+import type { AgentLoopOptions, AgentLoopStrategy, LoopContext } from "./loop.js";
 import type { OwnershipScope } from "./persistence.js";
+import type { AIProvider, ProviderRequestOptions, ProviderResolver } from "./provider.js";
 import type { ResourceLoader } from "./resources.js";
+import type { Guardrails, RunLimits } from "./run-limits.js";
 import type { SessionStore } from "./session.js";
 
 export interface AgentDefinition {

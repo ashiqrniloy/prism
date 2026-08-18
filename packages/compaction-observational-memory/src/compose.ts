@@ -15,12 +15,12 @@ import { buildObservationalMemoryContextBlocks } from "./recent-messages.js";
 import type { ObservationalMemoryFlushOptions, ObservationalMemoryRuntime, ObservationalMemoryWorkerRuntimeConfig } from "./runtime.js";
 import { createObservationalMemoryRuntime } from "./runtime.js";
 import {
+  assertNoRemovedFlatKeys,
+  defaultObservationalMemorySettings,
   type ObservationalMemoryContextSettingsInput,
   type ObservationalMemoryRetrievalSettingsInput,
   type ObservationalMemorySettings,
   type ObservationalMemorySettingsInput,
-  assertNoRemovedFlatKeys,
-  defaultObservationalMemorySettings,
   resolveObservationalMemorySettings,
 } from "./settings.js";
 import { createObservationalMemoryCompactionStrategy, type ObservationalMemoryCompactionStrategyOptions } from "./strategy.js";

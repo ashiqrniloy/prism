@@ -331,19 +331,24 @@ State management and Eval framework. Subagents.
 - [x] **ERP release journey.** Exercise identity, policy, budget reservation, SoD approval, outbox mutation, compensation, audit export, legal hold, replica failover, and restore.
   - Acceptance: atomicity/recovery invariants are documented and tested; no exactly-once claim; security/performance/storage budgets pass. “ERP production ready” remains blocked until the 0.3.0 live-service matrix is recorded.
   
-### 0.2.8 - Coding agent capabilities
+### 0.2.8 — ACP adoption fixes
 
+- [x] **Client-neutrality.** Scrub client names from the tree; `scripts/check-client-neutrality.mjs` is wired into `release:gate`.
+- [x] **ACP wire truth (B1–B5).** Host `usage.contextWindow` seam (omit when unknown); run-level `error` rejects `session/prompt` with `ERR_PRISM_ACP_RUN`; boolean-only `set_config_option`; explicit `ToolDefinition.kind`; permission docs match SDK wire kinds.
+- [x] **ACP surface (F1–F9).** `agent_thought_chunk`; transcript replay; spawnable `@arnilo/prism-acp-agent`; `StopReason` fidelity; UNSTABLE-gated plan updates; session titles; coding-tool projection; image tool-result content; slash-command updates.
+- [x] **Windows sandbox policy (F10).** Docs only: `createNativeSandbox` fails closed off Linux; Docker fallback; Job objects/AppContainer tracked, not scheduled.
+  - Acceptance: client-neutral tree, deny-by-default seams, additive-only compat, 51-package graph, `sdk:ready` + `release:check` green.
+
+### 0.2.9 - Misc
 - Background observer (Observational Memory, Recall, Tool use, Skill activation, Input token suppression)
 - Impeccable
 - Vent
 - Ponytail and Caveman
 - Evaluate all of the coding tools to make sure it has all the capabilities required for coding agents to do the job in the most correct and efficient way.
-- Computer use pckage: Linux
+- Computer use package: Linux
 - Observational Memory implementation review: Local Memory Storage for the session??
 - Implement Karpathy LLM Wiki extension. For Codebase and Personal Knowledge Management.
 - Debug workflow
-
-### 0.2.9 - Misc
 - Setup docs and skills such that only packages with updates get released
 - Not all packages are needed to be updated with the same version
 - Deepseek API with stable cache prefix

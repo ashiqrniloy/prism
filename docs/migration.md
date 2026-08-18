@@ -1,5 +1,19 @@
 # Migration guide
 
+## 0.2.7 → 0.2.8 ACP adoption fixes (additive)
+
+Release **0.2.8** (plan 028) tightens ACP coding-host interop and adds the spawnable `@arnilo/prism-acp-agent` entrypoint. **Additive-only: no exported declaration removed or changed, no persisted 0.2.7 shape repurposed.**
+
+Hosts that already speak ACP should re-check these wire behaviors (deny-by-default unchanged unless a new seam is wired):
+
+- `usage_update` is omitted when the host cannot report a context window (never `size = used`).
+- A terminal run `error` rejects `session/prompt` with `ERR_PRISM_ACP_RUN` instead of an `Agent error:` transcript chunk.
+- Only boolean config options are advertised; `set_config_option` on a select option fails `ERR_PRISM_ACP_CAPABILITY`.
+- Permission option kinds on the wire are `allow_once` / `allow_always` / `reject_once` / `reject_always`.
+- New optional seams (`sessions.transcript`, `sessions.title`, `commands.list`, `capabilities.usage.contextWindow`, `createCodingToolProjection`, image `toolResult`) emit nothing when unwired.
+
+No store migration. Rollback = restore the 0.2.7 manifests/tag. The added exports and `@arnilo/prism-acp-agent` simply disappear.
+
 ## 0.2.6 → 0.2.7 enterprise ERP production readiness (additive)
 
 Release **0.2.7** (plan 027) adds the enterprise ERP production-readiness primitives behind optional host-activated seams: the transactional outbox/inbox + bounded dispatcher, the durable saga compensation/reconciliation engine, multi-party separation-of-duties approvals, signed hash-chained audit export with WORM/SIEM sinks, field-level classification + fail-closed redaction, and the deterministic ERP invariant evals. **Additive-only: no exported declaration removed or changed, no persisted 0.2.6 shape repurposed.**

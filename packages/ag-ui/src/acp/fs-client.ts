@@ -7,7 +7,7 @@
  * capability; each method additionally fails closed on an explicit mask.
  * Payloads honor the AG-UI maxTextBytes cap (frozen, no new knob).
  */
-import { methods, type AgentContext, type ReadTextFileRequest, type WriteTextFileRequest } from "@agentclientprotocol/sdk";
+import { type AgentContext, methods, type ReadTextFileRequest, type WriteTextFileRequest } from "@agentclientprotocol/sdk";
 import { DEFAULT_MAX_TEXT_BYTES, HARD_MAX_TEXT_BYTES } from "../limits.js";
 import { AcpError } from "./errors.js";
 

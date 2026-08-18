@@ -1,13 +1,12 @@
 import type { Extension, Message } from "@arnilo/prism";
-
-import { readInitialConfig, type PonytailConfig } from "./config.js";
 import { createPonytailCommands, type PonytailCommandContext } from "./commands.js";
+import { type PonytailConfig, readInitialConfig } from "./config.js";
 import { buildPonytailInstructions } from "./instructions.js";
 import { extractUserText, persistMode, resolveModeFromEntries } from "./mode.js";
 import { loadUpstreamSkills, requirePonytailSkills } from "./skills.js";
-import { loadUpstreamHooks } from "./upstream-hooks.js";
-import { resolveUpstreamRoot } from "./upstream.js";
 import type { PonytailExtensionOptions, PonytailMode } from "./types.js";
+import { resolveUpstreamRoot } from "./upstream.js";
+import { loadUpstreamHooks } from "./upstream-hooks.js";
 
 const INJECTOR_NAME = "ponytail-mode";
 

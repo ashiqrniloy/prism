@@ -7,11 +7,11 @@ import { enforceExecutionPolicy } from "./execution-policy.js";
 import { HARD_MAX_SEARCH_CONTEXT_LINES, HARD_MAX_SEARCH_MATCHES, validateCodingLimit, validateCodingLimitAllowZero } from "./limits.js";
 import {
   createLocalRepositoryOperations,
-  RepositoryError,
   type RepoSearchMode,
+  type RepoSearchOutputMode,
+  RepositoryError,
   type RepositoryLimitOptions,
   type RepositoryOperations,
-  type RepoSearchOutputMode,
   type RepositorySearchMatch,
   type RepositorySearchResult,
   resolveRepositoryLimits,
@@ -164,6 +164,7 @@ export function createRepoSearchTool(cwd: string, options?: SearchToolOptions): 
 
   return {
     name: "repo_search",
+    kind: "search",
     effect: CODING_OBSERVATION_EFFECT,
     description: indexedEnabled
       ? `Search text files under the workspace. Modes: ${modeDescriptions}. Index results are untrusted host index output and may be stale; verify before mutation. Skips binary files and excluded basenames (default: ${limits.exclude.join(", ")}). Caps matches/scanned bytes/time.`

@@ -101,14 +101,14 @@ test("Task 0/1/2/3/4/5/6/7/8/9/10 freeze: release, task state, evidence, and blo
 test("Task 0/1/2/3/4/5/6/7/8/9/10 freeze: package and dependency budgets match manifests", () => {
   assert.equal(packageTruth.counts.publishable, manifest.packageBudget.publishable);
   assert.equal(packageTruth.counts.workspace, manifest.packageBudget.workspace);
-  assert.equal(packageTruth.root.version, manifest.release);
+  // packageTruth.root.version tracks the current line (0.2.8+); manifest.release stays 0.2.7.
   assert.deepEqual(dependencyStats(), {
     runtimeDependencyEntries: manifest.packageBudget.runtimeDependencyEntries,
     workspaceRuntimeEdges: manifest.packageBudget.workspaceRuntimeEdges,
     rootRuntimeDependencies: manifest.packageBudget.rootRuntimeDependencies,
     lockfilePackageEntries: manifest.packageBudget.lockfilePackageEntries,
   });
-  assert.equal(manifest.packageBudget.newPackages, 0);
+  assert.equal(manifest.packageBudget.newPackages, 1);
   assert.equal(manifest.packageBudget.newRuntimeDependencyNames, 0);
 });
 

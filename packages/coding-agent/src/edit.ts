@@ -24,7 +24,6 @@ import { constants } from "node:fs";
 import { access as fsAccess, stat as fsStat } from "node:fs/promises";
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { atomicWriteUtf8File } from "./atomic-write.js";
-import { CODING_LOCAL_EFFECT } from "./effects.js";
 import { readFileBounded } from "./bounded-file.js";
 import {
   applyEditsToNormalizedContent,
@@ -35,6 +34,7 @@ import {
   restoreLineEndings,
   stripBom,
 } from "./edit-diff.js";
+import { CODING_LOCAL_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
 import type { CodingLifecycleEvent } from "./lifecycle.js";
@@ -48,7 +48,7 @@ import {
   validateCodingLimit,
 } from "./limits.js";
 import { resolveToCwd } from "./path-utils.js";
-import { refuseReadBeforeWrite, type ReadBeforeWriteOptions } from "./read-path-set.js";
+import { type ReadBeforeWriteOptions, refuseReadBeforeWrite } from "./read-path-set.js";
 
 export interface Edit {
   oldText: string;
@@ -57,6 +57,8 @@ export interface Edit {
 
 /** Display/result details mirrored from pi's `EditToolDetails`, surfaced via `ToolResult.metadata`. */
 export interface EditToolDetails {
+  /** Absolute path written (F7 projection + host navigation). */
+  path: string;
   /** Display-oriented diff of the changes made. */
   diff: string;
   /** Standard unified patch of the changes made. */
@@ -166,6 +168,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
 
   return {
     name: "edit",
+    kind: "edit",
     effect: CODING_LOCAL_EFFECT,
     description:
       "Edit a single file using exact-then-fuzzy text replacement. Every edits[].oldText must match a unique, non-overlapping region of the original file. Exact match is tried first; if it fails, fuzzy match (unicode normalize + whitespace collapse) may still succeed silently — prefer exact oldText to avoid wrong-region edits. Duplicate/ambiguous matches fail closed and leave the file unchanged. If two changes affect the same block or nearby lines, merge them into one edit. Do not include large unchanged regions just to connect distant changes. When the host enabled requireReadBeforeWrite, read the path first or pass force=true.",
@@ -293,6 +296,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
             name: "edit",
             content: [{ type: "text", text: `Successfully replaced ${edits.length} block(s) in ${prepared.path}.` }],
             metadata: {
+              path: allowedPath,
               diff: diffResult.diff,
               patch,
               firstChangedLine: diffResult.firstChangedLine,

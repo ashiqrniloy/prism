@@ -1,17 +1,19 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { createSecretRedactor } from "@arnilo/prism";
 import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
-import { assertPersistenceQueryPaginationConforms, assertTenantScopedQueryIsolation } from "@arnilo/prism/testing/persistence-schema";
+import {
+  assertPersistenceQueryPaginationConforms,
+  assertTenantScopedQueryIsolation,
+  createPersistenceMigrationContract,
+} from "@arnilo/prism/testing/persistence-schema";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
-import { createPersistenceMigrationContract } from "@arnilo/prism/testing/persistence-schema";
 import Database from "better-sqlite3";
-import { randomUUID } from "node:crypto";
-import { applySqliteMigrations } from "../migrations.js";
 import {
   MIGRATION_001_INIT,
   MIGRATION_002_USAGE_SCOPE,
@@ -21,6 +23,7 @@ import {
   MIGRATION_006_AGENT_EVENT_SOURCE,
   MIGRATION_007_AGENT_EVENT_RETENTION_INDEX,
 } from "../ddl.js";
+import { applySqliteMigrations } from "../migrations.js";
 import { createSqlitePersistence } from "../persistence.js";
 
 const tempDirs: string[] = [];

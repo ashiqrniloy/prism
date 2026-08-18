@@ -1,3 +1,4 @@
+export { createGitHubForge } from "./github.js";
 export type {
   CreateGitHubForgeOptions,
   ForgeCheck,
@@ -13,4 +14,3 @@ export type {
   ResolvedForgeLimits,
 } from "./types.js";
 export { ForgeError, resolveForgeLimits } from "./types.js";
-export { createGitHubForge } from "./github.js";

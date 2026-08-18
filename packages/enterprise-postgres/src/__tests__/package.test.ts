@@ -5,13 +5,13 @@ import type { Pool } from "pg";
 import { createEnterpriseStateCleanup } from "../cleanup.js";
 import { decodeBoundedJson, encodeBoundedJson } from "../codecs.js";
 import {
-  ENTERPRISE_INDEX_NAMES,
-  ENTERPRISE_TABLE_NAMES,
   buildEnterpriseMigration001Ddl,
   buildEnterpriseMigration002Ddl,
   buildEnterpriseMigration003Ddl,
   buildEnterpriseMigration004Ddl,
   buildEnterpriseMigration005Ddl,
+  ENTERPRISE_INDEX_NAMES,
+  ENTERPRISE_TABLE_NAMES,
 } from "../ddl.js";
 import { createPostgresEnterpriseState } from "../enterprise.js";
 import { EnterprisePostgresError } from "../errors.js";

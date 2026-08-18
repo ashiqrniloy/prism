@@ -4,8 +4,8 @@
 // secret-clean, evidence-linked, and that the 0.3.0 production-ready blocker
 // remains explicit. A single failure blocks the release.
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
 import { scanSecrets } from "./scan-secrets.mjs";
@@ -38,23 +38,25 @@ const EVIDENCE_DOC = "docs/release-0.2.7-evidence.md";
 const BLOCKER = "0.3.0 live-service matrix";
 
 describe("Plan 027 Task 10 release closeout", () => {
-  test("release metadata is exactly 0.2.7 across the 50-package graph", () => {
-    assert.equal(truth.counts.publishable, 50, "exactly 50 publishable packages");
-    assert.equal(truth.counts.workspace, 49, "49 workspace packages");
-    assert.equal(truth.root.version, "0.2.7", "root manifest is 0.2.7");
-    assert.equal(truth.peerPolicy.spec, "0.2.7", "peer policy spec is 0.2.7");
+  test("release metadata is exactly 0.2.7 across the 51-package graph", () => {
+    assert.equal(truth.counts.publishable, 51, "exactly 51 publishable packages (0.2.8 plan 028 added @arnilo/prism-acp-agent)");
+    assert.equal(truth.counts.workspace, 50, "50 workspace packages");
+    assert.equal(truth.root.version, "0.2.8", "root manifest is 0.2.8");
+    assert.equal(truth.peerPolicy.spec, "0.2.8", "peer policy spec is 0.2.8");
     // package-lock root version matches.
     const lock = readJson("package-lock.json");
-    assert.equal(lock.version, "0.2.7", "package-lock.json root version is 0.2.7");
+    assert.equal(lock.version, "0.2.8", "package-lock.json root version is 0.2.8");
     // release.mjs validates every manifest version + peer range + lockfile entry
     // (release:check with --allow-dirty already passed for 0.2.7); the deeper
     // per-package peer/version contract is enforced by phase24-truth + phase27-freeze.
   });
 
-  test("no accidental runtime dependency drift; package graph unchanged", () => {
+  test("no accidental runtime dependency drift; package graph grows only by the plan 028 acp-agent package", () => {
     assert.equal(truth.counts.publishable, finalEvidence.packages.publishable);
     assert.equal(truth.counts.publishable, freeze.packageBudget.publishable);
-    assert.equal(freeze.packageBudget.publishable, 50);
+    assert.equal(freeze.packageBudget.publishable, 51);
+    assert.equal(freeze.packageBudget.newPackages, 1, "0.2.8 adds exactly one package (acp-agent)");
+    assert.equal(freeze.packageBudget.newRuntimeDependencyNames, 0, "all new edges reuse existing dependency names");
     // The four secret-manager providers remain deferred (no adapter shipped).
     for (const [id, provider] of Object.entries(freeze.demand)) {
       assert.equal(provider.status, "deferred", `${id} stays deferred`);
@@ -112,7 +114,7 @@ describe("Plan 027 Task 10 release closeout", () => {
   });
 
   test("release evidence manifest has no unexplained blocked surfaces and every skip is explained", () => {
-    assert.equal(releaseEvidence.release, "0.2.7", "release-evidence is for 0.2.7");
+    assert.equal(releaseEvidence.release, "0.2.8", "release-evidence is for the current line");
     // A blocked surface is "explained" when it documents why it is blocked: either it
     // names a missing required env (requiredEnv) or a missing evidence artifact
     // (reason, e.g. "no coverage-summary.json evidence — run npm run test:coverage
@@ -145,7 +147,7 @@ describe("Plan 027 Task 10 release closeout", () => {
 
   test("final release manifest is consistent", () => {
     assert.equal(finalEvidence.release, "0.2.7");
-    assert.equal(finalEvidence.packages.publishable, 50);
+    assert.equal(finalEvidence.packages.publishable, 51);
     assert.equal(finalEvidence.packages.version, "0.2.7");
     assert.equal(finalEvidence.migrations.count, 5);
     assert.equal(finalEvidence.erpJourneyResults.allInvariantsPass, true);

@@ -21,13 +21,13 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { Pool } from "pg";
-import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres";
 import { createPostgresEnterpriseState } from "@arnilo/prism-enterprise-postgres";
+import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres";
+import { Pool } from "pg";
 
 const url = process.env.PRISM_TEST_POSTGRES_URL;
 const worker = new URL("./phase27-ha-worker.mjs", import.meta.url).pathname;

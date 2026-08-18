@@ -12,6 +12,7 @@ import type {
   Message,
   ModelConfig,
   OwnershipScope,
+  ProviderRequestOptions,
   ProviderRequestPolicy,
   ProviderResolver,
   RetryOptions,
@@ -25,7 +26,6 @@ import type {
   Usage,
 } from "./contracts-core.js";
 import type { AgentRunInterruption, AgentRunStateOptions } from "./contracts-run-state.js";
-import type { ProviderRequestOptions } from "./contracts-core.js";
 import type { SecretRedactor } from "./redaction.js";
 import type { ToolValidator } from "./tools.js";
 
@@ -113,9 +113,18 @@ export interface ToolExecutionMetadata {
   readonly status: ToolCallStatus;
 }
 
+export type AgentFinishReason = "turn_limit" | "token_limit" | "refusal";
+
 export type AgentEvent =
   | { readonly type: "agent_started"; readonly sessionId: string; readonly runId: string }
-  | { readonly type: "agent_finished"; readonly sessionId: string; readonly runId: string; readonly usage?: Usage }
+  | {
+      readonly type: "agent_finished";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly usage?: Usage;
+      /** Why the loop stopped, when a limit/ceiling ended the run cleanly (F4). Absent = natural end. */
+      readonly finishReason?: AgentFinishReason;
+    }
   | {
       readonly type: "agent_suspended";
       readonly sessionId: string;
@@ -291,8 +300,13 @@ export interface ToolElicitationRequest {
   readonly validate?: (payload: JsonObject) => void;
 }
 
+/** Neutral tool-kind union mirroring the ACP `ToolKind` set (B4); never an ACP import in `src/`. */
+export type ToolKind = "read" | "edit" | "delete" | "move" | "search" | "execute" | "think" | "fetch" | "switch_mode" | "other";
+
 export interface ToolDefinition {
   readonly name: string;
+  /** Optional explicit kind; consumers (e.g. the ACP mapper) use it instead of name heuristics. */
+  readonly kind?: ToolKind;
   readonly description?: string;
   readonly parameters?: JsonObject;
   /** Force any provider turn containing this tool to dispatch sequentially. */

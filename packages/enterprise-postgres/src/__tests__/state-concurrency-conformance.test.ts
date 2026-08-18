@@ -5,8 +5,8 @@
 import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 import { assertStateConcurrencyConforms } from "@arnilo/prism/testing/state-concurrency-conformance";
-import { createMemoryIdempotencyStore } from "@arnilo/prism-work-tools";
 import { createMemoryModelRouterStateStore } from "@arnilo/prism-model-router";
+import { createMemoryIdempotencyStore } from "@arnilo/prism-work-tools";
 import { Pool } from "pg";
 import { createPostgresEnterpriseState } from "../enterprise.js";
 

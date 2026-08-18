@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { test } from "node:test";
 import type { ToolExecutionContext } from "@arnilo/prism";
 import { createEditTool } from "../edit.js";
-import { createReadPathSet } from "../read-path-set.js";
 import { createReadTool } from "../read.js";
+import { createReadPathSet } from "../read-path-set.js";
 import { createWriteTool } from "../write.js";
 
 let counter = 0;

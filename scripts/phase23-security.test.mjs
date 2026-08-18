@@ -29,7 +29,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import { AgentRunError, AGENT_RUN_STATE_NAMESPACE, createAgent } from "@arnilo/prism";
+import { AGENT_RUN_STATE_NAMESPACE, AgentRunError, createAgent } from "@arnilo/prism";
 
 const ROOT = join(import.meta.dirname, "..");
 const LOCK = join(ROOT, "scripts", "with-build-lock.mjs");

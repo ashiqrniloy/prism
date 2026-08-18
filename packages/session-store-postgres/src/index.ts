@@ -1,3 +1,8 @@
+export {
+  type ClosablePostgresAgentEventSource,
+  createPostgresAgentEventSource,
+  type PostgresAgentEventSourceOptions,
+} from "./event-source.js";
 export { qualifyTable, quoteIdentifier, validateIdentifier } from "./identifiers.js";
 export type { PostgresPersistence } from "./persistence.js";
 export {
@@ -7,8 +12,3 @@ export {
   reopenPostgresPersistence,
 } from "./persistence.js";
 export type { PostgresPersistenceOptions } from "./types.js";
-export {
-  createPostgresAgentEventSource,
-  type ClosablePostgresAgentEventSource,
-  type PostgresAgentEventSourceOptions,
-} from "./event-source.js";

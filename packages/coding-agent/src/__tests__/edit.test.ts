@@ -16,7 +16,7 @@ function textOf(r: ToolResult): string {
   const block = r.content?.[0];
   return block && block.type === "text" ? block.text : "";
 }
-type EditMeta = { diff?: string; patch?: string; firstChangedLine?: number };
+type EditMeta = { path?: string; diff?: string; patch?: string; firstChangedLine?: number };
 function meta(r: ToolResult): EditMeta | undefined {
   return r.metadata as EditMeta | undefined;
 }
@@ -40,6 +40,7 @@ test("single exact edit → content updated, unified patch in metadata, firstCha
     assert.match(meta(r)?.patch ?? "", /^-beta$/m);
     assert.match(meta(r)?.patch ?? "", /^\+BETA$/m);
     assert.ok(typeof meta(r)?.firstChangedLine === "number", "firstChangedLine is a number");
+    assert.equal(meta(r)?.path, join(cwd, "f.txt"));
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
 import type { ExecutionPolicy } from "@arnilo/prism";
-import { createProcessSessions, ProcessSessionError, type CodingProcessEvent, type ProcessSandboxBackend } from "../process/index.js";
+import { type CodingProcessEvent, createProcessSessions, type ProcessSandboxBackend, ProcessSessionError } from "../process/index.js";
 
 let root: string;
 

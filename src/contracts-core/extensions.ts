@@ -1,10 +1,10 @@
 /** Contracts-core extensions family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */
+
+import type { ToolDefinition } from "../contracts-protocol.js";
 import type { ContributionRegistries } from "../contributions.js";
 import type { ManifestContributionDeclaration } from "../manifests.js";
 import type { Middleware, MiddlewareHookName, MiddlewareRegistry } from "../middleware.js";
-import type { ToolDefinition } from "../contracts-protocol.js";
-import type { AIProvider, ProviderRequest } from "./provider.js";
 import type {
   AgentDefinition,
   CommandDefinition,
@@ -15,9 +15,10 @@ import type {
   Skill,
 } from "./agent.js";
 import type { CompactionStrategy, RetryPolicy } from "./compaction.js";
-import type { Credential, CredentialResolver, ResourceLoader, SettingsProvider } from "./resources.js";
 import type { ErrorInfo, ModelConfig } from "./content.js";
 import type { StoreFactory } from "./persistence.js";
+import type { AIProvider, ProviderRequest } from "./provider.js";
+import type { Credential, CredentialResolver, ResourceLoader, SettingsProvider } from "./resources.js";
 
 export type ContributionFileKind = "skill" | "tool" | "context" | "instructions";
 

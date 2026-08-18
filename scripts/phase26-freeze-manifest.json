@@ -345,7 +345,7 @@
           "- [x] **Host-selected PTY/interactive terminal backend.**"
         ],
         "scripts/package-truth.json": [
-          "0.2.7"
+          "0.2.8"
         ]
       },
       "securityTests": [
@@ -362,7 +362,7 @@
         "phase26-freeze.test.mjs"
       ],
       "task8": [
-        "\"version\": \"0.2.7\""
+        "\"version\": \"0.2.8\""
       ]
     },
     "plans/026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md": {
@@ -423,7 +423,7 @@
         "protected coding journey"
       ],
       "task8": [
-        "**0.2.7**"
+        "**0.2.8**"
       ]
     },
     "packages/coding-agent/README.md": {

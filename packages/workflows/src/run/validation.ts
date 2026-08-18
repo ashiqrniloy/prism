@@ -1,11 +1,12 @@
 /** validation (0.2.5 plan 025 Task 1 split). Moved verbatim from run.ts; public surface unchanged behind the barrel. */
-import { DEFAULT_MAX_STATE_BYTES, DEFAULT_MAX_STATE_HISTORY } from "../limits.js";
+
 import type { JsonObject } from "@arnilo/prism";
-import type { RunWorkflowOptions } from "../types.js";
 import { WorkflowRuntimeError } from "../errors.js";
+import { DEFAULT_MAX_STATE_BYTES, DEFAULT_MAX_STATE_HISTORY } from "../limits.js";
+import type { RunWorkflowOptions } from "../types.js";
 import { assertWithinBytes, redactValue } from "../util.js";
-import type { SchedulerState } from "./main.js";
 import { cloneState } from "./checkpoint.js";
+import type { SchedulerState } from "./main.js";
 
 export async function validateState(state: SchedulerState, options: RunWorkflowOptions): Promise<void> {
   const maxBytes = state.workflow.limits?.maxStateBytes ?? DEFAULT_MAX_STATE_BYTES;

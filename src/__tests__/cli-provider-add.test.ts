@@ -9,8 +9,8 @@ import { fileURLToPath } from "node:url";
 import {
   createProviderProject,
   defaultProviderTemplatesRoot,
-  parseProviderAddArgs,
   ProviderAddUsageError,
+  parseProviderAddArgs,
   runProviderAddCommand,
   validateProviderName,
 } from "../cli-provider-add.js";
@@ -18,7 +18,7 @@ import { runCli } from "../cli-runner.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const templatesRoot = defaultProviderTemplatesRoot();
-const VERSION = "0.2.7";
+const VERSION = "0.2.8";
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];

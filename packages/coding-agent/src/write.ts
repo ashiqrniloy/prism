@@ -25,7 +25,7 @@ import { withFileMutationQueue } from "./file-mutation-queue.js";
 import type { CodingLifecycleEvent } from "./lifecycle.js";
 import { DEFAULT_MAX_WRITE_BYTES, HARD_MAX_WRITE_BYTES, validateCodingLimit } from "./limits.js";
 import { resolveToCwd } from "./path-utils.js";
-import { refuseReadBeforeWrite, type ReadBeforeWriteOptions } from "./read-path-set.js";
+import { type ReadBeforeWriteOptions, refuseReadBeforeWrite } from "./read-path-set.js";
 
 /**
  * Pluggable operations for the write tool. Override to delegate file writing to remote systems
@@ -74,6 +74,7 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDe
 
   return {
     name: "write",
+    kind: "edit",
     effect: CODING_LOCAL_EFFECT,
     description:
       "Create or overwrite a file (full replace). Creates parent directories. Prefer edit for targeted changes. When the host enabled requireReadBeforeWrite, read the path first or pass force=true to override.",

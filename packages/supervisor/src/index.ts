@@ -1,6 +1,6 @@
 export * from "./a2a-card.js";
-export * from "./a2a-event-source.js";
 export * from "./a2a-client.js";
+export * from "./a2a-event-source.js";
 export * from "./a2a-parts.js";
 export * from "./a2a-push.js";
 export * from "./a2a-server.js";

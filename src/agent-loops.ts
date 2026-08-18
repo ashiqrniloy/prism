@@ -70,6 +70,8 @@ export const singleShotLoop: AgentLoopStrategy = {
 
       const dispatchable = dispatchableToolCalls(calls);
       if (dispatchable.length === 0 || toolRounds >= ctx.maxToolRounds) {
+        // F4: the tool-round ceiling ended the run cleanly (not a natural end).
+        if (dispatchable.length > 0 && toolRounds >= ctx.maxToolRounds) ctx.finishReason = "turn_limit";
         // Soft-interrupt / late steer: keep same run going when queue still has text.
         if (await ctx.applyPendingSteers?.()) {
           nextInput = [];
@@ -188,6 +190,7 @@ export function generateValidateReviseLoop(opts: {
               errors: [{ message: "maximum tool rounds exceeded" }],
               metadata: { reason: "tool_round_limit" },
             };
+            ctx.finishReason = "turn_limit";
             ctx.emit({ type: "artifact_failed", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt: attempts + 1, result });
             return usage;
           }

@@ -1,11 +1,16 @@
 #!/usr/bin/env node
-import { createServer, request as httpRequest } from "node:http";
-import { cpus, totalmem } from "node:os";
-import { performance } from "node:perf_hooks";
 import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { createServer, request as httpRequest } from "node:http";
+import { cpus, tmpdir, totalmem } from "node:os";
 import { join } from "node:path";
+import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
+import { createMemoryToolEffectStore } from "../../dist/index.js";
+import { resolveAgUiA2UiLimits } from "../../packages/ag-ui/dist/a2ui.js";
+import { createAgUiEventMapper } from "../../packages/ag-ui/dist/ag-ui-mapper.js";
+import { DEFAULT_AG_UI_LIMITS } from "../../packages/ag-ui/dist/limits.js";
+import { DEFAULT_A2UI_CATALOG, renderA2UiSurface } from "../../packages/ag-ui/dist/renderer/bind.js";
+import { reduceA2UiOps } from "../../packages/ag-ui/dist/renderer/core.js";
 import {
   createBoundGitRunner,
   createGitAwareRepositoryOperations,
@@ -14,12 +19,6 @@ import {
   createProcessSessions,
 } from "../../packages/coding-agent/dist/index.js";
 import { createAllowListEgressProxy, createEgressPolicy } from "../../packages/coding-security/dist/index.js";
-import { createMemoryToolEffectStore } from "../../dist/index.js";
-import { resolveAgUiA2UiLimits } from "../../packages/ag-ui/dist/a2ui.js";
-import { DEFAULT_AG_UI_LIMITS } from "../../packages/ag-ui/dist/limits.js";
-import { createAgUiEventMapper } from "../../packages/ag-ui/dist/ag-ui-mapper.js";
-import { reduceA2UiOps } from "../../packages/ag-ui/dist/renderer/core.js";
-import { renderA2UiSurface, DEFAULT_A2UI_CATALOG } from "../../packages/ag-ui/dist/renderer/bind.js";
 
 const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 5);
 const ITERATIONS = Number(process.env.PRISM_BENCH_ITERATIONS ?? 20);
