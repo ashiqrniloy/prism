@@ -5,7 +5,7 @@ MAX_SKILL_FILE_BYTES	export declare const MAX_SKILL_FILE_BYTES = 262144
 PONYTAIL_MODES	export declare const PONYTAIL_MODES: readonly ["off", "lite", "full", "ultra"]
 PONYTAIL_MODE_TYPE	export declare const PONYTAIL_MODE_TYPE: "ponytail-mode"
 PONYTAIL_PEER_PACKAGE	export declare const PONYTAIL_PEER_PACKAGE = "@dietrichgebert/ponytail"
-PONYTAIL_PEER_RANGE	export declare const PONYTAIL_PEER_RANGE = "^4.8.4"
+PONYTAIL_PEER_RANGE	export declare const PONYTAIL_PEER_RANGE = "^4.9.0"
 PONYTAIL_SKILL_NAMES	export declare const PONYTAIL_SKILL_NAMES: readonly ["ponytail", "ponytail-audit", "ponytail-debt", "ponytail-gain", "ponytail-help", "ponytail-review"]
 PonytailAppendOptions	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
 PonytailExtensionOptions	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"

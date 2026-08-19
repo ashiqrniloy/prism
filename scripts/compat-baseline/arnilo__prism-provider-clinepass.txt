@@ -1,0 +1,16 @@
+CLINEPASS_DEFAULT_BASE_URL	export declare const CLINEPASS_DEFAULT_BASE_URL = "https://api.cline.bot/api/v1"
+CLINEPASS_FEATURED_SLUGS	export declare const CLINEPASS_FEATURED_SLUGS: string[]
+CLINEPASS_THINKING_MAPS	export declare const CLINEPASS_THINKING_MAPS:
+clinePassBody	export declare function clinePassBody(request: ProviderRequest): JsonObject
+clinePassEvents	export declare function clinePassEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+clinePassModels	export declare const clinePassModels: ModelConfig[]
+clinePassReasoningEffort	export declare function clinePassReasoningEffort(request: ProviderRequest): string | undefined
+clinePassThinkingLevelMap	export declare function clinePassThinkingLevelMap(request: ProviderRequest): ClinePassThinkingLevelMap | undefined
+clinePassThinkingSlot	export declare function clinePassThinkingSlot(value: unknown): ClinePassThinkingSlot | undefined
+createClinePassProvider	export declare function createClinePassProvider(options?: ClinePassProviderOptions): AIProvider
+createClinePassProviderPackage	export declare function createClinePassProviderPackage(options?: ClinePassProviderPackageOptions): ProviderPackage
+defineClinePassModel	export declare function defineClinePassModel(config: ClinePassModelConfig): ModelConfig
+type ClinePassModelConfig	export { CLINEPASS_DEFAULT_BASE_URL, CLINEPASS_FEATURED_SLUGS, type ClinePassModelConfig, clinePassModels, defineClinePassModel, } from "./models.js"
+type ClinePassProviderOptions	export { createClinePassProvider, type ClinePassProviderOptions, clinePassBody, clinePassEvents, } from "./provider.js"
+type ClinePassThinkingLevelMap	export { type ClinePassThinkingLevelMap, type ClinePassThinkingSlot, CLINEPASS_THINKING_MAPS, clinePassReasoningEffort, clinePassThinkingLevelMap, clinePassThinkingSlot, } from "./thinking.js"
+type ClinePassThinkingSlot	export { type ClinePassThinkingLevelMap, type ClinePassThinkingSlot, CLINEPASS_THINKING_MAPS, clinePassReasoningEffort, clinePassThinkingLevelMap, clinePassThinkingSlot, } from "./thinking.js"

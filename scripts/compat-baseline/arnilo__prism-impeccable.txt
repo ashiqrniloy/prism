@@ -1,0 +1,13 @@
+IMPECCABLE_SKILL_NAME	export declare const IMPECCABLE_SKILL_NAME = "impeccable"
+ImpeccableExtensionOptions	export type { ImpeccableExtensionOptions } from "./types.js"
+MAX_SKILL_FILE_BYTES	export declare const MAX_SKILL_FILE_BYTES = 262144
+SKILL_FILE_CANDIDATES	export declare const SKILL_FILE_CANDIDATES: readonly ["skills/impeccable/SKILL.md", "SKILL.md"]
+UpstreamResolveError	export declare class UpstreamResolveError extends Error
+createImpeccableCommand	export declare function createImpeccableCommand(): CommandDefinition
+createImpeccableExtension	export declare function createImpeccableExtension(options: ImpeccableExtensionOptions): Extension
+loadImpeccableSkill	export declare function loadImpeccableSkill(root: string, skillRelativePath: string): Skill
+readBoundedFile	export declare function readBoundedFile(root: string, relativePath: string, maxBytes: number): string
+redactPaths	export declare function redactPaths(text: string, paths?: readonly string[]): string
+resolveUpstreamRoot	export declare function resolveUpstreamRoot(options: ResolveUpstreamRootOptions): ResolvedImpeccableUpstream
+type ResolveUpstreamRootOptions	export { MAX_SKILL_FILE_BYTES, type ResolveUpstreamRootOptions, type ResolvedImpeccableUpstream, SKILL_FILE_CANDIDATES, readBoundedFile, redactPaths, resolveUpstreamRoot, UpstreamResolveError, } from "./upstream.js"
+type ResolvedImpeccableUpstream	export { MAX_SKILL_FILE_BYTES, type ResolveUpstreamRootOptions, type ResolvedImpeccableUpstream, SKILL_FILE_CANDIDATES, readBoundedFile, redactPaths, resolveUpstreamRoot, UpstreamResolveError, } from "./upstream.js"

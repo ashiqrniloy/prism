@@ -1,0 +1,28 @@
+XAI_CONV_ID_MAX_LENGTH	export declare const XAI_CONV_ID_MAX_LENGTH = 128
+XAI_DEFAULT_BASE_URL	export declare const XAI_DEFAULT_BASE_URL = "https://api.x.ai/v1"
+XAI_DEFAULT_CLIENT_ID	export declare const XAI_DEFAULT_CLIENT_ID = "b1a00492-073a-47ea-816f-4c329264a828"
+XAI_DEFAULT_DEVICE_CODE_URL	export declare const XAI_DEFAULT_DEVICE_CODE_URL = "https://auth.x.ai/oauth2/device/code"
+XAI_DEFAULT_REFERRER	export declare const XAI_DEFAULT_REFERRER = "prism"
+XAI_DEFAULT_REVOKE_URL	export declare const XAI_DEFAULT_REVOKE_URL = "https://auth.x.ai/oauth2/revoke"
+XAI_DEFAULT_SCOPE	export declare const XAI_DEFAULT_SCOPE = "openid profile email offline_access grok-cli:access api:access"
+XAI_DEFAULT_TOKEN_URL	export declare const XAI_DEFAULT_TOKEN_URL = "https://auth.x.ai/oauth2/token"
+XAI_REFRESH_SKEW_MS	export declare const XAI_REFRESH_SKEW_MS: number
+createXaiOAuthProvider	export declare function createXaiOAuthProvider(options?: XaiOAuthOptions): OAuthProvider
+createXaiProvider	export declare function createXaiProvider(options?: XaiProviderOptions): AIProvider
+createXaiProviderPackage	export declare function createXaiProviderPackage(options?: XaiProviderPackageOptions): ProviderPackage
+defineXaiModel	export declare function defineXaiModel(config: XaiModelConfig): ModelConfig
+listXaiModels	export declare function listXaiModels(options?: ListXaiModelsOptions): Promise<ModelConfig[]>
+mapXaiModel	export declare function mapXaiModel(entry: XaiModelEntry, options?:
+parseXaiTokenCredentials	export declare function parseXaiTokenCredentials(json: OAuthTokenSuccessPayload, previousRefresh?: string, now?: () => number): OAuthCredentials
+toXaiMessage	export declare function toXaiMessage(message: Message, request: ProviderRequest): JsonObject
+type ListXaiModelsOptions	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, type XaiModelConfig, type XaiModelEntry, XAI_DEFAULT_BASE_URL, xaiModels, } from "./models.js"
+type XaiModelConfig	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, type XaiModelConfig, type XaiModelEntry, XAI_DEFAULT_BASE_URL, xaiModels, } from "./models.js"
+type XaiModelEntry	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, type XaiModelConfig, type XaiModelEntry, XAI_DEFAULT_BASE_URL, xaiModels, } from "./models.js"
+type XaiOAuthOptions	export { createXaiOAuthProvider, parseXaiTokenCredentials, type XaiOAuthOptions, XAI_DEFAULT_CLIENT_ID, XAI_DEFAULT_DEVICE_CODE_URL, XAI_DEFAULT_REFERRER, XAI_DEFAULT_REVOKE_URL, XAI_DEFAULT_SCOPE, XAI_DEFAULT_TOKEN_URL, XAI_REFRESH_SKEW_MS, } from "./oauth.js"
+type XaiProviderOptions	export { createXaiProvider, type XaiProviderOptions, toXaiMessage, xaiBody, xaiEvents } from "./provider.js"
+xGrokConvId	export declare function xGrokConvId(request: ProviderRequest): string | undefined
+xaiBody	export declare function xaiBody(request: ProviderRequest): JsonObject
+xaiCacheEnabled	export declare function xaiCacheEnabled(request: ProviderRequest): boolean
+xaiEvents	export declare function xaiEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+xaiModels	export declare const xaiModels: ModelConfig[]
+xaiReplayThinking	export declare function xaiReplayThinking(request: ProviderRequest): boolean

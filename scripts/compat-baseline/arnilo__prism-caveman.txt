@@ -26,7 +26,7 @@ readBoundedFile	export declare function readBoundedFile(root: string, relativePa
 readCavemanConfig	export declare function readCavemanConfig(configPath?: string): CavemanConfig
 readInitialConfig	export declare function readInitialConfig(configPath: string | undefined, defaultLevel?: CavemanLevel, showStatus?: boolean): CavemanConfig
 redactPaths	export declare function redactPaths(text: string, paths?: readonly string[]): string
-requireCavemanSkills	export declare function requireCavemanSkills(skills: readonly Skill[]): Map<CavemanSkillName, Skill>
+requireCavemanSkills	export declare function requireCavemanSkills(skills: readonly Skill[]): Map<string, Skill>
 resolveLevelFromEntries	export declare function resolveLevelFromEntries(entries: readonly SessionEntry[]): CavemanLevel | undefined
 resolveUpstreamRoot	export declare function resolveUpstreamRoot(options: ResolveUpstreamRootOptions): string
 writeCavemanConfig	export declare function writeCavemanConfig(configPath: string, config: CavemanConfig): void
