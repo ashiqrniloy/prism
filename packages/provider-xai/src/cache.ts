@@ -14,8 +14,5 @@ export function xaiCacheEnabled(request: ProviderRequest): boolean {
 /** Sticky conversation id for xAI prefix cache routing. */
 export function xGrokConvId(request: ProviderRequest): string | undefined {
   if (!xaiCacheEnabled(request)) return undefined;
-  return sanitizeCacheKey(
-    request.options?.cache?.key ?? request.options?.cacheKey ?? request.options?.sessionId,
-    XAI_CONV_ID_MAX_LENGTH,
-  );
+  return sanitizeCacheKey(request.options?.cache?.key ?? request.options?.cacheKey ?? request.options?.sessionId, XAI_CONV_ID_MAX_LENGTH);
 }

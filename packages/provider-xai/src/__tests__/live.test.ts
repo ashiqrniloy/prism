@@ -11,12 +11,9 @@ import { createXaiOAuthProvider, createXaiProvider, xaiModels } from "../index.j
 
 const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
 const API_KEY = process.env.XAI_API_KEY;
-const skip: string | false =
-  !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and XAI_API_KEY to run live xAI smoke tests" : false;
+const skip: string | false = !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and XAI_API_KEY to run live xAI smoke tests" : false;
 const oauthSkip: string | false =
-  process.env.PRISM_LIVE_XAI_OAUTH === "1"
-    ? false
-    : "set PRISM_LIVE_XAI_OAUTH=1 to run SuperGrok device-code login (opens a browser)";
+  process.env.PRISM_LIVE_XAI_OAUTH === "1" ? false : "set PRISM_LIVE_XAI_OAUTH=1 to run SuperGrok device-code login (opens a browser)";
 
 const model = xaiModels[0]!;
 const apiKey = (): string | undefined => process.env.XAI_API_KEY;

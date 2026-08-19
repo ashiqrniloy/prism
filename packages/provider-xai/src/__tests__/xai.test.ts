@@ -9,12 +9,12 @@ import {
 import {
   createXaiProvider,
   createXaiProviderPackage,
+  listXaiModels,
+  mapXaiModel,
   XAI_CONV_ID_MAX_LENGTH,
   XAI_DEFAULT_BASE_URL,
   xaiBody,
   xaiModels,
-  listXaiModels,
-  mapXaiModel,
   xGrokConvId,
 } from "../index.js";
 
@@ -77,7 +77,10 @@ describe("@arnilo/prism-provider-xai", () => {
     assert.equal(xGrokConvId({ ...request, options: { cacheRetention: "none", sessionId: "sess-1" } }), undefined);
     assert.equal(xGrokConvId({ ...request, options: { cache: { mode: "off" }, sessionId: "sess-1" } }), undefined);
     assert.equal(xGrokConvId({ ...request, options: { cacheKey: "sess#1!" } }), "sess-1");
-    assert.equal(xGrokConvId({ ...request, options: { cacheKey: "x".repeat(XAI_CONV_ID_MAX_LENGTH + 20) } })?.length, XAI_CONV_ID_MAX_LENGTH);
+    assert.equal(
+      xGrokConvId({ ...request, options: { cacheKey: "x".repeat(XAI_CONV_ID_MAX_LENGTH + 20) } })?.length,
+      XAI_CONV_ID_MAX_LENGTH,
+    );
     assert.equal(xGrokConvId({ ...request, options: { cacheKey: "sk-secret-key!!!" } }), "sk-secret-key");
   });
 
@@ -132,10 +135,7 @@ describe("@arnilo/prism-provider-xai", () => {
     const run = async (usage: object) => {
       const provider = createXaiProvider({
         apiKey: "fake-xai-key",
-        fetch: (async () =>
-          ok(
-            sse([{ choices: [{ delta: { content: "hi" }, finish_reason: "stop" }], usage }]),
-          )) as typeof fetch,
+        fetch: (async () => ok(sse([{ choices: [{ delta: { content: "hi" }, finish_reason: "stop" }], usage }]))) as typeof fetch,
       });
       return assertProviderStreamConforms({ provider, request, expect: { text: "hi" } });
     };

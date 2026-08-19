@@ -14,9 +14,12 @@ export function canonicalizeJsonSchema(value: unknown): unknown {
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>)
       .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, item]) => [key, key === "required" && Array.isArray(item) && item.every((entry) => typeof entry === "string")
-        ? [...item].sort((left, right) => (left as string).localeCompare(right as string))
-        : canonicalizeJsonSchema(item)]),
+      .map(([key, item]) => [
+        key,
+        key === "required" && Array.isArray(item) && item.every((entry) => typeof entry === "string")
+          ? [...item].sort((left, right) => (left as string).localeCompare(right as string))
+          : canonicalizeJsonSchema(item),
+      ]),
   );
 }
 

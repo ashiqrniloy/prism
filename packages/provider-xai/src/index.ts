@@ -31,21 +31,20 @@ export function createXaiProviderPackage(options: XaiProviderPackageOptions = {}
   });
 }
 
-export { xaiCacheEnabled, XAI_CONV_ID_MAX_LENGTH, xGrokConvId } from "./cache.js";
+export { XAI_CONV_ID_MAX_LENGTH, xaiCacheEnabled, xGrokConvId } from "./cache.js";
 export {
   defineXaiModel,
   type ListXaiModelsOptions,
   listXaiModels,
   mapXaiModel,
+  XAI_DEFAULT_BASE_URL,
   type XaiModelConfig,
   type XaiModelEntry,
-  XAI_DEFAULT_BASE_URL,
   xaiModels,
 } from "./models.js";
 export {
   createXaiOAuthProvider,
   parseXaiTokenCredentials,
-  type XaiOAuthOptions,
   XAI_DEFAULT_CLIENT_ID,
   XAI_DEFAULT_DEVICE_CODE_URL,
   XAI_DEFAULT_REFERRER,
@@ -53,6 +52,7 @@ export {
   XAI_DEFAULT_SCOPE,
   XAI_DEFAULT_TOKEN_URL,
   XAI_REFRESH_SKEW_MS,
+  type XaiOAuthOptions,
 } from "./oauth.js";
-export { createXaiProvider, type XaiProviderOptions, toXaiMessage, xaiBody, xaiEvents } from "./provider.js";
+export { createXaiProvider, toXaiMessage, type XaiProviderOptions, xaiBody, xaiEvents } from "./provider.js";
 export { xaiReplayThinking } from "./thinking.js";

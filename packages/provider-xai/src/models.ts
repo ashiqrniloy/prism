@@ -1,10 +1,4 @@
-import {
-  type CredentialValueSource,
-  type JsonObject,
-  type ModelConfig,
-  redactSecrets,
-  resolveCredentialValue,
-} from "@arnilo/prism";
+import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 export const XAI_DEFAULT_BASE_URL = "https://api.x.ai/v1";
@@ -104,9 +98,7 @@ export function mapXaiModel(entry: XaiModelEntry, options: { readonly provider?:
   });
 }
 
-export const xaiModels = (
-  ["grok-4.6", "grok-4.3", "grok-build-0.1"] as const
-).map((id) => defineXaiModel({ model: id, ...FEATURED[id]! }));
+export const xaiModels = (["grok-4.6", "grok-4.3", "grok-build-0.1"] as const).map((id) => defineXaiModel({ model: id, ...FEATURED[id]! }));
 
 function cleanJson(value: Record<string, unknown>): JsonObject {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as JsonObject;

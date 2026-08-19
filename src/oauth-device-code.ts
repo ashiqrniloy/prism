@@ -100,7 +100,12 @@ const encodeOAuthBody = (encoding: "json" | "form", params: Record<string, strin
     ? { contentType: "application/x-www-form-urlencoded", body: new URLSearchParams(params).toString() }
     : { contentType: "application/json", body: JSON.stringify(params) };
 
-const requireHttpsVerificationUri = (value: string, label: string, errorPrefix: string, secrets: readonly (string | undefined)[]): string => {
+const requireHttpsVerificationUri = (
+  value: string,
+  label: string,
+  errorPrefix: string,
+  secrets: readonly (string | undefined)[],
+): string => {
   let parsed: URL;
   try {
     parsed = new URL(value);
@@ -121,7 +126,18 @@ const requireHttpsVerificationUri = (value: string, label: string, errorPrefix: 
  * bounded text parsed as JSON with a redacted-text fallback.
  */
 export async function pollDeviceCodeToken(options: PollDeviceCodeTokenOptions): Promise<OAuthCredentials> {
-  const { fetchImpl, deviceCodeUrl, tokenUrl, clientId, scope, extraTokenParams, extraDeviceParams, callbacks, errorPrefix, parseTokenCredentials } = options;
+  const {
+    fetchImpl,
+    deviceCodeUrl,
+    tokenUrl,
+    clientId,
+    scope,
+    extraTokenParams,
+    extraDeviceParams,
+    callbacks,
+    errorPrefix,
+    parseTokenCredentials,
+  } = options;
   const bodyEncoding = options.bodyEncoding === "form" ? "form" : "json";
   const now = options.now ?? Date.now;
   const sleep = options.sleep ?? abortableSleep;

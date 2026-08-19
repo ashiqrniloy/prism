@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { pollDeviceCodeToken, type PollDeviceCodeTokenOptions } from "../oauth-device-code.js";
+import { type PollDeviceCodeTokenOptions, pollDeviceCodeToken } from "../oauth-device-code.js";
 
 const DEVICE = "https://example.test/device";
 const TOKEN = "https://example.test/token";
@@ -44,9 +44,7 @@ const poll = (overrides: Partial<PollDeviceCodeTokenOptions> & Pick<PollDeviceCo
 
 describe("pollDeviceCodeToken", () => {
   it("default JSON still sends application/json with { client_id, scope }", async () => {
-    const { calls, fetchImpl } = recorded((url) =>
-      Response.json(url.includes("device") ? payload() : { access_token: "tok" }),
-    );
+    const { calls, fetchImpl } = recorded((url) => Response.json(url.includes("device") ? payload() : { access_token: "tok" }));
     const creds = await poll({ fetchImpl });
     assert.equal(creds.access, "tok");
     assert.equal(calls.length, 2);
@@ -66,9 +64,7 @@ describe("pollDeviceCodeToken", () => {
   });
 
   it("bodyEncoding form sends urlencoded device + token bodies; referrer only on device POST", async () => {
-    const { calls, fetchImpl } = recorded((url) =>
-      Response.json(url.includes("device") ? payload() : { access_token: "tok" }),
-    );
+    const { calls, fetchImpl } = recorded((url) => Response.json(url.includes("device") ? payload() : { access_token: "tok" }));
     await poll({
       fetchImpl,
       bodyEncoding: "form",
@@ -101,7 +97,11 @@ describe("pollDeviceCodeToken", () => {
     );
     await poll({
       fetchImpl,
-      callbacks: { onDeviceCode: ({ verificationUri }) => { seen = verificationUri; } },
+      callbacks: {
+        onDeviceCode: ({ verificationUri }) => {
+          seen = verificationUri;
+        },
+      },
     });
     assert.equal(seen, "https://example.test/activate?user_code=USER-CODE");
   });
@@ -112,9 +112,7 @@ describe("pollDeviceCodeToken", () => {
       await assert.rejects(() => poll({ fetchImpl }), /verification_uri must be https/);
       assert.equal(calls.length, 1, uri);
     }
-    const { calls, fetchImpl } = recorded(() =>
-      Response.json(payload({ verification_uri_complete: "http://example.test/complete" })),
-    );
+    const { calls, fetchImpl } = recorded(() => Response.json(payload({ verification_uri_complete: "http://example.test/complete" })));
     await assert.rejects(() => poll({ fetchImpl }), /verification_uri_complete must be https/);
     assert.equal(calls.length, 1);
   });
@@ -179,9 +177,7 @@ describe("pollDeviceCodeToken", () => {
     );
     await assert.rejects(() => poll({ fetchImpl: huge }), /65536/);
 
-    const { fetchImpl: shapeless } = recorded((url) =>
-      Response.json(url.includes("device") ? payload() : { token_type: "bearer" }),
-    );
+    const { fetchImpl: shapeless } = recorded((url) => Response.json(url.includes("device") ? payload() : { token_type: "bearer" }));
     await assert.rejects(() => poll({ fetchImpl: shapeless }), /shape|access_token/i);
   });
 

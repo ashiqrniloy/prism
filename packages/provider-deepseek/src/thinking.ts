@@ -39,9 +39,7 @@ export function deepseekThinking(request: ProviderRequest): JsonObject {
 export function deepseekReasoningEffort(request: ProviderRequest): "low" | "high" | "max" | undefined {
   if (deepseekThinking(request).type === "disabled") return undefined;
   const effort =
-    request.options?.compat?.reasoning_effort ??
-    request.options?.compat?.reasoningEffort ??
-    request.model.compat?.reasoning_effort;
+    request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort ?? request.model.compat?.reasoning_effort;
   return mapDeepseekEffort(effort) ?? "high";
 }
 
@@ -51,7 +49,5 @@ export function deepseekReasoningEffort(request: ProviderRequest): "low" | "high
  */
 export function deepseekReplayThinking(request: ProviderRequest, messageIndex: number): boolean {
   if (request.tools && request.tools.length > 0) return true;
-  return request.messages.slice(Math.max(0, messageIndex)).some((message) =>
-    message.content.some((part) => part.type === "tool_call"),
-  );
+  return request.messages.slice(Math.max(0, messageIndex)).some((message) => message.content.some((part) => part.type === "tool_call"));
 }

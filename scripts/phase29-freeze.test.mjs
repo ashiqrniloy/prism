@@ -91,10 +91,7 @@ test("phase29 freeze: task0/task1 done, remaining tasks pending-or-done", () => 
   assert.equal(manifest.tasks.task1, "done");
   for (const id of TASK_IDS) {
     assert.ok(typeof manifest.tasks[id] === "string" && manifest.tasks[id].length > 0, `${id} has a token`);
-    assert.ok(
-      manifest.tasks[id] === "done" || manifest.tasks[id] === "pending",
-      `${id} must be pending or done`,
-    );
+    assert.ok(manifest.tasks[id] === "done" || manifest.tasks[id] === "pending", `${id} must be pending or done`);
   }
 });
 

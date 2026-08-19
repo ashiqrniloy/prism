@@ -38,7 +38,10 @@ describe("caveman skills", () => {
       assert.equal(skill.instructions, expected.instructions);
     }
     assert.ok(skills.find((item) => item.name === "caveman-explore"));
-    assert.equal(skills.find((item) => item.name === "generated"), undefined);
+    assert.equal(
+      skills.find((item) => item.name === "generated"),
+      undefined,
+    );
   });
 });
 

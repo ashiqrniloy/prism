@@ -1,5 +1,5 @@
-import { parseSkillFile, type Skill } from "@arnilo/prism";
 import { join } from "node:path";
+import { parseSkillFile, type Skill } from "@arnilo/prism";
 
 import { MAX_SKILL_FILE_BYTES, readBoundedFile } from "./upstream.js";
 

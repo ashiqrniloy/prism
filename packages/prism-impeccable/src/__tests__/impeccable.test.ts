@@ -23,10 +23,7 @@ describe("impeccable upstream", () => {
   it("resolveUpstreamRoot_accepts_skill_md_at_root", () => {
     const dir = mkdtempSync(join(tmpdir(), "prism-impeccable-root-"));
     try {
-      writeFileSync(
-        join(dir, "SKILL.md"),
-        "---\nname: impeccable\ndescription: compiled\n---\n\nCompiled skill.\n",
-      );
+      writeFileSync(join(dir, "SKILL.md"), "---\nname: impeccable\ndescription: compiled\n---\n\nCompiled skill.\n");
       const resolved = resolveUpstreamRoot({ upstreamPath: dir });
       assert.equal(resolved.skillRelativePath, "SKILL.md");
     } finally {
@@ -75,10 +72,7 @@ describe("impeccable upstream", () => {
 describe("impeccable extension", () => {
   it("setup_without_upstream_registers_nothing", async () => {
     const kernel = createExtensionKernel({ errorPolicy: "throw", secrets: [secretPath] });
-    await assert.rejects(
-      () => kernel.load([createImpeccableExtension({ upstreamPath: secretPath })]),
-      UpstreamResolveError,
-    );
+    await assert.rejects(() => kernel.load([createImpeccableExtension({ upstreamPath: secretPath })]), UpstreamResolveError);
     assert.equal(kernel.registries.skills.list().length, 0);
     assert.equal(kernel.registries.commands.list().length, 0);
   });

@@ -1,10 +1,4 @@
-import {
-  type CredentialValueSource,
-  type JsonObject,
-  type ModelConfig,
-  redactSecrets,
-  resolveCredentialValue,
-} from "@arnilo/prism";
+import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 export interface DeepSeekModelConfig extends Omit<ModelConfig, "provider" | "compat"> {

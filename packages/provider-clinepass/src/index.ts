@@ -32,15 +32,15 @@ export {
   defineClinePassModel,
 } from "./models.js";
 export {
-  createClinePassProvider,
   type ClinePassProviderOptions,
   clinePassBody,
   clinePassEvents,
+  createClinePassProvider,
 } from "./provider.js";
 export {
+  CLINEPASS_THINKING_MAPS,
   type ClinePassThinkingLevelMap,
   type ClinePassThinkingSlot,
-  CLINEPASS_THINKING_MAPS,
   clinePassReasoningEffort,
   clinePassThinkingLevelMap,
   clinePassThinkingSlot,

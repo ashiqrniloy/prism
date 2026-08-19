@@ -114,12 +114,7 @@ function deepseekTransform(body: JsonObject, request: ProviderRequest): JsonObje
 
 function stripDeepSeekManagedCompat(compat: JsonObject | undefined): JsonObject {
   if (!compat) return {};
-  const {
-    thinking: _thinking,
-    reasoning_effort: _effort,
-    reasoningEffort: _effortCamel,
-    ...rest
-  } = compat as Record<string, unknown>;
+  const { thinking: _thinking, reasoning_effort: _effort, reasoningEffort: _effortCamel, ...rest } = compat as Record<string, unknown>;
   return rest as JsonObject;
 }
 

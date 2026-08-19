@@ -2,10 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "@arnilo/prism";
 import { applyThinkingLevel } from "@arnilo/prism";
-import {
-  assertProviderOwnedHeadersWin,
-  assertProviderStreamConforms,
-} from "@arnilo/prism/testing/provider-conformance";
+import { assertProviderOwnedHeadersWin, assertProviderStreamConforms } from "@arnilo/prism/testing/provider-conformance";
 import {
   CLINEPASS_DEFAULT_BASE_URL,
   CLINEPASS_FEATURED_SLUGS,
@@ -58,13 +55,28 @@ describe("@arnilo/prism-provider-clinepass", () => {
 
   it("clinepass_maps_thinking_per_family", () => {
     assert.equal(clinePassBody(requestFor("cline-pass/glm-5.2", { compat: { reasoning_effort: "xhigh" } })).reasoning_effort, "xhigh");
-    assert.equal(clinePassBody(requestFor("cline-pass/glm-5.2", applyThinkingLevel(undefined, "max", "reasoning_effort"))).reasoning_effort, "high");
+    assert.equal(
+      clinePassBody(requestFor("cline-pass/glm-5.2", applyThinkingLevel(undefined, "max", "reasoning_effort"))).reasoning_effort,
+      "high",
+    );
     assert.equal(clinePassBody(requestFor("cline-pass/kimi-k3")).reasoning_effort, "max");
     assert.equal(clinePassBody(requestFor("cline-pass/kimi-k3", { compat: { reasoning_effort: "off" } })).reasoning_effort, undefined);
-    assert.equal(clinePassBody(requestFor("cline-pass/kimi-k2.7-code", { compat: { reasoning_effort: "medium" } })).reasoning_effort, "medium");
-    assert.equal(clinePassBody(requestFor("cline-pass/deepseek-v4-flash", { compat: { reasoning_effort: "high" } })).reasoning_effort, "high");
-    assert.equal(clinePassBody(requestFor("cline-pass/deepseek-v4-pro", { compat: { thinking: { type: "disabled" } } })).reasoning_effort, "none");
-    assert.equal(clinePassBody(requestFor("cline-pass/deepseek-v4-flash", { compat: { reasoning_effort: "medium" } })).reasoning_effort, undefined);
+    assert.equal(
+      clinePassBody(requestFor("cline-pass/kimi-k2.7-code", { compat: { reasoning_effort: "medium" } })).reasoning_effort,
+      "medium",
+    );
+    assert.equal(
+      clinePassBody(requestFor("cline-pass/deepseek-v4-flash", { compat: { reasoning_effort: "high" } })).reasoning_effort,
+      "high",
+    );
+    assert.equal(
+      clinePassBody(requestFor("cline-pass/deepseek-v4-pro", { compat: { thinking: { type: "disabled" } } })).reasoning_effort,
+      "none",
+    );
+    assert.equal(
+      clinePassBody(requestFor("cline-pass/deepseek-v4-flash", { compat: { reasoning_effort: "medium" } })).reasoning_effort,
+      undefined,
+    );
     assert.equal(clinePassBody(requestFor("cline-pass/qwen3.8-max", { compat: { reasoning_effort: "low" } })).reasoning_effort, "low");
   });
 

@@ -369,7 +369,10 @@ describe("docs", () => {
         readme.includes(`${all.deps.length} first-party packages (${all.closure} transitive)`),
         `README prism-all row must state the generated ${all.deps.length}/${all.closure} closure`,
       );
-      assert.ok(release.includes(`${providers.deps.length} of ${truth.counts.provider}`), `release page must state ${providers.deps.length} of ${truth.counts.provider} for the provider family`);
+      assert.ok(
+        release.includes(`${providers.deps.length} of ${truth.counts.provider}`),
+        `release page must state ${providers.deps.length} of ${truth.counts.provider} for the provider family`,
+      );
       assert.ok(
         release.includes(
           `reaches ${all.closure} of the ${truth.counts.workspace} workspace packages (${all.deps.length} direct + ${all.closure - all.deps.length} transitive)`,
@@ -2637,7 +2640,16 @@ describe("docs", () => {
   });
 
   it("first_party_providers_do_not_implement_deprecated_provider_timeout_retry_knobs", () => {
-    for (const dir of ["provider-openai", "provider-openrouter", "provider-opencode-go", "provider-zai", "provider-deepseek", "provider-xai", "provider-clinepass", "provider-kimi"]) {
+    for (const dir of [
+      "provider-openai",
+      "provider-openrouter",
+      "provider-opencode-go",
+      "provider-zai",
+      "provider-deepseek",
+      "provider-xai",
+      "provider-clinepass",
+      "provider-kimi",
+    ]) {
       const combined = tsFiles(`packages/${dir}/src`)
         .map((file) => readFileSync(file, "utf8"))
         .join("\n");
@@ -3940,7 +3952,11 @@ describe("docs", () => {
     for (const [name, text, tokens] of [
       ["caveman.md", caveman, ["createCavemanExtension", "caveman-level", "caveman-mode", "upstreamPath", "appendEntry"]],
       ["ponytail.md", ponytail, ["createPonytailExtension", "ponytail-mode", "ponytail-mode", "getPonytailInstructions", "appendEntry"]],
-      ["impeccable.md", readFileSync("docs/impeccable.md", "utf8"), ["createImpeccableExtension", "upstreamPath", "load_skill", "SKILL.md"]],
+      [
+        "impeccable.md",
+        readFileSync("docs/impeccable.md", "utf8"),
+        ["createImpeccableExtension", "upstreamPath", "load_skill", "SKILL.md"],
+      ],
     ] as const) {
       for (const token of tokens) {
         assert.ok(text.includes(token), `${name} missing ${token}`);

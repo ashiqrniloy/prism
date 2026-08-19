@@ -62,13 +62,11 @@ export function clinePassThinkingLevelMap(request: ProviderRequest): ClinePassTh
 export function clinePassReasoningEffort(request: ProviderRequest): string | undefined {
   const table = clinePassThinkingLevelMap(request);
   const requested = clinePassThinkingSlot(
-    request.options?.compat?.reasoning_effort ??
-      request.options?.compat?.reasoningEffort ??
-      request.options?.compat?.thinking,
+    request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort ?? request.options?.compat?.thinking,
   );
   const slot =
     requested ??
-    (request.options?.cacheRetention === "none" ? "off" : clinePassThinkingSlot(request.model.compat?.reasoning_effort) ?? "high");
+    (request.options?.cacheRetention === "none" ? "off" : (clinePassThinkingSlot(request.model.compat?.reasoning_effort) ?? "high"));
   if (!table) return slot === "off" ? undefined : slot;
   return table[slot] ?? undefined;
 }

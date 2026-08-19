@@ -9,7 +9,10 @@ export async function demo() {
   return {
     provider: provider?.id,
     auth: auth.map((method) => method.kind),
-    models: kernel.registries.models.list().filter((model) => model.provider === "xai").map((model) => model.model),
+    models: kernel.registries.models
+      .list()
+      .filter((model) => model.provider === "xai")
+      .map((model) => model.model),
   };
 }
 
