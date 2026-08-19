@@ -67,6 +67,11 @@
       "branches": 68.47,
       "functions": 85.37
     },
+    "@arnilo/prism-impeccable": {
+      "lines": 95.21,
+      "branches": 86.67,
+      "functions": 100
+    },
     "@arnilo/prism-openapi-tools": {
       "lines": 88.85,
       "branches": 81.3,
@@ -101,6 +106,16 @@
       "lines": 81.94,
       "branches": 67.5,
       "functions": 85.71
+    },
+    "@arnilo/prism-provider-clinepass": {
+      "lines": 93.99,
+      "branches": 86.21,
+      "functions": 94.12
+    },
+    "@arnilo/prism-provider-deepseek": {
+      "lines": 91.21,
+      "branches": 81.2,
+      "functions": 90.48
     },
     "@arnilo/prism-provider-google": {
       "lines": 90.47,
@@ -141,6 +156,11 @@
       "lines": 78.25,
       "branches": 76.47,
       "functions": 80
+    },
+    "@arnilo/prism-provider-xai": {
+      "lines": 94.92,
+      "branches": 90,
+      "functions": 97.3
     },
     "@arnilo/prism-provider-zai": {
       "lines": 91.1,
