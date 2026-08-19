@@ -14,7 +14,7 @@ listDeepSeekModels	export declare function listDeepSeekModels(options?: ListDeep
 mapDeepSeekModel	export declare function mapDeepSeekModel(entry: DeepSeekModelEntry, options?:
 mapDeepseekEffort	export declare function mapDeepseekEffort(value: unknown): "low" | "high" | "max" | undefined
 toDeepSeekMessage	export declare function toDeepSeekMessage(message: Message, request: ProviderRequest): JsonObject
-type DeepSeekModelConfig	export { defineDeepSeekModel, type DeepSeekModelConfig, type DeepSeekModelEntry, type ListDeepSeekModelsOptions, deepseekModels, listDeepSeekModels, mapDeepSeekModel, } from "./models.js"
-type DeepSeekModelEntry	export { defineDeepSeekModel, type DeepSeekModelConfig, type DeepSeekModelEntry, type ListDeepSeekModelsOptions, deepseekModels, listDeepSeekModels, mapDeepSeekModel, } from "./models.js"
+type DeepSeekModelConfig	export { type DeepSeekModelConfig, type DeepSeekModelEntry, deepseekModels, defineDeepSeekModel, type ListDeepSeekModelsOptions, listDeepSeekModels, mapDeepSeekModel, } from "./models.js"
+type DeepSeekModelEntry	export { type DeepSeekModelConfig, type DeepSeekModelEntry, deepseekModels, defineDeepSeekModel, type ListDeepSeekModelsOptions, listDeepSeekModels, mapDeepSeekModel, } from "./models.js"
 type DeepSeekProviderOptions	export { createDeepSeekProvider, DEEPSEEK_DEFAULT_BASE_URL, type DeepSeekProviderOptions, deepseekBody, deepseekEvents, toDeepSeekMessage, } from "./provider.js"
-type ListDeepSeekModelsOptions	export { defineDeepSeekModel, type DeepSeekModelConfig, type DeepSeekModelEntry, type ListDeepSeekModelsOptions, deepseekModels, listDeepSeekModels, mapDeepSeekModel, } from "./models.js"
+type ListDeepSeekModelsOptions	export { type DeepSeekModelConfig, type DeepSeekModelEntry, deepseekModels, defineDeepSeekModel, type ListDeepSeekModelsOptions, listDeepSeekModels, mapDeepSeekModel, } from "./models.js"

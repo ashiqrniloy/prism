@@ -9,5 +9,5 @@ loadImpeccableSkill	export declare function loadImpeccableSkill(root: string, sk
 readBoundedFile	export declare function readBoundedFile(root: string, relativePath: string, maxBytes: number): string
 redactPaths	export declare function redactPaths(text: string, paths?: readonly string[]): string
 resolveUpstreamRoot	export declare function resolveUpstreamRoot(options: ResolveUpstreamRootOptions): ResolvedImpeccableUpstream
-type ResolveUpstreamRootOptions	export { MAX_SKILL_FILE_BYTES, type ResolveUpstreamRootOptions, type ResolvedImpeccableUpstream, SKILL_FILE_CANDIDATES, readBoundedFile, redactPaths, resolveUpstreamRoot, UpstreamResolveError, } from "./upstream.js"
-type ResolvedImpeccableUpstream	export { MAX_SKILL_FILE_BYTES, type ResolveUpstreamRootOptions, type ResolvedImpeccableUpstream, SKILL_FILE_CANDIDATES, readBoundedFile, redactPaths, resolveUpstreamRoot, UpstreamResolveError, } from "./upstream.js"
+type ResolveUpstreamRootOptions	export { MAX_SKILL_FILE_BYTES, type ResolvedImpeccableUpstream, type ResolveUpstreamRootOptions, readBoundedFile, redactPaths, resolveUpstreamRoot, SKILL_FILE_CANDIDATES, UpstreamResolveError, } from "./upstream.js"
+type ResolvedImpeccableUpstream	export { MAX_SKILL_FILE_BYTES, type ResolvedImpeccableUpstream, type ResolveUpstreamRootOptions, readBoundedFile, redactPaths, resolveUpstreamRoot, SKILL_FILE_CANDIDATES, UpstreamResolveError, } from "./upstream.js"

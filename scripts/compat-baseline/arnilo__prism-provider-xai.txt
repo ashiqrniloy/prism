@@ -15,11 +15,11 @@ listXaiModels	export declare function listXaiModels(options?: ListXaiModelsOptio
 mapXaiModel	export declare function mapXaiModel(entry: XaiModelEntry, options?:
 parseXaiTokenCredentials	export declare function parseXaiTokenCredentials(json: OAuthTokenSuccessPayload, previousRefresh?: string, now?: () => number): OAuthCredentials
 toXaiMessage	export declare function toXaiMessage(message: Message, request: ProviderRequest): JsonObject
-type ListXaiModelsOptions	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, type XaiModelConfig, type XaiModelEntry, XAI_DEFAULT_BASE_URL, xaiModels, } from "./models.js"
-type XaiModelConfig	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, type XaiModelConfig, type XaiModelEntry, XAI_DEFAULT_BASE_URL, xaiModels, } from "./models.js"
-type XaiModelEntry	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, type XaiModelConfig, type XaiModelEntry, XAI_DEFAULT_BASE_URL, xaiModels, } from "./models.js"
-type XaiOAuthOptions	export { createXaiOAuthProvider, parseXaiTokenCredentials, type XaiOAuthOptions, XAI_DEFAULT_CLIENT_ID, XAI_DEFAULT_DEVICE_CODE_URL, XAI_DEFAULT_REFERRER, XAI_DEFAULT_REVOKE_URL, XAI_DEFAULT_SCOPE, XAI_DEFAULT_TOKEN_URL, XAI_REFRESH_SKEW_MS, } from "./oauth.js"
-type XaiProviderOptions	export { createXaiProvider, type XaiProviderOptions, toXaiMessage, xaiBody, xaiEvents } from "./provider.js"
+type ListXaiModelsOptions	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, XAI_DEFAULT_BASE_URL, type XaiModelConfig, type XaiModelEntry, xaiModels, } from "./models.js"
+type XaiModelConfig	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, XAI_DEFAULT_BASE_URL, type XaiModelConfig, type XaiModelEntry, xaiModels, } from "./models.js"
+type XaiModelEntry	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, XAI_DEFAULT_BASE_URL, type XaiModelConfig, type XaiModelEntry, xaiModels, } from "./models.js"
+type XaiOAuthOptions	export { createXaiOAuthProvider, parseXaiTokenCredentials, XAI_DEFAULT_CLIENT_ID, XAI_DEFAULT_DEVICE_CODE_URL, XAI_DEFAULT_REFERRER, XAI_DEFAULT_REVOKE_URL, XAI_DEFAULT_SCOPE, XAI_DEFAULT_TOKEN_URL, XAI_REFRESH_SKEW_MS, type XaiOAuthOptions, } from "./oauth.js"
+type XaiProviderOptions	export { createXaiProvider, toXaiMessage, type XaiProviderOptions, xaiBody, xaiEvents } from "./provider.js"
 xGrokConvId	export declare function xGrokConvId(request: ProviderRequest): string | undefined
 xaiBody	export declare function xaiBody(request: ProviderRequest): JsonObject
 xaiCacheEnabled	export declare function xaiCacheEnabled(request: ProviderRequest): boolean

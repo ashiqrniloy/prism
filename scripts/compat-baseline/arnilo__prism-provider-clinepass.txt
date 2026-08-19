@@ -11,6 +11,6 @@ createClinePassProvider	export declare function createClinePassProvider(options?
 createClinePassProviderPackage	export declare function createClinePassProviderPackage(options?: ClinePassProviderPackageOptions): ProviderPackage
 defineClinePassModel	export declare function defineClinePassModel(config: ClinePassModelConfig): ModelConfig
 type ClinePassModelConfig	export { CLINEPASS_DEFAULT_BASE_URL, CLINEPASS_FEATURED_SLUGS, type ClinePassModelConfig, clinePassModels, defineClinePassModel, } from "./models.js"
-type ClinePassProviderOptions	export { createClinePassProvider, type ClinePassProviderOptions, clinePassBody, clinePassEvents, } from "./provider.js"
-type ClinePassThinkingLevelMap	export { type ClinePassThinkingLevelMap, type ClinePassThinkingSlot, CLINEPASS_THINKING_MAPS, clinePassReasoningEffort, clinePassThinkingLevelMap, clinePassThinkingSlot, } from "./thinking.js"
-type ClinePassThinkingSlot	export { type ClinePassThinkingLevelMap, type ClinePassThinkingSlot, CLINEPASS_THINKING_MAPS, clinePassReasoningEffort, clinePassThinkingLevelMap, clinePassThinkingSlot, } from "./thinking.js"
+type ClinePassProviderOptions	export { type ClinePassProviderOptions, clinePassBody, clinePassEvents, createClinePassProvider, } from "./provider.js"
+type ClinePassThinkingLevelMap	export { CLINEPASS_THINKING_MAPS, type ClinePassThinkingLevelMap, type ClinePassThinkingSlot, clinePassReasoningEffort, clinePassThinkingLevelMap, clinePassThinkingSlot, } from "./thinking.js"
+type ClinePassThinkingSlot	export { CLINEPASS_THINKING_MAPS, type ClinePassThinkingLevelMap, type ClinePassThinkingSlot, clinePassReasoningEffort, clinePassThinkingLevelMap, clinePassThinkingSlot, } from "./thinking.js"
