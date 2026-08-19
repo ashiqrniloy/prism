@@ -30,9 +30,10 @@
     "version": "0.2.8",
     "green": true,
     "counts": {
-      "npmTest": "46 segments 0 failures (plan 028 Task 18)",
+      "npmTest": "3716 tests / 3683 pass / 33 skip / 0 fail",
       "coreNpmTest": "3716 tests / 33 skip (scripts/release-evidence.json)",
-      "threatSuites": 50,
+      "threatSuites": "50/50",
+      "testPostgres": "91/91",
       "publishable": 51,
       "audit": "0 moderate",
       "secrets": "0 findings",
@@ -40,6 +41,17 @@
       "releaseCheck": "51 packages available (--allow-dirty --allow-untagged)"
     },
     "sdkReady": "fail-closed without PRISM_TEST_POSTGRES_URL; operator remainder on 0.2.8",
-    "source": "scripts/release-evidence.json + plan 028 Task 18"
+    "source": "scripts/release-evidence.json + plan 028 Task 18",
+    "protected": {
+      "durableConformance": "present (test:postgres 91/91 with PRISM_TEST_POSTGRES_URL set)",
+      "liveCanaries": "protected rows (provider, MCP, A2A, Brave), never pass",
+      "blocked": "none"
+    },
+    "blocked": false,
+    "note": "0.2.8 freeze snapshot; skip-manifest parsers require npmTest/threatSuites/testPostgres in N/N form"
+  },
+  "protectedEvidence": {
+    "durableConformance": "test:postgres 91/91 (session-store-postgres + memory + enterprise-postgres + phase7/phase12/phase22) inherited from 0.2.8",
+    "sdkReady": "0.2.8 operator remainder; fail-closed without PRISM_TEST_POSTGRES_URL"
   }
 }
