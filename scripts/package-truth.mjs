@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-// The 9 `prism-*` family/profile packages. Taxonomy constant: these names have
+// `prism-*` family/profile packages. Taxonomy constant: these names have
 // no name-pattern separation from capability packages (e.g. prism-mcp), so the
 // set is explicit here; the docs tests assert it against the generated artifact.
 export const PRISM_FAMILY = [
@@ -20,6 +20,7 @@ export const PRISM_FAMILY = [
   "@arnilo/prism-caveman",
   "@arnilo/prism-code",
   "@arnilo/prism-compaction",
+  "@arnilo/prism-impeccable",
   "@arnilo/prism-openapi-tools",
   "@arnilo/prism-ponytail",
   "@arnilo/prism-providers",

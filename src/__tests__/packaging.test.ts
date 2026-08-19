@@ -24,6 +24,9 @@ const packages = [
   { dir: "packages/provider-azure", name: "@arnilo/prism-provider-azure" },
   { dir: "packages/provider-bedrock", name: "@arnilo/prism-provider-bedrock" },
   { dir: "packages/provider-vertex", name: "@arnilo/prism-provider-vertex" },
+  { dir: "packages/provider-deepseek", name: "@arnilo/prism-provider-deepseek" },
+  { dir: "packages/provider-xai", name: "@arnilo/prism-provider-xai" },
+  { dir: "packages/provider-clinepass", name: "@arnilo/prism-provider-clinepass" },
   { dir: "packages/policy", name: "@arnilo/prism-policy" },
   { dir: "packages/model-router", name: "@arnilo/prism-model-router" },
   { dir: "packages/work-tools", name: "@arnilo/prism-work-tools" },
@@ -32,6 +35,7 @@ const packages = [
   { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
   { dir: "packages/prism-caveman", name: "@arnilo/prism-caveman" },
   { dir: "packages/prism-ponytail", name: "@arnilo/prism-ponytail" },
+  { dir: "packages/prism-impeccable", name: "@arnilo/prism-impeccable" },
   { dir: "packages/observability-opentelemetry", name: "@arnilo/prism-observability-opentelemetry" },
   { dir: "packages/tool-validator-json-schema", name: "@arnilo/prism-tool-validator-json-schema" },
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
@@ -170,7 +174,7 @@ describe("packaging guard", () => {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
-          assert.equal(peers?.["@arnilo/prism"], "0.2.8", `${pkg.name} @arnilo/prism peer must be 0.2.4`);
+          assert.equal(peers?.["@arnilo/prism"], "0.2.9", `${pkg.name} @arnilo/prism peer must be 0.2.4`);
           const meta = manifest.peerDependenciesMeta as Readonly<Record<string, { readonly optional?: boolean }>> | undefined;
           assert.ok(!meta?.["@arnilo/prism"]?.optional, `${pkg.name} must not mark the @arnilo/prism peer optional`);
         });
@@ -187,6 +191,8 @@ describe("packaging guard", () => {
               "@arnilo/prism-provider-ai-sdk",
               "@arnilo/prism-provider-alibaba",
               "@arnilo/prism-provider-anthropic",
+              "@arnilo/prism-provider-clinepass",
+              "@arnilo/prism-provider-deepseek",
               "@arnilo/prism-provider-google",
               "@arnilo/prism-provider-kimi",
               "@arnilo/prism-provider-neuralwatt",
@@ -194,6 +200,7 @@ describe("packaging guard", () => {
               "@arnilo/prism-provider-openai",
               "@arnilo/prism-provider-opencode-go",
               "@arnilo/prism-provider-openrouter",
+              "@arnilo/prism-provider-xai",
               "@arnilo/prism-provider-zai",
             ],
             "@arnilo/prism-compaction": ["@arnilo/prism-compaction-llm", "@arnilo/prism-compaction-observational-memory"],
@@ -239,7 +246,7 @@ describe("packaging guard", () => {
           assert.ok(want, `${pkg.name} not in expected meta-package map`);
           assert.deepEqual(depNames.sort(), want.sort(), `${pkg.name} dependencies must be exactly its family`);
           for (const v of Object.values(deps)) {
-            assert.equal(v, "0.2.8", `${pkg.name} dependency must be pinned to 0.2.4`);
+            assert.equal(v, "0.2.9", `${pkg.name} dependency must be pinned to 0.2.4`);
           }
         });
       }
@@ -268,13 +275,13 @@ describe("packaging guard", () => {
     );
 
     const providers = readPkg("packages/prism-providers").dependencies as Record<string, string> | undefined;
-    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.2.8", "@arnilo/prism-providers must hard-depend on NeuralWatt");
+    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.2.9", "@arnilo/prism-providers must hard-depend on NeuralWatt");
     const all = readPkg("packages/prism-all").dependencies as Record<string, string> | undefined;
-    assert.equal(all?.["@arnilo/prism-providers"], "0.2.8", "@arnilo/prism-all must hard-depend on provider umbrella");
-    assert.equal(all?.["@arnilo/prism-ag-ui"], "0.2.8", "@arnilo/prism-all must hard-depend on AG-UI only");
-    assert.equal(all?.["@arnilo/prism-work-tools"], "0.2.8", "@arnilo/prism-all must hard-depend on work-tools");
-    assert.equal(all?.["@arnilo/prism-policy"], "0.2.8", "@arnilo/prism-all must hard-depend on policy");
-    assert.equal(all?.["@arnilo/prism-enterprise-postgres"], "0.2.8", "@arnilo/prism-all must hard-depend on enterprise PostgreSQL state");
+    assert.equal(all?.["@arnilo/prism-providers"], "0.2.9", "@arnilo/prism-all must hard-depend on provider umbrella");
+    assert.equal(all?.["@arnilo/prism-ag-ui"], "0.2.9", "@arnilo/prism-all must hard-depend on AG-UI only");
+    assert.equal(all?.["@arnilo/prism-work-tools"], "0.2.9", "@arnilo/prism-all must hard-depend on work-tools");
+    assert.equal(all?.["@arnilo/prism-policy"], "0.2.9", "@arnilo/prism-all must hard-depend on policy");
+    assert.equal(all?.["@arnilo/prism-enterprise-postgres"], "0.2.9", "@arnilo/prism-all must hard-depend on enterprise PostgreSQL state");
     for (const profile of ["packages/prism-code", "packages/prism-sdk"]) {
       const deps = readPkg(profile).dependencies as Record<string, string>;
       assert.equal(deps["@arnilo/prism-ag-ui"], undefined, `${profile} must not include AG-UI`);
@@ -297,7 +304,7 @@ describe("packaging guard", () => {
       }
     };
     visit("@arnilo/prism-all");
-    const optOutOfAll = new Set(["@arnilo/prism-caveman", "@arnilo/prism-ponytail"]);
+    const optOutOfAll = new Set(["@arnilo/prism-caveman", "@arnilo/prism-ponytail", "@arnilo/prism-impeccable"]);
     const expected = packages.map((pkg) => pkg.name).filter((name) => !optOutOfAll.has(name));
     assert.deepEqual([...included].sort(), expected.sort());
   });

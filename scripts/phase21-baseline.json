@@ -1,5 +1,5 @@
 {
-  "$comment": "Phase 21 (0.2.1) Task 1 baseline evidence, captured at 0.2.0 (HEAD cb9369d, Release 0.2.0 tag state) before any phase-21 implementation edit. npm test / coverage / biome / format / secrets / audit / pack figures are fresh verified runs in this session at cb9369d; typecheck/release-gate/plan-020-exit numbers cite the plan 020 exit gate recorded at the same HEAD. fileHashes are computed live at capture; the freeze test compares them against the working tree at every task state. [2026-08-18] manifestCount refreshed 49->50 workspace / 50->51 publishable: plan 028 shipped the spawnable ACP agent package @arnilo/prism-acp-agent. [2026-08-18] dependencyNames fingerprint refreshed: plan 028 added @arnilo/prism-acp-agent (its deps reuse existing names; the package itself is a new workspace entry).",
+  "$comment": "Phase 21 (0.2.1) Task 1 baseline evidence, captured at 0.2.0 (HEAD cb9369d, Release 0.2.0 tag state) before any phase-21 implementation edit. npm test / coverage / biome / format / secrets / audit / pack figures are fresh verified runs in this session at cb9369d; typecheck/release-gate/plan-020-exit numbers cite the plan 020 exit gate recorded at the same HEAD. fileHashes are computed live at capture; the freeze test compares them against the working tree at every task state. [2026-08-18] manifestCount refreshed 49->50 workspace / 50->51 publishable: plan 028 shipped the spawnable ACP agent package @arnilo/prism-acp-agent. [2026-08-18] dependencyNames fingerprint refreshed: plan 028 added @arnilo/prism-acp-agent (its deps reuse existing names; the package itself is a new workspace entry). [2026-08-19] manifestCount refreshed 50->54 workspace / 51->55 publishable: plan 029 shipped DeepSeek/xAI/ClinePass + prism-impeccable.",
   "captured": "2026-08-13T09:15:55.539Z",
   "release": "0.2.0",
   "node": "v24.18.0",
@@ -75,19 +75,19 @@
     "notes": "plan 020 exit gate record at HEAD cb9369d (plain gate, no --allow-break)"
   },
   "manifestCount": {
-    "publishable": 51,
-    "workspacePackages": 50,
+    "publishable": 55,
+    "workspacePackages": 54,
     "rootPackage": "@arnilo/prism",
     "categories": {
-      "provider": 14,
-      "prism": 9,
+      "provider": 17,
+      "prism": 10,
       "capability": 27
     },
-    "canonicalStatement": "51 publishable manifests = root @arnilo/prism + 50 workspace packages (14 provider adapters + 9 prism-* family/profile packages + 27 capability packages; the 0.2.8 plan 028 acp-agent closeout added @arnilo/prism-acp-agent)",
+    "canonicalStatement": "55 publishable manifests = root @arnilo/prism + 54 workspace packages (17 provider adapters + 10 prism-* family/profile packages + 27 capability packages; the 0.2.9 plan 029 cut added DeepSeek/xAI/ClinePass + @arnilo/prism-impeccable)",
     "regenerate": "ls -d packages/*/ | wc -l ; ls -d packages/provider-*/ | wc -l ; ls -d packages/prism-*/ | wc -l"
   },
   "dependencyNames": {
-    "sha256": "3824373e8125d26efba730f9a0137aabf6dcf996b99d2681fa254192920b3861",
+    "sha256": "3fad5ae23b8ab72027e227bb6e397e5715e4b87cf39fd49ed64c635e998d0d12",
     "packages": 50
   },
   "workspaceManifests": {

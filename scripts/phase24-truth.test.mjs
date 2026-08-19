@@ -28,15 +28,15 @@ test("committed artifact equals the generator output (regenerate via node script
 
 test("counts match manifests at the 0.2.4 truth baseline", () => {
   const t = computePackageTruth();
-  assert.equal(t.counts.publishable, 51);
-  assert.equal(t.counts.workspace, 50);
-  assert.equal(t.counts.provider, 14);
-  assert.equal(t.counts.prismFamily, 9);
+  assert.equal(t.counts.publishable, 55);
+  assert.equal(t.counts.workspace, 54);
+  assert.equal(t.counts.provider, 17);
+  assert.equal(t.counts.prismFamily, 10);
   assert.equal(t.counts.capability, 27);
-  assert.equal(t.counts.codeWithPeer, 44);
+  assert.equal(t.counts.codeWithPeer, 48);
   assert.equal(t.counts.pureManifest, 6);
-  assert.equal(t.providers.length, 14);
-  assert.equal(t.family.length, 9);
+  assert.equal(t.providers.length, 17);
+  assert.equal(t.family.length, 10);
   assert.equal(t.capability.length, 27);
   assert.equal(t.peerPolicy.decision, "A");
   assert.equal(t.peerPolicy.spec, t.root.version);
@@ -45,7 +45,7 @@ test("counts match manifests at the 0.2.4 truth baseline", () => {
 test("umbrella closures match manifests", () => {
   const t = computePackageTruth();
   const providers = t.umbrella["prism-providers"];
-  assert.equal(providers.deps.length, 11);
+  assert.equal(providers.deps.length, 14);
   assert.deepEqual(providers.omitsProviders, [
     "@arnilo/prism-provider-azure",
     "@arnilo/prism-provider-bedrock",
@@ -53,11 +53,12 @@ test("umbrella closures match manifests", () => {
   ]);
   const all = t.umbrella["prism-all"];
   assert.equal(all.deps.length, 21);
-  assert.equal(all.closure, 44, "21 direct deps expand through code/sdk/profile deps to 44 workspace packages");
-  assert.equal(all.omits.length, 5);
+  assert.equal(all.closure, 47, "21 direct deps expand through code/sdk/profile deps to 47 workspace packages");
+  assert.equal(all.omits.length, 6);
   for (const name of [
     "@arnilo/prism-caveman",
     "@arnilo/prism-document-reader",
+    "@arnilo/prism-impeccable",
     "@arnilo/prism-openapi-tools",
     "@arnilo/prism-ponytail",
     "@arnilo/prism-session-store-nats",
@@ -68,8 +69,8 @@ test("umbrella closures match manifests", () => {
 
 test("profile closures match manifests", () => {
   const t = computePackageTruth();
-  assert.equal(t.profiles["prism-providers"].length, 11);
-  assert.equal(t.profiles["prism-all"].length, 44);
+  assert.equal(t.profiles["prism-providers"].length, 14);
+  assert.equal(t.profiles["prism-all"].length, 47);
   for (const name of ["@arnilo/prism-compaction", "@arnilo/prism-tool-validator-json-schema", "@arnilo/prism-compaction-llm"]) {
     assert.ok(t.profiles["prism-base"].includes(name), `prism-base closure includes ${name}`);
   }
@@ -89,7 +90,7 @@ test("peer policy Decision A: all 43 code packages peer the bare exact current v
     ...readManifest(join(dir, "package.json")),
   }));
   const codeWithPeer = pkgs.filter((p) => p.peerDependencies?.["@arnilo/prism"] !== undefined);
-  assert.equal(codeWithPeer.length, t.counts.codeWithPeer, "44 code packages with a core peer");
+  assert.equal(codeWithPeer.length, t.counts.codeWithPeer, "48 code packages with a core peer");
   const secondPeers = {};
   for (const p of codeWithPeer) {
     const spec = p.peerDependencies["@arnilo/prism"];
@@ -113,7 +114,7 @@ test("peer policy Decision A: all 43 code packages peer the bare exact current v
     "@arnilo/prism-server": ["@arnilo/prism-workflows"],
   });
   const ponytail = pkgs.find((p) => p.name === "@arnilo/prism-ponytail");
-  assert.equal(ponytail.peerDependencies["@dietrichgebert/ponytail"], "^4.8.4");
+  assert.equal(ponytail.peerDependencies["@dietrichgebert/ponytail"], "^4.9.0");
   // the 6 pure-manifest family/profile packages declare no core peer
   for (const n of [
     "@arnilo/prism-all",

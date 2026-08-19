@@ -339,20 +339,19 @@ State management and Eval framework. Subagents.
 - [x] **Windows sandbox policy (F10).** Docs only: `createNativeSandbox` fails closed off Linux; Docker fallback; Job objects/AppContainer tracked, not scheduled.
   - Acceptance: client-neutral tree, deny-by-default seams, additive-only compat, 51-package graph, `sdk:ready` + `release:check` green.
 
-### 0.2.9 - Misc
-- Background observer (Observational Memory, Recall, Tool use, Skill activation, Input token suppression)
-- Impeccable
-- Vent
-- Ponytail and Caveman
-- Evaluate all of the coding tools to make sure it has all the capabilities required for coding agents to do the job in the most correct and efficient way.
-- Computer use package: Linux
-- Observational Memory implementation review: Local Memory Storage for the session??
-- Implement Karpathy LLM Wiki extension. For Codebase and Personal Knowledge Management.
-- Debug workflow
-- Setup docs and skills such that only packages with updates get released
-- Not all packages are needed to be updated with the same version
-- Deepseek API with stable cache prefix
-- Enterprise RAG Pipeline end to end with comprehensive capability with Langchain level capability
+### 0.2.9 — Provider adoption and behavior packages
+
+- [x] DeepSeek API provider (`@arnilo/prism-provider-deepseek`) with implicit prefix cache and thinking replay.
+- [x] xAI Grok provider (`@arnilo/prism-provider-xai`) with sticky `x-grok-conv-id`.
+- [x] xAI SuperGrok / X Premium OAuth (RFC 8628 device-code at `auth.x.ai`, host-invoked).
+- [x] ClinePass provider (`@arnilo/prism-provider-clinepass`) via `CLINE_API_KEY`.
+- [x] Cache-hit mapping for the three new providers.
+- [x] `@arnilo/prism-impeccable` upstream-skill package.
+- [x] Ponytail `^4.9.0` (bare `/ponytail` reports status).
+- [x] Caveman v2.1.0 extra `SKILL.md` registration.
+  - Acceptance: 55-package graph at exact 0.2.9; SuperGrok login works without `XAI_API_KEY`; additive-only compat; `sdk:ready` + `release:check` green.
+
+Not in 0.2.9 (later 0.2.x / 0.3.x): Muse/Cordis harness, Cline WorkOS, DeepSeek Anthropic route, grok-cli file scan, Vent, computer-use Linux, Karpathy wiki, enterprise RAG, coding-tool audit, debug workflow, independent package versions, Caveman 2 engine, Impeccable live detector.
 
 ### Mandatory 0.2.x regression matrix
 

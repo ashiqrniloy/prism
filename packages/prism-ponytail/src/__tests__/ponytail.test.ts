@@ -153,6 +153,33 @@ describe("ponytail extension wiring", () => {
     assert.match((block as { text: string }).text, /current ultra/);
   });
 
+  it("ponytail_empty_args_report_status_without_changing_mode", async () => {
+    const kernel = createExtensionKernel({ errorPolicy: "throw" });
+    const session = sessionCallbacks([
+      createSessionEntry({
+        sessionId: "s1",
+        kind: "custom",
+        data: { type: PONYTAIL_MODE_TYPE, mode: "ultra" },
+      }),
+    ]);
+    const before = session.entries.length;
+    await kernel.load([
+      createPonytailExtension({
+        upstreamPath: fixtureRoot,
+        defaultMode: "full",
+        quietStartup: true,
+        ...session,
+      }),
+    ]);
+    const command = kernel.registries.commands.get("ponytail");
+    assert.ok(command);
+    const result = await command.execute({}, { sessionId: "s1" });
+    assert.equal((result.value as { mode: string; defaultMode: string }).mode, "ultra");
+    assert.equal((result.value as { defaultMode: string }).defaultMode, "full");
+    assert.equal(session.entries.length, before);
+    assert.equal(resolveModeFromEntries(session.entries), "ultra");
+  });
+
   it("alias_command_dispatches_skill_name", async () => {
     const kernel = createExtensionKernel({ errorPolicy: "throw" });
     await kernel.load([

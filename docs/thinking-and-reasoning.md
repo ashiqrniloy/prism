@@ -49,8 +49,8 @@ Core maps only shapes shared by ≥2 packages (or an explicit no-op). Unique kno
 | Family | Compat patch | Used by (official fields) |
 | --- | --- | --- |
 | `openai_reasoning` | `{ reasoning: { effort } }` | OpenAI Responses `reasoning.effort`; OpenRouter `reasoning.effort` |
-| `reasoning_effort` | `{ reasoning_effort }` | Z.AI `reasoning_effort`; NeuralWatt `reasoning_effort`; Kimi K3 `reasoning_effort` |
-| `thinking_type` | `{ thinking: { type: "enabled" \| "disabled" } }` | Z.AI `thinking.type`; Kimi K2.x `thinking.type` (`none` → `disabled`) |
+| `reasoning_effort` | `{ reasoning_effort }` | Z.AI `reasoning_effort`; NeuralWatt `reasoning_effort`; Kimi K3 `reasoning_effort`; DeepSeek `reasoning_effort`; ClinePass `reasoning_effort` |
+| `thinking_type` | `{ thinking: { type: "enabled" \| "disabled" } }` | Z.AI `thinking.type`; Kimi K2.x `thinking.type` (`none` → `disabled`); DeepSeek `thinking.type` |
 | `noop` | `{}` | AI SDK / host-owned adapters — effort is host-model settings |
 
 `applyThinkingLevel` defaults `family` to `reasoning_effort` when omitted. For `openai_reasoning`, an existing `compat.reasoning.summary` (or other reasoning keys) is preserved when merging `effort`.
@@ -66,6 +66,9 @@ Core maps only shapes shared by ≥2 packages (or an explicit no-op). Unique kno
 | `@arnilo/prism-provider-kimi` | K3: `reasoning_effort`; K2.x: `thinking_type` | K2.7-code thinking is always on; do not send conflicting `thinking` + `reasoning_effort` |
 | `@arnilo/prism-provider-opencode-go` | Anthropic route: thinking blocks (`thinking_type` family); OpenAI route: `reasoning_content` preserve + optional `thinking`/`reasoning_effort`/`reasoning` passthrough | Official dual endpoints; MiniMax/Qwen → Anthropic, others → OpenAI |
 | `@arnilo/prism-provider-ai-sdk` | `noop` | Host `LanguageModelV4` owns reasoning settings |
+| `@arnilo/prism-provider-deepseek` | `thinking_type` + `reasoning_effort` | Thinking on by default (`high`). `cacheRetention: "none"` or `thinking: false` disables. Tool turns must replay `reasoning_content` or the API returns 400. |
+| `@arnilo/prism-provider-xai` | replay only | Featured Completions do not send `reasoning_effort`. Reasoning models must replay `reasoning_content` or the prefix cache breaks. Do not flatten thinking into text. |
+| `@arnilo/prism-provider-clinepass` | `reasoning_effort` | Per-model `compat.thinkingLevelMap`. GLM `xhigh` passthrough (never send `max`). K3 `high` → `max`. Unsupported slots omit the field. |
 
 `thinkingFamilyForModel` infers family from existing `compat` shape, then safe provider heuristics (`openai*` → `openai_reasoning`, `neuralwatt` → `reasoning_effort`), then `capabilities.reasoning` → `reasoning_effort`, else `noop`. Docs and packages may map other provider ids explicitly; core avoids provider-specific literals beyond those heuristics.
 
@@ -91,7 +94,7 @@ LLM compaction and observational memory accept `thinkingLevel?: string`. They ca
 
 - [Use-case model selection](use-case-model-selection.md) — session vs worker/summary model binding
 - [Provider packages](provider-packages.md) — package boundaries and discovery
-- [Provider caching](provider-caching.md) — cache retention can disable thinking on some providers (e.g. Z.AI when `cacheRetention: "none"`)
+- [Provider caching](provider-caching.md) — cache retention can disable thinking on some providers (e.g. Z.AI / DeepSeek when `cacheRetention: "none"`)
 - [Provider request policies](provider-request-policies.md) — `mergeProviderRequestOptions`
 - [Agent/session runtime](agent-session-runtime.md) — prior-reasoning preservation across turns
 - Per-provider pages under [docs/providers](providers/)

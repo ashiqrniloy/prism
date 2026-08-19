@@ -142,6 +142,7 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 - [Observational memory compaction package](compaction-observational-memory.md): optional extension helper that registers an inert fast memory compaction strategy.
 - [Caveman behavior integration](caveman.md): optional `@arnilo/prism-caveman` upstream Caveman skills, commands, level injector, and session `caveman-level` persistence.
 - [Ponytail behavior integration](ponytail.md): optional `@arnilo/prism-ponytail` upstream Ponytail skills, commands, mode injector, and session `ponytail-mode` persistence.
+- [Impeccable behavior integration](impeccable.md): optional `@arnilo/prism-impeccable` upstream Impeccable skill and `load_skill` command.
 - [Public contracts](public-contracts.md): `Extension`, `ExtensionAPI`, and contribution contract types.
 - [Credentials and redaction](credentials-and-redaction.md): secret-redaction behavior used for extension errors.
 

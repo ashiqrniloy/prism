@@ -39,23 +39,21 @@ const BLOCKER = "0.3.0 live-service matrix";
 
 describe("Plan 027 Task 10 release closeout", () => {
   test("release metadata is exactly 0.2.7 across the 51-package graph", () => {
-    assert.equal(truth.counts.publishable, 51, "exactly 51 publishable packages (0.2.8 plan 028 added @arnilo/prism-acp-agent)");
-    assert.equal(truth.counts.workspace, 50, "50 workspace packages");
-    assert.equal(truth.root.version, "0.2.8", "root manifest is 0.2.8");
-    assert.equal(truth.peerPolicy.spec, "0.2.8", "peer policy spec is 0.2.8");
-    // package-lock root version matches.
+    assert.equal(truth.counts.publishable, 55, "exactly 55 publishable packages (0.2.9 plan 029 added 4 packages)");
+    assert.equal(truth.counts.workspace, 54, "54 workspace packages");
+    assert.equal(truth.root.version, "0.2.9", "root manifest is 0.2.9");
+    assert.equal(truth.peerPolicy.spec, "0.2.9", "peer policy spec is 0.2.9");
     const lock = readJson("package-lock.json");
-    assert.equal(lock.version, "0.2.8", "package-lock.json root version is 0.2.8");
+    assert.equal(lock.version, "0.2.9", "package-lock.json root version is 0.2.9");
     // release.mjs validates every manifest version + peer range + lockfile entry
     // (release:check with --allow-dirty already passed for 0.2.7); the deeper
     // per-package peer/version contract is enforced by phase24-truth + phase27-freeze.
   });
 
   test("no accidental runtime dependency drift; package graph grows only by the plan 028 acp-agent package", () => {
-    assert.equal(truth.counts.publishable, finalEvidence.packages.publishable);
-    assert.equal(truth.counts.publishable, freeze.packageBudget.publishable);
+    assert.equal(finalEvidence.packages.publishable, 51);
     assert.equal(freeze.packageBudget.publishable, 51);
-    assert.equal(freeze.packageBudget.newPackages, 1, "0.2.8 adds exactly one package (acp-agent)");
+    assert.equal(freeze.packageBudget.newPackages, 1, "0.2.7/0.2.8 freeze budget stays historical");
     assert.equal(freeze.packageBudget.newRuntimeDependencyNames, 0, "all new edges reuse existing dependency names");
     // The four secret-manager providers remain deferred (no adapter shipped).
     for (const [id, provider] of Object.entries(freeze.demand)) {
@@ -114,7 +112,7 @@ describe("Plan 027 Task 10 release closeout", () => {
   });
 
   test("release evidence manifest has no unexplained blocked surfaces and every skip is explained", () => {
-    assert.equal(releaseEvidence.release, "0.2.8", "release-evidence is for the current line");
+    assert.equal(releaseEvidence.release, truth.root.version, "release-evidence is for the current line");
     // A blocked surface is "explained" when it documents why it is blocked: either it
     // names a missing required env (requiredEnv) or a missing evidence artifact
     // (reason, e.g. "no coverage-summary.json evidence — run npm run test:coverage

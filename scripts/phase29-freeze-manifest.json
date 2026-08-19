@@ -1,0 +1,115 @@
+{
+  "$comment": "Task 0 freeze for plan 029 (0.2.9 provider adoption + SuperGrok OAuth + behavior packages). Schema-only scope gate. Empty deviations at freeze; later tasks append {task,change,rationale} before leaving this list. SuperGrok OAuth is allowed and host-invoked. Validated by scripts/phase29-freeze.test.mjs. Baseline evidence in scripts/phase29-baseline.json.",
+  "release": "0.2.9",
+  "line": "0.2.x",
+  "type": "adoption",
+  "baseline": "0.2.8",
+  "allowed": [
+    "packages/provider-deepseek/**",
+    "packages/provider-xai/**",
+    "packages/provider-clinepass/**",
+    "packages/prism-impeccable/**",
+    "packages/prism-ponytail/**",
+    "packages/prism-caveman/**",
+    "packages/prism-providers/**",
+    "src/oauth-device-code.ts",
+    "docs/**",
+    "scripts/phase29-*",
+    "scripts/package-truth.mjs",
+    "xAI SuperGrok / X Premium OAuth (RFC 8628 device-code at auth.x.ai, host-invoked OAuthProvider)"
+  ],
+  "forbidden": [
+    "cline-workos-oauth",
+    "deepseek-anthropic-route",
+    "grok-cli-auth-file-scan",
+    "harness-rewrite",
+    "muse-observers",
+    "cordis-plugin-runtime",
+    "impeccable-live-detector",
+    "caveman-2-engine",
+    "independent-package-versions"
+  ],
+  "deviations": [
+    {
+      "task": "task1",
+      "change": "DeepSeek /anthropic route deferred",
+      "rationale": "pi-ai Completions only; locked out of 0.2.9"
+    },
+    {
+      "task": "task1",
+      "change": "xAI grok-4.5 / Responses deferred",
+      "rationale": "pi-ai catalogs grok-4.5 as openai-responses; official generate-text is Responses; featured Completions are grok-4.3, grok-4.6, grok-build-0.1"
+    },
+    {
+      "task": "task1",
+      "change": "ClinePass GET /models helper omitted",
+      "rationale": "no documented OpenAI-compatible list endpoint; community reports 404; static cline-pass/* catalog only"
+    },
+    {
+      "task": "task1",
+      "change": "Impeccable optional peer omitted; upstreamPath required",
+      "rationale": "npm impeccable@3.6.0 is the detector CLI, not a skill tree; host points at a checkout with readable SKILL.md"
+    },
+    {
+      "task": "task1",
+      "change": "xAI PKCE loopback deferred",
+      "rationale": "xAI rejects loopback from non-allowlisted clients; SuperGrok is RFC 8628 device-code"
+    },
+    {
+      "task": "task1",
+      "change": "Caveman 2 engine deferred",
+      "rationale": "separate proxy product; register extra SKILL.md only"
+    }
+  ],
+  "packageBudget": {
+    "baselinePublishable": 51,
+    "baselineWorkspace": 50,
+    "baselineProvider": 14,
+    "baselineFamily": 9,
+    "targetPublishable": 55,
+    "targetWorkspace": 54,
+    "targetProvider": 17,
+    "targetFamily": 10,
+    "newPackages": 4,
+    "newRuntimeDependencyNames": 0
+  },
+  "compat": {
+    "additiveOnly": true,
+    "baseline": "scripts/compat-baseline",
+    "baselineRelease": "0.2.8",
+    "promise": "additive-only declaration deltas vs scripts/compat-baseline; zero breaking deltas at the 0.2.9 bump; no --allow-break"
+  },
+  "releasePolicy": {
+    "auditLevelTarget": "moderate",
+    "signedTag": "v0.2.9",
+    "noNewCoreRuntimeDependencies": true,
+    "publication": "explicit operator action after evidence review; never automatic"
+  },
+  "oauth": {
+    "superGrok": "authorized",
+    "hostInvoked": true,
+    "eligibility": "official xAI OIDC at auth.x.ai plus published Grok Build public client; not Claude/Gemini subscription piggyback",
+    "clineWorkos": "out",
+    "grokCliFileScan": "out"
+  },
+  "tasks": {
+    "task0": "done",
+    "task1": "done",
+    "task2": "done",
+    "task3": "done",
+    "task4": "done",
+    "task5": "done",
+    "task6": "done",
+    "task7": "done",
+    "task8": "done",
+    "task9": "done",
+    "task10": "done"
+  },
+  "security": {
+    "auditLevel": "moderate",
+    "auditTarget": 0,
+    "compat": "additive-only",
+    "noNewCoreRuntimeDependencies": true,
+    "superGrok": "host-invoked and eligibility-gated"
+  }
+}

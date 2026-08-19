@@ -104,6 +104,11 @@ Each demo prints a single JSON line with its result.
 - `custom-session-store.ts` — **demo**: implement the `SessionStore` contract (append + list) and pass it to `createAgentSession`; observe the entry kinds the runtime appends.
 - `custom-tools-skills-context.ts` — **demo**: host-owned tool + skill + context provider in one agent, with a tool-call loop (no filesystem/shell/browser coding tools).
 - `extension-package.ts` — **demo**: bundle a tool, skill, and context provider into one `Extension`, load it through the kernel, and build an agent from the inert registries.
+- `provider-deepseek.ts` — **demo**: register DeepSeek via the extension kernel (fake key, no network).
+- `provider-xai.ts` — **demo**: register xAI Grok + api_key/oauth auth methods (fake key).
+- `provider-xai-oauth.ts` — **demo**: SuperGrok device-code login with mocked `fetch`.
+- `provider-clinepass.ts` — **demo**: register ClinePass static catalog (fake key).
+- `impeccable.ts` — **demo**: load fixture Impeccable `SKILL.md` + `/impeccable` → `load_skill`.
 - `provider-registration.ts` — **demo**: register a provider package via the
   extension kernel; resolve providers/models from host-owned registries.
 - `provider-resolver.ts` — **demo**: resolve an agent's provider from a mix of

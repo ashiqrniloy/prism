@@ -10,7 +10,7 @@ It registers upstream skills and commands, injects active mode instructions via 
 
 Use it when a host wants lazy-minimalism coding behavior (`lite`, `full`, `ultra`) with upstream Ponytail skills (`ponytail-audit`, `ponytail-debt`, `ponytail-gain`, `ponytail-help`, `ponytail-review`) in a Prism extension kernel.
 
-Install optional peer `@dietrichgebert/ponytail@^4.8.4` **or** pass `upstreamPath` to a checkout with `skills/` and `hooks/`.
+Install optional peer `@dietrichgebert/ponytail@^4.9.0` **or** pass `upstreamPath` to a checkout with `skills/` and `hooks/`.
 
 Pair with progressive disclosure: mode slices on the `ponytail-mode` injector; full skill bodies via `load_skill` only.
 
@@ -39,7 +39,7 @@ Registered skills: `ponytail`, `ponytail-audit`, `ponytail-debt`, `ponytail-gain
 
 Registered commands: `ponytail`, `ponytail-review`, `ponytail-audit`, `ponytail-gain`, `ponytail-debt`, `ponytail-help`.
 
-`ponytail` command actions: `lite|full|ultra|off`, `status`, `default <mode>`.
+`ponytail` command actions: empty args or `status` report current+default mode (4.9.0; does not change mode); `lite|full|ultra|off` set mode; `default <mode>` persists default.
 
 ## Outputs / response / events
 

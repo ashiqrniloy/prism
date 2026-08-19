@@ -25,6 +25,9 @@ const packages = [
   { dir: "packages/provider-azure", name: "@arnilo/prism-provider-azure" },
   { dir: "packages/provider-bedrock", name: "@arnilo/prism-provider-bedrock" },
   { dir: "packages/provider-vertex", name: "@arnilo/prism-provider-vertex" },
+  { dir: "packages/provider-deepseek", name: "@arnilo/prism-provider-deepseek" },
+  { dir: "packages/provider-xai", name: "@arnilo/prism-provider-xai" },
+  { dir: "packages/provider-clinepass", name: "@arnilo/prism-provider-clinepass" },
   { dir: "packages/policy", name: "@arnilo/prism-policy" },
   { dir: "packages/model-router", name: "@arnilo/prism-model-router" },
   { dir: "packages/work-tools", name: "@arnilo/prism-work-tools" },
@@ -33,6 +36,7 @@ const packages = [
   { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
   { dir: "packages/prism-caveman", name: "@arnilo/prism-caveman" },
   { dir: "packages/prism-ponytail", name: "@arnilo/prism-ponytail" },
+  { dir: "packages/prism-impeccable", name: "@arnilo/prism-impeccable" },
   { dir: "packages/observability-opentelemetry", name: "@arnilo/prism-observability-opentelemetry" },
   { dir: "packages/tool-validator-json-schema", name: "@arnilo/prism-tool-validator-json-schema" },
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
@@ -803,16 +807,16 @@ describe("install smoke (fresh offline tarball install)", () => {
     );
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.8.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.9.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.2.8.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.2.9.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.2.8.tgz"),
-      `expected 'arnilo-prism-0.2.8.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.2.9.tgz"),
+      `expected 'arnilo-prism-0.2.9.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.2.8.tgz", "arnilo-prism-compaction-0.2.8.tgz", "arnilo-prism-all-0.2.8.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.2.9.tgz", "arnilo-prism-compaction-0.2.9.tgz", "arnilo-prism-all-0.2.9.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });
@@ -830,7 +834,7 @@ describe("peer-version policy (plan 024 Task 3, Decision A: exact pins)", () => 
   it("a mismatched exact pin fails clearly with npm ERESOLVE naming the conflicting peer", () => {
     // Fake next-version adapter: real coding-agent source with version + core
     // peer bumped forward one — the only difference from the real tarball.
-    const fakeVersion = "0.2.9";
+    const fakeVersion = "0.2.10";
     const fakeDir = join(stage, "fake");
     cpSync(join(repoRoot, "packages", "coding-agent"), fakeDir, { recursive: true });
     const manifestPath = join(fakeDir, "package.json");
@@ -851,7 +855,7 @@ describe("peer-version policy (plan 024 Task 3, Decision A: exact pins)", () => 
     writeFileSync(join(consumer, "package.json"), JSON.stringify({ name: "prism-peer-mix-consumer", type: "module" }, null, 2));
     const coreInstall = run(
       "npm",
-      ["install", join(stage, "arnilo-prism-0.2.8.tgz"), "--offline", "--no-audit", "--no-fund", "--no-update-notifier"],
+      ["install", join(stage, "arnilo-prism-0.2.9.tgz"), "--offline", "--no-audit", "--no-fund", "--no-update-notifier"],
       consumer,
     );
     assert.equal(coreInstall.status, 0, coreInstall.stdout + coreInstall.stderr);
@@ -901,13 +905,13 @@ describe("packed truth conformance (plan 024 Task 5)", () => {
     if (result.installStatus !== 0) t.skip("install failed; packed truth unverifiable");
   };
 
-  it("the installed prism-providers tarball depends on exactly 11 provider tarballs (not 14)", (t) => {
+  it("the installed prism-providers tarball depends on exactly the generated provider family", (t) => {
     skipIfInstallFailed(t);
     const installed = installedManifest("prism-providers");
     const expected = [...truth.umbrella["prism-providers"].deps].sort();
     const actual = Object.keys(installed.dependencies).sort();
-    assert.deepEqual(actual, expected, "prism-providers tarball must depend on exactly the generated 11 providers");
-    assert.equal(actual.length, 11, "not 14 — Azure/Bedrock/Vertex are added by prism-all");
+    assert.deepEqual(actual, expected, "prism-providers tarball must depend on exactly the generated provider family");
+    assert.equal(actual.length, expected.length, "family size must match generated prism-providers deps");
   });
 
   it("the installed prism-all tarball deps and closure match the generated artifact", (t) => {

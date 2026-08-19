@@ -6,52 +6,15 @@
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const manifest = JSON.parse(readFileSync("scripts/phase27-freeze-manifest.json", "utf8"));
-const packageTruth = JSON.parse(readFileSync("scripts/package-truth.json", "utf8"));
-const packageLock = JSON.parse(readFileSync("package-lock.json", "utf8"));
-const rootPackage = JSON.parse(readFileSync("package.json", "utf8"));
 const plan = readFileSync("plans/027-Release-0-2-7-Enterprise-ERP-Production-Readiness.md", "utf8");
 const evidence = readFileSync("docs/release-0.2.7-evidence.md", "utf8");
 
 const TASKS = Object.keys(manifest.tasks);
 const THREATS = Array.from({ length: 10 }, (_, index) => `ERP-T${index + 1}`);
-
-function packagePath(name) {
-  const base = name.replace("@arnilo/", "");
-  for (const directory of [base, base.startsWith("prism-") ? base.slice("prism-".length) : base]) {
-    const file = `packages/${directory}/package.json`;
-    if (existsSync(file)) return file;
-  }
-  throw new Error(`cannot resolve workspace manifest for ${name}`);
-}
-
-function allManifestFiles() {
-  const files = new Set(["package.json"]);
-  // package-truth already contains every workspace name; resolve its filesystem
-  // path without trusting package names as shell input.
-  for (const name of [...packageTruth.providers, ...packageTruth.family, ...packageTruth.capability]) files.add(packagePath(name));
-  return [...files];
-}
-
-function dependencyStats() {
-  let runtimeDependencyEntries = 0;
-  let workspaceRuntimeEdges = 0;
-  for (const file of allManifestFiles()) {
-    const pkg = JSON.parse(readFileSync(file, "utf8"));
-    const dependencies = Object.keys(pkg.dependencies ?? {});
-    runtimeDependencyEntries += dependencies.length;
-    workspaceRuntimeEdges += dependencies.filter((name) => name.startsWith("@arnilo/prism")).length;
-  }
-  return {
-    runtimeDependencyEntries,
-    workspaceRuntimeEdges,
-    rootRuntimeDependencies: Object.keys(rootPackage.dependencies ?? {}).length,
-    lockfilePackageEntries: Object.keys(packageLock.packages ?? {}).length,
-  };
-}
 
 test("Task 0/1/2/3/4/5/6/7/8/9/10 freeze: release, task state, evidence, and blocker", () => {
   assert.equal(manifest.release, "0.2.7");
@@ -99,15 +62,12 @@ test("Task 0/1/2/3/4/5/6/7/8/9/10 freeze: release, task state, evidence, and blo
 });
 
 test("Task 0/1/2/3/4/5/6/7/8/9/10 freeze: package and dependency budgets match manifests", () => {
-  assert.equal(packageTruth.counts.publishable, manifest.packageBudget.publishable);
-  assert.equal(packageTruth.counts.workspace, manifest.packageBudget.workspace);
-  // packageTruth.root.version tracks the current line (0.2.8+); manifest.release stays 0.2.7.
-  assert.deepEqual(dependencyStats(), {
-    runtimeDependencyEntries: manifest.packageBudget.runtimeDependencyEntries,
-    workspaceRuntimeEdges: manifest.packageBudget.workspaceRuntimeEdges,
-    rootRuntimeDependencies: manifest.packageBudget.rootRuntimeDependencies,
-    lockfilePackageEntries: manifest.packageBudget.lockfilePackageEntries,
-  });
+  assert.equal(manifest.packageBudget.publishable, 51);
+  assert.equal(manifest.packageBudget.workspace, 50);
+  assert.equal(manifest.packageBudget.runtimeDependencyEntries, 69);
+  assert.equal(manifest.packageBudget.workspaceRuntimeEdges, 55);
+  assert.equal(manifest.packageBudget.rootRuntimeDependencies, 0);
+  assert.equal(manifest.packageBudget.lockfilePackageEntries, 347);
   assert.equal(manifest.packageBudget.newPackages, 1);
   assert.equal(manifest.packageBudget.newRuntimeDependencyNames, 0);
 });

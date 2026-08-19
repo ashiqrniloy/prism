@@ -102,6 +102,9 @@ const providerPackagePages: ReadonlyArray<[string, string]> = [
   ["docs/providers/opencode-go.md", "packages/provider-opencode-go/src/index.ts"],
   ["docs/providers/openrouter.md", "packages/provider-openrouter/src/index.ts"],
   ["docs/providers/zai.md", "packages/provider-zai/src/index.ts"],
+  ["docs/providers/deepseek.md", "packages/provider-deepseek/src/index.ts"],
+  ["docs/providers/xai.md", "packages/provider-xai/src/index.ts"],
+  ["docs/providers/clinepass.md", "packages/provider-clinepass/src/index.ts"],
   ["docs/providers/kimi.md", "packages/provider-kimi/src/index.ts"],
   ["docs/providers/alibaba.md", "packages/provider-alibaba/src/index.ts"],
   ["docs/providers/ollama.md", "packages/provider-ollama/src/index.ts"],
@@ -359,14 +362,14 @@ describe("docs", () => {
       const providers = truth.umbrella["prism-providers"];
       const all = truth.umbrella["prism-all"];
       assert.ok(
-        readme.includes(`${providers.deps.length} of 14 first-party provider adapters`),
-        "README prism-providers row must state the generated 11 of 14",
+        readme.includes(`${providers.deps.length} of ${truth.counts.provider} first-party provider adapters`),
+        `README prism-providers row must state the generated ${providers.deps.length} of ${truth.counts.provider}`,
       );
       assert.ok(
         readme.includes(`${all.deps.length} first-party packages (${all.closure} transitive)`),
         `README prism-all row must state the generated ${all.deps.length}/${all.closure} closure`,
       );
-      assert.ok(release.includes(`${providers.deps.length} of 14`), "release page must state 11 of 14 for the provider family");
+      assert.ok(release.includes(`${providers.deps.length} of ${truth.counts.provider}`), `release page must state ${providers.deps.length} of ${truth.counts.provider} for the provider family`);
       assert.ok(
         release.includes(
           `reaches ${all.closure} of the ${truth.counts.workspace} workspace packages (${all.deps.length} direct + ${all.closure - all.deps.length} transitive)`,
@@ -384,6 +387,7 @@ describe("docs", () => {
         "@arnilo/prism-session-store-nats": "NATS",
         "@arnilo/prism-caveman": "Caveman",
         "@arnilo/prism-ponytail": "Ponytail",
+        "@arnilo/prism-impeccable": "Impeccable",
       };
       for (const omitted of all.omits) {
         const readable = omissionReadable[omitted];
@@ -495,7 +499,7 @@ describe("docs", () => {
     assert.ok(release.includes("coverage close, behavior-backed"), "0.2.5 handoff must cover the coverage close");
     assert.ok(release.includes("Measured reductions and deltas"), "0.2.5 handoff must record the measured reductions/deltas");
     assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
-    assert.ok(changelog.includes(`## [${pkg.version}] - 2026-08-18`), `root changelog missing ${pkg.version} entry`);
+    assert.ok(changelog.includes(`## [${pkg.version}] - 2026-08-19`), `root changelog missing ${pkg.version} entry`);
     assert.ok(migration.includes("## 0.2.4 → 0.2.5"), "migration.md missing the 0.2.4 → 0.2.5 note");
     assert.ok(
       migration.includes("No runtime contract change and no migration"),
@@ -516,7 +520,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.2.8", "root manifest must be at 0.2.8");
+    assert.equal(pkg.version, "0.2.9", "root manifest must be at 0.2.9");
     assert.ok(release.includes("### 0.2.7 publish handoff (plan 027 Task 10)"), "release page missing 0.2.7 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.7 handoff missing rollback notes");
     // Semantic tripwire: the nine 0.2.7 ERP roadmap items are present in the handoff
@@ -531,7 +535,7 @@ describe("docs", () => {
     assert.ok(release.includes("ERP release journey"), "0.2.7 handoff must cover the ERP journey");
     assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.ok(changelog.includes(`## [${pkg.version}] - 2026-08-18`), `root changelog missing ${pkg.version} entry`);
+    assert.ok(changelog.includes(`## [${pkg.version}] - 2026-08-19`), `root changelog missing ${pkg.version} entry`);
     assert.ok(migration.includes("## 0.2.6 → 0.2.7"), "migration.md missing the 0.2.6 → 0.2.7 note");
     assert.ok(index.includes("**0.2.8**"), "docs/index.md missing the 0.2.8 current line");
     assert.ok(
@@ -553,14 +557,14 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.2.8", "root manifest must be at 0.2.8");
+    assert.equal(pkg.version, "0.2.9", "root manifest must be at 0.2.9");
     assert.ok(release.includes("### 0.2.8 publish handoff (plan 028 Task 18)"), "release page missing 0.2.8 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.8 handoff missing rollback notes");
     assert.ok(release.includes("client-neutrality"), "0.2.8 handoff must cover client-neutrality");
     assert.ok(release.includes("@arnilo/prism-acp-agent"), "0.2.8 handoff must name the spawnable agent");
     assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.ok(changelog.includes(`## [${pkg.version}] - 2026-08-18`), `root changelog missing ${pkg.version} entry`);
+    assert.ok(changelog.includes(`## [${pkg.version}] - 2026-08-19`), `root changelog missing ${pkg.version} entry`);
     assert.ok(migration.includes("## 0.2.7 → 0.2.8"), "migration.md missing the 0.2.7 → 0.2.8 note");
     assert.ok(index.includes("**0.2.8**"), "docs/index.md missing the 0.2.8 current line");
     assert.ok(index.includes("(acp-agent.md)"), "docs/index.md missing spawnable ACP agent page");
@@ -575,6 +579,34 @@ describe("docs", () => {
     assert.equal(unchecked, 0, `roadmap 0.2.8 section has ${unchecked} unchecked item(s) after Task 18`);
   });
 
+  it("plan 029 Task 10 freeze: 0.2.9 publish handoff, roadmap 0.2.9 completion, migration note, and navigation agree", () => {
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const changelog = readFileSync("CHANGELOG.md", "utf8");
+    const roadmap = readFileSync("roadmap.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const plansReadme = readFileSync("plans/README.md", "utf8");
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
+    assert.equal(pkg.version, "0.2.9", "root manifest must be at 0.2.9");
+    assert.ok(release.includes("### 0.2.9 publish handoff (plan 029 Task 10)"), "release page missing 0.2.9 handoff");
+    assert.ok(release.includes("SuperGrok"), "0.2.9 handoff must cover SuperGrok");
+    assert.ok(release.includes("@arnilo/prism-impeccable"), "0.2.9 handoff must name impeccable");
+    assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
+    assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
+    assert.ok(changelog.includes("## [0.2.9] - 2026-08-19"), "root changelog missing 0.2.9 entry");
+    assert.ok(migration.includes("## 0.2.8 → 0.2.9"), "migration.md missing the 0.2.8 → 0.2.9 note");
+    assert.ok(index.includes("**0.2.9**"), "docs/index.md missing the 0.2.9 current line");
+    assert.ok(
+      plansReadme.includes("029-Release-0-2-9-Provider-Adoption-And-Behavior-Packages.md") && plansReadme.includes("| complete |"),
+      "plans/README.md must mark plan 029 complete",
+    );
+    const section = roadmap.slice(roadmap.indexOf("### 0.2.9 — Provider adoption and behavior packages"));
+    const nextSection = section.indexOf("\n### Mandatory");
+    const body = nextSection === -1 ? section : section.slice(0, nextSection);
+    const unchecked = (body.match(/- \[ \] /g) ?? []).length;
+    assert.equal(unchecked, 0, `roadmap 0.2.9 section has ${unchecked} unchecked item(s) after Task 10`);
+  });
+
   it("plan 026 Task 8 freeze: 0.2.6 publish handoff, roadmap 0.2.6 completion, migration note, and navigation agree", () => {
     const release = readFileSync("docs/release-and-install.md", "utf8");
     const migration = readFileSync("docs/migration.md", "utf8");
@@ -583,7 +615,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.2.8", "root manifest must be at 0.2.8");
+    assert.equal(pkg.version, "0.2.9", "root manifest must be at 0.2.9");
     assert.ok(release.includes("### 0.2.6 publish handoff (plan 026 Task 8)"), "release page missing 0.2.6 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.6 handoff missing rollback notes");
     // Semantic tripwire: the seven 0.2.6 roadmap items are present in the handoff
@@ -598,7 +630,7 @@ describe("docs", () => {
     assert.ok(release.includes("protected real coding journey"), "0.2.6 handoff must cover the coding journey");
     assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.ok(changelog.includes(`## [${pkg.version}] - 2026-08-18`), `root changelog missing ${pkg.version} entry`);
+    assert.ok(changelog.includes(`## [${pkg.version}] - 2026-08-19`), `root changelog missing ${pkg.version} entry`);
     assert.ok(migration.includes("## 0.2.5 → 0.2.6"), "migration.md missing the 0.2.5 → 0.2.6 note");
     assert.ok(index.includes("**0.2.8**"), "docs/index.md missing the 0.2.8 current line");
     assert.ok(
@@ -753,7 +785,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.equal(pkg.version, "0.2.8", "root manifest must be at 0.2.8");
+    assert.equal(pkg.version, "0.2.9", "root manifest must be at 0.2.9");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -1611,7 +1643,7 @@ describe("docs", () => {
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 51, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 55, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
@@ -2333,6 +2365,10 @@ describe("docs", () => {
       "refreshOAuthCredential",
       "runtime override",
       "Prism does not read `process.env`",
+      "bodyEncoding",
+      "application/x-www-form-urlencoded",
+      "verification_uri_complete",
+      "extraDeviceParams",
     ]) {
       assert.ok(docs.includes(phrase), `credential docs missing ${phrase}`);
     }
@@ -2601,7 +2637,7 @@ describe("docs", () => {
   });
 
   it("first_party_providers_do_not_implement_deprecated_provider_timeout_retry_knobs", () => {
-    for (const dir of ["provider-openai", "provider-openrouter", "provider-opencode-go", "provider-zai", "provider-kimi"]) {
+    for (const dir of ["provider-openai", "provider-openrouter", "provider-opencode-go", "provider-zai", "provider-deepseek", "provider-xai", "provider-clinepass", "provider-kimi"]) {
       const combined = tsFiles(`packages/${dir}/src`)
         .map((file) => readFileSync(file, "utf8"))
         .join("\n");
@@ -2735,7 +2771,7 @@ describe("docs", () => {
       "docs/provider-caching.md",
       "best-effort explicit cache hints",
       "best-effort implicit prefix caching",
-      "11 of 14 first-party provider adapters",
+      "14 of 17 first-party provider adapters",
     ]) {
       assert.ok(readme.includes(phrase), `README.md cache/provider summary missing ${phrase}`);
     }
@@ -2908,8 +2944,8 @@ describe("docs", () => {
     }
     for (const phrase of [
       "**49 publishable manifests**: the root `@arnilo/prism` core package plus **48 workspace packages**",
-      "all eleven `@arnilo/prism-provider-*` packages",
-      "All 51 manifests (root + 50 workspace packages: 44 code packages + 6 pure-manifest family/profile packages",
+      "all fourteen `@arnilo/prism-provider-*` packages",
+      "All 55 manifests (root + 54 workspace packages: 48 code packages + 6 pure-manifest family/profile packages",
       "eight provider packages' `src/__tests__/live.test.ts`",
       "Enterprise PostgreSQL package/docs/example gate",
       "dist/index.js` + `dist/index.d.ts`",
@@ -3514,6 +3550,9 @@ describe("docs", () => {
       "@arnilo/prism-provider-ai-sdk",
       "@arnilo/prism-provider-alibaba",
       "@arnilo/prism-provider-ollama",
+      "@arnilo/prism-provider-deepseek",
+      "@arnilo/prism-provider-xai",
+      "@arnilo/prism-provider-clinepass",
     ]) {
       assert.ok(caching.includes(pkg), `provider-caching.md matrix missing ${pkg}`);
     }
@@ -3529,6 +3568,29 @@ describe("docs", () => {
     assert.ok(neuralwatt.includes("cross-provider"), "neuralwatt.md does not link the cross-provider cache matrix");
     assert.ok(packages.includes("canonical explicit/implicit matrix"), "provider-packages.md does not link the canonical cache matrix");
     assert.ok(index.includes("per-provider explicit/implicit cache matrix"), "docs/index.md does not advertise the provider cache matrix");
+  });
+
+  it("phase29_new_providers_cache_thinking_oauth_docs", () => {
+    const caching = readFileSync("docs/provider-caching.md", "utf8");
+    const packages = readFileSync("docs/provider-packages.md", "utf8");
+    const thinking = readFileSync("docs/thinking-and-reasoning.md", "utf8");
+    const deepseek = readFileSync("docs/providers/deepseek.md", "utf8");
+    const xai = readFileSync("docs/providers/xai.md", "utf8");
+    const clinepass = readFileSync("docs/providers/clinepass.md", "utf8");
+    assert.ok(caching.includes("x-grok-conv-id"), "provider-caching.md missing x-grok-conv-id");
+    assert.ok(caching.includes("prompt_cache_hit_tokens"), "provider-caching.md missing prompt_cache_hit_tokens");
+    assert.ok(caching.includes("cline-pass/"), "provider-caching.md missing cline-pass/");
+    assert.ok(xai.includes("x-grok-conv-id"), "xai.md missing x-grok-conv-id");
+    assert.ok(xai.includes("auth.x.ai"), "xai.md missing auth.x.ai");
+    assert.ok(packages.includes("auth.x.ai"), "provider-packages.md missing auth.x.ai");
+    assert.ok(deepseek.includes("prompt_cache_hit_tokens"), "deepseek.md missing prompt_cache_hit_tokens");
+    assert.ok(deepseek.includes("reasoning_content"), "deepseek.md missing reasoning_content");
+    assert.ok(thinking.includes("reasoning_content"), "thinking-and-reasoning.md missing reasoning_content");
+    assert.ok(thinking.includes("@arnilo/prism-provider-deepseek"), "thinking-and-reasoning.md missing DeepSeek");
+    assert.ok(thinking.includes("@arnilo/prism-provider-xai"), "thinking-and-reasoning.md missing xAI");
+    assert.ok(thinking.includes("@arnilo/prism-provider-clinepass"), "thinking-and-reasoning.md missing ClinePass");
+    assert.ok(clinepass.includes("cline-pass/"), "clinepass.md missing cline-pass/");
+    assert.ok(!caching.includes("cli-chat-proxy.grok.com"), "provider-caching.md must not document cli-chat-proxy");
   });
 
   it("2026-07-17 provider validation matrix lists all packages and P0-P2 ids and is indexed", () => {
@@ -3722,7 +3784,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 51, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 55, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {
@@ -3873,10 +3935,12 @@ describe("docs", () => {
     assert.ok(index.includes("Third-party integrations"), "docs/index.md missing Third-party integrations group");
     assert.ok(index.includes("caveman.md"), "docs/index.md missing caveman link");
     assert.ok(index.includes("ponytail.md"), "docs/index.md missing ponytail link");
+    assert.ok(index.includes("impeccable.md"), "docs/index.md missing impeccable link");
 
     for (const [name, text, tokens] of [
       ["caveman.md", caveman, ["createCavemanExtension", "caveman-level", "caveman-mode", "upstreamPath", "appendEntry"]],
       ["ponytail.md", ponytail, ["createPonytailExtension", "ponytail-mode", "ponytail-mode", "getPonytailInstructions", "appendEntry"]],
+      ["impeccable.md", readFileSync("docs/impeccable.md", "utf8"), ["createImpeccableExtension", "upstreamPath", "load_skill", "SKILL.md"]],
     ] as const) {
       for (const token of tokens) {
         assert.ok(text.includes(token), `${name} missing ${token}`);

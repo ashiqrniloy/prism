@@ -1,3 +1,8 @@
+## [0.2.9] - 2026-08-19
+
+### Changed
+- **Release 0.2.9 (plan 029)** is the provider-adoption and behavior-packages cut. **Additive-only.** New packages: `@arnilo/prism-provider-deepseek`, `@arnilo/prism-provider-xai` (API key + SuperGrok RFC 8628 device-code), `@arnilo/prism-provider-clinepass`, `@arnilo/prism-impeccable`. `pollDeviceCodeToken` accepts `bodyEncoding: "form"` and `extraDeviceParams`. Ponytail peer `^4.9.0` (empty `/ponytail` reports status). Caveman registers extra `SKILL.md`. Graph **55** publishable manifests at exact **0.2.9**. Store-compatible with 0.2.8; no migration. **Publication remains the operator handoff** (`docs/release-and-install.md` `0.2.9 publish handoff` — signed `v0.2.9` tag + npm OIDC).
+
 ## [0.2.8] - 2026-08-18
 
 ### Changed

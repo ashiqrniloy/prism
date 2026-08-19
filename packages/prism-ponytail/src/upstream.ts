@@ -9,7 +9,7 @@ export const MAX_INJECTED_INSTRUCTION_BYTES = 32_768;
 
 export const SKILLS_DIR_NAME = "skills";
 export const PONYTAIL_PEER_PACKAGE = "@dietrichgebert/ponytail";
-export const PONYTAIL_PEER_RANGE = "^4.8.4";
+export const PONYTAIL_PEER_RANGE = "^4.9.0";
 
 const MAX_ERROR_CHARS = 512;
 const require = createRequire(import.meta.url);

@@ -37,9 +37,9 @@ Session custom entry shape:
 { "kind": "custom", "data": { "type": "caveman-level", "level": "full" } }
 ```
 
-Registered skills: `caveman`, `caveman-commit`, `caveman-review`, `caveman-stats`, `caveman-compress`, `caveman-help`, `cavecrew`.
+Required skills (fail closed if missing): `caveman`, `caveman-commit`, `caveman-review`, `caveman-stats`, `caveman-compress`, `caveman-help`, `cavecrew`. Extra `skills/*/SKILL.md` (v2.1 extras like `caveman-explore`) register as optional skills and `load_skill` commands. Dirs without `SKILL.md` (`*.mjs`, `registry.json`, `generated/`) are skipped.
 
-Registered commands: `caveman`, `caveman-init`, `caveman-commit`, `caveman-review`, `caveman-stats`, `caveman-compress`.
+Registered commands: `caveman` (level), `caveman-init`, plus one `load_skill` dispatch per registered skill except `caveman`.
 
 ## Outputs / response / events
 
@@ -110,6 +110,7 @@ See `examples/caveman-ponytail.ts` for progressive catalog + `load_skill` wiring
 - `caveman-stats` dispatches skill metadata only; full stats need host session-log integration.
 - `caveman-init` returns upstream guidance text; it does not write files in the host repo.
 - No TUI status bar; optional `caveman:status` events for host UI.
+- Caveman 2 compression proxy/engine is **not** a Prism runtime. Only `SKILL.md` files under `skills/` load.
 
 ## Security and performance notes
 

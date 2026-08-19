@@ -2,11 +2,11 @@ import type { CommandDefinition, JsonObject } from "@arnilo/prism";
 
 import { type CavemanConfig, readCavemanConfig } from "./config.js";
 import { normalizeLevelArg } from "./mode.js";
-import type { CavemanSkillName } from "./skills.js";
+
 import type { CavemanLevel } from "./types.js";
 
 export interface CavemanCommandContext {
-  readonly skills: ReadonlyMap<CavemanSkillName, { readonly name: string; readonly instructions?: string }>;
+  readonly skills: ReadonlyMap<string, { readonly name: string; readonly instructions?: string }>;
   readonly getLevel: () => CavemanLevel;
   readonly setLevel: (level: CavemanLevel, sessionId?: string) => Promise<void>;
   readonly getConfig: () => CavemanConfig;
@@ -22,7 +22,7 @@ function commandArg(args: JsonObject): string {
   return "";
 }
 
-function skillDispatch(name: CavemanSkillName, ctx: CavemanCommandContext): CommandDefinition {
+function skillDispatch(name: string, ctx: CavemanCommandContext): CommandDefinition {
   return {
     name,
     description: `Dispatch upstream Caveman skill ${name}.`,
@@ -85,11 +85,11 @@ export function createCavemanCommands(ctx: CavemanCommandContext): readonly Comm
         };
       },
     },
-    skillDispatch("caveman-commit", ctx),
-    skillDispatch("caveman-review", ctx),
-    skillDispatch("caveman-stats", ctx),
-    skillDispatch("caveman-compress", ctx),
   ];
+  for (const name of ctx.skills.keys()) {
+    if (name === "caveman") continue;
+    commands.push(skillDispatch(name, ctx));
+  }
   return commands;
 }
 

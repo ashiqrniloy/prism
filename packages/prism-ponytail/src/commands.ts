@@ -29,13 +29,10 @@ function commandArg(args: JsonObject): string {
   return "";
 }
 
-function parsePonytailCommand(text: string, defaultMode: PonytailMode, upstream: UpstreamPonytailConfig): ParsedPonytailCommand {
+function parsePonytailCommand(text: string, upstream: UpstreamPonytailConfig): ParsedPonytailCommand {
   const normalizedText = text.trim().toLowerCase();
-  const fallback = defaultMode;
 
-  if (!normalizedText) {
-    return { type: "set-mode", mode: fallback === "off" ? "full" : fallback };
-  }
+  if (!normalizedText) return { type: "status" };
 
   const [primary, secondary] = normalizedText.split(/\s+/);
 
@@ -74,13 +71,13 @@ export function createPonytailCommands(ctx: PonytailCommandContext): readonly Co
   return [
     {
       name: "ponytail",
-      description: `Set mode: ${runtimeList}. Commands: status, default <mode>.`,
+      description: `Set mode: ${runtimeList}. Empty args report status. Commands: status, default <mode>.`,
       parameters: {
         type: "object",
         properties: { mode: { type: "string" }, text: { type: "string" }, args: { type: "string" } },
       } as JsonObject,
       async execute(args, context) {
-        const parsed = parsePonytailCommand(commandArg(args), ctx.getConfig().defaultMode, ctx.upstreamConfig);
+        const parsed = parsePonytailCommand(commandArg(args), ctx.upstreamConfig);
 
         if (parsed.type === "status") {
           const text = `Ponytail: current ${ctx.getMode()} • default ${ctx.getConfig().defaultMode}`;

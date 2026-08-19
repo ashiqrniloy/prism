@@ -1,7 +1,7 @@
 {
   "name": "@arnilo/prism-all",
-  "version": "0.2.8",
-  "description": "Broad Prism umbrella: 21 first-party runtime, capability, provider, and persistence packages (44 transitive; omits document-reader, OpenAPI tools, NATS, Caveman, Ponytail).",
+  "version": "0.2.9",
+  "description": "Broad Prism umbrella: 21 first-party runtime, capability, provider, and persistence packages (47 transitive; omits document-reader, OpenAPI tools, NATS, Caveman, Ponytail, Impeccable).",
   "license": "MIT",
   "scripts": {
     "pack:dry-run": "npm pack --dry-run"
@@ -11,27 +11,27 @@
     "CHANGELOG.md"
   ],
   "dependencies": {
-    "@arnilo/prism-code": "0.2.8",
-    "@arnilo/prism-sdk": "0.2.8",
-    "@arnilo/prism-providers": "0.2.8",
-    "@arnilo/prism-session-store-sqlite": "0.2.8",
-    "@arnilo/prism-session-store-postgres": "0.2.8",
-    "@arnilo/prism-evals": "0.2.8",
-    "@arnilo/prism-enterprise-postgres": "0.2.8",
-    "@arnilo/prism-memory": "0.2.8",
-    "@arnilo/prism-rag": "0.2.8",
-    "@arnilo/prism-server": "0.2.8",
-    "@arnilo/prism-supervisor": "0.2.8",
-    "@arnilo/prism-web-tools": "0.2.8",
-    "@arnilo/prism-browser": "0.2.8",
-    "@arnilo/prism-ag-ui": "0.2.8",
-    "@arnilo/prism-acp-agent": "0.2.8",
-    "@arnilo/prism-policy": "0.2.8",
-    "@arnilo/prism-model-router": "0.2.8",
-    "@arnilo/prism-provider-azure": "0.2.8",
-    "@arnilo/prism-provider-bedrock": "0.2.8",
-    "@arnilo/prism-provider-vertex": "0.2.8",
-    "@arnilo/prism-work-tools": "0.2.8"
+    "@arnilo/prism-code": "0.2.9",
+    "@arnilo/prism-sdk": "0.2.9",
+    "@arnilo/prism-providers": "0.2.9",
+    "@arnilo/prism-session-store-sqlite": "0.2.9",
+    "@arnilo/prism-session-store-postgres": "0.2.9",
+    "@arnilo/prism-evals": "0.2.9",
+    "@arnilo/prism-enterprise-postgres": "0.2.9",
+    "@arnilo/prism-memory": "0.2.9",
+    "@arnilo/prism-rag": "0.2.9",
+    "@arnilo/prism-server": "0.2.9",
+    "@arnilo/prism-supervisor": "0.2.9",
+    "@arnilo/prism-web-tools": "0.2.9",
+    "@arnilo/prism-browser": "0.2.9",
+    "@arnilo/prism-ag-ui": "0.2.9",
+    "@arnilo/prism-acp-agent": "0.2.9",
+    "@arnilo/prism-policy": "0.2.9",
+    "@arnilo/prism-model-router": "0.2.9",
+    "@arnilo/prism-provider-azure": "0.2.9",
+    "@arnilo/prism-provider-bedrock": "0.2.9",
+    "@arnilo/prism-provider-vertex": "0.2.9",
+    "@arnilo/prism-work-tools": "0.2.9"
   },
   "engines": {
     "node": ">=20"

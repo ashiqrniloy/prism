@@ -160,6 +160,9 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-provider-ollama` | Ollama Cloud / local provider with dynamic discovery and implicit-only caching |
 | `@arnilo/prism-provider-anthropic` | Anthropic Messages provider |
 | `@arnilo/prism-provider-google` | Google Gemini provider |
+| `@arnilo/prism-provider-deepseek` | DeepSeek Chat Completions provider |
+| `@arnilo/prism-provider-xai` | xAI Grok Completions + SuperGrok OAuth |
+| `@arnilo/prism-provider-clinepass` | ClinePass OpenAI-compatible gateway |
 | `@arnilo/prism-provider-azure` | Azure OpenAI provider |
 | `@arnilo/prism-provider-bedrock` | AWS Bedrock provider |
 | `@arnilo/prism-provider-vertex` | Google Vertex provider |
@@ -178,12 +181,12 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-credentials-node` | encrypted-file and keychain credentials |
 | `@arnilo/prism-session-store-sqlite` | SQLite persistence/checkpoints/leases/owned run feedback |
 | `@arnilo/prism-session-store-postgres` | PostgreSQL persistence/checkpoints/leases/owned run feedback |
-| `@arnilo/prism-providers` | family: 11 of 14 first-party provider adapters (omits Azure, Bedrock, Vertex, which `prism-all` adds separately), including AI SDK interoperability |
+| `@arnilo/prism-providers` | family: 14 of 17 first-party provider adapters (omits Azure, Bedrock, Vertex, which `prism-all` adds separately), including AI SDK interoperability |
 | `@arnilo/prism-compaction` | family: both compaction strategies |
 | `@arnilo/prism-base` | profile: core + compaction + JSON Schema validation |
 | `@arnilo/prism-code` | profile: base + coding tools/security + MCP |
 | `@arnilo/prism-sdk` | profile: base + workflows + MCP + credentials + OpenTelemetry |
-| `@arnilo/prism-all` | broad umbrella: 21 first-party packages (44 transitive) across runtime, capability, provider, and persistence — omits document-reader, OpenAPI tools, NATS, Caveman, and Ponytail |
+| `@arnilo/prism-all` | broad umbrella: 21 first-party packages (47 transitive) across runtime, capability, provider, and persistence — omits document-reader, OpenAPI tools, NATS, Caveman, Ponytail, and Impeccable |
 
 ## Scripts
 

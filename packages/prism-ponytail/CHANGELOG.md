@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.8] - 2026-08-19
+
+### Changed
+- Peer `@dietrichgebert/ponytail` is `^4.9.0`. Bare `/ponytail` reports current+default mode and does not change mode.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

@@ -196,7 +196,7 @@ await agent.createSession().run("…", { activeSkills: ["ponytail"] });
 // Turn 1: catalog only. After load_skill({ name: "ponytail" }), later turns include instructions.
 ```
 
-### Third-party behavior packages (Caveman, Ponytail)
+### Third-party behavior packages (Caveman, Ponytail, Impeccable)
 
 `@arnilo/prism-caveman` and `@arnilo/prism-ponytail` register upstream skills into the extension kernel skill registry. Hosts should:
 
@@ -205,7 +205,7 @@ await agent.createSession().run("…", { activeSkills: ["ponytail"] });
 3. Keep `skillsDisclosure: "progressive"` and register `createLoadSkillTool` — full `SKILL.md` bodies stay catalog-only until `load_skill`.
 4. Select `instructionInjectors: ["caveman-mode", "ponytail-mode"]` (or subset) for mode/level slices **without** forcing `skillsDisclosure: "eager"`.
 
-Mode slices and skill bodies are independent: the injector can add `PONYTAIL MODE ACTIVE` while `ponytail-audit` remains catalog-only until loaded. See [Caveman](caveman.md), [Ponytail](ponytail.md), and `examples/caveman-ponytail.ts`.
+Mode slices and skill bodies are independent: the injector can add `PONYTAIL MODE ACTIVE` while `ponytail-audit` remains catalog-only until loaded. See [Caveman](caveman.md), [Ponytail](ponytail.md), [Impeccable](impeccable.md), and `examples/caveman-ponytail.ts`.
 
 Pure validation without the tool: `resolveSkillLoad({ registry, name, tools, loaded, activeSkillNames })`.
 

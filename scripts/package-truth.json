@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-08-18T20:18:59.663Z",
+  "generatedAt": "2026-08-19T12:02:00.048Z",
   "root": {
     "name": "@arnilo/prism",
-    "version": "0.2.8"
+    "version": "0.2.9"
   },
   "counts": {
-    "publishable": 51,
-    "workspace": 50,
-    "provider": 14,
-    "prismFamily": 9,
+    "publishable": 55,
+    "workspace": 54,
+    "provider": 17,
+    "prismFamily": 10,
     "capability": 27,
-    "codeWithPeer": 44,
+    "codeWithPeer": 48,
     "pureManifest": 6
   },
   "providers": [
@@ -19,6 +19,8 @@
     "@arnilo/prism-provider-anthropic",
     "@arnilo/prism-provider-azure",
     "@arnilo/prism-provider-bedrock",
+    "@arnilo/prism-provider-clinepass",
+    "@arnilo/prism-provider-deepseek",
     "@arnilo/prism-provider-google",
     "@arnilo/prism-provider-kimi",
     "@arnilo/prism-provider-neuralwatt",
@@ -27,6 +29,7 @@
     "@arnilo/prism-provider-opencode-go",
     "@arnilo/prism-provider-openrouter",
     "@arnilo/prism-provider-vertex",
+    "@arnilo/prism-provider-xai",
     "@arnilo/prism-provider-zai"
   ],
   "family": [
@@ -35,6 +38,7 @@
     "@arnilo/prism-caveman",
     "@arnilo/prism-code",
     "@arnilo/prism-compaction",
+    "@arnilo/prism-impeccable",
     "@arnilo/prism-openapi-tools",
     "@arnilo/prism-ponytail",
     "@arnilo/prism-providers",
@@ -75,6 +79,8 @@
         "@arnilo/prism-provider-ai-sdk",
         "@arnilo/prism-provider-alibaba",
         "@arnilo/prism-provider-anthropic",
+        "@arnilo/prism-provider-clinepass",
+        "@arnilo/prism-provider-deepseek",
         "@arnilo/prism-provider-google",
         "@arnilo/prism-provider-kimi",
         "@arnilo/prism-provider-neuralwatt",
@@ -82,6 +88,7 @@
         "@arnilo/prism-provider-openai",
         "@arnilo/prism-provider-opencode-go",
         "@arnilo/prism-provider-openrouter",
+        "@arnilo/prism-provider-xai",
         "@arnilo/prism-provider-zai"
       ],
       "omitsProviders": [
@@ -114,10 +121,11 @@
         "@arnilo/prism-web-tools",
         "@arnilo/prism-work-tools"
       ],
-      "closure": 44,
+      "closure": 47,
       "omits": [
         "@arnilo/prism-caveman",
         "@arnilo/prism-document-reader",
+        "@arnilo/prism-impeccable",
         "@arnilo/prism-openapi-tools",
         "@arnilo/prism-ponytail",
         "@arnilo/prism-session-store-nats"
@@ -156,6 +164,8 @@
       "@arnilo/prism-provider-ai-sdk",
       "@arnilo/prism-provider-alibaba",
       "@arnilo/prism-provider-anthropic",
+      "@arnilo/prism-provider-clinepass",
+      "@arnilo/prism-provider-deepseek",
       "@arnilo/prism-provider-google",
       "@arnilo/prism-provider-kimi",
       "@arnilo/prism-provider-neuralwatt",
@@ -163,6 +173,7 @@
       "@arnilo/prism-provider-openai",
       "@arnilo/prism-provider-opencode-go",
       "@arnilo/prism-provider-openrouter",
+      "@arnilo/prism-provider-xai",
       "@arnilo/prism-provider-zai"
     ],
     "prism-all": [
@@ -189,6 +200,8 @@
       "@arnilo/prism-provider-anthropic",
       "@arnilo/prism-provider-azure",
       "@arnilo/prism-provider-bedrock",
+      "@arnilo/prism-provider-clinepass",
+      "@arnilo/prism-provider-deepseek",
       "@arnilo/prism-provider-google",
       "@arnilo/prism-provider-kimi",
       "@arnilo/prism-provider-neuralwatt",
@@ -197,6 +210,7 @@
       "@arnilo/prism-provider-opencode-go",
       "@arnilo/prism-provider-openrouter",
       "@arnilo/prism-provider-vertex",
+      "@arnilo/prism-provider-xai",
       "@arnilo/prism-provider-zai",
       "@arnilo/prism-providers",
       "@arnilo/prism-rag",
@@ -214,7 +228,7 @@
   },
   "peerPolicy": {
     "decision": "A",
-    "spec": "0.2.8",
+    "spec": "0.2.9",
     "atomicUpgrade": true
   }
 }

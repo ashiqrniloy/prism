@@ -1,0 +1,45 @@
+{
+  "$comment": "0.2.8 baseline captured at plan 029 Task 0 freeze (2026-08-19) for regression comparison at the Task 10 exit gate. Counts come from the published 0.2.8 tree (HEAD a9918b42) plus scripts/release-evidence.json and scripts/package-truth.json. No live network at freeze.",
+  "captured": "2026-08-19",
+  "release": "0.2.8",
+  "gitHead": "a9918b42bd77a4015f6987c0de1898cd96133bf4",
+  "node": "v24.19.0",
+  "platform": "linux",
+  "manifestCount": {
+    "publishable": 51,
+    "workspace": 50,
+    "provider": 14,
+    "prismFamily": 9,
+    "capability": 27,
+    "source": "scripts/package-truth.json"
+  },
+  "audit": {
+    "command": "npm audit --audit-level=moderate",
+    "level": "moderate",
+    "vulnerabilities": 0,
+    "source": "plans/028-Release-0-2-8-ACP-Adoption-Fixes.md Task 18 completion record"
+  },
+  "compat": {
+    "baseline": "scripts/compat-baseline",
+    "baselineRelease": "0.2.8",
+    "breakingDeltas": 0,
+    "policy": "additive-only",
+    "source": "docs/release-and-install.md 0.2.8 publish handoff"
+  },
+  "exitGate": {
+    "version": "0.2.8",
+    "green": true,
+    "counts": {
+      "npmTest": "46 segments 0 failures (plan 028 Task 18)",
+      "coreNpmTest": "3716 tests / 33 skip (scripts/release-evidence.json)",
+      "threatSuites": 50,
+      "publishable": 51,
+      "audit": "0 moderate",
+      "secrets": "0 findings",
+      "sbom": "255 packages",
+      "releaseCheck": "51 packages available (--allow-dirty --allow-untagged)"
+    },
+    "sdkReady": "fail-closed without PRISM_TEST_POSTGRES_URL; operator remainder on 0.2.8",
+    "source": "scripts/release-evidence.json + plan 028 Task 18"
+  }
+}

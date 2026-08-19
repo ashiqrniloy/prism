@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.8] - 2026-08-19
+
+### Changed
+- v2.1 extras: require the original seven skills; register other `skills/*/SKILL.md`; skip dirs without `SKILL.md`. Caveman 2 engine is not a Prism runtime.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

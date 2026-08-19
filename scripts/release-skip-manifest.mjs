@@ -204,6 +204,16 @@ function buildSurfaces({ baseline, artifact, thresholds, packages }) {
     }
   }
 
+  surfaces.push({
+    name: "xAI SuperGrok OAuth live login",
+    state: "protected",
+    protected: true,
+    live: true,
+    requiredEnv: "PRISM_LIVE_XAI_OAUTH",
+    reason:
+      "device-code SuperGrok login requires a real SuperGrok/X Premium session; offline oauth.test.ts covers form-urlencoded poll; never a silent pass",
+  });
+
   // Protected: live canaries (scheduled live-canaries workflow, real
   // credentials, outside the release gate). Never pass.
   const inherited = baseline ? `${baseline.name} exitGate/protectedEvidence` : "no baseline";

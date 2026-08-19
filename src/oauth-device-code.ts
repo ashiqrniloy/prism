@@ -19,6 +19,7 @@ export interface OAuthDeviceCodePayload {
   readonly device_code: string;
   readonly user_code: string;
   readonly verification_uri: string;
+  readonly verification_uri_complete?: string;
   readonly expires_in?: number;
   readonly interval?: number;
 }
@@ -43,6 +44,10 @@ export interface PollDeviceCodeTokenOptions {
   readonly scope?: string;
   /** Extra token-request params merged into every poll body (e.g. client_secret, audience). Never logged. */
   readonly extraTokenParams?: Readonly<Record<string, string>>;
+  /** Extra device-code params merged into the device-code body only (e.g. referrer). Never logged. */
+  readonly extraDeviceParams?: Readonly<Record<string, string>>;
+  /** Wire encoding for device-code and token POSTs. Default `json` keeps Codex / M365 callers byte-compatible. */
+  readonly bodyEncoding?: "json" | "form";
   readonly callbacks?: Pick<OAuthLoginCallbacks, "onDeviceCode" | "signal">;
   /** Message prefix, e.g. "OpenAI" or the adapter id. */
   readonly errorPrefix: string;
@@ -90,6 +95,24 @@ const isTokenSuccessPayload = (value: unknown): value is OAuthTokenSuccessPayloa
   return typeof (value as Record<string, unknown>).access_token === "string";
 };
 
+const encodeOAuthBody = (encoding: "json" | "form", params: Record<string, string>): { contentType: string; body: string } =>
+  encoding === "form"
+    ? { contentType: "application/x-www-form-urlencoded", body: new URLSearchParams(params).toString() }
+    : { contentType: "application/json", body: JSON.stringify(params) };
+
+const requireHttpsVerificationUri = (value: string, label: string, errorPrefix: string, secrets: readonly (string | undefined)[]): string => {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw redactOAuthError(new Error(`${errorPrefix} ${label} must be https`), secrets);
+  }
+  if (parsed.protocol !== "https:") {
+    throw redactOAuthError(new Error(`${errorPrefix} ${label} must be https`), secrets);
+  }
+  return value;
+};
+
 /**
  * Request a device code, surface it through `onDeviceCode`, then poll the token
  * endpoint until success, expiry, a terminal OAuth error, or abort. All response
@@ -98,15 +121,19 @@ const isTokenSuccessPayload = (value: unknown): value is OAuthTokenSuccessPayloa
  * bounded text parsed as JSON with a redacted-text fallback.
  */
 export async function pollDeviceCodeToken(options: PollDeviceCodeTokenOptions): Promise<OAuthCredentials> {
-  const { fetchImpl, deviceCodeUrl, tokenUrl, clientId, scope, extraTokenParams, callbacks, errorPrefix, parseTokenCredentials } = options;
+  const { fetchImpl, deviceCodeUrl, tokenUrl, clientId, scope, extraTokenParams, extraDeviceParams, callbacks, errorPrefix, parseTokenCredentials } = options;
+  const bodyEncoding = options.bodyEncoding === "form" ? "form" : "json";
   const now = options.now ?? Date.now;
   const sleep = options.sleep ?? abortableSleep;
-  const requestBody: Record<string, string> = { client_id: clientId };
-  if (scope) requestBody.scope = scope;
+  const deviceBody = encodeOAuthBody(bodyEncoding, {
+    client_id: clientId,
+    ...(scope ? { scope } : {}),
+    ...extraDeviceParams,
+  });
   const response = await fetchImpl(deviceCodeUrl, {
     method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(requestBody),
+    headers: { "content-type": deviceBody.contentType },
+    body: deviceBody.body,
     signal: callbacks?.signal,
   });
   if (!response.ok) {
@@ -115,10 +142,15 @@ export async function pollDeviceCodeToken(options: PollDeviceCodeTokenOptions): 
   }
   const json = await readBoundedResponseJson<OAuthDeviceCodePayload>(response, { shape: isDeviceCodePayload });
   const secrets = [json.device_code, json.user_code];
+  requireHttpsVerificationUri(json.verification_uri, "verification_uri", errorPrefix, secrets);
+  const verificationUri =
+    typeof json.verification_uri_complete === "string" && json.verification_uri_complete.length > 0
+      ? requireHttpsVerificationUri(json.verification_uri_complete, "verification_uri_complete", errorPrefix, secrets)
+      : json.verification_uri;
   const expiresAtMs = now() + (json.expires_in ?? 0) * 1_000;
   await callbacks?.onDeviceCode?.({
     userCode: json.user_code,
-    verificationUri: json.verification_uri,
+    verificationUri,
     expiresAt: json.expires_in ? new Date(expiresAtMs).toISOString() : undefined,
   });
   let intervalMs = Math.max(1, (json.interval ?? DEFAULT_DEVICE_POLL_INTERVAL_MS / 1_000) * 1_000);
@@ -126,15 +158,16 @@ export async function pollDeviceCodeToken(options: PollDeviceCodeTokenOptions): 
     throwIfAborted(callbacks?.signal);
     await sleep(intervalMs, callbacks?.signal);
     throwIfAborted(callbacks?.signal);
+    const tokenBody = encodeOAuthBody(bodyEncoding, {
+      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+      client_id: clientId,
+      device_code: json.device_code,
+      ...extraTokenParams,
+    });
     const tokenResponse = await fetchImpl(tokenUrl, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-        client_id: clientId,
-        device_code: json.device_code,
-        ...extraTokenParams,
-      }),
+      headers: { "content-type": tokenBody.contentType },
+      body: tokenBody.body,
       signal: callbacks?.signal,
     });
     if (tokenResponse.ok) {

@@ -1,5 +1,16 @@
 # Migration guide
 
+## 0.2.8 → 0.2.9 provider adoption and behavior packages (additive)
+
+Release **0.2.9** (plan 029) adds three provider packages, SuperGrok device-code OAuth, `@arnilo/prism-impeccable`, Ponytail 4.9.0 empty-args status, and Caveman v2.1 extra skills. **Additive-only: no exported declaration removed, no persisted 0.2.8 shape repurposed.**
+
+- Install `@arnilo/prism-provider-deepseek`, `@arnilo/prism-provider-xai`, or `@arnilo/prism-provider-clinepass` (or `@arnilo/prism-providers`) for the new adapters. SuperGrok login is host-invoked RFC 8628 at `auth.x.ai`; no `XAI_API_KEY` required when OAuth credentials are stored.
+- Bare `/ponytail` now reports current+default mode and does not change mode. Use `/ponytail lite|full|ultra|off` to set mode.
+- Caveman still requires the original seven skills; extra `skills/*/SKILL.md` register. Caveman 2 engine is not a Prism runtime.
+- `@arnilo/prism-impeccable` needs `upstreamPath` to a compiled `SKILL.md`. Not in `prism-all`.
+
+No store migration. Rollback = restore the 0.2.8 manifests/tag.
+
 ## 0.2.7 → 0.2.8 ACP adoption fixes (additive)
 
 Release **0.2.8** (plan 028) tightens ACP coding-host interop and adds the spawnable `@arnilo/prism-acp-agent` entrypoint. **Additive-only: no exported declaration removed or changed, no persisted 0.2.7 shape repurposed.**

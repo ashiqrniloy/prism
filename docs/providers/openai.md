@@ -54,7 +54,7 @@ uses official Responses `reasoning: { effort, summary? }` via
 | Continuation | An incomplete Responses stream self-resumes at most eight HTTP hops using opaque `previous_response_id`; a cursor is at most 4 KiB, is never replayed, and is observable as `continuation_required`. |
 | Realtime | `createOpenAIRealtimeSession()` exposes server-session creation, audio in/out, transcript deltas, provider-hosted calls, interrupt, and idempotent close through the neutral `RealtimeSession` seam. |
 | Block preservation | User/system text → `input_text`; assistant text → `output_text`; assistant host `tool_call` → top-level `function_call` with `call_id`; provider-hosted calls are not replayed; `tool_result` → top-level `function_call_output`; images/files/audio when declared on the model. Bare thinking without an encrypted Responses reasoning item is omitted on replay. |
-| Auth methods | `api_key` for `openai`; host-invoked subscription `oauth` for `openai-codex`. This is Prism's only first-party subscription OAuth flow in 0.0.12. |
+| Auth methods | `api_key` for `openai`; host-invoked subscription `oauth` for `openai-codex`. xAI SuperGrok is the other first-party subscription OAuth flow ([xAI](xai.md)). |
 
 Unsupported block placements or unclaimed images fail before `fetch`. Provider-hosted calls are telemetry only: Prism never dispatches them as host tools or sends a `tool_result`.
 

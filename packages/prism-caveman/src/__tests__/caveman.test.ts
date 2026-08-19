@@ -37,6 +37,8 @@ describe("caveman skills", () => {
       const expected = parseSkillFile(upstreamText, join(fixtureRoot, "skills", name, "SKILL.md"));
       assert.equal(skill.instructions, expected.instructions);
     }
+    assert.ok(skills.find((item) => item.name === "caveman-explore"));
+    assert.equal(skills.find((item) => item.name === "generated"), undefined);
   });
 });
 
@@ -105,9 +107,14 @@ describe("caveman extension wiring", () => {
         ...session,
       }),
     ]);
-    assert.equal(kernel.registries.skills.list().length, CAVEMAN_SKILL_NAMES.length);
+    const names = kernel.registries.skills.list().map((skill) => skill.name);
+    for (const name of CAVEMAN_SKILL_NAMES) assert.ok(names.includes(name), `missing ${name}`);
+    assert.ok(names.includes("caveman-explore"));
+    assert.ok(!names.includes("generated"));
     assert.ok(kernel.registries.commands.get("caveman"));
     assert.ok(kernel.registries.commands.get("caveman-commit"));
+    assert.ok(kernel.registries.commands.get("caveman-explore"));
+    assert.ok(!kernel.registries.commands.get("generated"));
     assert.ok(kernel.registries.instructionInjectors.get("caveman-mode"));
   });
 

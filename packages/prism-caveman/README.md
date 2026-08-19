@@ -29,6 +29,6 @@ await kernel.load([caveman]);
 // Register createLoadSkillTool + skillsDisclosure: "progressive" for catalog-only skill bodies.
 ```
 
-Registers upstream skills, level commands, `caveman-mode` injector (filtered `skills/caveman/SKILL.md`), and session custom `caveman-level` persistence.
+Registers the required seven upstream skills plus any extra `skills/*/SKILL.md`. Level command + `caveman-mode` injector (filtered `skills/caveman/SKILL.md`) + session `caveman-level`. Caveman 2 engine files are ignored.
 
 Full API docs: [docs/caveman.md](../../docs/caveman.md). Demo: `node examples/caveman-ponytail.ts`.
