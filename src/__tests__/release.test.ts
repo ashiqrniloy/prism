@@ -7,6 +7,7 @@ import test from "node:test";
 
 import {
   assertGitState,
+  detectBaselineTag,
   loadRelease,
   publishArgs,
   runRelease,
@@ -193,4 +194,23 @@ test("release workflow publishes the lockstep cut once and package tags independ
   const releaseCli = readFileSync(join(process.cwd(), "scripts/release.mjs"), "utf8");
   assert.match(releaseCli, /--provenance/);
   assert.match(releaseCli, /HEAD must have tag v\$\{version\}/);
+});
+
+test("detectBaselineTag skips current release tags and resolves prior baseline", () => {
+  const root = fixture();
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: root, stdio: "ignore" });
+  git("init");
+  git("config", "user.email", "release@example.invalid");
+  git("config", "user.name", "Release Test");
+  git("add", ".");
+  git("commit", "-m", "v0.2.9 release");
+  git("tag", "v0.2.9");
+  writeFileSync(join(root, "package.json"), JSON.stringify({ name: "@arnilo/prism", version: "0.3.0" }));
+  git("add", "package.json");
+  git("commit", "-m", "0.3.0 cut");
+  git("tag", "v0.3.0");
+
+  // When validating 0.3.0 release, baseline must be v0.2.9 (prior tag), not v0.3.0
+  const baseline = detectBaselineTag(root, undefined, "0.3.0");
+  assert.equal(baseline, "v0.2.9");
 });

@@ -173,14 +173,32 @@ function shellGit(root, ...args) {
   return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
 }
 
-export function detectBaselineTag(root, name) {
+export function detectBaselineTag(root, name, currentVersion) {
   if (name) {
     const out = shellGit(root, "tag", "--list", `${name}@*`, "--sort=-v:refname");
-    const tag = out.split("\n").filter(Boolean)[0];
-    if (tag) return tag;
+    const tags = out
+      .split("\n")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    for (const tag of tags) {
+      const ver = tag.slice(name.length + 1);
+      if (!currentVersion || (parseSemver(ver) && cmpSemver(ver, currentVersion) < 0)) {
+        return tag;
+      }
+    }
   }
   const out = shellGit(root, "tag", "--list", "v*", "--sort=-v:refname");
-  return out.split("\n").filter(Boolean)[0] ?? "HEAD";
+  const tags = out
+    .split("\n")
+    .map((t) => t.trim())
+    .filter(Boolean);
+  for (const tag of tags) {
+    const ver = tag.replace(/^v/, "");
+    if (!currentVersion || (parseSemver(ver) && cmpSemver(ver, currentVersion) < 0)) {
+      return tag;
+    }
+  }
+  return tags[0] ?? "HEAD";
 }
 
 export function defaultGitDiff(root, baseline, pkgPath) {
@@ -202,7 +220,8 @@ export function defaultBaselineVersion(root, baseline, pkgPath) {
 }
 
 export function changedPackages(release, { baseline, gitDiff = defaultGitDiff } = {}) {
-  const resolved = baseline ?? detectBaselineTag(release.root);
+  const rootVersion = release.byName.get("@arnilo/prism")?.manifest.version;
+  const resolved = baseline ?? detectBaselineTag(release.root, undefined, rootVersion);
   return release.packages.filter((pkg) => gitDiff(release.root, resolved, pkg.path));
 }
 
@@ -212,7 +231,8 @@ export function changedPackages(release, { baseline, gitDiff = defaultGitDiff } 
  * bumped, unchanged packages not. Git/baseline seams are injectable for tests.
  */
 export function validateReleaseIndependent(release, { baseline, gitDiff = defaultGitDiff, baselineVersion = defaultBaselineVersion } = {}) {
-  const resolved = baseline ?? detectBaselineTag(release.root);
+  const rootVersion = release.byName.get("@arnilo/prism")?.manifest.version;
+  const resolved = baseline ?? detectBaselineTag(release.root, undefined, rootVersion);
   const errors = [];
   for (const pkg of release.packages) {
     for (const field of DEPENDENCY_FIELDS) {
