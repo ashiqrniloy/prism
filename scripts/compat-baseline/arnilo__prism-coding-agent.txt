@@ -419,6 +419,7 @@ SearchToolOptions	export type { SearchToolOptions } from "./search.js"
 ShellConfig	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
 ShellToolOptions	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
 SuspendAskUserDecisionOptions	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+TextFileClient	export type { TextFileClient } from "./acp-operations.js"
 TransformImage	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
 TransformImageInput	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
 WORKSPACE_LOCK_REASON_PREFIX	export declare const WORKSPACE_LOCK_REASON_PREFIX: "prism-workspace:"
@@ -458,6 +459,7 @@ codingCheckpointStatePatch	export declare function codingCheckpointStatePatch(me
 codingPlanPathForTask	export declare function codingPlanPathForTask(taskId: string): string
 codingSha256Hex	export declare function codingSha256Hex(data: Buffer | string): string
 compileSearchPattern	export declare function compileSearchPattern(query: string, caseSensitive: boolean, maxPatternBytes: number):
+createAcpFilesystemOperations	export declare function createAcpFilesystemOperations(client: TextFileClient):
 createAllTools	export declare function createAllTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
 createAskUserDecisionResumeValidator	export declare function createAskUserDecisionResumeValidator(limits?: Pick<ResolvedAskUserDecisionLimits, "maxCustomTextBytes">): WorkflowResumeValidator
 createAskUserDecisionTool	export declare function createAskUserDecisionTool(options: AskUserDecisionToolOptions): ToolDefinition

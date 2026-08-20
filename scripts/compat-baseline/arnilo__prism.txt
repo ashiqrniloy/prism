@@ -144,6 +144,8 @@ DefaultInputBuildContext	export type { AgentInput, AssembleProviderInputOptions,
 DefaultInputBuilder	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
 DefaultPromptBuilder	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, DefaultPromptBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, ResolveContextOptions, } from "./input.js"
 DefaultRetryPolicyOptions	export type { DefaultRetryPolicyOptions } from "./retry.js"
+DelegatedAgentStepError	export declare class DelegatedAgentStepError extends Error
+DelegatedAgentStepInput	export type { DelegatedAgentStepInput } from "./delegated-agent-step.js"
 DeviceAdapter	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
 DeviceAdmitRequest	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
 DeviceChunkResult	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
@@ -246,6 +248,12 @@ MAX_ACTION_CONSTRAINTS	export declare const MAX_ACTION_CONSTRAINTS = 32
 MAX_ACTION_CONSTRAINT_BYTES	export declare const MAX_ACTION_CONSTRAINT_BYTES: number
 MAX_ATTRIBUTION_DEPTH	export declare const MAX_ATTRIBUTION_DEPTH = 8
 MAX_DECISION_REASON_BYTES	export declare const MAX_DECISION_REASON_BYTES: number
+MAX_DELEGATED_AGENT_DURATION_MS	export declare const MAX_DELEGATED_AGENT_DURATION_MS: number
+MAX_DELEGATED_AGENT_EVENT_BYTES	export declare const MAX_DELEGATED_AGENT_EVENT_BYTES: number
+MAX_DELEGATED_AGENT_ID_BYTES	export declare const MAX_DELEGATED_AGENT_ID_BYTES = 512
+MAX_DELEGATED_AGENT_NAME_BYTES	export declare const MAX_DELEGATED_AGENT_NAME_BYTES = 256
+MAX_DELEGATED_AGENT_STEP_INDEX	export declare const MAX_DELEGATED_AGENT_STEP_INDEX = 1000000
+MAX_DELEGATED_AGENT_TOKEN_COUNT	export declare const MAX_DELEGATED_AGENT_TOKEN_COUNT = 1000000000000
 MAX_ELICITATION_BYTES	export declare const MAX_ELICITATION_BYTES: number
 MAX_FEEDBACK_ID_LENGTH	export declare const MAX_FEEDBACK_ID_LENGTH = 128
 MAX_FEEDBACK_TAG_LENGTH	export declare const MAX_FEEDBACK_TAG_LENGTH = 64
@@ -501,6 +509,7 @@ createDefaultCompactionStrategy	export declare function createDefaultCompactionS
 createDefaultInputBuilder	export declare function createDefaultInputBuilder(): DefaultInputBuilder
 createDefaultPromptBuilder	export declare function createDefaultPromptBuilder(): DefaultPromptBuilder
 createDefaultRetryPolicy	export declare function createDefaultRetryPolicy(options?: DefaultRetryPolicyOptions): RetryPolicy
+createDelegatedAgentStep	export declare function createDelegatedAgentStep(input: DelegatedAgentStepInput): DelegatedAgentStep
 createEnvCredentialResolver	export declare function createEnvCredentialResolver(env: Readonly<Record<string, string | undefined>>, map: Readonly<Record<string, string>>): CredentialResolver
 createEventMultiplexer	export declare function createEventMultiplexer<T>(options?: EventMultiplexerOptions<T>): EventMultiplexer<T>
 createExplicitCredentialResolver	export declare function createExplicitCredentialResolver(sources: readonly CredentialResolverSource[]): CredentialResolver
