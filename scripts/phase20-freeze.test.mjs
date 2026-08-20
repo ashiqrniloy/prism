@@ -85,7 +85,13 @@ function dependencyNameFingerprint() {
   for (const [pkg, manifestPath] of [
     [root.name, "package.json"],
     ...readdirSync(url("../packages"), { withFileTypes: true })
-      .filter((e) => e.isDirectory() && existsSync(url(`../packages/${e.name}/package.json`)) && e.name !== "computer-use-linux" && e.name !== "antigravity-agent")
+      .filter(
+        (e) =>
+          e.isDirectory() &&
+          existsSync(url(`../packages/${e.name}/package.json`)) &&
+          e.name !== "computer-use-linux" &&
+          e.name !== "antigravity-agent",
+      )
       .map((e) => [JSON.parse(readFileSync(url(`../packages/${e.name}/package.json`), "utf8")).name, `packages/${e.name}/package.json`]),
   ]) {
     const m = JSON.parse(readFileSync(url(`../${manifestPath}`), "utf8"));
