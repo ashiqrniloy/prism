@@ -52,7 +52,7 @@
     }
   },
   "devDependencies": {
-    "@ag-ui/client": "0.0.57",
+    "@ag-ui/client": "0.0.58",
     "@arnilo/prism": "file:../..",
     "@arnilo/prism-mcp": "file:../mcp",
     "@arnilo/prism-supervisor": "file:../supervisor"
