@@ -29,11 +29,11 @@
     "@arnilo/prism": "^0.3.0"
   },
   "dependencies": {
-    "pg": "^8.22.0"
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
-    "@types/pg": "^8.11.11"
+    "@types/pg": "^8.23.0"
   },
   "engines": {
     "node": ">=20"
