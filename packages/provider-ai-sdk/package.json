@@ -25,11 +25,11 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@ai-sdk/provider": "4.0.4",
+    "@ai-sdk/provider": "4.0.7",
     "@arnilo/prism": "^0.3.0"
   },
   "devDependencies": {
-    "@ai-sdk/provider": "4.0.4",
+    "@ai-sdk/provider": "4.0.7",
     "@arnilo/prism": "file:../.."
   },
   "sideEffects": false,
