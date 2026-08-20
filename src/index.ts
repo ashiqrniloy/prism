@@ -284,6 +284,17 @@ export {
 } from "./devices.js";
 export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js";
 export { createEventMultiplexer, EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE, EventMultiplexerError } from "./event-multiplexer.js";
+export {
+  createDelegatedAgentStep,
+  DelegatedAgentStepError,
+  MAX_DELEGATED_AGENT_DURATION_MS,
+  MAX_DELEGATED_AGENT_EVENT_BYTES,
+  MAX_DELEGATED_AGENT_ID_BYTES,
+  MAX_DELEGATED_AGENT_NAME_BYTES,
+  MAX_DELEGATED_AGENT_STEP_INDEX,
+  MAX_DELEGATED_AGENT_TOKEN_COUNT,
+} from "./delegated-agent-step.js";
+export type { DelegatedAgentStepInput } from "./delegated-agent-step.js";
 export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js";
 export { applyExecutionDecision, assertExecutionAllowed, checkExecution, ExecutionDeniedError } from "./execution-policy.js";
 export type {
@@ -619,5 +630,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.2.9";
+export const version = "0.3.0";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

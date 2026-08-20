@@ -1,0 +1,14 @@
+COMPUTER_USE_LINUX_MUTATING_TOOLS	export declare const COMPUTER_USE_LINUX_MUTATING_TOOLS: readonly ["activate_window", "move_window", "resize_window", "scroll", "click", "drag", "press_key", "type_text", "perform_action", "set_value", "setup_accessibility", "setup_window_targeting"]
+COMPUTER_USE_LINUX_READ_TOOLS	export declare const COMPUTER_USE_LINUX_READ_TOOLS: readonly ["doctor", "list_apps", "list_windows", "focused_window", "get_app_state", "screenshot"]
+COMPUTER_USE_LINUX_SETUP_TOOLS	export declare const COMPUTER_USE_LINUX_SETUP_TOOLS: readonly ["setup_accessibility", "setup_window_targeting"]
+COMPUTER_USE_LINUX_SKILL_NAME	export declare const COMPUTER_USE_LINUX_SKILL_NAME = "computer-use-linux"
+COMPUTER_USE_LINUX_TOOL_NAMES	export declare const COMPUTER_USE_LINUX_TOOL_NAMES: readonly ["doctor", "list_apps", "list_windows", "focused_window", "get_app_state", "screenshot", ...("activate_window" | "click" | "drag" | "move_window" | "perform_action" | "press_key" | "resize_window" | "scroll" | "set_value" | "setup_accessibility" | "setup_window_targeting" | "type_text")[]]
+MAX_SKILL_FILE_BYTES	export declare const MAX_SKILL_FILE_BYTES: number
+classifyComputerUseLinuxTool	export declare function classifyComputerUseLinuxTool(name: string): ComputerUseLinuxToolClass | undefined
+createComputerUseLinuxTools	export declare function createComputerUseLinuxTools(options: ComputerUseLinuxToolsOptions): Promise<ComputerUseLinuxTools>
+isComputerUseLinuxTool	export declare function isComputerUseLinuxTool(name: string, includeSetupTools?: boolean): boolean
+loadComputerUseLinuxSkill	export declare function loadComputerUseLinuxSkill(): Skill
+packageName	export declare const packageName = "@arnilo/prism-computer-use-linux"
+type ComputerUseLinuxConnect	export { type ComputerUseLinuxConnect, type ComputerUseLinuxTools, type ComputerUseLinuxToolsOptions, createComputerUseLinuxTools, } from "./create.js"
+type ComputerUseLinuxTools	export { type ComputerUseLinuxConnect, type ComputerUseLinuxTools, type ComputerUseLinuxToolsOptions, createComputerUseLinuxTools, } from "./create.js"
+type ComputerUseLinuxToolsOptions	export { type ComputerUseLinuxConnect, type ComputerUseLinuxTools, type ComputerUseLinuxToolsOptions, createComputerUseLinuxTools, } from "./create.js"

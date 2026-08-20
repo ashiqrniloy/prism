@@ -54,6 +54,7 @@ const packages = [
   { dir: "packages/web-tools", name: "@arnilo/prism-web-tools" },
   { dir: "packages/browser", name: "@arnilo/prism-browser" },
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
+  { dir: "packages/computer-use-linux", name: "@arnilo/prism-computer-use-linux" },
   // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
   { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isMeta: true },
   { dir: "packages/prism-compaction", name: "@arnilo/prism-compaction", isMeta: true },
@@ -174,7 +175,7 @@ describe("packaging guard", () => {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
-          assert.equal(peers?.["@arnilo/prism"], "0.2.9", `${pkg.name} @arnilo/prism peer must be 0.2.4`);
+          assert.equal(peers?.["@arnilo/prism"], "^0.3.0", `${pkg.name} @arnilo/prism peer must be ^0.3.0`);
           const meta = manifest.peerDependenciesMeta as Readonly<Record<string, { readonly optional?: boolean }>> | undefined;
           assert.ok(!meta?.["@arnilo/prism"]?.optional, `${pkg.name} must not mark the @arnilo/prism peer optional`);
         });
@@ -246,7 +247,7 @@ describe("packaging guard", () => {
           assert.ok(want, `${pkg.name} not in expected meta-package map`);
           assert.deepEqual(depNames.sort(), want.sort(), `${pkg.name} dependencies must be exactly its family`);
           for (const v of Object.values(deps)) {
-            assert.equal(v, "0.2.9", `${pkg.name} dependency must be pinned to 0.2.4`);
+            assert.equal(v, "^0.3.0", `${pkg.name} dependency must use the ^0.3.0 caret window`);
           }
         });
       }
@@ -259,6 +260,15 @@ describe("packaging guard", () => {
       }
     });
   }
+
+  it("computer-use-linux package ships its local skill", () => {
+    const desktop = packages.find((pkg) => pkg.name === "@arnilo/prism-computer-use-linux");
+    assert.ok(desktop, "computer-use-linux missing from packaging package list");
+    const files = getPackList(desktop.dir, desktop.name);
+    assert.ok(files.includes("skills/computer-use-linux/SKILL.md"), "desktop package missing bundled skill");
+    const manifest = readPkg(desktop.dir);
+    assert.ok((manifest.files as string[] | undefined)?.includes("skills"), "desktop package manifest must include skills");
+  });
 
   it("phase48 neuralwatt package exports types and umbrella membership are release-gated", () => {
     const neuralWatt = packages.find((pkg) => pkg.name === "@arnilo/prism-provider-neuralwatt");
@@ -275,13 +285,13 @@ describe("packaging guard", () => {
     );
 
     const providers = readPkg("packages/prism-providers").dependencies as Record<string, string> | undefined;
-    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "0.2.9", "@arnilo/prism-providers must hard-depend on NeuralWatt");
+    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "^0.3.0", "@arnilo/prism-providers must hard-depend on NeuralWatt");
     const all = readPkg("packages/prism-all").dependencies as Record<string, string> | undefined;
-    assert.equal(all?.["@arnilo/prism-providers"], "0.2.9", "@arnilo/prism-all must hard-depend on provider umbrella");
-    assert.equal(all?.["@arnilo/prism-ag-ui"], "0.2.9", "@arnilo/prism-all must hard-depend on AG-UI only");
-    assert.equal(all?.["@arnilo/prism-work-tools"], "0.2.9", "@arnilo/prism-all must hard-depend on work-tools");
-    assert.equal(all?.["@arnilo/prism-policy"], "0.2.9", "@arnilo/prism-all must hard-depend on policy");
-    assert.equal(all?.["@arnilo/prism-enterprise-postgres"], "0.2.9", "@arnilo/prism-all must hard-depend on enterprise PostgreSQL state");
+    assert.equal(all?.["@arnilo/prism-providers"], "^0.3.0", "@arnilo/prism-all must hard-depend on provider umbrella");
+    assert.equal(all?.["@arnilo/prism-ag-ui"], "^0.3.0", "@arnilo/prism-all must hard-depend on AG-UI only");
+    assert.equal(all?.["@arnilo/prism-work-tools"], "^0.3.0", "@arnilo/prism-all must hard-depend on work-tools");
+    assert.equal(all?.["@arnilo/prism-policy"], "^0.3.0", "@arnilo/prism-all must hard-depend on policy");
+    assert.equal(all?.["@arnilo/prism-enterprise-postgres"], "^0.3.0", "@arnilo/prism-all must hard-depend on enterprise PostgreSQL state");
     for (const profile of ["packages/prism-code", "packages/prism-sdk"]) {
       const deps = readPkg(profile).dependencies as Record<string, string>;
       assert.equal(deps["@arnilo/prism-ag-ui"], undefined, `${profile} must not include AG-UI`);
@@ -304,7 +314,12 @@ describe("packaging guard", () => {
       }
     };
     visit("@arnilo/prism-all");
-    const optOutOfAll = new Set(["@arnilo/prism-caveman", "@arnilo/prism-ponytail", "@arnilo/prism-impeccable"]);
+    const optOutOfAll = new Set([
+      "@arnilo/prism-caveman",
+      "@arnilo/prism-ponytail",
+      "@arnilo/prism-impeccable",
+      "@arnilo/prism-computer-use-linux",
+    ]);
     const expected = packages.map((pkg) => pkg.name).filter((name) => !optOutOfAll.has(name));
     assert.deepEqual([...included].sort(), expected.sort());
   });

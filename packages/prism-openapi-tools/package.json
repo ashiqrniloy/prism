@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-openapi-tools",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "description": "Optional OpenAPI 3.1 tools adapter for Prism: compile host-selected operations into bounded ToolDefinitions.",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,7 +25,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "0.2.9"
+    "@arnilo/prism": "^0.3.0"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

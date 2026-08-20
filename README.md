@@ -4,7 +4,9 @@
 bring their tools, providers, credentials, storage, and UI; Prism supplies the
 common contracts, registries, agent/session runtime, replaceable input/prompt
 and compaction strategies, CLI/RPC adapters, and first-party provider/compaction
-packages. Prism defines contracts, not apps.
+packages. The current 0.3.0 line contains 56 publishable manifests, including
+optional Linux desktop control and independent package versioning after the final
+lockstep cut. Prism defines contracts, not apps.
 
 ## Current scope
 
@@ -18,9 +20,10 @@ packages. Prism defines contracts, not apps.
   OpenAI/OpenRouter use best-effort explicit cache hints, NeuralWatt uses
   best-effort implicit prefix caching, and other providers have route/model-specific
   or no cache-control support; see [docs/provider-caching.md](docs/provider-caching.md).
-- **First-party packages**: fourteen provider adapters, two compaction strategies,
+- **First-party packages**: seventeen provider adapters, two compaction strategies,
   coding tools/security, JSON Schema validation, MCP, workflows, OpenTelemetry,
-  encrypted credentials, SQLite/PostgreSQL persistence, and manifest-only install profiles.
+  encrypted credentials, SQLite/PostgreSQL persistence, Linux desktop control,
+  and manifest-only install profiles.
 - **Tools, context, skills**: host-owned tool registry with allow/deny filtering
   and dispatch, context providers, and a skill registry with progressive
   disclosure.
@@ -56,7 +59,7 @@ npm install @arnilo/prism @arnilo/prism-provider-openai    # core + one provider
 npm install @arnilo/prism-base                              # core + compaction + validation
 npm install @arnilo/prism-code @arnilo/prism-provider-openai # coding-agent profile
 npm install @arnilo/prism-sdk @arnilo/prism-provider-openai  # application profile
-npm install @arnilo/prism-all                               # broad umbrella (21 direct / 44 transitive packages)
+npm install @arnilo/prism-all                               # broad umbrella (21 direct / 47 workspace packages)
 npm install @arnilo/prism-server @arnilo/prism-workflows    # optional Web API boundary
 npm install @arnilo/prism-supervisor                         # optional local delegation + A2A 1.0
 npm install @arnilo/prism-web-tools                          # optional bounded Brave/Exa/Firecrawl research
@@ -168,6 +171,8 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-provider-vertex` | Google Vertex provider |
 | `@arnilo/prism-provider-ai-sdk` | AI SDK interoperability adapter |
 | `@arnilo/prism-browser` | optional host-wired Playwright browser automation (not core; not auto-activated) |
+| `@arnilo/prism-computer-use-linux` | optional Linux desktop-control tools over a host-owned `computer-use-linux` MCP binary |
+| `@arnilo/prism-antigravity-agent` | optional Antigravity CLI delegated agent adapter with per-run Prism MCP capability exposure |
 | `@arnilo/prism-compaction-llm` | provider-backed compaction strategy |
 | `@arnilo/prism-compaction-observational-memory` | source-backed memory + recall tool |
 | `@arnilo/prism-coding-agent` | bounded shell/read/write/edit tools |
@@ -186,7 +191,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-base` | profile: core + compaction + JSON Schema validation |
 | `@arnilo/prism-code` | profile: base + coding tools/security + MCP |
 | `@arnilo/prism-sdk` | profile: base + workflows + MCP + credentials + OpenTelemetry |
-| `@arnilo/prism-all` | broad umbrella: 21 first-party packages (47 transitive) across runtime, capability, provider, and persistence — omits document-reader, OpenAPI tools, NATS, Caveman, Ponytail, and Impeccable |
+| `@arnilo/prism-all` | broad umbrella: 21 first-party packages (47 transitive) across a 47-package workspace closure — omits document-reader, OpenAPI tools, NATS, Caveman, Ponytail, Impeccable, computer-use-linux, and antigravity-agent |
 
 ## Scripts
 

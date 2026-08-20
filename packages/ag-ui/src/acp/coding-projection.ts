@@ -12,6 +12,9 @@
  *   (`newText` = unified patch) + location at `firstChangedLine`.
  * - `write`: metadata `{ path }` → location only (result carries no file body,
  *   so no honest oldText/newText; use `file_changed` + `fileDiff` for bodies).
+ * - `delete`: metadata `{ path }` → location only.
+ * - `move`: metadata `{ to }` (falling back to `{ from }`) → destination location only;
+ *   moves never emit a fake diff.
  *
  * Redaction and the hard `acpDiffBytes` / `acpLocationsPerUpdate` caps still
  * run in the mapper after this returns. Optional `maxDiffBytes` pre-truncates
@@ -63,8 +66,8 @@ export function createCodingToolProjection(options: CodingToolProjectionOptions 
       };
     },
     toolLocations(result) {
-      if (result.error || (result.name !== "edit" && result.name !== "write")) return undefined;
-      const path = metaString(result, "path");
+      if (result.error || !["edit", "write", "delete", "move"].includes(result.name)) return undefined;
+      const path = result.name === "move" ? (metaString(result, "to") ?? metaString(result, "from")) : metaString(result, "path");
       if (!path) return undefined;
       const line = result.name === "edit" ? metaLine(result, "firstChangedLine") : undefined;
       return [{ path, ...(line === undefined ? {} : { line }) }];

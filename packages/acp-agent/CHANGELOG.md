@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.0] - 2026-08-20
+
+### Added
+
+- Spawnable ACP agents create per-session coding registries backed by advertised client editor buffers, preserving durable approval resumes through the same session agent; disk-backed shell/search/list/glob/delete/move behavior remains explicit hybrid mode.
+
 ## [0.2.8] - 2026-08-18
 
 ### Added

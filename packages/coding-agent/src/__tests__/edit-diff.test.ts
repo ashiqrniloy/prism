@@ -135,3 +135,39 @@ test("generateDiffString: returns diff and first changed line", () => {
   assert.ok(diff.includes("+2 B"));
   assert.ok(diff.includes("-2 b"));
 });
+
+test("applyEditsToNormalizedContent: result carries usedFuzzyMatch (exact=false, fuzzy=true)", () => {
+  const exact = applyEditsToNormalizedContent("a\nb\n", [{ oldText: "b", newText: "B" }], "f");
+  assert.equal(exact.usedFuzzyMatch, false);
+  // oldText omits trailing whitespace that the file has → fuzzy match path
+  const fuzzy = applyEditsToNormalizedContent("line\u00A0with spaces\n", [{ oldText: "line with spaces", newText: "X" }], "f");
+  assert.equal(fuzzy.usedFuzzyMatch, true);
+});
+
+test("applyEditsToNormalizedContent: no-match error includes Nearby snippets when a similar line exists", () => {
+  // oldText diverges from the file AFTER the first 16 chars, so the clipped needle is a shared prefix
+  const content = "function createEditTool(opts) {\nother\nfunction createEditTool(config) {\nrest";
+  assert.throws(
+    () => applyEditsToNormalizedContent(content, [{ oldText: "function createEditTool(ARGS) {", newText: "z" }], "src/a.ts"),
+    (err: Error) =>
+      /Could not find the exact text in src\/a\.ts/.test(err.message) &&
+      /Nearby:/.test(err.message) &&
+      /L1: function createEditTool\(opts\) \{/.test(err.message) &&
+      /L3: function createEditTool\(config\) \{/.test(err.message),
+  );
+});
+
+test("applyEditsToNormalizedContent: no-match with no similar line keeps the plain sentence", () => {
+  assert.throws(
+    () => applyEditsToNormalizedContent("alpha\nbeta\n", [{ oldText: "zzz unrelated", newText: "y" }], "f"),
+    (err: Error) => /Could not find the exact text in f/.test(err.message) && !/Nearby:/.test(err.message),
+  );
+});
+
+test("applyEditsToNormalizedContent: no-match needle shorter than 4 chars keeps the plain sentence", () => {
+  // first line "ab" trims to 2 chars < 4 → no Nearby
+  assert.throws(
+    () => applyEditsToNormalizedContent("ab\nab\n", [{ oldText: "ab\nmore", newText: "y" }], "f"),
+    (err: Error) => !/Nearby:/.test(err.message),
+  );
+});

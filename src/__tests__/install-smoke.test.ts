@@ -807,40 +807,39 @@ describe("install smoke (fresh offline tarball install)", () => {
     );
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.2.9.tgz.
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.3.0.tgz.
   // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.2.9.tgz (npm strips the @scope/)", () => {
+  it("core tarball filename is arnilo-prism-0.3.0.tgz (npm strips the @scope/)", () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.2.9.tgz"),
-      `expected 'arnilo-prism-0.2.9.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes("arnilo-prism-0.3.0.tgz"),
+      `expected 'arnilo-prism-0.3.0.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.2.9.tgz", "arnilo-prism-compaction-0.2.9.tgz", "arnilo-prism-all-0.2.9.tgz"]) {
+    for (const meta of ["arnilo-prism-providers-0.3.0.tgz", "arnilo-prism-compaction-0.3.0.tgz", "arnilo-prism-all-0.3.0.tgz"]) {
       assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
     }
   });
 });
 
-// Plan 024 Task 3: peer-version policy (Decision A — exact pins). A partial
-// upgrade (installed core at the current version + an adapter peering the
-// NEXT version) must fail clearly with ERESOLVE; the matched-set clean install
-// is the main journey above (every tarball at the same exact version,
-// installStatus 0).
-describe("peer-version policy (plan 024 Task 3, Decision A: exact pins)", () => {
+// Plan 030 Task 9: peer-version policy (Decision B — caret ranges). A package
+// may move within the 0.3.x window without forcing a synchronized graph, but a
+// package outside that window must still fail clearly with ERESOLVE.
+describe("peer-version policy (plan 030 Task 9, Decision B: caret ranges)", () => {
   const stage = mkdtempSync(join(tmpdir(), "prism-peer-mix-"));
   after(() => rmSync(stage, { recursive: true, force: true }));
 
-  it("a mismatched exact pin fails clearly with npm ERESOLVE naming the conflicting peer", () => {
-    // Fake next-version adapter: real coding-agent source with version + core
-    // peer bumped forward one — the only difference from the real tarball.
-    const fakeVersion = "0.2.10";
+  it("a peer range outside the 0.3.x window fails clearly with npm ERESOLVE", () => {
+    // Fake next-major adapter: real coding-agent source with version + core
+    // peer bumped outside the current caret window — the only difference from
+    // the real tarball.
+    const fakeVersion = "0.4.0";
     const fakeDir = join(stage, "fake");
     cpSync(join(repoRoot, "packages", "coding-agent"), fakeDir, { recursive: true });
     const manifestPath = join(fakeDir, "package.json");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     manifest.version = fakeVersion;
-    manifest.peerDependencies["@arnilo/prism"] = fakeVersion;
+    manifest.peerDependencies["@arnilo/prism"] = "^0.4.0";
     writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     for (const [cwd, dest] of [
       [fakeDir, stage],
@@ -855,13 +854,13 @@ describe("peer-version policy (plan 024 Task 3, Decision A: exact pins)", () => 
     writeFileSync(join(consumer, "package.json"), JSON.stringify({ name: "prism-peer-mix-consumer", type: "module" }, null, 2));
     const coreInstall = run(
       "npm",
-      ["install", join(stage, "arnilo-prism-0.2.9.tgz"), "--offline", "--no-audit", "--no-fund", "--no-update-notifier"],
+      ["install", join(stage, "arnilo-prism-0.3.0.tgz"), "--offline", "--no-audit", "--no-fund", "--no-update-notifier"],
       consumer,
     );
     assert.equal(coreInstall.status, 0, coreInstall.stdout + coreInstall.stderr);
 
-    // Decision A is fail-closed: npm refuses the tree instead of silently
-    // resolving an untested pair (no --legacy-peer-deps fallback anywhere).
+    // Decision B still fails closed outside the caret window (no
+    // --legacy-peer-deps fallback anywhere).
     const mix = run(
       "npm",
       [
@@ -877,8 +876,8 @@ describe("peer-version policy (plan 024 Task 3, Decision A: exact pins)", () => 
     assert.notEqual(mix.status, 0, "an unsupported peer mixture must fail the install");
     assert.ok(mix.stderr.includes("ERESOLVE"), `expected npm ERESOLVE, got:\n${mix.stdout}${mix.stderr}`);
     assert.ok(
-      mix.stderr.includes(`@arnilo/prism@"${fakeVersion}"`),
-      `expected the conflicting ${fakeVersion} peer named, got:\n${mix.stdout}${mix.stderr}`,
+      mix.stderr.includes('@arnilo/prism@"^0.4.0"'),
+      `expected the conflicting ^0.4.0 peer named, got:\n${mix.stdout}${mix.stderr}`,
     );
   });
 });

@@ -44,7 +44,9 @@ The handler accepts only `POST` JSON validated with official AG-UI `RunAgentInpu
 
 ## Outputs / response / events
 
-The handler returns `text/event-stream`, one `data: <AG-UI event>\n\n` frame per output. Mapper lifecycle is ordered: `RUN_*`, `STEP_*`, `TEXT_MESSAGE_*`, and `TOOL_CALL_*` are deterministic Prism mappings. Host projectors may additionally prove and emit `STATE_SNAPSHOT`/`STATE_DELTA`, `MESSAGES_SNAPSHOT`, `ACTIVITY_*`, current `REASONING_*`, `RAW`, and named `CUSTOM` values. All values revalidate against official `EventSchemas`; deprecated `THINKING_*` and convenience chunk events are not produced. Active message/tool/reasoning/step sequences close before error, interruption, or finish.
+The handler returns `text/event-stream`, one `data: <AG-UI event>\n\n` frame per output. Mapper lifecycle is ordered: `RUN_*`, `STEP_*`, `TEXT_MESSAGE_*`, and `TOOL_CALL_*` are deterministic Prism mappings. Host projectors may additionally prove and emit `STATE_SNAPSHOT`/`STATE_DELTA`, `MESSAGES_SNAPSHOT`, `ACTIVITY_*`, current `REASONING_*`, `RAW`, and named `CUSTOM` values.
+
+`delegated_agent_step` maps by default to bounded `ACTIVITY_SNAPSHOT` metadata with activity type `prism.delegated_agent_step`; `includeCustomEvents: true` also emits `CUSTOM prism.delegated_agent_step`. The safe payload contains adapter/conversation identifiers, step index/state/kind, duration, token counts, tool/subagent names, and opaque detail references only. Normal assistant text remains `TEXT_MESSAGE_*`; delegated events never duplicate transcript text. Raw event bodies, tool arguments/results, paths, URIs, logs, and hidden thought text remain absent unless a host explicitly supplies a projection. All values revalidate against official `EventSchemas`; deprecated `THINKING_*` and convenience chunk events are not produced. Active message/tool/reasoning/step sequences close before error, interruption, or finish.
 
 A Prism durable `agent_suspended` returns `RUN_FINISHED` with core interrupt id `${runId}:${version}` and a strict `{ decision: "approve" | "deny" }` schema. `projection.interrupt` may attach bounded expiry/metadata or additional host policy interrupts but must retain that core id. Without `interrupts.resume`, one exact entry is required; `cancelled` means deny. An aggregate policy may validate bounded multiple entries, then returns one current-version core decision. Payloads containing `editedArgs`/`args` always deny: Prism does not mutate persisted tool calls. The adapter checks host authorization, selected run, suspended status, and checkpoint version, then calls `AgentRunLifecycle.resumeStream()` once. Claimed/dispatched tools are never replayed.
 
@@ -122,7 +124,7 @@ See runnable network-free [`examples/ag-ui-server.ts`](../examples/ag-ui-server.
 
 All identity, authorization, session/thread mapping, durable checkpoint lookup, persistence selection, replay cursor persistence, transport adaptation, MCP bridge/card configuration, app sandbox DOM, remote A2A task correlation, and optional projection are host-owned. The adapter owns no listener, database, background reconnect loop, credential resolver, or UI state.
 
-`AgUiProjection` is an allow-list. Without a callback, raw tool arguments/results/progress, arbitrary state/patches/transcripts/activity/reasoning/raw events, paths, ACP locations/diffs/terminals/raw I/O, and frontend-supplied tools remain absent. Reasoning signatures do not become AG-UI encrypted values automatically: a host must explicitly provide an already client-encrypted opaque value. `input.project` is also an allow-list: do not merge client state/forwarded props into ownership, identity, tools, permissions, provider options, or media fetch policy.
+`AgUiProjection` is an allow-list. Without a callback, raw tool arguments/results/progress, arbitrary state/patches/transcripts/activity/reasoning/raw events, delegated raw event bodies, paths, ACP locations/diffs/terminals/raw I/O, and frontend-supplied tools remain absent. Reasoning signatures do not become AG-UI encrypted values automatically: a host must explicitly provide an already client-encrypted opaque value. `input.project` is also an allow-list: do not merge client state/forwarded props into ownership, identity, tools, permissions, provider options, or media fetch policy.
 
 ### Reasoning encrypted-value helper (FR-3)
 
@@ -222,4 +224,5 @@ Defaults / hard caps: request 64 KiB / 1 MiB; input 128 / 1024 messages, 32 / 25
 - [MCP bridge/server](mcp-tools.md): `mcpApps` negotiation, bounded resources, and remote tool trust.
 - [A2A interoperability](a2a.md): verified rich task client and remote task lifecycle.
 - [Host security guide](host-security.md): authorization, ownership, redaction, and credential boundaries.
+- [Antigravity delegated agent](antigravity-agent.md): delegated Antigravity CLI execution with timeline step projection.
 - [Work artifacts and review](work-artifacts-and-review.md): durable artifact service that produces the co-work approval/progress/download-link events projected here.

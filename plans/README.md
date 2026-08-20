@@ -33,5 +33,7 @@ Active numbered execution plans for Prism roadmap phases.
 | [027-Release-0-2-7-Enterprise-ERP-Production-Readiness.md](027-Release-0-2-7-Enterprise-ERP-Production-Readiness.md) | 0.2.x — Release 0.2.7 (enterprise ERP production readiness) | complete |
 | [028-Release-0-2-8-ACP-Adoption-Fixes.md](028-Release-0-2-8-ACP-Adoption-Fixes.md) | 0.2.x — Release 0.2.8 (ACP adoption fixes) | complete |
 | [029-Release-0-2-9-Provider-Adoption-And-Behavior-Packages.md](029-Release-0-2-9-Provider-Adoption-And-Behavior-Packages.md) | 0.2.x — Release 0.2.9 (DeepSeek/xAI SuperGrok OAuth/ClinePass, impeccable, ponytail/caveman) | complete |
+| [030-Release-0-3-0-Desktop-Coding-Tools-Independent-Versions.md](030-Release-0-3-0-Desktop-Coding-Tools-Independent-Versions.md) | 0.3.x — Release 0.3.0 (computer-use-linux, coding/ACP tools, independent versions) | complete (2026-08-20) |
+| [031-Release-0-3-0-Antigravity-Cli-Prism-Mcp-Blueprint.md](031-Release-0-3-0-Antigravity-Cli-Prism-Mcp-Blueprint.md) | 0.3.x — 0.3.0 amendment (Antigravity CLI + Prism MCP) | complete (2026-08-20) |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

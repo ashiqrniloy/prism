@@ -583,3 +583,170 @@ test("read options and request pagination reject invalid limits", async () => {
 test("DEFAULT_MAX_IMAGE_BYTES is 10 MB", () => {
   assert.equal(DEFAULT_MAX_IMAGE_BYTES, 10_000_000);
 });
+
+// --- findText (plan 030 Task 3) ---
+
+test("read findText returns the page starting at the first matching line", async () => {
+  const cwd = await tmp();
+  try {
+    const lines = ["one", "two", "three", "four", "five createEditTool here", "six", "seven"];
+    await writeFile(join(cwd, "f.txt"), `${lines.join("\n")}\n`);
+    const tool = createReadTool(cwd);
+    const r = await tool.execute({ path: "f.txt", findText: "createEditTool" }, ctx());
+    assert.equal(r.error, undefined, JSON.stringify(r.error));
+    assert.equal(textOf(r).split("\n")[0], "five createEditTool here");
+    assert.equal(trunc(r)?.truncatedBy ?? null, null, "small file must not truncate");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("read findText exact misses different case; case-insensitive hits", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "c.txt"), "createedittool line\nother\n");
+    const tool = createReadTool(cwd);
+    const exact = await tool.execute({ path: "c.txt", findText: "createEditTool" }, ctx());
+    assert.ok(exact.error, "exact match must miss different case");
+    assert.match(exact.error?.message ?? "", /Could not find/);
+    const ci = await tool.execute({ path: "c.txt", findText: "createEditTool", findMode: "case-insensitive" }, ctx());
+    assert.equal(ci.error, undefined, JSON.stringify(ci.error));
+    assert.equal(textOf(ci).split("\n")[0], "createedittool line");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("read findText not-found is an error result with no file body", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "n.txt"), "alpha\nbeta\n");
+    const tool = createReadTool(cwd);
+    const r = await tool.execute({ path: "n.txt", findText: "zzz" }, ctx());
+    assert.ok(r.error);
+    assert.match(r.error?.message ?? "", /Could not find/);
+    const body = textOf(r);
+    assert.ok(!body.includes("alpha"), "file body must not leak into the error result");
+    assert.ok(!body.includes("beta"), "file body must not leak into the error result");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("read findText empty string is an input error", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "e.txt"), "x\n");
+    const tool = createReadTool(cwd);
+    const r = await tool.execute({ path: "e.txt", findText: "" }, ctx());
+    assert.ok(r.error);
+    assert.match(r.error?.message ?? "", /findText must be a non-empty string/);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("read findText with offset ignores earlier hits", async () => {
+  const cwd = await tmp();
+  try {
+    const lines: string[] = [];
+    for (let i = 1; i <= 12; i++) lines.push(i === 2 || i === 10 ? `line ${i} NEEDLE` : `line ${i}`);
+    await writeFile(join(cwd, "o.txt"), `${lines.join("\n")}\n`);
+    const tool = createReadTool(cwd);
+    const r = await tool.execute({ path: "o.txt", findText: "NEEDLE", offset: 5 }, ctx());
+    assert.equal(r.error, undefined, JSON.stringify(r.error));
+    assert.equal(textOf(r).split("\n")[0], "line 10 NEEDLE", "must skip the line-2 hit and land on line 10");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("read findText errors when the scan cap is hit before a match", async () => {
+  const cwd = await tmp();
+  let calls = 0;
+  try {
+    const ops: ReadOperations = {
+      readFile: async () => Buffer.from(""),
+      readText: async (_path, options) => {
+        calls++;
+        return {
+          content: `filler ${options.offset}\n`, // never contains the needle
+          startLine: options.offset,
+          outputLines: 1,
+          hasMore: true,
+          nextOffset: options.offset + 1,
+          truncatedBy: null,
+          firstLineExceedsLimit: false,
+          scannedBytes: 100, // exceeds the small maxScanBytes on the first page
+          totalLines: undefined,
+          totalBytes: undefined,
+        };
+      },
+      access: async () => {},
+      statFile: async () => ({ size: 0 }),
+      detectImageMimeType: async () => null,
+    };
+    const tool = createReadTool(cwd, { operations: ops, maxScanBytes: 50 });
+    const r = await tool.execute({ path: "remote", findText: "needle" }, ctx());
+    assert.ok(r.error, JSON.stringify(r.error));
+    assert.match(r.error?.message ?? "", /scan limit/);
+    assert.ok(calls >= 1, "at least one readText page must be scanned before the cap trips");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("read findText works through a custom paged ReadOperations backend", async () => {
+  const cwd = await tmp();
+  let calls = 0;
+  try {
+    // 5-line "file" paged 2 lines at a time; needle on line 4.
+    const all = ["a", "b", "c", "d NEEDLE", "e"];
+    const text = `${all.join("\n")}\n`;
+    const ops: ReadOperations = {
+      readFile: async () => Buffer.from(text),
+      readText: async (_path, options) => {
+        calls++;
+        const pl = options.limit ?? options.maxLines;
+        const start = options.offset;
+        const slice = all.slice(start - 1, start - 1 + pl);
+        const hasMore = start - 1 + pl < all.length;
+        return {
+          content: slice.join("\n"),
+          startLine: start,
+          outputLines: slice.length,
+          hasMore,
+          nextOffset: hasMore ? start + pl : undefined,
+          truncatedBy: null,
+          firstLineExceedsLimit: false,
+          scannedBytes: (start - 1 + slice.length) * 10, // grows with depth
+          totalLines: all.length,
+          totalBytes: text.length,
+        };
+      },
+      access: async () => {},
+      statFile: async () => ({ size: text.length }),
+      detectImageMimeType: async () => null,
+    };
+    const tool = createReadTool(cwd, { operations: ops, maxLines: 2 });
+    const r = await tool.execute({ path: "mem", findText: "NEEDLE" }, ctx());
+    assert.equal(r.error, undefined, JSON.stringify(r.error));
+    assert.equal(textOf(r).split("\n")[0], "d NEEDLE", "first line must be the hit line (page re-read at offset 4)");
+    assert.ok(calls >= 2, "must page through at least 2 pages to reach the needle at line 4");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("read findText rejects an unknown findMode", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "m.txt"), "x\n");
+    const tool = createReadTool(cwd);
+    const r = await tool.execute({ path: "m.txt", findText: "x", findMode: "fuzzy" }, ctx());
+    assert.ok(r.error);
+    assert.match(r.error?.message ?? "", /findMode must be 'exact' or 'case-insensitive'/);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});

@@ -14,7 +14,7 @@ describe("@arnilo/prism-provider-clinepass skeleton", () => {
   it("provider_packages_do_not_add_runtime_dependencies", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.deepEqual(pkg.dependencies ?? {}, {});
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.2.9");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.3.0");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 });

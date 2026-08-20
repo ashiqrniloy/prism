@@ -226,11 +226,34 @@ function countOccurrences(content: string, oldText: string): number {
   return fuzzyContent.split(fuzzyOldText).length - 1;
 }
 
-function getNotFoundError(path: string, editIndex: number, totalEdits: number): Error {
-  if (totalEdits === 1) {
-    return new Error(`Could not find the exact text in ${path}. The old text must match exactly including all whitespace and newlines.`);
+function getNotFoundError(path: string, content: string, oldText: string, editIndex: number, totalEdits: number): Error {
+  const base =
+    totalEdits === 1
+      ? `Could not find the exact text in ${path}. The old text must match exactly including all whitespace and newlines.`
+      : `Could not find edits[${editIndex}] in ${path}. The oldText must match exactly including all whitespace and newlines.`;
+  // Cheap first-line substring scan: collect up to 3 unique nearby lines so the model can correct
+  // its oldText. No extra file read — `content` is the already-loaded target. Needle is clipped to
+  // 16 chars (min 4) to avoid noise from tiny/short oldText.
+  const firstLine = oldText
+    .split("\n")
+    .map((l) => l.trim())
+    .find((l) => l.length > 0);
+  if (!firstLine) return new Error(base);
+  const needle = firstLine.slice(0, 16);
+  if (needle.length < 4) return new Error(base);
+  const lines = content.split("\n");
+  const seen = new Set<string>();
+  const nearby: string[] = [];
+  for (let i = 0; i < lines.length && nearby.length < 3; i++) {
+    if (lines[i].includes(needle)) {
+      const snippet = lines[i].slice(0, 120);
+      if (seen.has(snippet)) continue;
+      seen.add(snippet);
+      nearby.push(`  L${i + 1}: ${snippet}`);
+    }
   }
-  return new Error(`Could not find edits[${editIndex}] in ${path}. The oldText must match exactly including all whitespace and newlines.`);
+  if (nearby.length === 0) return new Error(base);
+  return new Error(`${base}\nNearby:\n${nearby.join("\n")}`);
 }
 
 function getDuplicateError(path: string, editIndex: number, totalEdits: number, occurrences: number): Error {
@@ -270,6 +293,7 @@ interface MatchedEdit {
 export interface AppliedEditsResult {
   baseContent: string;
   newContent: string;
+  usedFuzzyMatch: boolean;
 }
 
 /**
@@ -299,7 +323,7 @@ export function applyEditsToNormalizedContent(normalizedContent: string, edits: 
     const edit = normalizedEdits[i];
     const matchResult = fuzzyFindText(replacementBaseContent, edit.oldText);
     if (!matchResult.found) {
-      throw getNotFoundError(path, i, normalizedEdits.length);
+      throw getNotFoundError(path, normalizedContent, edit.oldText, i, normalizedEdits.length);
     }
     const occurrences = countOccurrences(replacementBaseContent, edit.oldText);
     if (occurrences > 1) {
@@ -329,7 +353,7 @@ export function applyEditsToNormalizedContent(normalizedContent: string, edits: 
   if (baseContent === newContent) {
     throw getNoChangeError(path, normalizedEdits.length);
   }
-  return { baseContent, newContent };
+  return { baseContent, newContent, usedFuzzyMatch };
 }
 
 /** Generate a standard unified patch. */

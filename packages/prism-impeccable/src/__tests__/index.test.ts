@@ -8,7 +8,7 @@ describe("impeccable package scaffold", () => {
     assert.equal(pkg.name, "@arnilo/prism-impeccable");
     assert.deepEqual(pkg.exports["."], { types: "./dist/index.d.ts", default: "./dist/index.js" });
     assert.equal(pkg.sideEffects, false);
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "0.2.9");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.3.0");
     assert.equal(pkg.dependencies ?? undefined, undefined);
     assert.equal(pkg.scripts.postinstall, undefined);
     assert.equal(pkg.peerDependencies.impeccable, undefined);

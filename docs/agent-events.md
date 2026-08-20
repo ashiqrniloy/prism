@@ -2,7 +2,7 @@
 
 ## What it does
 
-`AgentEvent` is the single observable stream every `AgentSession` run emits. Subscribers receive normalized, redacted, in-order events covering agent lifecycle, assistant message streaming, tool execution, queue updates, subscriber overflow, compaction, retry, artifact validation/refinement, and terminal errors. The stream is in-memory, live-only, and bounded per subscriber by `SubscribeOptions`; there is no durable queue, no background work, and no extra dependency.
+`AgentEvent` is the single observable stream every `AgentSession` run emits. Subscribers receive normalized, redacted, in-order events covering agent lifecycle, assistant message streaming, delegated-agent activity, tool execution, queue updates, subscriber overflow, compaction, retry, artifact validation/refinement, and terminal errors. The stream is in-memory, live-only, and bounded per subscriber by `SubscribeOptions`; there is no durable queue, no background work, and no extra dependency.
 
 Events are emitted by the runtime and by loops through `LoopContext.emit`, both of which route through `redactAgentEvent(event, activeRedactor)` so every payload is secret-redacted before subscribers observe it.
 
@@ -56,6 +56,7 @@ const subscription = session.subscribe({ maxQueuedEvents: 256, overflow: "close"
 for await (const event of subscription) {
   switch (event.type) {
     case "message_delta": // append event.content
+    case "delegated_agent_step": // render bounded external activity
     case "tool_execution_started": // …
     case "artifact_failed": // budget exhausted
       break;
@@ -71,6 +72,7 @@ The `AgentEvent` union (grouped by concern):
 | Turns | `turn_started`, `turn_finished` |
 | Provider turns | `provider_turn_started`, `provider_turn_finished` |
 | Assistant messages | `message_started`, `message_delta`, `message_finished` |
+| Delegated agents | `delegated_agent_step` |
 | Tool execution | `tool_execution_started`, `tool_execution_progress`, `tool_execution_finished`, `tool_execution_error`, `tool_execution_blocked` |
 | Guardrails | `guardrail_decision` |
 | Queue/subscribers | `queue_updated`, `event_subscriber_overflow`, `steer_rejected` |
@@ -95,6 +97,11 @@ Agent / turn / message events:
 | `turn_started` / `turn_finished` | `sessionId`, `runId`, `turn: number` |
 | `message_started` / `message_finished` | `sessionId`, `runId`, `message: Message` |
 | `message_delta` | `sessionId`, `runId`, `content: ContentBlock` (`tool_call_delta` fragments may appear here for live UI streaming; stored messages use final `tool_call` blocks) |
+| `delegated_agent_step` | `sessionId`, `runId`, `adapterId`, `externalConversationId` (≤512 UTF-8 bytes), `stepIndex`, `state`, `kind`, optional `durationMs`, token-only `usage`, `toolName`, `subagentType`, and opaque `detail` references |
+
+`delegated_agent_step` is a safe timeline event for an adapter-owned loop. `kind` is one of `assistant`, `tool`, `subagent`, `checkpoint`, or `unknown`; unknown external step kinds normalize to `unknown`. It never carries raw arguments, results, paths, URIs, logs, event bodies, or hidden thought text. `thinkingTokens` is a count only. The constructor and existing event-source default cap keep serialized events at 64 KiB.
+
+Adapters should call `createDelegatedAgentStep({ sessionId, runId, adapterId, externalConversationId, stepIndex, state, kind, usage })` rather than forwarding external JSON. The constructor allow-lists fields and fails closed on malformed or oversized identifiers/counters.
 
 `message_delta.content.type === "tool_call_delta"` carries `{ index, id?, name?, argumentsText? }`. Treat it as a streaming fragment. The runtime reconstructs and persists a final `tool_call` before executing tools. Deltas missing `id`/`name` at stream end fail the provider turn with `ErrorInfo.code: "incomplete_delta"` (typed `ProviderTransportError`); they never throw a bare `Error`. Malformed JSON with id+name present recovers as a blocked tool result (`invalid_json_arguments`) instead.
 

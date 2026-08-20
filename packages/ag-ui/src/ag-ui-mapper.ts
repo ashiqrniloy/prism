@@ -1,5 +1,14 @@
 import { type AGUIEvent, EventSchemas, EventType } from "@ag-ui/core";
-import type { AgentEvent, ErrorInfo, SecretRedactor, ThinkingContent, ToolCallContent, ToolResult, Usage } from "@arnilo/prism";
+import type {
+  AgentEvent,
+  DelegatedAgentStep,
+  ErrorInfo,
+  SecretRedactor,
+  ThinkingContent,
+  ToolCallContent,
+  ToolResult,
+  Usage,
+} from "@arnilo/prism";
 import { type AgUiA2UiOptions, createAgUiA2UiPainter } from "./a2ui.js";
 import { AgUiError } from "./errors.js";
 import { type AgUiLimitOptions, resolveAgUiLimits } from "./limits.js";
@@ -118,6 +127,38 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
         prism: { run: { status, ...(version === undefined ? {} : { version }), ...(addition === undefined ? {} : { state: addition }) } },
       },
     });
+  };
+  const delegatedActivity = (event: DelegatedAgentStep): AgUiActivitySnapshot => {
+    const durationMs = safeDelegatedNumber(event.durationMs);
+    const usage = safeDelegatedUsage(event.usage);
+    const detail = safeDelegatedDetail(event.detail);
+    return {
+      type: "snapshot",
+      messageId: id(undefined, `${event.runId}:delegated`),
+      activityType: "prism.delegated_agent_step",
+      content: {
+        adapterId: text(event.adapterId, 512),
+        externalConversationId: text(event.externalConversationId, 512),
+        stepIndex: Number.isSafeInteger(event.stepIndex) && event.stepIndex >= 0 ? event.stepIndex : 0,
+        state: event.state === "active" || event.state === "done" || event.state === "error" ? event.state : "error",
+        kind:
+          event.kind === "assistant" || event.kind === "tool" || event.kind === "subagent" || event.kind === "checkpoint"
+            ? event.kind
+            : "unknown",
+        ...(durationMs === undefined ? {} : { durationMs }),
+        ...(event.toolName === undefined ? {} : { toolName: text(event.toolName, 256) }),
+        ...(event.subagentType === undefined ? {} : { subagentType: text(event.subagentType, 256) }),
+        ...(usage === undefined ? {} : { usage }),
+        ...(detail === undefined
+          ? {}
+          : {
+              detail: {
+                ...(detail.referenceId === undefined ? {} : { referenceId: text(detail.referenceId, 512) }),
+                ...(detail.label === undefined ? {} : { label: text(detail.label, 256) }),
+              },
+            }),
+      },
+    };
   };
   const custom = async (events: AGUIEvent[], name: string, value: unknown): Promise<void> => {
     if (!options.includeCustomEvents) return;
@@ -352,6 +393,21 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           activeMessage = undefined;
           messageHasDelta = false;
           break;
+        case "delegated_agent_step": {
+          const activity = delegatedActivity(event);
+          const content = projectAgUiJson(activity.content, limits.maxActivityBytes, limits, "delegated activity");
+          if (content && typeof content === "object" && !Array.isArray(content)) {
+            emit(events, {
+              type: EventType.ACTIVITY_SNAPSHOT,
+              messageId: activity.messageId,
+              activityType: activity.activityType,
+              content,
+              replace: true,
+            });
+            await custom(events, "prism.delegated_agent_step", content);
+          }
+          break;
+        }
         case "tool_execution_started":
           await startTool(events, event.call);
           break;
@@ -401,6 +457,34 @@ function usage(value: Usage): Record<string, number> {
     string,
     number
   >;
+}
+
+function safeDelegatedNumber(value: number | undefined): number | undefined {
+  return value !== undefined && Number.isSafeInteger(value) && value >= 0 && value <= 24 * 60 * 60 * 1000 ? value : undefined;
+}
+
+function safeDelegatedUsage(value: DelegatedAgentStep["usage"]): Record<string, number> | undefined {
+  if (!value) return undefined;
+  const output: Record<string, number> = {};
+  for (const key of ["inputTokens", "outputTokens", "thinkingTokens", "cacheReadTokens", "cacheWriteTokens", "totalTokens"] as const) {
+    const amount = value[key];
+    if (amount !== undefined && Number.isSafeInteger(amount) && amount >= 0 && amount <= 1_000_000_000_000) output[key] = amount;
+  }
+  return Object.keys(output).length > 0 ? output : undefined;
+}
+
+function safeDelegatedDetail(value: DelegatedAgentStep["detail"]): DelegatedAgentStep["detail"] | undefined {
+  if (!value) return undefined;
+  const referenceId = value.referenceId;
+  const label = value.label;
+  return {
+    ...(typeof referenceId === "string" && safeOpaqueReference(referenceId, 512) ? { referenceId } : {}),
+    ...(typeof label === "string" && safeOpaqueReference(label, 256) ? { label } : {}),
+  };
+}
+
+function safeOpaqueReference(value: string, maxBytes: number): boolean {
+  return value.length > 0 && !/[\\/\\:\\0\\r\\n]/.test(value) && Buffer.byteLength(value, "utf8") <= maxBytes;
 }
 
 export function truncateUtf8(value: string, maxBytes: number): string {

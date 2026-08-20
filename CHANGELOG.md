@@ -1,3 +1,15 @@
+## [0.3.0] - 2026-08-20
+
+### Added
+- **Release 0.3.0 (plans 030, 031)** is the final lockstep cut and first independent-versioning line. The graph contains 57 publishable manifests; internal first-party ranges use `^0.3.0`, Decision B permits changed packages to patch/minor independently inside `<0.4.0`, and later publication uses `@arnilo/<package>@<version>` tags.
+- Optional `@arnilo/prism-antigravity-agent` delegates autonomous coding sessions to the official Google Antigravity CLI (`agy`) with per-run loopback HTTP MCP capability exposure, AG-UI timeline projection, secret redaction, and `--conversation` continuation. Host owns the official binary and `agy login` authentication state.
+- Optional `@arnilo/prism-computer-use-linux` wraps a host-owned Linux `computer-use-linux` MCP binary. DeviceAdapter admission is deny-by-default, setup tools are opt-in, mutating calls require approval/ExecutionPolicy, results are bounded and untrusted, input is serialized, and the package is omitted from umbrellas.
+- Coding/ACP closeouts: `read.findText`, visible fuzzy edit outcomes and nearby miss context, ACP editor-buffer filesystem operations, spawnable per-session coding registries, and delete/move result locations.
+
+### Changed
+- Release automation keeps explicit `--lockstep --version 0.3.0` for the final cut, then defaults to changed-package validation/publication and package tags. No Changesets or new core runtime dependency.
+- No persisted store migration. Live-service canaries and delegated Cursor adapter remain later demand-gated 0.3.x work.
+
 ## [0.2.9] - 2026-08-19
 
 ### Changed

@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-08-19T12:02:00.048Z",
+  "generatedAt": "2026-08-20T17:52:00.555Z",
   "root": {
     "name": "@arnilo/prism",
-    "version": "0.2.9"
+    "version": "0.3.0"
   },
   "counts": {
-    "publishable": 55,
-    "workspace": 54,
+    "publishable": 57,
+    "workspace": 56,
     "provider": 17,
     "prismFamily": 10,
-    "capability": 27,
-    "codeWithPeer": 48,
+    "capability": 29,
+    "codeWithPeer": 50,
     "pureManifest": 6
   },
   "providers": [
@@ -47,11 +47,13 @@
   "capability": [
     "@arnilo/prism-acp-agent",
     "@arnilo/prism-ag-ui",
+    "@arnilo/prism-antigravity-agent",
     "@arnilo/prism-browser",
     "@arnilo/prism-coding-agent",
     "@arnilo/prism-coding-security",
     "@arnilo/prism-compaction-llm",
     "@arnilo/prism-compaction-observational-memory",
+    "@arnilo/prism-computer-use-linux",
     "@arnilo/prism-credentials-node",
     "@arnilo/prism-document-reader",
     "@arnilo/prism-enterprise-postgres",
@@ -123,7 +125,9 @@
       ],
       "closure": 47,
       "omits": [
+        "@arnilo/prism-antigravity-agent",
         "@arnilo/prism-caveman",
+        "@arnilo/prism-computer-use-linux",
         "@arnilo/prism-document-reader",
         "@arnilo/prism-impeccable",
         "@arnilo/prism-openapi-tools",
@@ -227,8 +231,8 @@
     ]
   },
   "peerPolicy": {
-    "decision": "A",
-    "spec": "0.2.9",
-    "atomicUpgrade": true
+    "decision": "B",
+    "spec": "^0.3.0",
+    "atomicUpgrade": false
   }
 }

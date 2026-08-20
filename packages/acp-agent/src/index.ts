@@ -10,6 +10,8 @@
 import { randomUUID } from "node:crypto";
 import type { AgentApp, McpServer } from "@agentclientprotocol/sdk";
 import {
+  type Agent,
+  type AgentIdentity,
   type AIProvider,
   type CheckpointStore,
   createAgent,
@@ -21,8 +23,8 @@ import {
   type OwnershipScope,
   type SessionStore,
 } from "@arnilo/prism";
-import { createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
-import { createCodingTools } from "@arnilo/prism-coding-agent";
+import { createAcpClientFilesystem, createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
+import { createAcpFilesystemOperations, createCodingTools } from "@arnilo/prism-coding-agent";
 import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 import type { PrismAcpAgentConfig } from "./config.js";
 
@@ -49,6 +51,14 @@ export function selectMcpServers(allow: readonly string[], servers: readonly Mcp
 export function createSpawnableAgent(options: CreateSpawnableAgentOptions): AgentApp {
   const { config } = options;
   const ownership: OwnershipScope = { userId: config.userId };
+  const identity: AgentIdentity = {
+    tenantId: "local",
+    userId: config.userId,
+    principal: { kind: "user", id: config.userId },
+    scopes: ["coding"],
+    issuedAt: new Date().toISOString(),
+    verified: true,
+  };
   let store: SessionStore;
   let checkpoints: CheckpointStore;
   if (config.sessionStore.type === "sqlite") {
@@ -59,28 +69,60 @@ export function createSpawnableAgent(options: CreateSpawnableAgentOptions): Agen
     store = createMemorySessionStore();
     checkpoints = createMemoryCheckpointStore();
   }
+  const defaultAgentId = "prism-acp-agent";
   const tools = createToolRegistry(createCodingTools(config.cwd));
   const prismAgent = createAgent({
-    id: "prism-acp-agent",
+    id: defaultAgentId,
     model: { provider: "mock", model: "mock" },
     provider: options.provider ?? createMockProvider(),
     store,
     tools,
     ownership,
+    identity,
     runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
   });
+  // ACP fs adapters carry session ids, so editor-backed tool registries must be
+  // built per session instead of shared through the default disk agent.
+  const sessionAgents = new Map<string, Agent>();
   return createPrismAcpAgent({
     name: "Prism ACP Agent",
     authorize: () => ({ ownership }),
-    sessionFactory: async (input) => ({
-      session: prismAgent.createSession({ id: input.sessionId ?? randomUUID() }),
-      agentId: "prism-acp-agent",
-      tools,
-    }),
+    sessionFactory: async (input) => {
+      const sessionId = input.sessionId ?? randomUUID();
+      let sessionAgent = prismAgent;
+      let sessionTools = tools;
+      let agentId = defaultAgentId;
+      if (input.coding?.filesystem) {
+        const operations = createAcpFilesystemOperations(input.coding.filesystem);
+        sessionTools = createToolRegistry(
+          createCodingTools(input.cwd, {
+            read: { operations: operations.read },
+            write: { operations: operations.write },
+            edit: { operations: operations.edit },
+          }),
+        );
+        agentId = `${defaultAgentId}:${sessionId}`;
+        sessionAgent = createAgent({ ...prismAgent.config, id: agentId, tools: sessionTools });
+        sessionAgents.set(agentId, sessionAgent);
+      }
+      return {
+        session: sessionAgent.createSession({ id: sessionId }),
+        agentId,
+        tools: sessionTools,
+      };
+    },
     lifecycle: createAgentRunLifecycle({
       checkpoints,
-      resolveAgent: () => ({ agent: prismAgent, definitionRevision: "1" }),
+      resolveAgent: ({ agentId }) => {
+        if (agentId === defaultAgentId) return { agent: prismAgent, definitionRevision: "1" };
+        const sessionAgent = sessionAgents.get(agentId);
+        if (!sessionAgent) throw new Error(`Unknown ACP session agent: ${agentId}`);
+        return { agent: sessionAgent, definitionRevision: "1" };
+      },
     }),
+    coding: {
+      filesystem: (client, sessionId) => createAcpClientFilesystem(client, sessionId),
+    },
     mcp: config.mcp ? { transports: ["http", "sse"], select: ({ servers }) => selectMcpServers(config.mcp!.allow, servers) } : undefined,
     modes: config.modes
       ? { modes: config.modes.modes, ...(config.modes.defaultModeId !== undefined ? { defaultModeId: config.modes.defaultModeId } : {}) }

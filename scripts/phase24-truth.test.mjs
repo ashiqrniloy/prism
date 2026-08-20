@@ -12,6 +12,9 @@ import { computePackageTruth, expandWorkspaceDirs, readManifest } from "./packag
 const ROOT = join(import.meta.dirname, "..");
 const run = (args, cwd = ROOT) => spawnSync(process.execPath, args, { cwd, encoding: "utf8" });
 const stripStamp = ({ generatedAt, ...rest }) => rest;
+const phase30Manifest = JSON.parse(readFileSync(join(ROOT, "scripts", "phase30-freeze-manifest.json"), "utf8"));
+const hasDesktopPackage = phase30Manifest.tasks.task7 === "done";
+const hasAntigravityPackage = phase30Manifest.amendments?.antigravity?.tasks?.task6 === "done";
 
 test("generator reproducible: two runs byte-identical modulo generatedAt", () => {
   assert.deepEqual(stripStamp(computePackageTruth()), stripStamp(computePackageTruth()));
@@ -26,20 +29,22 @@ test("committed artifact equals the generator output (regenerate via node script
   );
 });
 
-test("counts match manifests at the 0.2.4 truth baseline", () => {
+test("counts match manifests at the 0.3.0 truth graph plus the Task 7 desktop package", () => {
   const t = computePackageTruth();
-  assert.equal(t.counts.publishable, 55);
-  assert.equal(t.counts.workspace, 54);
+  const added = Number(hasDesktopPackage) + Number(hasAntigravityPackage);
+  assert.equal(t.counts.publishable, 55 + added);
+  assert.equal(t.counts.workspace, 54 + added);
   assert.equal(t.counts.provider, 17);
   assert.equal(t.counts.prismFamily, 10);
-  assert.equal(t.counts.capability, 27);
-  assert.equal(t.counts.codeWithPeer, 48);
+  assert.equal(t.counts.capability, 27 + added);
+  assert.equal(t.counts.codeWithPeer, 48 + added);
   assert.equal(t.counts.pureManifest, 6);
   assert.equal(t.providers.length, 17);
   assert.equal(t.family.length, 10);
-  assert.equal(t.capability.length, 27);
-  assert.equal(t.peerPolicy.decision, "A");
-  assert.equal(t.peerPolicy.spec, t.root.version);
+  assert.equal(t.capability.length, 27 + added);
+  assert.equal(t.peerPolicy.decision, "B");
+  assert.equal(t.peerPolicy.spec, `^${t.root.version}`);
+  assert.equal(t.peerPolicy.atomicUpgrade, false);
 });
 
 test("umbrella closures match manifests", () => {
@@ -54,7 +59,7 @@ test("umbrella closures match manifests", () => {
   const all = t.umbrella["prism-all"];
   assert.equal(all.deps.length, 21);
   assert.equal(all.closure, 47, "21 direct deps expand through code/sdk/profile deps to 47 workspace packages");
-  assert.equal(all.omits.length, 6);
+  assert.equal(all.omits.length, 6 + Number(hasDesktopPackage) + Number(hasAntigravityPackage));
   for (const name of [
     "@arnilo/prism-caveman",
     "@arnilo/prism-document-reader",
@@ -62,6 +67,8 @@ test("umbrella closures match manifests", () => {
     "@arnilo/prism-openapi-tools",
     "@arnilo/prism-ponytail",
     "@arnilo/prism-session-store-nats",
+    ...(hasDesktopPackage ? ["@arnilo/prism-computer-use-linux"] : []),
+    ...(hasAntigravityPackage ? ["@arnilo/prism-antigravity-agent"] : []),
   ]) {
     assert.ok(all.omits.includes(name), `prism-all omits ${name}`);
   }
@@ -82,7 +89,7 @@ test("profile closures match manifests", () => {
   }
 });
 
-test("peer policy Decision A: all 43 code packages peer the bare exact current version", () => {
+test("peer policy Decision B: all code packages peer the caret current line", () => {
   const t = computePackageTruth();
   const root = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
   const pkgs = expandWorkspaceDirs(ROOT, root.workspaces).map((dir) => ({
@@ -90,12 +97,12 @@ test("peer policy Decision A: all 43 code packages peer the bare exact current v
     ...readManifest(join(dir, "package.json")),
   }));
   const codeWithPeer = pkgs.filter((p) => p.peerDependencies?.["@arnilo/prism"] !== undefined);
-  assert.equal(codeWithPeer.length, t.counts.codeWithPeer, "48 code packages with a core peer");
+  assert.equal(codeWithPeer.length, t.counts.codeWithPeer, "code packages with a core peer");
   const secondPeers = {};
   for (const p of codeWithPeer) {
     const spec = p.peerDependencies["@arnilo/prism"];
-    assert.equal(spec, t.root.version, `${p.name} must peer @arnilo/prism@${t.root.version} exactly`);
-    assert.ok(!/[\s~^><*|]/.test(spec), `${p.name} peer spec must be a bare exact version, got ${spec}`);
+    assert.equal(spec, `^${t.root.version}`, `${p.name} must peer @arnilo/prism@^${t.root.version}`);
+    assert.match(spec, /^\^\d+\.\d+\.\d+$/, `${p.name} peer spec must be a 0.x caret range, got ${spec}`);
     const extra = Object.keys(p.peerDependencies).filter((n) => n.startsWith("@arnilo/prism-"));
     if (extra.length > 0) secondPeers[p.name] = extra;
     // devDependency on the root so the workspace resolves the peer locally
@@ -109,6 +116,8 @@ test("peer policy Decision A: all 43 code packages peer the bare exact current v
     "@arnilo/prism-ag-ui": ["@arnilo/prism-mcp", "@arnilo/prism-supervisor"],
     "@arnilo/prism-coding-agent": ["@arnilo/prism-workflows"],
     "@arnilo/prism-coding-security": ["@arnilo/prism-coding-agent"],
+    ...(hasDesktopPackage ? { "@arnilo/prism-computer-use-linux": ["@arnilo/prism-mcp"] } : {}),
+    ...(hasAntigravityPackage ? { "@arnilo/prism-antigravity-agent": ["@arnilo/prism-coding-agent", "@arnilo/prism-mcp"] } : {}),
     "@arnilo/prism-document-reader": ["@arnilo/prism-coding-agent"],
     "@arnilo/prism-rag": ["@arnilo/prism-memory"],
     "@arnilo/prism-server": ["@arnilo/prism-workflows"],

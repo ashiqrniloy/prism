@@ -1,8 +1,8 @@
 # Prism Roadmap
 
-Updated: 2026-08-12
-Baseline: `@arnilo/prism` **0.1.7** (plans 001–019 implemented; 0.1.x is complete).
-Scope: a forward-looking roadmap beginning at **0.2.0** with security, correctness, release-integrity, maintainability, coding-agent, and Enterprise ERP readiness work from the 2026-08-12 comprehensive review. **Resequencing (2026-08-12):** every item previously scheduled for 0.2.x moves unchanged to **0.3.x**; 0.2.x is reserved for review remediation and production-readiness work. Completed evidence remains in `plans/001`–`plans/019`, `CHANGELOG.md`, and `docs/review-coverage-*`.
+Updated: 2026-08-20
+Baseline: `@arnilo/prism` **0.3.0** (plans 001–030 implemented; 0.3.0 is the current release cut).
+Scope: a forward-looking roadmap beginning at **0.2.0** with security, correctness, release-integrity, maintainability, coding-agent, and Enterprise ERP readiness work from the 2026-08-12 comprehensive review. **Resequencing (2026-08-12):** every item previously scheduled for 0.2.x moves unchanged to **0.3.x**; 0.2.x is reserved for review remediation and production-readiness work. Completed evidence remains in `plans/001`–`plans/030`, `CHANGELOG.md`, and `docs/review-coverage-*`.
 
 ## Objectives
 
@@ -47,7 +47,7 @@ The codebase was reviewed end to end after the 0.1.0 cut. Findings below explain
 5. **ACP sessions are not durable.** Modes/config report table defaults; the live task registry is in-memory (cap 512, FIFO), not persisted across restart (plans 010/012). → 0.1.6 (demand-gated): durable ACP session store behind a host-owned seam.
 6. **Delegated-agent seams exist but are protocol-specific (A2A/ACP) with no generic "delegated coding host" contract.** Adding Cursor/Antigravity/Aider/Claude-Code-SDK as one-offs would duplicate the mapping. → deferred to 0.3.1: one generic delegated-agent contract + thin per-SDK adapters (see SDK evaluation).
 7. **Observational-memory residual gaps.** Loaded-skill bodies and `ReadPathSet` are session-scoped in-memory only — checkpoint resume does not restore them (plans 003/004). `wrapResumeRun`/`attach` use a `sessionId` registry with no core lifecycle hook (plan 002). → 0.1.3/0.1.6: checkpoint persistence for loaded-skill names + read-path set (demand-gated).
-8. **Live canary matrix is not recorded.** Real OIDC IdP + JWKS rotation, real OPA bundle pinning, real MCP OAuth AS (DCR + refresh/revoke), real S3-compatible store incl. KMS, and real NATS JetStream are documented as blocked protected gates, but CI runs only fakes (plans 009/011/012). → deferred to 0.3.0 as a named, env-gated, fail-loud gate.
+8. **Live canary matrix is not recorded.** Real OIDC IdP + JWKS rotation, real OPA bundle pinning, real MCP OAuth AS (DCR + refresh/revoke), real S3-compatible store incl. KMS, and real NATS JetStream are documented as blocked protected gates, but CI runs only fakes (plans 009/011/012). → deferred to later 0.3.x as a named, env-gated, fail-loud gate (not 0.3.0).
 
 ### Elegance of implementation
 
@@ -93,8 +93,8 @@ The codebase was reviewed end to end after the 0.1.0 cut. Findings below explain
 
 - **No active vulnerabilities.** `npm audit --audit-level=moderate` = 0; tree locked at 317 deps; CodeQL/SAST, provenance, SBOM/license, secret scan, and supply-chain negative fixtures are wired into `release.yml`.
 - **Residual controls to harden (not flaws, deferred gates)**:
-  - Live canary matrix (real IdP/OPA/S3/MCP-AS/NATS) untested in CI — fakes only. → 0.3.0.
-  - No real NATS JetStream server test suite (fake of the narrow seam only). → 0.3.0.
+  - Live canary matrix (real IdP/OPA/S3/MCP-AS/NATS) untested in CI — fakes only. → later 0.3.x (not 0.3.0).
+  - No real NATS JetStream server test suite (fake of the narrow seam only). → later 0.3.x (not 0.3.0).
   - No automated test holds an MCP SSE stream open (long-lived teardown rejected for CI); production relays but the path is untested. → shipped in 0.1.1 (plan 013 Task 2, bounded relay asserted).
   - Hand-rolled SigV4 is single-chunk only (no multipart/accelerate) — upload size ceiling; upgrade path documented. → 0.3.2 (demand-gated).
   - ACP modes/config are not persisted by the agent — a naive host could leak cross-session/cross-tenant mode state if it persists without ownership scoping. → guidance note + ownership-scoped persistence example shipped in 0.1.1 (plan 013 Task 5); durable ACP session store → 0.1.6.
@@ -283,7 +283,7 @@ Each milestone requires its own numbered plan. Plans that add or change a public
 
 ### 0.2.4 — Package, documentation, and compatibility truth
 
-^- [x] **Make package claims match manifests.** Correct README/profile wording for `prism-providers` and `prism-all`; explicitly list current omissions (`document-reader`, `openapi-tools`, `session-store-nats`, Caveman, Ponytail) without changing umbrella membership in 0.2.x. Actual catalog/membership expansion remains deferred to 0.3.0.
+^- [x] **Make package claims match manifests.** Correct README/profile wording for `prism-providers` and `prism-all`; explicitly list current omissions (`document-reader`, `openapi-tools`, `session-store-nats`, Caveman, Ponytail) without changing umbrella membership in 0.2.x. Actual catalog/membership expansion remains deferred to later 0.3.x (0.3.0 omits desktop from umbrellas).
   - Acceptance: no page claims “every” or “all” unless dependency closure proves it; packed-install tests assert documented contents.
 ^- [x] **Generate package/version/profile tables.** Use manifests as the single source for package count, provider membership, version, profile closure, and release status. Refresh `docs/0.1.0-readiness.md`, `docs/index.md`, `docs/release-and-install.md`, root/package READMEs, roadmap completion status, and changelogs for the 0.1.7 baseline.
   - Acceptance: generated checks catch drift; stale 0.1.1/0.0.23 “current line” text and contradictory provider counts are gone.
@@ -351,7 +351,7 @@ State management and Eval framework. Subagents.
 - [x] Caveman v2.1.0 extra `SKILL.md` registration.
   - Acceptance: 55-package graph at exact 0.2.9; SuperGrok login works without `XAI_API_KEY`; additive-only compat; `sdk:ready` + `release:check` green.
 
-Not in 0.2.9 (later 0.2.x / 0.3.x): Muse/Cordis harness, Cline WorkOS, DeepSeek Anthropic route, grok-cli file scan, Vent, computer-use Linux, Karpathy wiki, enterprise RAG, coding-tool audit, debug workflow, independent package versions, Caveman 2 engine, Impeccable live detector.
+Not in 0.2.9 (later 0.2.x / 0.3.x): Muse/Cordis harness, Cline WorkOS, DeepSeek Anthropic route, grok-cli file scan, Vent, Karpathy wiki, enterprise RAG, debug workflow, Caveman 2 engine, Impeccable live detector. **0.3.0 (plan 030):** computer-use Linux, coding-tool audit, independent package versions.
 
 ### Mandatory 0.2.x regression matrix
 
@@ -370,15 +370,30 @@ Before 0.2.x closes, automated tests must prove:
 11. Bedrock signing handles case-insensitive duplicate headers and repeated query keys.
 12. Workspace coverage excludes imported core files and records protected skips.
 
-## Roadmap — 0.3.x Deferred Expansion
+## Roadmap — 0.3.x
 
-Everything in this section was previously scheduled for 0.2.x and is intentionally deferred. No implementation starts until 0.2.x exit gates pass.
+0.2.x foundations are green and the original 0.3.0 cut is complete (plan 030). Unpublished 0.3.0 is reopened only for the demand-approved Antigravity CLI + Prism MCP amendment (plan 031); remaining catalog work stays demand-gated under later 0.3.x.
+
+### 0.3.0 — Linux desktop, coding/ACP tools, independent versions, Antigravity CLI delegation
+
+Plan 030 is complete and the final lockstep cut is closed. Plan 031 adds one delegated-agent package (`@arnilo/prism-antigravity-agent`) before publication without reopening other later-0.3.x work.
+
+- [x] `@arnilo/prism-computer-use-linux` — wraps host-owned `computer-use-linux` MCP; DeviceAdapter admission; setup tools off; omitted from umbrellas.
+- [x] Coding/ACP closeouts — `read.findText`, loud fuzzy/`edit` misses, `createAcpFilesystemOperations`, spawnable-agent client-fs wiring, `delete`/`move` projection.
+- [x] Last lockstep to **0.3.0**, then per-package semver with `^0.3.0` peers (Decision B). No Changesets.
+- [x] `@arnilo/prism-antigravity-agent` amendment — official host-owned `agy` headless CLI, CLI-owned Google AI Pro authentication, selected Prism capabilities through loopback MCP, delegated execution projected into Prism/AG-UI, omitted from provider catalogs and umbrellas (plan 031).
+
+**0.3.0 closeout baseline.** The graph contains 57 publishable manifests (17 providers, 10 family/profile packages, 29 capability packages), all at `0.3.0`; internal first-party ranges use `^0.3.0`; package-truth records Decision B; and release publication defaults to changed-package tags. Offline verification remains green.
+
+Out of 0.3.0: live canary matrix, delegated Cursor adapter, Cedar / second object store, macOS/Windows desktop, `apply_patch`/notebooks/trash, Caveman 2, Impeccable live detector.
 
 ### 0.3.1 — Review
 
-Code review fixes
+Code review fixes. Delegated Cursor adapter stays here only if demanded.
 
 ### 0.3.2 - Evaluation framework
+
+Live canary matrix (real IdP/OPA/S3/MCP-AS/NATS) stays demand-gated here, not in 0.3.0.
 
 
 ## Consolidated Compromises (from plans 001–012)
@@ -409,18 +424,19 @@ Closed items are marked **done**; open historical expansion items are routed to 
 - **005:** Tag/publish 0.0.22 — **done**.
 - **006:** Commit, tag `v0.0.23`, clean preflight — **done**. Phase 7 next — **done** (0.0.24).
 - **007:** Cut signed `v0.0.24` + protected Postgres + publish dry-run — **done**. Non-destructive workspace rebuild path (concurrent cleans) — **→ 0.1.1**. Public `deriveToolEffectKey` export if hosts need offline key derivation — **demand-gated (0.3.x)**. Phase 8 builds on frozen seams — **done** (0.0.25).
-- **008:** Cut signed `v0.0.25` + `sdk:ready` + publish dry-run — **done**. FR-3 reasoning encrypted-value helper — **done** (0.0.26). FR-4 MCP Apps UI-initiated mutation retry — **done** (0.0.26). FR-5 NATS JetStream `AgentEventSource` — **done** (0.0.26, fake-seam; **live suite → 0.3.0**). Async `AgUiProjection` hooks — **→ 0.1.7**.
-- **009:** Live NATS integration suite — **→ 0.3.0**. FR-3/4/5/6/7 shipped 0.0.26 — **done**. Tasks 13–15 (A2A server-side exposure, frontend renderer, async `AgUiProjection`) — **done** in 0.0.26. Phase 10 ACP mapping — **done** (0.0.27). Operator handoff (48 manifests) — **done**.
+- **008:** Cut signed `v0.0.25` + `sdk:ready` + publish dry-run — **done**. FR-3 reasoning encrypted-value helper — **done** (0.0.26). FR-4 MCP Apps UI-initiated mutation retry — **done** (0.0.26). FR-5 NATS JetStream `AgentEventSource` — **done** (0.0.26, fake-seam; **live suite → later 0.3.x**). Async `AgUiProjection` hooks — **→ 0.1.7**.
+- **009:** Live NATS integration suite — **→ later 0.3.x**. FR-3/4/5/6/7 shipped 0.0.26 — **done**. Tasks 13–15 (A2A server-side exposure, frontend renderer, async `AgUiProjection`) — **done** in 0.0.26. Phase 10 ACP mapping — **done** (0.0.27). Operator handoff (48 manifests) — **done**.
 - **010:** (Plan left "to be filled after task completion.") Material deferred items recorded above: deferred lifecycle events, modes/config persistence, durable ACP session store — **→ 0.1.6**; MCP SSE relay test — **→ 0.1.1**; coverage summary — **→ 0.1.1**.
-- **011:** Record protected live-canary matrix — **→ 0.3.0**. MCP SSE coverage — **→ 0.1.1**. Cedar, second artifact adapter, OpenAPI pagination — **→ 0.3.2 (demand-gated)**. Manifest-count narrative — **→ 0.1.1**.
+- **011:** Record protected live-canary matrix — **→ later 0.3.x**. MCP SSE coverage — **→ 0.1.1**. Cedar, second artifact adapter, OpenAPI pagination — **→ 0.3.2 (demand-gated)**. Manifest-count narrative — **→ 0.1.1**.
 - **012:** Operator publication of 0.1.0 (signed tag + npm OIDC) — **tag exists; npm publish remains operator action**. Phase 13 demand evidence — **this roadmap's 0.3.x demand gates**. Node 22 CI leg + multi-Postgres CI legs on-demand — **demand-gated**. Durable ACP session store + native sandbox backend — **→ 0.1.6 (demand-gated)**.
 
 ## Proposed New Features (summary)
 
 - **0.1.x — complete:** Alibaba enrichment; hygiene; module split; breaking-option cleanup; coding closeouts; cache telemetry; cost/latency routing; async AG-UI projection; provider scaffold.
 - **0.2.x — review remediation:** fail-closed resume/subprocess/sandbox behavior; provider/network bounds and completion; atomic budgets/conversations; build/coverage integrity; package/docs truth; focused refactors; production coding-agent capabilities; ERP transactions, recovery, approvals, audit, secrets, and DR.
-- **0.3.x — deferred former 0.2.x work:** protected live-service/NATS matrix, provider catalog and umbrella membership, Cursor/Antigravity delegated-agent adapters, Cedar/object-store/OpenAPI adapter breadth, and delegated-agent telemetry.
-- **Demand-gated beyond 0.3.x:** Studio/control plane and visual workflow editor; hosted cloud and managed observability; Slack/Teams/channel catalogs, voice/device, desktop OS control; remote-browser/sandbox vendors; further forges/queues/policy engines/object stores/databases/vector stores/providers; advanced GraphRAG/semantic chunking; cron/calendar/event triggers. Each needs a named user, operational owner, threat model, measurable acceptance, and numbered plan.
+- **0.3.0 — demand cut (plan 030):** Linux desktop wrap, coding/ACP tool closeouts, independent package versions.
+- **Later 0.3.x — still deferred:** protected live-service/NATS matrix, provider catalog and umbrella membership, Cursor/Antigravity delegated-agent adapters, Cedar/object-store/OpenAPI adapter breadth, and delegated-agent telemetry.
+- **Demand-gated beyond 0.3.x:** Studio/control plane and visual workflow editor; hosted cloud and managed observability; Slack/Teams/channel catalogs, voice/device; remote-browser/sandbox vendors; further forges/queues/policy engines/object stores/databases/vector stores/providers; advanced GraphRAG/semantic chunking; cron/calendar/event triggers. Each needs a named user, operational owner, threat model, measurable acceptance, and numbered plan. Desktop OS control for **Linux** is 0.3.0; macOS/Windows stay here.
 
 ## Release Validation Checklist
 
@@ -445,7 +461,7 @@ Every 0.2.x and 0.3.x release must satisfy:
 - Built-in user database, login UI, SAML identity provider, or SCIM server.
 - Mandatory Kubernetes, Helm, Terraform, Redis, Kafka, SQS, or vendor control plane.
 - Automatic provider, credential, MCP server, OpenAPI operation, LSP server, forge, delegated agent, or network discovery.
-- Broad Slack/Teams/channel, voice/device, desktop-control, remote-browser, vector-store, object-store, policy-engine, forge, or delegated-agent catalogs beyond the one-reference-first rule.
+- Broad Slack/Teams/channel, voice/device, desktop-control vendor, remote-browser, vector-store, object-store, policy-engine, forge, or delegated-agent catalogs beyond the one-reference-first rule. The Linux desktop wrapper is the single 0.3.0 reference adapter; macOS/Windows remain deferred.
 - Built-in Caveman or Ponytail prompt content, skill bodies, hook scripts, or rule text (integration packages only wire upstream).
 - Exactly-once execution claims for arbitrary external side effects.
 - Model-only usage of Cursor or Antigravity SDKs — neither exposes a model-only seam; they integrate as delegated agents, not providers.

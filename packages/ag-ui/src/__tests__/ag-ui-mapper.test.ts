@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { EventSchemas, EventType } from "@ag-ui/core";
-import { type AgentEvent, createSecretRedactor } from "@arnilo/prism";
+import { type AgentEvent, createDelegatedAgentStep, createSecretRedactor } from "@arnilo/prism";
 import { createAgUiEventMapper, packageName, resolveAgUiLimits } from "../index.js";
 
 describe("@arnilo/prism-ag-ui", () => {
@@ -192,6 +192,35 @@ describe("@arnilo/prism-ag-ui", () => {
         `missing ${type}`,
       );
     }
+  });
+
+  it("projects delegated steps to bounded activity/custom metadata without transcript or raw details", async () => {
+    const mapper = createAgUiEventMapper({ includeCustomEvents: true });
+    const event = createDelegatedAgentStep({
+      sessionId: "session-1",
+      runId: "run-1",
+      adapterId: "antigravity-cli",
+      externalConversationId: "conversation-1",
+      stepIndex: 4,
+      state: "done",
+      kind: "tool",
+      toolName: "prism:edit",
+      durationMs: 70,
+      usage: { inputTokens: 100, outputTokens: 20, thinkingTokens: 4, totalTokens: 124 },
+      detail: { referenceId: "opaque-1", label: "safe" },
+    });
+    const mapped = await mapper.map(event);
+    assert.deepEqual(
+      mapped.map((item) => item.type),
+      [EventType.ACTIVITY_SNAPSHOT, EventType.CUSTOM],
+    );
+    const activity = mapped[0] as { content: Record<string, unknown> };
+    assert.equal(activity.content.kind, "tool");
+    assert.deepEqual(activity.content.usage, { inputTokens: 100, outputTokens: 20, thinkingTokens: 4, totalTokens: 124 });
+    assert.equal(JSON.stringify(mapped).includes("arguments"), false);
+    assert.equal(JSON.stringify(mapped).includes("result"), false);
+    assert.equal(EventSchemas.safeParse(mapped[0]).success, true);
+    assert.equal(EventSchemas.safeParse(mapped[1]).success, true);
   });
 
   it("enforces finite limits and truncates oversized text before schema output", async () => {

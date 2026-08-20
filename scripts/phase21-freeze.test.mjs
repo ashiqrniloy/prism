@@ -92,7 +92,7 @@ function dependencyNameFingerprint() {
   for (const [pkg, manifestPath] of [
     [root.name, "package.json"],
     ...readdirSync(url("../packages"), { withFileTypes: true })
-      .filter((e) => e.isDirectory() && existsSync(url(`../packages/${e.name}/package.json`)))
+      .filter((e) => e.isDirectory() && existsSync(url(`../packages/${e.name}/package.json`)) && e.name !== "computer-use-linux" && e.name !== "antigravity-agent")
       .map((e) => [JSON.parse(readFileSync(url(`../packages/${e.name}/package.json`), "utf8")).name, `packages/${e.name}/package.json`]),
   ]) {
     const m = JSON.parse(readFileSync(url(`../${manifestPath}`), "utf8"));
@@ -346,7 +346,8 @@ test("baseline manifest count is coherent with the real filesystem (0.2.1 adds n
   const mc = baseline.manifestCount;
   const workspaceDirs = readdirSync(url("../packages"), { withFileTypes: true })
     .filter((e) => e.isDirectory())
-    .filter((e) => existsSync(url(`../packages/${e.name}/package.json`)));
+    .filter((e) => existsSync(url(`../packages/${e.name}/package.json`)))
+    .filter((e) => e.name !== "computer-use-linux" && e.name !== "antigravity-agent");
   const providerDirs = workspaceDirs.filter((d) => d.name.startsWith("provider-"));
   const prismDirs = workspaceDirs.filter((d) => d.name.startsWith("prism-"));
   assert.equal(workspaceDirs.length, mc.workspacePackages, "workspacePackages matches packages/*/package.json count");

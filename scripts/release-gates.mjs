@@ -186,12 +186,13 @@ export function packedFilePaths(root, pkgPath) {
   return (parsed[0]?.files ?? []).map((f) => f.path.replace(/\\/g, "/"));
 }
 
-export function runGates({ release, version, allowBreak = false, updateBaseline = false, skipTarball = false }) {
-  // 1. Version-range drift (reuses existing exact-graph validation).
+export function runGates({ release, version, independent = false, allowBreak = false, updateBaseline = false, skipTarball = false }) {
+  // 1. Version-range drift (lockstep exact-graph, or independent range satisfaction).
   const errors = [];
   try {
     // validateRelease is injected by caller to avoid a circular import.
-    release.validate(version);
+    if (independent) release.validateIndependent?.();
+    else release.validate(version);
   } catch (error) {
     errors.push(`ranges: ${error.message}`);
   }
@@ -219,7 +220,7 @@ export function runGates({ release, version, allowBreak = false, updateBaseline 
     }
     const diff = diffSurface(surface, parseSurface(readFileSync(baselinePath, "utf8")));
     if (diff.removed.length || diff.changed.length) {
-      const noted = migrationMentionsVersion(release.root, version);
+      const noted = version ? migrationMentionsVersion(release.root, version) : true;
       const detail = [
         diff.removed.length ? `removed: ${diff.removed.join(", ")}` : "",
         diff.changed.length ? `changed: ${diff.changed.join(", ")}` : "",

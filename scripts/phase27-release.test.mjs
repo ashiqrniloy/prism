@@ -36,15 +36,18 @@ const DR_EVIDENCE = "docs/_evidence/phase27-dr-evidence.json";
 const ROADMAP = "roadmap.md";
 const EVIDENCE_DOC = "docs/release-0.2.7-evidence.md";
 const BLOCKER = "0.3.0 live-service matrix";
+const hasDesktopPackage = truth.capability.includes("@arnilo/prism-computer-use-linux");
+const hasAntigravityPackage = truth.capability.includes("@arnilo/prism-antigravity-agent");
 
 describe("Plan 027 Task 10 release closeout", () => {
-  test("release metadata is exactly 0.2.7 across the 51-package graph", () => {
-    assert.equal(truth.counts.publishable, 55, "exactly 55 publishable packages (0.2.9 plan 029 added 4 packages)");
-    assert.equal(truth.counts.workspace, 54, "54 workspace packages");
-    assert.equal(truth.root.version, "0.2.9", "root manifest is 0.2.9");
-    assert.equal(truth.peerPolicy.spec, "0.2.9", "peer policy spec is 0.2.9");
+  test("release metadata remains consistent after the 0.3.0 cut", () => {
+    const added = Number(hasDesktopPackage) + Number(hasAntigravityPackage);
+    assert.equal(truth.counts.publishable, 55 + added, "current publishable package count");
+    assert.equal(truth.counts.workspace, 54 + added, "current workspace package count");
+    assert.equal(truth.root.version, "0.3.0", "root manifest is 0.3.0");
+    assert.equal(truth.peerPolicy.spec, "^0.3.0", "peer policy spec is ^0.3.0");
     const lock = readJson("package-lock.json");
-    assert.equal(lock.version, "0.2.9", "package-lock.json root version is 0.2.9");
+    assert.equal(lock.version, "0.3.0", "package-lock.json root version is 0.3.0");
     // release.mjs validates every manifest version + peer range + lockfile entry
     // (release:check with --allow-dirty already passed for 0.2.7); the deeper
     // per-package peer/version contract is enforced by phase24-truth + phase27-freeze.

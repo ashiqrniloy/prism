@@ -65,6 +65,8 @@ export interface EditToolDetails {
   patch: string;
   /** Line number of the first change in the new file (for editor navigation). */
   firstChangedLine?: number;
+  /** `true` when the replacement applied via fuzzy (not exact) matching. Absent for exact. */
+  fuzzy?: boolean;
 }
 
 /**
@@ -171,7 +173,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
     kind: "edit",
     effect: CODING_LOCAL_EFFECT,
     description:
-      "Edit a single file using exact-then-fuzzy text replacement. Every edits[].oldText must match a unique, non-overlapping region of the original file. Exact match is tried first; if it fails, fuzzy match (unicode normalize + whitespace collapse) may still succeed silently — prefer exact oldText to avoid wrong-region edits. Duplicate/ambiguous matches fail closed and leave the file unchanged. If two changes affect the same block or nearby lines, merge them into one edit. Do not include large unchanged regions just to connect distant changes. When the host enabled requireReadBeforeWrite, read the path first or pass force=true.",
+      "Edit a single file using exact-then-fuzzy text replacement. Every edits[].oldText must match a unique, non-overlapping region of the original file. Exact match is tried first; if it fails, fuzzy match (unicode normalize + whitespace collapse) may still succeed and is reported as `(fuzzy match)` — prefer exact `oldText` copied from a fresh `read` to avoid wrong-region edits. Duplicate/ambiguous matches fail closed and leave the file unchanged. If two changes affect the same block or nearby lines, merge them into one edit. Do not include large unchanged regions just to connect distant changes. When the host enabled requireReadBeforeWrite, read the path first or pass force=true.",
     parameters: {
       type: "object",
       properties: {
@@ -276,8 +278,9 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
           // Apply exact-then-fuzzy matching. Throws on no-match / duplicate / overlap / empty / no-change.
           let baseContent: string;
           let newContent: string;
+          let usedFuzzyMatch = false;
           try {
-            ({ baseContent, newContent } = applyEditsToNormalizedContent(normalizedContent, edits, prepared.path));
+            ({ baseContent, newContent, usedFuzzyMatch } = applyEditsToNormalizedContent(normalizedContent, edits, prepared.path));
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             return errorResult(toolCallId, message);
@@ -291,15 +294,17 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
 
           const diffResult = generateDiffString(baseContent, newContent);
           const patch = generateUnifiedPatch(prepared.path, baseContent, newContent);
+          const confirmation = `Successfully replaced ${edits.length} block(s) in ${prepared.path}${usedFuzzyMatch ? " (fuzzy match)" : ""}.`;
           return {
             toolCallId,
             name: "edit",
-            content: [{ type: "text", text: `Successfully replaced ${edits.length} block(s) in ${prepared.path}.` }],
+            content: [{ type: "text", text: confirmation }],
             metadata: {
               path: allowedPath,
               diff: diffResult.diff,
               patch,
               firstChangedLine: diffResult.firstChangedLine,
+              ...(usedFuzzyMatch ? { fuzzy: true } : {}),
             } satisfies EditToolDetails,
           };
         });

@@ -23,6 +23,7 @@ export function loadRelease(root = process.cwd()) {
   const byName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
   const release = { root, packages, byName };
   release.validate = (version) => validateRelease(release, version);
+  release.validateIndependent = (opts) => validateReleaseIndependent(release, opts);
   return release;
 }
 
@@ -34,7 +35,7 @@ export function validateRelease(release, version) {
     if (pkg.manifest.publishConfig?.access !== "public") errors.push(`${pkg.manifest.name} must set publishConfig.access to public`);
     for (const field of DEPENDENCY_FIELDS) {
       for (const [name, range] of Object.entries(pkg.manifest[field] ?? {})) {
-        if (release.byName.has(name) && range !== version)
+        if (release.byName.has(name) && range !== version && !satisfiesInternalRange(range, version))
           errors.push(`${pkg.manifest.name} ${field}.${name} is ${range}, expected ${version}`);
       }
     }
@@ -93,6 +94,26 @@ export function bumpRelease(release, from, to) {
   return changed;
 }
 
+export function rewriteInternalRanges(release, version, style = "caret") {
+  if (style !== "caret") throw new Error(`unsupported internal range style: ${style}; use caret`);
+  const target = `^${version}`;
+  const changed = [];
+  for (const pkg of release.packages) {
+    let dirty = false;
+    for (const field of DEPENDENCY_FIELDS) {
+      for (const name of Object.keys(pkg.manifest[field] ?? {})) {
+        if (!release.byName.has(name) || pkg.manifest[field][name] === target) continue;
+        pkg.manifest[field][name] = target;
+        dirty = true;
+      }
+    }
+    if (!dirty) continue;
+    writeFileSync(join(release.root, pkg.path, "package.json"), `${JSON.stringify(pkg.manifest, null, 2)}\n`);
+    changed.push(pkg.manifest.name);
+  }
+  return changed;
+}
+
 export function regenerateLockfile(root) {
   const result = spawnSync("npm", ["install", "--package-lock-only", "--ignore-scripts"], {
     cwd: root,
@@ -103,11 +124,152 @@ export function regenerateLockfile(root) {
   if (result.status !== 0) throw new Error("npm install --package-lock-only failed after version bump");
 }
 
-export function assertGitState(root, version, { allowDirty = false, allowUntagged = false } = {}) {
+// --- independent versioning (dual-mode; default after the 0.3.0 cut) ---
+
+const SEMVER_RE = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/;
+
+export function parseSemver(version) {
+  const m = SEMVER_RE.exec(String(version));
+  return m ? { major: +m[1], minor: +m[2], patch: +m[3] } : undefined;
+}
+
+function cmpSemver(a, b) {
+  const pa = parseSemver(a);
+  const pb = parseSemver(b);
+  if (!pa || !pb) return 0;
+  return pa.major - pb.major || pa.minor - pb.minor || pa.patch - pb.patch;
+}
+
+/**
+ * Internal range satisfaction for @arnilo/* pins. Supports exact, caret, and
+ * tilde with npm's 0.x bounds. No prerelease handling — first-party pins are
+ * release versions.
+ */
+export function satisfiesInternalRange(range, version) {
+  const r = String(range).trim();
+  const min = r.replace(/^[~^]/, "");
+  const base = parseSemver(min);
+  const target = parseSemver(version);
+  if (!base || !target || cmpSemver(version, min) < 0) return false;
+  if (r.startsWith("~")) return target.major === base.major && target.minor === base.minor;
+  if (r.startsWith("^")) {
+    if (base.major > 0) return target.major === base.major;
+    if (base.minor > 0) return target.major === 0 && target.minor === base.minor;
+    return target.major === 0 && target.minor === 0 && target.patch === base.patch;
+  }
+  return r === version;
+}
+
+export function incrementVersion(version, type) {
+  const v = parseSemver(version);
+  if (!v) throw new Error(`invalid version: ${version}`);
+  if (type === "patch") return `${v.major}.${v.minor}.${v.patch + 1}`;
+  if (type === "minor") return `${v.major}.${v.minor + 1}.0`;
+  if (type === "major") return `${v.major + 1}.0.0`;
+  throw new Error(`unknown bump type: ${type}; use patch|minor|major`);
+}
+
+function shellGit(root, ...args) {
+  return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+}
+
+export function detectBaselineTag(root, name) {
+  if (name) {
+    const out = shellGit(root, "tag", "--list", `${name}@*`, "--sort=-v:refname");
+    const tag = out.split("\n").filter(Boolean)[0];
+    if (tag) return tag;
+  }
+  const out = shellGit(root, "tag", "--list", "v*", "--sort=-v:refname");
+  return out.split("\n").filter(Boolean)[0] ?? "HEAD";
+}
+
+export function defaultGitDiff(root, baseline, pkgPath) {
+  const target = pkgPath === "." ? "." : `./${pkgPath}`;
+  const result = spawnSync("git", ["diff", "--quiet", baseline, "--", target], { cwd: root, encoding: "utf8" });
+  if (result.error) return true; // git failed (e.g. path new at baseline) -> treat as changed
+  return result.status !== 0;
+}
+
+export function defaultBaselineVersion(root, baseline, pkgPath) {
+  const rel = pkgPath === "." ? "package.json" : `${pkgPath}/package.json`;
+  const result = spawnSync("git", ["show", `${baseline}:${rel}`], { cwd: root, encoding: "utf8" });
+  if (result.status !== 0) return undefined; // new package at baseline
+  try {
+    return JSON.parse(result.stdout).version;
+  } catch {
+    return undefined;
+  }
+}
+
+export function changedPackages(release, { baseline, gitDiff = defaultGitDiff } = {}) {
+  const resolved = baseline ?? detectBaselineTag(release.root);
+  return release.packages.filter((pkg) => gitDiff(release.root, resolved, pkg.path));
+}
+
+/**
+ * Independent validate: every internal pin satisfies the target's actual
+ * version, lockfile per-package versions match manifests, changed packages
+ * bumped, unchanged packages not. Git/baseline seams are injectable for tests.
+ */
+export function validateReleaseIndependent(release, { baseline, gitDiff = defaultGitDiff, baselineVersion = defaultBaselineVersion } = {}) {
+  const resolved = baseline ?? detectBaselineTag(release.root);
+  const errors = [];
+  for (const pkg of release.packages) {
+    for (const field of DEPENDENCY_FIELDS) {
+      for (const [name, range] of Object.entries(pkg.manifest[field] ?? {})) {
+        const target = release.byName.get(name);
+        if (!target) continue;
+        if (!satisfiesInternalRange(range, target.manifest.version)) {
+          errors.push(`${pkg.manifest.name} ${field}.${name} range ${range} does not satisfy ${name}@${target.manifest.version}`);
+        }
+      }
+    }
+  }
+  const lock = JSON.parse(readFileSync(join(release.root, "package-lock.json"), "utf8"));
+  for (const pkg of release.packages) {
+    const locked = lock.packages?.[pkg.path === "." ? "" : pkg.path];
+    if (!locked) errors.push(`package-lock.json missing ${pkg.path}`);
+    else if (locked.version !== pkg.manifest.version)
+      errors.push(`package-lock.json ${pkg.path} version is ${locked.version}, manifest is ${pkg.manifest.version}`);
+  }
+  for (const pkg of release.packages) {
+    const changed = gitDiff(release.root, resolved, pkg.path);
+    const base = baselineVersion(release.root, resolved, pkg.path);
+    if (changed && base && pkg.manifest.version === base)
+      errors.push(`${pkg.manifest.name} changed since ${resolved} but version is still ${base} (bump required)`);
+    if (!changed && base && pkg.manifest.version !== base)
+      errors.push(`${pkg.manifest.name} unchanged since ${resolved} but version is ${pkg.manifest.version} (was ${base})`);
+  }
+  if (errors.length) throw new Error(errors.join("\n"));
+  return topologicalOrder(release);
+}
+
+export function bumpPackage(release, name, type) {
+  const pkg = release.byName.get(name);
+  if (!pkg) throw new Error(`unknown package: ${name}`);
+  const from = pkg.manifest.version;
+  const to = incrementVersion(from, type);
+  pkg.manifest.version = to;
+  writeFileSync(join(release.root, pkg.path, "package.json"), `${JSON.stringify(pkg.manifest, null, 2)}\n`);
+  return { name, from, to };
+}
+
+export function assertGitState(root, version, { allowDirty = false, allowUntagged = false, independent = false, packages = [], tag } = {}) {
   const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
   if (!allowDirty && git("status", "--porcelain")) throw new Error("release requires a clean git tree");
-  if (!allowUntagged) {
-    const tags = git("tag", "--points-at", "HEAD").split("\n").filter(Boolean);
+  if (allowUntagged) return;
+  const tags = git("tag", "--points-at", "HEAD").split("\n").filter(Boolean);
+  if (independent) {
+    const packageTag = tag ?? process.env.GITHUB_REF_NAME;
+    if (packageTag) {
+      const target = packages.find(({ name, version: v }) => `${name}@${v}` === packageTag);
+      if (!target) throw new Error(`HEAD must have a current package tag; got ${packageTag}`);
+      if (!tags.includes(packageTag)) throw new Error(`HEAD must have tag ${packageTag}`);
+      return;
+    }
+    const tagged = packages.filter(({ name, version: v }) => tags.includes(`${name}@${v}`));
+    if (!tagged.length) throw new Error("HEAD must have a current package tag");
+  } else {
     if (!tags.includes(`v${version}`)) throw new Error(`HEAD must have tag v${version}`);
   }
 }
@@ -154,6 +316,8 @@ export function publishArgs(pkg, dryRun = false, provenance = process.env.GITHUB
 export async function runRelease({
   release,
   version,
+  independent = false,
+  independentOptions,
   mode,
   resume = false,
   dryRun = false,
@@ -162,9 +326,13 @@ export async function runRelease({
   reportPath,
   publisher,
 }) {
-  const order = validateRelease(release, version);
+  const validated = independent ? validateReleaseIndependent(release, independentOptions) : validateRelease(release, version);
+  const order = independent
+    ? validated.filter((pkg) => changedPackages(release, independentOptions).some((changed) => changed.path === pkg.path))
+    : validated;
   const report = {
-    version,
+    version: independent ? "independent" : version,
+    independent,
     dryRun,
     order: order.map((pkg) => pkg.manifest.name),
     packages: [],
@@ -182,15 +350,16 @@ export async function runRelease({
     });
 
   for (const pkg of order) {
-    const published = await registryManifest(pkg.manifest.name, version, registry, fetcher);
+    const pubVersion = independent ? pkg.manifest.version : version;
+    const published = await registryManifest(pkg.manifest.name, pubVersion, registry, fetcher);
     if (published) {
       if (mode === "publish" && resume && samePublishedManifest(pkg.manifest, published)) {
         report.packages.push({ name: pkg.manifest.name, status: "skipped" });
         saveReport(reportPath, report);
-        console.log(`skipped ${pkg.manifest.name}@${version} (already published)`);
+        console.log(`skipped ${pkg.manifest.name}@${pubVersion} (already published)`);
         continue;
       }
-      throw new Error(`${pkg.manifest.name}@${version} already exists on the registry`);
+      throw new Error(`${pkg.manifest.name}@${pubVersion} already exists on the registry`);
     }
     if (mode === "check") {
       report.packages.push({ name: pkg.manifest.name, status: "available" });
@@ -246,7 +415,7 @@ export function checkReleaseEvidence({ manifestPath, root = process.cwd() } = {}
   return manifest;
 }
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const options = { mode: argv[0] };
   for (let i = 1; i < argv.length; i++) {
     const arg = argv[i];
@@ -257,19 +426,43 @@ function parseArgs(argv) {
     else if (arg === "--allow-break") options.allowBreak = true;
     else if (arg === "--update-baseline") options.updateBaseline = true;
     else if (arg === "--skip-tarball") options.skipTarball = true;
+    else if (arg === "--independent") options.independent = true;
+    else if (arg === "--lockstep") options.lockstep = true;
+    else if (arg === "--ranges") options.ranges = argv[++i];
     else if (arg === "--from") options.from = argv[++i];
     else if (arg === "--to") options.to = argv[++i];
+    else if (arg === "--package") options.package = argv[++i];
+    else if (arg === "--type") options.type = argv[++i];
+    else if (arg === "--baseline") options.baseline = argv[++i];
     else if (["--version", "--root", "--registry", "--report"].includes(arg))
       options[arg.slice(2).replace("report", "reportPath")] = argv[++i];
     else throw new Error(`unknown argument: ${arg}`);
   }
-  if (!["check", "publish", "gate", "bump"].includes(options.mode))
-    throw new Error("usage: release.mjs <check|publish|gate|bump> --version <version> [--resume] [--dry-run]");
+  if (!["check", "publish", "gate", "bump", "changed"].includes(options.mode))
+    throw new Error(
+      "usage: release.mjs <check|publish|gate|bump|changed> [--lockstep --version <version>|--independent] [--resume] [--dry-run]",
+    );
   if (options.mode === "gate") {
-    options.version ??= JSON.parse(readFileSync(join(resolve(options.root ?? process.cwd()), "package.json"), "utf8")).version;
+    if (options.lockstep && options.independent) throw new Error("--lockstep and --independent are mutually exclusive");
+    if (!options.lockstep) options.independent = true;
+    if (options.independent && options.version) throw new Error("--independent and --version are mutually exclusive");
+    if (options.lockstep && !options.version) throw new Error("--lockstep requires --version <version>");
     return options;
   }
-  if (options.mode !== "bump" && !options.version) throw new Error("--version is required");
+  if (options.mode === "changed") return options;
+  if (options.mode === "bump") {
+    const lockstep = options.from && options.to;
+    const single = options.package && options.type;
+    if (lockstep === single)
+      throw new Error("bump requires either --from <v> --to <v> (lockstep) or --package <name> --type <patch|minor|major> (single)");
+    if (options.ranges && (!lockstep || options.ranges !== "caret"))
+      throw new Error("--ranges supports only caret with lockstep --from/--to");
+    return options;
+  }
+  if (options.lockstep && options.independent) throw new Error("--lockstep and --independent are mutually exclusive");
+  if (!options.lockstep && !options.independent) options.independent = true;
+  if (options.independent && options.version) throw new Error("--independent and --version are mutually exclusive");
+  if (options.lockstep && !options.version) throw new Error("--lockstep requires --version <version>");
   if (options.mode === "publish" && !options.dryRun && (options.allowDirty || options.allowUntagged)) {
     throw new Error("real publication cannot bypass clean tagged git checks");
   }
@@ -280,11 +473,24 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const root = resolve(options.root ?? process.cwd());
   const release = loadRelease(root);
+  if (options.mode === "changed") {
+    const list = changedPackages(release, { baseline: options.baseline });
+    for (const pkg of list) console.log(pkg.manifest.name);
+    return;
+  }
   if (options.mode === "bump") {
-    if (!options.from || !options.to) throw new Error("bump requires --from <version> --to <version>");
+    if (options.package) {
+      if (!options.type) throw new Error("bump --package requires --type <patch|minor|major>");
+      const result = bumpPackage(release, options.package, options.type);
+      regenerateLockfile(root);
+      console.log(`bumped ${result.name}: ${result.from} -> ${result.to}`);
+      return;
+    }
     const changed = bumpRelease(release, options.from, options.to);
+    const ranged = options.ranges ? rewriteInternalRanges(release, options.to, options.ranges) : [];
     regenerateLockfile(root);
     console.log(`bumped ${changed.length} manifests from ${options.from} to ${options.to}: ${changed.join(", ")}`);
+    if (ranged.length) console.log(`rewrote ${ranged.length} manifests to ${options.ranges} internal ranges: ${ranged.join(", ")}`);
     return;
   }
   if (options.mode === "gate") {
@@ -292,6 +498,7 @@ async function main() {
     const report = runGates({
       release,
       version: options.version,
+      independent: options.independent,
       allowBreak: options.allowBreak,
       updateBaseline: options.updateBaseline,
       skipTarball: options.skipTarball,
@@ -299,10 +506,16 @@ async function main() {
     console.log(JSON.stringify(report, null, 2));
     return;
   }
-  assertGitState(root, options.version, options);
+  assertGitState(root, options.version, {
+    ...options,
+    independent: options.independent,
+    tag: process.env.GITHUB_REF_NAME,
+    packages: release.packages.map((p) => ({ name: p.manifest.name, version: p.manifest.version })),
+  });
   const report = await runRelease({
     ...options,
     release,
+    independentOptions: { baseline: options.baseline },
     reportPath: options.reportPath ? resolve(root, options.reportPath) : undefined,
   });
   console.log(JSON.stringify(report, null, 2));

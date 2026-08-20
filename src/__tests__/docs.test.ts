@@ -81,6 +81,7 @@ const apiPages = [
   "docs/coding-security.md",
   "docs/browser-automation.md",
   "docs/device-adapters.md",
+  "docs/computer-use-linux.md",
   "docs/mcp-tools.md",
   "docs/node-filesystem-config.md",
   "docs/node-jsonl-session-store.md",
@@ -92,6 +93,7 @@ const apiPages = [
   "docs/cli-rpc.md",
   "docs/workflows.md",
   "docs/work-artifacts-and-review.md",
+  "docs/antigravity-agent.md",
   "docs/release-and-install.md",
   "docs/performance.md",
   "docs/migration.md",
@@ -147,6 +149,7 @@ const requiredHeadings = [
 
 function markdownFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    if (entry.name === "node_modules" || entry.name === "dist") return [];
     const path = join(dir, entry.name);
     if (entry.isDirectory()) return markdownFiles(path);
     return entry.isFile() && entry.name.endsWith(".md") ? [path] : [];
@@ -233,6 +236,11 @@ describe("docs", () => {
       const text = readFileSync(page, "utf8");
       for (const heading of requiredHeadings) assert.ok(text.includes(heading), `${page} missing ${heading}`);
     }
+  });
+
+  it("computer-use-linux docs are indexed under Tools", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    assert.match(index, /## Tools[\s\S]*- \[Linux desktop control\]\(computer-use-linux\.md\)/);
   });
 
   it("docs index contains exactly one navigation link per documentation page", () => {
@@ -391,6 +399,8 @@ describe("docs", () => {
         "@arnilo/prism-caveman": "Caveman",
         "@arnilo/prism-ponytail": "Ponytail",
         "@arnilo/prism-impeccable": "Impeccable",
+        "@arnilo/prism-computer-use-linux": "computer-use-linux",
+        "@arnilo/prism-antigravity-agent": "antigravity-agent",
       };
       for (const omitted of all.omits) {
         const readable = omissionReadable[omitted];
@@ -501,8 +511,8 @@ describe("docs", () => {
     assert.ok(release.includes("dead-code cleanup, internal-only"), "0.2.5 handoff must cover the dead-code cleanup");
     assert.ok(release.includes("coverage close, behavior-backed"), "0.2.5 handoff must cover the coverage close");
     assert.ok(release.includes("Measured reductions and deltas"), "0.2.5 handoff must record the measured reductions/deltas");
-    assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
-    assert.ok(changelog.includes(`## [${pkg.version}] - 2026-08-19`), `root changelog missing ${pkg.version} entry`);
+    assert.ok(release.includes(`@arnilo/prism@^${pkg.version}`), `release page peer range must be ^${pkg.version}`);
+    assert.ok(changelog.includes("## [0.2.5] - 2026-08-15"), "root changelog missing 0.2.5 entry");
     assert.ok(migration.includes("## 0.2.4 → 0.2.5"), "migration.md missing the 0.2.4 → 0.2.5 note");
     assert.ok(
       migration.includes("No runtime contract change and no migration"),
@@ -523,7 +533,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.2.9", "root manifest must be at 0.2.9");
+    assert.equal(pkg.version, "0.3.0", "root manifest must be at 0.3.0 after the Task 9 cut");
     assert.ok(release.includes("### 0.2.7 publish handoff (plan 027 Task 10)"), "release page missing 0.2.7 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.7 handoff missing rollback notes");
     // Semantic tripwire: the nine 0.2.7 ERP roadmap items are present in the handoff
@@ -536,9 +546,9 @@ describe("docs", () => {
     assert.ok(release.includes("backup, restore, and migration rollback evidence"), "0.2.7 handoff must cover backup/restore");
     assert.ok(release.includes("field-level data classification and redaction"), "0.2.7 handoff must cover classification");
     assert.ok(release.includes("ERP release journey"), "0.2.7 handoff must cover the ERP journey");
-    assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
+    assert.ok(release.includes(`@arnilo/prism@^${pkg.version}`), `release page peer range must be ^${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.ok(changelog.includes(`## [${pkg.version}] - 2026-08-19`), `root changelog missing ${pkg.version} entry`);
+    assert.ok(changelog.includes("## [0.2.7] - 2026-08-17"), "root changelog missing 0.2.7 entry");
     assert.ok(migration.includes("## 0.2.6 → 0.2.7"), "migration.md missing the 0.2.6 → 0.2.7 note");
     assert.ok(index.includes("**0.2.8**"), "docs/index.md missing the 0.2.8 current line");
     assert.ok(
@@ -560,14 +570,14 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.2.9", "root manifest must be at 0.2.9");
+    assert.equal(pkg.version, "0.3.0", "root manifest must be at 0.3.0 after the Task 9 cut");
     assert.ok(release.includes("### 0.2.8 publish handoff (plan 028 Task 18)"), "release page missing 0.2.8 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.8 handoff missing rollback notes");
     assert.ok(release.includes("client-neutrality"), "0.2.8 handoff must cover client-neutrality");
     assert.ok(release.includes("@arnilo/prism-acp-agent"), "0.2.8 handoff must name the spawnable agent");
-    assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
+    assert.ok(release.includes(`@arnilo/prism@^${pkg.version}`), `release page peer range must be ^${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.ok(changelog.includes(`## [${pkg.version}] - 2026-08-19`), `root changelog missing ${pkg.version} entry`);
+    assert.ok(changelog.includes("## [0.2.8] - 2026-08-18"), "root changelog missing 0.2.8 entry");
     assert.ok(migration.includes("## 0.2.7 → 0.2.8"), "migration.md missing the 0.2.7 → 0.2.8 note");
     assert.ok(index.includes("**0.2.8**"), "docs/index.md missing the 0.2.8 current line");
     assert.ok(index.includes("(acp-agent.md)"), "docs/index.md missing spawnable ACP agent page");
@@ -590,11 +600,11 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.2.9", "root manifest must be at 0.2.9");
+    assert.equal(pkg.version, "0.3.0", "root manifest must be at 0.3.0 after the Task 9 cut");
     assert.ok(release.includes("### 0.2.9 publish handoff (plan 029 Task 10)"), "release page missing 0.2.9 handoff");
     assert.ok(release.includes("SuperGrok"), "0.2.9 handoff must cover SuperGrok");
     assert.ok(release.includes("@arnilo/prism-impeccable"), "0.2.9 handoff must name impeccable");
-    assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
+    assert.ok(release.includes(`@arnilo/prism@^${pkg.version}`), `release page peer range must be ^${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
     assert.ok(changelog.includes("## [0.2.9] - 2026-08-19"), "root changelog missing 0.2.9 entry");
     assert.ok(migration.includes("## 0.2.8 → 0.2.9"), "migration.md missing the 0.2.8 → 0.2.9 note");
@@ -618,7 +628,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.2.9", "root manifest must be at 0.2.9");
+    assert.equal(pkg.version, "0.3.0", "root manifest must be at 0.3.0 after the Task 9 cut");
     assert.ok(release.includes("### 0.2.6 publish handoff (plan 026 Task 8)"), "release page missing 0.2.6 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.6 handoff missing rollback notes");
     // Semantic tripwire: the seven 0.2.6 roadmap items are present in the handoff
@@ -631,9 +641,9 @@ describe("docs", () => {
     assert.ok(release.includes("durable ACP/live-task and managed-process recovery"), "0.2.6 handoff must cover durable recovery");
     assert.ok(release.includes("bounded patch review and incremental diagnostics"), "0.2.6 handoff must cover review/diagnostics");
     assert.ok(release.includes("protected real coding journey"), "0.2.6 handoff must cover the coding journey");
-    assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
+    assert.ok(release.includes(`@arnilo/prism@^${pkg.version}`), `release page peer range must be ^${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.ok(changelog.includes(`## [${pkg.version}] - 2026-08-19`), `root changelog missing ${pkg.version} entry`);
+    assert.ok(changelog.includes("## [0.2.6] - 2026-08-16"), "root changelog missing 0.2.6 entry");
     assert.ok(migration.includes("## 0.2.5 → 0.2.6"), "migration.md missing the 0.2.5 → 0.2.6 note");
     assert.ok(index.includes("**0.2.8**"), "docs/index.md missing the 0.2.8 current line");
     assert.ok(
@@ -786,9 +796,9 @@ describe("docs", () => {
       assert.ok(contracts.includes(token), `public-contracts missing ${token}`);
     assert.ok(release.includes("### 0.1.0 publish handoff (plan 012 Task 7)"), "release page missing 0.1.0 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
-    assert.ok(release.includes(`@arnilo/prism@${pkg.version}`), `release page peer pin must be ${pkg.version}`);
+    assert.ok(release.includes(`@arnilo/prism@^${pkg.version}`), `release page peer range must be ^${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.equal(pkg.version, "0.2.9", "root manifest must be at 0.2.9");
+    assert.equal(pkg.version, "0.3.0", "root manifest must be at 0.3.0 after the Task 9 cut");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -1646,7 +1656,7 @@ describe("docs", () => {
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 55, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 57, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
@@ -2245,19 +2255,19 @@ describe("docs", () => {
     }
   });
 
-  it("peer-version policy (plan 024 Task 3): exact pins, atomic upgrade, unsupported mixture, migration note", () => {
+  it("peer-version policy (plan 030 Task 9): caret ranges, independent packages, migration note", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     const release = readFileSync("docs/release-and-install.md", "utf8");
     const migration = readFileSync("docs/migration.md", "utf8");
     assert.ok(
-      release.includes(`non-optional **exact** \`@arnilo/prism@${pkg.version}\` peer`),
-      "release page must state the exact current peer spec",
+      release.includes(`non-optional **caret** \`@arnilo/prism@^${pkg.version}\` peer`),
+      "release page must state the caret current peer spec",
     );
-    assert.ok(release.includes("atomic-upgrade rule"), "release page must state the atomic-upgrade rule");
-    assert.ok(release.includes("ERESOLVE"), "release page must state the unsupported-mixture behavior");
-    assert.ok(release.includes("^1.0.0"), "release page must state the 1.x widening");
-    assert.ok(migration.includes("## 0.2.3 → 0.2.4"), "migration.md must carry the 0.2.3 → 0.2.4 note");
-    assert.ok(migration.includes("atomic-upgrade rule"), "migration note must state the atomic-upgrade rule");
+    assert.ok(release.includes("Decision B"), "release page must state Decision B");
+    assert.ok(release.includes("independent"), "release page must state independent publication");
+    assert.ok(release.includes("@arnilo/prism-coding-agent@0.3.1"), "release page must show package-tag publication");
+    assert.ok(migration.includes("## 0.2.9 → 0.3.0"), "migration.md must carry the 0.2.9 → 0.3.0 note");
+    assert.ok(migration.includes("Decision B"), "migration note must state Decision B");
   });
 
   it("release_and_install_docs_list_every_core_export_subpath_and_current_session_api", () => {
@@ -2957,7 +2967,7 @@ describe("docs", () => {
     for (const phrase of [
       "**49 publishable manifests**: the root `@arnilo/prism` core package plus **48 workspace packages**",
       "all fourteen `@arnilo/prism-provider-*` packages",
-      "All 55 manifests (root + 54 workspace packages: 48 code packages + 6 pure-manifest family/profile packages",
+      "All 56 manifests (root + 55 workspace packages: 49 code packages + 6 pure-manifest family/profile packages",
       "eight provider packages' `src/__tests__/live.test.ts`",
       "Enterprise PostgreSQL package/docs/example gate",
       "dist/index.js` + `dist/index.d.ts`",
@@ -3796,7 +3806,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 55, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 57, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {

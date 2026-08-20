@@ -113,6 +113,39 @@ export interface ToolExecutionMetadata {
   readonly status: ToolCallStatus;
 }
 
+export type DelegatedAgentStepState = "active" | "done" | "error";
+export type DelegatedAgentStepKind = "assistant" | "tool" | "subagent" | "checkpoint" | "unknown";
+
+/** Token counters only; delegated adapters must never put thought text in this shape. */
+export interface DelegatedAgentStepUsage {
+  readonly inputTokens?: number;
+  readonly outputTokens?: number;
+  readonly thinkingTokens?: number;
+  readonly cacheReadTokens?: number;
+  readonly cacheWriteTokens?: number;
+  readonly totalTokens?: number;
+}
+
+/** Safe delegated timeline metadata. Raw arguments, results, paths, URIs, and event bodies are not fields. */
+export interface DelegatedAgentStep {
+  readonly type: "delegated_agent_step";
+  readonly sessionId: string;
+  readonly runId: string;
+  readonly adapterId: string;
+  readonly externalConversationId: string;
+  readonly stepIndex: number;
+  readonly state: DelegatedAgentStepState;
+  readonly kind: DelegatedAgentStepKind;
+  readonly durationMs?: number;
+  readonly usage?: DelegatedAgentStepUsage;
+  readonly toolName?: string;
+  readonly subagentType?: string;
+  readonly detail?: {
+    readonly referenceId?: string;
+    readonly label?: string;
+  };
+}
+
 export type AgentFinishReason = "turn_limit" | "token_limit" | "refusal";
 
 export type AgentEvent =
@@ -161,6 +194,7 @@ export type AgentEvent =
   | { readonly type: "message_started"; readonly sessionId: string; readonly runId: string; readonly message: Message }
   | { readonly type: "message_delta"; readonly sessionId: string; readonly runId: string; readonly content: ContentBlock }
   | { readonly type: "message_finished"; readonly sessionId: string; readonly runId: string; readonly message: Message }
+  | DelegatedAgentStep
   | { readonly type: "tool_execution_started"; readonly sessionId: string; readonly runId: string; readonly call: ToolCallContent }
   | {
       readonly type: "tool_execution_progress";

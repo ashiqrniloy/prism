@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0] - 2026-08-20
+
+### Added
+
+- `read.findText` performs bounded literal/case-insensitive paging without extending `ReadOperations`.
+- Edit misses include bounded nearby line context; Unicode-normalized fuzzy matches are reported in confirmation text and `metadata.fuzzy`.
+- `createAcpFilesystemOperations` adapts ACP text-file methods to read/write/edit without touching host disk; image/document paths fail closed.
+
 ## [0.2.6] - unreleased
 
 ### Added

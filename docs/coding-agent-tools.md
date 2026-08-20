@@ -10,6 +10,7 @@
 | `createReadTool(cwd, options?)` | `read` tool: read a text or image file into `TextContent` / `ImageContent`. |
 | `createWriteTool(cwd, options?)` | `write` tool: create or overwrite a file, creating parent directories. |
 | `createEditTool(cwd, options?)` | `edit` tool: precise exact-then-fuzzy text replacement in an existing file. |
+| `createAcpFilesystemOperations(client)` | Map an ACP-shaped text-file client to `read`/`write`/`edit` operations; no local-disk fallback, binary/image support, or remote `mkdir`. |
 | `createRepoListTool(cwd, options?)` | `repo_list` tool: bounded deterministic repository listing. |
 | `createRepoSearchTool(cwd, options?)` | `repo_search` tool: bounded literal text search (`outputMode`: content / files_with_matches / count). |
 | `createGlobTool(cwd, options?)` | `glob` tool: bounded filename-pattern match (`*` / `?` / `**`; opt-in bounded `{a,b}` brace expansion via `braceExpansion`). |
@@ -49,6 +50,23 @@ const tools = createToolRegistry(createCodingTools(process.cwd()));
 ```
 
 Every tool carries an explicit `kind` (`shell`→`execute`, `read`/`repo_list`→`read`, `write`/`edit`→`edit`, `repo_search`/`glob`→`search`, `delete`→`delete`, `move`→`move`) so ACP `tool_call` updates and other consumers can classify tools without name heuristics.
+
+### ACP editor-buffer operations
+
+`createAcpFilesystemOperations` adapts any client with `readTextFile({ path, line?, limit? })` and `writeTextFile({ path, content })` methods to the `ReadOperations`, `WriteOperations`, and `EditOperations` seams. All reads and writes stay client-backed; `mkdir` is a no-op, `statFile` measures a bounded UTF-8 text read, and image MIME detection is always `null`.
+
+```ts
+import { createAcpFilesystemOperations, createCodingTools } from "@arnilo/prism-coding-agent";
+
+const operations = createAcpFilesystemOperations(clientFilesystem);
+const tools = createCodingTools(cwd, {
+  read: { operations: operations.read },
+  write: { operations: operations.write },
+  edit: { operations: operations.edit },
+});
+```
+
+This is an editor-buffer adapter, not a repository backend: `repo_list`, `repo_search`, `glob`, `delete`, and `move` remain disk-backed unless separately overridden. Binary/image and document reads are not silently delegated to local disk.
 
 ## When to use it
 
@@ -144,8 +162,10 @@ Read a text or image file.
 | `path` | `string` | Path to the file (relative or absolute; `~` and `file://` expanded). Required. |
 | `offset` | `number` | Line to start reading from (1-indexed). |
 | `limit` | `number` | Maximum number of lines to read. |
+| `findText` | `string` | Literal substring to search for (no regex). When set, the tool pages through the file from `offset` and returns the page starting at the **first matching line** (re-read at the hit line so the match is the first line). No match is an error result with no file body. |
+| `findMode` | `"exact" \| "case-insensitive"` | Match mode for `findText` (default `"exact"`). Two literals only — no regex, no fuzzy. |
 
-**Outputs:** text files are scanned incrementally until one requested page, `maxLines`/`maxBytes`, EOF, or `maxScanBytes` (default 64 MiB scanned per call; 1 GiB hard cap). The default path never loads the complete file and returns a `Use offset=N to continue` footer when more remains. Exact total line count is reported only when EOF was already reached in the bounded scan. Image files (PNG/JPEG/GIF/WebP/BMP by **magic bytes**, not extension) become `[TextContent note, ImageContent]` with base64 `data` and `mimeType`. Oversize images are rejected by `stat` (when available) or `buffer.length` against `maxImageBytes` (default 10 MB) before base64 encoding. An optional `transformImage` callback lets hosts resize or re-encode images without adding image-processing dependencies to the base package. Read failures (missing file, offset beyond end, oversize image, abort) are error results.
+**Outputs:** text files are scanned incrementally until one requested page, `maxLines`/`maxBytes`, EOF, or `maxScanBytes` (default 64 MiB scanned per call; 1 GiB hard cap). The default path never loads the complete file and returns a `Use offset=N to continue` footer when more remains. Exact total line count is reported only when EOF was already reached in the bounded scan. When `findText` is set, the tool pages through `readText` output (in `maxLines`-sized pages) from `offset`, returns the page whose first line is the first match, and stops at the same `maxScanBytes` scan cap — the search is a literal substring scan (per `findMode`), never regex. Image files (PNG/JPEG/GIF/WebP/BMP by **magic bytes**, not extension) become `[TextContent note, ImageContent]` with base64 `data` and `mimeType`. Oversize images are rejected by `stat` (when available) or `buffer.length` against `maxImageBytes` (default 10 MB) before base64 encoding. An optional `transformImage` callback lets hosts resize or re-encode images without adding image-processing dependencies to the base package. Read failures (missing file, offset beyond end, oversize image, abort, findText scan limit) are error results.
 
 `read` tool options (via `createReadTool(cwd, options)` or `ToolsOptions.read`):
 
@@ -166,6 +186,14 @@ const read = createReadTool(cwd, {
   maxImageBytes: DEFAULT_MAX_IMAGE_BYTES,
   transformImage: async ({ buffer, mimeType }) => host.resizeImage(buffer, mimeType),
 });
+
+// jump to the first line containing the needle
+await read.execute({ path: "src/edit.ts", findText: "createEditTool" }, ctx);
+// case-insensitive search starting at offset 50
+await read.execute(
+  { path: "src/edit.ts", findText: "edittool", findMode: "case-insensitive", offset: 50 },
+  ctx,
+);
 ```
 
 `read` result `metadata`:
@@ -236,13 +264,13 @@ Precise text replacement in an existing file via exact-then-fuzzy matching.
 
 Each `edits[].oldText` must match a unique, non-overlapping region of the original file. Matching is exact first, then fuzzy (unicode normalization / whitespace collapse).
 
-**Fuzzy silent-success tradeoff (loud):** when exact match fails, fuzzy may still apply a replacement **without warning the model**. That can edit the wrong region if `oldText` is slightly off (extra/missing whitespace, unicode lookalikes). Prefer exact `oldText` copied from a fresh `read`. Duplicate / non-unique matches already **fail closed** and leave the file unchanged — ambiguity is not silently resolved by picking the first hit.
+**Fuzzy silent-success tradeoff (loud):** when exact match fails, fuzzy may still apply a replacement and is **reported** — both the confirmation text (`Successfully replaced N block(s) in {path} (fuzzy match).`) and `metadata.fuzzy: true`. That can edit the wrong region if `oldText` is slightly off (extra/missing whitespace, unicode lookalikes). Prefer exact `oldText` copied from a fresh `read`. On **no match**, the error lists up to 3 nearby lines (1-indexed, clipped to 120 chars) whose first-line substring matches the edit's first non-empty `oldText` line, so the model can correct its `oldText` (skipped when the needle is shorter than 4 chars or no line contains it). Duplicate / non-unique matches already **fail closed** and leave the file unchanged — ambiguity is not silently resolved by picking the first hit.
 
 A BOM is stripped before matching and re-prepended on write; original line endings are restored. Defaults reject targets over 8 MiB, aggregate old/new UTF-8 input over 2 MiB, or more than 100 edits (hard caps: 64 MiB, 16 MiB, and 1,000). Stat and bounded read checks run before matching or mutation. Default local `writeFile` uses same-directory temp + `rename` (crash-safe replace).
 
-**Outputs:** a `TextContent` confirmation (`Successfully replaced N block(s) in {path}.`) plus `metadata`. Any failure — missing/unreadable file, no match, duplicate (non-unique) match, overlap, empty `oldText`, no-op edit, or abort — is an error result, and the file is left **unchanged** (the match runs before the write).
+**Outputs:** a `TextContent` confirmation (`Successfully replaced N block(s) in {path}.`, with ` (fuzzy match)` appended when the replacement applied via fuzzy matching) plus `metadata`. Any failure — missing/unreadable file, no match (with nearby line context), duplicate (non-unique) match, overlap, empty `oldText`, no-op edit, or abort — is an error result, and the file is left **unchanged** (the match runs before the write).
 
-`edit` result `metadata`: `{ diff, patch, firstChangedLine }` — a display-oriented diff, a standard unified patch, and the first changed line in the new file. These are host-readable; the model only sees the short confirmation (keeps model context small).
+`edit` result `metadata`: `{ path, diff, patch, firstChangedLine, fuzzy? }` — the absolute path written, a display-oriented diff, a standard unified patch, the first changed line in the new file, and `fuzzy: true` present only when the replacement applied via fuzzy (not exact) matching. These are host-readable; the model only sees the short confirmation (keeps model context small).
 
 ### `repo_list`
 

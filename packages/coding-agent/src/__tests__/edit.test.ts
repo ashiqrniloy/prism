@@ -358,3 +358,68 @@ test("aborted signal before edit → error result, file unchanged", async () => 
     await rm(cwd, { recursive: true, force: true });
   }
 });
+
+// --- edit miss context + loud fuzzy (plan 030 Task 4) ---
+
+test("edit no-match includes Nearby snippets and leaves the file unchanged", async () => {
+  const cwd = await tmp();
+  try {
+    // oldText diverges from the file after the first 16 chars, so the clipped needle is a shared prefix
+    const before = "function createEditTool(opts) {\nother\nfunction createEditTool(config) {\nrest\n";
+    await writeFile(join(cwd, "a.ts"), before);
+    const tool = createEditTool(cwd);
+    const r = await tool.execute({ path: "a.ts", edits: [{ oldText: "function createEditTool(ARGS) {", newText: "z" }] }, ctx());
+    assert.ok(r.error, "no-match must be an error result");
+    assert.match(r.error!.message, /Could not find the exact text in .*a\.ts/);
+    assert.match(r.error!.message, /Nearby:/);
+    assert.match(r.error!.message, /L1: function createEditTool\(opts\) \{/);
+    assert.match(r.error!.message, /L3: function createEditTool\(config\) \{/);
+    assert.equal(await readFile(join(cwd, "a.ts"), "utf-8"), before, "file must be byte-identical");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("edit no-match with no similar line keeps the plain sentence (no Nearby)", async () => {
+  const cwd = await tmp();
+  try {
+    const before = "alpha\nbeta\n";
+    await writeFile(join(cwd, "f.txt"), before);
+    const tool = createEditTool(cwd);
+    const r = await tool.execute({ path: "f.txt", edits: [{ oldText: "zzz unrelated", newText: "y" }] }, ctx());
+    assert.ok(r.error);
+    assert.match(r.error!.message, /Could not find/);
+    assert.doesNotMatch(r.error!.message, /Nearby:/);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("edit fuzzy match is loud: metadata.fuzzy === true and confirmation mentions (fuzzy match)", async () => {
+  const cwd = await tmp();
+  try {
+    // NBSP in the file vs regular space in oldText: exact match fails, fuzzy (NBSP→space) applies
+    await writeFile(join(cwd, "f.txt"), "line\u00A0with spaces\n");
+    const tool = createEditTool(cwd);
+    const r = await tool.execute({ path: "f.txt", edits: [{ oldText: "line with spaces", newText: "CHANGED" }] }, ctx());
+    assert.equal(r.error, undefined, `unexpected error: ${r.error?.message}`);
+    assert.match(textOf(r), /\(fuzzy match\)/);
+    assert.equal((meta(r) as { fuzzy?: boolean } | undefined)?.fuzzy, true);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("edit exact match is quiet: no fuzzy flag, no (fuzzy match) in confirmation", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "f.txt"), "alpha\nbeta\ngamma");
+    const tool = createEditTool(cwd);
+    const r = await tool.execute({ path: "f.txt", edits: [{ oldText: "beta", newText: "BETA" }] }, ctx());
+    assert.equal(r.error, undefined);
+    assert.doesNotMatch(textOf(r), /fuzzy/i);
+    assert.equal((meta(r) as { fuzzy?: boolean } | undefined)?.fuzzy, undefined, "fuzzy must be absent for exact");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});

@@ -5,8 +5,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-// @ts-expect-error stdlib-only release CLI intentionally ships as directly runnable JavaScript.
-import { assertGitState, loadRelease, publishArgs, runRelease, validateRelease } from "../../scripts/release.mjs";
+import {
+  assertGitState,
+  loadRelease,
+  publishArgs,
+  runRelease,
+  validateRelease,
+  validateReleaseIndependent,
+  // @ts-expect-error stdlib-only release CLI intentionally ships as directly runnable JavaScript.
+} from "../../scripts/release.mjs";
 
 const VERSION = "0.0.13";
 
@@ -31,12 +38,18 @@ function fixture() {
 
 const missing = async () => new Response("not found", { status: 404 });
 
-test("0.2.0 release graph is exact, publishable, and documented", () => {
-  const version = "0.2.9";
+test("0.3.0 release graph is independent, publishable, and documented", () => {
+  const version = "0.3.0";
   const release = loadRelease(process.cwd());
-  // 55 = root + 54 workspace packages (0.2.9 plan 029 adds deepseek/xai/clinepass/impeccable).
-  assert.equal(release.packages.length, 55);
-  assert.doesNotThrow(() => validateRelease(release, version));
+  // 57 = root + 56 workspace packages, including the host-owned desktop wrapper and antigravity agent.
+  assert.equal(release.packages.length, 57);
+  assert.doesNotThrow(() =>
+    validateReleaseIndependent(release, {
+      baseline: "HEAD",
+      gitDiff: () => false,
+      baselineVersion: () => version,
+    }),
+  );
   for (const pkg of release.packages) {
     const changelog = readFileSync(join(process.cwd(), pkg.path, "CHANGELOG.md"), "utf8");
     assert.ok(changelog.includes("## [0.1.0] - 2026-08-09"), `${pkg.manifest.name} missing 0.1.0 changelog`);
@@ -170,12 +183,13 @@ test("registry failures stay attributable without leaking environment tokens", a
   delete process.env.NODE_AUTH_TOKEN;
 });
 
-test("release workflow publishes with provenance from the exact v* tag", () => {
+test("release workflow publishes the lockstep cut once and package tags independently", () => {
   const workflow = readFileSync(join(process.cwd(), ".github/workflows/release.yml"), "utf8");
-  assert.match(workflow, /tags:\s*\["v\*"\]/);
+  assert.match(workflow, /tags:\s*\["v0\.3\.0", "@arnilo\/\*@\*"\]/);
   assert.match(workflow, /id-token:\s*write/);
-  assert.match(workflow, /npm run release:publish -- --version "\$\{GITHUB_REF_NAME#v\}"/);
-  assert.match(workflow, /--resume/);
+  assert.match(workflow, /release:publish -- --lockstep --version 0\.3\.0/);
+  assert.match(workflow, /release:publish -- --resume/);
+  assert.doesNotMatch(workflow, /publish[\s\S]*startsWith\(github\.ref, 'refs\/tags\/v'\)/);
   const releaseCli = readFileSync(join(process.cwd(), "scripts/release.mjs"), "utf8");
   assert.match(releaseCli, /--provenance/);
   assert.match(releaseCli, /HEAD must have tag v\$\{version\}/);

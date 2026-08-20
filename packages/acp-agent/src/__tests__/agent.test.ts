@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
+import { type AIProvider, providerDone, toolCallContent } from "@arnilo/prism";
 import { ConfigError } from "../config.js";
 import { createSpawnableAgent, loadConfig, parseConfig, selectMcpServers } from "../index.js";
 
@@ -16,6 +17,20 @@ const baseConfig = (cwd: string) => ({
   modes: { modes: [{ id: "edit", name: "Edit" }], defaultModeId: "edit" },
   configOptions: { options: [{ type: "boolean", id: "verbose", name: "Verbose", defaultValue: false }] },
 });
+
+function writeProvider(): AIProvider {
+  let turns = 0;
+  return {
+    id: "acp-agent-write-test",
+    async *generate() {
+      if (++turns === 1) {
+        yield { type: "tool_call", call: toolCallContent("write-1", "write", { path: "buffer.txt", content: "editor" }) };
+      } else {
+        yield providerDone();
+      }
+    },
+  };
+}
 
 test("parseConfig resolves relative paths and validates the happy path", () => {
   const dir = mkdtempSync(join(tmpdir(), "acp-agent-"));
@@ -134,6 +149,73 @@ test("createSpawnableAgent serves initialize/new/prompt/close over the SDK", asy
     assert.equal(result.stopReason, "end_turn");
     await connection.request(methods.agent.session.close, { sessionId: created.sessionId });
   });
+});
+
+test("createSpawnableAgent routes advertised fs coding tools to client buffers", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "acp-agent-fs-"));
+  try {
+    const diskPath = join(dir, "buffer.txt");
+    writeFileSync(diskPath, "disk");
+    const writes: Array<{ path: string; content: string }> = [];
+    const agent = createSpawnableAgent({
+      config: parseConfig(JSON.stringify({ userId: "local", cwd: dir, sessionStore: { type: "memory" } }), dir),
+      provider: writeProvider(),
+    });
+    const acpClient = client({ name: "fs-test-client" })
+      .onRequest(methods.client.fs.readTextFile, () => ({ content: "editor" }))
+      .onRequest(methods.client.fs.writeTextFile, ({ params }) => {
+        writes.push({ path: params.path, content: params.content });
+        return {};
+      })
+      .onRequest(methods.client.session.requestPermission, () => ({
+        outcome: { outcome: "selected", optionId: "allow-once" },
+      }));
+
+    await acpClient.connectWith(agent, async (connection) => {
+      await connection.request(methods.agent.initialize, {
+        protocolVersion: PROTOCOL_VERSION,
+        clientCapabilities: { fs: { readTextFile: true, writeTextFile: true } },
+      });
+      const created = await connection.request(methods.agent.session.new, { cwd: dir, mcpServers: [] });
+      const result = await connection.request(methods.agent.session.prompt, {
+        sessionId: created.sessionId,
+        prompt: [{ type: "text", text: "write buffer" }],
+      });
+      assert.equal(result.stopReason, "end_turn");
+    });
+
+    assert.deepEqual(writes, [{ path: diskPath, content: "editor" }]);
+    assert.equal(readFileSync(diskPath, "utf8"), "disk", "client fs write must not touch cwd disk");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("createSpawnableAgent keeps disk coding tools when fs is not advertised", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "acp-agent-disk-"));
+  try {
+    const agent = createSpawnableAgent({
+      config: parseConfig(JSON.stringify({ userId: "local", cwd: dir, sessionStore: { type: "memory" } }), dir),
+      provider: writeProvider(),
+    });
+    const acpClient = client({ name: "disk-test-client" }).onRequest(methods.client.session.requestPermission, () => ({
+      outcome: { outcome: "selected", optionId: "allow-once" },
+    }));
+
+    await acpClient.connectWith(agent, async (connection) => {
+      await connection.request(methods.agent.initialize, { protocolVersion: PROTOCOL_VERSION });
+      const created = await connection.request(methods.agent.session.new, { cwd: dir, mcpServers: [] });
+      const result = await connection.request(methods.agent.session.prompt, {
+        sessionId: created.sessionId,
+        prompt: [{ type: "text", text: "write buffer" }],
+      });
+      assert.equal(result.stopReason, "end_turn");
+    });
+
+    assert.equal(readFileSync(join(dir, "buffer.txt"), "utf8"), "editor");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("createSpawnableAgent works with the sqlite store", async () => {

@@ -118,6 +118,15 @@ export function computePackageTruth(rootDir = DEFAULT_ROOT) {
   const allDeps = Object.keys(byName.get("@arnilo/prism-all")?.dependencies ?? {}).sort();
   const allClosure = closure("@arnilo/prism-all");
   const omits = names.filter((n) => n !== "@arnilo/prism-all" && !allClosure.includes(n));
+  const internalRanges = [];
+  for (const pkg of pkgs) {
+    for (const field of ["dependencies", "optionalDependencies", "peerDependencies"]) {
+      for (const [name, range] of Object.entries(pkg[field] ?? {})) {
+        if (byName.has(name)) internalRanges.push(range);
+      }
+    }
+  }
+  const independent = internalRanges.some((range) => /^[~^]/.test(range));
 
   return {
     generatedAt: new Date().toISOString(),
@@ -148,7 +157,11 @@ export function computePackageTruth(rootDir = DEFAULT_ROOT) {
       "prism-providers": closure("@arnilo/prism-providers"),
       "prism-all": allClosure,
     },
-    peerPolicy: { decision: "A", spec: root.version, atomicUpgrade: true },
+    peerPolicy: {
+      decision: independent ? "B" : "A",
+      spec: independent ? `^${root.version}` : root.version,
+      atomicUpgrade: !independent,
+    },
   };
 }
 

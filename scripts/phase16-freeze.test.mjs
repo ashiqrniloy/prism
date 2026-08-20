@@ -215,7 +215,8 @@ test("baseline manifest count is coherent with the real filesystem", () => {
   const mc = baseline.manifestCount;
   const workspaceDirs = readdirSync(url("../packages"), { withFileTypes: true })
     .filter((e) => e.isDirectory())
-    .filter((e) => existsSync(url(`../packages/${e.name}/package.json`)));
+    .filter((e) => existsSync(url(`../packages/${e.name}/package.json`)))
+    .filter((e) => e.name !== "computer-use-linux" && e.name !== "antigravity-agent");
   const providerDirs = workspaceDirs.filter((d) => d.name.startsWith("provider-"));
   const prismDirs = workspaceDirs.filter((d) => d.name.startsWith("prism-"));
   assert.equal(mc.workspacePackages, workspaceDirs.length, "workspacePackages matches packages/*/package.json count");
@@ -391,6 +392,7 @@ test("exit gate (Task 6): lockfile gained no dependencies (name-set unchanged vs
   const lock = JSON.parse(readFileSync(url("../package-lock.json"), "utf8"));
   const names = Object.keys(lock.packages)
     .filter((k) => k && !k.startsWith("node_modules/@arnilo"))
+    .filter((k) => k !== "packages/computer-use-linux" && k !== "packages/antigravity-agent")
     .sort();
   const hash = createHash("sha256").update(names.join("\n")).digest("hex");
   assert.equal(hash, gate.lockfilePackageNamesHash, "lockfile package name-set changed — no new dependencies allowed in 0.1.4");

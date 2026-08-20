@@ -1,0 +1,81 @@
+{
+  "$comment": "Plan 031 Task 0 product/terms decision for the 0.3.0 Antigravity amendment. Architecture approval is not legal advice. Public publication remains gated on owner/counsel acceptance or Google confirmation of official headless CLI orchestration.",
+  "release": "0.3.0",
+  "plan": "031",
+  "recorded": "2026-08-20",
+  "decision": "conditional_go",
+  "product": {
+    "objective": "use Google AI Pro Antigravity quota while exposing Prism capabilities and projecting delegated execution into Prism UI",
+    "surface": "official-agy-headless-cli",
+    "loopOwner": "antigravity",
+    "delegatedLoopAccepted": true,
+    "prismOwns": [
+      "selected-mcp-capabilities",
+      "mcp-authorization",
+      "outer-cancellation",
+      "outer-limits",
+      "redaction",
+      "event-persistence",
+      "ui-projection"
+    ],
+    "uiVisibility": "documented-stream-json-only",
+    "rawChainOfThought": false
+  },
+  "authentication": {
+    "owner": "official-agy-cli",
+    "subscription": "google-ai-pro",
+    "setup": "interactive-agy-login",
+    "headless": "cached-cli-credentials",
+    "prismCredentialAccess": false,
+    "fallbackBilling": ["gemini-api-key", "vertex"]
+  },
+  "terms": {
+    "status": "implementation_go_publication_conditional",
+    "notLegalAdvice": true,
+    "basis": [
+      "official headless documentation explicitly supports scripting, programs, and CI",
+      "official MCP documentation defines MCP as Antigravity extension bridge",
+      "Prism executes official agy and never accesses Antigravity credentials or private service protocols"
+    ],
+    "publicationGate": "recorded owner/counsel acceptance or Google confirmation that launching documented agy headless mode with cached login is permitted",
+    "allowed": [
+      "official-agy-subprocess",
+      "documented-stream-json",
+      "documented-workspace-mcp",
+      "host-interactive-login"
+    ],
+    "forbidden": [
+      "antigravity-oauth-reuse",
+      "cookie-or-session-token-reuse",
+      "credential-file-reading",
+      "private-api-or-protocol",
+      "oauth-plugin-or-proxy",
+      "safety-bypass"
+    ]
+  },
+  "scope": {
+    "package": "@arnilo/prism-antigravity-agent",
+    "packageKind": "delegated-agent",
+    "umbrellaMembership": "omit",
+    "providerCatalogMembership": "omit",
+    "baselinePublishable": 56,
+    "targetPublishable": 57,
+    "baselineWorkspace": 55,
+    "targetWorkspace": 56,
+    "newRuntimeDependencyNames": 0,
+    "hostPrerequisite": "agy"
+  },
+  "protocolProof": {
+    "status": "fixture_and_live_stream_passed",
+    "liveStatus": "mcp_permission_blocked",
+    "task": "task1",
+    "fixtureCommand": "node scripts/phase30-antigravity-probe.mjs --fixture",
+    "unauthenticatedFixtureCommand": "node scripts/phase30-antigravity-probe.mjs --fixture --unauthenticated",
+    "liveCommand": "node scripts/phase30-antigravity-probe.mjs --live",
+    "liveCliVersion": "1.1.16",
+    "liveStreamObserved": "init + step_update* + result",
+    "liveMcpTargetObserved": "prism/prism_echo",
+    "liveMcpCalls": 0,
+    "liveReason": "official agy streamed a bounded run, but headless permission auto-denied the unconfigured MCP call; per-run permission override is undocumented and --dangerously-skip-permissions is forbidden, so global settings were not edited"
+  }
+}

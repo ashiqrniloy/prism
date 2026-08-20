@@ -6,6 +6,8 @@
 
 // --- per-tool factories & types ---
 
+export type { TextFileClient } from "./acp-operations.js";
+export { createAcpFilesystemOperations } from "./acp-operations.js";
 export { createDirectoryArtifactWriter, createTempArtifactWriter, sha256Hex } from "./artifacts.js";
 export type {
   AskUserDecisionAnswer,

@@ -255,7 +255,7 @@ describe("createAcpEventMapper", () => {
     });
   });
 
-  it("F7: createCodingToolProjection maps edit patch+path and write path; default still denies", async () => {
+  it("F7: createCodingToolProjection maps edit patch+path, write/delete/move locations; default still denies", async () => {
     const withProjection = createAcpEventMapper({
       projection: createCodingToolProjection(),
       redactor: createSecretRedactor(["SECRET"]),
@@ -312,6 +312,76 @@ describe("createAcpEventMapper", () => {
       status: "completed",
       locations: [{ path: "/w/out.txt" }],
     });
+
+    const deleteFinished = (
+      await withProjection.map({
+        type: "tool_execution_finished",
+        sessionId: "session-1",
+        runId: "run-1",
+        result: {
+          toolCallId: "tool-4",
+          name: "delete",
+          metadata: { path: "/w/removed.txt", kind: "file" },
+        },
+        metadata: { durationMs: 1, status: "finished" },
+      })
+    )[0]!;
+    assert.deepEqual(deleteFinished, {
+      sessionUpdate: "tool_call_update",
+      toolCallId: "tool-4",
+      title: "delete",
+      status: "completed",
+      locations: [{ path: "/w/removed.txt" }],
+    });
+
+    const moveFinished = (
+      await withProjection.map({
+        type: "tool_execution_finished",
+        sessionId: "session-1",
+        runId: "run-1",
+        result: {
+          toolCallId: "tool-5",
+          name: "move",
+          metadata: { from: "/w/old.txt", to: "/w/new.txt" },
+        },
+        metadata: { durationMs: 1, status: "finished" },
+      })
+    )[0]!;
+    assert.deepEqual(moveFinished, {
+      sessionUpdate: "tool_call_update",
+      toolCallId: "tool-5",
+      title: "move",
+      status: "completed",
+      locations: [{ path: "/w/new.txt" }],
+    });
+
+    const moveFromFallback = (
+      await withProjection.map({
+        type: "tool_execution_finished",
+        sessionId: "session-1",
+        runId: "run-1",
+        result: { toolCallId: "tool-6", name: "move", metadata: { from: "/w/old.txt" } },
+        metadata: { durationMs: 1, status: "finished" },
+      })
+    )[0]!;
+    assert.deepEqual(moveFromFallback, {
+      sessionUpdate: "tool_call_update",
+      toolCallId: "tool-6",
+      title: "move",
+      status: "completed",
+      locations: [{ path: "/w/old.txt" }],
+    });
+
+    const failedMove = (
+      await withProjection.map({
+        type: "tool_execution_finished",
+        sessionId: "session-1",
+        runId: "run-1",
+        result: { toolCallId: "tool-7", name: "move", error: { message: "denied" }, metadata: { to: "/w/new.txt" } },
+        metadata: { durationMs: 1, status: "error" },
+      })
+    )[0]!;
+    assert.equal((failedMove as { locations?: unknown }).locations, undefined);
 
     // Non-coding tool + coding projector: no diff/locations.
     const other = (

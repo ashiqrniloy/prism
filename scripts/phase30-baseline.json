@@ -1,0 +1,62 @@
+{
+  "$comment": "0.2.9 baseline captured at plan 030 Task 0 freeze. Counts from scripts/package-truth.json on the 0.2.9 tree. No live network at freeze.",
+  "captured": "2026-08-20",
+  "release": "0.2.9",
+  "gitHead": "9be4284e917eb6512fcb8d503e26f87d5a3074bd",
+  "node": "v24.19.0",
+  "platform": "linux",
+  "manifestCount": {
+    "publishable": 55,
+    "workspace": 54,
+    "provider": 17,
+    "prismFamily": 10,
+    "capability": 27,
+    "source": "scripts/package-truth.json"
+  },
+  "peerPolicy": {
+    "decision": "A",
+    "spec": "0.2.9",
+    "atomicUpgrade": true,
+    "lockstep": true,
+    "source": "scripts/package-truth.json"
+  },
+  "audit": {
+    "command": "npm audit --audit-level=moderate",
+    "level": "moderate",
+    "vulnerabilities": 0,
+    "source": "plan 029 security target; re-check at Task 10"
+  },
+  "compat": {
+    "baseline": "scripts/compat-baseline",
+    "baselineRelease": "0.2.9",
+    "breakingDeltas": 0,
+    "policy": "additive-only",
+    "source": "docs/release-and-install.md Decision A"
+  },
+  "protectedEvidence": {
+    "durableConformance": "inherited 0.2.9 evidence: test:postgres 91/91 with PRISM_TEST_POSTGRES_URL set",
+    "liveCanaries": "protected rows (provider, MCP, A2A, Brave), never pass",
+    "blocked": "none"
+  },
+  "exitGate": {
+    "version": "0.2.9",
+    "green": true,
+    "counts": {
+      "publishable": 55,
+      "audit": "0 moderate",
+      "peerPolicy": "A / exact 0.2.9",
+      "lockstep": true,
+      "npmTest": "3716 tests / 3683 pass / 33 skip / 0 fail",
+      "threatSuites": "50/50",
+      "testPostgres": "91/91"
+    },
+    "source": "scripts/package-truth.json + plan 029 complete",
+    "blocked": false,
+    "protectedEvidence": {
+      "durableConformance": "inherited 0.2.9 evidence: test:postgres 91/91 with PRISM_TEST_POSTGRES_URL set",
+      "liveCanaries": "protected rows (provider, MCP, A2A, Brave), never pass",
+      "blocked": "none"
+    },
+    "note": "0.2.9 freeze snapshot for 0.3.0; exit-gate counts inherit the completed 0.2.9 release evidence until Task 10 records the 0.3.0 closeout"
+  }
+}

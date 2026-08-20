@@ -1,0 +1,68 @@
+{
+  "name": "@arnilo/prism-antigravity-agent",
+  "version": "0.3.0",
+  "description": "Delegated agent adapter for official Antigravity CLI (agy) with per-run Prism MCP capability exposure and AG-UI timeline projection.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@arnilo/prism-coding-agent": "^0.3.0",
+    "@arnilo/prism-mcp": "^0.3.0",
+    "@modelcontextprotocol/sdk": "1.30.0"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "^0.3.0",
+    "@arnilo/prism-coding-agent": "^0.3.0",
+    "@arnilo/prism-mcp": "^0.3.0"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../..",
+    "@arnilo/prism-ag-ui": "file:../ag-ui",
+    "@arnilo/prism-coding-agent": "file:../coding-agent",
+    "@arnilo/prism-mcp": "file:../mcp"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/antigravity-agent"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/antigravity-agent#readme",
+  "keywords": [
+    "prism",
+    "antigravity",
+    "agy",
+    "agent",
+    "delegated-agent",
+    "mcp"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

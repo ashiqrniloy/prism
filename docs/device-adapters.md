@@ -2,7 +2,7 @@
 
 ## What it does
 
-Optional realtime voice and desktop OS / computer-control surface for Prism agents, shipped in 0.0.14 as a **contract + deny-by-default policy only** in `@arnilo/prism` (`src/devices.ts`). No vendor voice or desktop-control implementation ships in 0.0.14 — those are demand-gated to 0.1.x. The contract composes over the existing `PermissionPolicy`, `RunLimits`, approval (`tool_approval`), and redactor seams; it adds no second approval runtime and no device framework.
+Optional realtime voice and desktop OS / computer-control surface for Prism agents, shipped in 0.0.14 as a **contract + deny-by-default policy** in `@arnilo/prism` (`src/devices.ts`). The first vendor adapter, `@arnilo/prism-computer-use-linux`, wraps the host-owned `computer-use-linux` MCP binary without changing this generic contract. The contract composes over the existing `PermissionPolicy`, `RunLimits`, approval (`tool_approval`), and redactor seams; it adds no second approval runtime and no device framework.
 
 ## When to use it
 
@@ -79,7 +79,7 @@ if (chunk.accepted) emit(redactDeviceTelemetry(createSecretRedactor([token]), fr
 
 - Frozen caps: audio/screenshot/stream chunk **1 MiB / 8 MiB**; concurrent device sessions per identity **1 / 4**. Device wall time / turns / tool calls consume the shared `RunLimits` (admission fails closed without run accounting).
 - `enabled` resolves to `true` only on an explicit `true`; any other value is disabled. `requireApproval` stays `true` unless the host explicitly sets `false` (it should not).
-- Vendor voice / desktop-control packages are **deferred to 0.1.x** and ship only if Task 0 records measured demand. This page documents the contract they must satisfy via `runDevicePolicyConformance`.
+- `@arnilo/prism-computer-use-linux` is the first vendor package. It remains optional, Linux-only, host-binary-owned, and outside umbrella profiles; this page stays generic so future voice or desktop vendors can satisfy the same contract via `runDevicePolicyConformance`.
 
 ## Security and performance notes
 
@@ -91,7 +91,8 @@ if (chunk.accepted) emit(redactDeviceTelemetry(createSecretRedactor([token]), fr
 ## Related APIs
 
 - [Browser automation](browser-automation.md): verified-state checkpoints + reload/verify-before-side-effect for browser composition.
+- [Linux desktop control](computer-use-linux.md): first-party host-owned `computer-use-linux` MCP wrapper using this contract.
 - [Conversations](conversations.md): durable threads that own the runs device sessions bind to.
 - [Host security](host-security.md): approval, sandbox, and egress trust boundaries device adapters compose over.
 - [Performance and resource limits](performance.md): shared `RunLimits` accounting.
-- [Migration](migration.md): 0.0.14 additive seams and 0.1.x device vendor deferral.
+- [Migration](migration.md): historical 0.0.14 additive seams and device-vendor deferral; the 0.3.0 desktop wrapper is additive and optional.

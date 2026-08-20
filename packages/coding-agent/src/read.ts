@@ -36,7 +36,7 @@ import {
   HARD_MAX_TEXT_SCAN_BYTES,
   validateCodingLimit,
 } from "./limits.js";
-import { resolveReadPathAsync } from "./path-utils.js";
+import { resolveReadPathAsync, resolveToCwd } from "./path-utils.js";
 import type { ReadPathSet } from "./read-path-set.js";
 import { formatSize, type TruncationResult } from "./truncate.js";
 
@@ -427,6 +427,46 @@ function errorResult(toolCallId: string, message: string): ToolResult {
   };
 }
 
+/**
+ * Scan paginated `readText` output for the first line containing `findText` (literal substring,
+ * no regex). Starts at `startLine` and advances via `nextOffset` until a hit, EOF, or the scan
+ * cap. Returns the 1-indexed hit line, or `undefined` when the needle is not found before EOF.
+ * Throws on scan-limit / abort / no-progress so the caller's error path surfaces a clean result.
+ * Pages with `limit` unset so each backend page is `maxLines`-sized (fewer round trips).
+ */
+async function findMatchLine(
+  ops: ReadOperations,
+  absolutePath: string,
+  findText: string,
+  findMode: "exact" | "case-insensitive",
+  startLine: number,
+  maxLines: number,
+  maxBytes: number,
+  maxScanBytes: number,
+  signal: AbortSignal | undefined,
+): Promise<number | undefined> {
+  const caseInsensitive = findMode === "case-insensitive";
+  const needle = caseInsensitive ? findText.toLowerCase() : findText;
+  let offset = startLine;
+  let guard = 0; // ponytail: safety cap for backends that report hasMore without advancing
+  while (true) {
+    if (signal?.aborted) throw new Error("Operation aborted");
+    const page = await ops.readText(absolutePath, { offset, maxLines, maxBytes, maxScanBytes, signal });
+    if (!page.firstLineExceedsLimit && page.content.length > 0) {
+      const lines = page.content.split("\n");
+      for (let index = 0; index < lines.length; index++) {
+        const line = caseInsensitive ? lines[index].toLowerCase() : lines[index];
+        if (line.includes(needle)) return page.startLine + index;
+      }
+    }
+    if (!page.hasMore || page.nextOffset === undefined) return undefined;
+    if (page.scannedBytes >= maxScanBytes) throw new Error(`findText did not match within ${formatSize(maxScanBytes)} scan limit`);
+    if (page.nextOffset <= offset) throw new Error(`findText could not advance past line ${offset}`);
+    offset = page.nextOffset;
+    if (++guard > 100_000) throw new Error("findText exceeded iteration guard");
+  }
+}
+
 export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefinition {
   if (options && "autoResizeImages" in options) {
     throw new TypeError('Read tool: "autoResizeImages" was removed in 0.1.5; use "transformImage" instead.');
@@ -448,6 +488,12 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
         path: { type: "string", description: "Path to the file to read (relative or absolute)" },
         offset: { type: "number", description: "Line number to start reading from (1-indexed)" },
         limit: { type: "number", description: "Maximum number of lines to read" },
+        findText: {
+          type: "string",
+          description:
+            "Literal substring to search for (no regex). Returns the page starting at the first matching line at/after offset. No match is an error result.",
+        },
+        findMode: { type: "string", enum: ["exact", "case-insensitive"], description: "Match mode for findText (default 'exact')." },
       },
       required: ["path"],
       additionalProperties: false,
@@ -462,15 +508,25 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
       const path = typeof args.path === "string" ? args.path : "";
       const offset = typeof args.offset === "number" ? args.offset : undefined;
       const limit = typeof args.limit === "number" ? args.limit : undefined;
+      const findText = typeof args.findText === "string" ? args.findText : undefined;
+      const findModeRaw = typeof args.findMode === "string" ? args.findMode : "exact";
 
       if (path.length === 0) {
         return errorResult(toolCallId, "path is required and must be a non-empty string.");
       }
+      if (findText !== undefined) {
+        if (findText.length === 0) {
+          return errorResult(toolCallId, "findText must be a non-empty string.");
+        }
+        if (findModeRaw !== "exact" && findModeRaw !== "case-insensitive") {
+          return errorResult(toolCallId, "findMode must be 'exact' or 'case-insensitive'.");
+        }
+      }
 
       try {
-        const startLine = validateCodingLimit("offset", offset ?? 1, Number.MAX_SAFE_INTEGER);
+        let startLine = validateCodingLimit("offset", offset ?? 1, Number.MAX_SAFE_INTEGER);
         const requestedLines = limit === undefined ? undefined : validateCodingLimit("limit", limit, HARD_MAX_LINES);
-        const absolutePath = await resolveReadPathAsync(path, cwd);
+        const absolutePath = options?.operations ? resolveToCwd(path, cwd) : await resolveReadPathAsync(path, cwd);
 
         const policyCheck = await enforceExecutionPolicy(
           options?.executionPolicy,
@@ -540,6 +596,24 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
               },
             };
           }
+        }
+
+        if (findText !== undefined) {
+          const hit = await findMatchLine(
+            ops,
+            allowedPath,
+            findText,
+            findModeRaw as "exact" | "case-insensitive",
+            startLine,
+            maxLines,
+            maxBytes,
+            maxScanBytes,
+            context.signal,
+          );
+          if (hit === undefined) {
+            return errorResult(toolCallId, `Could not find ${JSON.stringify(findText)} in ${path}.`);
+          }
+          startLine = hit;
         }
 
         const page = await ops.readText(allowedPath, {

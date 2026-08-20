@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.0] - 2026-08-20
+
+### Added
+
+- `createCodingToolProjection()` now projects successful `delete` and `move` results as bounded path locations; moves use destination metadata with a source fallback and never emit diffs.
+
 ## [0.2.8] - 2026-08-18
 
 ### Added

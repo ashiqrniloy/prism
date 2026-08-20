@@ -1,5 +1,18 @@
 # Migration guide
 
+## 0.2.9 → 0.3.0 lockstep cut and independent package versions (additive)
+
+Release **0.3.0** is the final lockstep cut on the 0.3.x line: all 57 publishable manifests move from `0.2.9` to `0.3.0`, then internal first-party `dependencies`, `optionalDependencies`, and `peerDependencies` use `^0.3.0`. The package graph is now **Decision B**: changed packages may patch/minor independently inside `>=0.3.0 <0.4.0`; unchanged packages keep their version.
+
+- **Release commands:** default `release.mjs check`, `publish`, and `gate` are independent. Use `--lockstep --version 0.3.0` only for the final cut or the one emergency lockstep train. Later publication tags are `@arnilo/<package>@<version>`; a generic `v*` tag does not publish the monorepo.
+- **Consumer installs:** keep first-party peers inside `^0.3.0`. A package at `0.3.1` can be installed with other unchanged `0.3.0` packages; a `0.4.0` package requires the next coordinated peer-range cut.
+- **New optional packages:**
+  - `@arnilo/prism-antigravity-agent` delegates autonomous coding sessions to the official `agy` CLI with per-run loopback MCP capability exposure, AG-UI timeline projection, and `--conversation` continuation; host owns binary and `agy login` authentication state; omitted from umbrellas.
+  - `@arnilo/prism-computer-use-linux` wraps a host-owned Linux `computer-use-linux` MCP binary. It is Linux-only, deny-by-default through `DeviceAdapter`, outside umbrella profiles, and never auto-connects on import.
+- **Coding/ACP closeouts:** `read.findText`, visible fuzzy edit matches/miss context, ACP editor-buffer filesystem operations, spawnable per-session coding registries, and delete/move result locations are additive and require no store migration. Client filesystem mode remains text-only: image/document reads fail closed and never fall back to host disk.
+
+No persisted store migration. Before publication, rollback by restoring the 0.2.9 manifests/tag. After publication, roll forward with an additive 0.3.x package patch; npm unpublish is not a rollback strategy.
+
 ## 0.2.8 → 0.2.9 provider adoption and behavior packages (additive)
 
 Release **0.2.9** (plan 029) adds three provider packages, SuperGrok device-code OAuth, `@arnilo/prism-impeccable`, Ponytail 4.9.0 empty-args status, and Caveman v2.1 extra skills. **Additive-only: no exported declaration removed, no persisted 0.2.8 shape repurposed.**
@@ -619,12 +632,12 @@ Release **0.0.14** is strictly additive: every surface extends a shipped package
 | AG-UI co-work events | Run events only | `mapCoWork()` (+ ACP parity) for artifact progress/approval/download-link, connector drafts, redacted browser snapshots |
 | OAuth connectors | Codex only | `createMicrosoft365OAuthProvider` / `createGoogleWorkspaceOAuthProvider` (PKCE/device-code), least-privilege scope bundles, `revokeOAuthCredential`, per-identity `createOAuthWorkTokenProvider` |
 | Browser composition | Run policy only | `createBrowserCheckpointLedger`: verified-state checkpoints + reload/verify-before-side-effect |
-| Device adapters | n/a | Core `DeviceAdapter` contract + deny-by-default `resolveDevicePolicy` / `assertDeviceAdmit` + conformance (no vendor package) |
+| Device adapters | n/a | Core `DeviceAdapter` contract + deny-by-default `resolveDevicePolicy` / `assertDeviceAdmit` + conformance (the first vendor wrapper arrives in 0.3.0) |
 | Providers | 9 HTTP adapters in `@arnilo/prism-providers` | Optional `@arnilo/prism-provider-alibaba` (Model Studio / DashScope + Coding Plan, dynamic `listAlibabaModels`, explicit + implicit cache) and `@arnilo/prism-provider-ollama` (cloud/local, dynamic `listOllamaModels`, implicit-only cache); both join the `@arnilo/prism-providers` family (11 adapters) |
 
 **Identity requirement:** every new conversation/artifact/memory/connector/browser/device surface starts from a host-verified `AgentIdentity` (0.0.13 `IdentityVerifier`); ownership is rechecked on resume and at schedule fire time. Caller-asserted identity fails closed.
 
-**Deferred to 0.0.15 / 0.1.x (demand-gated):** Slack/Teams chat-channel packages, realtime-voice and desktop-control vendor packages (contract + conformance only in 0.0.14), Studio/control plane, local Office runtime, a second memory/event runtime, and memory production conformance canaries. PostgreSQL/pgvector memory and M365/GWS OAuth / Playwright / keychain live canaries remain explicit operator gates.
+**Deferred from the 0.0.14 line (historical demand gate):** Slack/Teams chat-channel packages, realtime-voice and desktop-control vendor packages were deferred (contract + conformance only in 0.0.14), Studio/control plane, local Office runtime, a second memory/event runtime, and memory production conformance canaries. The 0.3.0 Linux desktop wrapper is now the first vendor adapter; macOS/Windows desktop vendors remain deferred, and PostgreSQL/pgvector memory plus M365/GWS OAuth / Playwright / keychain live canaries remain explicit operator gates.
 
 Benchmark placeholder: `node scripts/benchmark-0.0.14.mjs` (release Task 12). Caps documented in [Performance limits](performance.md).
 
