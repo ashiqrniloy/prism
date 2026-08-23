@@ -71,6 +71,7 @@ Prism is a TypeScript/Node.js agent harness. Host apps and extension packages ow
 - [System prompts](system-prompts.md): compose explicit user/package/app/run system prompt layers, auto-load the standard `AGENTS.md` (workspace) / `SYSTEM.md` prompt files via the Node `loadSystemPromptFiles` loader (trust-gated for `AGENTS.md`), and append `SYSTEM.md` → per-agent `AGENT.md` body → repo `AGENTS.md` layers from a discovered agent bundle via `resolveAgentBundle`.
 - [Instruction injection](instruction-injection.md): register package injectors that layer redacted instructions/context blocks without granting tools, permissions, or resource escapes.
 - [Context and skills](context-and-skills.md): resolve ordered context providers; progressive skill catalog (`skillsDisclosure`, default catalog-only), `load_skill` on-demand bodies, fail-closed registry activation (`activateAllSkills` migration opt-in), `toolNames` fail closed before provider turns, priority-aware budget demotion, and optional `toolResultFold`.
+- [LLM Wiki](wiki.md): optional `@arnilo/prism-wiki` automated Karpathy-style knowledge compiler, incremental Merkle change tracking, on-device `qmd` hybrid search, and Context7-style clickable line navigation for codebases and PKM.
 - [Retrieval-augmented generation](rag.md): optional bounded source lifecycle, document adapters, host reranking, ingestion status, attributable citations, and inert context injection.
 
 ## Tools

@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-08-20T17:52:00.555Z",
+  "generatedAt": "2026-08-23T18:06:48.787Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.3.0"
   },
   "counts": {
-    "publishable": 57,
-    "workspace": 56,
+    "publishable": 58,
+    "workspace": 57,
     "provider": 17,
     "prismFamily": 10,
-    "capability": 29,
-    "codeWithPeer": 50,
+    "capability": 30,
+    "codeWithPeer": 51,
     "pureManifest": 6
   },
   "providers": [
@@ -72,6 +72,7 @@
     "@arnilo/prism-supervisor",
     "@arnilo/prism-tool-validator-json-schema",
     "@arnilo/prism-web-tools",
+    "@arnilo/prism-wiki",
     "@arnilo/prism-work-tools",
     "@arnilo/prism-workflows"
   ],
@@ -132,7 +133,8 @@
         "@arnilo/prism-impeccable",
         "@arnilo/prism-openapi-tools",
         "@arnilo/prism-ponytail",
-        "@arnilo/prism-session-store-nats"
+        "@arnilo/prism-session-store-nats",
+        "@arnilo/prism-wiki"
       ]
     }
   },
