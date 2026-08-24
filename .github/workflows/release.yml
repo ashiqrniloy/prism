@@ -213,6 +213,8 @@ jobs:
       - run: npm run build
       - name: pack release artifacts, checksums, SBOM, and secret scan
         run: |
+          SAFE_REF=$(echo "$GITHUB_REF_NAME" | sed 's#[/@:]#-#g')
+          echo "SAFE_REF=$SAFE_REF" >> "$GITHUB_ENV"
           mkdir -p release-artifacts
           npm pack --json --pack-destination release-artifacts > release-artifacts/core-pack.json
           npm pack --workspaces --json --pack-destination release-artifacts > release-artifacts/workspace-pack.json
@@ -239,7 +241,7 @@ jobs:
       - name: retain release artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: release-artifacts-${{ github.ref_name }}
+          name: release-artifacts-${{ env.SAFE_REF }}
           path: release-artifacts
           retention-days: 30
       - name: publish in dependency order
@@ -255,7 +257,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: publish-report-${{ github.ref_name }}
+          name: publish-report-${{ env.SAFE_REF }}
           path: release-artifacts/publish-report.json
           if-no-files-found: warn
           retention-days: 30
