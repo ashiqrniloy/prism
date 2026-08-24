@@ -94,6 +94,7 @@ const apiPages = [
   "docs/workflows.md",
   "docs/work-artifacts-and-review.md",
   "docs/antigravity-agent.md",
+  "docs/wiki.md",
   "docs/release-and-install.md",
   "docs/performance.md",
   "docs/migration.md",
@@ -401,6 +402,7 @@ describe("docs", () => {
         "@arnilo/prism-impeccable": "Impeccable",
         "@arnilo/prism-computer-use-linux": "computer-use-linux",
         "@arnilo/prism-antigravity-agent": "antigravity-agent",
+        "@arnilo/prism-wiki": "wiki",
       };
       for (const omitted of all.omits) {
         const readable = omissionReadable[omitted];
@@ -1656,7 +1658,7 @@ describe("docs", () => {
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 57, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 58, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
@@ -3806,7 +3808,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 57, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 58, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {

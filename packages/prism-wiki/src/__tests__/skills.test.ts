@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { describe, it, before, after } from "node:test";
+import { after, before, describe, it } from "node:test";
 import { createSkillRegistry } from "@arnilo/prism";
-import { deployWikiSkills, loadBundledSkills, parseSkillMarkdown, wikiMaintainerSkill, wikiSearcherSkill } from "../skills.js";
+import { deployWikiSkills, loadBundledSkills, parseSkillMarkdown } from "../skills.js";
 
 const TEST_DIR = join(process.cwd(), "dist/__tests__/scratch-skills-test");
 
@@ -58,7 +58,7 @@ Do step 1 and step 2.`;
 
     const searcher = skills.get("wiki-searcher");
     assert.ok(searcher);
-    assert.ok(searcher.toolNames && searcher.toolNames.includes("wiki_search"));
+    assert.ok(searcher.toolNames?.includes("wiki_search"));
 
     // Register into Prism SkillRegistry
     const registry = createSkillRegistry();

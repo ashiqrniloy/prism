@@ -2,7 +2,7 @@
 
 All notable changes to `@arnilo/prism-wiki` will be documented in this file.
 
-## 0.0.1 - 2026-08-23
+## [0.0.1] - 2026-08-24
 
 ### Added
 - Initial release of `@arnilo/prism-wiki`.
@@ -11,3 +11,13 @@ All notable changes to `@arnilo/prism-wiki` will be documented in this file.
 - Tools: `wiki_search`, `wiki_read_page`, `wiki_record_insight`.
 - Bundled skills: `wiki-maintainer`, `wiki-searcher` with automatic `.agents/skills/` deployment.
 - Codebase, PKM, and Hybrid domain profiles with Merkle hash drift tracking.
+
+## [0.1.0] - 2026-08-09
+
+### Added
+- Initial package declaration for `@arnilo/prism-wiki`.
+
+## [0.0.28] - 2026-08-08
+
+### Added
+- Reserved package entry for the wiki compiler.

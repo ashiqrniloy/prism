@@ -13,7 +13,7 @@ export function createWikiLintCommand(options: WikiExtensionOptions = {}): Comma
   return {
     name: "wiki-lint",
     description: "Check wiki health for broken links, dead source line anchors, and orphan pages.",
-    async execute(args, context) {
+    async execute(_args, _context) {
       const report = await lintWiki(options);
 
       const statusText = report.ok

@@ -12,6 +12,7 @@ const packageTruth = JSON.parse(readFileSync(url("./package-truth.json"), "utf8"
 const phase30 = JSON.parse(readFileSync(url("./phase30-freeze-manifest.json"), "utf8"));
 const hasDesktopPackage = phase30.tasks.task7 === "done";
 const hasAntigravityPackage = phase30.amendments?.antigravity?.tasks?.task6 === "done";
+const hasWikiPackage = existsSync(url("../packages/prism-wiki/package.json"));
 
 const TASK_IDS = ["task0", "task1", "task2", "task3", "task4", "task5", "task6", "task7", "task8", "task9", "task10"];
 const REQUIRED_ALLOWED = [
@@ -135,7 +136,7 @@ test("phase29 freeze: package budget matches current graph until Task 10", () =>
     assert.equal(packageTruth.counts.provider, 14);
     assert.equal(packageTruth.counts.prismFamily, 9);
   } else {
-    const added = Number(hasDesktopPackage) + Number(hasAntigravityPackage);
+    const added = Number(hasDesktopPackage) + Number(hasAntigravityPackage) + Number(hasWikiPackage);
     assert.equal(packageTruth.counts.publishable, 55 + added);
     assert.equal(packageTruth.counts.workspace, 54 + added);
     assert.equal(packageTruth.counts.provider, 17);

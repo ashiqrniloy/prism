@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import type { DeadAnchor, SourceDelta, WikiEntityMetadata, WikiManifest, WikiProfileType, WikiSourceAnchor } from "./types.js";
 

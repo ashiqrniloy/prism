@@ -15,8 +15,8 @@ Compile and maintain persistent, compounding Markdown wikis (`.wiki/`) from raw 
    - Never copy raw code bodies or entire articles into the wiki.
 
 2. **Precise Source Anchors**:
-   - Every factual claim about code must carry an exact line-range link in Markdown format:
-     `[symbolName](file:///absolute/path/to/file#L10-L45)`
+   - Every factual claim about code must carry an exact line-range link:
+     `symbolName (file:///path/to/file#L10-L45)`
    - Anchor links enable zero-grep navigation for consuming agents and allow the linter to detect code drift.
 
 3. **Contradiction Reconciliation**:

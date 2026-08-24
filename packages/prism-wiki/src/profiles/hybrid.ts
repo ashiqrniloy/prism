@@ -7,7 +7,7 @@ export class HybridProfile {
   private readonly codebaseProfile = new CodebaseProfile();
   private readonly pkmProfile = new PkmProfile();
 
-  matches(files: readonly string[]): boolean {
+  matches(_files: readonly string[]): boolean {
     return true; // Catch-all
   }
 
@@ -30,7 +30,7 @@ export class HybridProfile {
 
   generateSchemaRules(): string {
     return `# Hybrid Codebase & Knowledge Wiki Schema Rules
-- For source code modules, compile to \`entities/module-<name>.md\` with exact clickable line anchors: \`[symbol](file:///abs/path#L10-L40)\`.
+- For source code modules, compile to \`entities/module-<name>.md\` with exact clickable line anchors: \`symbol (file:///path#L10-L40)\`.
 - For conceptual documentation and literature notes, compile to \`entities/concept-<name>.md\` with \`[[wikilink]]\` cross-references.
 - Architectural decision records live in \`decisions/ADR-<num>-<name>.md\`.
 - All operations update \`index.md\` and append to \`log.md\`.

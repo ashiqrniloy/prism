@@ -1,4 +1,0 @@
-interface:
-  display_name: "Wiki Searcher"
-  short_description: "Search compiled LLM wiki with Context7 line navigation"
-  default_prompt: "Search the wiki for architecture and design decisions"

@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { loadManifest, validateAnchor } from "../manifest.js";
 import type { BrokenLink, DeadAnchor, LintReport } from "../types.js";

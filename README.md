@@ -173,6 +173,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-browser` | optional host-wired Playwright browser automation (not core; not auto-activated) |
 | `@arnilo/prism-computer-use-linux` | optional Linux desktop-control tools over a host-owned `computer-use-linux` MCP binary |
 | `@arnilo/prism-antigravity-agent` | optional Antigravity CLI delegated agent adapter with per-run Prism MCP capability exposure |
+| `@arnilo/prism-wiki` | optional Karpathy LLM Wiki knowledge compiler with local `qmd` hybrid search and Context7 line navigation |
 | `@arnilo/prism-compaction-llm` | provider-backed compaction strategy |
 | `@arnilo/prism-compaction-observational-memory` | source-backed memory + recall tool |
 | `@arnilo/prism-coding-agent` | bounded shell/read/write/edit tools |
@@ -191,7 +192,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-base` | profile: core + compaction + JSON Schema validation |
 | `@arnilo/prism-code` | profile: base + coding tools/security + MCP |
 | `@arnilo/prism-sdk` | profile: base + workflows + MCP + credentials + OpenTelemetry |
-| `@arnilo/prism-all` | broad umbrella: 21 first-party packages (47 transitive) across a 47-package workspace closure — omits document-reader, OpenAPI tools, NATS, Caveman, Ponytail, Impeccable, computer-use-linux, and antigravity-agent |
+| `@arnilo/prism-all` | broad umbrella: 21 first-party packages (47 transitive) across a 47-package workspace closure — omits document-reader, OpenAPI tools, NATS, Caveman, Ponytail, Impeccable, computer-use-linux, antigravity-agent, and wiki |
 
 ## Scripts
 

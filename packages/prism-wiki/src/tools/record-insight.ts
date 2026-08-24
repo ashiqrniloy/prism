@@ -67,7 +67,7 @@ ${content}
       try {
         const existingIndex = await readFile(indexPath, "utf8");
         const relLink = `- [[${folderName}/${fileName}|${title}]]: User-recorded insight`;
-        const updatedIndex = existingIndex + `\n${relLink}\n`;
+        const updatedIndex = `${existingIndex}\n${relLink}\n`;
         await writeFile(indexPath, updatedIndex, "utf8");
       } catch {
         // Index update best-effort

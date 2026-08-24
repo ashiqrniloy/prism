@@ -217,6 +217,11 @@
       "branches": 78.24,
       "functions": 86.9
     },
+    "@arnilo/prism-wiki": {
+      "lines": 87.67,
+      "branches": 76.37,
+      "functions": 90.82
+    },
     "@arnilo/prism-session-store-postgres": {
       "protectedException": "requires PRISM_TEST_POSTGRES_URL (durable postgres legs)"
     },

@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import type { QmdSearchResult, SearchMode, WikiManifest } from "../types.js";
+import type { QmdSearchResult, SearchMode } from "../types.js";
 
 const execFileAsync = promisify(execFile);
 

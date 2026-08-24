@@ -1,4 +1,0 @@
-interface:
-  display_name: "Wiki Maintainer"
-  short_description: "Compile and maintain Karpathy-style LLM wikis"
-  default_prompt: "Update the project wiki with recent changes"

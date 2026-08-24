@@ -4,7 +4,7 @@
 
 `@arnilo/prism-wiki` implements Andrej Karpathy's **LLM Wiki Pattern** for the Prism agent ecosystem. It acts as a knowledge compiler that transforms raw, immutable sources (source code, AST symbols, notes, markdown clips, transcripts, journal entries) into a persistent, compounding, cross-linked Markdown knowledge base (`.wiki/`).
 
-It integrates Tobias Lütke's [`qmd`](https://github.com/tobi/qmd) on-device hybrid search engine (BM25, vector search, and LLM reranking) and hydrates search results with Context7-inspired hierarchical breadcrumbs (`# Category > ## Topic`) and live clickable source line anchors (`file:///path/to/file#Lxx-Lyy`), enabling agents and humans to navigate code and notes directly without blind regex loops (`grep`/`rg`).
+It integrates Tobias Lütke's [`qmd`](https://github.com/tobi/qmd) on-device hybrid search engine (BM25, vector search, and LLM reranking) and hydrates search results with Context7-inspired hierarchical breadcrumbs (`# Category > ## Topic`) and live clickable source line anchors (`file:///path/to/file#Lxx-Lyy` format), enabling agents and humans to navigate code and notes directly without blind regex loops (`grep`/`rg`).
 
 ## When to use it
 
@@ -19,7 +19,7 @@ The Karpathy LLM Wiki pattern is structured into 3 distinct tiers:
 
 1. **Raw Sources (Immutable)**: Source code files, design docs, transcripts, journals, and Markdown notes. Raw sources are strictly read-only and never mutated.
 2. **Compiled Wiki (`.wiki/`)**: Persistent, cross-linked Markdown documents containing synthesized architecture models, entity descriptions, decision records, and line-anchored claims.
-3. **Schema & Protocols (`SCHEMA.md`)**: Operational guidelines governing entity categorization, link formatting (`[[wikilink]]`), citation rules (`file:///abs/path#Lxx-Lyy`), catalog indexing (`index.md`), and chronological change logging (`log.md`).
+3. **Schema & Protocols (`SCHEMA.md`)**: Operational guidelines governing entity categorization, link formatting (`[[wikilink]]`), citation rules (`file:///path#Lxx-Lyy`), catalog indexing (`index.md`), and chronological change logging (`log.md`).
 
 ## Inputs / request
 
@@ -64,7 +64,7 @@ npx prism-wiki search "How does authentication work?" --mode query
 
 ## Outputs / response / events
 
-- `wiki_search` returns a structured markdown payload containing section breadcrumbs, conceptual summaries, and clickable source file/line links (`[symbol](file:///path/to/file#Lxx-Lyy)`).
+- `wiki_search` returns a structured markdown payload containing section breadcrumbs, conceptual summaries, and clickable source line links (`file:///path#Lxx-Lyy`).
 - Lifecycle commands return status objects (`{ status: "initialized" | "refreshed" | "clean", ok: boolean }`).
 
 ## Request/response example
@@ -89,8 +89,8 @@ npx prism-wiki search "How does authentication work?" --mode query
 The authentication layer uses asymmetric Ed25519 JWT verification in middleware, backed by a persistent token-revocation denylist stored in PostgreSQL.
 
 **Code & Source Anchors (Clickable):**
-- Token verification: [`verifyToken()`](file:///home/arn/Projects/prism/src/auth/jwt.ts#L45-L89)
-- Revocation check: [`assertNotRevoked()`](file:///home/arn/Projects/prism/src/auth/session-store.ts#L112-L138)
+- Token verification: `verifyToken()` (`file:///src/auth/jwt.ts#L45-L89`)
+- Revocation check: `assertNotRevoked()` (`file:///src/auth/session-store.ts#L112-L138`)
 - Architecture Decision: [[decisions/ADR-004-ed25519-migration.md]]
 ```
 

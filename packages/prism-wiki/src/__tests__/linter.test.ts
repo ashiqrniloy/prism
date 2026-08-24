@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { describe, it, before, after } from "node:test";
+import { after, before, describe, it } from "node:test";
 import { WikiLinter } from "../engine/linter.js";
 import { scaffoldWiki } from "../engine/scaffolder.js";
 import { hashContent, updateManifestWithEntities } from "../manifest.js";

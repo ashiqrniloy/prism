@@ -1,5 +1,3 @@
-import type { ContentBlock, ErrorInfo, JsonObject } from "@arnilo/prism";
-
 export type WikiProfileType = "codebase" | "pkm" | "hybrid" | "auto";
 
 export type SearchMode = "search" | "vsearch" | "query";

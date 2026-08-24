@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { describe, it, before, after } from "node:test";
+import { after, before, describe, it } from "node:test";
 import { QmdClient, type QmdCommandRunner } from "../search/qmd-client.js";
 
 const TEST_DIR = join(process.cwd(), "dist/__tests__/scratch-qmd-test");
@@ -23,7 +23,7 @@ describe("prism-wiki qmd client & fallback search", () => {
   it("qmd_client_invokes_runner_with_json_flag", async () => {
     const invokedArgs: string[][] = [];
 
-    const mockRunner: QmdCommandRunner = async (cmd, args) => {
+    const mockRunner: QmdCommandRunner = async (_cmd, args) => {
       invokedArgs.push([...args]);
       if (args[0] === "--version") {
         return { stdout: "qmd 0.1.0\n", stderr: "" };

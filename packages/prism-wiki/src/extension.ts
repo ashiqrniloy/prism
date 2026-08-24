@@ -8,8 +8,7 @@ import { createWikiRecordInsightTool, WIKI_RECORD_INSIGHT_TOOL_NAME } from "./to
 import { createWikiSearchTool, WIKI_SEARCH_TOOL_NAME } from "./tools/search.js";
 import type { WikiExtensionOptions } from "./types.js";
 
-export { WIKI_READ_PAGE_TOOL_NAME, WIKI_RECORD_INSIGHT_TOOL_NAME, WIKI_SEARCH_TOOL_NAME };
-export { initWiki, refreshWiki, lintWiki };
+export { initWiki, lintWiki, refreshWiki, WIKI_READ_PAGE_TOOL_NAME, WIKI_RECORD_INSIGHT_TOOL_NAME, WIKI_SEARCH_TOOL_NAME };
 export const WIKI_INJECTOR_NAME = "wiki-guidance";
 
 export function createWikiExtension(options: WikiExtensionOptions = {}): Extension {
@@ -53,7 +52,7 @@ export function createWikiExtension(options: WikiExtensionOptions = {}): Extensi
       const wikiInjector: InstructionInjector = {
         name: WIKI_INJECTOR_NAME,
         description: "Injects wiki awareness instructions when wiki is active in the workspace.",
-        apply(ctx) {
+        apply(_ctx) {
           return {
             when: "every_turn",
             instructions:

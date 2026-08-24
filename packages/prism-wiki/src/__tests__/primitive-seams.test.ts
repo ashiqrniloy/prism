@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 import { createExtensionKernel } from "@arnilo/prism";
 import {
+  createWikiExtension,
   WIKI_INJECTOR_NAME,
   WIKI_READ_PAGE_TOOL_NAME,
   WIKI_RECORD_INSIGHT_TOOL_NAME,
   WIKI_SEARCH_TOOL_NAME,
-  createWikiExtension,
 } from "../index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -30,6 +30,7 @@ describe("prism-wiki primitive seams & package scaffold", () => {
     const wikiExt = createWikiExtension({
       wikiRoot: ".wiki-test",
       profile: "codebase",
+      autoDeploySkills: false,
     });
 
     assert.equal(wikiExt.name, "@arnilo/prism-wiki");
@@ -55,7 +56,7 @@ describe("prism-wiki primitive seams & package scaffold", () => {
 
   it("search_tool_executes_with_safe_response", async () => {
     const kernel = createExtensionKernel();
-    await kernel.load([createWikiExtension()]);
+    await kernel.load([createWikiExtension({ autoDeploySkills: false })]);
 
     const tool = kernel.registries.tools.get(WIKI_SEARCH_TOOL_NAME);
     assert.ok(tool);

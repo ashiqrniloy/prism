@@ -149,7 +149,6 @@ export class CodebaseProfile {
           endLine: Math.min(lineNum + 15, lines.length),
           signature: line.trim(),
         });
-        continue;
       }
     }
 
@@ -178,7 +177,7 @@ export class CodebaseProfile {
 
     const entities: ExtractedEntityDraft[] = [];
     for (const [group, data] of modulesByGroup.entries()) {
-      const title = group.charAt(0).toUpperCase() + group.slice(1) + " Module";
+      const title = `${group.charAt(0).toUpperCase() + group.slice(1)} Module`;
       const id = `module-${group.toLowerCase().replace(/[^a-z0-9-_]/g, "-")}`;
       entities.push({
         id,
@@ -196,7 +195,7 @@ export class CodebaseProfile {
 
   generateSchemaRules(): string {
     return `# Codebase Wiki Schema Rules
-- Every claim regarding implementation logic must cite exact code line anchors: \`[symbol](file:///abs/path/to/file#L10-L40)\`.
+- Every claim regarding implementation logic must cite exact code line anchors: \`symbol (file:///path/to/file#L10-L40)\`.
 - Group compiled entities by functional modules in \`entities/module-<name>.md\`.
 - Keep architectural decision records in \`decisions/ADR-<num>-<name>.md\`.
 - Do not repeat code verbatim; explain invariants, flow, and dependencies.

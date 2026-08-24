@@ -232,10 +232,12 @@ test("phase30 freeze: package budget 55→57; graph gains desktop then Antigravi
   assert.equal(packageTruth.counts.prismFamily, 10);
   const desktopDone = manifest.tasks.task7 === "done";
   const antigravityDone = manifest.amendments.antigravity.tasks.task6 === "done";
-  assert.equal(packageTruth.counts.publishable, 55 + Number(desktopDone) + Number(antigravityDone));
-  assert.equal(packageTruth.counts.workspace, 54 + Number(desktopDone) + Number(antigravityDone));
+  const hasWiki = packageTruth.capability.includes("@arnilo/prism-wiki");
+  assert.equal(packageTruth.counts.publishable, 55 + Number(desktopDone) + Number(antigravityDone) + Number(hasWiki));
+  assert.equal(packageTruth.counts.workspace, 54 + Number(desktopDone) + Number(antigravityDone) + Number(hasWiki));
   if (desktopDone) assert.ok(packageTruth.capability.includes("@arnilo/prism-computer-use-linux"));
   if (antigravityDone) assert.ok(packageTruth.capability.includes("@arnilo/prism-antigravity-agent"));
+  if (hasWiki) assert.ok(packageTruth.capability.includes("@arnilo/prism-wiki"));
   if (manifest.tasks.task9 === "pending") {
     assert.equal(packageTruth.peerPolicy.decision, "A");
     assert.equal(packageTruth.root.version, "0.2.9");

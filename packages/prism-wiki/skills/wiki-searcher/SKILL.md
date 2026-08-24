@@ -23,7 +23,7 @@ Query the compiled LLM Wiki (`.wiki/`) with Context7-style hierarchical breadcru
 3. **Context7-Style Navigation (Zero-Grep)**:
    - Inspect the returned section hierarchy (`# Category > ## Topic`) for structural context.
    - Jump directly to source code implementations using the returned clickable line links:
-     `[verifyToken](file:///path/to/file.ts#L45-L89)`
+     `verifyToken (file:///path/to/file.ts#L45-L89)`
    - Never run broad regex searches across the repo when direct file/line links are returned in search results.
 
 4. **Compounding Answers & Insights**:

@@ -77,7 +77,7 @@ export function createWikiInitCommand(options: WikiExtensionOptions = {}): Comma
       },
       additionalProperties: false,
     },
-    async execute(args, context) {
+    async execute(args, _context) {
       const profile = (args.profile as WikiExtensionOptions["profile"]) ?? options.profile ?? "auto";
       const res = await initWiki({ ...options, profile });
 

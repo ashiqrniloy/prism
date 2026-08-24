@@ -45,7 +45,7 @@ export function createWikiRefreshCommand(options: WikiExtensionOptions = {}): Co
   return {
     name: "wiki-refresh",
     description: "Perform incremental compilation on modified source files and update the wiki index.",
-    async execute(args, context) {
+    async execute(_args, _context) {
       const res = await refreshWiki(options);
       const delta = res.delta;
 

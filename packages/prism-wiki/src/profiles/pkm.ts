@@ -31,7 +31,7 @@ export class PkmProfile {
       }
 
       // Extract hashtags (#tag)
-      const tagMatches = line.matchAll(/#([a-zA-Z0-9_\-]+)/g);
+      const tagMatches = line.matchAll(/#([a-zA-Z0-9_-]+)/g);
       for (const match of tagMatches) {
         symbols.push({
           name: match[1],
@@ -55,7 +55,7 @@ export class PkmProfile {
       const tags = symbols.filter((s) => s.kind === "tag").map((t) => t.name);
 
       const title = headings.length > 0 ? headings[0].name : file.relativePath.replace(/\.[^/.]+$/, "");
-      const id = "concept-" + file.relativePath.toLowerCase().replace(/[^a-z0-9-_]/g, "-");
+      const id = `concept-${file.relativePath.toLowerCase().replace(/[^a-z0-9-_]/g, "-")}`;
 
       entities.push({
         id,

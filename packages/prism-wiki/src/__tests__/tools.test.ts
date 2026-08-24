@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { describe, it, before, after } from "node:test";
+import { after, before, describe, it } from "node:test";
 import { createWikiReadPageTool } from "../tools/read-page.js";
 import { createWikiRecordInsightTool } from "../tools/record-insight.js";
 import { createWikiSearchTool } from "../tools/search.js";

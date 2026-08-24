@@ -40,15 +40,15 @@ function fixture() {
 const missing = async () => new Response("not found", { status: 404 });
 
 test("0.3.0 release graph is independent, publishable, and documented", () => {
-  const version = "0.3.0";
   const release = loadRelease(process.cwd());
-  // 57 = root + 56 workspace packages, including the host-owned desktop wrapper and antigravity agent.
-  assert.equal(release.packages.length, 57);
+  // 58 = root + 57 workspace packages, including the host-owned desktop wrapper, antigravity agent, and prism-wiki.
+  assert.equal(release.packages.length, 58);
   assert.doesNotThrow(() =>
     validateReleaseIndependent(release, {
       baseline: "HEAD",
       gitDiff: () => false,
-      baselineVersion: () => version,
+      baselineVersion: (_root: string, _baseline: string, pkgPath: string) =>
+        release.packages.find((p: { path: string; manifest: { version: string } }) => p.path === pkgPath)?.manifest.version,
     }),
   );
   for (const pkg of release.packages) {

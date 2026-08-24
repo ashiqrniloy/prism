@@ -35,5 +35,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [029-Release-0-2-9-Provider-Adoption-And-Behavior-Packages.md](029-Release-0-2-9-Provider-Adoption-And-Behavior-Packages.md) | 0.2.x — Release 0.2.9 (DeepSeek/xAI SuperGrok OAuth/ClinePass, impeccable, ponytail/caveman) | complete |
 | [030-Release-0-3-0-Desktop-Coding-Tools-Independent-Versions.md](030-Release-0-3-0-Desktop-Coding-Tools-Independent-Versions.md) | 0.3.x — Release 0.3.0 (computer-use-linux, coding/ACP tools, independent versions) | complete (2026-08-20) |
 | [031-Release-0-3-0-Antigravity-Cli-Prism-Mcp-Blueprint.md](031-Release-0-3-0-Antigravity-Cli-Prism-Mcp-Blueprint.md) | 0.3.x — 0.3.0 amendment (Antigravity CLI + Prism MCP) | complete (2026-08-20) |
+| [032-Prism-Wiki-Karpathy-LLM-Wiki-Package.md](032-Prism-Wiki-Karpathy-LLM-Wiki-Package.md) | Phase 32 — Karpathy LLM Wiki System (@arnilo/prism-wiki) | complete (2026-08-24) |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

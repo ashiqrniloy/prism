@@ -14,7 +14,7 @@ export interface DeployOptions {
 export function resolvePackageSkillsDir(): string {
   // If running from src or dist, skills directory is at package root ../skills
   const candidate1 = resolve(__dirname, "../skills");
-  const candidate2 = resolve(__dirname, "../../skills");
+  const _candidate2 = resolve(__dirname, "../../skills");
   return candidate1;
 }
 
@@ -102,7 +102,7 @@ export const wikiMaintainerSkill: Skill = {
     "Compiles, ingests, updates, reconciles contradictions, and lints the Karpathy LLM Wiki (.wiki/) for codebases and PKM vaults. Use when building a new wiki (wiki-init), incrementally updating changed sources (wiki-refresh), reconciling conflicting claims, or performing health checks (wiki-lint).",
   instructions:
     "1. Compilation over duplication: Synthesize architecture, workflows, and decisions; never copy full code files.\n" +
-    "2. Precise anchors: Every factual claim about code must cite exact line links: `[symbol](file:///path#L10-L40)`.\n" +
+    "2. Precise anchors: Every factual claim about code must cite exact line links: `symbol (file:///path#L10-L40)`.\n" +
     "3. Contradiction reconciliation: Update existing entity pages on conflicting data; log resolutions in `.wiki/log.md`.\n" +
     "4. Keep `.wiki/index.md` (content catalog) and `.wiki/log.md` (audit ledger) synchronized.",
 };

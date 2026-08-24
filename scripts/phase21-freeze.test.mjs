@@ -97,7 +97,8 @@ function dependencyNameFingerprint() {
           e.isDirectory() &&
           existsSync(url(`../packages/${e.name}/package.json`)) &&
           e.name !== "computer-use-linux" &&
-          e.name !== "antigravity-agent",
+          e.name !== "antigravity-agent" &&
+          e.name !== "prism-wiki",
       )
       .map((e) => [JSON.parse(readFileSync(url(`../packages/${e.name}/package.json`), "utf8")).name, `packages/${e.name}/package.json`]),
   ]) {
@@ -353,7 +354,7 @@ test("baseline manifest count is coherent with the real filesystem (0.2.1 adds n
   const workspaceDirs = readdirSync(url("../packages"), { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .filter((e) => existsSync(url(`../packages/${e.name}/package.json`)))
-    .filter((e) => e.name !== "computer-use-linux" && e.name !== "antigravity-agent");
+    .filter((e) => e.name !== "computer-use-linux" && e.name !== "antigravity-agent" && e.name !== "prism-wiki");
   const providerDirs = workspaceDirs.filter((d) => d.name.startsWith("provider-"));
   const prismDirs = workspaceDirs.filter((d) => d.name.startsWith("prism-"));
   assert.equal(workspaceDirs.length, mc.workspacePackages, "workspacePackages matches packages/*/package.json count");

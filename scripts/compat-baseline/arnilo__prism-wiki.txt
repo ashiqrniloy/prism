@@ -1,0 +1,44 @@
+CodebaseProfile	export declare class CodebaseProfile
+Context7Hydrator	export declare class Context7Hydrator
+ContradictionEngine	export declare class ContradictionEngine
+DEFAULT_IGNORE_PATTERNS	export declare const DEFAULT_IGNORE_PATTERNS: string[]
+HybridProfile	export declare class HybridProfile
+PkmProfile	export declare class PkmProfile
+QmdClient	export declare class QmdClient
+WIKI_INJECTOR_NAME	export declare const WIKI_INJECTOR_NAME = "wiki-guidance"
+WIKI_READ_PAGE_TOOL_NAME	export declare const WIKI_READ_PAGE_TOOL_NAME = "wiki_read_page"
+WIKI_RECORD_INSIGHT_TOOL_NAME	export declare const WIKI_RECORD_INSIGHT_TOOL_NAME = "wiki_record_insight"
+WIKI_SEARCH_TOOL_NAME	export declare const WIKI_SEARCH_TOOL_NAME = "wiki_search"
+WikiCompiler	export declare class WikiCompiler
+WikiLinter	export declare class WikiLinter
+computeSourceDelta	export declare function computeSourceDelta(manifest: WikiManifest, currentFiles: Map<string, string>): SourceDelta
+createEmptyManifest	export declare function createEmptyManifest(wikiRoot: string, rawRoots?: readonly string[], profile?: WikiProfileType): WikiManifest
+createWikiExtension	export declare function createWikiExtension(options?: WikiExtensionOptions): Extension
+createWikiInitCommand	export declare function createWikiInitCommand(options?: WikiExtensionOptions): CommandDefinition
+createWikiLintCommand	export declare function createWikiLintCommand(options?: WikiExtensionOptions): CommandDefinition
+createWikiReadPageTool	export declare function createWikiReadPageTool(options?: WikiExtensionOptions): ToolDefinition
+createWikiRecordInsightTool	export declare function createWikiRecordInsightTool(options?: WikiExtensionOptions): ToolDefinition
+createWikiRefreshCommand	export declare function createWikiRefreshCommand(options?: WikiExtensionOptions): CommandDefinition
+createWikiSearchTool	export declare function createWikiSearchTool(options?: WikiExtensionOptions): ToolDefinition
+defaultQmdRunner	export declare const defaultQmdRunner: QmdCommandRunner
+deployWikiSkills	export declare function deployWikiSkills(workspaceRoot: string, options?: DeployOptions): Promise<string[]>
+hashContent	export declare function hashContent(content: string | Buffer): string
+hashFile	export declare function hashFile(filePath: string): Promise<string>
+initWiki	export declare function initWiki(options?: WikiExtensionOptions): Promise<InitWikiResult>
+lintWiki	export declare function lintWiki(options?: WikiExtensionOptions): Promise<LintReport>
+loadBundledSkills	export declare function loadBundledSkills(packageRoot?: string): Promise<Map<string, Skill>>
+loadManifest	export declare function loadManifest(wikiRootPath: string): Promise<WikiManifest | undefined>
+parseSkillMarkdown	export declare function parseSkillMarkdown(content: string):
+refreshWiki	export declare function refreshWiki(options?: WikiExtensionOptions): Promise<RefreshWikiResult>
+renderEntityMarkdown	export declare function renderEntityMarkdown(workspaceRoot: string, entity: WikiEntityMetadata, symbols: readonly ExtractedSymbol[], summary?: string): string
+renderIndexCatalog	export declare function renderIndexCatalog(entities: readonly WikiEntityMetadata[]): string
+resolvePackageSkillsDir	export declare function resolvePackageSkillsDir(): string
+resolveProfile	export declare function resolveProfile(profileType: WikiProfileType, sampleFiles: readonly string[]): CodebaseProfile | PkmProfile | HybridProfile
+runCli	export declare function runCli(argv: readonly string[]): Promise<number>
+saveManifest	export declare function saveManifest(wikiRootPath: string, manifest: WikiManifest): Promise<void>
+scaffoldWiki	export declare function scaffoldWiki(options: ScaffoldOptions): Promise<ScaffoldResult>
+scanRawFiles	export declare function scanRawFiles(workspaceRoot: string, rawRoots?: readonly string[], options?: ScanOptions): Promise<Map<string, string>>
+updateManifestWithEntities	export declare function updateManifestWithEntities(manifest: WikiManifest, updatedEntities: readonly WikiEntityMetadata[], newFileHashes: Map<string, string>): WikiManifest
+validateAnchor	export declare function validateAnchor(anchor: WikiSourceAnchor, currentFileContent?: string):
+wikiMaintainerSkill	export declare const wikiMaintainerSkill: Skill
+wikiSearcherSkill	export declare const wikiSearcherSkill: Skill

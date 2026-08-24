@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import type { HydratedSearchHit, QmdSearchResult, SearchMode, WikiManifest, WikiSearchResponse, WikiSourceAnchor } from "../types.js";
 
 export class Context7Hydrator {

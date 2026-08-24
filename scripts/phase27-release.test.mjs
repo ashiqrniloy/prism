@@ -38,10 +38,11 @@ const EVIDENCE_DOC = "docs/release-0.2.7-evidence.md";
 const BLOCKER = "0.3.0 live-service matrix";
 const hasDesktopPackage = truth.capability.includes("@arnilo/prism-computer-use-linux");
 const hasAntigravityPackage = truth.capability.includes("@arnilo/prism-antigravity-agent");
+const hasWikiPackage = truth.capability.includes("@arnilo/prism-wiki");
 
 describe("Plan 027 Task 10 release closeout", () => {
   test("release metadata remains consistent after the 0.3.0 cut", () => {
-    const added = Number(hasDesktopPackage) + Number(hasAntigravityPackage);
+    const added = Number(hasDesktopPackage) + Number(hasAntigravityPackage) + Number(hasWikiPackage);
     assert.equal(truth.counts.publishable, 55 + added, "current publishable package count");
     assert.equal(truth.counts.workspace, 54 + added, "current workspace package count");
     assert.equal(truth.root.version, "0.3.0", "root manifest is 0.3.0");
