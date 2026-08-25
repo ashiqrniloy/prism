@@ -1,0 +1,55 @@
+DEFAULT_EDIT_TOOL_NAMES	export declare const DEFAULT_EDIT_TOOL_NAMES: readonly ["write", "edit", "move"]
+DEFAULT_MAX_PROMPT_CHARS	export declare const DEFAULT_MAX_PROMPT_CHARS = 4096
+DEFAULT_MAX_RESULT_BYTES	export declare const DEFAULT_MAX_RESULT_BYTES = 524288
+DEFAULT_RETRIEVAL_BUDGET_MS	export declare const DEFAULT_RETRIEVAL_BUDGET_MS = 8000
+DEFAULT_STDERR_TAIL_CHARS	export declare const DEFAULT_STDERR_TAIL_CHARS = 2000
+GRAFT_EXTENSION_NAME	export declare const GRAFT_EXTENSION_NAME = "@arnilo/prism-graft"
+GRAFT_PEER_PACKAGE	export declare const GRAFT_PEER_PACKAGE = "@nanonets/graft"
+GRAFT_PEER_RANGE	export declare const GRAFT_PEER_RANGE = "^0.13.0"
+GRAFT_RESOLVE_ERROR_CODE	export declare const GRAFT_RESOLVE_ERROR_CODE = "graft_resolve_failed"
+GRAFT_SKILL_BODY	export declare const GRAFT_SKILL_BODY: string
+GRAFT_STATE_TYPE	export declare const GRAFT_STATE_TYPE = "graft-state"
+GraftAppendOptions	export type { GraftAppendOptions, GraftExtensionOptions, GraftExtensionState, GraftMode } from "./types.js"
+GraftExtensionOptions	export type { GraftAppendOptions, GraftExtensionOptions, GraftExtensionState, GraftMode } from "./types.js"
+GraftExtensionState	export type { GraftAppendOptions, GraftExtensionOptions, GraftExtensionState, GraftMode } from "./types.js"
+GraftMode	export type { GraftAppendOptions, GraftExtensionOptions, GraftExtensionState, GraftMode } from "./types.js"
+GraftResolveError	export declare class GraftResolveError extends Error
+HOOK_OVERHEAD_MS	export declare const HOOK_OVERHEAD_MS = 2000
+MAX_ERROR_CHARS	export declare const MAX_ERROR_CHARS = 512
+MAX_GRAPH_FILE_BYTES	export declare const MAX_GRAPH_FILE_BYTES = 262144
+MIN_CHILD_TIMEOUT_MS	export declare const MIN_CHILD_TIMEOUT_MS = 4000
+MIN_PROMPT_CHARS	export declare const MIN_PROMPT_CHARS = 12
+ORIENTATION_MAX_BYTES	export declare const ORIENTATION_MAX_BYTES: number
+PACK_BLOCK_CEILING_BYTES	export declare const PACK_BLOCK_CEILING_BYTES: number
+ResolveGraftCliOptions	export type { ResolvedGraftCli, ResolveGraftCliOptions } from "./upstream.js"
+ResolvedGraftCli	export type { ResolvedGraftCli, ResolveGraftCliOptions } from "./upstream.js"
+SEEN_CAP	export declare const SEEN_CAP = 256
+childEnv	export declare function childEnv(options?: ChildEnvOptions): Record<string, string>
+childTimeoutMs	export declare function childTimeoutMs(budgetMs: number | undefined, fallback?: number): number
+createEditWatchMiddleware	export declare function createEditWatchMiddleware(deps: GraftEditWatchDeps, options:
+createGraftCommands	export declare function createGraftCommands(ctx: GraftCommandContext): readonly CommandDefinition[]
+createGraftContextProvider	export declare function createGraftContextProvider(deps: GraftContextProviderDeps): ContextProvider
+createGraftExtension	export declare function createGraftExtension(options: GraftExtensionOptions): Extension
+createGraftOrientationInjector	export declare function createGraftOrientationInjector(getOrientation: () => string | undefined): InstructionInjector
+createGraftSkill	export declare function createGraftSkill(): Skill
+defineGraftTools	export declare function defineGraftTools(ctx: GraftToolsContext): readonly ToolDefinition[]
+editedPathFrom	export declare function editedPathFrom(result: ToolResult, editToolNames?: readonly string[]): string | undefined
+formatPointerPack	export declare function formatPointerPack(askResult: unknown, seen: ReadonlySet<string>): PointerPack
+isGraftStateData	export declare function isGraftStateData(value: unknown): value is GraftStateData
+latestUserText	export declare function latestUserText(messages: readonly Message[]): string | undefined
+loadOrientation	export declare function loadOrientation(indexPath: string, freshness: GraftFreshness | undefined, maxBytes?: number): string | undefined
+nextSeen	export declare function nextSeen(previous: SeenState, freshIds: readonly string[]): readonly string[]
+persistGraftPatch	export declare function persistGraftPatch(options: PersistGraftPatchOptions): Promise<void>
+readBoundedFile	export declare function readBoundedFile(root: string, relativePath: string, maxBytes: number): string
+redactPaths	export declare function redactPaths(text: string, paths?: readonly string[]): string
+repoRelative	export declare function repoRelative(projectDir: string, path: string): string
+resolveExtension	export declare function resolveExtension(options: GraftExtensionOptions):
+resolveGraftCli	export declare function resolveGraftCli(options?: ResolveGraftCliOptions): ResolvedGraftCli
+resolveLatestGraftState	export declare function resolveLatestGraftState(entries: readonly SessionEntry[]): GraftStateData | undefined
+runGraftJson	export declare function runGraftJson<T = unknown>(cli: ResolvedGraftCli, args: readonly string[], options?: RunGraftJsonOptions): Promise<RunGraftResult<T>>
+shouldQuery	export declare function shouldQuery(text: string | undefined, options?:
+shouldRegisterPullTools	export declare function shouldRegisterPullTools(mode: GraftMode): boolean
+shouldRegisterPushSurface	export declare function shouldRegisterPushSurface(mode: GraftMode): boolean
+summarizeBlast	export declare function summarizeBlast(payload: unknown):
+underGraft	export declare function underGraft(projectDir: string, path: string): boolean
+wireEditWatch	export declare function wireEditWatch(api:

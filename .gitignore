@@ -1,4 +1,7 @@
 dist/
+
+# compiled example demos (emitted by docs.test tsc step; never commit)
+examples/*.js
 node_modules/
 release-artifacts/
 bug-reports/
