@@ -392,7 +392,14 @@ test("exit gate (Task 6): lockfile gained no dependencies (name-set unchanged vs
   const lock = JSON.parse(readFileSync(url("../package-lock.json"), "utf8"));
   const names = Object.keys(lock.packages)
     .filter((k) => k && !k.startsWith("node_modules/@arnilo"))
-    .filter((k) => k !== "packages/computer-use-linux" && k !== "packages/antigravity-agent" && k !== "packages/prism-wiki")
+    .filter(
+      (k) =>
+        k !== "packages/computer-use-linux" &&
+        k !== "packages/antigravity-agent" &&
+        k !== "packages/prism-wiki" &&
+        // plan 033: optional peer-dependency-only workspace package (no new external deps)
+        k !== "packages/prism-graft",
+    )
     .sort();
   const hash = createHash("sha256").update(names.join("\n")).digest("hex");
   assert.equal(hash, gate.lockfilePackageNamesHash, "lockfile package name-set changed — no new dependencies allowed in 0.1.4");

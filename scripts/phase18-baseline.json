@@ -1,5 +1,5 @@
 {
-  "$comment": "0.1.6 Task 0 baseline evidence (plan 018, 2026-08-11): captured at HEAD fc914aa (signed v0.1.5 tag) with all five closeouts deferred. Seam hashes are the pre-change truth for the phase-18 state machine: while a closeout's task is pending its allowed files must stay byte-identical; a deferred closeout's files are immutable until demand evidence lands in phase18-freeze-manifest.json. The closeout inventory mirrors the manifest (same ids/tasks/status). exitGate records the Task 7 0.1.6 evidence once Tasks 1-7 land. [2026-08-18] manifestCount refreshed 49->50 workspace / 50->51 publishable: plan 028 shipped the spawnable ACP agent package @arnilo/prism-acp-agent. [2026-08-19] manifestCount refreshed for plan 029 (+4 packages; workspace 53+doc-reader=54).",
+  "$comment": "0.1.6 Task 0 baseline evidence (plan 018, 2026-08-11): captured at HEAD fc914aa (signed v0.1.5 tag) with all five closeouts deferred. Seam hashes are the pre-change truth for the phase-18 state machine: while a closeout's task is pending its allowed files must stay byte-identical; a deferred closeout's files are immutable until demand evidence lands in phase18-freeze-manifest.json. The closeout inventory mirrors the manifest (same ids/tasks/status). exitGate records the Task 7 0.1.6 evidence once Tasks 1-7 land. [2026-08-18] manifestCount refreshed 49->50 workspace / 50->51 publishable: plan 028 shipped the spawnable ACP agent package @arnilo/prism-acp-agent. [2026-08-19] manifestCount refreshed for plan 029 (+4 packages; workspace 53+doc-reader=54). [2026-08-25] manifestCount refreshed for plan 033: optional context-graph package @arnilo/prism-graft (+1 prism-family workspace package).",
   "captured": "2026-08-11",
   "release": "0.1.5",
   "node": "v24.18.0",
@@ -31,12 +31,12 @@
     "result": "green; compat baseline exists at 0.1.5, 0 breaking declaration deltas"
   },
   "manifestCount": {
-    "publishable": 54,
-    "workspacePackages": 53,
+    "publishable": 55,
+    "workspacePackages": 54,
     "rootPackage": "@arnilo/prism",
     "categories": {
       "provider": 17,
-      "prism": 10,
+      "prism": 11,
       "capability": 26
     },
     "canonicalStatement": "54 publishable (phase18 +doc-reader convention) / live 55 after plan 029",

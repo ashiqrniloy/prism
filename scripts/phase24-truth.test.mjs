@@ -16,6 +16,7 @@ const phase30Manifest = JSON.parse(readFileSync(join(ROOT, "scripts", "phase30-f
 const hasDesktopPackage = phase30Manifest.tasks.task7 === "done";
 const hasAntigravityPackage = phase30Manifest.amendments?.antigravity?.tasks?.task6 === "done";
 const hasWikiPackage = existsSync(join(ROOT, "packages", "prism-wiki", "package.json"));
+const hasGraftPackage = existsSync(join(ROOT, "packages", "prism-graft")); // plan 033 optional context-graph package
 
 test("generator reproducible: two runs byte-identical modulo generatedAt", () => {
   assert.deepEqual(stripStamp(computePackageTruth()), stripStamp(computePackageTruth()));
@@ -32,7 +33,7 @@ test("committed artifact equals the generator output (regenerate via node script
 
 test("counts match manifests at the 0.3.0 truth graph plus the Task 7 desktop package", () => {
   const t = computePackageTruth();
-  const added = Number(hasDesktopPackage) + Number(hasAntigravityPackage) + Number(hasWikiPackage);
+  const added = Number(hasDesktopPackage) + Number(hasAntigravityPackage) + Number(hasWikiPackage) + Number(hasGraftPackage);
   assert.equal(t.counts.publishable, 55 + added);
   assert.equal(t.counts.workspace, 54 + added);
   assert.equal(t.counts.provider, 17);
@@ -60,7 +61,10 @@ test("umbrella closures match manifests", () => {
   const all = t.umbrella["prism-all"];
   assert.equal(all.deps.length, 21);
   assert.equal(all.closure, 47, "21 direct deps expand through code/sdk/profile deps to 47 workspace packages");
-  assert.equal(all.omits.length, 6 + Number(hasDesktopPackage) + Number(hasAntigravityPackage) + Number(hasWikiPackage));
+  assert.equal(
+    all.omits.length,
+    6 + Number(hasDesktopPackage) + Number(hasAntigravityPackage) + Number(hasWikiPackage) + Number(hasGraftPackage),
+  );
   for (const name of [
     "@arnilo/prism-caveman",
     "@arnilo/prism-document-reader",
@@ -71,6 +75,7 @@ test("umbrella closures match manifests", () => {
     ...(hasDesktopPackage ? ["@arnilo/prism-computer-use-linux"] : []),
     ...(hasAntigravityPackage ? ["@arnilo/prism-antigravity-agent"] : []),
     ...(hasWikiPackage ? ["@arnilo/prism-wiki"] : []),
+    ...(hasGraftPackage ? ["@arnilo/prism-graft"] : []),
   ]) {
     assert.ok(all.omits.includes(name), `prism-all omits ${name}`);
   }

@@ -1,5 +1,5 @@
 {
-  "$comment": "0.1.0 baseline evidence captured at plan 013 Task 0 freeze (2026-08-09) for regression comparison at the Task 6 exit gate. Tree state at capture: HEAD at v0.1.0 + uncommitted plan 013 Task 0 files (roadmap.md rewrite, plans/013-Release-0-1-1-Post-Release-Hardening.md, plans/README.md index row, scripts/phase13-freeze-manifest.json, scripts/phase13-freeze.test.mjs, scripts/phase13-baseline.json). Core coverage is core-only per the plan 010 compromise (packages/** and examples/** excluded); plan 013 Task 3 adds a combined core+workspace summary without weakening the core gate. [2026-08-11] manifestCount refreshed 48->49 workspace / 49->50 publishable: plan 018 doc-reader closeout shipped the optional @arnilo/prism-document-reader package into the working tree. [2026-08-13] phase12-freeze-manifest.json support.postgres.schemaVersion refreshed 7->8 (plan 022 Task 2 adds migration 008_session_version); baseline re-touched to keep the Task 0 capture-ordering guard honest. [2026-08-18] manifestCount refreshed 49->50 workspace / 50->51 publishable: plan 028 shipped the spawnable ACP agent package @arnilo/prism-acp-agent. [2026-08-19] manifestCount refreshed 50->54 workspace / 51->55 publishable: plan 029 shipped DeepSeek/xAI/ClinePass + prism-impeccable.",
+  "$comment": "0.1.0 baseline evidence captured at plan 013 Task 0 freeze (2026-08-09) for regression comparison at the Task 6 exit gate. Tree state at capture: HEAD at v0.1.0 + uncommitted plan 013 Task 0 files (roadmap.md rewrite, plans/013-Release-0-1-1-Post-Release-Hardening.md, plans/README.md index row, scripts/phase13-freeze-manifest.json, scripts/phase13-freeze.test.mjs, scripts/phase13-baseline.json). Core coverage is core-only per the plan 010 compromise (packages/** and examples/** excluded); plan 013 Task 3 adds a combined core+workspace summary without weakening the core gate. [2026-08-11] manifestCount refreshed 48->49 workspace / 49->50 publishable: plan 018 doc-reader closeout shipped the optional @arnilo/prism-document-reader package into the working tree. [2026-08-13] phase12-freeze-manifest.json support.postgres.schemaVersion refreshed 7->8 (plan 022 Task 2 adds migration 008_session_version); baseline re-touched to keep the Task 0 capture-ordering guard honest. [2026-08-18] manifestCount refreshed 49->50 workspace / 50->51 publishable: plan 028 shipped the spawnable ACP agent package @arnilo/prism-acp-agent. [2026-08-19] manifestCount refreshed 50->54 workspace / 51->55 publishable: plan 029 shipped DeepSeek/xAI/ClinePass + prism-impeccable. [2026-08-25] manifestCount refreshed 54->55 counted workspace / 55->56 publishable (phase-13 counting excludes host-owned computer-use-linux, antigravity-agent, prism-wiki): plan 033 shipped the optional context-graph package @arnilo/prism-graft (plus the earlier Caveman/Ponytail behavior packages).",
   "captured": "2026-08-09",
   "release": "0.1.0",
   "node": "v24.18.0",
@@ -40,12 +40,12 @@
     "status": "blocked: dirty git tree (uncommitted plan 013 Task 0 files); green at clean v0.1.0 per plan 012 Task 7 (release:check 49/49, release:publish --dry-run 49/49 twice byte-identical)"
   },
   "manifestCount": {
-    "publishable": 55,
-    "workspacePackages": 54,
+    "publishable": 56,
+    "workspacePackages": 55,
     "rootPackage": "@arnilo/prism",
     "categories": {
       "provider": 17,
-      "prism": 10,
+      "prism": 11,
       "capability": 27
     },
     "canonicalStatement": "55 publishable manifests = root @arnilo/prism + 54 workspace packages (17 provider adapters + 10 prism-* family/profile packages + 27 capability packages; the 0.2.9 plan 029 cut added DeepSeek/xAI/ClinePass + @arnilo/prism-impeccable)",

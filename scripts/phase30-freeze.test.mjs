@@ -229,12 +229,14 @@ test("phase30 freeze: package budget 55→57; graph gains desktop then Antigravi
   assert.equal(budget.newPackages, 2);
   assert.equal(budget.newRuntimeDependencyNames, 0);
   assert.equal(packageTruth.counts.provider, 17);
+  const hasGraft = packageTruth.capability.includes("@arnilo/prism-graft"); // plan 033 optional context-graph package
   assert.equal(packageTruth.counts.prismFamily, 10);
   const desktopDone = manifest.tasks.task7 === "done";
   const antigravityDone = manifest.amendments.antigravity.tasks.task6 === "done";
   const hasWiki = packageTruth.capability.includes("@arnilo/prism-wiki");
-  assert.equal(packageTruth.counts.publishable, 55 + Number(desktopDone) + Number(antigravityDone) + Number(hasWiki));
-  assert.equal(packageTruth.counts.workspace, 54 + Number(desktopDone) + Number(antigravityDone) + Number(hasWiki));
+  const graftTerm = Number(hasGraft);
+  assert.equal(packageTruth.counts.publishable, 55 + Number(desktopDone) + Number(antigravityDone) + Number(hasWiki) + graftTerm);
+  assert.equal(packageTruth.counts.workspace, 54 + Number(desktopDone) + Number(antigravityDone) + Number(hasWiki) + graftTerm);
   if (desktopDone) assert.ok(packageTruth.capability.includes("@arnilo/prism-computer-use-linux"));
   if (antigravityDone) assert.ok(packageTruth.capability.includes("@arnilo/prism-antigravity-agent"));
   if (hasWiki) assert.ok(packageTruth.capability.includes("@arnilo/prism-wiki"));

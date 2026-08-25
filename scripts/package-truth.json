@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-08-24T10:18:52.006Z",
+  "generatedAt": "2026-08-25T13:40:22.284Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.3.0"
   },
   "counts": {
-    "publishable": 58,
-    "workspace": 57,
+    "publishable": 59,
+    "workspace": 58,
     "provider": 17,
     "prismFamily": 10,
-    "capability": 30,
-    "codeWithPeer": 51,
+    "capability": 31,
+    "codeWithPeer": 52,
     "pureManifest": 6
   },
   "providers": [
@@ -58,6 +58,7 @@
     "@arnilo/prism-document-reader",
     "@arnilo/prism-enterprise-postgres",
     "@arnilo/prism-evals",
+    "@arnilo/prism-graft",
     "@arnilo/prism-mcp",
     "@arnilo/prism-memory",
     "@arnilo/prism-model-router",
@@ -130,6 +131,7 @@
         "@arnilo/prism-caveman",
         "@arnilo/prism-computer-use-linux",
         "@arnilo/prism-document-reader",
+        "@arnilo/prism-graft",
         "@arnilo/prism-impeccable",
         "@arnilo/prism-openapi-tools",
         "@arnilo/prism-ponytail",

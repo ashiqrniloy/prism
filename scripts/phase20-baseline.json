@@ -1,5 +1,5 @@
 {
-  "$comment": "Phase 20 (0.2.0) Task 1 baseline evidence, captured at 0.1.7 before any phase-20 implementation edit. npm test / coverage / typecheck / biome / format / secrets / audit / pack / release-gate figures are the verified clean 0.1.7 runs (plan 019 exit gate + this session's clean sequential and coverage runs at HEAD 051470a). fileHashes are computed live at capture; the freeze test compares them against the working tree at every task state. [2026-08-18] manifestCount refreshed 49->50 workspace / 50->51 publishable: plan 028 shipped the spawnable ACP agent package @arnilo/prism-acp-agent. [2026-08-18] dependencyNames fingerprint refreshed: plan 028 added @arnilo/prism-acp-agent (its deps reuse existing names; the package itself is a new workspace entry). [2026-08-19] manifestCount refreshed 50->54 workspace / 51->55 publishable: plan 029 shipped DeepSeek/xAI/ClinePass + prism-impeccable.",
+  "$comment": "Phase 20 (0.2.0) Task 1 baseline evidence, captured at 0.1.7 before any phase-20 implementation edit. npm test / coverage / typecheck / biome / format / secrets / audit / pack / release-gate figures are the verified clean 0.1.7 runs (plan 019 exit gate + this session's clean sequential and coverage runs at HEAD 051470a). fileHashes are computed live at capture; the freeze test compares them against the working tree at every task state. [2026-08-18] manifestCount refreshed 49->50 workspace / 50->51 publishable: plan 028 shipped the spawnable ACP agent package @arnilo/prism-acp-agent. [2026-08-18] dependencyNames fingerprint refreshed: plan 028 added @arnilo/prism-acp-agent (its deps reuse existing names; the package itself is a new workspace entry). [2026-08-19] manifestCount refreshed 50->54 workspace / 51->55 publishable: plan 029 shipped DeepSeek/xAI/ClinePass + prism-impeccable. [2026-08-25] manifestCount refreshed for plan 033: optional context-graph package @arnilo/prism-graft (+1 prism-family workspace package).",
   "captured": "2026-08-12T20:37:30.096Z",
   "release": "0.1.7",
   "node": "v24.18.0",
@@ -66,12 +66,12 @@
     "notes": "plain gate after --update-baseline at 0.1.7; no --allow-break anywhere"
   },
   "manifestCount": {
-    "publishable": 55,
-    "workspacePackages": 54,
+    "publishable": 56,
+    "workspacePackages": 55,
     "rootPackage": "@arnilo/prism",
     "categories": {
       "provider": 17,
-      "prism": 10,
+      "prism": 11,
       "capability": 27
     },
     "canonicalStatement": "55 publishable manifests = root @arnilo/prism + 54 workspace packages (17 provider adapters + 10 prism-* family/profile packages + 27 capability packages; the 0.2.9 plan 029 cut added DeepSeek/xAI/ClinePass + @arnilo/prism-impeccable)",

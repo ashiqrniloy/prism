@@ -77,6 +77,11 @@
       "branches": 68.47,
       "functions": 85.37
     },
+    "@arnilo/prism-graft": {
+      "lines": 95.76,
+      "branches": 81.45,
+      "functions": 92.63
+    },
     "@arnilo/prism-impeccable": {
       "lines": 95.21,
       "branches": 86.67,

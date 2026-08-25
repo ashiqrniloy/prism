@@ -298,7 +298,11 @@ function releaseFields(manifest) {
   return Object.fromEntries(
     DEPENDENCY_FIELDS.map((field) => [
       field,
-      Object.fromEntries(Object.entries(manifest[field] ?? {}).filter(([name]) => name.startsWith(INTERNAL_SCOPE))),
+      Object.fromEntries(
+        Object.entries(manifest[field] ?? {})
+          .filter(([name]) => name.startsWith(INTERNAL_SCOPE))
+          .sort(([a], [b]) => a.localeCompare(b)),
+      ),
     ]),
   );
 }

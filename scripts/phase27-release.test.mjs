@@ -39,10 +39,11 @@ const BLOCKER = "0.3.0 live-service matrix";
 const hasDesktopPackage = truth.capability.includes("@arnilo/prism-computer-use-linux");
 const hasAntigravityPackage = truth.capability.includes("@arnilo/prism-antigravity-agent");
 const hasWikiPackage = truth.capability.includes("@arnilo/prism-wiki");
+const hasGraftPackage = truth.capability.includes("@arnilo/prism-graft"); // plan 033 optional context-graph package
 
 describe("Plan 027 Task 10 release closeout", () => {
   test("release metadata remains consistent after the 0.3.0 cut", () => {
-    const added = Number(hasDesktopPackage) + Number(hasAntigravityPackage) + Number(hasWikiPackage);
+    const added = Number(hasDesktopPackage) + Number(hasAntigravityPackage) + Number(hasWikiPackage) + Number(hasGraftPackage);
     assert.equal(truth.counts.publishable, 55 + added, "current publishable package count");
     assert.equal(truth.counts.workspace, 54 + added, "current workspace package count");
     assert.equal(truth.root.version, "0.3.0", "root manifest is 0.3.0");

@@ -1,13 +1,10 @@
 {
-  "name": "@arnilo/prism-wiki",
+  "name": "@arnilo/prism-graft",
   "version": "0.0.1",
-  "description": "Karpathy LLM Wiki system with local qmd hybrid search and Context7 navigation for Prism.",
+  "description": "Graft context-graph integration for Prism.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "prism-wiki": "dist/cli.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -16,7 +13,6 @@
   },
   "files": [
     "dist",
-    "skills",
     "!dist/__tests__",
     "!dist/**/*.map",
     "README.md",
@@ -30,7 +26,13 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.3.0"
+    "@arnilo/prism": "^0.3.0",
+    "@nanonets/graft": "^0.13.0"
+  },
+  "peerDependenciesMeta": {
+    "@nanonets/graft": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."
@@ -42,26 +44,21 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ashiqrniloy/prism.git",
-    "directory": "packages/prism-wiki"
+    "directory": "packages/prism-graft"
   },
   "bugs": {
+    "type": "url",
     "url": "https://github.com/ashiqrniloy/prism/issues"
   },
-  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-wiki#readme",
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-graft#readme",
   "keywords": [
     "prism",
-    "wiki",
-    "llm-wiki",
-    "karpathy",
-    "qmd",
-    "context7",
-    "knowledge-base",
+    "graft",
+    "context-graph",
     "agent",
     "extension"
   ],
-  "sideEffects": [
-    "dist/cli.js"
-  ],
+  "sideEffects": false,
   "publishConfig": {
     "access": "public"
   }
