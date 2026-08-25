@@ -34,7 +34,7 @@ export interface ResolveGraftCliOptions {
 /**
  * A resolved way to invoke the graft CLI.
  * - `explicit`: run `command` with the call's own argv appended.
- * - `peer-bin`: run `process.execPath <package>/dist/cli.js` with the call's argv appended
+ * - `peer-bin`: run `process.execPath <manifest bin>` with the call's argv appended
  *   (the npm `bin` target of `@nanonets/graft`).
  */
 export interface ResolvedGraftCli {

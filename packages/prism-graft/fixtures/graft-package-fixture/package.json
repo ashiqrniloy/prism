@@ -1,5 +1,7 @@
 {
   "name": "graft-package-fixture",
   "version": "0.13.0",
-  "bin": { "graft": "dist/cli.js" }
+  "bin": {
+    "graft": "bin/graft.mjs"
+  }
 }

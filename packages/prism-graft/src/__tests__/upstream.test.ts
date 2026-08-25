@@ -20,7 +20,7 @@ function sessionCallbacks() {
 
 describe("graft cli resolution", () => {
   it("resolveGraftCli_prefers_explicit_cliPath", () => {
-    const explicit = join(fixtureRoot, "dist", "cli.js");
+    const explicit = join(fixtureRoot, "bin", "graft.mjs");
     const resolved = resolveGraftCli({ cliPath: explicit, packageRoot: import.meta.dirname });
     assert.deepEqual(resolved, { kind: "explicit", command: explicit, args: [] });
   });
@@ -41,7 +41,7 @@ describe("graft cli resolution", () => {
     assert.equal(resolved.kind, "peer-bin");
     assert.equal(resolved.command, process.execPath);
     assert.equal(resolved.args.length, 1);
-    assert.ok(resolved.args[0]?.endsWith(join("dist", "cli.js")));
+    assert.ok(resolved.args[0]?.endsWith(join("bin", "graft.mjs")));
   });
 
   it("resolveGraftCli_fails_closed_when_packageRoot_has_no_bin", () => {
@@ -80,13 +80,13 @@ describe("graft cli resolution", () => {
 
 describe("bounded graph file reads", () => {
   it("readBoundedFile_reads_within_root_and_cap", () => {
-    const body = readBoundedFile(fixtureRoot, "dist/cli.js", 64 * 1024);
+    const body = readBoundedFile(fixtureRoot, "bin/graft.mjs", 64 * 1024);
     assert.ok(body.includes("stub"));
   });
 
   it("readBoundedFile_rejects_escape_and_oversize", () => {
     assert.throws(() => readBoundedFile(fixtureRoot, "../package.json", 64 * 1024), GraftResolveError);
-    assert.throws(() => readBoundedFile(fixtureRoot, "dist/cli.js", 4), GraftResolveError);
+    assert.throws(() => readBoundedFile(fixtureRoot, "bin/graft.mjs", 4), GraftResolveError);
   });
 });
 

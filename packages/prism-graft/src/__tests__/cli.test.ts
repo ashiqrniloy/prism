@@ -5,7 +5,7 @@ import { describe, it } from "node:test";
 import { childEnv, childTimeoutMs, type RunGraftResult, runGraftJson } from "../cli.js";
 import type { ResolvedGraftCli } from "../upstream.js";
 
-const fixtureCli = resolve(import.meta.dirname, "../../fixtures/graft-package-fixture/dist/cli.js");
+const fixtureCli = resolve(import.meta.dirname, "../../fixtures/graft-package-fixture/bin/graft.mjs");
 const fixtureRoot = resolve(import.meta.dirname, "../../fixtures/graft-package-fixture");
 
 function explicitCli(): ResolvedGraftCli {

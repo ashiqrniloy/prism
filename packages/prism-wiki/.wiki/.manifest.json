@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "profile": "pkm",
+  "profile": "codebase",
   "wikiRoot": ".wiki",
   "rawRoots": [
     "."
