@@ -10,12 +10,15 @@ import {
   createResourceDocumentLoader,
   createWebFetchDocumentLoader,
   deleteSource,
+  HARD_RETRIEVE_SCOPE_CAP,
   htmlParser,
   indexChunks,
+  isValidContentHash,
   listIngestionStatus,
   markdownParser,
   pdfParser,
   RagAbortError,
+  RagError,
   RagLimitError,
   RagScopeError,
   RagValidationError,
@@ -25,6 +28,7 @@ import {
   retrieveContext,
   textParser,
 } from "../index.js";
+import type { DocumentLoader, Parser, RagChunk, TransactionalVectorStore } from "../types.js";
 
 const scope = { tenantId: "tenant-a", resourceId: "docs", corpusId: "handbook" };
 
@@ -49,6 +53,73 @@ describe("chunkText / chunkMarkdown", () => {
     assert.deepEqual(chunkText("   \n", { sourceId: "empty" }), []);
   });
 
+  it("stamps ATX heading stack on chunks and leaves pre-heading preamble unmarked", () => {
+    const md = "Preamble paragraph.\n\n# Policy\n\nPolicy intro.\n\n## 3.2 Leave\n\nLeave body.\n\n## 3.3 Sick\n\nSick body.";
+    const chunks = chunkMarkdown(md, { sourceId: "handbook", size: 40, overlap: 0 });
+
+    assert.equal(chunks.length, 4);
+    // Pre-heading preamble chunk — no heading.
+    assert.equal(chunks[0]?.metadata?.heading, undefined);
+    assert.equal(chunks[0]?.text, "Preamble paragraph.");
+
+    // Under # Policy only.
+    assert.equal(chunks[1]?.text, "# Policy\n\nPolicy intro.");
+    assert.deepEqual(chunks[1]?.metadata?.heading, ["Policy"]);
+
+    // Under ## 3.2 Leave (inherits Policy).
+    assert.equal(chunks[2]?.text, "## 3.2 Leave\n\nLeave body.");
+    assert.deepEqual(chunks[2]?.metadata?.heading, ["Policy", "3.2 Leave"]);
+
+    // ## 3.3 Sick pops 3.2 Leave, keeps Policy.
+    assert.equal(chunks[3]?.text, "## 3.3 Sick\n\nSick body.");
+    assert.deepEqual(chunks[3]?.metadata?.heading, ["Policy", "3.3 Sick"]);
+  });
+
+  it("caller-supplied heading metadata takes precedence over auto-stamp", () => {
+    const md = "# Policy\n\nBody.";
+    const chunks = chunkMarkdown(md, { sourceId: "x", size: 9, overlap: 0, metadata: { heading: "custom" } });
+    // # Policy is 8 chars; Body is 4 — two chunks with caller heading on both.
+    assert.equal(chunks[0]?.text, "# Policy");
+    assert.equal(chunks[0]?.metadata?.heading, "custom");
+    assert.equal(chunks[1]?.text, "Body.");
+    assert.equal(chunks[1]?.metadata?.heading, "custom");
+  });
+
+  it("chunkText (plain text) never stamps heading", () => {
+    const text = "# This is not markdown\n\nJust plain text.";
+    const chunks = chunkText(text, { sourceId: "x", size: 120, overlap: 0 });
+    for (const c of chunks) assert.equal(c.metadata?.heading, undefined);
+  });
+
+  it("parser metadata propagates through replaceDocument and appears on chunks", async () => {
+    const loader: DocumentLoader = {
+      load: async (uri) => ({ uri, mediaType: "text/markdown", text: "# Policy\n\nBody." }),
+    };
+    const parser: Parser = {
+      async parse(doc) {
+        return { uri: doc.uri, text: doc.text ?? "", metadata: { page: 2, section: "intro" } };
+      },
+    };
+    const store = createMemoryVectorStore();
+    await replaceDocument({
+      uri: "mem://policy",
+      sourceId: "mem://policy",
+      loader,
+      parser,
+      embedder: createHashEmbedder({ dimensions: 8 }),
+      store,
+      scope,
+    });
+    const records = await store.getBySource(
+      { tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId },
+      "mem://policy",
+    );
+    for (const r of records) {
+      assert.equal(r.metadata?.page, 2);
+      assert.equal(r.metadata?.section, "intro");
+    }
+  });
+
   it("fails closed on invalid or oversized limits", () => {
     assert.throws(() => chunkText("abc", { sourceId: "x", size: 10, overlap: 10 }), RagLimitError);
     assert.throws(() => chunkText("abcdef", { sourceId: "x", maxDocumentChars: 5 }), RagLimitError);
@@ -64,6 +135,7 @@ describe("indexChunks", () => {
     const batchSizes: number[] = [];
     const embeddedTexts: string[] = [];
     const embedder: Embedder = {
+      id: "test-batching",
       dimensions: base.dimensions,
       async embed(texts, options) {
         batchSizes.push(texts.length);
@@ -107,7 +179,7 @@ describe("indexChunks", () => {
       indexChunks({ chunks, embedder: createHashEmbedder(), store: createMemoryVectorStore(), scope, signal: controller.signal }),
       RagAbortError,
     );
-    const bad: Embedder = { dimensions: 2, embed: async (texts) => texts.map(() => [1]) };
+    const bad: Embedder = { id: "test-bad", dimensions: 2, embed: async (texts) => texts.map(() => [1]) };
     await assert.rejects(indexChunks({ chunks, embedder: bad, store: createMemoryVectorStore(), scope }), RagValidationError);
   });
 });
@@ -126,6 +198,7 @@ describe("source lifecycle and document adapters", () => {
       1,
     );
     const bad: Embedder = {
+      id: "test-failing",
       dimensions: 8,
       embed: async () => {
         throw new Error("embedding failed");
@@ -228,7 +301,197 @@ describe("source lifecycle and document adapters", () => {
   });
 });
 
+const lexicalSpy: string[] = [];
+
+/** Stub store with controllable retrieval legs; hits carry valid RAG metadata + Task-2 embedder identity. */
+function stubLegStore(vectorHits: MemoryVectorHit[], lexicalHits: MemoryVectorHit[]): VectorStore {
+  return {
+    async upsert() {},
+    async query() {
+      return vectorHits;
+    },
+    async delete() {
+      return 0;
+    },
+    lexicalModes: ["fts"],
+    async lexicalQuery(query) {
+      lexicalSpy.push(query.text);
+      return lexicalHits;
+    },
+  };
+}
+
+function ragHit(id: string, score = 0.5): MemoryVectorHit {
+  return {
+    id,
+    tenantId: scope.tenantId,
+    resourceId: scope.resourceId,
+    threadId: scope.corpusId,
+    text: `text ${id}`,
+    embedding: new Array(8).fill(0.1),
+    sequence: 0,
+    embedderId: "prism-hash-embedder",
+    metadata: { _rag: { sourceId: "src", citationId: id, chunkIndex: 0, start: 0, end: 4 } },
+    createdAt: new Date(0).toISOString(),
+    score,
+  };
+}
+
 describe("retrieveContext / ContextProvider", () => {
+  it("fuses legs with RRF labels and orders hybrid > vector > lexical", async () => {
+    const embedder = createHashEmbedder({ dimensions: 8 });
+    lexicalSpy.length = 0;
+    const shared = ragHit("src#0001", 0.6);
+    const store = stubLegStore([shared, ragHit("src#0003")], [shared, ragHit("src#0002")]);
+    const result = await retrieveContext("anything", { embedder, store, scope, lexical: "fts", rrfK: 2 });
+    // shared: 1/3+1/3 = 2/3; vecOnly & lexOnly: 1/(2+2) each, id tie-break "lexOnly" < "vecOnly"
+    assert.deepEqual(
+      result.hits.map((hit) => [hit.citationId, hit.provenance.retrieval, hit.retrievalRank]),
+      [
+        ["src#0001", "hybrid", 0],
+        ["src#0002", "lexical", 1],
+        ["src#0003", "vector", 2],
+      ],
+    );
+  });
+
+  it("passes redacted query text to the lexical leg", async () => {
+    const embedder = createHashEmbedder({ dimensions: 8 });
+    lexicalSpy.length = 0;
+    const store = stubLegStore([], []);
+    await retrieveContext("grant TOPSECRET access", { embedder, store, scope, secrets: ["TOPSECRET"] });
+    const captured = lexicalSpy.at(-1);
+    assert.ok(captured && !captured.includes("TOPSECRET"));
+  });
+
+  it('skips the lexical leg entirely under lexical:"off"', async () => {
+    const embedder = createHashEmbedder({ dimensions: 8 });
+    lexicalSpy.length = 0;
+    let lexicalCalls = 0;
+    const store: VectorStore = {
+      async upsert() {},
+      async query() {
+        return [ragHit("src#only")];
+      },
+      async delete() {
+        return 0;
+      },
+      lexicalModes: ["fts"],
+      async lexicalQuery(query) {
+        lexicalCalls += 1;
+        lexicalSpy.push(query.text);
+        return [];
+      },
+    };
+    const result = await retrieveContext("anything", { embedder, store, scope, lexical: "off" });
+    assert.equal(lexicalCalls, 0);
+    assert.equal(result.hits.length, 1);
+    assert.equal(result.hits[0]?.provenance.retrieval, "vector");
+  });
+
+  it("fails closed on unsupported lexical/fusion/rrfK option combinations", async () => {
+    const embedder = createHashEmbedder({ dimensions: 8 });
+    const bareStore: VectorStore = {
+      async upsert() {},
+      async query() {
+        return [];
+      },
+      async delete() {
+        return 0;
+      },
+    };
+    await assert.rejects(retrieveContext("q", { embedder, store: bareStore, scope, lexical: "fts" }), (error: RagValidationError) =>
+      /no lexicalQuery capability/.test(error.message),
+    );
+    const ftsStore = stubLegStore([], []); // declares fts only
+    await assert.rejects(retrieveContext("q", { embedder, store: ftsStore, scope, lexical: "bm25" }), (error: RagValidationError) =>
+      /does not declare BM25 support/.test(error.message),
+    );
+    await assert.rejects(
+      retrieveContext("q", { embedder, store: stubLegStore([], []), scope, fusion: "weighted" as never }),
+      RagValidationError,
+    );
+    await assert.rejects(retrieveContext("q", { embedder, store: stubLegStore([], []), scope, rrfK: 0 }), RagLimitError);
+    await assert.rejects(retrieveContext("q", { embedder, store: stubLegStore([], []), scope, rrfK: 1_001 }), RagLimitError);
+  });
+
+  it("retrieves hybrid through the real memory store lexical leg", async () => {
+    const embedder = createHashEmbedder({ dimensions: 16 });
+    const store = createMemoryVectorStore();
+    await indexChunks({
+      chunks: chunkText("approval policy requires current authorization", { sourceId: "policy" }),
+      embedder,
+      store,
+      scope,
+    });
+    const result = await retrieveContext("approval policy requires current authorization", { embedder, store, scope });
+    assert.ok(result.hits.length >= 1);
+    assert.equal(result.hits[0]?.citationId, "policy#0001");
+    assert.equal(result.hits[0]?.provenance.retrieval, "hybrid");
+  });
+
+  it("stamps embedderId on records and throws ERR_PRISM_RAG_EMBEDDER_MISMATCH on model drift", async () => {
+    const embedder = createHashEmbedder({ dimensions: 16 });
+    const store = createMemoryVectorStore();
+    await indexChunks({
+      chunks: chunkText("approval policy requires current authorization", { sourceId: "security" }),
+      embedder,
+      store,
+      scope,
+    });
+    const stored = await store.getBySource(
+      { tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId },
+      "security",
+    );
+    assert.equal(stored[0]?.embedderId, embedder.id);
+
+    // Different model id, same dimensions.
+    const other = { ...embedder, id: "other-model" };
+    await assert.rejects(
+      retrieveContext("approval policy", { embedder: other, store, scope }),
+      (error: RagError) => error.code === "ERR_PRISM_RAG_EMBEDDER_MISMATCH" && /other-model/.test(error.message),
+    );
+
+    // Same id, different dimensionality reaching the check via a permissive store.
+    const wrongDims: Embedder = { id: embedder.id, dimensions: 8, embed: async () => [[1, 0, 0, 0, 0, 0, 0, 0]] };
+    const storedHit: MemoryVectorHit = { ...stored[0]!, score: 0.9 };
+    const unfiltered: VectorStore = {
+      async upsert() {},
+      async query() {
+        return [storedHit];
+      },
+      async delete() {
+        return 0;
+      },
+    };
+    await assert.rejects(
+      retrieveContext("approval policy", { embedder: wrongDims, store: unfiltered, scope }),
+      (error: RagError) => error.code === "ERR_PRISM_RAG_EMBEDDER_MISMATCH" && /dims/.test(error.message),
+    );
+  });
+
+  it("fails closed on legacy records without embedderId and names the re-index path", async () => {
+    const embedder = createHashEmbedder({ dimensions: 16 });
+    const store = createMemoryVectorStore();
+    await store.upsert([
+      {
+        id: "doc#0002",
+        tenantId: scope.tenantId,
+        resourceId: scope.resourceId,
+        threadId: scope.corpusId,
+        text: "legacy note",
+        embedding: [...(await embedder.embed(["legacy note"]))[0]!],
+        sequence: 0,
+        metadata: {},
+        createdAt: new Date(0).toISOString(),
+      },
+    ]);
+    await assert.rejects(
+      retrieveContext("legacy note", { embedder, store, scope }),
+      (error: RagError) => error.code === "ERR_PRISM_RAG_EMBEDDER_MISMATCH" && /re-index/.test(error.message),
+    );
+  });
+
   it("filters bounded top-K hits and renders stable citations", async () => {
     const embedder = createHashEmbedder({ dimensions: 16 });
     const store = createMemoryVectorStore();
@@ -349,6 +612,7 @@ describe("retrieveContext / ContextProvider", () => {
     const base = createHashEmbedder({ dimensions: 8 });
     let calls = 0;
     const failing: Embedder = {
+      id: "test-partial",
       dimensions: base.dimensions,
       async embed(texts, options) {
         calls += 1;
@@ -374,6 +638,7 @@ describe("retrieveContext / ContextProvider", () => {
     assert.doesNotMatch(JSON.stringify(partial), /secret/);
     const store = createMemoryVectorStore();
     const bad: Embedder = {
+      id: "test-failed-source",
       dimensions: base.dimensions,
       embed: async () => {
         throw new Error("failed source");
@@ -433,6 +698,7 @@ describe("retrieveContext / ContextProvider", () => {
       text: "foreign",
       embedding: [1, 0],
       sequence: 0,
+      embedderId: embedder.id,
       metadata,
       createdAt: new Date(0).toISOString(),
       score: 1,
@@ -451,6 +717,376 @@ describe("retrieveContext / ContextProvider", () => {
         scope,
       }),
       RagScopeError,
+    );
+  });
+});
+
+describe("replaceSource hash skip", () => {
+  const DOC_HASH = "ab".repeat(32);
+  const mkChunk = (id: string, text: string): RagChunk => ({
+    id,
+    citationId: id,
+    sourceId: "doc",
+    index: Number(id.slice(-1)),
+    start: 0,
+    end: text.length,
+    text,
+  });
+  const readRecords = async (store: TransactionalVectorStore) =>
+    store.getBySource({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }, "doc");
+
+  function countingEmbedder(inner: Embedder): Embedder & { calls: () => number } {
+    let calls = 0;
+    return {
+      id: inner.id,
+      dimensions: inner.dimensions,
+      embed: async (texts, opts) => {
+        calls += 1;
+        return inner.embed(texts, opts);
+      },
+      calls: () => calls,
+    };
+  }
+
+  it("skips unchanged documents with zero embed calls and zero writes", async () => {
+    const embedder = countingEmbedder(createHashEmbedder({ dimensions: 8 }));
+    const store = createMemoryVectorStore();
+    const chunks = [mkChunk("doc#0001", "stable policy text")];
+    const first = await replaceSource({ sourceId: "doc", chunks, embedder, store, scope, contentHash: DOC_HASH });
+    assert.equal(first.skipped, undefined);
+    assert.equal(embedder.calls(), 1);
+    const second = await replaceSource({ sourceId: "doc", chunks, embedder, store, scope, contentHash: DOC_HASH });
+    assert.deepEqual(second, { sourceId: "doc", deleted: 0, indexed: 0, skipped: true });
+    assert.equal(embedder.calls(), 1);
+    assert.equal((await readRecords(store)).length, 1);
+  });
+
+  it("replaces fully on hash change and stamps the new digest", async () => {
+    const embedder = createHashEmbedder({ dimensions: 8 });
+    const store = createMemoryVectorStore();
+    await replaceSource({ sourceId: "doc", chunks: [mkChunk("doc#0001", "version one")], embedder, store, scope, contentHash: DOC_HASH });
+    const nextHash = "cd".repeat(32);
+    const result = await replaceSource({
+      sourceId: "doc",
+      chunks: [mkChunk("doc#0001", "version two")],
+      embedder,
+      store,
+      scope,
+      contentHash: nextHash,
+    });
+    assert.deepEqual(result, { sourceId: "doc", deleted: 1, indexed: 1 });
+    const stored = (await readRecords(store))[0]!;
+    assert.equal(stored.text, "version two");
+    assert.equal((stored.metadata as { _rag?: { contentHash?: string } })._rag?.contentHash, nextHash);
+  });
+
+  it("re-embeds only delta chunks and keeps survivor embeddings", async () => {
+    const embedder = countingEmbedder(createHashEmbedder({ dimensions: 8 }));
+    const store = createMemoryVectorStore();
+    const first = [mkChunk("doc#0001", "alpha stays"), mkChunk("doc#0002", "beta v1")];
+    await replaceSource({ sourceId: "doc", chunks: first, embedder, store, scope, contentHash: DOC_HASH });
+    const survivor = (await readRecords(store)).find((record) => record.id === "doc#0001")!;
+
+    const second = [mkChunk("doc#0001", "alpha stays"), mkChunk("doc#0002", "beta v2")];
+    const result = await replaceSource({
+      sourceId: "doc",
+      chunks: second,
+      embedder,
+      store,
+      scope,
+      contentHash: "ef".repeat(32), // doc changed → no doc-level skip
+    });
+    assert.deepEqual(result, { sourceId: "doc", deleted: 2, indexed: 2 });
+    assert.equal(embedder.calls(), 2); // initial batch + exactly one delta chunk
+
+    const stored = await readRecords(store);
+    assert.deepEqual(stored.find((record) => record.id === "doc#0001")!.embedding, survivor.embedding);
+    assert.equal(stored.find((record) => record.id === "doc#0002")!.text, "beta v2");
+  });
+
+  it("forces full re-index when skipIfUnchanged is false and never skips unhashed stores", async () => {
+    const embedder = countingEmbedder(createHashEmbedder({ dimensions: 8 }));
+    const store = createMemoryVectorStore();
+    const chunks = [mkChunk("doc#0001", "stable policy text")];
+    await replaceSource({ sourceId: "doc", chunks, embedder, store, scope, contentHash: DOC_HASH });
+    const forced = await replaceSource({
+      sourceId: "doc",
+      chunks,
+      embedder,
+      store,
+      scope,
+      contentHash: DOC_HASH,
+      skipIfUnchanged: false,
+    });
+    assert.equal(forced.indexed, 1);
+    assert.equal(forced.skipped, undefined);
+    assert.equal(embedder.calls(), 2);
+
+    // Legacy store without stamped hashes must not skip either.
+    const legacyStore = createMemoryVectorStore();
+    await indexChunks({ chunks, embedder: createHashEmbedder({ dimensions: 8 }), store: legacyStore, scope });
+    const legacyResult = await replaceSource({ sourceId: "doc", chunks, embedder, store: legacyStore, scope, contentHash: DOC_HASH });
+    assert.equal(legacyResult.skipped, undefined);
+
+    await assert.rejects(
+      replaceSource({ sourceId: "doc", chunks, embedder, store, scope, contentHash: "not-a-hash" }),
+      (error: RagValidationError) => /hex digest/.test(error.message),
+    );
+    assert.equal(isValidContentHash(DOC_HASH), true);
+    assert.equal(isValidContentHash("ZZ".repeat(32)), false);
+    assert.equal(isValidContentHash("ab".repeat(8)), false); // too short
+  });
+});
+
+describe("generation visibility", () => {
+  const mkChunk = (text: string): RagChunk => ({
+    id: "doc#0001",
+    citationId: "doc#0001",
+    sourceId: "doc",
+    index: 0,
+    start: 0,
+    end: text.length,
+    text,
+  });
+
+  it("replaceSource stamps generation N+1 and advances the scope pointer atomically", async () => {
+    const embedder = createHashEmbedder({ dimensions: 8 });
+    const store = createMemoryVectorStore();
+    const DOC_HASH = "ab".repeat(32);
+    await replaceSource({ sourceId: "doc", chunks: [mkChunk("version one body")], embedder, store, scope, contentHash: DOC_HASH });
+    assert.equal(
+      await store.getCurrentGeneration?.({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }),
+      1,
+    );
+    let records = await store.getBySource({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }, "doc");
+    assert.equal(records[0]?.generation, 1);
+
+    const second = await replaceSource({
+      sourceId: "doc",
+      chunks: [mkChunk("version two body")],
+      embedder,
+      store,
+      scope,
+      contentHash: "ef".repeat(32),
+    });
+    assert.deepEqual(second, { sourceId: "doc", deleted: 1, indexed: 1 });
+    records = await store.getBySource({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }, "doc");
+    assert.equal(records[0]?.generation, 2);
+    assert.equal(
+      await store.getCurrentGeneration?.({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }),
+      2,
+    );
+
+    // Skip path must not bump the pointer.
+    const skipped = await replaceSource({
+      sourceId: "doc",
+      chunks: [mkChunk("version two body")],
+      embedder,
+      store,
+      scope,
+      contentHash: "ef".repeat(32),
+    });
+    assert.equal(skipped.skipped, true);
+    assert.equal(
+      await store.getCurrentGeneration?.({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }),
+      2,
+    );
+  });
+
+  it("model-upgrade journey: B-built generation replaces A-era rows and retrieval follows", async () => {
+    const embedderA = createHashEmbedder({ dimensions: 8, id: "model-a" });
+    const embedderB = createHashEmbedder({ dimensions: 8, id: "model-b" });
+    const store = createMemoryVectorStore();
+    await replaceSource({ sourceId: "doc", chunks: [mkChunk("embedded by model a")], embedder: embedderA, store, scope });
+    await replaceSource({ sourceId: "doc", chunks: [mkChunk("embedded by model b")], embedder: embedderB, store, scope });
+
+    const result = await retrieveContext("embedded by model b", { embedder: embedderB, store, scope });
+    assert.equal(result.hits.length, 1);
+    assert.equal(result.hits[0]!.text, "embedded by model b");
+    // A-era rows are gone; querying with the old model fails closed on the remaining B rows.
+    await assert.rejects(
+      retrieveContext("query", { embedder: embedderA, store, scope }),
+      (error: RagError) => error.code === "ERR_PRISM_RAG_EMBEDDER_MISMATCH",
+    );
+
+    // Rows re-indexed before generations existed (embedderId stamped, no generation) stay retrievable.
+    await store.upsert([
+      {
+        tenantId: scope.tenantId,
+        resourceId: scope.resourceId,
+        threadId: scope.corpusId,
+        id: "doc#0002",
+        text: "legacy untagged chunk",
+        embedding: Array.from({ length: 8 }, (_, i) => (i === 0 ? 1 : 0)),
+        sequence: 0,
+        metadata: { _rag: { sourceId: "doc", citationId: "doc#0002", chunkIndex: 1, start: 0, end: "legacy untagged chunk".length } },
+        createdAt: new Date(0).toISOString(),
+        embedderId: "model-b",
+      },
+    ]);
+    const mixed = await retrieveContext("legacy untagged chunk", { embedder: embedderB, store, scope });
+    assert.ok(mixed.hits.some((hit) => hit.id === "doc#0002"));
+  });
+});
+
+describe("retrieveContext multi-scope", () => {
+  const org = { tenantId: "org_a", resourceId: "kb", corpusId: "org" };
+  const user = { tenantId: "org_a", resourceId: "kb", corpusId: "user_self" };
+  const session = { tenantId: "org_a", resourceId: "kb", corpusId: "session" };
+  const other = { tenantId: "org_a", resourceId: "kb", corpusId: "user_other" };
+
+  function scopedHit(target: typeof org, id: string, score = 0.9): MemoryVectorHit {
+    return {
+      ...ragHit(id, score),
+      tenantId: target.tenantId,
+      resourceId: target.resourceId,
+      threadId: target.corpusId,
+    };
+  }
+
+  function scopedStore(hitsByCorpus: Record<string, MemoryVectorHit[]>, extras?: { lexical?: boolean }) {
+    const queries: Array<{ threadId: string; topK: number }> = [];
+    const lexicalQueries: string[] = [];
+    const store: VectorStore = {
+      async upsert() {},
+      async query(query) {
+        queries.push({ threadId: query.threadId, topK: query.topK });
+        return hitsByCorpus[query.threadId] ?? [];
+      },
+      async delete() {
+        return 0;
+      },
+      ...(extras?.lexical
+        ? {
+            lexicalModes: ["fts"] as const,
+            async lexicalQuery(query: { text: string; threadId: string }) {
+              lexicalQueries.push(query.text);
+              return hitsByCorpus[query.threadId] ?? [];
+            },
+          }
+        : {}),
+    };
+    return { store, queries, lexicalQueries };
+  }
+
+  it("fuses three scopes with one embed and one rerank", async () => {
+    const embedder = createHashEmbedder({ dimensions: 8 });
+    let embeds = 0;
+    const spy: Embedder = {
+      ...embedder,
+      embed: async (texts, options) => {
+        embeds += 1;
+        return embedder.embed(texts, options);
+      },
+    };
+    let reranks = 0;
+    const { store, queries } = scopedStore({
+      org: [scopedHit(org, "src#org")],
+      user_self: [scopedHit(user, "src#user")],
+      session: [scopedHit(session, "src#sess")],
+      user_other: [scopedHit(other, "src#other")],
+    });
+    const result = await retrieveContext("anything", {
+      embedder: spy,
+      store,
+      scopes: [org, user, session],
+      lexical: "off",
+      topK: 8,
+      queryCandidates: 20,
+      reranker: {
+        async rerank({ hits }) {
+          reranks += 1;
+          return hits;
+        },
+      },
+    });
+    assert.equal(embeds, 1);
+    assert.equal(reranks, 1);
+    assert.ok(result.hits.length <= 8);
+    const corpora = new Set(result.hits.map((hit) => hit.provenance.corpusId));
+    assert.deepEqual([...corpora].sort(), ["org", "session", "user_self"]);
+    assert.ok(result.hits.every((hit) => ["org", "user_self", "session"].includes(hit.provenance.corpusId)));
+    assert.ok(result.hits.every((hit) => hit.provenance.tenantId === "org_a"));
+    assert.deepEqual(
+      queries.map((query) => query.threadId),
+      ["org", "user_self", "session"],
+    );
+    assert.ok(queries.every((query) => query.topK === 20));
+  });
+
+  it("returns empty without embed/search/rerank when scopes is empty", async () => {
+    let embeds = 0;
+    let queries = 0;
+    let lex = 0;
+    let reranks = 0;
+    const embedder: Embedder = {
+      id: "prism-hash-embedder",
+      dimensions: 8,
+      embed: async () => {
+        embeds += 1;
+        return [new Array(8).fill(0)];
+      },
+    };
+    const store: VectorStore = {
+      lexicalModes: ["fts"],
+      async upsert() {},
+      async query() {
+        queries += 1;
+        return [];
+      },
+      async delete() {
+        return 0;
+      },
+      async lexicalQuery() {
+        lex += 1;
+        return [];
+      },
+    };
+    const result = await retrieveContext("anything", {
+      embedder,
+      store,
+      scopes: [],
+      lexical: "fts",
+      reranker: {
+        async rerank({ hits }) {
+          reranks += 1;
+          return hits;
+        },
+      },
+    });
+    assert.deepEqual(result.hits, []);
+    assert.deepEqual(result.citations, []);
+    assert.equal(result.truncated, false);
+    assert.equal(embeds, 0);
+    assert.equal(queries, 0);
+    assert.equal(lex, 0);
+    assert.equal(reranks, 0);
+  });
+
+  it("rejects both, neither, and more than HARD_RETRIEVE_SCOPE_CAP scopes", async () => {
+    const embedder = createHashEmbedder({ dimensions: 8 });
+    const store = createMemoryVectorStore();
+    await assert.rejects(retrieveContext("q", { embedder, store, scope: org, scopes: [org] }), RagValidationError);
+    await assert.rejects(retrieveContext("q", { embedder, store }), RagValidationError);
+    const tooMany = Array.from({ length: HARD_RETRIEVE_SCOPE_CAP + 1 }, (_, i) => ({
+      tenantId: "org_a",
+      resourceId: "kb",
+      corpusId: `c${i}`,
+    }));
+    await assert.rejects(retrieveContext("q", { embedder, store, scopes: tooMany }), RagLimitError);
+  });
+
+  it("fails closed on a foreign corpus row and embedder drift in any requested scope", async () => {
+    const embedder = createHashEmbedder({ dimensions: 8 });
+    const { store } = scopedStore({
+      org: [scopedHit(other, "src#other")],
+    });
+    await assert.rejects(retrieveContext("q", { embedder, store, scopes: [org, user, session], lexical: "off" }), RagScopeError);
+
+    const { store: driftedStore } = scopedStore({ user_self: [{ ...scopedHit(user, "src#user"), embedderId: "other-model" }] });
+    await assert.rejects(
+      retrieveContext("q", { embedder, store: driftedStore, scopes: [org, user], lexical: "off" }),
+      (error: RagError) => error.code === "ERR_PRISM_RAG_EMBEDDER_MISMATCH",
     );
   });
 });

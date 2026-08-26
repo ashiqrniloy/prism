@@ -33,6 +33,8 @@ export interface AlibabaEmbedderOptions {
  * without importing it — the package stays dependency-free).
  */
 export interface AlibabaEmbedder {
+  /** Embedding model identity (`options.model`); persisted on indexed records for drift detection. */
+  readonly id: string;
   readonly dimensions: number;
   embed(texts: readonly string[], options?: { readonly signal?: AbortSignal }): Promise<readonly (readonly number[])[]>;
 }
@@ -59,6 +61,7 @@ export function createAlibabaEmbedder(options: AlibabaEmbedderOptions): AlibabaE
   const fetchImpl = options.fetch ?? fetch;
 
   return {
+    id: options.model,
     dimensions,
     async embed(texts, embedOptions = {}) {
       if (texts.length === 0) return [];

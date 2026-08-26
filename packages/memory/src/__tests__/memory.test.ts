@@ -16,8 +16,130 @@ import {
   validateAgainstJsonSchema,
   validateIdentifier,
 } from "../index.js";
+import type { MemoryVectorRecord } from "../types.js";
 
 describe("@arnilo/prism-memory", () => {
+  it("returns tokenized-overlap fts hits scoped to the thread", async () => {
+    const store = createMemoryVectorStore();
+    const record = (overrides: Partial<MemoryVectorRecord> & Pick<MemoryVectorRecord, "id">): MemoryVectorRecord => ({
+      tenantId: "t1",
+      resourceId: "r1",
+      threadId: "th1",
+      text: "",
+      embedding: [1, 0],
+      sequence: 0,
+      embedderId: "m",
+      metadata: {},
+      createdAt: new Date(0).toISOString(),
+      ...overrides,
+    });
+    await store.upsert([
+      record({ id: "a", text: "approval policy requires current authorization", sequence: 1 }),
+      record({ id: "b", text: "cooking pasta gets approval rating", sequence: 2 }),
+      record({ id: "c", text: "approval policy draft", sequence: 3, tenantId: "other" }),
+    ]);
+    const hits = await store.lexicalQuery!({ tenantId: "t1", resourceId: "r1", threadId: "th1", text: "approval policy", topK: 5 });
+    assert.deepEqual(
+      hits.map((entry) => entry.id),
+      ["a", "b"],
+    );
+    assert.equal(hits[0]?.score, 1); // both query terms matched
+    assert.ok(hits[1] && hits[1].score < 1);
+    assert.equal(
+      (await store.lexicalQuery!({ tenantId: "t1", resourceId: "r1", threadId: "th1", text: "approval policy", topK: 1 })).length,
+      1,
+    );
+    assert.equal((await store.lexicalQuery!({ tenantId: "t1", resourceId: "r1", threadId: "th1", text: "zzz qqq", topK: 5 })).length, 0);
+    assert.equal(
+      (await store.lexicalQuery!({ tenantId: "other", resourceId: "r1", threadId: "th1", text: "approval policy", topK: 5 }))[0]?.id,
+      "c",
+    );
+  });
+
+  it("hash embedder carries a stable test id and records validate embedderId", async () => {
+    const embedder = createHashEmbedder();
+    assert.equal(embedder.id, "prism-hash-embedder");
+    assert.equal(createHashEmbedder({ id: "custom-id" }).id, "custom-id");
+
+    const store = createMemoryVectorStore();
+    const scope = { tenantId: "t", resourceId: "r", threadId: "th" };
+    const base = {
+      tenantId: scope.tenantId,
+      resourceId: scope.resourceId,
+      threadId: scope.threadId,
+      text: "x",
+      embedding: [1, 0],
+      sequence: 0,
+      metadata: {},
+      createdAt: new Date(0).toISOString(),
+    };
+    await store.upsert([{ ...base, id: "a", embedderId: "m1" }]);
+    assert.equal((await store.getByThread(scope))[0]?.embedderId, "m1");
+    await assert.rejects(store.upsert([{ ...base, id: "b", embedderId: "" }]), MemoryValidationError);
+    await assert.rejects(store.upsert([{ ...base, id: "c", embedderId: "x".repeat(257) }]), MemoryValidationError);
+  });
+
+  it("generation visibility: current generation only, legacy rows stay, explicit pointer enables rollback", async () => {
+    const store = createMemoryVectorStore();
+    const scope = { tenantId: "t", resourceId: "r", threadId: "gen" };
+    const record = (id: string, text: string, generation?: bigint | number): MemoryVectorRecord => ({
+      tenantId: scope.tenantId,
+      resourceId: scope.resourceId,
+      threadId: scope.threadId,
+      id,
+      text,
+      embedding: [1, 0],
+      sequence: 0,
+      metadata: {},
+      createdAt: new Date(0).toISOString(),
+      ...(generation === undefined ? {} : { generation }),
+    });
+
+    // No generations at all: everything visible.
+    await store.upsert([record("legacy-1", "legacy one")]);
+    assert.equal((await store.query({ ...scope, embedding: [1, 0], topK: 10 })).length, 1);
+    assert.equal(await store.getCurrentGeneration?.(scope), undefined);
+
+    // Generation 1 lands; legacy row stays retrievable.
+    await store.upsert([record("g1-a", "gen one a", 1)]);
+    await store.upsert([record("legacy-2", "legacy two")]);
+    let ids = (await store.query({ ...scope, embedding: [1, 0], topK: 10 })).map((hit) => hit.id).sort();
+    assert.deepEqual(ids, ["g1-a", "legacy-1", "legacy-2"]);
+    assert.equal(await store.getCurrentGeneration?.(scope), 1); // derived from max present
+
+    // Generation 2 swap: gen-1 rows vanish from retrieval but remain via getBySource.
+    await store.upsert([record("g2-a", "gen two a", 2), record("g2-b", "gen two b", 2n)]);
+    ids = (await store.query({ ...scope, embedding: [1, 0], topK: 10 })).map((hit) => hit.id).sort();
+    assert.deepEqual(ids, ["g2-a", "g2-b", "legacy-1", "legacy-2"]);
+    assert.equal(await store.getCurrentGeneration?.(scope), 2);
+
+    // Explicit pointer rollback: back to generation 1 without touching rows.
+    await store.setCurrentGeneration?.(scope, 1);
+    ids = (await store.query({ ...scope, embedding: [1, 0], topK: 10 })).map((hit) => hit.id).sort();
+    assert.deepEqual(ids, ["g1-a", "legacy-1", "legacy-2"]);
+    assert.equal(await store.getCurrentGeneration?.(scope), 1);
+
+    // Validation: integer only.
+    await assert.rejects(store.upsert([record("bad", "x", 1.5)]), MemoryValidationError);
+    await assert.rejects(store.upsert([record("bad", "x", -1)]), MemoryValidationError);
+    await assert.rejects(store.setCurrentGeneration!(scope, -3), MemoryValidationError);
+
+    // Transactional pointer writes roll back with the records.
+    await assert.rejects(
+      store.transaction(async (tx) => {
+        await tx.setCurrentGeneration!(scope, 9);
+        throw new Error("abort");
+      }),
+      /abort/,
+    );
+    assert.equal(await store.getCurrentGeneration?.(scope), 1);
+
+    // Scope isolation: another scope is unaffected by this scope's pointer.
+    const other = { tenantId: "t", resourceId: "r", threadId: "other-gen" };
+    await store.upsert([{ ...record("o1", "other", 5), threadId: other.threadId }]);
+    assert.equal(await store.getCurrentGeneration?.(other), 5);
+  });
+
   it("exports package name and resolves default limits", () => {
     assert.equal(packageName, "@arnilo/prism-memory");
     const limits = resolveMemoryLimits();
@@ -88,6 +210,7 @@ describe("@arnilo/prism-memory", () => {
       resourceId: "r",
       threadId: "th",
       embedder: {
+        id: "test-nan",
         dimensions: 2,
         async embed() {
           return [[1, NaN]];
@@ -277,6 +400,7 @@ describe("@arnilo/prism-memory", () => {
     const base = createHashEmbedder({ dimensions: 8 });
     let rebuildCalls = 0;
     const embedder = {
+      id: "test-rebuild",
       dimensions: base.dimensions,
       async embed(texts: readonly string[], options?: { readonly signal?: AbortSignal }) {
         rebuildCalls += 1;

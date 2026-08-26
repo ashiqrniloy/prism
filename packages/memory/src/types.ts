@@ -46,6 +46,9 @@ export interface MemoryRetentionResult {
 }
 
 export interface Embedder {
+  /** Stable identity of the embedding model, e.g. "nomic-embed-text-v1.5".
+   * Persisted on every indexed record so query/index model drift fails closed. */
+  readonly id: string;
   readonly dimensions: number;
   embed(texts: readonly string[], options?: { readonly signal?: AbortSignal }): Promise<readonly (readonly number[])[]>;
 }
@@ -58,6 +61,10 @@ export interface MemoryVectorRecord {
   readonly text: string;
   readonly embedding: readonly number[];
   readonly sequence: number;
+  /** Identity of the embedder that produced `embedding`; absent on legacy records. */
+  readonly embedderId?: string;
+  /** Monotonic per-scope index generation; absent on legacy records, which stay retrievable until re-indexed. */
+  readonly generation?: bigint | number;
   readonly metadata?: JsonObject;
   readonly consent?: MemoryConsent;
   readonly createdAt: string;
@@ -94,6 +101,18 @@ export interface MemoryVectorPage {
   readonly nextCursor?: string;
 }
 
+/** Lexical (keyword) retrieval request for stores that declare support. */
+export interface VectorLexicalQuery {
+  readonly tenantId: string;
+  readonly resourceId: string;
+  readonly threadId: string;
+  readonly text: string;
+  readonly topK: number;
+  readonly signal?: AbortSignal;
+}
+
+export type LexicalMode = "fts" | "bm25";
+
 export interface VectorStore {
   upsert(records: readonly MemoryVectorRecord[], options?: { readonly signal?: AbortSignal }): Promise<void>;
   query(query: VectorQuery): Promise<readonly MemoryVectorHit[]>;
@@ -101,6 +120,12 @@ export interface VectorStore {
   getByThread?(scope: Required<MemoryScope>): Promise<readonly MemoryVectorRecord[]>;
   listByThread?(query: MemoryVectorListQuery): Promise<MemoryVectorPage>;
   countByThread?(scope: Required<MemoryScope>, options?: { readonly signal?: AbortSignal }): Promise<number>;
+  /** Lexical retrieval modes this store can execute; absent = no lexical leg. */
+  readonly lexicalModes?: readonly LexicalMode[];
+  lexicalQuery?(query: VectorLexicalQuery): Promise<readonly MemoryVectorHit[]>;
+  /** Current generation for an exact scope; undefined = no generated records yet (or never swapped). */
+  getCurrentGeneration?(scope: MemoryScope): Promise<bigint | number | undefined>;
+  setCurrentGeneration?(scope: MemoryScope, generation: bigint | number): Promise<void>;
 }
 
 export interface WorkingMemoryKey extends MemoryScope {}

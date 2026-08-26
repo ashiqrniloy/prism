@@ -44,18 +44,26 @@ export {
   resolveMemoryLimits,
 } from "./limits.js";
 export { createMemory } from "./memory.js";
-export type { PostgresMemoryStores, PostgresMemoryStoresOptions } from "./postgres.js";
+export type {
+  PostgresMemoryStores,
+  PostgresMemoryStoresOptions,
+  PostgresVectorSourceStore,
+  PostgresVectorStore,
+  PostgresVectorStoreOptions,
+} from "./postgres.js";
 export {
   createPostgresMemoryStores,
+  createPostgresVectorStore,
   queryPostgres,
 } from "./postgres.js";
-export { buildMemoryDdl, DEFAULT_MEMORY_SCHEMA } from "./postgres-ddl.js";
+export { buildMemoryDdl, buildVectorSearchDdl, DEFAULT_MEMORY_SCHEMA, DEFAULT_VECTOR_TABLE } from "./postgres-ddl.js";
 export { qualifyTable, quoteIdentifier, validateIdentifier } from "./postgres-identifiers.js";
 export { validateAgainstJsonSchema } from "./schema.js";
 export type {
   CreateMemoryOptions,
   Embedder,
   ExportMemoryOptions,
+  LexicalMode,
   Memory,
   MemoryConsent,
   MemoryConsentInput,
@@ -81,6 +89,7 @@ export type {
   RememberOptions,
   RememberResult,
   VectorDeleteFilter,
+  VectorLexicalQuery,
   VectorQuery,
   VectorStore,
   WorkingMemoryKey,
@@ -92,7 +101,7 @@ export type {
 } from "./types.js";
 export { assertFiniteVector } from "./util.js";
 export type { MemoryVectorStoreOptions } from "./vector-memory.js";
-export { createMemoryVectorStore, selectAdjacentRecords } from "./vector-memory.js";
+export { createMemoryVectorStore, selectAdjacentRecords, tokenizeLexical } from "./vector-memory.js";
 export type { MemoryWorkingStoreOptions } from "./working-memory.js";
 export { createMemoryWorkingStore, validateWorkingValue } from "./working-memory.js";
 

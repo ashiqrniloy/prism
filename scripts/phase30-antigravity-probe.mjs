@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
+import { execFileSync, spawn } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execFileSync, spawn } from "node:child_process";
+import { createDelegatedAgentStep } from "@arnilo/prism";
+import { createPrismMcpServer } from "@arnilo/prism-mcp";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createDelegatedAgentStep } from "@arnilo/prism";
-import { createPrismMcpServer } from "@arnilo/prism-mcp";
 
 const SCRIPT = fileURLToPath(import.meta.url);
 const ROOT = resolve(dirname(SCRIPT), "..");

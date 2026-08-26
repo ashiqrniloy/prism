@@ -2,6 +2,9 @@ export { chunkMarkdown, chunkText } from "./chunk.js";
 export { createRagContextProvider } from "./context.js";
 
 export { RagAbortError, RagError, RagLimitError, RagScopeError, RagValidationError } from "./errors.js";
+export type { FusedCandidate, RetrievalLeg } from "./fusion.js";
+export { fuseReciprocalRank } from "./fusion.js";
+export { isValidContentHash } from "./hash.js";
 export { indexChunks } from "./indexing.js";
 export { createMemoryIngestionStatusStore, listIngestionStatus } from "./ingestion-status.js";
 export type { RagLimits, RagLimitsInput } from "./limits.js";
@@ -40,6 +43,7 @@ export {
   HARD_MAX_RESULT_BYTES_CAP,
   HARD_QUERY_CANDIDATES_CAP,
   HARD_RERANK_CONCURRENCY_CAP,
+  HARD_RETRIEVE_SCOPE_CAP,
   HARD_TOP_K_CAP,
   resolveRagLimits,
 } from "./limits.js";
@@ -48,6 +52,9 @@ export { htmlParser, markdownParser, pdfParser, textParser } from "./parsers.js"
 export { retrieveContext } from "./retrieve.js";
 export type { SourceMutationResult } from "./sources.js";
 export { deleteSource, replaceDocument, replaceSource } from "./sources.js";
+export type { CreateTeiRerankerOptions } from "./tei-reranker.js";
+export { createTeiReranker } from "./tei-reranker.js";
+export type { RagTelemetry, RagTelemetryAttributeValue, RagTelemetrySpan } from "./telemetry.js";
 
 export type {
   Chunker,
@@ -78,6 +85,7 @@ export type {
   ReplaceSourceOptions,
   Reranker,
   RetrieveContextOptions,
+  ReusableEmbedding,
   SourceVectorStore,
   TransactionalVectorStore,
 } from "./types.js";

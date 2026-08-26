@@ -22,11 +22,33 @@ function chunkDocument(text: string, options: ChunkOptions, markdown: boolean): 
   if (text.length > limits.maxDocumentChars) {
     throw new RagLimitError(`document exceeds ${limits.maxDocumentChars} characters`);
   }
-  if (options.metadata) assertBytes(options.metadata, 64 * 1024, "chunk metadata");
+  const callerMeta = options.metadata;
+  if (callerMeta) assertBytes(callerMeta, 64 * 1024, "chunk metadata");
   if (!text.trim()) return Object.freeze([]);
+
+  // Pre-scan ATX heading positions so we can track the heading stack at each chunk's start.
+  // # ponytail: setext headings ignored — ATX covers the acceptance "## 3.2 Leave" / "# Policy";
+  // add setext support when a fixture demands it.
+  interface Heading {
+    pos: number;
+    level: number;
+    text: string;
+  }
+  const headings: Heading[] = [];
+  if (markdown) {
+    let pos = 0;
+    for (const line of text.split("\n")) {
+      const trimmed = line.trimStart();
+      const match = trimmed.match(/^(#{1,6})\s+(.+)$/);
+      if (match) headings.push({ pos, level: match[1]!.length, text: match[2]!.trim() });
+      pos += line.length + 1; // +1 for the newline character
+    }
+  }
 
   const chunks: RagChunk[] = [];
   let start = 0;
+  let headingIdx = 0;
+  const headingStack: { level: number; text: string }[] = [];
   while (start < text.length) {
     while (start < text.length && /\s/.test(text[start]!)) start += 1;
     if (start >= text.length) break;
@@ -34,8 +56,24 @@ function chunkDocument(text: string, options: ChunkOptions, markdown: boolean): 
     const end = ceiling === text.length ? ceiling : preferredEnd(text, start, ceiling, markdown);
     const raw = text.slice(start, end).trimEnd();
     if (raw) {
+      // Advance heading stack to the current chunk start position.
+      while (headingIdx < headings.length && headings[headingIdx]!.pos <= start) {
+        const h = headings[headingIdx]!;
+        while (headingStack.length > 0 && headingStack[headingStack.length - 1]!.level >= h.level) {
+          headingStack.pop();
+        }
+        headingStack.push({ level: h.level, text: h.text });
+        headingIdx++;
+      }
+
       const index = chunks.length;
       const citationId = `${sourceId}#${String(index + 1).padStart(4, "0")}`;
+      const meta = callerMeta ? { ...callerMeta } : {};
+      // Stamp heading metadata unless the caller supplied explicit heading data.
+      if (markdown && meta.heading === undefined && headingStack.length > 0) {
+        meta.heading = headingStack.map((h) => h.text);
+      }
+      const metadata = Object.keys(meta).length > 0 ? Object.freeze(meta) : undefined;
       chunks.push(
         Object.freeze({
           id: citationId,
@@ -45,7 +83,7 @@ function chunkDocument(text: string, options: ChunkOptions, markdown: boolean): 
           start,
           end: start + raw.length,
           text: raw,
-          ...(options.metadata ? { metadata: Object.freeze({ ...options.metadata }) } : {}),
+          ...(metadata ? { metadata } : {}),
         }),
       );
       if (chunks.length > limits.maxChunks) throw new RagLimitError(`chunk count exceeds ${limits.maxChunks}`);

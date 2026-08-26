@@ -1,6 +1,7 @@
 import { type JsonObject, resolveRedactor } from "@arnilo/prism";
 import type { MemoryVectorRecord } from "@arnilo/prism-memory";
 import { RagValidationError } from "./errors.js";
+import { isValidContentHash } from "./hash.js";
 import { ingestionStatus } from "./ingestion-status.js";
 import { HARD_CHUNK_SIZE_CAP, resolveRagLimits } from "./limits.js";
 import type { IndexChunksOptions, IndexChunksResult } from "./types.js";
@@ -31,6 +32,7 @@ export async function indexChunkBatches(
   ) {
     throw new RagValidationError(`embedder dimensions must be an integer in 1..${limits.maxVectorDimensions}`);
   }
+  nonEmpty(options.embedder.id, "embedder.id");
   if (options.chunks.length > limits.maxChunks) throw new RagValidationError(`chunk count exceeds ${limits.maxChunks}`);
   const redactor = resolveRedactor(options.redactor, options.secrets);
   const sourceIds = new Set<string>();
@@ -68,13 +70,30 @@ export async function indexChunkBatches(
     }
   };
   await setStatus("pending");
+  const embedSpan = options.telemetry?.startSpan("embedding.index", { "rag.embedder_id": options.embedder.id }, options.telemetryParent);
   try {
     for (let offset = 0; offset < options.chunks.length; offset += limits.embedBatchSize) {
       assertNotAborted(options.signal);
       const batch = options.chunks.slice(offset, offset + limits.embedBatchSize);
       const texts = batch.map((chunk) => redactor?.redact(chunk.text) ?? chunk.text);
-      const vectors = await options.embedder.embed(texts, { signal: options.signal });
-      if (vectors.length !== batch.length) throw new RagValidationError("embedder returned unexpected vector count");
+      // Embed only the delta: chunks whose id+text match a stored record reuse its embedding.
+      const vectors: Array<number[] | undefined> = batch.map((chunk, index) => {
+        const reused = options.reuseEmbeddings?.get(chunk.id);
+        if (!reused || reused.text !== texts[index]) return undefined;
+        return [...reused.embedding];
+      });
+      const pending = vectors.flatMap((vector, index) => (vector === undefined ? [index] : []));
+      if (pending.length) {
+        const fresh = await options.embedder.embed(
+          pending.map((index) => texts[index]!),
+          { signal: options.signal },
+        );
+        if (fresh.length !== pending.length) throw new RagValidationError("embedder returned unexpected vector count");
+        pending.forEach((index, position) => {
+          vectors[index] = [...fresh[position]!];
+        });
+      }
+      if (vectors.some((vector) => vector === undefined)) throw new RagValidationError("embedder returned unexpected vector count");
       const records: MemoryVectorRecord[] = batch.map((chunk, index) => {
         const embedding = vectors[index]!;
         if (embedding.length !== options.embedder.dimensions || embedding.some((value) => !Number.isFinite(value))) {
@@ -83,7 +102,14 @@ export async function indexChunkBatches(
         const safeMetadata = redactor?.redact(chunk.metadata ?? {}) ?? chunk.metadata ?? {};
         const metadata = {
           ...safeMetadata,
-          _rag: { sourceId: chunk.sourceId, citationId: chunk.citationId, chunkIndex: chunk.index, start: chunk.start, end: chunk.end },
+          _rag: {
+            sourceId: chunk.sourceId,
+            citationId: chunk.citationId,
+            chunkIndex: chunk.index,
+            start: chunk.start,
+            end: chunk.end,
+            ...(options.contentHash && isValidContentHash(options.contentHash) ? { contentHash: options.contentHash.toLowerCase() } : {}),
+          },
         };
         assertBytes(metadata, limits.maxMetadataBytes, "chunk metadata");
         return {
@@ -94,6 +120,7 @@ export async function indexChunkBatches(
           text: texts[index]!,
           embedding,
           sequence: chunk.index,
+          embedderId: options.embedder.id,
           metadata: metadata as JsonObject,
           createdAt: new Date(0).toISOString(),
         };
@@ -105,8 +132,11 @@ export async function indexChunkBatches(
     }
     await setStatus("indexed");
   } catch (error) {
+    embedSpan?.recordError();
     await setStatus([...written.values()].some((progress) => progress.chunks > 0) ? "partial" : "failed", error);
     throw error;
+  } finally {
+    embedSpan?.end();
   }
   return Object.freeze({ indexed: options.chunks.length, sourceIds: Object.freeze([...sourceIds].sort()) });
 }

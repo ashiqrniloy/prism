@@ -1,3 +1,21 @@
+## [0.3.1] - 2026-08-26
+
+### Added
+- **Release 0.3.1 (plan 034)** is the first Decision B independent patch: only `@arnilo/prism-rag`, `@arnilo/prism-memory`, and `@arnilo/prism-observability-opentelemetry` move `0.3.0 → 0.3.1`. Internal `^0.3.0` ranges stay valid; root and every other workspace package stay at their pre-plan versions. Production RAG engine (P1–P8):
+  - **P1 transactional pgvector store** — `createPostgresVectorStore` (standalone) plus the existing `createPostgresMemoryStores().vectorStore` now implement `getBySource` + `transaction`. Additive DDL: `embedder_id` / `content_hash` / `generation`, `text_tsv` + GIN, HNSW when the embedding dimension is pinned, per-scope generation pointer table. Host names schema/table and owns the knowledge database.
+  - **P2 hybrid retrieve** — `retrieveContext({ lexical: "fts" | "bm25" | "off" })` fuses vector + lexical legs with RRF (`fusion: "rrf"`, `rrfK` 60 / cap 1,000). Provenance `retrieval` is `vector` | `lexical` | `hybrid`. Stores advertise `lexicalModes`; unsupported `bm25` fails closed. `fuseReciprocalRank` / `tokenizeLexical` exported.
+  - **P3 embedder identity** — `Embedder.id` is required and stamped as `embedderId`. Retrieve fails closed with `ERR_PRISM_RAG_EMBEDDER_MISMATCH` on id/dimension drift or legacy rows without an id (re-index path named). **TypeScript break for Embedder implementers** — add `readonly id: string`; see `docs/migration.md` `0.3.0 → 0.3.1`.
+  - **P4 content-hash skip** — `replaceSource({ contentHash })` skips unchanged sources (`{ indexed: 0, skipped: true }`) and reuses embeddings when chunk text matches (`reuseEmbeddings`, `isValidContentHash`).
+  - **P5 heading metadata** — `chunkMarkdown` stamps `metadata.heading` (parent-first ATX stack) unless the caller supplied one; parser metadata (`page`, `section`, …) copies onto chunks.
+  - **P6 generation visibility** — `replaceSource` bumps a scope-level generation; retrieval filters to the current generation (legacy generation-less rows stay visible). `getCurrentGeneration` / `setCurrentGeneration` support rollback.
+  - **P7 RAG telemetry** — dependency-free `RagTelemetry` seam; `createRagTelemetry()` in the OpenTelemetry package maps the `rag_request` / `rag_index` span tree. Span-name + `rag.*` allow-list drops raw chunk text.
+  - **P8 TEI reranker** — `createTeiReranker({ baseUrl })` posts `{query, texts, raw_scores:false}` to host TEI `/rerank`, permutation-only, fail-closed parse, 65,536-byte ceiling, `pinnedFetch` default. SSRF/URL policy stays host-side.
+  - **multi-scope retrieve** — `retrieveContext({ scopes: [org, user, session] })` embeds once, runs per-scope vector/lexical legs, fuses with one RRF, reranks once, and cuts `topK`. `scope` still valid; empty `scopes` returns zero hits with no embed/search/rerank (host “no allowed corpora” path). `HARD_RETRIEVE_SCOPE_CAP` is 8. Provenance carries `tenantId`/`resourceId`/`corpusId`. Telemetry: `rag.scope_count` + chunk tenant/corpus.
+- Compat baselines regenerated (`--update-baseline`). Scanner sees additive exports only; the Embedder.id implementer break is documented, not a name-level removal. No `--allow-break`. Publication remains the operator handoff (`docs/release-and-install.md` `0.3.1 independent RAG engine patch` — package tags `@arnilo/prism-memory@0.3.1`, `@arnilo/prism-rag@0.3.1`, `@arnilo/prism-observability-opentelemetry@0.3.1`).
+
+### Changed
+- Store compatibility with 0.3.0: **compatible, additive**. New columns/indexes/tables are `IF NOT EXISTS`; 0.3.0 rows remain readable. Rollback = restore the 0.3.0 package versions (generation-less retrieve still works; heading/hash/telemetry/TEI simply disappear). No root/core persisted-shape change.
+
 ## [0.3.0] - 2026-08-20
 
 ### Added

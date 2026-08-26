@@ -365,6 +365,23 @@ For a later coding-agent-only patch, bump its manifest with `bump --package @arn
 
 **Rollback notes.** Before publication, restore the 0.2.9 manifests/tag. After publication, roll forward with an additive 0.3.x package patch; npm unpublish is not a rollback strategy.
 
+### 0.3.1 independent RAG engine patch (plan 034 Task 12)
+
+**Decision: GO when the operator prerequisites below are recorded.** Release **0.3.1** is the first Decision B independent patch: only `@arnilo/prism-memory`, `@arnilo/prism-rag`, and `@arnilo/prism-observability-opentelemetry` move `0.3.0 → 0.3.1`. Internal `^0.3.0` ranges stay. Root current line remains **0.3.0**.
+
+```bash
+node scripts/release.mjs bump --package @arnilo/prism-memory --type patch
+node scripts/release.mjs bump --package @arnilo/prism-rag --type patch
+node scripts/release.mjs bump --package @arnilo/prism-observability-opentelemetry --type patch
+node scripts/release.mjs gate --update-baseline --skip-tarball   # review Embedder.id; scanner is additive-only
+node scripts/release.mjs check --allow-dirty --allow-untagged
+# publish tags (operator handoff; not this task):
+#   git tag @arnilo/prism-memory@0.3.1 && git tag @arnilo/prism-rag@0.3.1
+#   git tag @arnilo/prism-observability-opentelemetry@0.3.1 && git push --tags
+```
+
+**Compat.** Baselines regenerated with `--update-baseline`. Expected deltas are additive exports (`createPostgresVectorStore`, `createTeiReranker`, `createRagTelemetry`, multi-scope `scopes`, `HARD_RETRIEVE_SCOPE_CAP`, fusion/hash/generation helpers). `Embedder.id` is a TypeScript implementer break documented in `docs/migration.md` `0.3.0 → 0.3.1`; the name-level scanner does not see interface members, so `--allow-break` is not required. `RagProvenance` gained `tenantId`/`resourceId`/`corpusId` (additive interface members, invisible to scanner). **Store:** additive Postgres DDL; 0.3.0 rows remain readable. **Rollback:** restore the 0.3.0 package versions. Publication remains the operator handoff — this task does not publish.
+
 ### 0.2.9 publish handoff (plan 029 Task 10)
 
 **Decision: GO when the operator prerequisites below are recorded.** Release **0.2.9** (plan 029) is the provider-adoption and behavior-packages cut on the 0.2.x review-remediation line. API surface **additive-only** (plain reviewed compat gate at 0.2.9: expected deltas are the version literal plus the new provider/OAuth/impeccable exports and the form-urlencoded `pollDeviceCodeToken` options; zero removals; baselines regenerated with `--update-baseline`, no `--allow-break`). Ships `@arnilo/prism-provider-deepseek`, `@arnilo/prism-provider-xai` (API key + SuperGrok RFC 8628), `@arnilo/prism-provider-clinepass`, and `@arnilo/prism-impeccable`. Ponytail peer `^4.9.0` (bare `/ponytail` reports status). Caveman registers extra `SKILL.md`. SuperGrok is host-invoked; Cline WorkOS, DeepSeek `/anthropic`, grok-cli file scan, harness/Cordis/Muse, Caveman 2 engine, and Impeccable live detector stay out. Release graph is **55** publishable manifests at exact **0.2.9** (root + 54 workspace). Store compatibility with 0.2.8: **compatible, no migration**.

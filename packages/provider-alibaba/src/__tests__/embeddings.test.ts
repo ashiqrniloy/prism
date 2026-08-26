@@ -34,6 +34,7 @@ describe("createAlibabaEmbedder", () => {
     assert.equal(headers?.get("authorization"), "Bearer sk-dashscope-secret");
     assert.equal(headers?.get("content-type"), "application/json");
     assert.equal(body.model, "text-embedding-v4");
+    assert.equal(embedder.id, "text-embedding-v4");
     assert.deepEqual(body.input, ["hello"]);
     assert.equal(body.dimensions, ALIBABA_EMBEDDING_DEFAULT_DIMENSIONS);
     assert.equal(body.encoding_format, "float");

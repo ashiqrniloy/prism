@@ -33,6 +33,9 @@ export const DEFAULT_MAX_RERANK_MS = 2_000;
 export const HARD_MAX_RERANK_MS_CAP = 10_000;
 export const DEFAULT_RERANK_CONCURRENCY = 2;
 export const HARD_RERANK_CONCURRENCY_CAP = 8;
+export const DEFAULT_RRF_K = 60;
+export const HARD_RRF_K_CAP = 1_000;
+export const HARD_RETRIEVE_SCOPE_CAP = 8;
 export const DEFAULT_INGESTION_STATUS_PAGE_SIZE = 50;
 export const HARD_INGESTION_STATUS_PAGE_SIZE_CAP = 200;
 
@@ -54,6 +57,7 @@ export interface RagLimits {
   readonly maxRerankBytes: number;
   readonly maxRerankMs: number;
   readonly rerankConcurrency: number;
+  readonly rrfK: number;
   readonly ingestionStatusPageSize: number;
 }
 
@@ -103,6 +107,7 @@ export function resolveRagLimits(input: RagLimitsInput = {}): RagLimits {
     maxRerankBytes: integer(input.maxRerankBytes, DEFAULT_MAX_RERANK_BYTES, HARD_MAX_RERANK_BYTES_CAP, "maxRerankBytes"),
     maxRerankMs: integer(input.maxRerankMs, DEFAULT_MAX_RERANK_MS, HARD_MAX_RERANK_MS_CAP, "maxRerankMs"),
     rerankConcurrency: integer(input.rerankConcurrency, DEFAULT_RERANK_CONCURRENCY, HARD_RERANK_CONCURRENCY_CAP, "rerankConcurrency"),
+    rrfK: integer(input.rrfK, DEFAULT_RRF_K, HARD_RRF_K_CAP, "rrfK"),
     ingestionStatusPageSize: integer(
       input.ingestionStatusPageSize,
       DEFAULT_INGESTION_STATUS_PAGE_SIZE,

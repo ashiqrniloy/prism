@@ -37,5 +37,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [031-Release-0-3-0-Antigravity-Cli-Prism-Mcp-Blueprint.md](031-Release-0-3-0-Antigravity-Cli-Prism-Mcp-Blueprint.md) | 0.3.x — 0.3.0 amendment (Antigravity CLI + Prism MCP) | complete (2026-08-20) |
 | [032-Prism-Wiki-Karpathy-LLM-Wiki-Package.md](032-Prism-Wiki-Karpathy-LLM-Wiki-Package.md) | Phase 32 — Karpathy LLM Wiki System (@arnilo/prism-wiki) | complete (2026-08-24) |
 | [033-Prism-Graft-L0-L3-Deep-Integration.md](033-Prism-Graft-L0-L3-Deep-Integration.md) | Plan 33 — Prism-Graft L0–L3 deep integration (@arnilo/prism-graft) | in progress (2026-08-25) |
+| [034-Release-0-3-1-Production-RAG-Engine.md](034-Release-0-3-1-Production-RAG-Engine.md) | 0.3.x — Release 0.3.1 (production RAG engine + multi-scope retrieve) | complete (2026-08-26) |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

@@ -31,12 +31,40 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
 } {
   const maxEntryTextChars = options.maxEntryTextChars ?? 64_384;
   const records = new Map<string, MemoryVectorRecord>();
-
+  // Explicit generation pointer per exact scope; set by setCurrentGeneration (rollback/swap).
+  const generationPointers = new Map<string, bigint | number>();
   function recordKey(record: Pick<MemoryVectorRecord, "tenantId" | "resourceId" | "threadId" | "id">): string {
     return `${record.tenantId}\0${record.resourceId}\0${record.threadId}\0${record.id}`;
   }
 
-  function createStore(target: Map<string, MemoryVectorRecord>): SourceStore {
+  function maxPresentGeneration(
+    target: Map<string, MemoryVectorRecord>,
+    tenantId: string,
+    resourceId: string,
+    threadId: string,
+  ): number | undefined {
+    let max: number | undefined;
+    for (const record of target.values()) {
+      if (record.tenantId !== tenantId || record.resourceId !== resourceId || record.threadId !== threadId) continue;
+      if (record.generation === undefined) continue;
+      const value = Number(record.generation);
+      if (max === undefined || value > max) max = value;
+    }
+    return max;
+  }
+
+  function requireValidGeneration(generation: bigint | number): void {
+    if (
+      !(
+        (typeof generation === "number" && Number.isInteger(generation) && generation >= 0) ||
+        (typeof generation === "bigint" && generation >= 0)
+      )
+    ) {
+      throw new MemoryValidationError("generation must be a non-negative integer");
+    }
+  }
+
+  function createStore(target: Map<string, MemoryVectorRecord>, pointers: Map<string, bigint | number>): SourceStore {
     return {
       async upsert(input, upsertOptions = {}) {
         assertNotAborted(upsertOptions.signal);
@@ -46,6 +74,13 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
           assertTextLimit(record.text, maxEntryTextChars, "vector text");
           assertFiniteVector(record.embedding, "embedding");
           if (!Number.isInteger(record.sequence)) throw new MemoryValidationError("sequence must be an integer");
+          if (record.generation !== undefined) requireValidGeneration(record.generation);
+          if (
+            record.embedderId !== undefined &&
+            (typeof record.embedderId !== "string" || record.embedderId.length === 0 || record.embedderId.length > 256)
+          ) {
+            throw new MemoryValidationError("embedderId must be a non-empty string of at most 256 characters");
+          }
           target.set(recordKey(record), Object.freeze({ ...record, embedding: [...record.embedding] }));
         }
       },
@@ -54,10 +89,16 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
         assertNotAborted(query.signal);
         const scope = requireScope(query, true) as Required<typeof query>;
         assertFiniteVector(query.embedding, "query embedding");
+        const scopeKey = `${scope.tenantId}\0${scope.resourceId}\0${scope.threadId}`;
+        // # ponytail: memory adapter derives current from max present unless explicitly pointed (rollback); durable adapter keeps a real pointer table
+        const current = pointers.get(scopeKey) ?? maxPresentGeneration(target, scope.tenantId, scope.resourceId, scope.threadId);
+        const currentValue = current === undefined ? undefined : Number(current);
         const hits: MemoryVectorHit[] = [];
         for (const record of target.values()) {
           if (record.tenantId !== scope.tenantId || record.resourceId !== scope.resourceId || record.threadId !== scope.threadId) continue;
           if (record.embedding.length !== query.embedding.length) continue;
+          // Generation visibility: legacy rows stay retrievable; generated rows only at the current generation.
+          if (currentValue !== undefined && record.generation !== undefined && Number(record.generation) !== currentValue) continue;
           hits.push({ ...record, score: cosineSimilarity(query.embedding, record.embedding) });
         }
         hits.sort((a, b) => b.score - a.score || a.sequence - b.sequence || a.id.localeCompare(b.id));
@@ -136,22 +177,65 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
           ),
         );
       },
+
+      lexicalModes: ["fts"],
+
+      async lexicalQuery(lexicalQuery) {
+        assertNotAborted(lexicalQuery.signal);
+        const required = requireScope(lexicalQuery, true) as Required<MemoryVectorRecord>;
+        const terms = tokenizeLexical(requireNonEmptyString(lexicalQuery.text, "text"));
+        if (terms.size === 0 || lexicalQuery.topK < 1) return [];
+        const scored: MemoryVectorHit[] = [];
+        for (const record of target.values()) {
+          if (record.tenantId !== required.tenantId || record.resourceId !== required.resourceId || record.threadId !== required.threadId) {
+            continue;
+          }
+          const recordTerms = tokenizeLexical(record.text);
+          let matches = 0;
+          for (const term of terms) if (recordTerms.has(term)) matches += 1;
+          if (matches === 0) continue;
+          scored.push({ ...record, score: matches / terms.size });
+        }
+        scored.sort((a, b) => b.score - a.score || a.sequence - b.sequence || a.id.localeCompare(b.id));
+        return scored.slice(0, lexicalQuery.topK);
+      },
+
+      async getCurrentGeneration(scope) {
+        const required = requireScope(scope, true) as Required<MemoryVectorRecord>;
+        const key = `${required.tenantId}\0${required.resourceId}\0${required.threadId}`;
+        return pointers.get(key) ?? maxPresentGeneration(target, required.tenantId, required.resourceId, required.threadId);
+      },
+
+      async setCurrentGeneration(scope, generation) {
+        requireValidGeneration(generation);
+        const required = requireScope(scope, true) as Required<MemoryVectorRecord>;
+        pointers.set(`${required.tenantId}\0${required.resourceId}\0${required.threadId}`, generation);
+      },
     };
   }
 
-  const store = createStore(records);
+  const store = createStore(records, generationPointers);
   return {
     ...store,
     async transaction(operation, transactionOptions = {}) {
       assertNotAborted(transactionOptions.signal);
       const staged = new Map(records);
-      const result = await operation(createStore(staged));
+      const stagedPointers = new Map(generationPointers);
+      const result = await operation(createStore(staged, stagedPointers));
       assertNotAborted(transactionOptions.signal);
       records.clear();
       for (const [key, record] of staged) records.set(key, record);
+      generationPointers.clear();
+      for (const [key, value] of stagedPointers) generationPointers.set(key, value);
       return result;
     },
   };
+}
+
+/** Lowercase alphanumeric tokens; the shared tokenizer behind the memory store's fts leg. */
+export function tokenizeLexical(text: string): Set<string> {
+  const matches = text.toLowerCase().match(/[a-z0-9]+/g);
+  return new Set((matches ?? []).filter((term) => term.length > 1));
 }
 
 function sorted(records: readonly MemoryVectorRecord[]): readonly MemoryVectorRecord[] {

@@ -20,7 +20,7 @@ import type {
 } from "./contracts.js";
 import { AgentLoopStateError, AgentRunStateError } from "./contracts.js";
 import type { SecretRedactor } from "./redaction.js";
-import { validateLoadedSkillBodies, type LoadedSkillBodiesEntry } from "./skill-load.js";
+import { type LoadedSkillBodiesEntry, validateLoadedSkillBodies } from "./skill-load.js";
 
 export const AGENT_RUN_STATE_NAMESPACE = "prism.agent-run";
 export const AGENT_RUN_STATE_SCHEMA_VERSION = 1 as const;

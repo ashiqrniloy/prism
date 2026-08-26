@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.1] - 2026-08-26
+
+### Added
+- `createRagTelemetry({ tracer, meter, attributeFilter? })` adapts `@arnilo/prism-rag`'s `RagTelemetry` seam onto a PrismTracer. Fixed span-name set + `rag.*` attribute allow-list; raw chunk text dropped.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

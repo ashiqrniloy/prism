@@ -7,9 +7,9 @@
       "$comment": "[2026-08-25] plan 033 Task 8 re-baseline: root tarball crossed the prior 891578 baseline through accumulated docs growth on the 0.3.0 line (wiki page set, release-and-install truth tables) before this plan; measured 938368 at HEAD and 938567 with the graft additions (docs/graft.md, index entry, examples/graft-extension.ts, package-truth artifact). Docs-only growth — root dist/runtime unchanged by prism-graft (separate workspace package)."
     },
     "unpackedBytes": {
-      "baseline": 3055343,
+      "baseline": 3212522,
       "tolerance": 0.05,
-      "$comment": "[2026-08-17] plan 027 Task 8 re-baseline with packedBytes (field-policy module + docs page)."
+      "$comment": "[2026-08-26] plan 034 Task 12 re-baseline: RAG engine docs (rag/observability/memory/migration/release-and-install) + CHANGELOG [0.3.1] on the 0.3.0 line; measured 3212522 vs prior 3055343. Docs-only — root dist/runtime unchanged."
     },
     "fileCount": {
       "baseline": 366,

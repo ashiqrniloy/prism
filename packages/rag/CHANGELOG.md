@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.1] - 2026-08-26
+
+### Added
+- Hybrid retrieve (`lexical` / RRF / `retrieval` labels), multi-scope retrieve (`scopes: RagScope[]` — one embed, per-scope legs, one RRF, one rerank; `scope` stays valid), content-hash skip, heading-stack chunk metadata, generation stamping, `RagTelemetry` seam, `createTeiReranker`, `fuseReciprocalRank`, `isValidContentHash`. `HARD_RETRIEVE_SCOPE_CAP`. Provenance carries `tenantId`/`resourceId`/`corpusId`. Retrieve fails closed on embedder id/dimension drift (`ERR_PRISM_RAG_EMBEDDER_MISMATCH`).
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

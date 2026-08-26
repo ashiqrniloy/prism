@@ -1,5 +1,6 @@
 import type { ContextProvider, JsonObject, Message, SecretRedactor } from "@arnilo/prism";
 import type { Embedder, MemoryVectorRecord, VectorStore } from "@arnilo/prism-memory";
+import type { RagTelemetry, RagTelemetrySpan } from "./telemetry.js";
 
 export interface RagScope {
   readonly tenantId: string;
@@ -16,6 +17,12 @@ export interface RagChunk {
   readonly end: number;
   readonly text: string;
   readonly metadata?: JsonObject;
+}
+
+/** Stored embedding of a previous record offered for reuse when its text is unchanged. */
+export interface ReusableEmbedding {
+  readonly text: string;
+  readonly embedding: readonly number[];
 }
 
 export interface ChunkOptions {
@@ -116,6 +123,13 @@ export interface IndexChunksOptions {
   readonly secrets?: readonly (string | undefined)[];
   readonly statusStore?: IngestionStatusStore;
   readonly signal?: AbortSignal;
+  /** Host-supplied document digest stamped into each record's `_rag.contentHash`. */
+  readonly contentHash?: string;
+  /** Chunk id → previous text+embedding; embeddings are reused (no embed call) when texts match. */
+  readonly reuseEmbeddings?: ReadonlyMap<string, ReusableEmbedding>;
+  /** Optional telemetry seam; spans nest under `telemetryParent` when supplied. */
+  readonly telemetry?: RagTelemetry;
+  readonly telemetryParent?: RagTelemetrySpan;
 }
 
 export interface IndexChunksResult {
@@ -127,6 +141,10 @@ export interface ReplaceSourceOptions extends Omit<IndexChunksOptions, "chunks" 
   readonly sourceId: string;
   readonly chunks: readonly RagChunk[];
   readonly store: TransactionalVectorStore;
+  /** Host-computed document digest; enables the unchanged-source skip. */
+  readonly contentHash?: string;
+  /** Skip re-indexing when the stored document hash matches. Default true when contentHash is present. */
+  readonly skipIfUnchanged?: boolean;
 }
 
 export interface DeleteSourceOptions {
@@ -153,7 +171,11 @@ export interface RagProvenance {
   readonly chunkId: string;
   readonly citationId: string;
   readonly provider: string;
-  readonly retrieval: "vector";
+  readonly tenantId: string;
+  readonly resourceId: string;
+  readonly corpusId: string;
+  /** Which retrieval leg(s) surfaced this hit after RRF fusion. */
+  readonly retrieval: "vector" | "lexical" | "hybrid";
   readonly retrievedAt: string;
 }
 
@@ -186,9 +208,21 @@ export interface Reranker {
 export interface RetrieveContextOptions {
   readonly embedder: Embedder;
   readonly store: VectorStore;
-  readonly scope: RagScope;
+  /** Single exact scope. Provide `scope` or `scopes`, never both. */
+  readonly scope?: RagScope;
+  /** One or more exact scopes (empty = no hits, no embed). */
+  readonly scopes?: readonly RagScope[];
+  /** Optional telemetry seam; when omitted, instrumentation costs nothing. */
+  readonly telemetry?: RagTelemetry;
   readonly topK?: number;
   readonly queryCandidates?: number;
+  /** Lexical leg mode. Default runs fts when the store supports it and silently skips otherwise;
+   * explicitly requesting "fts"/"bm25" on an unsupported store fails closed. */
+  readonly lexical?: "fts" | "bm25" | "off";
+  /** Only reciprocal-rank fusion is supported. */
+  readonly fusion?: "rrf";
+  /** RRF smoothing constant (default 60, capped). */
+  readonly rrfK?: number;
   readonly filter?: JsonObject;
   readonly maxResultBytes?: number;
   readonly maxContextTokens?: number;

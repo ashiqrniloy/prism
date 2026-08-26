@@ -4,13 +4,14 @@
 
 Prism exposes provider and tool timing through stable, metadata-only `AgentEvent` variants. Hosts subscribe via `session.subscribe()` or persist events through `RunLedger`. Core helpers build `ProviderTurnMetadata` and classify HTTP failures without echoing prompts, tool arguments, or credentials.
 
-Optional package `@arnilo/prism-observability-opentelemetry` maps those events to OpenTelemetry spans and low-cardinality metrics. OpenTelemetry is **not** a dependency of `@arnilo/prism`.
+Optional package `@arnilo/prism-observability-opentelemetry` maps those events to OpenTelemetry spans and low-cardinality metrics, and adapts `@arnilo/prism-rag`'s dependency-free telemetry seam (`createRagTelemetry()`) onto the same tracer. OpenTelemetry is **not** a dependency of `@arnilo/prism`.
 
 APIs:
 
 - `ProviderTurnMetadata`, `ToolExecutionMetadata` on `AgentEvent`
 - `createProviderTurnMetadata()`, `readProviderHttpStatus()` in `@arnilo/prism`
 - `createOpenTelemetryInstrumentation()`, `wrapOpenTelemetryApi()`, `createInMemoryTelemetry()` in `@arnilo/prism-observability-opentelemetry`
+- `createRagTelemetry()` in `@arnilo/prism-observability-opentelemetry` (RAG spans/events; see span tree below)
 - `handleRunFeedback()` / `handleEvaluation()` for explicit safe post-run projection
 
 ## When to use it
@@ -96,6 +97,21 @@ OpenTelemetry mapping (when enabled):
 | `handleRunFeedback` | active-run `prism.run.feedback` event or ended-run span | `prism.run.feedback` |
 | `handleEvaluation` | active-run `gen_ai.evaluation.result` event or ended-run span | `prism.run.evaluation` (`status`) |
 
+RAG span tree (`@arnilo/prism-rag` + `createRagTelemetry()`):
+
+| Span | Parent | Notes |
+| --- | --- | --- |
+| `rag_request` | host/chosen parent or root | One per `retrieveContext()`; carries `rag.top_k`, `rag.scope_count`, `rag.result_count`, `rag.index_generation` (single-scope only), scope/embedder id. `chunk_retrieved` events add `rag.chunk.tenant_id` + `rag.chunk.corpus_id`. |
+| `embedding.query` | `rag_request` | Embedder call for the query |
+| `retrieval.vector_search` / `retrieval.lexical` | `rag_request` | Present when the leg runs (lexical only when enabled and supported) |
+| `retrieval.fusion` | `rag_request` | RRF fusion of the legs; `rag.fused_candidates` count |
+| `retrieval.rerank` | `rag_request` | Only when a reranker is configured |
+| `prompt.assembly` | `rag_request` | Context/template rendering |
+| `rag_index` | host/chosen parent or root | One per `replaceSource()`/`indexChunks()`; `rag.chunk_count`, `rag.index_generation`, `rag.embedder_id`, `rag.source_id` |
+| `embedding.index` | `rag_index` | Embedder batch call; skipped when unchanged-content skip fires |
+
+`createRagTelemetry({ tracer, meter, attributeFilter? })` adapts the dependency-free `RagTelemetry` seam to a PrismTracer. Only the fixed span names and `rag.*`-shaped attribute keys pass through; anything else (including raw chunk text) is dropped before export. `attributeFilter` can further reduce or drop attributes.
+
 High-cardinality identifiers (`sessionId`, `runId`, `requestId`, `toolCallId`) are **span attributes only**, never metric labels.
 
 ## Request/response example
@@ -149,6 +165,10 @@ detach();
 telemetry.handleRunFeedback({ runId: result.runId, rating: 1, hasComment: true, tagCount: 1, scorerCount: 1, evaluationCount: 1 });
 telemetry.handleEvaluation({ runId: result.runId, name: "citation", status: "scored", score: 0.9, hasReason: true });
 console.log(traceId, memory.spans.map((span) => span.name));
+
+// RAG: attach the same tracer to retrieveContext via the dependency-free seam
+const ragTelemetry = createRagTelemetry({ tracer: memory.tracer, meter: memory.meter });
+const found = await retrieveContext("policy", { embedder, store, scope, telemetry: ragTelemetry }); // rag_request tree
 ```
 
 ## Extension and configuration notes

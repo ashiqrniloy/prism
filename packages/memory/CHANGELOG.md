@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.1] - 2026-08-26
+
+### Added
+- Required `Embedder.id`; optional `embedderId` / `generation` on records. `createPostgresVectorStore`, `getBySource` + `transaction`, lexical `fts` leg, generation pointers, `buildVectorSearchDdl` (HNSW when dimension pinned, tsvector + GIN). `tokenizeLexical` exported.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

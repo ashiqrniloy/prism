@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-rag` is an optional package for deterministic text/Markdown chunking, bounded embedding/vector indexing, atomic scoped source replacement/deletion, focused text/Markdown/HTML/PDF parsing, bounded reranking, ingestion status, attributable citations, content-trust metadata, and explicit `ContextProvider` injection. It reuses `Embedder` and `VectorStore` from `@arnilo/prism-memory`; Prism core input assembly is unchanged.
+`@arnilo/prism-rag` is an optional package for deterministic text/Markdown chunking (with ATX heading-stack metadata), bounded embedding/vector indexing with embedder-identity drift guards, atomic scoped source replacement/deletion with content-hash skip and generation visibility, hybrid vector+lexical retrieval with reciprocal-rank fusion (one embed / one RRF / one rerank across one or many exact scopes), focused text/Markdown/HTML/PDF parsing, bounded reranking (host seam plus a TEI REST adapter), ingestion status, attributable citations, content-trust metadata, and explicit `ContextProvider` injection. It reuses `Embedder` and `VectorStore` from `@arnilo/prism-memory`; Prism core input assembly is unchanged.
 
 ## When to use it
 
@@ -18,7 +18,7 @@ Chunking:
 | `chunkMarkdown(markdown, options)` | Same engine, preferring heading/paragraph boundaries |
 | `sourceId` | Required stable, non-secret source identifier |
 | `size` / `overlap` | Character ceiling and repeated context |
-| `metadata` | JSON metadata copied to every chunk |
+| `metadata` | JSON metadata copied to every chunk; Markdown chunking additionally stamps `heading` (ordered parent-first heading stack, e.g. `["Policy", "3.2 Leave"]`) unless the caller supplies one.
 
 Document lifecycle:
 
@@ -35,13 +35,18 @@ Index/retrieve:
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `embedder` / `store` | yes | Phase 7 `Embedder` and `VectorStore` |
-| `scope` | yes | `{ tenantId, resourceId, corpusId }`; corpus maps to vector thread isolation |
+| `scope` / `scopes` | one or the other | Exact `{ tenantId, resourceId, corpusId }` (corpus → vector thread). `scope` is the single-corpus path; `scopes` is 0..`HARD_RETRIEVE_SCOPE_CAP` (8) exact scopes. Empty `scopes` returns no hits and does not embed/search/rerank. Passing both or neither throws. |
 | `chunks` | indexing | `RagChunk[]` from package chunkers or compatible host parser |
-| `topK` / `queryCandidates` | retrieval | Returned result count and bounded pre-filter candidates |
+| `topK` / `queryCandidates` | retrieval | Returned result count and bounded pre-filter candidates (`queryCandidates` is **per scope**) |
+| `lexical` | no | `"fts"` \| `"bm25"` \| `"off"` (default `"off"`); enables the lexical retrieval leg when the store advertises it |
+| `fusion` / `rrfK` | no | `"rrf"` fusion of vector+lexical legs (default `"rrf"` when `lexical` is on; `rrfK` default 60, hard cap 1,000) |
 | `filter` | no | Shallow JSON metadata equality filter |
 | `reranker` | no | Host-owned `Reranker` receives redacted bounded `RagHit[]` and must return the same IDs once each, in preferred order. |
 | `maxRerankBytes` / `maxRerankMs` / `rerankConcurrency` | no | Reranker caps; defaults/hard limits are 64/256 KiB, 2/10 s, and 2/8 active calls per reranker object. |
 | `statusStore` | no | `IngestionStatusStore` records per-source pending/indexed/failed/partial byte/chunk progress; use `listIngestionStatus()` for capped exact-scope pages. |
+| `contentHash` | no | Host-computed document digest; stamped on records and enables unchanged-source skip in `replaceSource` (`skipIfUnchanged`, default true when present) |
+| `reuseEmbeddings` | no | `ReadonlyMap<string, ReusableEmbedding>` — chunk id → `{ text, embedding }`; embeddings reused (no embed call) when texts match |
+| `telemetry` / `telemetryParent` | no | `RagTelemetry` seam (e.g. `createRagTelemetry()` from `@arnilo/prism-observability-opentelemetry`); spans nest under `telemetryParent` |
 | `redactor` / `secrets` | no | Redact before embedding, persistence, reranking, and injection |
 | `signal` | no | Abort embedding, vector operations, reranking, and batch progression |
 
@@ -51,7 +56,8 @@ Index/retrieve:
 - `indexChunks()` returns `{ indexed, sourceIds }` after bounded batch upserts.
 - `replaceSource()` / `deleteSource()` return `{ sourceId, deleted, indexed }`.
 - `replaceDocument()` carries loader parser metadata into chunk metadata; the web loader preserves web-tools citation ID and `untrusted: true`.
-- `retrieveContext()` returns `{ query, trust, text, hits, citations, truncated }`. Every hit/citation carries `{ provenance: { sourceId, chunkId, citationId, provider, retrieval: "vector", retrievedAt }, trust: { untrusted: true, inert: true, injectionCapable: true } }`; `retrievalRank` preserves pre-rerank order. Rendered text uses `[citation-id] text` blocks.
+- `retrieveContext()` returns `{ query, trust, text, hits, citations, truncated }`. Every hit/citation carries `{ provenance: { sourceId, chunkId, citationId, provider, tenantId, resourceId, corpusId, retrieval: "vector" | "lexical" | "hybrid", retrievedAt }, trust: { untrusted: true, inert: true, injectionCapable: true } }`; `retrieval` labels the leg(s) that surfaced the hit after RRF fusion, and `retrievalRank` preserves pre-rerank order. Rendered text uses `[citation-id] text` blocks.
+- `replaceSource()` returns `{ sourceId, deleted, indexed, skipped? }` (skipped when the stored `contentHash` matched and no writes occurred). Records carry `embedderId` (from `Embedder.id`, the Task 2 identity contract) and `generation` (scope-level monotonically bumped index per replacement; `_rag` metadata carries `contentHash` when supplied). `store.getCurrentGeneration(scope)` / `store.setCurrentGeneration(scope, n)` let hosts read and roll back the visible generation; retrieval filters to the current generation while legacy generation-less rows stay visible.
 - `createMemoryIngestionStatusStore()` is a bounded in-memory reference adapter. `listIngestionStatus({ store, scope, limit, cursor })` returns capped status pages; hosts supply durable stores when status must survive process restart.
 - `createRagContextProvider()` returns one ordinary context provider. Empty queries/results contribute no block.
 - No events, tools, permissions, provider calls, loaders, or network requests are added.
@@ -94,7 +100,7 @@ await indexChunks({ chunks, embedder, store, scope, statusStore });
 const found = await retrieveContext("approval policy", {
   embedder,
   store,
-  scope,
+  scopes: [scope], // or `scope` for one corpus
   topK: 4,
   filter: { category: "security" },
   reranker: { rerank: async ({ hits }) => [...hits].sort((a, b) => b.score - a.score) },
@@ -109,11 +115,47 @@ const agent = createAgent({
 console.log(found.text, await agent.createSession().run("How do approvals work?"));
 ```
 
+Content-hash skip and hash validation:
+
+```ts
+import { isValidContentHash } from "@arnilo/prism-rag";
+
+const digest = "ab12..."; // host-computed SHA-256 hex of the document
+if (!isValidContentHash(digest)) throw new Error("invalid digest");
+await replaceSource({ sourceId: "doc", chunks, embedder, store, scope, contentHash: digest }); // unchanged → skipped, zero embeds
+```
+
+Hybrid retrieval, TEI reranking, and telemetry:
+
+```ts
+import { createRagTelemetry } from "@arnilo/prism-observability-opentelemetry";
+import { createTeiReranker } from "@arnilo/prism-rag";
+
+const telemetry = createRagTelemetry({ tracer, meter }); // @opentelemetry/api instruments
+const org = { tenantId: "t1", resourceId: "docs", corpusId: "org" };
+const user = { tenantId: "t1", resourceId: "docs", corpusId: "user" };
+const session = { tenantId: "t1", resourceId: "docs", corpusId: "session" };
+const found = await retrieveContext("leave balance", {
+  embedder,
+  store, // a store that advertises lexicalModes: ["fts"]
+  scopes: [org, user, session], // one embed, per-scope legs, one RRF, one rerank
+  lexical: "fts",
+  topK: 8,
+  reranker: createTeiReranker({ baseUrl: "https://tei.svc:8080" }),
+  telemetry, // roots a rag_request span tree; attachSession/handleAgentEvent NOT required
+});
+```
+
 ## Extension and configuration notes
 
 - Supply any Phase 7-conforming embedder/vector store, including the in-memory reference or PostgreSQL/pgvector adapter.
 - Metadata filtering is package-local after a bounded candidate query so existing vector contracts/adapters remain unchanged. Increase `queryCandidates` only when selective filters measurably need it.
 - `Reranker` is a host seam, not a provider integration. Return each redacted candidate ID exactly once; Prism retains canonical hit/provenance/trust fields and exposes `retrievalRank` for diagnostics. Add a hosted reranker only when a host owns its credentials, quota, and retry policy.
+- `createTeiReranker({ baseUrl, model?, timeoutMs?, maxResponseBytes?, ssrf?, allowLoopback?, fetch? })` (`CreateTeiRerankerOptions`) adapts a Hugging Face TEI `POST <baseUrl>/rerank` endpoint (`{query, texts, raw_scores:false}` → `{results:[{index,score}]}`) into the `Reranker` seam. It returns a permutation-only reorder of the same hit objects, so provenance/trust move untouched. Response parsing is strict — short/duplicate/out-of-range indices, non-finite scores, HTTP errors, timeouts, and oversized bodies all fail closed; the `rerankHits` caps (`maxRerankBytes`, `maxRerankMs`, `rerankConcurrency`) still apply around it. The default transport is the core DNS-pinned `pinnedFetch` (redirect-free, byte-bounded to 65,536 by default); HTTPS is required unless `allowLoopback: true` (loopback dev/test) or the host supplies `ssrf`/`fetch` for cluster networking. The adapter validates URL shape only — SSRF policy enforcement stays host-side. No credentials are ever sent; there is no SaaS default URL.
+- Hybrid retrieval: pass `lexical: "fts"` (or `"bm25"` when the store supports it) to `retrieveContext()`; the two legs are fused with reciprocal-rank fusion (`fusion: "rrf"`, `rrfK` 60 default; the pure helper `fuseReciprocalRank()` returns `FusedCandidate[]` for custom orchestration). Stores advertise support via `lexicalModes?: readonly LexicalMode[]` and `tokenizeLexical()` is the shared tokenizer. Each hit's provenance `retrieval` field reports `vector`/`lexical`/`hybrid`; fusion internals expose `RetrievalLeg`.
+- Multi-scope retrieve: `scopes: RagScope[]` searches each exact scope against that scope's current generation, then runs **one** RRF over the union and **one** rerank. The query is embedded once. `queryCandidates` is per scope. Duplicate scopes are dropped. `HARD_RETRIEVE_SCOPE_CAP` is 8.
+- Embedder identity/drift guard: `Embedder.id` (memory contract) is stamped onto every vector record as `embedderId`. `retrieveContext()` fails closed with `ERR_PRISM_RAG_EMBEDDER_MISMATCH` when a stored record's `embedderId` or dimensions differ from the active embedder (for example after a model change) — re-index the source before retrieving. Legacy records without an `embedderId` also fail closed, naming the re-index path.
+- Generations: `replaceSource()` stamps a scope-level generation (auto-incremented per replacement) on staged records and the vector store filters retrieval to the current generation. `setCurrentGeneration()` supports rollback; stores without generation tracking keep legacy behavior (everything visible).
 - `IngestionStatusStore` is optional observability storage. It is keyed by exact scope and source ID; use `listIngestionStatus()` rather than an unbounded corpus scan. The reference memory store is process-local; implement the same capped scope behavior for durable status.
 - `createRagContextProvider()` derives its query from latest user text by default; pass a fixed string or callback for host-controlled query generation.
 - `createResourceDocumentLoader({ loader })` calls one host-owned `ResourceLoader`; it scans nothing and performs no filesystem or network I/O itself. Pass the host's permission/trust context to that loader.
@@ -123,14 +165,19 @@ console.log(found.text, await agent.createSession().run("How do approvals work?"
 
 ## Security and performance notes
 
-- Every index/query includes exact tenant/resource/corpus scope; returned records are rechecked and malformed/foreign records fail closed.
+- Every index/query includes exact tenant/resource/corpus scope; returned records are rechecked and malformed/foreign records fail closed. `retrieveContext` accepts `scope` or `scopes` (never both, never neither). Empty `scopes` is the host “no allowed corpora” path — no embed, no search, no rerank. A hit whose stored scope is not in the requested list fails closed. Generation filters stay per scope.
+- Embedding identity is a privacy/consistency boundary: records from a different embedder (or dimension) never silently mingle with new ones — retrieval fails closed and names the re-index path. Generation pointers are scope-scoped: a pointer row belongs to exactly one scope, and visibility is computed inside the store (SQL), never by post-filtering in JS.
 - Source IDs become citation/storage IDs and must be stable non-secret identifiers. Text and user metadata can be redacted before external embedding and persistence.
+- Heading metadata is document text only — it passes through the existing `maxMetadataBytes` cap as chunk metadata; no new content path is introduced.
+- `contentHash` skip and `reuseEmbeddings` never leak embeddings: reused embeddings are keyed by chunk id within one replacement and only accepted when the stored text matches exactly.
 - Retrieved documents are untrusted inert context. Prompt-injection text cannot activate tools, skills, credentials, permissions, or extensions.
 - Remote sources must pass existing resource/media trust, SSRF, MIME, and byte policies before their decoded text reaches this package.
 - `replaceSource()` stages every bounded embedding before opening the store transaction. It requires a source-aware transactional store and fails closed rather than pretending generic upserts are atomic. `createMemoryVectorStore()` supplies the reference `getBySource()` / transaction capability; durable stores must implement equivalent exact-scope behavior.
 - `deleteSource()` rechecks every returned record's tenant/resource/corpus and source metadata before delete. Same source IDs in another corpus remain untouched.
 - Parsers enforce byte/page/time caps, abort before and after parsing, decode UTF-8 strictly, and strip HTML script/style content. Parsed and retrieved text remains untrusted inert context; it never gains tool authority.
-- Rerankers receive redacted input under byte/time/concurrency caps. Timeout, abort, unknown/duplicate/missing IDs, oversized input, and reranker failures fail closed; returned objects cannot overwrite Prism provenance/trust fields.
+- Rerankers receive redacted input under byte/time/concurrency caps. Timeout, abort, unknown/duplicate/missing IDs, oversized input, and reranker failures fail closed; returned objects cannot overwrite Prism provenance/trust fields. The TEI adapter adds fail-closed response parsing (permutation completeness, finite scores) and honors the 65,536-byte response ceiling; SSRF/URL policy is host-side (see Extension notes).
+- Telemetry is a host-owned seam: `RagTelemetry` adapter (`createRagTelemetry()`) drops anything outside a fixed span-name set and `rag.*`-shaped attribute keys, so raw chunk text never reaches the tracer unless the host's own `attributeFilter` opts it in; when the seam is absent, instrumentation costs nothing.
+- Durable vector stores (PostgreSQL/pgvector path via `@arnilo/prism-memory`) run their DDL against the host's knowledge database — tables are created in a schema/table the host names (default `prism_memory.semantic_memory`), and hosts must own backup/retention of that database. See [Working and semantic memory](working-and-semantic-memory.md).
 - Ingestion failure errors are redacted before status storage. Status reads reject foreign scope entries and page-limit violations; status itself creates no permission or tool authority.
 - Filtering scans at most `queryCandidates` hits; rendering stops at top-K, UTF-8 result bytes, or estimated context-token ceiling.
 

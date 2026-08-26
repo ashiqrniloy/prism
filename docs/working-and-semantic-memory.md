@@ -155,6 +155,24 @@ const memory = createMemory({
 });
 ```
 
+Standalone durable vector store for RAG:
+
+```ts
+import { createPostgresVectorStore, createHashEmbedder } from "@arnilo/prism-memory";
+
+const store = await createPostgresVectorStore({
+  connectionString: process.env.DATABASE_URL!,
+  schema: "prism_memory", // default
+  table: "semantic_memory", // default
+  dimension: 32, // optional; pins the embedding column width (HNSW + drift guard)
+}); // PostgresVectorStoreOptions; dimension must match the embedder's dimensions
+// store implements rag's VectorStore/TransactionalVectorStore contract: upsert,
+// query, getBySource, transaction, lexicalQuery (fts, when available), and
+// getCurrentGeneration/setCurrentGeneration. close() ends adapter-owned pools.
+```
+
+`createPostgresVectorStore()` is the production counterpart to `createMemoryVectorStore()` used by `@arnilo/prism-rag`; `createPostgresMemoryStores()` reuses the same vector implementation internally.
+
 ## Extension and configuration notes
 
 - Hosts wire the context provider into `AgentConfig.context` or `resolveContextProviders()`.
@@ -162,6 +180,8 @@ const memory = createMemory({
 - `createHashEmbedder()` is for tests/demos only; production hosts supply a real `Embedder`.
 - Observational memory (`@arnilo/prism-compaction-observational-memory`) remains unchanged and composable.
 - Consent is enforced at the single `recall()` gate, so both direct recall and `createContextProvider()` injection honor it; `visible: false` (or a revoked grant) keeps an entry out of prompts, events, exports, and telemetry. `setConsent`/`correct` re-upsert in place (consent change does not re-embed); `forget`/`applyRetention` are real deletes, not tombstones. Retention uses indexed oldest-first pages plus a scoped count, deleting one default-500/hard-5000 batch without reading a corpus into memory. The PostgreSQL adapter persists consent in a `consent JSONB` column added by `buildMemoryDdl`.
+- The PostgreSQL vector path owns its DDL in Prism (`buildMemoryDdl`/`buildVectorSearchDdl` exported): the `<table>_rag_scope_generations` per-scope generation pointer table, `text_tsv` tsvector column + GIN index for the lexical RAG leg, and an HNSW index when the embedding dimension is pinned. DDL runs against the host's **knowledge database** — the host names `schema`/`table` (defaults `prism_memory`/`semantic_memory`), owns backup/retention of that database, and can run migrations manually with `skipMigrations: true`. Identifiers are validated/quoted; values stay parameterized.
+- `createPostgresVectorStore({ dimension })` pins the embedding column width before building indexes: pgvector can only build HNSW over `vector(N)` columns, and dimension mismatch fails closed instead of drifting.
 - `exportMemory()` requires an exact `{ tenantId, resourceId, threadId }` identity equal to its `createMemory()` scope. It excludes legacy consent-less, invisible, and revoked records even when normal recall allows legacy entries. It returns a stable sequence cursor page, redacted before response, with defaults/hard caps of 100/200 entries, 4/32 MiB, and 10/60 seconds. `rebuildIndex()` uses the same stable cursor shape to re-embed one 32/128-record page under a 10/60-second cap; save the cursor durably to resume. Both APIs require a store implementing bounded `listByThread()`; retention also requires `countByThread()`. PostgreSQL/pgvector and the in-memory reference adapter conform; SQLite persistence stores sessions, not semantic vectors.
 - Profile bundles do not include this package yet.
 

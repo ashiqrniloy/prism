@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-observability-opentelemetry",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Optional OpenTelemetry adapter for Prism agent events.",
   "type": "module",
   "main": "./dist/index.js",
@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
+    "@arnilo/prism-rag": "file:../rag",
     "@opentelemetry/api": "^1.9.0"
   },
   "engines": {

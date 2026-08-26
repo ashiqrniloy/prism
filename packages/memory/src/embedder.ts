@@ -4,6 +4,8 @@ import { assertFiniteVector, assertNotAborted, chunkArray } from "./util.js";
 
 export interface HashEmbedderOptions {
   readonly dimensions?: number;
+  /** Override the deterministic test id (default `prism-hash-embedder`). */
+  readonly id?: string;
 }
 
 /**
@@ -17,6 +19,7 @@ export function createHashEmbedder(options: HashEmbedderOptions = {}): Embedder 
   }
 
   return {
+    id: options.id ?? "prism-hash-embedder",
     dimensions,
     async embed(texts, embedOptions = {}) {
       assertNotAborted(embedOptions.signal);

@@ -1,5 +1,15 @@
 # Migration guide
 
+## 0.3.0 → 0.3.1 production RAG engine (independent patch)
+
+Only `@arnilo/prism-rag`, `@arnilo/prism-memory`, and `@arnilo/prism-observability-opentelemetry` move to `0.3.1`. Keep every other first-party package on `^0.3.0` — those ranges already satisfy `0.3.1`.
+
+**Required for Embedder implementers.** `Embedder.id` is now a required `readonly id: string` (stable model/deploy identity, ≤256 chars). Hosts that construct their own embedder must set it; `createHashEmbedder` defaults to `"prism-hash-embedder"` and the Alibaba embedder uses `options.model`. `retrieveContext` fails closed with `ERR_PRISM_RAG_EMBEDDER_MISMATCH` when a stored `embedderId` is missing or differs (or dimensions differ). Re-index the source after an embedder/model change. Existing 0.3.0 rows without `embedderId` also fail closed until re-indexed.
+
+Everything else is additive and opt-in: `createPostgresVectorStore`, hybrid `lexical` retrieve, `contentHash` skip, heading metadata, generation pointers, `createRagTelemetry`, `createTeiReranker`, multi-scope retrieve (`scopes` — pass `scope` for one corpus or `scopes` for one-or-many exact corpora; `scope` stays valid, both or neither throws). Default `retrieveContext` / `replaceSource` paths without those options stay 0.3.0-compatible (vector-only, single-scope, no skip, no telemetry).
+
+Postgres DDL is additive (`IF NOT EXISTS` columns/indexes/tables). 0.3.0 rows remain readable. Rollback = restore the 0.3.0 package versions; no down migration.
+
 ## 0.2.9 → 0.3.0 lockstep cut and independent package versions (additive)
 
 Release **0.3.0** is the final lockstep cut on the 0.3.x line: all 57 publishable manifests move from `0.2.9` to `0.3.0`, then internal first-party `dependencies`, `optionalDependencies`, and `peerDependencies` use `^0.3.0`. The package graph is now **Decision B**: changed packages may patch/minor independently inside `>=0.3.0 <0.4.0`; unchanged packages keep their version.

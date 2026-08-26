@@ -2,6 +2,7 @@ import { type JsonObject, resolveRedactor } from "@arnilo/prism";
 import type { MemoryVectorRecord } from "@arnilo/prism-memory";
 import { chunkText } from "./chunk.js";
 import { RagScopeError, RagValidationError } from "./errors.js";
+import { isValidContentHash } from "./hash.js";
 import { indexChunkBatches } from "./indexing.js";
 import { ingestionStatus } from "./ingestion-status.js";
 import type {
@@ -17,6 +18,13 @@ export interface SourceMutationResult {
   readonly sourceId: string;
   readonly deleted: number;
   readonly indexed: number;
+  /** Set when an unchanged document hash short-circuited the replace. */
+  readonly skipped?: true;
+}
+
+function storedDocHash(record: MemoryVectorRecord): string | undefined {
+  const value = (record.metadata as { _rag?: { contentHash?: unknown } } | undefined)?._rag?.contentHash;
+  return isValidContentHash(value) ? value : undefined;
 }
 
 export async function replaceSource(options: ReplaceSourceOptions): Promise<SourceMutationResult> {
@@ -28,6 +36,10 @@ export async function replaceSource(options: ReplaceSourceOptions): Promise<Sour
   }
 
   const redactor = resolveRedactor(options.redactor, options.secrets);
+  if (options.contentHash !== undefined && !isValidContentHash(options.contentHash)) {
+    throw new RagValidationError("contentHash must be a hex digest of 32..128 characters");
+  }
+  const contentHash = options.contentHash?.toLowerCase();
   const totalBytes = options.chunks.reduce((total, chunk) => total + byteLength(redactor?.redact(chunk.text) ?? chunk.text), 0);
   const setStatus = async (state: "pending" | "indexed" | "failed", error?: unknown): Promise<void> => {
     if (!options.statusStore) return;
@@ -44,14 +56,59 @@ export async function replaceSource(options: ReplaceSourceOptions): Promise<Sour
     );
   };
   await setStatus("pending");
+  const telemetry = options.telemetry;
+  const root = telemetry?.startSpan("rag_index", {
+    "rag.scope.tenant_id": scope.tenantId,
+    "rag.source_id": sourceId,
+    "rag.embedder_id": options.embedder.id,
+    "rag.chunk_count": options.chunks.length,
+  });
   try {
+    // One read decides the skip; unchanged sources cost zero embeds and zero writes.
+    const previous = await sourceRecords(options.store, sourceId, scope, options.signal);
+    if (
+      contentHash &&
+      options.skipIfUnchanged !== false &&
+      previous.length > 0 &&
+      previous.every((record) => storedDocHash(record) === contentHash)
+    ) {
+      // Incoming stats describe the now-live content even though nothing was rewritten.
+      await setStatus("indexed", undefined);
+      return Object.freeze({ sourceId, deleted: 0, indexed: 0, skipped: true as const });
+    }
+    const reuseEmbeddings = new Map<string, { text: string; embedding: readonly number[] }>();
+    if (options.skipIfUnchanged !== false) {
+      // skipIfUnchanged: false means rebuild everything — no embedding reuse either.
+      for (const record of previous) {
+        if (record.embedderId === options.embedder.id) {
+          reuseEmbeddings.set(record.id, { text: record.text, embedding: record.embedding });
+        }
+      }
+    }
     const staged: MemoryVectorRecord[] = [];
-    const indexed = await indexChunkBatches({ ...options, statusStore: undefined }, async (records) => {
-      staged.push(...records);
-    });
+    const indexed = await indexChunkBatches(
+      { ...options, statusStore: undefined, contentHash, reuseEmbeddings, telemetry, telemetryParent: root },
+      async (records) => {
+        staged.push(...records);
+      },
+    );
     assertNotAborted(options.signal);
     const result = await options.store.transaction(
       async (store) => {
+        // Generation visibility: stamp chunks at N+1 and advance the scope pointer in the
+        // same transaction as the swap. Stores without generation tracking keep legacy behavior.
+        const getCurrent = store.getCurrentGeneration?.bind(store);
+        const setCurrent = store.setCurrentGeneration?.bind(store);
+        let nextGeneration: number | undefined;
+        if (getCurrent && setCurrent) {
+          const current = await getCurrent({
+            tenantId: scope.tenantId,
+            resourceId: scope.resourceId,
+            threadId: scope.corpusId,
+          });
+          nextGeneration = (current === undefined ? 0 : Number(current)) + 1;
+          root?.setAttribute("rag.index_generation", nextGeneration);
+        }
         const previous = await sourceRecords(store, sourceId, scope, options.signal);
         assertNotAborted(options.signal);
         if (previous.length) {
@@ -60,7 +117,20 @@ export async function replaceSource(options: ReplaceSourceOptions): Promise<Sour
             { signal: options.signal },
           );
         }
-        if (staged.length) await store.upsert(staged, { signal: options.signal });
+        if (staged.length) {
+          const stamped = nextGeneration === undefined ? staged : staged.map((record) => ({ ...record, generation: nextGeneration }));
+          await store.upsert(stamped, { signal: options.signal });
+        }
+        if (setCurrent && nextGeneration !== undefined) {
+          await setCurrent(
+            {
+              tenantId: scope.tenantId,
+              resourceId: scope.resourceId,
+              threadId: scope.corpusId,
+            },
+            nextGeneration,
+          );
+        }
         return Object.freeze({ sourceId, deleted: previous.length, indexed: indexed.indexed });
       },
       { signal: options.signal },
@@ -68,8 +138,11 @@ export async function replaceSource(options: ReplaceSourceOptions): Promise<Sour
     await setStatus("indexed");
     return result;
   } catch (error) {
+    root?.recordError();
     await setStatus("failed", error);
     throw error;
+  } finally {
+    root?.end();
   }
 }
 

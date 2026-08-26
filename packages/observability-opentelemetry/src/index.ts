@@ -24,5 +24,7 @@ export {
   createOpenTelemetryInstrumentation,
   wrapOpenTelemetryApi,
 } from "./instrumentation.js";
+export type { CreateRagTelemetryOptions } from "./rag-telemetry.js";
+export { createRagTelemetry } from "./rag-telemetry.js";
 
 export const packageName = "@arnilo/prism-observability-opentelemetry";

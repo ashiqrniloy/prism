@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-memory",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Optional working memory and semantic recall primitives with Embedder/VectorStore contracts for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,8 +21,8 @@
   "scripts": {
     "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/memory.test.js",
-    "test:postgres": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/memory.test.js dist/__tests__/postgres-memory.integration.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/memory.test.js dist/__tests__/postgres-vector.integration.test.js",
+    "test:postgres": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/memory.test.js dist/__tests__/postgres-memory.integration.test.js dist/__tests__/postgres-vector.integration.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {

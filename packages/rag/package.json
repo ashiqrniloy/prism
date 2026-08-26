@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-rag",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Optional bounded text and Markdown RAG primitives for Prism.",
   "type": "module",
   "main": "./dist/index.js",

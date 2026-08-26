@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  type AgentEventRecord,
   createDelegatedAgentStep,
   createMemoryAgentEventSource,
   createSecretRedactor,
   DelegatedAgentStepError,
   MAX_DELEGATED_AGENT_EVENT_BYTES,
   redactAgentEvent,
-  type AgentEventRecord,
 } from "../index.js";
 
 describe("delegated agent step", () => {
