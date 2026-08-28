@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { AgentSession, Message, ToolDefinition, ToolExecutionContext } from "@arnilo/prism";
 import { assertExecutionAllowed, createToolRegistry, dispatchToolCall } from "@arnilo/prism";
 import { WorkflowAbortError, WorkflowCheckpointError, WorkflowRuntimeError } from "../errors.js";
-import { DEFAULT_MAX_NESTED_DEPTH } from "../limits.js";
+import { DEFAULT_MAX_CONCURRENCY, DEFAULT_MAX_NESTED_DEPTH } from "../limits.js";
 import type {
   RunWorkflowOptions,
   WorkflowEventBus,
@@ -192,6 +192,42 @@ function createContext(state: SchedulerState, nodeId: string, options: RunWorkfl
   };
 }
 
+async function mapPool<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>,
+  signal?: AbortSignal,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  let failed: unknown;
+  const runners = Array.from({ length: Math.min(Math.max(concurrency, 1), items.length) }, async () => {
+    while (true) {
+      if (failed) return;
+      if (signal?.aborted) {
+        failed = new WorkflowAbortError();
+        throw failed;
+      }
+      const index = next;
+      next += 1;
+      if (index >= items.length) return;
+      try {
+        results[index] = await worker(items[index]!, index);
+      } catch (error) {
+        failed = error;
+        throw error;
+      }
+    }
+  });
+  try {
+    await Promise.all(runners);
+  } catch (error) {
+    await Promise.allSettled(runners);
+    throw error;
+  }
+  return results;
+}
+
 async function executeNode(
   node: WorkflowNodeDefinition,
   ctx: WorkflowNodeContext,
@@ -216,12 +252,11 @@ async function executeNode(
       if (items.length > effectiveLimit) {
         throw new WorkflowRuntimeError(`Fan-out exceeded maxFanOut (${items.length} > ${effectiveLimit})`, "ERR_PRISM_WORKFLOW_FANOUT");
       }
-      const mapped: unknown[] = [];
-      for (let index = 0; index < items.length; index += 1) {
-        if (ctx.signal?.aborted) throw new WorkflowAbortError();
-        mapped.push(await node.map(items[index], index, ctx));
-      }
-      return { output: mapped };
+      const workflowConcurrency = state.workflow.limits?.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY;
+      const concurrency = Math.min(options.concurrency ?? workflowConcurrency, workflowConcurrency);
+      return {
+        output: await mapPool(items, concurrency, (item, index) => Promise.resolve(node.map(item, index, ctx)), ctx.signal),
+      };
     }
     case "join": {
       const from = node.from ?? (Object.keys(ctx.upstream).length === 1 ? Object.keys(ctx.upstream)[0] : undefined);

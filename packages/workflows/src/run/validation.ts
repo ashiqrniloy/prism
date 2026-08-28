@@ -45,21 +45,26 @@ export async function updateWorkflowState(
   options: RunWorkflowOptions,
 ): Promise<Readonly<JsonObject>> {
   let result: JsonObject = state.state;
-  const update = state.stateChain.then(async () => {
-    const next = updateOptions?.mode === "replace" ? cloneState(patch) : { ...cloneState(state.state), ...cloneState(patch) };
-    const redacted = redactValue(next, options.redactor);
-    const maxHistory = state.workflow.limits?.maxStateHistory ?? DEFAULT_MAX_STATE_HISTORY;
-    if (state.stateVersion + 1 >= maxHistory) {
-      throw new WorkflowRuntimeError(`Workflow state history exceeds maxStateHistory (${maxHistory})`, "ERR_PRISM_WORKFLOW_STATE_HISTORY");
-    }
-    const candidate: SchedulerState = { ...state, state: redacted };
-    await validateState(candidate, options);
-    state.state = redacted;
-    state.stateVersion += 1;
-    state.stateHistory.set(state.stateVersion, cloneState(redacted));
-    result = cloneState(redacted);
-  });
-  state.stateChain = update;
+  const update = state.stateChain
+    .catch(() => undefined)
+    .then(async () => {
+      const next = updateOptions?.mode === "replace" ? cloneState(patch) : { ...cloneState(state.state), ...cloneState(patch) };
+      const redacted = redactValue(next, options.redactor);
+      const maxHistory = state.workflow.limits?.maxStateHistory ?? DEFAULT_MAX_STATE_HISTORY;
+      if (state.stateVersion + 1 >= maxHistory) {
+        throw new WorkflowRuntimeError(
+          `Workflow state history exceeds maxStateHistory (${maxHistory})`,
+          "ERR_PRISM_WORKFLOW_STATE_HISTORY",
+        );
+      }
+      const candidate: SchedulerState = { ...state, state: redacted };
+      await validateState(candidate, options);
+      state.state = redacted;
+      state.stateVersion += 1;
+      state.stateHistory.set(state.stateVersion, cloneState(redacted));
+      result = cloneState(redacted);
+    });
+  state.stateChain = update.catch(() => undefined);
   await update;
   return result;
 }

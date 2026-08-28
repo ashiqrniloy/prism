@@ -311,9 +311,18 @@ describe("agent loop strategies", () => {
       assert.equal(maxActive, 2);
     });
 
-    it("aborts pending parallel dispatches when the run signal is aborted", async () => {
+    it("waits for in-flight parallel dispatches before surfacing abort", async () => {
       const controller = new AbortController();
       let started = 0;
+      let release!: () => void;
+      const inFlight = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let firstStarted!: () => void;
+      const firstStartedPromise = new Promise<void>((resolve) => {
+        firstStarted = resolve;
+      });
+      let firstSettled = false;
       const ctx = stubCtx({
         input: "Hi",
         maxToolRounds: 1,
@@ -327,15 +336,91 @@ describe("agent loop strategies", () => {
         }),
         dispatchToolCall: async (call) => {
           started += 1;
-          if (call.id === "c1") controller.abort(new Error("aborted run"));
-          await new Promise((resolve) => setTimeout(resolve, 20));
+          if (call.id === "c1") {
+            firstStarted();
+            controller.abort(new Error("aborted run"));
+            await inFlight;
+            firstSettled = true;
+          }
           return { toolCallId: call.id, name: call.name };
         },
         emit: () => {},
       });
-      await assert.rejects(() => singleShotLoop.run(ctx), /aborted run/);
+      const run = singleShotLoop.run(ctx);
+      let completed = false;
+      const observed = run.then(
+        () => {
+          completed = true;
+        },
+        () => {
+          completed = true;
+        },
+      );
+      await firstStartedPromise;
+      await Promise.resolve();
+      assert.equal(completed, false);
+      assert.equal(started, 1);
+      release();
+      await assert.rejects(run, /aborted run/);
+      await observed;
+      assert.equal(firstSettled, true);
       assert.equal(ctx.history.filter((message) => message.role === "tool").length, 0);
-      assert.ok(started >= 1);
+    });
+
+    it("waits for in-flight workers and stops unclaimed calls after the first failure", async () => {
+      let releaseSecond!: () => void;
+      const secondDone = new Promise<void>((resolve) => {
+        releaseSecond = resolve;
+      });
+      let secondStarted!: () => void;
+      const secondStartedPromise = new Promise<void>((resolve) => {
+        secondStarted = resolve;
+      });
+      let secondSettled = false;
+      const started: string[] = [];
+      const appended: Message[] = [];
+      const ctx = stubCtx({
+        toolConcurrency: 2,
+        generate: async () => ({ content: [], calls: [], started: true }),
+        dispatchToolCall: async (call) => {
+          started.push(call.id);
+          if (call.id === "c1") throw new Error("first failure");
+          if (call.id === "c2") {
+            secondStarted();
+            await secondDone;
+            secondSettled = true;
+            return { toolCallId: call.id, name: call.name };
+          }
+          throw new Error("c3 must not start");
+        },
+        appendMessage: async (message) => {
+          appended.push(message);
+        },
+        emit: () => {},
+      });
+      const dispatch = dispatchToolCallsInOrder(
+        [toolCallContent("c1", "a", {}), toolCallContent("c2", "b", {}), toolCallContent("c3", "c", {})],
+        ctx,
+      );
+      let completed = false;
+      const observed = dispatch.then(
+        () => {
+          completed = true;
+        },
+        () => {
+          completed = true;
+        },
+      );
+      await secondStartedPromise;
+      await Promise.resolve();
+      assert.equal(completed, false);
+      assert.deepEqual(started, ["c1", "c2"]);
+      releaseSecond();
+      await assert.rejects(dispatch, /first failure/);
+      await observed;
+      assert.equal(secondSettled, true);
+      assert.deepEqual(started, ["c1", "c2"]);
+      assert.deepEqual(appended, []);
     });
 
     it("resolveToolConcurrency reads single-shot loop options with RunOptions precedence", () => {
@@ -506,11 +591,15 @@ describe("agent loop strategies", () => {
     function reviseCtx(opts: {
       generateTexts: readonly string[];
       validator: (value: unknown) => { ok: boolean; errors?: { message: string }[] };
+      sessionId?: string;
+      runId?: string;
     }): { ctx: LoopContext; assistantTexts: string[]; appendedMessages: Message[] } {
       let generateCalls = 0;
       const assistantTexts: string[] = [];
       const appendedMessages: Message[] = [];
       const ctx = stubCtx({
+        sessionId: opts.sessionId ?? "s",
+        runId: opts.runId ?? "r",
         input: "build a thing",
         generate: async () => {
           const text = opts.generateTexts[generateCalls] ?? "fallback";
@@ -568,6 +657,49 @@ describe("agent loop strategies", () => {
       assert.equal(appendedMessages.length, 1);
       assert.equal(appendedMessages[0]?.role, "assistant");
       assert.equal(appendedMessages.filter((message) => message.role === "user").length, 0);
+    });
+
+    it("resets state when a factory strategy is reused by another run", async () => {
+      const loop = generateValidateReviseLoop({ validator: () => ({ ok: true }), maxRevisions: 3 });
+      const first = reviseCtx({ generateTexts: ["first"], validator: () => ({ ok: true }), sessionId: "s1", runId: "r1" });
+      await loop.run(first.ctx);
+      assert.equal((loop.snapshot!() as { attempts: number }).attempts, 1);
+
+      const second = reviseCtx({ generateTexts: ["second"], validator: () => ({ ok: true }), sessionId: "s2", runId: "r2" });
+      await loop.run(second.ctx);
+      assert.equal(second.assistantTexts.length, 1);
+      assert.equal((loop.snapshot!() as { attempts: number }).attempts, 1);
+    });
+
+    it("restores a full revision budget after an exhausted reused run", async () => {
+      let accept = false;
+      const loop = generateValidateReviseLoop({
+        maxRevisions: 1,
+        validator: () => (accept ? { ok: true } : { ok: false, errors: [{ message: "bad" }] }),
+      });
+      const first = reviseCtx({ generateTexts: ["bad-1", "bad-2"], validator: () => ({ ok: false }), sessionId: "s1", runId: "r1" });
+      await loop.run(first.ctx);
+      assert.equal(first.assistantTexts.length, 2);
+
+      accept = true;
+      const second = reviseCtx({ generateTexts: ["good"], validator: () => ({ ok: true }), sessionId: "s2", runId: "r2" });
+      await loop.run(second.ctx);
+      assert.equal(second.assistantTexts.length, 1);
+      assert.equal((loop.snapshot!() as { attempts: number }).attempts, 1);
+    });
+
+    it("restores attempt state without resetting for a resumed run", async () => {
+      const loop = generateValidateReviseLoop({ validator: () => ({ ok: true }), maxRevisions: 3 });
+      loop.restore!({ attempts: 1, artifactPhase: true, savedSchema: null, pendingHistory: [] });
+      const resumed = reviseCtx({
+        generateTexts: ["resumed"],
+        validator: () => ({ ok: true }),
+        sessionId: "resume-session",
+        runId: "resume-run",
+      });
+      await loop.run(resumed.ctx);
+      assert.equal(resumed.assistantTexts.length, 1);
+      assert.equal((loop.snapshot!() as { attempts: number }).attempts, 2);
     });
 
     it("budget exhaustion terminates; exactly maxRevisions repair messages, no infinite loop", async () => {

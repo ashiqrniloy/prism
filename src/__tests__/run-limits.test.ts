@@ -4,6 +4,7 @@ import {
   type AgentEvent,
   type AgentLoopStrategy,
   AgentRunError,
+  type AIProvider,
   createAgent,
   createMockProvider,
   providerDone,
@@ -40,6 +41,27 @@ describe("run limits", () => {
     assert.throws(() => cost.recordUsage({ outputTokens: 1, cost: 0, currency: "EUR" }), RunLimitError);
     tracker.dispose();
     cost.dispose();
+  });
+
+  it("charges UTF-8 provider events at their serialized byte length", async () => {
+    const event = providerTextDelta("😀");
+    const bytes = Buffer.byteLength(JSON.stringify(event), "utf8");
+    const provider: AIProvider = {
+      id: "utf8-bytes",
+      async *generate() {
+        yield event;
+      },
+    };
+    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider });
+    const within = await agent.createSession().run("hi", { limits: { maxResponseBytes: bytes } });
+    assert.equal(within.status, "succeeded");
+
+    await assert.rejects(agent.createSession().run("hi", { limits: { maxResponseBytes: bytes - 1 } }), (error: unknown) => {
+      assert.ok(error instanceof AgentRunError);
+      assert.equal(error.result.limit?.limit, "maxResponseBytes");
+      assert.equal(error.result.limit?.observed, bytes);
+      return true;
+    });
   });
 
   it("emits one terminal breach and withholds configured-token-budget output", async () => {

@@ -17,7 +17,7 @@ Cache hints are best-effort. They describe intent; providers decide whether thei
 Use this page when a host or provider package needs to:
 
 - Mark stable system prompts, tools, context, or messages as cacheable.
-- Opt into cache-aware default input ordering so stable attachments/resources, summaries, and prior history form a reusable prefix before the current user turn.
+- Use cache-aware default input ordering so stable instructions, attachments/resources, summaries, and prior history form a reusable prefix before the current user turn.
 - Carry a stable cache key across turns without putting provider-specific fields in core.
 - Read `ModelConfig.cache` to decide whether to map hints to implicit caching, key-based caching, cache-control breakpoints, provider-specific caching, or no caching.
 - Compute normalized cache diagnostics from `Usage.cacheReadTokens` / `Usage.cacheWriteTokens`, including providers that only report reads.
@@ -66,7 +66,7 @@ Cache helpers return plain data:
 
 Provider events do not change. Cache accounting stays in normalized `Usage.cacheReadTokens` and `Usage.cacheWriteTokens`.
 
-For stable-prefix payloads, `inputLayout: "cache_aware"` is the default on the default input builder, `assembleProviderInput()`, `AgentConfig`, and `RunOptions`; set `inputLayout: "legacy"` to restore the prior order. The default prompt builder already places context, selected skills, and tool declarations before input messages; cache-aware input ordering then places attachments/resources, summaries, prior history, and pending tool results before the current user suffix. The prefix is byte-stable only when those stable inputs are unchanged; Prism still does not guarantee provider cache hits.
+For stable-prefix payloads, `inputLayout: "cache_aware"` is the default on the default input builder, `assembleProviderInput()`, `AgentConfig`, and `RunOptions`; set `inputLayout: "legacy"` to restore the prior order. The default prompt builder's cache-aware order is leading system instructions → resolved context blocks → selected/progressively disclosed skills → fallback text tool declarations → attachments/resources → summaries → prior history → pending tool results → current input. Declared tool schemas remain in `ProviderRequest.tools` and are never granted by prompt middleware. Changing only current input preserves the serialized message prefix before the final user suffix; changing dynamic context or loaded skills changes only from its own boundary onward, while tool schemas remain independently stable. The prefix is byte-stable only when those stable inputs are unchanged; Prism still does not guarantee provider cache hits.
 
 ## Request/response example
 

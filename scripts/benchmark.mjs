@@ -33,6 +33,7 @@ export const SCENARIOS = {
   "phase9-coding": { module: "benchmark-scenarios/phase9-coding.mjs", phase: 9, protected: false },
   "phase10-acp": { module: "benchmark-scenarios/phase10-acp.mjs", phase: 10, protected: false },
   "phase11-auth": { module: "benchmark-scenarios/phase11-auth.mjs", phase: 11, protected: false },
+  "multi-agent-runtime": { module: "benchmark-scenarios/multi-agent-runtime.mjs", phase: 35, protected: false },
 };
 
 function main() {

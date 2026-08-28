@@ -61,7 +61,7 @@ Useful exported types:
 - `DefaultInputBuildContext`: optional input layout, instructions, history, summaries, attachments, resource loader/URIs, tool results, middleware, ids, metadata, and abort signal.
 - `InputAttachment`: already-loaded text/content blocks (including `audio`, `file`, and `document`) or an explicit URI loaded through a caller-provided `ResourceLoader`.
 - `PromptInstruction`: labeled system instruction text.
-- `DefaultPromptBuilder`: the default `PromptBuilder`.
+- `DefaultPromptBuilder`: the default `PromptBuilder`; cache-aware by default and legacy-preserving when `inputLayout: "legacy"` is passed in its request.
 - `AssembleProviderInputOptions`: model, input, optional builders, context providers, selected skills, active tools, generic provider options, metadata, signal, and optional `contextBudget` (`maxInputTokens` / `maxInputBytes` / `reportOmissions`).
 - `applyContextBudget` / `getContextBudgetReport` / `resolveContextBudget`: deterministic eviction + omission report helpers (estimate = UTF-16 code units ÷ 4).
 - `PromptTemplateOptions`: missing-variable behavior for `renderPromptTemplate()`.
@@ -79,7 +79,12 @@ The builder returns `readonly Message[]`.
 | `legacy` | instructions → summaries → history → current input → attachments/resources → tool results |
 | `cache_aware` | instructions → attachments/resources → summaries → history → tool results → current input |
 
-The default prompt builder still prepends context, selected skills, and tool declarations before those input messages. Cache-aware ordering gives cache-capable providers a stable prefix only while those stable inputs stay byte-stable; changing tools, context, resources, summaries, history, or attachments changes the prefix too.
+The default prompt builder preserves one composition path while honoring layout:
+
+- `cache_aware` (default): leading system messages from input assembly → resolved context blocks → selected/progressively disclosed skills → text tool declarations for text-only/unknown models → remaining input-builder messages (attachments/resources → summaries → history → tool results → current input).
+- `legacy`: context blocks → skills → text tool declarations → all input-builder messages (instructions → summaries → history → current input → attachments/resources → tool results).
+
+In cache-aware mode, leading system instructions form the stable boundary before dynamic context and skills. The provider `tools` field remains the host-supplied schema list; text declarations are only a fallback for models without declared tool support. Changing only current input changes the final suffix; changing context, loaded skills, resources, summaries, history, attachments, or tools changes that boundary or a later suffix. A stable prefix persists only while those stable inputs stay byte-stable; provider cache hits remain best-effort.
 - History is prepended before current input.
 - Instructions and summaries are system messages; compacted branch summaries from `rebuildSessionContext()` use the same path.
 - Text attachments and explicit text resources are user messages; inline `audio`/`file`/`document` blocks pass through unchanged on attachments with `content`.
@@ -112,8 +117,8 @@ The default prompt builder still prepends context, selected skills, and tool dec
 ```json
 [
   { "role": "system", "content": [{ "type": "text", "text": "System instruction:\nAnswer briefly." }] },
-  { "role": "user", "content": [{ "type": "text", "text": "Hello" }] },
-  { "role": "user", "content": [{ "type": "text", "text": "Attachment notes.md:\nRemember the release date." }] }
+  { "role": "user", "content": [{ "type": "text", "text": "Attachment notes.md:\nRemember the release date." }] },
+  { "role": "user", "content": [{ "type": "text", "text": "Hello" }] }
 ]
 ```
 
@@ -139,7 +144,7 @@ const messages = await createDefaultInputBuilder().build(prompt, {
 await session.run("Explain this", { inputLayout: "cache_aware" });
 ```
 
-Cache-aware mode is opt-in; hosts that do nothing keep legacy order.
+Cache-aware mode is the default. Set `inputLayout: "legacy"` when compatibility with the prior whole-prompt order is required.
 
 ## Extension and configuration notes
 
@@ -163,7 +168,7 @@ const request = await assembleProviderInput({
 
 ## Security and performance notes
 
-- The builder is linear in supplied messages, attachments, resources, and tool results. Layout selection is one flattening branch over already-built groups.
+- Input grouping and default prompt composition are linear in supplied messages, attachments, resources, context blocks, skills, and tools. Layout selection is one branch over already-built groups; no message sorting or canonicalization is performed.
 - Template expansion is dependency-free string replacement over `{{name}}` variables. It does not evaluate expressions, filters, loops, partials, JavaScript, globals, or prototype properties.
 - It performs no provider calls, tool execution, credential resolution, package discovery, filesystem scan, network access, timers, or watchers.
 - URI attachments/resources load only through the caller-provided `ResourceLoader`. Binary media uses `resolveMediaContentBlock()` / `loadBinaryResource()` with bounded bytes, SSRF checks for URLs, and MIME magic validation — see [Multimodal content](multimodal-content.md).

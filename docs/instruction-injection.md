@@ -63,7 +63,7 @@ Only `instructions` and `contextBlocks` are honored from a contribution; other f
 
 Injectors do not emit events. Their output is folded into the assembled `ProviderRequest`:
 
-- **Instructions** layer via `composeSystemPrompt(injectorContributions, { base: systemInstructions })` as `source: "package"`, `mode: "append"`. Host base instructions come first, then injector package instructions appended. This keeps a single prompt-composition code path (no parallel prompt code in the assembler).
+- **Instructions** layer via `composeSystemPrompt(injectorContributions, { base: systemInstructions })` as `source: "package"`, `mode: "append"`. Host base instructions come first, then injector package instructions appended. This keeps a single prompt-composition code path (no parallel prompt code in the assembler). In the default `cache_aware` layout, that composed leading system message stays before dynamic context, skills, history, tool results, and current input; explicit `legacy` keeps prior whole-prompt ordering.
 - **Context blocks** merge via `resolveContextProviders`, appended after host+skill provider blocks, before the context middleware hook runs. `ponytail:` the assembler threads `injectedBlocks` into `resolveContextProviders` so the existing context middleware flow is untouched and the diff stays minimal.
 
 `runInstructionInjectors(injectors, ctx)` runs each selected injector against a turn-local `InstructionContext`, returning `{ instructions: SystemPromptContribution[]; contextBlocks: ContextBlock[] }`. It aborts on `ctx.signal`.

@@ -28,6 +28,47 @@ node scripts/benchmark-0.1.0.mjs --out scripts/benchmark-0.1.0.json
 PRISM_TEST_POSTGRES_URL="postgresql://…" node scripts/benchmark-0.1.0.mjs --out scripts/benchmark-0.1.0.json  # adds protected legs
 ```
 
+## Multi-agent runtime concurrency (phase 35)
+
+`node scripts/benchmark.mjs --scenario multi-agent-runtime` is network-free (mock providers, in-process memory stores, no credentials). It measures concurrent independent sessions (1/4/16/32), supervisor fan-out and saturation (32 attempted delegates vs `maxActiveChildren`), parallel workflow fan-out maps (8×20 ms items at concurrency 2, ≥1.75× vs sequential), parallel workflow agent nodes, in-run tool concurrency, and an abort storm. Each result row carries p50/p95, throughput, heap delta, queued/dropped events, peak active provider calls, completions, and abort settle. Ceilings live in `scripts/budgets.json#multiAgentRuntime` (sanity bounds, machine-dependent). Exhaustive 59-manifest classification and recorded numbers: [`docs/_evidence/phase35-ai-runtime-package-matrix.md`](./_evidence/phase35-ai-runtime-package-matrix.md). Schema/safety/invariants: `scripts/benchmark-multi-agent.test.mjs`. Fan-out row: 8×20 ms items at concurrency 2, ≥1.75× vs sequential, peak workers ≤ 2. Supervisor saturation: 32 attempted delegates vs `maxActiveChildren` 4, overflow rejected, `activeAfter` 0.
+
+```bash
+node scripts/benchmark.mjs --scenario multi-agent-runtime --out /tmp/prism-multi-agent.json
+```
+
+Recorded 2026-08-27, Node v24.19.0 / Linux x64, 5 warmups + 20 waves, 8 ms mock delay. 32 independent sessions p95 10.1 ms (vs 9.0 ms at n=1); supervisor cap-4 fan-out p95 9.4 ms; workflow 4 agent nodes at concurrency 2 p95 17.9 ms; 8 tools at concurrency 4 p95 17.4 ms; abort storm settled in 5.5 ms with zero leftover provider calls. Dropped events: 0 on every row. Task 6 three-run median p95 (2026-08-28, same fixture): sessions 9.9/9.9/10.6/12.0, supervisorFanOut 10.4, supervisorSaturation 10.3, workflowFanOut 84.5 (1.87×, peak workers 2), workflowAgentNodes 19.7, toolConcurrency 19.1, abortStorm 3.3 — all under `scripts/budgets.json#multiAgentRuntime` ceilings. Protected PostgreSQL (`PRISM_TEST_POSTGRES_URL`) skipped on this host; `release:gate` blocked until durable evidence exists. Memory-store router 16/32-worker reservations do not oversubscribe.
+
+## Large-history and streamed-delta hot paths (plan 036)
+
+The `multi-agent-runtime` scenario also covers 10,000 context-budget history rows and
+5,000 streamed provider deltas. `applyContextBudget` measures the keep-set once,
+advances a history head cursor during eviction, and slices the retained suffix once;
+it never front-mutates the history array. Runtime request/response limit accounting
+uses `Buffer.byteLength(JSON.stringify(value), "utf8")`, so UTF-8 byte limits do not
+allocate an encoded buffer per provider event.
+
+Run with the existing network-free fixture:
+
+```bash
+node scripts/benchmark.mjs --scenario multi-agent-runtime
+```
+
+Recorded 2026-08-28 on Node v24.19.0 / Linux x64, 5 warmups + 20 measured waves.
+`contextBudget-10k-history` completed with zero history remaining; its p50/p95 were
+2.481/3.708 ms and peak measured heap delta was 7,748,848 bytes. `provider-5k-deltas`
+processed 5,000 deltas (320,015 serialized response bytes) at 4.253/5.847 ms p50/p95
+with a 4,414,944-byte peak measured heap delta. These are local comparison evidence,
+not portable SLOs; ceilings are in `scripts/budgets.json#multiAgentRuntime`.
+
+`Buffer.byteLength` counts encoded bytes rather than JavaScript string length. A
+serialized provider event at the exact response-byte cap succeeds; one byte below it
+fails closed, including multibyte Unicode deltas. Context-budget omission order and
+newest-history preservation remain covered by the root context-budget tests.
+
+## Current-line root artifact diet
+
+`npm pack --dry-run --json` on `@arnilo/prism` is gated by `scripts/budget-gate.test.mjs` against `scripts/budgets.json#root` (±5%). Repository-only history stays out of the tarball: `docs/_evidence/**`, `docs/release-*-evidence.md`, `docs/api-page-template.md`, `dist/__tests__`, and `*.map`. Every page linked from shipped `docs/index.md` must be in the pack. Recorded 2026-08-27: **923,045 packed / 3,149,665 unpacked / 375 files** (226 `dist` js+d.ts, 124 index-linked docs, 25 other). 0.1.0 freeze 713,454 / 293 stays historical.
+
 ## 0.1.4 tree-shake measurement (static-reachability proxy)
 
 The 0.1.4 god-module split (agents/contracts → per-concern modules behind barrels) is
@@ -89,9 +130,10 @@ file count fail above baseline × 1.05. Labels: **network-free** = runs in
 | reconnectCatchup | 8.374 | 100 | distributed events (0.0.24) | protected |
 
 Install/startup rows (same helpers as the budget gate — no duplicate
-measurement): startup import 41.7 ms (ceiling 250 ms); root packed 711,755
-bytes vs baseline 678,541 (+5%, tolerance 5%); root file count 295 vs 293
-(+5%). Storage-growth rows and query plans from the protected legs are in the
+measurement): startup import 41.7 ms (ceiling 250 ms). The recorded 0.1.0.json
+pack rows (711,755 bytes / 295 files vs freeze 678,541 / 293) stay historical.
+Live root pack is the current-line diet in `scripts/budgets.json#root` (see below).
+Storage-growth rows and query plans from the protected legs are in the
 recorded JSON (`storageBeforeCleanup` / `storageAfterCleanup` per leg).
 
 Conformance companions: `scripts/phase8–11-conformance.test.mjs` plus the
@@ -375,7 +417,7 @@ On default overflow, the affected subscriber receives one `event_subscriber_over
 }
 ```
 
-`drop_oldest` keeps the newest queued events. `drop_newest` ignores incoming events while the queue is full. These policies are live-view policies only; they do not affect `RunLedger` writes or stored session entries.
+`drop_oldest` keeps the newest queued events. `drop_newest` ignores incoming events while the queue is full. These policies are live-view policies only; they do not affect `RunLedger` writes or stored session entries. Graceful `createEventMultiplexer().close()` (and abort) stop new publishes/sources and drain already-queued events within `maxQueuedEvents` before the subscriber completes. Overflow `close` still drops the backlog, emits one overflow notice, and terminates.
 
 ## Request/response example
 

@@ -64,27 +64,34 @@ export async function persistCheckpoint(
   // Terminal writes must land even when the run signal is already aborted
   // (cancel finalization / durable aborted status for resume).
   const terminal = state.status === "succeeded" || state.status === "failed" || state.status === "aborted";
-  const save = state.checkpointChain.then(async () => {
-    await options.checkpoints!.save({
-      workflowId: state.workflow.id,
-      runId: state.runId,
-      version,
-      expectedVersion,
-      fencingToken: options.fencingToken,
-      ownership: options.ownership,
-      value,
-      signal: terminal ? undefined : options.signal,
+  const operation = state.checkpointChain
+    .catch(() => undefined)
+    .then(async () => {
+      try {
+        await options.checkpoints!.save({
+          workflowId: state.workflow.id,
+          runId: state.runId,
+          version,
+          expectedVersion,
+          fencingToken: options.fencingToken,
+          ownership: options.ownership,
+          value,
+          signal: terminal ? undefined : options.signal,
+        });
+      } catch (error) {
+        state.version = expectedVersion;
+        throw error;
+      }
+      emit({
+        type: "checkpoint_saved",
+        workflowId: state.workflow.id,
+        runId: state.runId,
+        version,
+        timestamp: nowIso(),
+      });
     });
-    emit({
-      type: "checkpoint_saved",
-      workflowId: state.workflow.id,
-      runId: state.runId,
-      version,
-      timestamp: nowIso(),
-    });
-  });
-  state.checkpointChain = save;
-  await save;
+  state.checkpointChain = operation.catch(() => undefined);
+  await operation;
 }
 
 export function isWorkflowSuspension(value: unknown): value is WorkflowSuspension {

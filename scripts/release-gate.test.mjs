@@ -65,6 +65,9 @@ export * as ns from "./mod.js";
 
   it("tarball deny list blocks review/plan/map content and allows clean packs", () => {
     assert.throws(() => assertTarballAllowDeny("pkg", ["dist/index.js", "docs/review-coverage-2026.md"]), /denied paths/);
+    assert.throws(() => assertTarballAllowDeny("pkg", ["docs/_evidence/release-0.2.7-evidence.md"]), /denied paths/);
+    assert.throws(() => assertTarballAllowDeny("pkg", ["docs/release-0.2.7-evidence.md"]), /denied paths/);
+    assert.throws(() => assertTarballAllowDeny("pkg", ["docs/api-page-template.md"]), /denied paths/);
     assert.throws(() => assertTarballAllowDeny("pkg", ["plans/079.md"]), /denied paths/);
     assert.throws(() => assertTarballAllowDeny("pkg", ["dist/index.js.map"]), /denied paths/);
     assert.throws(() => assertTarballAllowDeny("pkg", ["dist/__tests__/x.test.js"]), /denied paths/);

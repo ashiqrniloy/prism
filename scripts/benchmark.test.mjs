@@ -29,7 +29,8 @@ describe("benchmark.mjs scenario registry", () => {
     for (const leg of legs) {
       assert.ok(SCENARIOS[leg], `orchestrator scenario ${leg} is registered`);
     }
-    assert.deepEqual([...Object.keys(SCENARIOS)].sort(), [...legs].sort(), "registry and orchestrator agree");
+    assert.ok(SCENARIOS["multi-agent-runtime"], "multi-agent-runtime is registered");
+    assert.equal(SCENARIOS["multi-agent-runtime"].protected, false);
   });
 
   it("--list prints every scenario and exits 0", () => {

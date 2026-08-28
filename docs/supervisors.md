@@ -17,11 +17,11 @@ Use a supervisor when a host or agent must choose a child dynamically. Use `@arn
 | `delegate({ childId, input, threadId?, limits?, signal? })` | Invokes one allow-listed child. Input is text and byte-bounded. |
 | `hooks.before` | May reject, modify redacted input, or narrow limits/policy. |
 | `hooks.after` | Observes redacted terminal summary; failures cannot alter settled result. |
-| `limits` | Depth 4/16, active children 4/32, input 64 KiB/1 MiB, steps 8/64, tools 32/256, tokens 20k/1m, timeout 60s/30m, event queue 128/4096 default/hard. |
+| `limits` | Depth 4/16, active children 4/32, input 64 KiB/1 MiB, steps 8/64, tools 32/256, tokens 20k/1m, timeout 60s/30m, event queue 128/4096 default/hard. Over-cap `delegate()` throws `SupervisorLimitError` before incrementing `activeChildren`. Hook rejection and timeout decrement the count exactly once (no leaked timers). |
 
 ## Outputs / response / events
 
-`delegate()` returns the child's `AgentRunResult` or throws its `AgentRunError`/a supervisor denial or limit error. `subscribe()` emits bounded `delegation_started`, `delegation_finished`, `delegation_rejected`, and `delegation_error` metadata events. Hosts may project those events through observability `handleDelegation()` using the parent Prism run ID; no OpenTelemetry dependency enters this package.
+`delegate()` returns the child's `AgentRunResult` or throws its `AgentRunError`/a supervisor denial or limit error. `subscribe()` emits bounded `delegation_started`, `delegation_finished`, `delegation_rejected`, and `delegation_error` metadata events. Graceful close drains already-queued terminal events before the iterator completes (same core multiplexer contract). Hosts may project those events through observability `handleDelegation()` using the parent Prism run ID; no OpenTelemetry dependency enters this package.
 
 ## Request/response example
 

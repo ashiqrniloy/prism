@@ -28,6 +28,10 @@ async function assemble(model: ModelConfig): Promise<ProviderRequest> {
     model,
     inputLayout: "cache_aware",
     systemInstructions: "Answer from the pinned workspace context.",
+    contextProviders: [{ name: "workspace", resolve: () => [{ title: "Dynamic workspace state", content: "Current branch is clean." }] }],
+    skills: [{ name: "concise", description: "Keep answers short.", instructions: "Use concise answers." }],
+    skillsDisclosure: "progressive",
+    attachments: [{ name: "schema.md", text: "Stable response schema." }],
     summaries: ["Stable project summary reused across turns."],
     history: [
       { role: "user", content: [{ type: "text", text: "Summarize the cache plan." }] },

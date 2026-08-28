@@ -42,28 +42,34 @@ export function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStor
 
   return {
     append(entry, appendOptions) {
-      appendChain = appendChain.then(async () => {
-        if (options.createDirectory !== false) await mkdir(dirname(path), { recursive: true });
-        const readResult = await readJsonlSessionEntries(path);
-        if (readResult.errors.length > 0) {
-          const first = readResult.errors[0]!;
-          throw new Error(`Invalid JSONL at line ${first.line}: ${first.message}`);
-        }
-        const entries = readResult.entries;
-        const dedupKey = appendOptions?.idempotencyKey
-          ? `${entry.sessionId}\u0000${appendOptions.idempotencyKey}\u0000${appendOptions.expectedParentId ?? ""}`
-          : undefined;
-        if (dedupKey !== undefined && idempotencySeen.has(dedupKey)) {
-          throw new SessionAppendConflictError({ code: SESSION_APPEND_CONFLICT_CODE, idempotencyDuplicate: true });
-        }
-        if (appendOptions?.expectedParentId !== undefined && !entries.some((existing) => existing.id === appendOptions.expectedParentId)) {
-          throw new SessionAppendConflictError({ code: SESSION_APPEND_CONFLICT_CODE, expectedParentId: appendOptions.expectedParentId });
-        }
-        if (entries.some((existing) => existing.id === entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
-        if (dedupKey !== undefined) idempotencySeen.add(dedupKey);
-        await appendFile(path, `${JSON.stringify(entry)}\n`, "utf8");
-      });
-      return appendChain;
+      const operation = appendChain
+        .catch(() => undefined)
+        .then(async () => {
+          if (options.createDirectory !== false) await mkdir(dirname(path), { recursive: true });
+          const readResult = await readJsonlSessionEntries(path);
+          if (readResult.errors.length > 0) {
+            const first = readResult.errors[0]!;
+            throw new Error(`Invalid JSONL at line ${first.line}: ${first.message}`);
+          }
+          const entries = readResult.entries;
+          const dedupKey = appendOptions?.idempotencyKey
+            ? `${entry.sessionId}\u0000${appendOptions.idempotencyKey}\u0000${appendOptions.expectedParentId ?? ""}`
+            : undefined;
+          if (dedupKey !== undefined && idempotencySeen.has(dedupKey)) {
+            throw new SessionAppendConflictError({ code: SESSION_APPEND_CONFLICT_CODE, idempotencyDuplicate: true });
+          }
+          if (
+            appendOptions?.expectedParentId !== undefined &&
+            !entries.some((existing) => existing.id === appendOptions.expectedParentId)
+          ) {
+            throw new SessionAppendConflictError({ code: SESSION_APPEND_CONFLICT_CODE, expectedParentId: appendOptions.expectedParentId });
+          }
+          if (entries.some((existing) => existing.id === entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
+          if (dedupKey !== undefined) idempotencySeen.add(dedupKey);
+          await appendFile(path, `${JSON.stringify(entry)}\n`, "utf8");
+        });
+      appendChain = operation.catch(() => undefined);
+      return operation;
     },
     async list(sessionId) {
       return (await readEntries(path)).filter((entry) => entry.sessionId === sessionId);

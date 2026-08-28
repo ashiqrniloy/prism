@@ -168,11 +168,10 @@ export function throwIfAbortedSignal(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Agent run aborted");
 }
 
-const jsonTextEncoder = new TextEncoder();
-
 export function jsonBytes(value: unknown): number {
   try {
-    return jsonTextEncoder.encode(JSON.stringify(value)).byteLength;
+    const serialized = JSON.stringify(value);
+    return serialized === undefined ? 0 : Buffer.byteLength(serialized, "utf8");
   } catch {
     throw new TypeError("Provider request or event must be JSON-serializable for run limits");
   }

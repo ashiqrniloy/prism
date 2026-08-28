@@ -254,6 +254,8 @@ export interface PromptBuilder {
 
 export interface PromptBuildRequest {
   readonly messages: readonly Message[];
+  /** Input layout selected by the host; the default builder uses cache-aware ordering unless legacy is explicit. */
+  readonly inputLayout?: InputAssemblyLayout;
   readonly context?: readonly ContextBlock[];
   readonly skills?: readonly Skill[];
   readonly skillsDisclosure?: import("../skill-disclosure.js").SkillsDisclosure;

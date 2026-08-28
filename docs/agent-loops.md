@@ -128,6 +128,8 @@ Optional steer hooks on `LoopContext` (0.0.11): `hasPendingSteers?()` / `applyPe
 
 The snapshot is stored as `loopState: { name, revision, snapshot }` on the durable run state and cleared when the run reaches a terminal status. On resume, a name/revision mismatch between the stored `loopState` and the resolved strategy fails closed (`ERR_PRISM_LOOP_REVISION`), and the fingerprint check independently rejects any loop drift. Suspension occurs only before an input provider call or immediately before a tool side effect; completed provider turns remain in `SessionStore` history and are not repeated after `resumeAgentRun()`.
 
+A strategy returned by `generateValidateReviseLoop()` is safe to reuse across sequential runs. Its built-in state is scoped to `(sessionId, runId)`; a new non-restored run resets attempts, artifact phase, saved schema, and pending repair messages, while a restored run keeps the checkpointed state. Arbitrary custom strategies are not cloned or reset automatically.
+
 ## Outputs / response / events
 
 `AgentLoopStrategy.run(ctx)` returns `Promise<Usage | undefined>` as a fallback for custom loops. Core runtime independently accumulates every usage-bearing provider turn in O(turns), persists scoped turn/run rows, and emits `agent_finished` with the aggregate.
@@ -231,6 +233,7 @@ await session.run(input, { loop: twoShotLoop });
 - `ArtifactValidation.errors[].message` may echo model text — `artifact_*` event payloads flow through the same `redactAgentEvent` path as other `AgentEvent`s (see [Agent events](agent-events.md)).
 - `generateValidateReviseLoop` makes at most `1 + maxRevisions + maxToolRounds` provider turns when bounded tools are enabled (otherwise `maxRevisions + 1`); it cannot loop forever. Each revision costs one provider turn plus one store append.
 - Bounded artifact tool calls run sequentially through `dispatchToolCall` (permission + validation + execute); their assistant call and result are persisted before the next provider request. `singleShotLoop` retains its bounded parallel worker pool and original call-order transcript behavior.
+- In a parallel single-shot batch, the worker pool stops claiming calls after the first dispatch error or abort, waits for every already-claimed worker with `Promise.allSettled`, appends no buffered tool-result rows for a failed batch, then rethrows the first failure. Already-claimed side effects may finish and are not rolled back; successful batches still append results in original call order. The round-level `chargeToolRound` approval gate runs before workers, so approval suspension starts no worker.
 - The loop is a plain object/factory; no class hierarchy, no background work, no extra dependencies. `LoopContext` is a single object literal of bound arrows built once per run.
 - The host-domain-free boundary is guarded by tests: `src/` imports no host-domain package, and the `Artifact*`/`AgentLoop*`/`LoopContext` contracts contain no `workflow`/`node`/`step` field names. Hosts supply their own schema; no host domain type is imported by `src/`.
 

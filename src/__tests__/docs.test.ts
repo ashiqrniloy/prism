@@ -1708,7 +1708,7 @@ describe("docs", () => {
       assert.ok(models.includes(phrase), `model-registry.md missing ${phrase}`);
   });
 
-  it("phase43 cache-aware ordering docs cover opt-in safety and diagnostics", () => {
+  it("phase43 cache-aware ordering docs cover default safety and diagnostics", () => {
     const index = readFileSync("docs/index.md", "utf8");
     for (const page of ["input-and-prompt-assembly.md", "provider-caching.md", "runs-and-usage.md"]) {
       assert.ok(index.includes(`(${page})`), `docs/index.md does not link ${page}`);
@@ -1721,7 +1721,7 @@ describe("docs", () => {
       'Set `inputLayout: "legacy"`',
       "current input → attachments/resources → tool results",
       "attachments/resources → summaries → history → tool results → current input",
-      "stable prefix only while those stable inputs stay byte-stable",
+      "stable prefix",
       "does not split tool transcripts",
       "URI attachments/resources load only through the caller-provided `ResourceLoader`",
     ])
@@ -3537,6 +3537,13 @@ describe("docs", () => {
       "page-size caps",
       "(run_id, sequence)",
       "(run_id, recorded_at, id)",
+      "Large-history and streamed-delta hot paths",
+      "10,000 context-budget history rows",
+      "5,000 streamed provider deltas",
+      "contextBudget-10k-history",
+      "provider-5k-deltas",
+      "Buffer.byteLength(JSON.stringify(value)",
+      "head cursor",
     ]) {
       assert.ok(performance.includes(phrase), `docs/performance.md missing ${phrase}`);
     }

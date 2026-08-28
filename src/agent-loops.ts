@@ -112,12 +112,30 @@ export function generateValidateReviseLoop(opts: {
   const max = opts.maxRevisions ?? 3;
   const repairer = opts.repairer ?? defaultRepairer<unknown>();
   const finalOnly = opts.structuredOutputTiming === "final-turn-only" && opts.toolCalls === "bounded";
-  // ponytail: per-run state hoisted to factory scope so snapshot/restore can capture it;
-  // resolveLoop invokes this factory once per run, so there is no cross-run leakage.
+  // ponytail: keep only current-run state in this strategy so snapshot/restore can capture it;
+  // supplied strategy instances may be reused, so a new non-restored run resets these locals.
   let attempts = 0;
   let artifactPhase = !finalOnly;
   let savedSchema: StructuredOutputOptions | undefined;
   let pendingHistory: Message[] = [];
+  let stateOwner: { readonly sessionId: string; readonly runId: string } | undefined;
+  let restoredStatePending = false;
+
+  const resetState = (): void => {
+    attempts = 0;
+    artifactPhase = !finalOnly;
+    savedSchema = undefined;
+    pendingHistory = [];
+  };
+
+  const prepareRunState = (ctx: LoopContext): void => {
+    const sameRun = stateOwner?.sessionId === ctx.sessionId && stateOwner.runId === ctx.runId;
+    if (!sameRun) {
+      if (!restoredStatePending) resetState();
+      stateOwner = { sessionId: ctx.sessionId, runId: ctx.runId };
+    }
+    restoredStatePending = false;
+  };
   return {
     name: "generate-validate-revise",
     revision: "1",
@@ -140,8 +158,10 @@ export function generateValidateReviseLoop(opts: {
       // Repair messages were appended to the session before suspension, so the rebuilt
       // history already carries them; re-applying pendingHistory would duplicate them.
       pendingHistory = [];
+      restoredStatePending = true;
     },
     async run(ctx: LoopContext): Promise<Usage | undefined> {
+      prepareRunState(ctx);
       let usage: Usage | undefined;
       let nextInput: AgentInput = ctx.input;
       let toolRounds = 0;
@@ -302,16 +322,30 @@ export async function dispatchToolCallsInOrder(calls: readonly ToolCallContent[]
 
   const results: (ToolResult | undefined)[] = new Array(calls.length);
   let nextIndex = 0;
+  let stopped = false;
+  let firstFailure: unknown;
+  const recordFailure = (error: unknown): void => {
+    if (stopped) return;
+    stopped = true;
+    firstFailure = error;
+  };
   const workers = Array.from({ length: concurrency }, async () => {
     for (;;) {
-      throwIfAborted(ctx.signal);
-      const index = nextIndex;
-      nextIndex += 1;
-      if (index >= calls.length) return;
-      results[index] = await ctx.dispatchToolCall(calls[index]!);
+      if (stopped) return;
+      try {
+        throwIfAborted(ctx.signal);
+        const index = nextIndex;
+        nextIndex += 1;
+        if (index >= calls.length) return;
+        results[index] = await ctx.dispatchToolCall(calls[index]!);
+      } catch (error) {
+        recordFailure(error);
+        return;
+      }
     }
   });
-  await Promise.all(workers);
+  await Promise.allSettled(workers);
+  if (stopped) throw firstFailure;
   for (const result of results) {
     throwIfAborted(ctx.signal);
     if (!result) continue;

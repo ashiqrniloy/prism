@@ -122,6 +122,60 @@ describe("runWorkflow", () => {
     assert.equal(result.outputs.reduce, 12);
   });
 
+  it("maps fan-out concurrently in input order under maxConcurrency", async () => {
+    let active = 0;
+    let peak = 0;
+    const expand = fanOutNode({
+      items: async () => [3, 1, 2, 0],
+      map: async (item, index) => {
+        active += 1;
+        peak = Math.max(peak, active);
+        await new Promise((resolve) => setTimeout(resolve, index === 0 ? 25 : 5));
+        active -= 1;
+        return Number(item) * 10;
+      },
+    });
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "fan-parallel",
+      nodes: { expand },
+      limits: { maxConcurrency: 2, maxFanOut: 8 },
+    });
+    const result = await runWorkflow(workflow, null);
+    assert.deepEqual(result.outputs.expand, [30, 10, 20, 0]);
+    assert.equal(peak, 2);
+  });
+
+  it("stops further fan-out items after the first failure and persists failed state", async () => {
+    let started = 0;
+    let finished = 0;
+    const expand = fanOutNode({
+      items: async () => [0, 1, 2, 3],
+      map: async (item) => {
+        started += 1;
+        if (item === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 15));
+          throw new Error("boom");
+        }
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        finished += 1;
+        return item;
+      },
+    });
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "fan-fail",
+      nodes: { expand },
+      limits: { maxConcurrency: 2, maxFanOut: 8 },
+    });
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    await assert.rejects(() => runWorkflow(workflow, null, { checkpoints, runId: "fan-fail" }), /boom/);
+    const saved = await getWorkflowRun(checkpoints, { workflowId: "fan-fail", runId: "fan-fail" });
+    assert.equal(saved?.value.status, "failed");
+    assert.equal(started, 2);
+    assert.equal(finished, 1);
+  });
+
   it("executes a bounded 1,000-node DAG without rescanning failures", async () => {
     const nodes: Record<string, ReturnType<typeof functionNode>> = {};
     const edges: [string, string][] = [];
@@ -656,6 +710,47 @@ describe("runWorkflow", () => {
     });
     const saved = await getWorkflowRun(checkpoints, { workflowId: "redact", runId: "r-redact" });
     assert.match(String(saved?.value.nodes.node?.output), /\[REDACTED\]/);
+  });
+
+  it("recovers state updates after a rejected patch", async () => {
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "recover-state",
+      limits: { maxStateBytes: 32 },
+      nodes: {
+        update: functionNode({
+          execute: async (ctx) => {
+            await assert.rejects(() => ctx.updateState({ value: "x".repeat(64) }), /Workflow state exceeds max bytes/);
+            return ctx.updateState({ value: "ok" });
+          },
+        }),
+      },
+    });
+    const result = await runWorkflow(workflow, null);
+    assert.deepEqual(result.state, { value: "ok" });
+    assert.deepEqual(result.outputs.update, { value: "ok" });
+  });
+
+  it("recovers checkpoint saves after an injected rejection", async () => {
+    const inner = createMemoryWorkflowCheckpoints();
+    let saves = 0;
+    const checkpoints = {
+      ...inner,
+      async save(input: Parameters<typeof inner.save>[0]) {
+        saves += 1;
+        if (saves === 2) throw new Error("injected checkpoint failure");
+        return inner.save(input);
+      },
+    };
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "recover-checkpoint",
+      nodes: { done: functionNode({ execute: () => "ok" }) },
+    });
+    await assert.rejects(() => runWorkflow(workflow, null, { checkpoints, runId: "r-recover" }), /injected checkpoint failure/);
+    const saved = await getWorkflowRun(checkpoints, { workflowId: "recover-checkpoint", runId: "r-recover" });
+    assert.equal(saved?.value.status, "failed");
+    assert.ok(saves >= 3, `terminal save must run after rejection (saves=${saves})`);
   });
 
   it("rejects resume across tenants", async () => {

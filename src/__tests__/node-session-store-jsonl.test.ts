@@ -234,6 +234,21 @@ describe("node jsonl session store", () => {
     assert.equal((await readJsonlSessionEntries(path)).entries.length, 0);
   });
 
+  it("recovers later appends after a rejected operation", async () => {
+    const path = await tempPath();
+    const store = createJsonlSessionStore(path);
+    await assert.rejects(
+      () =>
+        store.append(createSessionEntry({ id: "e1", sessionId: "s1", kind: "label", label: "orphan" }), { expectedParentId: "missing" }),
+      (error: unknown) => isSessionAppendConflict(error),
+    );
+    await store.append(createSessionEntry({ id: "e2", sessionId: "s1", kind: "label", label: "ok" }));
+    assert.deepEqual(
+      (await store.list("s1")).map((entry) => entry.id),
+      ["e2"],
+    );
+  });
+
   it("deduplicates an exact retry at the same position by idempotencyKey", async () => {
     const path = await tempPath();
     const store = createJsonlSessionStore(path);

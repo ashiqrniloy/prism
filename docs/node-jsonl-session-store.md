@@ -72,7 +72,7 @@ Use `createMemorySessionStore()` for tests or throwaway sessions; use the JSONL 
 - Reads and writes use only the caller-provided path.
 - Errors include path/reason or line number, not file contents.
 - Do not put secrets in messages, metadata, summaries, labels, or custom entries.
-- Reads are linear in file size. Appends also re-read and re-parse the whole file for duplicate/parent/corruption checks before writing one line, and are serialized per store instance.
+- Reads are linear in file size. Appends also re-read and re-parse the whole file for duplicate/parent/corruption checks before writing one line, and are serialized per store instance. A rejected append does not poison later appends; the rejected line is not written.
 - There is no cross-process lock or durable idempotency table; two processes writing the same file can race. Add a database or external lock if multiple processes write the same file.
 - Treat this adapter as development/single-process storage. Production multi-writer hosts should use an indexed database `SessionStore` adapter.
 

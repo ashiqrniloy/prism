@@ -319,6 +319,36 @@ describe("@arnilo/prism-model-router", () => {
     assert.equal(used.tokens, 0);
   });
 
+  it("does not oversubscribe under 16 and 32 parallel reservations", async () => {
+    const identityKey = {
+      tenantId: identity.tenantId,
+      userId: identity.userId,
+      principalId: identity.principal.id,
+      provider: "openai",
+    };
+    for (const workers of [16, 32]) {
+      const state = createMemoryModelRouterStateStore();
+      const key = { ...identityKey, model: `gpt-${workers}` };
+      const results = await Promise.all(
+        Array.from({ length: workers }, () =>
+          state.reserveBudget({
+            key,
+            tokens: 26,
+            maxTokens: 100,
+            windowMs: 60_000,
+            reservationTtlMs: 60_000,
+            now: 0,
+          }),
+        ),
+      );
+      assert.equal(results.filter((result) => result.admitted).length, 3, `${workers} workers must admit 3`);
+      assert.equal(results.filter((result) => !result.admitted).length, workers - 3);
+      assert.ok(results.find((result) => !result.admitted)?.retryAfterMs !== undefined);
+      const used = await state.readBudget({ key, windowMs: 60_000, now: 0 });
+      assert.equal(used.tokens, 0);
+    }
+  });
+
   it("commits actual deltas, releases remainders, and rejects stale fencing", async () => {
     const state = createMemoryModelRouterStateStore();
     const key = {

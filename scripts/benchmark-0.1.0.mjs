@@ -148,9 +148,11 @@ for (const row of results) {
 if (installSize.startupImportMs > capacity.startupImportMsCeiling) {
   failures.push(`startupImport ${installSize.startupImportMs}ms > frozen ceiling ${capacity.startupImportMsCeiling}ms`);
 }
+// Live pack is the current-line diet in scripts/budgets.json. Freeze-manifest
+// pack rows stay historical for the recorded 0.1.0.json envelope.
 const packChecks = [
-  checkUpperBound("rootPackedBytes", installSize.rootPackedBytes, capacity.rootPackedBytes.baseline, capacity.rootPackedBytes.tolerance),
-  checkUpperBound("rootFileCount", installSize.rootFileCount, capacity.rootFileCount.baseline, capacity.rootFileCount.tolerance),
+  checkUpperBound("rootPackedBytes", installSize.rootPackedBytes, budgets.root.packedBytes.baseline, budgets.root.packedBytes.tolerance),
+  checkUpperBound("rootFileCount", installSize.rootFileCount, budgets.root.fileCount.baseline, budgets.root.fileCount.tolerance),
 ];
 for (const check of packChecks) {
   if (!check.ok) failures.push(check.message);

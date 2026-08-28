@@ -216,7 +216,7 @@ By default tools without `parameters` skip schema validation (`missingSchema: "a
 
 ### Parallel tool execution (single-shot loop)
 
-Opt in through `loop.toolConcurrency` on `AgentConfig` / `RunOptions` (single-shot strategy only). Default is `1` (sequential). Independent calls from one provider turn run concurrently up to the limit; transcript rows and `appendMessage` stay in original call order. Each call still uses `dispatchToolCall` (permission, validation, abort signal). See [Agent loops](agent-loops.md).
+Opt in through `loop.toolConcurrency` on `AgentConfig` / `RunOptions` (single-shot strategy only). Default is `1` (sequential). Independent calls from one provider turn run concurrently up to the limit; transcript rows and `appendMessage` stay in original call order. Each call still uses `dispatchToolCall` (permission, validation, abort signal). If a worker throws or the run aborts, workers stop claiming new calls, already-claimed calls settle, buffered tool-result rows are not appended, and the first failure is rethrown. Already-claimed side effects are not rolled back; the shared abort signal is still passed to each dispatch. The round-level `chargeToolRound` approval gate runs before any worker starts. See [Agent loops](agent-loops.md).
 
 ```ts
 await session.run(input, {

@@ -11,6 +11,7 @@ import {
   measureRootPack,
   measureStartupMs,
 } from "./budget-gates.mjs";
+import { packedFilePaths } from "./release-gates.mjs";
 
 // Fast performance-budget gate (plan 079, Task 8). Runs in `npm test`: gates the
 // deterministic root artifact size and a non-flaky startup ceiling against
@@ -197,6 +198,22 @@ describe("performance budget gate", () => {
       checkUpperBound("root unpackedBytes", pack.unpackedBytes, budgets.root.unpackedBytes.baseline, budgets.root.unpackedBytes.tolerance),
       checkUpperBound("root fileCount", pack.fileCount, budgets.root.fileCount.baseline, budgets.root.fileCount.tolerance),
     ]);
+  });
+
+  it("dry pack ships every docs/index.md page and excludes evidence/maps/tests", () => {
+    const packed = packedFilePaths(process.cwd(), ".");
+    const packedSet = new Set(packed);
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const match of index.matchAll(/\]\(([^)]+)\)/g)) {
+      const href = match[1].split("#")[0];
+      if (!href.endsWith(".md") || href.startsWith("http") || href.startsWith("../")) continue;
+      const path = `docs/${href.replace(/^\.\//, "")}`;
+      assert.ok(packedSet.has(path), `shipped index links ${path} missing from pack`);
+    }
+    assert.ok(packedSet.has("docs/index.md"));
+    assert.ok(!packed.some((path) => path.includes("_evidence") || /release-.*-evidence\.md$/.test(path)));
+    assert.ok(!packed.includes("docs/api-page-template.md"));
+    assert.ok(!packed.some((path) => path.includes("__tests__") || path.endsWith(".map")));
   });
 
   it("root import startup stays under the sanity ceiling", () => {

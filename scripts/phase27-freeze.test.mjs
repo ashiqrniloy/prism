@@ -11,7 +11,7 @@ import { test } from "node:test";
 
 const manifest = JSON.parse(readFileSync("scripts/phase27-freeze-manifest.json", "utf8"));
 const plan = readFileSync("plans/027-Release-0-2-7-Enterprise-ERP-Production-Readiness.md", "utf8");
-const evidence = readFileSync("docs/release-0.2.7-evidence.md", "utf8");
+const evidence = readFileSync("docs/_evidence/release-0.2.7-evidence.md", "utf8");
 
 const TASKS = Object.keys(manifest.tasks);
 const THREATS = Array.from({ length: 10 }, (_, index) => `ERP-T${index + 1}`);
@@ -156,5 +156,5 @@ test("Task 0/1/2/3/4/5/6/7/8/9/10 freeze: plan checkbox and docs navigation are 
   for (const number of TASKS.slice(11).map((task) => task.slice(4)))
     assert.ok(plan.includes(`### ${number}. [ ]`), `Task ${number} remains open`);
   const index = readFileSync("docs/index.md", "utf8");
-  assert.ok(index.includes("release-0.2.7-evidence.md"));
+  assert.ok(!index.includes("release-0.2.7-evidence.md"), "0.2.7 evidence is repository-only, not shipped nav");
 });

@@ -76,7 +76,7 @@ export function estimateTextTokens(text: string): number {
 }
 
 export function estimateTextBytes(text: string): number {
-  return new TextEncoder().encode(text).byteLength;
+  return Buffer.byteLength(text, "utf8");
 }
 
 export function estimateMessageTokens(message: Message): number {
@@ -140,12 +140,13 @@ export function applyContextBudget(options: {
   const tools = options.tools ? [...options.tools] : undefined;
   const omitted: ContextBudgetOmission[] = [];
   const demotedBodies = new Set<string>();
+  const historyCursor = { index: 0 };
 
   // Measure once, then subtract each dropped item's own estimate (dropNext computes it
   // with the same estimators) — avoids an O(n²) re-scan of the full keep-set per drop.
   const kept = measureAll(groups, context, skills, tools, skillContext, demotedBodies);
   while (overBudget(kept, budget)) {
-    const drop = dropNext(groups, context, skills, layout, skillContext, demotedBodies);
+    const drop = dropNext(groups, context, skills, layout, skillContext, demotedBodies, historyCursor);
     if (!drop) {
       throw new ContextBudgetError();
     }
@@ -154,6 +155,7 @@ export function applyContextBudget(options: {
     if (omitted.length < HARD_MAX_CONTEXT_BUDGET_OMISSIONS) omitted.push(drop);
   }
 
+  if (historyCursor.index > 0) groups.history = groups.history.slice(historyCursor.index);
   const reportOmissions = omitted.slice(0, DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS);
   return {
     groups,
@@ -186,8 +188,9 @@ function dropNext(
   layout: InputAssemblyLayout,
   skillContext: SkillRenderContext,
   demotedBodies: Set<string>,
+  historyCursor: { index: number },
 ): ContextBudgetOmission | undefined {
-  // ponytail: drop droppable groups in layout order; within history, drop oldest first (shift).
+  // ponytail: drop droppable groups in layout order; within history, advance a cursor and slice once.
   // cache_aware keeps attachments longer so stable prefix stays intact while budget still allows it.
   const order =
     layout === "cache_aware"
@@ -199,8 +202,8 @@ function dropNext(
       const message = groups.toolResults.pop()!;
       return omission("tool_results", message.id ?? toolResultId(message), message);
     }
-    if (kind === "history" && groups.history.length > 0) {
-      const message = groups.history.shift()!;
+    if (kind === "history" && historyCursor.index < groups.history.length) {
+      const message = groups.history[historyCursor.index++]!;
       return omission("history", message.id, message);
     }
     if (kind === "summaries" && groups.summaries.length > 0) {

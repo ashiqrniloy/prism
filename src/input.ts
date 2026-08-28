@@ -140,16 +140,23 @@ export function createDefaultPromptBuilder(): DefaultPromptBuilder {
       // Tool-capable models receive schemas via request.tools; the text list only serves
       // text-only (or unknown-capability) models — duplicating it doubles tool tokens per turn.
       const tools = request.model?.capabilities?.tools === true ? undefined : request.tools;
-      return [
-        ...contextMessages(request.context),
-        ...buildSkillMessages(request.skills, {
-          disclosure: request.skillsDisclosure,
-          loaded: request.loadedSkills,
-          demotedBodies: request.demotedSkillBodies?.length ? new Set(request.demotedSkillBodies) : undefined,
-        }),
-        ...toolMessages(tools),
-        ...request.messages,
-      ];
+      const context = contextMessages(request.context);
+      const skills = buildSkillMessages(request.skills, {
+        disclosure: request.skillsDisclosure,
+        loaded: request.loadedSkills,
+        demotedBodies: request.demotedSkillBodies?.length ? new Set(request.demotedSkillBodies) : undefined,
+      });
+      const declarations = toolMessages(tools);
+      if ((request.inputLayout ?? "cache_aware") === "legacy") {
+        return [...context, ...skills, ...declarations, ...request.messages];
+      }
+
+      // Default input assembly keeps stable instruction messages at the front. Keep that
+      // boundary ahead of dynamic context/skills; legacy retains the old whole-prompt order.
+      const firstNonSystem = request.messages.findIndex((message) => message.role !== "system");
+      const stable = firstNonSystem < 0 ? request.messages : request.messages.slice(0, firstNonSystem);
+      const dynamic = firstNonSystem < 0 ? [] : request.messages.slice(firstNonSystem);
+      return [...stable, ...context, ...skills, ...declarations, ...dynamic];
     },
   };
 }
@@ -265,6 +272,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
   const promptRequest = options.middleware
     ? await options.middleware.run("prompt_build", {
         messages,
+        inputLayout: layout,
         context,
         skills,
         skillsDisclosure: options.skillsDisclosure,
@@ -276,6 +284,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
       })
     : {
         messages,
+        inputLayout: layout,
         context,
         skills,
         skillsDisclosure: options.skillsDisclosure,
@@ -285,7 +294,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
         metadata: options.metadata,
         signal: options.signal,
       };
-  const providerMessages = await promptBuilder.build({ ...promptRequest, tools, model: options.model });
+  const providerMessages = await promptBuilder.build({ ...promptRequest, inputLayout: layout, tools, model: options.model });
   assertMessagesSupportModelCapabilities(options.model, providerMessages);
 
   const metadata = budgetReport ? { ...options.metadata, [CONTEXT_BUDGET_REPORT_METADATA_KEY]: budgetReport } : options.metadata;

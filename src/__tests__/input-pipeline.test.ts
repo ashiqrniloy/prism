@@ -6,6 +6,7 @@ import {
   createDefaultInputBuilder,
   createDefaultPromptBuilder,
   createExtensionKernel,
+  createLoadedSkillSet,
   createMiddlewareRegistry,
   createSkillRegistry,
   type Message,
@@ -488,7 +489,7 @@ describe("context resolution and prompt composition", () => {
     }
   });
 
-  it("cache-aware provider input has byte-stable prefix for different current user turns", async () => {
+  it("cache-aware provider input keeps stable instructions before dynamic context and current turns", async () => {
     const tool: ToolDefinition = { name: "echo", description: "Echo input", execute: () => ({ toolCallId: "c", name: "echo" }) };
     const common = {
       model: { provider: "mock", model: "demo" },
@@ -508,12 +509,81 @@ describe("context resolution and prompt composition", () => {
         messages.findIndex((message) => text(message) === current),
       );
 
+    assert.equal(text(first.messages[0]!), "System instruction:\nRules");
+    assert.equal(text(first.messages[1]!), "Project:\nContext");
     assert.deepEqual(
       JSON.parse(JSON.stringify(prefix(first.messages, "Ask A"))),
       JSON.parse(JSON.stringify(prefix(second.messages, "Ask B"))),
     );
     assert.equal(first.messages.at(-1) ? text(first.messages.at(-1)!) : undefined, "Ask A");
     assert.equal(second.messages.at(-1) ? text(second.messages.at(-1)!) : undefined, "Ask B");
+
+    const changedContext = await assembleProviderInput({
+      ...common,
+      contextProviders: [{ name: "project", resolve: () => [{ title: "Project", content: "Changed" }] }],
+      input: "Ask A",
+    });
+    assert.deepEqual(
+      JSON.parse(JSON.stringify(prefix(first.messages, "Project:\nContext"))),
+      JSON.parse(JSON.stringify(prefix(changedContext.messages, "Project:\nChanged"))),
+    );
+    assert.deepEqual(changedContext.tools, first.tools);
+  });
+
+  it("cache-aware prompt order keeps loaded skill changes after the stable prefix", async () => {
+    const skill = { name: "brief", description: "Be brief", instructions: "Full skill body" };
+    const common = {
+      model: { provider: "mock", model: "demo", capabilities: { tools: true } },
+      inputLayout: "cache_aware" as const,
+      systemInstructions: "Stable rules",
+      contextProviders: [{ name: "project", resolve: () => [{ title: "Project", content: "Dynamic context" }] }],
+      skills: [skill],
+      skillsDisclosure: "progressive" as const,
+      input: "Ask",
+    };
+    const catalog = await assembleProviderInput(common);
+    const loaded = createLoadedSkillSet();
+    loaded.add("brief");
+    const full = await assembleProviderInput({ ...common, loadedSkills: loaded });
+    const skillIndex = (messages: readonly Message[]) => messages.findIndex((message) => text(message)?.startsWith("Skill brief"));
+
+    assert.deepEqual(
+      JSON.parse(JSON.stringify(catalog.messages.slice(0, skillIndex(catalog.messages)))),
+      JSON.parse(JSON.stringify(full.messages.slice(0, skillIndex(full.messages)))),
+    );
+    assert.match(text(catalog.messages[skillIndex(catalog.messages)]!)!, /Skill brief: Be brief/);
+    assert.match(text(full.messages[skillIndex(full.messages)]!)!, /Skill brief:\nFull skill body/);
+    assert.equal(text(catalog.messages.at(-1)!)!, "Ask");
+    assert.equal(text(full.messages.at(-1)!)!, "Ask");
+  });
+
+  it("legacy prompt layout preserves prior whole-prompt ordering", async () => {
+    const tool: ToolDefinition = { name: "echo", execute: () => ({ toolCallId: "c", name: "echo" }) };
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo", capabilities: { tools: true } },
+      inputLayout: "legacy",
+      input: "Ask",
+      systemInstructions: "Rules",
+      contextProviders: [{ name: "project", resolve: () => [{ title: "Project", content: "Context" }] }],
+      skills: [{ name: "brief", instructions: "Be brief" }],
+      skillsDisclosure: "eager",
+      summaries: ["Summary"],
+      history: [{ role: "assistant", content: [{ type: "text", text: "old" }] }],
+      attachments: [{ name: "notes.md", text: "notes" }],
+      toolResults: [{ toolCallId: "c", name: "echo", value: "ok" }],
+      tools: [tool],
+    });
+
+    assert.deepEqual(
+      request.messages.map((message) => message.role),
+      ["system", "system", "system", "system", "assistant", "user", "user", "tool"],
+    );
+    assert.equal(text(request.messages[0]!), "Project:\nContext");
+    assert.equal(text(request.messages[2]!), "System instruction:\nRules");
+    assert.equal(text(request.messages[3]!), "Summary:\nSummary");
+    assert.equal(text(request.messages[5]!), "Ask");
+    assert.equal(text(request.messages[6]!), "Attachment notes.md:\nnotes");
+    assert.deepEqual(request.tools, [tool]);
   });
 
   it("assembles provider input without calling provider or executing tools", async () => {

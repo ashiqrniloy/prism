@@ -59,6 +59,40 @@ describe("context budget", () => {
     );
   });
 
+  it("evicts 10k history rows linearly while preserving newest order", () => {
+    const count = 10_000;
+    const history = Array.from({ length: count }, (_, index) => user(`history-${index}`, `h-${index}`));
+    const system = "sys";
+    const current = "current";
+    const result = applyContextBudget({
+      groups: {
+        instructions: [{ id: "sys", role: "system", content: [{ type: "text", text: system }] }],
+        summaries: [],
+        history,
+        input: [user(current)],
+        attachments: [],
+        toolResults: [],
+      },
+      budget: {
+        maxInputTokens:
+          estimateTextTokens(system) +
+          estimateTextTokens(current) +
+          estimateTextTokens("history-9998") +
+          estimateTextTokens("history-9999"),
+        reportOmissions: true,
+      },
+    });
+    assert.deepEqual(
+      result.groups.history.map((message) => message.id),
+      ["h-9998", "h-9999"],
+    );
+    assert.deepEqual(
+      result.report.omitted.slice(0, 3).map((row) => row.id),
+      ["h-0", "h-1", "h-2"],
+    );
+    assert.equal(result.report.truncated, true);
+  });
+
   it("evicts history/tool results before context and skills", async () => {
     const history: Message[] = [assistant("old-a", "h1"), user("old-b", "h2")];
     const skills: Skill[] = [{ name: "skill-a", instructions: "skill body" }];

@@ -87,7 +87,7 @@
     "haEvidence": "docs/_evidence/phase27-ha-evidence.json",
     "drEvidence": "docs/_evidence/phase27-dr-evidence.json",
     "erpJourneyEvidence": "docs/_evidence/phase27-erp-journey.json",
-    "releaseDoc": "docs/release-0.2.7-evidence.md"
+    "releaseDoc": "docs/_evidence/release-0.2.7-evidence.md"
   },
   "secretScan": {
     "files": 4456,

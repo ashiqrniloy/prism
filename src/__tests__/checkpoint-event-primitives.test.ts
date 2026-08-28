@@ -158,9 +158,64 @@ describe("EventMultiplexer", () => {
     mux.publish(1);
     assert.equal((await parked).value, 1);
     mux.close();
-    // Slot freed: a fresh subscriber works (and terminates because the mux is closed).
+    assert.equal((await first.next()).done, true);
     const afterClose = mux.subscribe()[Symbol.asyncIterator]();
     assert.equal((await afterClose.next()).done, true);
+  });
+
+  it("drains queued events after close in comparator order", async () => {
+    const mux = createEventMultiplexer<number>({ compare: (a, b) => a - b });
+    mux.publish(3);
+    mux.publish(1);
+    mux.publish(2);
+    mux.close();
+    const seen: number[] = [];
+    for await (const event of mux.subscribe()) seen.push(event);
+    assert.deepEqual(seen, [1, 2, 3]);
+    mux.publish(4);
+    assert.equal(mux.closed, true);
+  });
+
+  it("completes a parked reader immediately when close has no backlog", async () => {
+    const mux = createEventMultiplexer<number>();
+    const iterator = mux.subscribe()[Symbol.asyncIterator]();
+    const parked = iterator.next();
+    mux.close();
+    assert.equal((await parked).done, true);
+  });
+
+  it("overflow close keeps one notice, stops sources, and ignores later close", async () => {
+    let returned = 0;
+    const source: AsyncIterable<number> = {
+      [Symbol.asyncIterator]() {
+        return {
+          async next() {
+            return { value: 0, done: false };
+          },
+          async return() {
+            returned += 1;
+            return { value: undefined, done: true };
+          },
+        };
+      },
+    };
+    const mux = createEventMultiplexer<number>({
+      maxQueuedEvents: 2,
+      overflow: "close",
+      overflowEvent: () => -1,
+    });
+    mux.observe(source, (value) => value);
+    mux.publish(1);
+    mux.publish(2);
+    mux.publish(3);
+    assert.equal(mux.closed, true);
+    assert.equal(mux.droppedEvents, 1);
+    const seen: number[] = [];
+    for await (const event of mux.subscribe()) seen.push(event);
+    assert.deepEqual(seen, [-1]);
+    mux.close();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(returned, 1);
   });
 
   it("frees the single-consumer slot when the first subscriber returns", async () => {

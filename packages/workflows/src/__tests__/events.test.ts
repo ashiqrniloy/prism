@@ -38,4 +38,14 @@ describe("createWorkflowEventBus", () => {
     bus.close();
     assert.ok(events.includes("workflow_event_overflow") || events.includes("node_finished"));
   });
+
+  it("drains queued events after close", async () => {
+    const bus = createWorkflowEventBus({ workflowId: "wf", runId: "r1" });
+    bus.emit({ type: "workflow_started", workflowId: "wf", runId: "r1", timestamp: new Date().toISOString() });
+    bus.emit({ type: "workflow_finished", workflowId: "wf", runId: "r1", status: "succeeded", timestamp: new Date().toISOString() });
+    bus.close();
+    const types: string[] = [];
+    for await (const event of bus.subscribe()) types.push(event.type);
+    assert.deepEqual(types, ["workflow_started", "workflow_finished"]);
+  });
 });

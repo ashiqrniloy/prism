@@ -149,10 +149,6 @@ export function createEventMultiplexer<T>(options: EventMultiplexerOptions<T> = 
     isClosed = true;
     options.signal?.removeEventListener("abort", abort);
     finishSources();
-    queue.length = 0;
-    // Free the single-consumer slot: a consumer suspended at a yield may never pull
-    // again, and after close a fresh subscriber terminates immediately anyway.
-    activeConsumer = false;
     if (waiter) {
       const resolve = waiter;
       waiter = undefined;

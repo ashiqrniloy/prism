@@ -45,7 +45,7 @@ Known `source` order is deterministic: `user`, `package`, `app`, then `run`. Unk
 
 ## Outputs / response / events
 
-`composeSystemPrompt()` returns the composed prompt string or `undefined` when no prompt text remains. The agent/session runtime passes that string to `assembleProviderInput()` as `systemInstructions`; it does not emit a separate event or store prompt layers.
+`composeSystemPrompt()` returns the composed prompt string or `undefined` when no prompt text remains. The agent/session runtime passes that string to `assembleProviderInput()` as `systemInstructions`; it does not emit a separate event or store prompt layers. With the default `cache_aware` layout, this composed system message is emitted before dynamic context, skills, history, tool results, and current input; set `inputLayout: "legacy"` to retain the prior whole-prompt order.
 
 ## Request/response example
 

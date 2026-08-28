@@ -38,5 +38,9 @@ Active numbered execution plans for Prism roadmap phases.
 | [032-Prism-Wiki-Karpathy-LLM-Wiki-Package.md](032-Prism-Wiki-Karpathy-LLM-Wiki-Package.md) | Phase 32 — Karpathy LLM Wiki System (@arnilo/prism-wiki) | complete (2026-08-24) |
 | [033-Prism-Graft-L0-L3-Deep-Integration.md](033-Prism-Graft-L0-L3-Deep-Integration.md) | Plan 33 — Prism-Graft L0–L3 deep integration (@arnilo/prism-graft) | in progress (2026-08-25) |
 | [034-Release-0-3-1-Production-RAG-Engine.md](034-Release-0-3-1-Production-RAG-Engine.md) | 0.3.x — Release 0.3.1 (production RAG engine + multi-scope retrieve) | complete (2026-08-26) |
+| [035-AI-Runtime-Concurrency-And-Performance.md](035-AI-Runtime-Concurrency-And-Performance.md) | Runtime audit — multi-agent concurrency, persistence, events, and artifact performance | planned |
+| [036-Tools-Skills-Loops-And-Cache-Prefix.md](036-Tools-Skills-Loops-And-Cache-Prefix.md) | Runtime audit — tools, skills, loops, and stable cache prefixes | planned |
+| [037-First-Party-Provider-Parity-And-Caching.md](037-First-Party-Provider-Parity-And-Caching.md) | Provider audit — all 17 first-party provider packages | planned |
+| [038-CodeQL-Security-Remediation.md](038-CodeQL-Security-Remediation.md) | Security audit — 59 open GitHub CodeQL alerts and extended coverage | in progress (Task 1 complete) |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

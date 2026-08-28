@@ -78,6 +78,7 @@ describe("createSupervisor", () => {
       hooks: { before: () => ({ allowed: false, reason: "review denied" }) },
     });
     await assert.rejects(denied.delegate({ childId: "child", input: "x" }), /review denied/);
+    assert.equal(denied.activeChildren, 0);
 
     const narrowed = createSupervisor({
       ownership,
@@ -191,6 +192,7 @@ describe("createSupervisor", () => {
       },
     });
     await assert.rejects(timeout.delegate({ childId: "child", input: "x" }), /timeout/);
+    assert.equal(timeout.activeChildren, 0);
 
     const tokens = createSupervisor({ ownership, limits: { maxTokens: 1 }, children: { child: { createAgent: () => doneAgent("x", 2) } } });
     await assert.rejects(tokens.delegate({ childId: "child", input: "x" }), /token limit/);

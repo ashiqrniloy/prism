@@ -13,6 +13,9 @@ export const TARBALL_DENY_PATTERNS = [
   /(^|\/)plans\//,
   /(^|\/)scripts\/benchmark-/,
   /(^|\/)docs\/review-coverage-/,
+  /(^|\/)docs\/_evidence\//,
+  /(^|\/)docs\/release-.*-evidence\.md$/,
+  /(^|\/)docs\/api-page-template\.md$/,
   /(^|\/)__tests__\//,
   /\.map$/,
   // Unexpected file types: binaries, native modules, and credential material

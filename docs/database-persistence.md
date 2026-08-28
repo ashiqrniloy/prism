@@ -389,7 +389,7 @@ For document or wide-column stores, map the relational tables above to the store
 - **Branches:** In document stores, a branch can be a lightweight document keyed by `leaf_entry_id` that points to the session and root. Rebuild still walks `parent_id` links in entries.
 - **Retention:** Use TTL columns or scheduled map-reduce/streaming jobs. TTL on `expires_at` or entry timestamps is the simplest NoSQL implementation.
 
-The Node JSONL session store is a single-process development adapter. It has no cross-process locking, no migrations, no retention enforcement, and no tenant isolation. Do not use it as a production multi-writer store.
+The Node JSONL session store is a single-process development adapter. It has no cross-process locking, no migrations, no retention enforcement, and no tenant isolation. Do not use it as a production multi-writer store. Appends serialize per instance; a rejected append (conflict, duplicate, corrupt file) does not poison later appends on that instance. The rejected write is not committed.
 
 ## Request/response example
 

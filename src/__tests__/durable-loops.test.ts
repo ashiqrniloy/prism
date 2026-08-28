@@ -8,6 +8,7 @@ import {
   createAgent,
   createMemoryCheckpointStore,
   createMemorySessionStore,
+  generateValidateReviseLoop,
   type JsonValue,
   providerDone,
   providerTextDelta,
@@ -156,6 +157,14 @@ describe("durable custom loops", () => {
     const checkpoints = createMemoryCheckpointStore();
     let turn = 0;
     const seen: string[] = [];
+    const loop = generateValidateReviseLoop({
+      toolCalls: "bounded",
+      maxRevisions: 2,
+      validator: (value: unknown) => {
+        seen.push(String(value));
+        return { ok: true as const, value };
+      },
+    });
     const agent = createAgent({
       id: "durable-gvr",
       model: { provider: "mock", model: "demo" },
@@ -173,15 +182,7 @@ describe("durable custom loops", () => {
           yield providerDone();
         },
       },
-      loop: {
-        strategy: "generate-validate-revise",
-        toolCalls: "bounded",
-        maxRevisions: 2,
-        validator: (value: unknown) => {
-          seen.push(String(value));
-          return { ok: true as const, value };
-        },
-      },
+      loop,
       tools: [{ name: "draft", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "draft", value: "drafted" }) }],
     });
     const first = await agent
