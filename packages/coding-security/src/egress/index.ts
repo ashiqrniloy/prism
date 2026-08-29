@@ -1,8 +1,17 @@
 /** Egress module entry point: policy, proxy, DNS pinning, limits, attestation. */
 
-export type { AddressResolver } from "./dns-pin.js";
+export { createEgressPolicy, EGRESS_PRESETS } from "./policy.js";
+export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js";
+export { createAllowListEgressProxy } from "./proxy.js";
+export type {
+  CreateAllowListEgressProxyOptions,
+  EgressAttestation,
+  EgressProxy,
+  EgressProxyEndpoint,
+  EgressProxyStats,
+} from "./proxy.js";
 export { assertPinned, isMetadataAddress, isPrivateAddress, normalizeAddress, resolvePinned } from "./dns-pin.js";
-export type { EgressLimitOptions, ResolvedEgressLimits } from "./limits.js";
+export type { AddressResolver } from "./dns-pin.js";
 export {
   DEFAULT_MAX_EGRESS_CONCURRENT_CONNECTIONS,
   DEFAULT_MAX_EGRESS_REDIRECT_HOPS,
@@ -18,15 +27,6 @@ export {
   HARD_MAX_EGRESS_TRANSFER_TIME_MS,
   resolveEgressLimits,
 } from "./limits.js";
-export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js";
-export { createEgressPolicy, EGRESS_PRESETS } from "./policy.js";
-export type {
-  CreateAllowListEgressProxyOptions,
-  EgressAttestation,
-  EgressProxy,
-  EgressProxyEndpoint,
-  EgressProxyStats,
-} from "./proxy.js";
-export { createAllowListEgressProxy } from "./proxy.js";
-export type { EgressAuditRecord, EgressErrorCode } from "./types.js";
+export type { EgressLimitOptions, ResolvedEgressLimits } from "./limits.js";
 export { EgressError } from "./types.js";
+export type { EgressAuditRecord, EgressErrorCode } from "./types.js";
