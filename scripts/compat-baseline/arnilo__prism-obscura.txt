@@ -5,15 +5,15 @@ DEFAULT_OBSCURA_SERVER_ID	export declare const DEFAULT_OBSCURA_SERVER_ID = "obsc
 DEFAULT_OBSCURA_WEB_LIMITS	export declare const DEFAULT_OBSCURA_WEB_LIMITS: ObscuraWebLimits
 HARD_OBSCURA_PROCESS_LIMITS	export declare const HARD_OBSCURA_PROCESS_LIMITS: ObscuraProcessLimits
 HARD_OBSCURA_WEB_LIMITS	export declare const HARD_OBSCURA_WEB_LIMITS: ObscuraWebLimits
-ObscuraCdpSession	export type { ObscuraChromium, ObscuraCdpSession, ObscuraPlaywright } from "./cdp.js"
-ObscuraChromium	export type { ObscuraChromium, ObscuraCdpSession, ObscuraPlaywright } from "./cdp.js"
+ObscuraCdpSession	export type { ObscuraCdpSession, ObscuraChromium, ObscuraPlaywright } from "./cdp.js"
+ObscuraChromium	export type { ObscuraCdpSession, ObscuraChromium, ObscuraPlaywright } from "./cdp.js"
 ObscuraCliRunOptions	export type { ObscuraCliRunOptions, ObscuraCliRunResult } from "./cli.js"
 ObscuraCliRunResult	export type { ObscuraCliRunOptions, ObscuraCliRunResult } from "./cli.js"
 ObscuraCloseOptions	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
 ObscuraError	export declare class ObscuraError extends Error
 ObscuraExit	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
 ObscuraMcpError	export declare class ObscuraMcpError extends Error
-ObscuraPlaywright	export type { ObscuraChromium, ObscuraCdpSession, ObscuraPlaywright } from "./cdp.js"
+ObscuraPlaywright	export type { ObscuraCdpSession, ObscuraChromium, ObscuraPlaywright } from "./cdp.js"
 ObscuraProcessOptions	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
 OwnedObscuraProcess	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
 connectObscuraCdp	export declare function connectObscuraCdp(options: ConnectObscuraCdpOptions): Promise<ObscuraCdpSession>
@@ -30,9 +30,9 @@ runObscuraCli	export declare function runObscuraCli(options: ObscuraCliRunOption
 spawnObscuraProcess	export declare function spawnObscuraProcess(options: ObscuraProcessOptions): OwnedObscuraProcess
 type ObscuraMcpTools	export { createObscuraMcpTools, DEFAULT_OBSCURA_NAME_PREFIX, DEFAULT_OBSCURA_SERVER_ID, ObscuraMcpError, type ObscuraMcpTools, type ObscuraMcpToolsOptions, } from "./mcp.js"
 type ObscuraMcpToolsOptions	export { createObscuraMcpTools, DEFAULT_OBSCURA_NAME_PREFIX, DEFAULT_OBSCURA_SERVER_ID, ObscuraMcpError, type ObscuraMcpTools, type ObscuraMcpToolsOptions, } from "./mcp.js"
-type ObscuraProcessLimits	export { DEFAULT_OBSCURA_PROCESS_LIMITS, HARD_OBSCURA_PROCESS_LIMITS, type ObscuraProcessLimits, resolveObscuraProcessLimits, } from "./limits.js"
-type ObscuraSearchProfile	export { DEFAULT_OBSCURA_SEARCH_PROFILE, resolveObscuraSearchProfile, type ObscuraSearchProfile } from "./search-profile.js"
-type ObscuraWebLimits	export { DEFAULT_OBSCURA_WEB_LIMITS, HARD_OBSCURA_WEB_LIMITS, resolveObscuraWebLimits, type ObscuraWebLimits, } from "./limits.js"
+type ObscuraProcessLimits	export { DEFAULT_OBSCURA_PROCESS_LIMITS, DEFAULT_OBSCURA_WEB_LIMITS, HARD_OBSCURA_PROCESS_LIMITS, HARD_OBSCURA_WEB_LIMITS, type ObscuraProcessLimits, type ObscuraWebLimits, resolveObscuraProcessLimits, resolveObscuraWebLimits, } from "./limits.js"
+type ObscuraSearchProfile	export { DEFAULT_OBSCURA_SEARCH_PROFILE, type ObscuraSearchProfile, resolveObscuraSearchProfile } from "./search-profile.js"
+type ObscuraWebLimits	export { DEFAULT_OBSCURA_PROCESS_LIMITS, DEFAULT_OBSCURA_WEB_LIMITS, HARD_OBSCURA_PROCESS_LIMITS, HARD_OBSCURA_WEB_LIMITS, type ObscuraProcessLimits, type ObscuraWebLimits, resolveObscuraProcessLimits, resolveObscuraWebLimits, } from "./limits.js"
 type ObscuraWebTools	export { createObscuraWebTools, type ObscuraWebTools, type ObscuraWebToolsOptions } from "./web.js"
 type ObscuraWebToolsOptions	export { createObscuraWebTools, type ObscuraWebTools, type ObscuraWebToolsOptions } from "./web.js"
 validateObscuraCommand	export declare function validateObscuraCommand(options: ObscuraProcessOptions, limits: ObscuraProcessLimits): void

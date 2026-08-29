@@ -1,4 +1,5 @@
 OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH	export declare const OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH = 64
+applyPromptCacheBreakpoints	export declare function applyPromptCacheBreakpoints(request: ProviderRequest): readonly OpenAIBreakpointMessage[]
 computeS256Challenge	export declare function computeS256Challenge(verifier: string): string
 createOpenAICodexOAuthProvider	export declare function createOpenAICodexOAuthProvider(options?: OpenAICodexOAuthOptions): OAuthProvider
 createOpenAICodexProvider	export declare function createOpenAICodexProvider(options?: OpenAICodexProviderOptions): AIProvider
@@ -14,6 +15,7 @@ openAICodexModels	export declare const openAICodexModels: readonly [
 openAICodexOAuthProvider	export declare const openAICodexOAuthProvider: OAuthProvider
 openAIModels	export declare const openAIModels: readonly [ModelConfig]
 promptCacheKey	export declare function promptCacheKey(options: ProviderRequestOptions | undefined): string | undefined
+promptCacheOptions	export declare function promptCacheOptions(options: ProviderRequestOptions | undefined, model: ModelConfig):
 promptCacheRetention	export declare function promptCacheRetention(options: ProviderRequestOptions | undefined, model: ModelConfig): "24h" | undefined
 resolveOpenAIReasoning	export declare function resolveOpenAIReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
 type ListOpenAIModelsOptions	export { defineOpenAIModel, type ListOpenAIModelsOptions, listOpenAIModels, mapOpenAIModel, type OpenAIModelConfig, type OpenAIModelEntry, openAICodexModels, openAIModels, } from "./models.js"

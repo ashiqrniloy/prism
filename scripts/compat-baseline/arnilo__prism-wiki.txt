@@ -28,6 +28,7 @@ initWiki	export declare function initWiki(options?: WikiExtensionOptions): Promi
 lintWiki	export declare function lintWiki(options?: WikiExtensionOptions): Promise<LintReport>
 loadBundledSkills	export declare function loadBundledSkills(packageRoot?: string): Promise<Map<string, Skill>>
 loadManifest	export declare function loadManifest(wikiRootPath: string): Promise<WikiManifest | undefined>
+parseMarkdownHeading	export declare function parseMarkdownHeading(line: string):
 parseSkillMarkdown	export declare function parseSkillMarkdown(content: string):
 refreshWiki	export declare function refreshWiki(options?: WikiExtensionOptions): Promise<RefreshWikiResult>
 renderEntityMarkdown	export declare function renderEntityMarkdown(workspaceRoot: string, entity: WikiEntityMetadata, symbols: readonly ExtractedSymbol[], summary?: string): string

@@ -1,6 +1,6 @@
 DEEPSEEK_DEFAULT_BASE_URL	export declare const DEEPSEEK_DEFAULT_BASE_URL = "https://api.deepseek.com"
 canonicalizeDeepSeekTools	export declare function canonicalizeDeepSeekTools(tools: unknown): unknown
-canonicalizeJsonSchema	export declare function canonicalizeJsonSchema(value: unknown): unknown
+canonicalizeJsonSchema	export { canonicalizeDeepSeekTools, canonicalizeJsonSchema } from "./cache.js"
 createDeepSeekProvider	export declare function createDeepSeekProvider(options?: DeepSeekProviderOptions): AIProvider
 createDeepSeekProviderPackage	export declare function createDeepSeekProviderPackage(options?: DeepSeekProviderPackageOptions): ProviderPackage
 deepseekBody	export declare function deepseekBody(request: ProviderRequest): JsonObject

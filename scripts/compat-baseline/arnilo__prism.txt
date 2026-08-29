@@ -435,6 +435,7 @@ assertAdapterSchemaMatchesModel	export declare function assertAdapterSchemaMatch
 assertAgentEventSourceConforms	export declare function assertAgentEventSourceConforms(factory: AgentEventSourceConformanceFactory): Promise<void>
 assertAppliedPersistenceMigrations	export declare function assertAppliedPersistenceMigrations(contract: PersistenceMigrationContract, applied: readonly AppliedPersistenceMigration[]):
 assertCanRegister	export declare function assertCanRegister<K>(map: ReadonlyMap<K, unknown>, key: K, label: string, displayKey?: string, duplicate?: DuplicateRegistrationPolicy): void
+assertCanonicalToolParameters	export declare function assertCanonicalToolParameters(serialized: unknown, original: unknown): void
 assertCompactionStrategyConforms	export declare function assertCompactionStrategyConforms(strategy: CompactionStrategy, options?: CompactionConformanceOptions): Promise<
 assertDeclaredMediaTypeMatches	export declare function assertDeclaredMediaTypeMatches(declaredMediaType: string, bytes: Uint8Array, policy?: MediaMimePolicy): void
 assertDeviceAdmit	export declare function assertDeviceAdmit(policy: ResolvedDevicePolicy, request: DeviceAdmitRequest): void
@@ -449,6 +450,8 @@ assertMediaBlocksWithinBounds	export declare function assertMediaBlocksWithinBou
 assertMessagesSupportModelCapabilities	export declare function assertMessagesSupportModelCapabilities(model: ModelConfig, messages: readonly Message[]): void
 assertMigrationUpAndReopen	export declare function assertMigrationUpAndReopen(contract: PersistenceMigrationContract, appliedAfterUp: readonly AppliedPersistenceMigration[], appliedAfterReopen: readonly AppliedPersistenceMigration[]): void
 assertModelSupportsContentBlocks	export declare function assertModelSupportsContentBlocks(model: ModelConfig, blocks: readonly ContentBlock[]): void
+assertNoFetches	export declare function assertNoFetches(calls: readonly unknown[]): void
+assertNoForeignCacheFields	export declare function assertNoForeignCacheFields(body: unknown, allowed?: readonly string[]): void
 assertNoSecretLeak	export declare function assertNoSecretLeak(events: readonly ProviderEvent[], secrets: readonly string[]): void
 assertOpenAIChatMessage	export declare function assertOpenAIChatMessage(message: unknown, path: string): asserts message is Message
 assertParameterizedQuery	export declare function assertParameterizedQuery(sql: string, boundValues: readonly unknown[]): void
@@ -485,6 +488,7 @@ cacheHitRate	export declare function cacheHitRate(usage: Usage | undefined): num
 cacheSavings	export declare function cacheSavings(usage: Usage | undefined, model: ModelConfig): number | undefined
 cacheUsageReport	export declare function cacheUsageReport(usage: Usage | undefined, model?: ModelConfig): CacheUsageReport | undefined
 canonicalToolEffectJson	export declare function canonicalToolEffectJson(value: unknown): string
+canonicalizeJsonSchema	export declare function canonicalizeJsonSchema(value: unknown): unknown
 capSkillCatalog	export declare function capSkillCatalog(skills: readonly Skill[]): readonly Skill[]
 checkExecution	export declare function checkExecution(policy: ExecutionPolicy | undefined, action: ExecutionAction): Promise<ExecutionDecision>
 checkPermission	export declare function checkPermission(policy: PermissionPolicy | undefined, request: PermissionRequest): Promise<PermissionDecision>
@@ -723,6 +727,7 @@ requireRunFeedbackOwnership	export declare function requireRunFeedbackOwnership(
 resolveActiveSkills	export declare function resolveActiveSkills(options: ResolveActiveSkillsOptions): readonly Skill[]
 resolveAgentBundle	export declare function resolveAgentBundle(bundle: AgentBundle, options: ResolveAgentBundleOptions): Promise<Agent>
 resolveAgentDefinition	export declare function resolveAgentDefinition(def: AgentDefinition, context: AgentDefinitionResolutionContext): Promise<Agent> | Agent
+resolveBreakpoint	export declare function resolveBreakpoint(messages: readonly Message[], breakpoint: PromptCacheBreakpoint): number
 resolveContextBudget	export declare function resolveContextBudget(budget: ContextBudget): Required<Pick<ContextBudget, "reportOmissions">> & ContextBudget
 resolveContextProviders	export declare function resolveContextProviders(options: ResolveContextOptions): Promise<readonly ContextBlock[]>
 resolveCredentialValue	export declare function resolveCredentialValue(source: CredentialValueSource | undefined, request: CredentialRequest): Promise<string | undefined>
@@ -782,6 +787,7 @@ snapshotLoadedSkillBodies	export declare function snapshotLoadedSkillBodies(skil
 sniffMediaMimeType	export declare function sniffMediaMimeType(bytes: Uint8Array): string | undefined
 splitFrontmatter	export declare function splitFrontmatter(text: string, path: string):
 statusFromState	export declare function statusFromState(state: StoredAgentRunState, version: number): AgentRunStatusResult
+systemCacheControlField	export declare function systemCacheControlField(messages: readonly CacheControlledMessage[], toText: (message: Message) => string): string | readonly SystemCacheControlTextBlock[] | undefined
 systemPromptContributionKey	export declare function systemPromptContributionKey(contribution: SystemPromptContribution): string
 tenantScopedUniqueKey	export declare function tenantScopedUniqueKey(baseColumns: readonly string[], tenantColumn?: "tenant_id" | "account_id" | "user_id"): readonly string[]
 thinkingCompatFor	export declare function thinkingCompatFor(family: ThinkingCompatFamily, level: ThinkingLevel | string): JsonObject
@@ -792,6 +798,7 @@ toolCallContent	export declare function toolCallContent(id: string, name: string
 toolCallFromArgumentsText	export declare function toolCallFromArgumentsText(id: string, name: string, argumentsText: string): ToolCallContent
 toolEffectArgumentsHash	export declare function toolEffectArgumentsHash(argumentsValue: JsonObject): string
 toolElicitationRequest	export declare function toolElicitationRequest(tool: ToolDefinition | undefined, args: JsonObject, context: ToolExecutionContext):
+trimTrailingSlashes	export declare function trimTrailingSlashes(value: string): string
 tryParseJsonObjectArguments	export declare function tryParseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): ParseJsonObjectArgumentsResult
 type OAuthTokenSuccessPayload	export { abortableSleep, type OAuthTokenSuccessPayload, type PollDeviceCodeTokenOptions, pollDeviceCodeToken, redactOAuthError, throwIfAborted, } from "./oauth-device-code.js"
 type PinnedFetchOptions	export { boundResponse, defaultResolver, isLoopbackAddress, isLoopbackHostname, normalizeHostname, type PinnedFetchOptions, pinnedFetch, raceAbort, requestPinned, resolvePinnedAddress, } from "./pinned-fetch.js"
@@ -803,7 +810,7 @@ validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(valu
 validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.3.0"
+version	export declare const version = "0.3.1"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]
