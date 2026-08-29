@@ -1,3 +1,44 @@
+## [0.3.2] - 2026-08-29 (plan 050)
+
+### Added
+- **OKF adoption (`@arnilo/prism-wiki`)**: wiki-init/refresh/lint emit and validate
+  OKF v0.2 bundles (Karpathy prompt retained). See `docs/wiki.md`.
+- **DOCS-1 (Clay integration findings)**: three integrator contracts, in place on
+  the pages that own them — resume-aware workflow nodes (`ctx.resume` or silent
+  re-suspend) in `docs/workflows.md`; supervisor child factories return `Agent`
+  not `AgentSession` (`SupervisorError: child "<id>" factory must return an
+  Agent, got <type>`) plus durable-store nested approvals in `docs/supervisors.md`;
+  task-boundary `session.compact()` fails closed during an active run in
+  `docs/compaction-and-retry.md`. Each block links `examples/autonomous-coding-loop.ts`.
+- **FEATURE-2 (Clay integration findings)**: documented bounded iterate-until-done
+  host-loop pattern in `docs/workflows.md` — one `runWorkflow` per iteration,
+  iteration state in workflow inputs, explicit termination predicate and budgets,
+  typed `BudgetExhaustedError` (fail-closed, never a hang), `replayWorkflow` per
+  iteration run id. Seeded by `examples/autonomous-coding-loop.ts`. Plan 045 `loop`
+  node remains the future in-graph primitive; this intake ships the docs+example
+  minimum only.
+- **FEATURE-6 (Clay integration findings)**: composite `examples/autonomous-coding-loop.ts`
+  conformance reference — goal → roadmap → per-task supervisor children (per-child
+  models) → `runCodingGoalVerify`-style validation → observational-memory attach +
+  task-boundary compact + recall → human gate with simulated restart → host-side
+  bounded iterate-until-done with deterministic budget exhaustion. Mock providers
+  only; no credentials or network.
+- **FEATURE-3 (Clay integration findings)**: host-opt-in command driver hooks.
+  `CommandExecutionContext` gains an optional `drivers?: CommandDrivers`
+  (`startRun` / `startWorkflow` / `steer` — typed minimal handles returning
+  `AgentRunResult`-shaped results / workflow run id + status) so a contributed
+  command can act through host-injected capabilities instead of being
+  re-implemented host-side. The RPC session factory accepts `drivers` and
+  forwards them at the single command-execution site; absent drivers leave
+  the context shape unchanged (no key, no allocation). Drivers are
+  host-injected capabilities, never package-supplied.
+### Fixed
+- **FEATURE-1 (Clay integration findings)**: `resolveAgentDefinition` no longer
+  throws `Agent "<name>" has no model` when the declarative definition omits
+  `model` but `context.overrides.model` supplies one — the fallback is a
+  single `??` at `buildBaseConfig`, the `create()` path is unchanged, and a
+  definition with neither source still fails closed.
+
 ## [0.3.1] - 2026-08-29
 
 > Root + 28 changed packages move to 0.3.1 in the plan 039 changed-package cut; `@arnilo/prism-rag` moves 0.3.1 → 0.3.2; `@arnilo/prism-obscura` publishes new at 0.3.0. Distinct from the 2026-08-26 rag/memory/otel 0.3.1 patch below (independent Decision B tags).

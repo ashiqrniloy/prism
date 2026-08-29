@@ -93,6 +93,8 @@ createDefaultRetryPolicy(options?: DefaultRetryPolicyOptions): RetryPolicy
 
 `session.compact(options?)` emits `compaction_started`, runs the strategy on the current branch, runs `middleware.run("compaction", { context, result })` when middleware is configured, appends one standard `kind: "compaction"` entry under the current leaf, emits `compaction_finished`, and returns the appended result. Manual compaction rejects while a run is active.
 
+> **Contract — compact at the task boundary.** `session.compact()` throws `Error("Agent session already has an active run")` while `run()`/`stream()` is in flight. Intended model: one `run()` per task, then compact. Do not design mid-run compaction. Auto-compaction (when `thresholdEntries` is set) already runs **before** provider input, not during the turn. Live demo: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) (`compact` node after execute/validate/gate).
+
 Auto-compaction checks at most once per `run()`, after input/model-change entries are appended and before provider input assembly. It runs only when `AgentConfig.compaction` or `RunOptions.compaction` supplies `thresholdEntries`, and it is skipped by `RunOptions.compaction: false`.
 
 `rebuildSessionContext()` detects the latest compaction entry on a branch. Its returned `entries` still contains the raw full branch, while `messages` contains only messages after the compaction boundary plus `keepEntryIds`, and `summaries` contains the compaction summary plus later summary entries.
@@ -170,6 +172,7 @@ The default strategy does not call a provider. Hosts that need model-generated s
 - [Session stores and branching](session-stores-and-branching.md): branch entries, compaction entries, and `rebuildSessionContext()` behavior.
 - [Input and prompt assembly](input-and-prompt-assembly.md): compacted summaries become default summary messages for provider input.
 - [Agent/session runtime](agent-session-runtime.md): `session.compact()`, opt-in auto-compaction, `RunOptions.retry`, and `retry_scheduled` runtime behavior.
+- Example: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) — task-boundary compact after each iteration.
 - [Middleware hooks](middleware-hooks.md): `compaction` and `retry` middleware payload timing.
 - [Contribution registries](contribution-registries.md): compaction strategy and retry policy contributions.
 - [Configuration and manifests](configuration-and-manifests.md): `compactionStrategy` and `retryPolicy` manifest contribution kinds.

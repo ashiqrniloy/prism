@@ -47,6 +47,13 @@ Do step 1 and step 2.`;
     const searcherContent = await readFile(searcherSkillPath, "utf8");
 
     assert.ok(maintainerContent.includes("name: wiki-maintainer"));
+    assert.ok(maintainerContent.includes("Compilation over Duplication"));
+    assert.ok(maintainerContent.includes("Precise Source Anchors"));
+    assert.ok(maintainerContent.includes("Contradiction Reconciliation"));
+    assert.ok(maintainerContent.includes("Synchronized Catalogs and Ledgers"));
+    assert.ok(maintainerContent.includes("OKF"));
+    assert.ok(maintainerContent.includes("type"));
+    assert.ok(maintainerContent.includes("generated"));
     assert.ok(yamlContent.includes('display_name: "Wiki Maintainer"'));
     assert.ok(searcherContent.includes("name: wiki-searcher"));
   });

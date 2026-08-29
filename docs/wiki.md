@@ -19,7 +19,7 @@ The Karpathy LLM Wiki pattern is structured into 3 distinct tiers:
 
 1. **Raw Sources (Immutable)**: Source code files, design docs, transcripts, journals, and Markdown notes. Raw sources are strictly read-only and never mutated.
 2. **Compiled Wiki (`.wiki/`)**: Persistent, cross-linked Markdown documents containing synthesized architecture models, entity descriptions, decision records, and line-anchored claims.
-3. **Schema & Protocols (`SCHEMA.md`)**: Operational guidelines governing entity categorization, link formatting (`[[wikilink]]`), citation rules (`file:///path#Lxx-Lyy`), catalog indexing (`index.md`), and chronological change logging (`log.md`).
+3. **Schema & Protocols (`SCHEMA.md`)**: Operational guidelines governing OKF v0.2 emission, entity categorization, citation rules (`file:///path#Lxx-Lyy`), catalog indexing (`index.md`), and chronological change logging (`log.md`).
 
 ## Inputs / request
 
@@ -44,7 +44,7 @@ The Karpathy LLM Wiki pattern is structured into 3 distinct tiers:
 
 - `/wiki-init`: Scaffolds `.wiki/`, instantiates `SCHEMA.md`, `index.md`, and `log.md`, deploys skills, and adds the `qmd` collection.
 - `/wiki-refresh`: Detects modified source files via SHA-256 Merkle diffing, compiles updates to affected entity pages, reconciles contradictions in `log.md`, and runs `qmd update`.
-- `/wiki-lint`: Checks for broken `[[wikilinks]]`, dead line anchors, orphan pages, and unindexed symbols.
+- `/wiki-lint`: Checks OKF frontmatter (`type`, ISO `generated.at`), leftover `[[wikilinks]]`, unresolved relative markdown links, dead line anchors, and orphan pages.
 
 ### Standalone CLI Commands
 
@@ -81,7 +81,7 @@ npx prism-wiki search "How does authentication work?" --mode query
 ### Response Content:
 ```markdown
 ### Match 1: Authentication Architecture > Token Verification
-- **Wiki Page:** [[entities/authentication.md]]
+- **Wiki Page:** `entities/authentication.md`
 - **Category:** Core Module
 - **Freshness:** Current (Source hash matches manifest)
 
@@ -91,7 +91,7 @@ The authentication layer uses asymmetric Ed25519 JWT verification in middleware,
 **Code & Source Anchors (Clickable):**
 - Token verification: `verifyToken()` (`file:///src/auth/jwt.ts#L45-L89`)
 - Revocation check: `assertNotRevoked()` (`file:///src/auth/session-store.ts#L112-L138`)
-- Architecture Decision: [[decisions/ADR-004-ed25519-migration.md]]
+- Architecture Decision: `decisions/ADR-004-ed25519-migration.md`
 ```
 
 ## Implementation example
@@ -118,6 +118,20 @@ await kernel.load([wiki]);
 2. **`wiki-searcher`**: Context7 hierarchical breadcrumb query resolution, zero-grep instructions, and compounding insight recording.
 
 When initialized (`wiki-init` or `createWikiExtension`), these skills are automatically deployed to the host workspace's `.agents/skills/` folder so any compatible agent can leverage them immediately.
+
+## OKF v0.2 bundle format
+
+Emitted `.wiki/` trees are [OKF v0.2](https://github.com/GoogleCloudPlatform/open-knowledge-format) bundles. Karpathy compilation (synthesize, don't copy; precise `file:///` anchors; contradiction reconciliation; synchronized catalog/ledger) is unchanged.
+
+| Artifact | OKF rule |
+| --- | --- |
+| Root `index.md` | Only `okf_version: "0.2"` frontmatter; sectioned bullet listings per OKF §8 |
+| `entities/index.md`, `decisions/index.md`, `concepts/index.md` | No frontmatter (progressive disclosure) |
+| Concept pages | `type` required (Module / Concept / Decision Record / Entity / Person / Tool), plus `title`, `description`, `tags`, `sources[].resource`, `generated: { by: prism-wiki/<version>, at: <ISO 8601 UTC> }` |
+| `log.md` | `# Directory Update Log`, `## YYYY-MM-DD` newest first, `* **Verb**: …` |
+| Links | Standard relative markdown. `[[wikilinks]]` are lint errors |
+
+`.manifest.json` remains the compilation ledger (`id`, `category`, `rawSources`, `lastCompiledAt`). Those keys are not copied into page frontmatter. Trust families (`verified`, `status`) are omitted in v1 (unverified). `wiki-refresh` upgrades pages it touches; leftover legacy pages can be re-scaffolded — the format is regenerable from raw sources.
 
 ## Extension and configuration notes
 

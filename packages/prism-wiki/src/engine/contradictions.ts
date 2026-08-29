@@ -60,19 +60,16 @@ export class ContradictionEngine {
     return records;
   }
 
+  formatContradictionLogItems(records: readonly ContradictionRecord[]): readonly { readonly verb: string; readonly text: string }[] {
+    return records.map((rec) => ({
+      verb: "Reconciled",
+      text: `contradiction ${rec.type} on ${rec.entityId}: ${rec.previousClaim}. ${rec.resolution}`,
+    }));
+  }
+
   formatContradictionLogEntry(records: readonly ContradictionRecord[]): string {
-    if (records.length === 0) return "";
-
-    const timestamp = records[0].detectedAt.replace("T", " ").slice(0, 16);
-    let entry = `\n## [${timestamp}] contradiction | Reconciled ${records.length} conflicting claim(s)\n`;
-
-    for (const rec of records) {
-      entry += `- **Entity:** [[entities/${rec.entityId}.md]] (${rec.type})\n`;
-      entry += `  - Previous: ${rec.previousClaim}\n`;
-      entry += `  - Updated: ${rec.newClaim}\n`;
-      entry += `  - Resolution: ${rec.resolution}\n`;
-    }
-
-    return entry;
+    return this.formatContradictionLogItems(records)
+      .map((item) => `* **${item.verb}**: ${item.text}`)
+      .join("\n");
   }
 }

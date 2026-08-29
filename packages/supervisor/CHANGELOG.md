@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.2] - 2026-08-29 (plan 050)
+
+### Added
+- **FEATURE-4 (Clay integration findings)**: opt-in child event passthrough.
+  `createSupervisor({ childEvents: true })` projects a redacted, capped milestone
+  subset of child `AgentEvent`s (`agent_started`/`finished`/`suspended`/`denied`
+  and tool-execution events) onto the supervisor stream as `delegation_child_event`
+  tagged with `childId`/`delegationId`/`depth`. Default off (stream unchanged).
+  Caps `maxChildEventsPerDelegation` (256/4096) and `maxChildEventBytes`
+  (32 KiB/256 KiB); overflow drops further child events and emits one
+  `delegation_child_events_capped` marker. Live passthrough is the initial
+  `delegate()` session; `resumeNestedRun` rebuilds are not projected in v1.
+
+### Fixed
+- **BUG-2 (Clay integration findings)**: both child-factory consumption sites
+  (initial delegation and durable resume rebuild) now validate the factory
+  result shape (`config` object + `createSession` function) before any policy
+  intersection is read. A factory returning a session or any non-`Agent` value
+  fails closed at `delegate()`/resume time with
+  `SupervisorError: child "<id>" factory must return an Agent, got <type>`
+  (constructor name, e.g. `RuntimeAgentSession`) instead of a cryptic
+  `Cannot read properties of undefined (reading 'permission')` TypeError.
+
 ## [0.3.1] - 2026-08-29
 
 ### Changed

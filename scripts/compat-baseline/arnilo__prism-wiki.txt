@@ -3,6 +3,8 @@ Context7Hydrator	export declare class Context7Hydrator
 ContradictionEngine	export declare class ContradictionEngine
 DEFAULT_IGNORE_PATTERNS	export declare const DEFAULT_IGNORE_PATTERNS: string[]
 HybridProfile	export declare class HybridProfile
+OKF_TYPE_BY_CATEGORY	export declare const OKF_TYPE_BY_CATEGORY:
+OKF_VERSION	export declare const OKF_VERSION = "0.2"
 PkmProfile	export declare class PkmProfile
 QmdClient	export declare class QmdClient
 WIKI_INJECTOR_NAME	export declare const WIKI_INJECTOR_NAME = "wiki-guidance"
@@ -22,24 +24,37 @@ createWikiRefreshCommand	export declare function createWikiRefreshCommand(option
 createWikiSearchTool	export declare function createWikiSearchTool(options?: WikiExtensionOptions): ToolDefinition
 defaultQmdRunner	export declare const defaultQmdRunner: QmdCommandRunner
 deployWikiSkills	export declare function deployWikiSkills(workspaceRoot: string, options?: DeployOptions): Promise<string[]>
+fileResource	export declare function fileResource(workspaceRoot: string, filePath: string, startLine?: number, endLine?: number): string
 hashContent	export declare function hashContent(content: string | Buffer): string
 hashFile	export declare function hashFile(filePath: string): Promise<string>
 initWiki	export declare function initWiki(options?: WikiExtensionOptions): Promise<InitWikiResult>
+isIso8601Utc	export declare function isIso8601Utc(value: string): boolean
 lintWiki	export declare function lintWiki(options?: WikiExtensionOptions): Promise<LintReport>
 loadBundledSkills	export declare function loadBundledSkills(packageRoot?: string): Promise<Map<string, Skill>>
 loadManifest	export declare function loadManifest(wikiRootPath: string): Promise<WikiManifest | undefined>
+oneLine	export declare function oneLine(value: string): string
+parseConceptFrontmatter	export declare function parseConceptFrontmatter(content: string):
 parseMarkdownHeading	export declare function parseMarkdownHeading(line: string):
 parseSkillMarkdown	export declare function parseSkillMarkdown(content: string):
+prependLog	export declare function prependLog(existing: string | undefined, date: string, items: readonly
 refreshWiki	export declare function refreshWiki(options?: WikiExtensionOptions): Promise<RefreshWikiResult>
+renderConceptFrontmatter	export declare function renderConceptFrontmatter(input:
+renderDirIndex	export declare function renderDirIndex(dir: "entities" | "decisions" | "concepts", entities: readonly WikiEntityMetadata[]): string
 renderEntityMarkdown	export declare function renderEntityMarkdown(workspaceRoot: string, entity: WikiEntityMetadata, symbols: readonly ExtractedSymbol[], summary?: string): string
 renderIndexCatalog	export declare function renderIndexCatalog(entities: readonly WikiEntityMetadata[]): string
+renderRootIndex	export declare function renderRootIndex(entities: readonly WikiEntityMetadata[]): string
+renderSchema	export declare function renderSchema(profileName: string, profileRules: string): string
+resolveMarkdownHref	export declare function resolveMarkdownHref(fromRelPath: string, href: string): string | undefined
 resolvePackageSkillsDir	export declare function resolvePackageSkillsDir(): string
 resolveProfile	export declare function resolveProfile(profileType: WikiProfileType, sampleFiles: readonly string[]): CodebaseProfile | PkmProfile | HybridProfile
 runCli	export declare function runCli(argv: readonly string[]): Promise<number>
 saveManifest	export declare function saveManifest(wikiRootPath: string, manifest: WikiManifest): Promise<void>
 scaffoldWiki	export declare function scaffoldWiki(options: ScaffoldOptions): Promise<ScaffoldResult>
 scanRawFiles	export declare function scanRawFiles(workspaceRoot: string, rawRoots?: readonly string[], options?: ScanOptions): Promise<Map<string, string>>
+sourcesFromEntity	export declare function sourcesFromEntity(workspaceRoot: string, entity: WikiEntityMetadata): OkfSource[]
 updateManifestWithEntities	export declare function updateManifestWithEntities(manifest: WikiManifest, updatedEntities: readonly WikiEntityMetadata[], newFileHashes: Map<string, string>): WikiManifest
 validateAnchor	export declare function validateAnchor(anchor: WikiSourceAnchor, currentFileContent?: string):
+wikiActor	export declare function wikiActor(): string
+wikiDate	export declare function wikiDate(iso?: string): string
 wikiMaintainerSkill	export declare const wikiMaintainerSkill: Skill
 wikiSearcherSkill	export declare const wikiSearcherSkill: Skill

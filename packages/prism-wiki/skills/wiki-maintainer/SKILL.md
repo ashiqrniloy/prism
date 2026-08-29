@@ -24,8 +24,8 @@ Compile and maintain persistent, compounding Markdown wikis (`.wiki/`) from raw 
    - Log the contradiction in `.wiki/log.md` with conflicting claims and the resolution rationale.
 
 4. **Synchronized Catalogs and Ledgers**:
-   - `index.md`: Content-oriented catalog listing every page, category, and 1-line summary.
-   - `log.md`: Chronological append-only ledger of ingests, refreshes, and lint passes (`## [YYYY-MM-DD] op | Description`).
+   - `index.md`: OKF catalog (`okf_version: "0.2"` only) with sectioned bullet listings.
+   - `log.md`: Date-grouped newest-first ledger (`## YYYY-MM-DD`, bold leading verbs).
 
 ## Maintenance Procedures
 
@@ -35,13 +35,12 @@ Compile and maintain persistent, compounding Markdown wikis (`.wiki/`) from raw 
 2. For each modified source:
    - Identify affected entity pages in `.wiki/entities/`.
    - Update summaries, relationships, and source line anchors.
-   - If an entity is new, create `.wiki/entities/<name>.md` with YAML frontmatter (title, category, tags, rawSources).
-3. Update `.wiki/index.md` with new/modified entity entries.
-4. Append an entry to `.wiki/log.md`:
+   - If an entity is new, create `.wiki/entities/<name>.md` with OKF frontmatter (`type`, `title`, `description`, `tags`, `sources`, `generated`).
+3. Update `.wiki/index.md` with new/modified entity entries (markdown links, not `[[wikilinks]]`).
+4. Prepend an entry to `.wiki/log.md`:
    ```markdown
-   ## [2026-08-24] refresh | Updated auth entity anchors
-   - Reflected token verification changes in `src/auth/jwt.ts`.
-   - Re-indexed 2 symbols.
+   ## 2026-08-24
+   * **Compiled**: Updated auth entity anchors in `src/auth/jwt.ts`.
    ```
 5. Trigger on-device index update via `qmd update`.
 
@@ -49,6 +48,7 @@ Compile and maintain persistent, compounding Markdown wikis (`.wiki/`) from raw 
 
 Run periodically to verify wiki integrity:
 - **Dead Anchors**: Check if referenced file lines shifted or symbols were renamed.
-- **Broken Links**: Check for unresolved `[[wikilinks]]`.
+- **Broken Links**: Check unresolved relative markdown links; flag leftover `[[wikilinks]]` as non-OKF.
+- **OKF frontmatter**: Concept pages need `type`; `generated.at` must be ISO 8601 UTC.
 - **Orphan Pages**: Identify entity pages with no inbound links from other pages or `index.md`.
 - **Gaps**: Identify frequently referenced symbols or concepts lacking dedicated entity pages.

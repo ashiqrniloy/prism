@@ -203,6 +203,27 @@ describe("resolveAgentDefinition", () => {
     assert.throws(() => resolveAgentDefinition(def, {}), /has no model/);
   });
 
+  // FEATURE-1 (Clay integration findings, plan 050 Task 4): a definition
+  // without a model resolves from context.overrides.model (host-injected
+  // selection) instead of throwing. Explicit def.model keeps driving registry
+  // resolution; overrides may still replace model post-resolution like any
+  // other config field (see "overrides swap model" above).
+  it("missing def.model resolves from overrides.model", () => {
+    const def: AgentDefinition = { name: "override-model", instructions: "Be brief." };
+    const resolved = resolveAgentDefinition(def, {
+      overrides: { model: { provider: "mock", model: "demo" } },
+      providerSource: () => provider,
+    });
+    assert.ok(!(resolved instanceof Promise));
+    assert.equal(resolved.config.model.provider, "mock");
+    assert.equal(resolved.config.model.model, "demo");
+  });
+
+  it("missing def.model and no overrides.model still throws", () => {
+    const def: AgentDefinition = { name: "no-model-anywhere" };
+    assert.throws(() => resolveAgentDefinition(def, { overrides: { instructions: "late" } }), /Agent "no-model-anywhere" has no model/);
+  });
+
   it("unknown model id throws", () => {
     const registries = createContributionRegistries();
     const def: AgentDefinition = { name: "unknown-model", model: "mock/missing" };

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { createEmptyManifest, saveManifest } from "../manifest.js";
 import { resolveProfile } from "../profiles/hybrid.js";
 import type { WikiManifest, WikiProfileType } from "../types.js";
+import { prependLog, renderDirIndex, renderRootIndex, renderSchema, wikiDate } from "./okf.js";
 
 export interface ScaffoldOptions {
   readonly wikiRoot: string;
@@ -32,56 +33,31 @@ export async function scaffoldWiki(options: ScaffoldOptions): Promise<ScaffoldRe
 
   const createdFiles: string[] = [];
 
-  // 1. SCHEMA.md
   const schemaPath = join(wikiRoot, "SCHEMA.md");
-  const schemaContent = `# Wiki Schema & Operational Protocol
-
-Profile: \`${profileInstance.name}\`
-
-${profileInstance.generateSchemaRules()}
-
-## Formatting Conventions
-- **Entity Files**: \`.wiki/entities/<id>.md\` with YAML frontmatter (\`id\`, \`title\`, \`category\`, \`tags\`, \`rawSources\`).
-- **Decision Records**: \`.wiki/decisions/ADR-<num>-<title>.md\`.
-- **Linking**: Use \`[[entity-id]]\` for wiki page cross-references and \`symbol (file:///path#Lxx-Lyy)\` for code anchors.
-- **Index**: Keep \`.wiki/index.md\` alphabetized and categorized.
-- **Log**: Append every operation chronologically to \`.wiki/log.md\`.
-`;
-  await writeFile(schemaPath, schemaContent, "utf8");
+  await writeFile(schemaPath, renderSchema(profileInstance.name, profileInstance.generateSchemaRules()), "utf8");
   createdFiles.push(schemaPath);
 
-  // 2. index.md
   const indexPath = join(wikiRoot, "index.md");
-  const indexContent = `# Wiki Index
-
-Catalog of compiled knowledge, modules, and architectural decisions.
-
-## Modules
-
-*No modules compiled yet.*
-
-## Concepts
-
-*No concepts compiled yet.*
-
-## Decisions
-
-*No decision records yet.*
-`;
-  await writeFile(indexPath, indexContent, "utf8");
+  await writeFile(indexPath, renderRootIndex([]), "utf8");
   createdFiles.push(indexPath);
 
-  // 3. log.md
-  const logPath = join(wikiRoot, "log.md");
-  const now = new Date().toISOString().replace("T", " ").slice(0, 16);
-  const logContent = `# Wiki Operations Log
+  for (const dir of ["entities", "decisions", "concepts"] as const) {
+    const dirIndex = join(wikiRoot, dir, "index.md");
+    await writeFile(dirIndex, renderDirIndex(dir, []), "utf8");
+    createdFiles.push(dirIndex);
+  }
 
-## [${now}] init | Wiki Scaffolding
-- Initialized \`${wikiRoot}\` directory layout.
-- Instantiated \`SCHEMA.md\` under profile \`${profileInstance.name}\`.
-- Created baseline \`index.md\` and \`log.md\`.
-`;
-  await writeFile(logPath, logContent, "utf8");
+  const logPath = join(wikiRoot, "log.md");
+  await writeFile(
+    logPath,
+    prependLog(undefined, wikiDate(), [
+      {
+        verb: "Initialized",
+        text: `Wiki Scaffolding of \`${wikiRoot}\` under profile \`${profileInstance.name}\`.`,
+      },
+    ]),
+    "utf8",
+  );
   createdFiles.push(logPath);
 
   // 4. .manifest.json

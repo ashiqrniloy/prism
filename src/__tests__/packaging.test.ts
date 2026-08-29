@@ -176,9 +176,9 @@ describe("packaging guard", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
           // Decision B window: ^0.3.0 everywhere; packages republishing in the
-          // plan 039 cut track the root patch (^0.3.1).
+          // plan 039 cut track the root patch (^0.3.1), plan 050 cut (^0.3.2).
           assert.ok(
-            peers?.["@arnilo/prism"] === "^0.3.0" || peers?.["@arnilo/prism"] === "^0.3.1",
+            peers?.["@arnilo/prism"] === "^0.3.0" || peers?.["@arnilo/prism"] === "^0.3.1" || peers?.["@arnilo/prism"] === "^0.3.2",
             `${pkg.name} @arnilo/prism peer must be inside the Decision B window, got ${peers?.["@arnilo/prism"]}`,
           );
           const meta = manifest.peerDependenciesMeta as Readonly<Record<string, { readonly optional?: boolean }>> | undefined;

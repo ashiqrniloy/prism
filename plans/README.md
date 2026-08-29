@@ -54,5 +54,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [047-In-Session-Handoff-Pattern-Recipe.md](047-In-Session-Handoff-Pattern-Recipe.md) | 0.3.x — recipe: in-session handoff pattern | planned |
 | [048-Hierarchical-Crew-Recipe.md](048-Hierarchical-Crew-Recipe.md) | 0.3.x — recipe: hierarchical "crew" with manager agent | planned |
 | [049-Template-Gallery-Deep-Research.md](049-Template-Gallery-Deep-Research.md) | 0.3.x — template gallery: `prism init --template` (Deep Research first) | planned |
+| [050-Release-0-3-2-Clay-Integration-Findings-And-OKF-Wiki.md](050-Release-0-3-2-Clay-Integration-Findings-And-OKF-Wiki.md) | 0.3.x — release 0.3.2: Clay integration findings intake + OKF v0.2 wiki format + changed-package npm publish | in progress |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

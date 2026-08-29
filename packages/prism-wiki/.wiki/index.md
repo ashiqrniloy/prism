@@ -1,15 +1,22 @@
+---
+okf_version: "0.2"
+---
+
 # Wiki Index
 
 Catalog of compiled knowledge, modules, and architectural decisions.
 
 ## Modules
 
-*No modules compiled yet.*
+*None indexed yet.*
+
 
 ## Concepts
 
-*No concepts compiled yet.*
+*None indexed yet.*
+
 
 ## Decisions
 
-*No decision records yet.*
+*None indexed yet.*
+

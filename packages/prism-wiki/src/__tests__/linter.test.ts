@@ -78,11 +78,28 @@ describe("prism-wiki anti-drift linter", () => {
 
     await writeFile(join(wikiDir, "entities/linked-module.md"), `# Linked Module\nI am referenced by index.`, "utf8");
 
-    await writeFile(join(wikiDir, "index.md"), `# Wiki Index\n- [[entities/linked-module.md]]`, "utf8");
+    await writeFile(join(wikiDir, "index.md"), `# Wiki Index\n* [Linked](entities/linked-module.md) - referenced`, "utf8");
 
     const linter = new WikiLinter();
     const report = await linter.lint(wikiDir, TEST_DIR);
 
     assert.ok(report.orphans.some((o) => o.includes("orphan-module.md")));
+  });
+
+  it("linter_flags_okf_frontmatter_and_wikilinks", async () => {
+    const wikiDir = join(TEST_DIR, ".wiki-okf");
+    await scaffoldWiki({ wikiRoot: wikiDir, profile: "codebase" });
+    await writeFile(
+      join(wikiDir, "entities/bad.md"),
+      `---\ntitle: "Bad"\ngenerated: { by: prism-wiki/0.0.2, at: not-a-date }\n---\n\n# Bad\nSee [[wikilink]] and [missing](missing.md).\n`,
+      "utf8",
+    );
+    const linter = new WikiLinter();
+    const report = await linter.lint(wikiDir, TEST_DIR);
+    assert.equal(report.ok, false);
+    assert.ok(report.gaps.some((gap) => gap.includes("missing type")));
+    assert.ok(report.gaps.some((gap) => gap.includes("generated.at")));
+    assert.ok(report.brokenLinks.some((bl) => bl.target.includes("[[wikilink]]")));
+    assert.ok(report.brokenLinks.some((bl) => bl.target.includes("missing.md")));
   });
 });

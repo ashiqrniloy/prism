@@ -1,6 +1,6 @@
 # @arnilo/prism-wiki
 
-Karpathy LLM Wiki system with local `qmd` hybrid search and Context7-style line navigation for Prism.
+Karpathy LLM Wiki system that emits [OKF v0.2](https://github.com/GoogleCloudPlatform/open-knowledge-format) bundles, with local `qmd` hybrid search and Context7-style line navigation for Prism.
 
 Importing is inert: no tools, commands, skills, or timers are registered until the host loads the extension via `kernel.load([createWikiExtension(...)])`.
 
@@ -44,6 +44,6 @@ npx prism-wiki search "How is token revocation implemented?" --mode query
 
 - **Automated Initiation (`wiki-init` / `/wiki-init`)**: Scaffolds `.wiki/`, instantiates `SCHEMA.md`, `index.md`, and `log.md`, deploys portable `wiki-maintainer` and `wiki-searcher` skills into `.agents/skills/`, and adds the `.wiki` collection to `qmd`.
 - **Incremental Maintenance (`wiki-refresh` / `/wiki-refresh`)**: Fast SHA-256 Merkle diffing detects modified files and updates affected entity pages without re-scanning unchanged files.
-- **Anti-Drift Health Checks (`wiki-lint` / `/wiki-lint`)**: Detects broken `[[links]]`, dead code line anchors (`file#Lxx-Lyy`), orphan entity pages, and flags contradictions in `log.md`.
+- **Anti-Drift Health Checks (`wiki-lint` / `/wiki-lint`)**: Detects missing OKF `type`, non-ISO `generated.at`, leftover `[[wikilinks]]`, unresolved relative markdown links, dead code line anchors (`file#Lxx-Lyy`), and orphan entity pages.
 - **Context7-Inspired Search (`wiki_search`)**: Queries on-device `qmd` hybrid search and hydrates results with section breadcrumbs (`# Module > ## Architecture`) and exact clickable source line anchors (`file:///path/to/file#L45-L90`), allowing agents to inspect code directly without blind `grep`/`rg`.
 - **Compounding Knowledge (`wiki_record_insight`)**: Persists synthesized answers, ADRs, and decisions back into `.wiki/decisions/` to accumulate learnings across sessions.

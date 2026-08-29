@@ -1,6 +1,6 @@
 # Prism production RAG engine (hybrid retrieve, transactional store, traces)
 
-Status: **requested** — filed against Prism `@arnilo/prism-rag@0.3.0` / `@arnilo/prism-memory@0.3.0`. Synapta Plan 080 is **blocked** until a release implements every item below and Synapta pins that release. Architecture: [`docs/architecture/knowledge-rag.md`](../architecture/knowledge-rag.md).
+Status: **requested** — filed against Prism `@arnilo/prism-rag@0.3.0` / `@arnilo/prism-memory@0.3.0`. Synapta Plan 080 is **blocked** until a release implements every item below and Synapta pins that release. Architecture: `docs/architecture/knowledge-rag.md` (noted in plan 034 as not present in-repo).
 
 ## Summary
 

@@ -16,6 +16,10 @@ export const DEFAULT_DELEGATION_TIMEOUT_MS = 60_000;
 export const HARD_DELEGATION_TIMEOUT_MS = 30 * 60_000;
 export const DEFAULT_MAX_SUPERVISOR_QUEUED_EVENTS = 128;
 export const HARD_MAX_SUPERVISOR_QUEUED_EVENTS = 4096;
+export const DEFAULT_MAX_CHILD_EVENTS_PER_DELEGATION = 256;
+export const HARD_MAX_CHILD_EVENTS_PER_DELEGATION = 4096;
+export const DEFAULT_MAX_CHILD_EVENT_BYTES = 32 * 1024;
+export const HARD_MAX_CHILD_EVENT_BYTES = 256 * 1024;
 
 export interface SupervisorLimits {
   readonly maxDepth?: number;
@@ -26,6 +30,10 @@ export interface SupervisorLimits {
   readonly maxTokens?: number;
   readonly timeoutMs?: number;
   readonly maxQueuedEvents?: number;
+  /** Milestone child events projected per delegation when `childEvents` is on. */
+  readonly maxChildEventsPerDelegation?: number;
+  /** Serialized byte ceiling for one projected child event. */
+  readonly maxChildEventBytes?: number;
 }
 
 export interface ResolvedSupervisorLimits {
@@ -37,6 +45,8 @@ export interface ResolvedSupervisorLimits {
   readonly maxTokens: number;
   readonly timeoutMs: number;
   readonly maxQueuedEvents: number;
+  readonly maxChildEventsPerDelegation: number;
+  readonly maxChildEventBytes: number;
 }
 
 const SPECS = {
@@ -48,6 +58,8 @@ const SPECS = {
   maxTokens: [DEFAULT_MAX_DELEGATION_TOKENS, HARD_MAX_DELEGATION_TOKENS],
   timeoutMs: [DEFAULT_DELEGATION_TIMEOUT_MS, HARD_DELEGATION_TIMEOUT_MS],
   maxQueuedEvents: [DEFAULT_MAX_SUPERVISOR_QUEUED_EVENTS, HARD_MAX_SUPERVISOR_QUEUED_EVENTS],
+  maxChildEventsPerDelegation: [DEFAULT_MAX_CHILD_EVENTS_PER_DELEGATION, HARD_MAX_CHILD_EVENTS_PER_DELEGATION],
+  maxChildEventBytes: [DEFAULT_MAX_CHILD_EVENT_BYTES, HARD_MAX_CHILD_EVENT_BYTES],
 } as const;
 
 export function resolveSupervisorLimits(input: SupervisorLimits = {}): ResolvedSupervisorLimits {

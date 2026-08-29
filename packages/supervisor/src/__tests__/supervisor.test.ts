@@ -13,7 +13,7 @@ import {
   providerUsage,
   type ToolDefinition,
 } from "@arnilo/prism";
-import { createSupervisor, SupervisorDeniedError, SupervisorLimitError } from "../index.js";
+import { createSupervisor, SupervisorDeniedError, SupervisorError, SupervisorLimitError } from "../index.js";
 
 const ownership = { tenantId: "tenant", userId: "user" };
 const doneAgent = (text = "child", tokens = 2): Agent =>
@@ -243,5 +243,170 @@ describe("createSupervisor", () => {
     controller.abort(new Error("canary abort"));
     await assert.rejects(pending);
     assert.doesNotMatch(completion, /canary/);
+  });
+
+  // BUG-2 regression (Clay integration findings, plan 050 Task 3): a child factory
+  // returning a session (or any non-Agent) must fail with an actionable error at
+  // delegate() time, not a cryptic "reading 'permission'" TypeError.
+  it("rejects a child factory returning a non-Agent with an actionable error", async () => {
+    const session = doneAgent().createSession({ id: "s" });
+    const sessionFactory = createSupervisor({
+      ownership,
+      children: { writer: { createAgent: () => session as unknown as Agent } },
+    });
+    await assert.rejects(
+      sessionFactory.delegate({ childId: "writer", input: "x" }),
+      (error: unknown) =>
+        error instanceof SupervisorError && /child "writer" factory must return an Agent, got RuntimeAgentSession/.test(error.message),
+    );
+
+    const emptyFactory = createSupervisor({
+      ownership,
+      children: { writer: { createAgent: () => ({}) as unknown as Agent } },
+    });
+    await assert.rejects(
+      emptyFactory.delegate({ childId: "writer", input: "x" }),
+      /child "writer" factory must return an Agent, got Object/,
+    );
+
+    for (const [label, value] of [
+      ["undefined", undefined],
+      ["null", null],
+      ["string", "nope"],
+    ] as const) {
+      const badFactory = createSupervisor({
+        ownership,
+        children: { writer: { createAgent: () => value as unknown as Agent } },
+      });
+      await assert.rejects(
+        badFactory.delegate({ childId: "writer", input: "x" }),
+        new RegExp(`child "writer" factory must return an Agent, got ${label}`),
+      );
+    }
+  });
+
+  // FEATURE-4 (Clay integration findings, plan 050 Task 6): opt-in child event
+  // passthrough. Default off; milestone subset only; redaction + caps when on.
+  it("does not project child events onto the supervisor stream by default", async () => {
+    const supervisor = createSupervisor({
+      ownership,
+      children: { child: { createAgent: () => doneAgent() } },
+    });
+    const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
+    await supervisor.delegate({ childId: "child", input: "x" });
+    const types: string[] = [];
+    for (;;) {
+      const next = await iterator.next();
+      if (next.done) break;
+      types.push(next.value.type);
+      if (next.value.type === "delegation_finished") break;
+    }
+    assert.deepEqual(types, ["delegation_started", "delegation_finished"]);
+  });
+
+  it("projects tagged milestone child events when childEvents is on", async () => {
+    const supervisor = createSupervisor({
+      ownership,
+      childEvents: true,
+      children: { research: { createAgent: () => doneAgent() } },
+    });
+    const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
+    await supervisor.delegate({ childId: "research", input: "x" });
+    const received: Array<{ type: string; childId?: string; depth?: number; childEventType?: string }> = [];
+    for (;;) {
+      const next = await iterator.next();
+      if (next.done) break;
+      const event = next.value;
+      received.push({
+        type: event.type,
+        childId: "childId" in event ? event.childId : undefined,
+        depth: "depth" in event ? event.depth : undefined,
+        childEventType: event.type === "delegation_child_event" ? event.childEvent.type : undefined,
+      });
+      if (event.type === "delegation_finished") break;
+    }
+    assert.equal(received[0]?.type, "delegation_started");
+    const childEvents = received.filter((event) => event.type === "delegation_child_event");
+    assert.ok(childEvents.some((event) => event.childEventType === "agent_started"));
+    assert.ok(childEvents.some((event) => event.childEventType === "agent_finished"));
+    assert.equal(
+      childEvents.every((event) => event.childId === "research" && event.depth === 1),
+      true,
+    );
+    assert.equal(
+      childEvents.some((event) => event.childEventType === "message_delta" || event.childEventType === "message_started"),
+      false,
+    );
+    assert.equal(received.at(-1)?.type, "delegation_finished");
+  });
+
+  it("redacts child events before emission", async () => {
+    const tool: ToolDefinition = {
+      name: "write",
+      execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "write", value: "ok" }),
+    };
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate() {
+        yield providerToolCall({ type: "tool_call", id: "c1", name: "write", arguments: { secret: "canary" } });
+        yield providerDone();
+      },
+    };
+    const supervisor = createSupervisor({
+      ownership,
+      childEvents: true,
+      redactor: createSecretRedactor(["canary"]),
+      children: {
+        child: {
+          createAgent: () =>
+            createAgent({
+              model: { provider: "mock", model: "test" },
+              provider,
+              tools: [tool],
+            }),
+        },
+      },
+    });
+    const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
+    await supervisor.delegate({ childId: "child", input: "x" });
+    const blobs: string[] = [];
+    for (;;) {
+      const next = await iterator.next();
+      if (next.done) break;
+      blobs.push(JSON.stringify(next.value));
+      if (next.value.type === "delegation_finished") break;
+    }
+    assert.equal(
+      blobs.some((blob) => blob.includes("canary")),
+      false,
+    );
+    assert.equal(
+      blobs.some((blob) => blob.includes("delegation_child_event")),
+      true,
+    );
+  });
+
+  it("drops further child events and emits one capped marker when the per-delegation cap is hit", async () => {
+    const supervisor = createSupervisor({
+      ownership,
+      childEvents: true,
+      limits: { maxChildEventsPerDelegation: 1 },
+      children: { child: { createAgent: () => doneAgent() } },
+    });
+    const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
+    await supervisor.delegate({ childId: "child", input: "x" });
+    const types: string[] = [];
+    let maxChildEvents = 0;
+    for (;;) {
+      const next = await iterator.next();
+      if (next.done) break;
+      types.push(next.value.type);
+      if (next.value.type === "delegation_child_events_capped") maxChildEvents = next.value.maxChildEvents;
+      if (next.value.type === "delegation_finished") break;
+    }
+    assert.equal(types.filter((type) => type === "delegation_child_event").length, 1);
+    assert.equal(types.filter((type) => type === "delegation_child_events_capped").length, 1);
+    assert.equal(maxChildEvents, 1);
+    assert.equal(types.at(-1), "delegation_finished");
   });
 });

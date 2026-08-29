@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { ToolDefinition } from "@arnilo/prism";
+import { OKF_TYPE_BY_CATEGORY, prependLog, renderConceptFrontmatter, wikiActor, wikiDate } from "../engine/okf.js";
 import type { WikiExtensionOptions } from "../types.js";
 
 export const WIKI_RECORD_INSIGHT_TOOL_NAME = "wiki_record_insight";
@@ -74,11 +75,15 @@ export function createWikiRecordInsightTool(options: WikiExtensionOptions = {}):
       const filePath = join(targetDir, fileName);
       const nowIso = new Date().toISOString();
 
-      const pageContent = `---
-title: ${JSON.stringify(title)}
-category: ${category}
-createdAt: ${JSON.stringify(nowIso)}
----
+      const pageContent = `${renderConceptFrontmatter({
+        type: OKF_TYPE_BY_CATEGORY[category],
+        title,
+        description: title,
+        tags: [category],
+        sources: [],
+        generatedBy: wikiActor(),
+        generatedAt: nowIso,
+      })}
 
 # ${title}
 
@@ -86,24 +91,25 @@ ${content}
 `;
       await writeFile(filePath, pageContent, "utf8");
 
-      // Append to index.md
       const indexPath = join(absWikiRoot, "index.md");
       try {
         const existingIndex = await readFile(indexPath, "utf8");
-        const relLink = `- [[${folderName}/${fileName}|${title}]]: User-recorded insight`;
-        const updatedIndex = `${existingIndex}\n${relLink}\n`;
-        await writeFile(indexPath, updatedIndex, "utf8");
+        const relLink = `* [${title}](${folderName}/${fileName}) - User-recorded insight`;
+        await writeFile(indexPath, `${existingIndex.trimEnd()}\n${relLink}\n`, "utf8");
       } catch {
         // Index update best-effort
       }
 
-      // Append to log.md
       const logPath = join(absWikiRoot, "log.md");
-      const logTimestamp = nowIso.replace("T", " ").slice(0, 16);
-      const logEntry = `\n## [${logTimestamp}] record | Recorded ${category}: "${title}"\n- Saved to \`${folderName}/${fileName}\`.\n`;
       try {
         const existingLog = await readFile(logPath, "utf8");
-        await writeFile(logPath, existingLog + logEntry, "utf8");
+        await writeFile(
+          logPath,
+          prependLog(existingLog, wikiDate(nowIso), [
+            { verb: "Recorded", text: `Recorded ${category} "${title}" in \`${folderName}/${fileName}\`.` },
+          ]),
+          "utf8",
+        );
       } catch {
         // Log update best-effort
       }

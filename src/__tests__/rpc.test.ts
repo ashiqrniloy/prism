@@ -188,6 +188,90 @@ describe("rpc", () => {
     assert.ok(lines.some((line: any) => line.id === "2" && line.ok === false));
   });
 
+  // FEATURE-3 (Clay integration findings, plan 050 Task 5): host-opt-in driver
+  // hooks on CommandExecutionContext. Absent drivers ⇒ context shape unchanged.
+  it("rpc_command_forwards_host_drivers_when_supplied", async () => {
+    const seen: unknown[] = [];
+    const command = {
+      name: "launch",
+      async execute(_args: any, context: any) {
+        assert.ok(context.drivers);
+        const workflowRun = await context.drivers.startWorkflow({ id: "wf" }, "go", { revision: "1" });
+        await context.drivers.steer("run-1", "nudge");
+        const run = await context.drivers.startRun("hi");
+        return { name: "launch", value: { workflowRun, runText: run.text } };
+      },
+    };
+    const drivers = {
+      startRun: async () => ({ text: "ran", status: "succeeded" }),
+      startWorkflow: async (workflow: object, input: unknown, options: unknown) => {
+        seen.push([workflow, input, options]);
+        return { runId: "run_wf", status: "succeeded" };
+      },
+      steer: async (runId: string, input: string) => {
+        seen.push([runId, input]);
+      },
+    };
+    const stdout = new MemoryWritable();
+    await runRpcServer({
+      stdin: Readable.from(`${JSON.stringify({ id: "1", command: "command", params: { name: "launch", args: {} } })}\n`),
+      stdout,
+      createSession,
+      commands: [command as any],
+      drivers: drivers as any,
+    });
+    const response = stdout.lines().find((line: any) => line.id === "1") as any;
+    assert.ok(response.ok === true);
+    assert.deepEqual(response.result.value.workflowRun, { runId: "run_wf", status: "succeeded" });
+    assert.equal(response.result.value.runText, "ran");
+    assert.deepEqual(seen[0], [{ id: "wf" }, "go", { revision: "1" }]);
+    assert.deepEqual(seen[1], ["run-1", "nudge"]);
+  });
+
+  it("rpc_command_context_carries_no_drivers_key_when_host_supplies_none", async () => {
+    let contextKeys: string[] = [];
+    const command = {
+      name: "probe",
+      execute: (_args: any, context: any) => {
+        contextKeys = Object.keys(context);
+        return { name: "probe", value: "ok" };
+      },
+    };
+    const lines = await run(`${JSON.stringify({ id: "1", command: "command", params: { name: "probe", args: {} } })}\n`, [command as any]);
+    const response = lines.find((line: any) => line.id === "1") as any;
+    assert.ok(response.ok === true);
+    assert.equal("drivers" in (response as any) && false, false);
+    assert.deepEqual(contextKeys, ["sessionId"]);
+  });
+
+  it("rpc_command_driver_error_surfaces_as_rpc_error_envelope", async () => {
+    const command = {
+      name: "boom",
+      async execute(_args: any, context: any) {
+        await context.drivers.startWorkflow({}, "go");
+        return { name: "boom", value: "unreachable" };
+      },
+    };
+    const drivers = {
+      startRun: async () => ({ text: "" }),
+      startWorkflow: async () => {
+        throw new Error("driver exploded");
+      },
+      steer: async () => {},
+    };
+    const stdout = new MemoryWritable();
+    await runRpcServer({
+      stdin: Readable.from(`${JSON.stringify({ id: "1", command: "command", params: { name: "boom", args: {} } })}\n`),
+      stdout,
+      createSession,
+      commands: [command as any],
+      drivers: drivers as any,
+    });
+    const response = stdout.lines().find((line: any) => line.id === "1") as any;
+    assert.equal(response.ok, false);
+    assert.match(response.error?.message ?? "", /driver exploded/);
+  });
+
   it("rpc_abort_cancels_active_provider_stream_before_stdin_closes", async () => {
     const stdout = new MemoryWritable();
     const server = runRpcServer({

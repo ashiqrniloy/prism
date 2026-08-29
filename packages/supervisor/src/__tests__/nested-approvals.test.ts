@@ -416,6 +416,91 @@ describe("nested-agent approval propagation", () => {
     );
   });
 
+  // BUG-2 regression (Clay integration findings, plan 050 Task 3): the rebuilt
+  // child factory on the resume path gets the same actionable guard as the
+  // initial delegation — a session return must not crash at `.config.permission`.
+  it("fails closed when a rebuilt child factory returns a non-Agent (resume path)", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    let valid = true;
+    const buildChild = (): Agent =>
+      createAgent({
+        id: "child-writer",
+        model: { provider: "mock", model: "test" },
+        store: createMemorySessionStore(),
+        provider: {
+          id: "mock",
+          async *generate() {
+            yield { type: "tool_call" as const, call: toolCallContent("w1", "write", { v: 1 }) };
+            yield providerDone();
+          },
+        },
+        tools: [
+          {
+            name: "write",
+            parameters: {},
+            execute: (_args: JsonObject, context: { toolCallId: string }) => ({
+              toolCallId: context.toolCallId,
+              name: "write",
+              value: "done",
+            }),
+          },
+        ],
+      });
+    const supervisor = createSupervisor({
+      id: "lead",
+      ownership,
+      checkpoints,
+      definitionRevision: "1",
+      children: {
+        writer: {
+          // Valid on the initial delegation; non-Agent on the durable rebuild.
+          createAgent: () => (valid ? buildChild() : (buildChild().createSession({ id: "s" }) as unknown as Agent)),
+        },
+      },
+    });
+    const root = createAgent({
+      id: "root",
+      model: { provider: "mock", model: "test" },
+      store: createMemorySessionStore(),
+      provider: {
+        id: "mock",
+        async *generate() {
+          yield { type: "tool_call" as const, call: toolCallContent("root-d1", "delegate", { childId: "writer" }) };
+          yield providerDone();
+        },
+      },
+      tools: [
+        {
+          name: "delegate",
+          parameters: {},
+          execute: async (args: JsonObject, context: { toolCallId: string }) => {
+            const result = await supervisor.delegate({ childId: String(args.childId), input: "go" });
+            return { toolCallId: context.toolCallId, name: "delegate", value: result.text };
+          },
+        },
+      ],
+    });
+    const runState = { checkpoints, definitionRevision: "1", resumeNestedRun: supervisor.resumeNestedRun };
+    const first = await root.createSession({ id: "s1" }).run("go", { runState });
+    assert.equal(first.status, "suspended");
+
+    valid = false;
+    const pending = first.interruption!.pendingDecisions!;
+    let failureMessage = "";
+    try {
+      const result = await resumeAgentRun(
+        root,
+        { runId: first.runId, sessionId: first.sessionId },
+        { expectedVersion: first.runState!.version!, decisions: [{ approvalId: pending[0]!.approvalId, outcome: "allow_once" }] },
+        runState,
+      );
+      failureMessage = result.status === "failed" ? (result.error?.message ?? "") : `unexpected status ${result.status}`;
+    } catch (error) {
+      failureMessage = error instanceof Error ? error.message : String(error);
+    }
+    assert.match(failureMessage, /child "writer" factory must return an Agent, got RuntimeAgentSession/);
+  });
+
   it("cannot widen child permission through a root approval", async () => {
     const readOnly: PermissionPolicy = {
       check: (request) => (request.kind === "tool" ? { allowed: false, reason: "read-only child" } : { allowed: true }),

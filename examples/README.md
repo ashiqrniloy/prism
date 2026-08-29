@@ -54,6 +54,7 @@ node examples/workflow-distributed-coordinator.ts
 node examples/workflow-schedules-replay.ts
 node examples/durable-coding-workflow.ts
 node examples/coding-goal-verify.ts
+node examples/autonomous-coding-loop.ts
 node examples/coding-tools-capability-gaps.ts
 node examples/phase9-coding-intelligence.ts
 node examples/agent-durable-approval.ts
@@ -162,6 +163,7 @@ Each demo prints a single JSON line with its result.
 - `workflow-schedules-replay.ts` — **demo**: ownership-scoped one-time schedule → existing coordinator background run → nested shared-state workflow → immutable-lineage replay.
 - `durable-coding-workflow.ts` — **demo**: durable coding plan/todos as workspace Markdown, workflow `state.coding` checkpoint metadata, approval suspend/resume with fingerprint/hash revalidation, background cancel, and host-owned PR handoff (no network).
 - `coding-goal-verify.ts` — **demo**: `runCodingGoalVerify` thin goal→verify helper (failing check → suspend → approve → bounded handoff; no Goal table / network).
+- `autonomous-coding-loop.ts` — **demo**: composite autonomous build loop (goal → roadmap → supervisor children with per-child models → `runCodingGoalVerify`-style validation → OM attach/compact/recall → human gate with simulated restart → host-side bounded iterate-until-done and budget exhaustion). Mock providers only.
 - `coding-tools-capability-gaps.ts` — **demo**: `outputMode`, `glob`, read-before-write, `delete`/`move` smoke (network-free).
 - `phase9-coding-intelligence.ts` — **demo**: composed Phase 9 scenario (network-free): Git-aware enumeration, approved LSP rename, managed process session, idempotent forge PR (fake GitHub), and allow-list egress (github+registry presets).
 - `acp-coding-host.ts` — **demo**: `createPrismAcpAgent` hosting seams (session store, MCP select, modes, config options, prompt media policy, client fs adapter, lifecycle emitter) with an in-process SDK client round trip (network-free).

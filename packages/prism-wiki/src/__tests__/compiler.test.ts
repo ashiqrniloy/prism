@@ -32,8 +32,15 @@ describe("prism-wiki compiler & scaffolder engine", () => {
     const manifest = await readFile(join(wikiDir, ".manifest.json"), "utf8");
 
     assert.ok(schema.includes("Codebase Wiki Schema Rules"));
+    assert.ok(schema.includes("OKF v0.2"));
     assert.ok(index.includes("# Wiki Index"));
+    assert.ok(index.includes('okf_version: "0.2"'));
+    assert.ok(!index.includes("[["));
     assert.ok(log.includes("Wiki Scaffolding"));
+    assert.ok(log.includes("# Directory Update Log"));
+    assert.match(log, /^## \d{4}-\d{2}-\d{2}$/m);
+    const entitiesIndex = await readFile(join(wikiDir, "entities/index.md"), "utf8");
+    assert.ok(entitiesIndex.startsWith("# Entities"));
     assert.ok(manifest.includes('"version": "1.0.0"'));
   });
 
@@ -65,12 +72,22 @@ export function verifyToken(token: string): boolean {
     const entityFile = await readFile(join(workspaceDir, ".wiki/entities", `${entity.id}.md`), "utf8");
     assert.ok(entityFile.includes("verifyToken"));
     assert.ok(entityFile.includes("file:///"));
+    assert.match(entityFile, /^type: Module$/m);
+    assert.ok(entityFile.includes("description:"));
+    assert.ok(entityFile.includes("sources:"));
+    assert.ok(entityFile.includes("generated:"));
+    assert.ok(!entityFile.includes("\ncategory:"));
+    assert.ok(!entityFile.includes("rawSources:"));
+    assert.ok(!/^id: /m.test(entityFile.split("\n---")[0]));
 
     const indexFile = await readFile(join(workspaceDir, ".wiki/index.md"), "utf8");
     assert.ok(indexFile.includes(entity.title));
+    assert.ok(indexFile.includes(`](entities/${entity.id}.md)`));
+    assert.ok(!indexFile.includes("[["));
 
     const logFile = await readFile(join(workspaceDir, ".wiki/log.md"), "utf8");
     assert.ok(logFile.includes("entities compiled"));
+    assert.match(logFile, /\* \*\*Compiled\*\*:/);
 
     // Second compile with no changes should be a no-op delta
     const secondResult = await compiler.compile({

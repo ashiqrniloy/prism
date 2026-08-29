@@ -1,6 +1,6 @@
 # Prism multi-scope retrieve (one embed, global RRF + rerank)
 
-Status: **requested** — filed against Prism `@arnilo/prism-rag` (published `0.3.0` and the unpublished P1–P8 working tree). Sibling of [`prism-production-rag.md`](prism-production-rag.md) (P1–P8). Synapta Plan 082 cannot implement the architecture query pipeline until a release accepts `RagScope[]` on one `retrieveContext` call. Architecture: [`docs/architecture/knowledge-rag.md`](../architecture/knowledge-rag.md) § Query pipeline.
+Status: **requested** — filed against Prism `@arnilo/prism-rag` (published `0.3.0` and the unpublished P1–P8 working tree). Sibling of [`prism-production-rag.md`](prism-production-rag.md) (P1–P8). Synapta Plan 082 cannot implement the architecture query pipeline until a release accepts `RagScope[]` on one `retrieveContext` call. Architecture: `docs/architecture/knowledge-rag.md` § Query pipeline (noted in plan 034 as not present in-repo).
 
 ## Summary
 

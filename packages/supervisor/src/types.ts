@@ -1,5 +1,6 @@
 import type {
   Agent,
+  AgentEvent,
   AgentIdentity,
   AgentRunResult,
   CheckpointStore,
@@ -108,6 +109,20 @@ export type SupervisorEvent =
       readonly delegationId: string;
       readonly depth: number;
       readonly error: string;
+    }
+  | {
+      readonly type: "delegation_child_event";
+      readonly childId: string;
+      readonly delegationId: string;
+      readonly depth: number;
+      readonly childEvent: AgentEvent;
+    }
+  | {
+      readonly type: "delegation_child_events_capped";
+      readonly childId: string;
+      readonly delegationId: string;
+      readonly depth: number;
+      readonly maxChildEvents: number;
     };
 
 export interface CreateSupervisorOptions {
@@ -122,6 +137,13 @@ export interface CreateSupervisorOptions {
   readonly limits?: SupervisorLimits;
   readonly hooks?: SupervisorHooks;
   readonly redactor?: SecretRedactor;
+  /**
+   * Opt-in: project a redacted, capped milestone subset of child `AgentEvent`s
+   * (`agent_started`/`finished`/`suspended`/`denied` and tool-execution events)
+   * onto the supervisor stream as `delegation_child_event`. Default off — the
+   * stream is unchanged when unset/false. Full per-token streaming is out of scope.
+   */
+  readonly childEvents?: boolean;
   /**
    * Durable child runs: with `checkpoints` + `definitionRevision`, every child runs with
    * `interruptBeforeTool`; a child that suspends on pending decisions throws

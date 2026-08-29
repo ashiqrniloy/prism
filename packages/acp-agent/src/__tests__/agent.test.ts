@@ -91,6 +91,9 @@ test("parseConfig rejects invalid configs with clear errors", () => {
     // Memory store needs no path; unknown nested keys rejected.
     const config = parseConfig(JSON.stringify({ userId: "u", cwd: ".", sessionStore: { type: "memory", path: "/x" } }), dir);
     assert.deepEqual(config.sessionStore, { type: "memory" });
+    // ":memory:" must survive verbatim (sqlite in-memory), never resolved to a literal file.
+    const memoryConfig = parseConfig(JSON.stringify({ userId: "u", cwd: ".", sessionStore: { type: "sqlite", path: ":memory:" } }), dir);
+    assert.deepEqual(memoryConfig.sessionStore, { type: "sqlite", path: ":memory:" });
     assert.throws(
       () => parseConfig(JSON.stringify({ userId: "u", cwd: ".", sessionStore: { type: "memory", extra: 1 } }), dir),
       /unknown key/,

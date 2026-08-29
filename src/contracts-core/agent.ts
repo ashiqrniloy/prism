@@ -1,8 +1,8 @@
 /** Contracts-core agent family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */
 
-import type { InputAssemblyLayout, RunLedger, ToolDefinition, ToolEffectStore, ToolRegistry } from "../contracts-protocol.js";
-import type { AgentRunStateOptions, AgentSession } from "../contracts-run-state.js";
+import type { InputAssemblyLayout, RunLedger, RunOptions, ToolDefinition, ToolEffectStore, ToolRegistry } from "../contracts-protocol.js";
+import type { AgentRunResult, AgentRunStateOptions, AgentSession } from "../contracts-run-state.js";
 import type { ContributionRegistries } from "../contributions.js";
 import type { MiddlewareRegistry } from "../middleware.js";
 import type { SecretRedactor } from "../redaction.js";
@@ -164,6 +164,29 @@ export interface CommandExecutionContext {
   readonly runId?: string;
   readonly signal?: AbortSignal;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  /** Host-injected driver capabilities (host-opt-in; never package-supplied).
+   *  Absent in hosts that don't supply them — commands stay inert data there. */
+  readonly drivers?: CommandDrivers;
+}
+
+/** Minimal run reference returned by {@link CommandDrivers.startWorkflow}. */
+export interface CommandWorkflowRun {
+  readonly runId: string;
+  readonly status: string;
+}
+
+/** Host-injected capabilities a contributed command may act through when the
+ *  host opts in. Drivers are supplied by the host at context construction
+ *  (e.g. the RPC session factory), never by packages; core only types and
+ *  forwards them. `metadata.trust` labeling is unaffected. */
+export interface CommandDrivers {
+  /** Start a session run. */
+  startRun(input: string, options?: RunOptions): Promise<AgentRunResult> | AgentRunResult;
+  /** Start a run on a host-understood orchestration definition. Returns at
+   *  minimum the run id and status; richer host shapes pass through as-is. */
+  startWorkflow(definition: object, input: unknown, options?: Readonly<Record<string, unknown>>): Promise<CommandWorkflowRun>;
+  /** Steer an active run with additional input. */
+  steer(runId: string, input: string): Promise<void> | void;
 }
 
 export interface CommandResult {

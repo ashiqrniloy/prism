@@ -576,11 +576,17 @@ export function askUserDecisionResumeSchema(
   };
 }
 
+/**
+ * Normalize a suspend request into durable `AskUserDecisionSuspendData`.
+ * `allowCustom` follows the tool-path default: omitted/null becomes `false`
+ * (persisted data always carries a boolean); non-boolean values fail closed
+ * at accept time with an actionable message — never at resume time.
+ */
 export function toAskUserDecisionSuspendData(request: {
   readonly question: string;
   readonly options: readonly AskUserDecisionOption[];
   readonly selectionMode: AskUserDecisionSelectionMode;
-  readonly allowCustom: boolean;
+  readonly allowCustom?: boolean;
   readonly toolCallId?: string;
   readonly sessionId?: string;
   readonly runId?: string;
@@ -589,7 +595,7 @@ export function toAskUserDecisionSuspendData(request: {
     question: request.question,
     options: request.options,
     selectionMode: request.selectionMode,
-    allowCustom: request.allowCustom,
+    allowCustom: parseAllowCustom(request.allowCustom),
     ...(request.toolCallId ? { toolCallId: request.toolCallId } : {}),
     ...(request.sessionId ? { sessionId: request.sessionId } : {}),
     ...(request.runId ? { runId: request.runId } : {}),
@@ -609,12 +615,17 @@ function isAskUserDecisionSuspendData(value: unknown): value is AskUserDecisionS
 
 /**
  * Return from a workflow node to pause for a user decision (opt-in durable path).
+ * `allowCustom` defaults to `false` when omitted (same default as the
+ * `ask_user_decision` tool path); a non-boolean value throws at accept time.
  * Host resumes via `resumeWorkflow` + `createAskUserDecisionResumeValidator` / `validateAskUserDecisionResume`.
  */
 export function suspendAskUserDecision(
   request:
     | AskUserDecisionSuspendData
-    | Pick<AskUserDecisionRequest, "question" | "options" | "selectionMode" | "allowCustom" | "toolCallId" | "sessionId" | "runId">,
+    | (Pick<AskUserDecisionRequest, "question" | "options" | "selectionMode" | "sessionId" | "runId"> & {
+        readonly allowCustom?: boolean;
+        readonly toolCallId?: string;
+      }),
   options?: SuspendAskUserDecisionOptions,
 ): WorkflowSuspension<AskUserDecisionAnswer> {
   const data = toAskUserDecisionSuspendData(request);

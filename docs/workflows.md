@@ -76,6 +76,16 @@ All workflow limits and runtime `concurrency` reject non-safe integers, zero, ne
 
 A function node returns `suspend({ reason, data?, resumeSchema? })` to persist `status: "suspended"`. Its next invocation receives `ctx.resume` only after an approved resume. `resumeWorkflow(workflow, { runId }, options)` validates schema/version/ownership/`definitionHash`, claims the checkpoint before node execution, and continues the suspended node. Denial persists terminal `denied` status without invoking it. Existing failed/aborted checkpoint resume remains available without a human decision.
 
+> **Contract — resume-aware nodes.** After an approved resume, the **same** node's `execute` is re-invoked with `ctx.resume`. Returning `suspend(...)` unconditionally re-suspends silently; downstream nodes never run. Branch on `ctx.resume`:
+>
+> ```ts
+> execute: async (ctx) => ctx.resume
+>   ? handle(ctx.resume)
+>   : suspendAskUserDecision({ ... }),
+> ```
+>
+> Live demo: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) (`gate` node).
+
 Coding-agent ask-user glue (opt-in, no Goal DB): `suspendAskUserDecision(request)` wraps `suspend` with durable question/options/`selectionMode`/`allowCustom` data + resume schema; resume with `createAskUserDecisionResumeValidator()` or `validateAskUserDecisionResume`. Goal→verify: `runCodingGoalVerify` / `createCodingGoalVerifyWorkflow` compose plan Markdown → named checks → approve suspend → bounded handoff over the same primitives (`examples/coding-goal-verify.ts`). When a workflow node wraps a durable agent run, that run's shared pending-decision batch (Task 2) is the approval authority — workflow `suspend`/`resume` stay workflow-scoped and do not mint a parallel decision store.
 
 Every node receives bounded `ctx.state`, `ctx.stateVersion`, and async `ctx.updateState(patch, { mode: "merge" | "replace" })`. Updates serialize, validate, redact, and snapshot before checkpoint save. A rejected state or checkpoint write stays rejected (nothing committed) and recovers the per-run chain so a later valid write can run. `workflowNode({ workflow })` runs its child with the same ownership, agent/tool registries, execution policy, redactor, signal, checkpoints, and event bus; child state replaces parent state after success.
@@ -300,6 +310,29 @@ runRpcServer({
 });
 ```
 
+## Bounded iterate-until-done (host-loop pattern)
+
+Workflows stay acyclic. "Loop until the goal passes" is a **host** `for`/`while` over `runWorkflow`, not a graph cycle. One run per iteration; iteration state in workflow **inputs**; the host owns the termination predicate and budgets. No extra runtime. Runnable proof: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) (N iterations, mid-loop human gate with simulated restart, typed budget exhaustion).
+
+1. Keep the DAG acyclic (roadmap → execute → validate → gate → compact).
+2. Pass `{ goal, iteration }` as `runWorkflow` input — never a back-edge.
+3. Bound the host loop (`MAX_ITERATIONS`). Per-child tool/token caps stay on `supervisor.delegate` / `RunOptions`.
+4. Explicit predicate (`passed(outputs)`). Exhaustion throws a typed error — fail-closed, never hang.
+5. Human gate is ordinary `suspend` / `resumeWorkflow` (CAS `expectedVersion`). Restart = new runtime, same checkpoint store.
+6. Audit **each iteration** with `replayWorkflow({ sourceRunId, fromNodeId })`. The host loop is N run ids — `listWorkflowRuns` lists them; `replayWorkflow` does not replay the `for`.
+
+```ts
+for (let i = 0; i < MAX_ITERATIONS; i++) {
+  const run = await runWorkflow(phase, { goal, iteration: i }, { checkpoints, ownership });
+  if (run.status === "suspended") break; // resumeWorkflow later with expectedVersion
+  if (run.status !== "succeeded") throw new Error(run.status);
+  if (passed(run.outputs)) break;
+}
+if (!passed(last.outputs)) throw new BudgetExhaustedError(MAX_ITERATIONS);
+```
+
+Budgets are the host's job until [plan 045](../plans/045-Bounded-Loop-Workflow-Node.md) ships an in-graph `loop` node (`until` + hard `maxIterations`, still finite). Do not wait on that primitive for this pattern.
+
 ## Extension and configuration notes
 
 - Workflow semantics stay in this optional package; generic checkpoint persistence and bounded event fan-in live in core.
@@ -337,7 +370,7 @@ Use workflows for known, durable, replayable graphs. Use optional supervisor del
 
 ## Related APIs
 
-- Examples: `examples/workflow-research-and-review.ts`, `examples/workflow-parallel-research.ts`, `examples/workflow-tool-approval.ts`, `examples/workflow-multimodal-document.ts`, `examples/workflow-sqlite-resume.ts`, `examples/workflow-postgres-resume.ts`, `examples/workflow-event-sink.ts`, `examples/workflow-rpc-cancel.ts`, `examples/workflow-distributed-coordinator.ts` — offline runnable demos; PostgreSQL safely skips unless `PRISM_TEST_POSTGRES_URL` is set.
+- Examples: `examples/workflow-research-and-review.ts`, `examples/workflow-parallel-research.ts`, `examples/workflow-tool-approval.ts`, `examples/workflow-multimodal-document.ts`, `examples/workflow-sqlite-resume.ts`, `examples/workflow-postgres-resume.ts`, `examples/workflow-event-sink.ts`, `examples/workflow-rpc-cancel.ts`, `examples/workflow-distributed-coordinator.ts`, `examples/autonomous-coding-loop.ts` (host-loop iterate-until-done) — offline runnable demos; PostgreSQL safely skips unless `PRISM_TEST_POSTGRES_URL` is set.
 - [Workflow orchestration primitives](workflow-orchestration-primitives.md): Task 0–1 inventory and locked adapter contracts
 - [Agent/session runtime](agent-session-runtime.md): `AgentSession.run()`/`stream()`, abort, subscribe
 - [Guardrails](guardrails.md): `RunWorkflowOptions.guardrails` routes tool nodes through core dispatch before policy and side effects.

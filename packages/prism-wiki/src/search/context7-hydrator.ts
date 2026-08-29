@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
+import { parseConceptFrontmatter } from "../engine/okf.js";
 import { parseMarkdownHeading } from "../heading.js";
 import type { HydratedSearchHit, QmdSearchResult, SearchMode, WikiManifest, WikiSearchResponse, WikiSourceAnchor } from "../types.js";
 
@@ -48,7 +49,8 @@ export class Context7Hydrator {
       const entityMeta = manifest?.entities[entityId];
 
       const anchors: readonly WikiSourceAnchor[] = entityMeta?.anchors ?? [];
-      const title = entityMeta?.title ?? currentH1 ?? hit.title ?? entityId;
+      const frontmatter = parseConceptFrontmatter(content);
+      const title = entityMeta?.title ?? frontmatter?.title ?? currentH1 ?? hit.title ?? entityId;
 
       // Extract summary (first paragraph after H1)
       let summary = "";
@@ -63,7 +65,7 @@ export class Context7Hydrator {
           break;
         }
       }
-      if (!summary) summary = hit.snippet.slice(0, 200).replace(/\n/g, " ");
+      if (!summary) summary = frontmatter?.description ?? hit.snippet.slice(0, 200).replace(/\n/g, " ");
 
       // Check freshness against manifest source hashes
       let isStale = false;
@@ -106,7 +108,7 @@ export class Context7Hydrator {
       const freshnessLabel = hit.isStale ? "⚠️ Stale (Source code modified since compilation)" : "✅ Current";
 
       let section = `#### Match ${matchNum}: ${hit.title}\n`;
-      section += `- **Wiki Page:** \`[[${hit.wikiPath}]]\`\n`;
+      section += `- **Wiki Page:** [${hit.title}](/${hit.wikiPath})\n`;
       section += `- **Breadcrumbs:** \`${hit.breadcrumbs.join(" | ")}\`\n`;
       section += `- **Freshness:** ${freshnessLabel}\n\n`;
       section += `**Synthesized Summary:**\n${hit.summary}\n\n`;

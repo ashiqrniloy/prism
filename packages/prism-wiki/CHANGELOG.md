@@ -2,6 +2,16 @@
 
 All notable changes to `@arnilo/prism-wiki` will be documented in this file.
 
+## [0.0.3] - 2026-08-29
+
+### Changed
+- Emitted `.wiki/` trees are OKF v0.2 bundles: root `index.md` carries only
+  `okf_version: "0.2"`, per-directory indexes, concept frontmatter
+  (`type`/`title`/`description`/`tags`/`sources`/`generated`), date-grouped
+  newest-first `log.md`, and plain markdown links. Karpathy compilation body
+  and skills are retained. `wiki-lint` flags missing `type`, non-ISO
+  `generated.at`, and leftover `[[wikilinks]]`.
+
 ## [0.0.1] - 2026-08-24
 
 ### Added

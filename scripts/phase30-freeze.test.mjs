@@ -255,7 +255,7 @@ test("phase30 freeze: package budget 55→57; graph gains desktop then Antigravi
   } else {
     // Decision B allows the root to patch independently after the 0.3.0 cut
     // (plan 039 moved the root to 0.3.1 with every changed package).
-    assert.ok(["0.3.0", "0.3.1"].includes(packageTruth.root.version), `root version ${packageTruth.root.version}`);
+    assert.ok(["0.3.0", "0.3.1", "0.3.2"].includes(packageTruth.root.version), `root version ${packageTruth.root.version}`);
     assert.equal(packageTruth.peerPolicy.decision, "B");
     // Peer spec follows the root version (plan 039: ^0.3.0 window peers rewritten to ^0.3.1).
     assert.equal(packageTruth.peerPolicy.spec, `^${packageTruth.root.version}`);

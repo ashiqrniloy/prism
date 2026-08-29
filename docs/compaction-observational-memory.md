@@ -166,6 +166,52 @@ The runtime requires host-supplied `session`, an `appendEntry` callback bound to
 
 `createObservationalMemoryExtension()` registers only inert contributions. It does not start workers, compact sessions, read settings, resolve credentials, call providers, or execute tools/commands during setup.
 
+## Cross-session / delegation-tree recall (opt-in pattern)
+
+Default is per-session: `attach()` + `appendEntry` bind one store/branch, and `recallObservationalMemory(entries, id)` / `createRecallMemoryTool({ getEntries })` see only the entries the host passes for that session. Supervisor children therefore produce observations the parent cannot recall. That is acceptable for v1 — the parent transcript already contains `delegate()` results, so parent OM covers milestones. There is no package primitive for a shared workspace scope (a namespaced multi-tenant store key is out of scope).
+
+Hosts that need parent recall of child *source* work compose it themselves: wrap the shared `SessionStore.append` so eligible child messages (`isEligibleObservationSourceEntry`) are copied onto a workspace (or parent) session with a **new entry id** and that session's `sessionId`/`parentId`. Parent OM then observes those copies and mints **new** observation ids. Child OM, if attached, stays on the child session with its own ids.
+
+```ts
+import { createId, type SessionStore } from "@arnilo/prism";
+import { isEligibleObservationSourceEntry } from "@arnilo/prism-compaction-observational-memory";
+
+function funnelChildMessagesToWorkspace(store: SessionStore, workspaceSessionId: string): SessionStore {
+  return {
+    async append(entry, options) {
+      await store.append(entry, options);
+      if (entry.sessionId === workspaceSessionId) return;
+      if (!isEligibleObservationSourceEntry(entry)) return;
+      const leaf = (await store.list(workspaceSessionId)).at(-1);
+      await store.append({
+        ...entry,
+        id: createId("entry"),
+        sessionId: workspaceSessionId,
+        parentId: leaf?.id,
+      });
+    },
+    list: (sessionId) => store.list(sessionId),
+    get: (id) => store.get?.(id) ?? Promise.resolve(undefined),
+    searchSessions: (query) => store.searchSessions?.(query) ?? Promise.reject(new Error("searchSessions unsupported")),
+    readBranchPath: store.readBranchPath?.bind(store),
+  };
+}
+```
+
+Wire the wrapped store into both the parent session and each supervisor child factory (`createAgent({ store })`). Parent `attach({ appendEntry: (entry, options) => store.append(entry, options) })` and `createRecallMemoryTool({ getEntries: () => parentSession.entries() })` then see funneled child messages plus parent-minted observations. Recreate the parent session with the store `leafId` after a restart so the workspace branch is the one that received the copies. [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) shows parent OM attach/compact/recall in the supervisor loop; it records child outcomes on the parent session (same recall, no extra store wrap).
+
+Rules that keep exact-id recall unambiguous:
+
+- Recall always takes **one** branch (`session.entries()` / `getEntries(sessionId)`). Never concatenate parent + child lists into one `recallObservationalMemory()` call.
+- Copies mint a new `entry.id`. `createMemorySessionStore` rejects duplicate ids globally; JSONL/DB adapters do too.
+- Do **not** rewrite the child's OM `appendEntry` onto the workspace session. After each memory append the runtime checks the entry is visible at the **child** leaf and fails closed on a session/store mismatch. Funnel messages; let parent OM observe them.
+- Do **not** copy `om.*` custom entries across. Their `sourceEntryIds` point at the origin session and would dangle on the workspace branch.
+- Serialize funnel copies if concurrent children share the workspace tip (the sketch's `list().at(-1)` is not a lock).
+
+Cost: the workspace branch grows with every funneled child message; parent `compactAfterTokens` / observation-pool caps still apply but fire sooner. Keep the per-session default unless parent recall of child sources is required.
+
+Ownership: funnel only within the `OwnershipScope` already on the parent agent/store. Child factories receive that ownership from the supervisor; do not share a store across tenants or identities. Observations never leave the store the host scoped.
+
 ## Security and performance notes
 
 - Recall is exact-id only; there is no semantic search, vector store, or transcript browser.
@@ -187,6 +233,7 @@ The runtime requires host-supplied `session`, an `appendEntry` callback bound to
 - [Compaction and retry policies](compaction-and-retry.md): replaceable compaction strategy boundary.
 - [LLM compaction package](compaction-llm.md): existing optional compaction-package pattern.
 - [Session stores and branching](session-stores-and-branching.md): branch entries that observational memory reads and appends to.
+- [Supervisor delegation](supervisors.md): child sessions whose messages this page's opt-in funnel can copy onto a workspace branch.
 - [Extensions](extensions.md): inert registration pattern for optional package contributions.
 - [Tools](tools.md): host activation and dispatch for optional recall tool contributions.
 - [CLI/RPC](cli-rpc.md): command contributions through explicitly wired RPC hosts.

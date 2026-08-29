@@ -54,7 +54,7 @@ describe("Plan 027 Task 10 release closeout", () => {
     assert.equal(truth.counts.workspace, 54 + added, "current workspace package count");
     // Decision B: the root may patch independently after the 0.3.0 cut
     // (plan 039 changed-package cut moved the root to 0.3.1).
-    assert.ok(["0.3.0", "0.3.1"].includes(truth.root.version), `root manifest ${truth.root.version}`);
+    assert.ok(["0.3.0", "0.3.1", "0.3.2"].includes(truth.root.version), `root manifest ${truth.root.version}`);
     assert.equal(truth.peerPolicy.spec, `^${truth.root.version}`, "peer policy spec tracks the root");
     const lock = readJson("package-lock.json");
     assert.equal(lock.version, truth.root.version, "package-lock.json root version matches the manifest");

@@ -123,7 +123,8 @@ export const wikiMaintainerSkill: Skill = {
     "1. Compilation over duplication: Synthesize architecture, workflows, and decisions; never copy full code files.\n" +
     "2. Precise anchors: Every factual claim about code must cite exact line links: `symbol (file:///path#L10-L40)`.\n" +
     "3. Contradiction reconciliation: Update existing entity pages on conflicting data; log resolutions in `.wiki/log.md`.\n" +
-    "4. Keep `.wiki/index.md` (content catalog) and `.wiki/log.md` (audit ledger) synchronized.",
+    "4. Keep `.wiki/index.md` (content catalog) and `.wiki/log.md` (audit ledger) synchronized.\n" +
+    '5. Emit OKF v0.2: concept frontmatter `type`/`title`/`description`/`tags`/`sources`/`generated`; root `index.md` only `okf_version: "0.2"`; `log.md` date-grouped newest-first; plain markdown links (no `[[wikilinks]]`); attribute claims via `sources[].id` footnotes.',
 };
 
 export async function loadBundledSkills(packageRoot?: string): Promise<Map<string, Skill>> {

@@ -168,6 +168,48 @@ await agent.createSession().run("Use the Acme extension.", { activeSkills: ["acm
 - Middleware from `api.use()` runs only when the host passes `kernel.middleware` into runtime configuration.
 - Provider packages, provider request policies, system prompt contributions, instruction injectors, builders, strategies, commands, store factories, resource loaders, settings providers, and credential resolvers are all inert until host code selects or invokes them.
 
+### Host driver hooks (opt-in)
+
+A contributed command can act — start a session run, start a workflow, steer
+an active run — only when the **host** injects driver capabilities into the
+execution context. Drivers are never package-supplied: a command that wants
+them guards on `context.drivers` and degrades gracefully when the host
+supplies none. Commands stay inert data in hosts without drivers, and the
+context shape is unchanged (no `drivers` key at all).
+
+```ts
+// Host opt-in (e.g. RPC session factory):
+await runRpcServer({
+  stdin,
+  stdout,
+  createSession,
+  commands,
+  drivers: {
+    startRun: (input, options) => session.run(input, options),
+    startWorkflow: (workflow, input, options) => runWorkflow(workflow, input, options),
+    steer: (runId, input) => session.steer(runId, input),
+  },
+});
+
+// Contributed command (host-opt-in capability use):
+registerCommand({
+  name: "acme.start",
+  async execute(args, context) {
+    if (!context.drivers?.startWorkflow) {
+      return { name: "acme.start", error: { message: "host did not supply workflow drivers" } };
+    }
+    const run = await context.drivers.startWorkflow(workflowFor(args), args.input);
+    return { name: "acme.start", value: { runId: run.runId, status: run.status } };
+  },
+});
+```
+
+`CommandDrivers` is typed (`startRun` / `startWorkflow` / `steer`) and exported
+from the core contracts surface. Driver errors surface through the command's
+normal error path — commands map failures to `CommandResult.error`
+(`ErrorInfo`) or let the host error envelope carry them. Driver presence does
+not affect command `metadata.trust` labeling.
+
 ## Security and performance notes
 
 - Prism does not sandbox extension code. Hosts should load only trusted packages or run untrusted packages in their own sandbox/process before calling Prism APIs.

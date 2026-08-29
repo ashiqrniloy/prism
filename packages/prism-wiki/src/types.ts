@@ -14,6 +14,7 @@ export interface WikiEntityMetadata {
   readonly id: string;
   readonly title: string;
   readonly category: "entity" | "concept" | "module" | "decision" | "person" | "tool";
+  readonly description?: string;
   readonly tags: readonly string[];
   readonly rawSources: readonly string[];
   readonly anchors: readonly WikiSourceAnchor[];

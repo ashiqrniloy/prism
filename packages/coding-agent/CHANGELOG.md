@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.2] - 2026-08-29 (plan 050)
+
+### Fixed
+- **BUG-1 (Clay integration findings)**: `suspendAskUserDecision` now defaults an
+  omitted `allowCustom` to `false` at accept time (same normalization as the
+  `ask_user_decision` tool path), so the persisted suspension always carries a
+  boolean and resumes cleanly after a JSON checkpoint round-trip; `toolCallId`
+  is optional on the suspend request; a non-boolean `allowCustom` throws
+  `allowCustom must be a boolean` at accept time instead of failing at resume
+  time with `suspension.data missing ask_user_decision request`.
+
 ## [0.3.1] - 2026-08-29
 
 ### Changed

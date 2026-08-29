@@ -120,11 +120,11 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
   const secondPeers = {};
   for (const p of codeWithPeer) {
     const spec = p.peerDependencies["@arnilo/prism"];
-    // Decision B window: peers either track the current root patch (^0.3.1,
-    // rewritten when the root republishes) or keep the prior ^0.3.0 window
-    // peer — both satisfy the root while the line is 0.3.x (plan 039).
+    // Decision B window: peers either track the current root patch (^0.3.2 for
+    // the plan 050 set, ^0.3.1 for the plan 039 set) or keep the prior ^0.3.0
+    // window peer — all satisfy the root while the line is 0.3.x.
     assert.ok(
-      spec === `^${t.root.version}` || spec === "^0.3.0",
+      spec === `^${t.root.version}` || spec === "^0.3.0" || spec === "^0.3.1",
       `${p.name} must peer @arnilo/prism inside the Decision B window, got ${spec}`,
     );
     assert.match(spec, /^\^\d+\.\d+\.\d+$/, `${p.name} peer spec must be a 0.x caret range, got ${spec}`);

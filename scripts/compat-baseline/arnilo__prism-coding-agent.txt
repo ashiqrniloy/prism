@@ -573,7 +573,7 @@ searchLocal	export declare function searchLocal(request: RepositorySearchRequest
 sha256Hex	export declare function sha256Hex(data: Buffer): string
 shouldSkipName	export declare function shouldSkipName(name: string, includeHidden: boolean, exclude: ReadonlySet<string>): boolean
 stripBom	export declare function stripBom(content: string):
-suspendAskUserDecision	export declare function suspendAskUserDecision(request: AskUserDecisionSuspendData | Pick<AskUserDecisionRequest, "question" | "options" | "selectionMode" | "allowCustom" | "toolCallId" | "sessionId" | "runId">, options?: SuspendAskUserDecisionOptions): WorkflowSuspension<AskUserDecisionAnswer>
+suspendAskUserDecision	export declare function suspendAskUserDecision(request: AskUserDecisionSuspendData | (Pick<AskUserDecisionRequest, "question" | "options" | "selectionMode" | "sessionId" | "runId"> &
 toAskUserDecisionSuspendData	export declare function toAskUserDecisionSuspendData(request:
 toRepoRelative	export declare function toRepoRelative(root: string, absolutePath: string): string
 truncateHead	export declare function truncateHead(content: string, options?: TruncationOptions): TruncationResult

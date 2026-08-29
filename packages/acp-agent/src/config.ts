@@ -101,7 +101,8 @@ export function validateConfig(raw: unknown, baseDir: string, source: string): P
     rejectUnknown(raw.sessionStore, KNOWN_SESSION_STORE_KEYS, `${source}.sessionStore`);
     if (raw.sessionStore.type === "sqlite") {
       const path = requireString(raw.sessionStore.path, `${source}.sessionStore`, "path");
-      sessionStore = { type: "sqlite", path: resolve(baseDir, path) };
+      // ":memory:" is the sqlite in-memory convention — pass it through verbatim.
+      sessionStore = { type: "sqlite", path: path === ":memory:" ? path : resolve(baseDir, path) };
     } else if (raw.sessionStore.type !== "memory") {
       fail(source, `sessionStore.type must be "sqlite" or "memory", got ${JSON.stringify(raw.sessionStore.type)}`);
     }

@@ -5,6 +5,18 @@ import type { ExtractedSymbol, ScannedFile } from "../profiles/codebase.js";
 import { resolveProfile } from "../profiles/hybrid.js";
 import type { SourceDelta, WikiEntityMetadata, WikiManifest, WikiProfileType, WikiSourceAnchor } from "../types.js";
 import { ContradictionEngine } from "./contradictions.js";
+import {
+  fileResource,
+  OKF_TYPE_BY_CATEGORY,
+  oneLine,
+  prependLog,
+  renderConceptFrontmatter,
+  renderDirIndex,
+  renderRootIndex,
+  sourcesFromEntity,
+  wikiActor,
+  wikiDate,
+} from "./okf.js";
 import { scaffoldWiki } from "./scaffolder.js";
 
 export interface CompileOptions {
@@ -28,81 +40,47 @@ export function renderEntityMarkdown(
   symbols: readonly ExtractedSymbol[],
   summary?: string,
 ): string {
-  const frontmatter = `---
-id: ${entity.id}
-title: ${JSON.stringify(entity.title)}
-category: ${entity.category}
-tags: [${entity.tags.map((t) => JSON.stringify(t)).join(", ")}]
-rawSources: [${entity.rawSources.map((s) => JSON.stringify(s)).join(", ")}]
-lastCompiledAt: ${JSON.stringify(entity.lastCompiledAt)}
----
+  const description = oneLine(summary ?? entity.description ?? `Compiled architectural model and knowledge for ${entity.title}.`);
+  const frontmatter = renderConceptFrontmatter({
+    type: OKF_TYPE_BY_CATEGORY[entity.category],
+    title: entity.title,
+    description,
+    tags: entity.tags,
+    sources: sourcesFromEntity(workspaceRoot, entity),
+    generatedBy: wikiActor(),
+    generatedAt: entity.lastCompiledAt,
+  });
+
+  const symbolsSection =
+    symbols.length > 0
+      ? symbols
+          .slice(0, 50)
+          .map((s) => {
+            const matchingAnchor = entity.anchors.find((a) => a.symbol === s.name);
+            const file = matchingAnchor ? matchingAnchor.filePath : (entity.rawSources[0] ?? "");
+            const link = `[${s.name}](${fileResource(workspaceRoot, file, s.startLine, s.endLine)})`;
+            return `- ${link} (\`${s.kind}\`): ${s.signature ?? s.name}`;
+          })
+          .join("\n")
+      : "*No exported symbols indexed.*";
+
+  return `${frontmatter}
 
 # ${entity.title}
 
-${summary ?? `Compiled architectural model and knowledge for ${entity.title}.`}
+${description}
 
 ## Key Symbols & Source Anchors
 
-${
-  symbols.length > 0
-    ? symbols
-        .slice(0, 50)
-        .map((s) => {
-          const matchingAnchor = entity.anchors.find((a) => a.symbol === s.name);
-          const file = matchingAnchor ? matchingAnchor.filePath : (entity.rawSources[0] ?? "");
-          const absPath = resolve(workspaceRoot, file).replace(/\\/g, "/");
-          const link = `[${s.name}](file:///${absPath.replace(/^\/+/, "")}#L${s.startLine}-L${s.endLine})`;
-          return `- ${link} (\`${s.kind}\`): ${s.signature ?? s.name}`;
-        })
-        .join("\n")
-    : "*No exported symbols indexed.*"
-}
+${symbolsSection}
 
 ## Raw Sources
 ${entity.rawSources.map((src) => `- \`${src}\``).join("\n")}
 `;
-
-  return frontmatter;
 }
 
 export function renderIndexCatalog(entities: readonly WikiEntityMetadata[]): string {
-  const modules = entities.filter((e) => e.category === "module");
-  const concepts = entities.filter((e) => e.category === "concept");
-  const decisions = entities.filter((e) => e.category === "decision");
-  const others = entities.filter((e) => !["module", "concept", "decision"].includes(e.category));
-
-  function renderGroup(group: readonly WikiEntityMetadata[]): string {
-    if (group.length === 0) return "*None indexed yet.*\n";
-    return [...group]
-      .sort((a, b) => a.title.localeCompare(b.title))
-      .map((e) => `- [[entities/${e.id}.md|${e.title}]]: ${e.tags.join(", ") || "General"}`)
-      .join("\n");
-  }
-
-  return `# Wiki Index
-
-Catalog of compiled knowledge, modules, and architectural decisions.
-
-## Modules
-
-${renderGroup(modules)}
-
-## Concepts
-
-${renderGroup(concepts)}
-
-## Decisions
-
-${renderGroup(decisions)}
-${
-  others.length > 0
-    ? `
-## Additional Entities
-
-${renderGroup(others)}
-`
-    : ""
-}`;
+  return renderRootIndex(entities);
 }
 
 export class WikiCompiler {
@@ -199,6 +177,7 @@ export class WikiCompiler {
         id: draft.id,
         title: draft.title,
         category: draft.category,
+        description: oneLine(draft.summary ?? `Compiled architectural model and knowledge for ${draft.title}.`),
         tags: draft.tags,
         rawSources: draft.rawSources,
         anchors,
@@ -220,22 +199,25 @@ export class WikiCompiler {
 
     const indexContent = renderIndexCatalog(allEntities);
     await writeFile(join(wikiRoot, "index.md"), indexContent, "utf8");
-
-    // Append to log.md
-    const logTimestamp = nowIso.replace("T", " ").slice(0, 16);
-    let logEntry = `\n## [${logTimestamp}] compile | ${compiledEntities.length} entities compiled\n- Added ${delta.added.length} file(s), modified ${delta.modified.length}, deleted ${delta.deleted.length}.\n- Profile: \`${profileInstance.name}\`.\n`;
-
-    if (contradictionRecords.length > 0) {
-      logEntry += contradictionEngine.formatContradictionLogEntry(contradictionRecords);
-    }
+    await writeFile(join(wikiRoot, "entities", "index.md"), renderDirIndex("entities", allEntities), "utf8");
+    await writeFile(join(wikiRoot, "decisions", "index.md"), renderDirIndex("decisions", allEntities), "utf8");
+    await writeFile(join(wikiRoot, "concepts", "index.md"), renderDirIndex("concepts", allEntities), "utf8");
 
     const logPath = join(wikiRoot, "log.md");
+    let existingLog: string | undefined;
     try {
-      const existingLog = await readFile(logPath, "utf8");
-      await writeFile(logPath, existingLog + logEntry, "utf8");
+      existingLog = await readFile(logPath, "utf8");
     } catch {
-      await writeFile(logPath, `# Wiki Log\n${logEntry}`, "utf8");
+      existingLog = undefined;
     }
+    const logItems = [
+      {
+        verb: "Compiled",
+        text: `${compiledEntities.length} entities compiled (added ${delta.added.length}, modified ${delta.modified.length}, deleted ${delta.deleted.length}). Profile \`${profileInstance.name}\`.`,
+      },
+      ...contradictionEngine.formatContradictionLogItems(contradictionRecords),
+    ];
+    await writeFile(logPath, prependLog(existingLog, wikiDate(nowIso), logItems), "utf8");
 
     // Update and persist manifest
     manifest = updateManifestWithEntities(manifest, compiledEntities, currentFiles);

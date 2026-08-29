@@ -57,7 +57,8 @@ describe("prism-wiki contradiction engine", () => {
     assert.ok(contradictions.some((c) => c.type === "source_removed" && c.previousClaim.includes("old-session.ts")));
 
     const formattedLog = engine.formatContradictionLogEntry(contradictions);
-    assert.ok(formattedLog.includes("contradiction | Reconciled 2 conflicting claim(s)"));
+    assert.ok(formattedLog.includes("Reconciled"));
+    assert.ok(formattedLog.includes("contradiction"));
     assert.ok(formattedLog.includes("legacySessionCheck"));
   });
 });

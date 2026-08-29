@@ -402,6 +402,137 @@ test("workflow suspend → approve resume validates answer (network-free)", asyn
   assert.equal(output.resolved.selectedId, "postgres");
 });
 
+// BUG-1 regression (plan 050 Task 2): omitted allowCustom must default to false
+// at accept time so the persisted shape survives a JSON checkpoint round-trip.
+test("suspendAskUserDecision defaults omitted allowCustom to false and survives JSON round-trip", () => {
+  const suspension = suspendAskUserDecision({
+    question: decisionRequest.question,
+    options: decisionRequest.options,
+    selectionMode: "single",
+    // allowCustom deliberately omitted
+  });
+  const data = suspension.data as { allowCustom: unknown };
+  assert.equal(data.allowCustom, false);
+  // Checkpoints persist JSON; the key must survive the round-trip.
+  assert.equal(JSON.parse(JSON.stringify(data)).allowCustom, false);
+  // Tool-path parity: custom text is rejected under the defaulted false.
+  assert.throws(() => validateAskUserDecisionResume(suspension.data as never, { customText: "nope" }), /allowCustom=false/);
+});
+
+test("suspendAskUserDecision rejects non-boolean allowCustom at accept time", () => {
+  assert.throws(
+    () =>
+      suspendAskUserDecision({
+        ...decisionRequest,
+        allowCustom: "yes" as unknown as boolean,
+      }),
+    /allowCustom must be a boolean/,
+  );
+});
+
+test("durable suspend → resume succeeds with allowCustom omitted (single mode)", async () => {
+  const checkpoints = createWorkflowCheckpoints({
+    store: createMemoryCheckpointStore(),
+  });
+  const request = {
+    question: decisionRequest.question,
+    options: decisionRequest.options,
+    selectionMode: "single" as const,
+    toolCallId: "call-suspend-omitted",
+    // allowCustom deliberately omitted
+  };
+  const workflow = defineWorkflow({
+    revision: "1",
+    id: "ask-user-decision-allowcustom-omitted-single",
+    nodes: {
+      ask: functionNode({
+        execute: async (ctx) => {
+          const data = toAskUserDecisionSuspendData(request);
+          if (!ctx.resume) return suspendAskUserDecision(request);
+          return { resolved: validateAskUserDecisionResume(data, ctx.resume.input) };
+        },
+      }),
+    },
+    edges: [],
+    limits: { maxConcurrency: 1, maxStateBytes: 64 * 1024 },
+  });
+
+  const first = await runWorkflow(
+    workflow,
+    {},
+    {
+      checkpoints,
+      validateResume: createAskUserDecisionResumeValidator(),
+    },
+  );
+  assert.equal(first.status, "suspended");
+  assert.equal((first.suspension?.data as { allowCustom: unknown } | undefined)?.allowCustom, false);
+
+  const second = await resumeWorkflow(
+    workflow,
+    { runId: first.runId, workflowId: workflow.id },
+    {
+      checkpoints,
+      validateResume: createAskUserDecisionResumeValidator(),
+      resume: { decision: "approve", expectedVersion: first.version, input: { selectedId: "postgres" } },
+    },
+  );
+  assert.equal(second.status, "succeeded");
+});
+
+test("durable suspend → resume succeeds with allowCustom omitted (multiple mode)", async () => {
+  const checkpoints = createWorkflowCheckpoints({
+    store: createMemoryCheckpointStore(),
+  });
+  const request = {
+    question: multiArgs.question,
+    options: parseAskUserDecisionArgs(multiArgs, resolveAskUserDecisionLimits()).options,
+    selectionMode: "multiple" as const,
+    toolCallId: "call-suspend-omitted-multi",
+    // allowCustom deliberately omitted
+  };
+  const workflow = defineWorkflow({
+    revision: "1",
+    id: "ask-user-decision-allowcustom-omitted-multiple",
+    nodes: {
+      ask: functionNode({
+        execute: async (ctx) => {
+          const data = toAskUserDecisionSuspendData(request);
+          if (!ctx.resume) return suspendAskUserDecision(request);
+          return { resolved: validateAskUserDecisionResume(data, ctx.resume.input) };
+        },
+      }),
+    },
+    edges: [],
+    limits: { maxConcurrency: 1, maxStateBytes: 64 * 1024 },
+  });
+
+  const first = await runWorkflow(
+    workflow,
+    {},
+    {
+      checkpoints,
+      validateResume: createAskUserDecisionResumeValidator(),
+    },
+  );
+  assert.equal(first.status, "suspended");
+  assert.equal((first.suspension?.data as { allowCustom: unknown } | undefined)?.allowCustom, false);
+
+  const second = await resumeWorkflow(
+    workflow,
+    { runId: first.runId, workflowId: workflow.id },
+    {
+      checkpoints,
+      validateResume: createAskUserDecisionResumeValidator(),
+      resume: { decision: "approve", expectedVersion: first.version, input: { selectedIds: ["sqlite", "fts"] } },
+    },
+  );
+  assert.equal(second.status, "succeeded");
+  const output = second.outputs.ask as { resolved: { kind: string; selectedIds?: readonly string[] } };
+  assert.equal(output.resolved.kind, "selection");
+  assert.deepEqual(output.resolved.selectedIds, ["sqlite", "fts"]);
+});
+
 test("blocking ask() callback mode unchanged when ask provided", async () => {
   const tool = createAskUserDecisionTool({
     ask: async () => ({ selectedId: "sqlite" }),

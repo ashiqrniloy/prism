@@ -417,6 +417,12 @@ Opt-in `ask_user_decision` for ambiguous, high-impact direction choices. Model m
 | Agent durable adapter | `validateAskUserDecisionAgentResume({ request, answer })` — same validation; **no** new `AgentRunInterruption` kinds in 0.0.11 |
 
 Custom-text caps match question defaults (2 KiB / hard 8 KiB). Options default max 6 (hard 16).
+`allowCustom` defaults to `false` on **both** paths when omitted — the tool
+path (`parseAllowCustom`) and the workflow suspend path
+(`toAskUserDecisionSuspendData`) normalize at accept time, so the persisted
+suspension always carries a boolean and survives JSON checkpoint round-trips;
+a non-boolean value throws `allowCustom must be a boolean` at accept time,
+never at resume time.
 
 ```ts
 import { createToolRegistry } from "@arnilo/prism";
@@ -440,7 +446,7 @@ return suspendAskUserDecision({
   question: "Ship sqlite or postgres?",
   options: [/* ≥2 with 3 pros + 3 cons each */],
   selectionMode: "single",
-  allowCustom: false,
+  // allowCustom optional — defaults to false (tool-path parity)
 });
 // resumeWorkflow(..., { validateResume: createAskUserDecisionResumeValidator() })
 ```

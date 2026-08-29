@@ -17,11 +17,15 @@ Use a supervisor when a host or agent must choose a child dynamically. Use `@arn
 | `delegate({ childId, input, threadId?, limits?, signal? })` | Invokes one allow-listed child. Input is text and byte-bounded. |
 | `hooks.before` | May reject, modify redacted input, or narrow limits/policy. |
 | `hooks.after` | Observes redacted terminal summary; failures cannot alter settled result. |
-| `limits` | Depth 4/16, active children 4/32, input 64 KiB/1 MiB, steps 8/64, tools 32/256, tokens 20k/1m, timeout 60s/30m, event queue 128/4096 default/hard. Over-cap `delegate()` throws `SupervisorLimitError` before incrementing `activeChildren`. Hook rejection and timeout decrement the count exactly once (no leaked timers). |
+| `limits` | Depth 4/16, active children 4/32, input 64 KiB/1 MiB, steps 8/64, tools 32/256, tokens 20k/1m, timeout 60s/30m, event queue 128/4096, child events/delegation 256/4096, child-event bytes 32 KiB/256 KiB default/hard. Over-cap `delegate()` throws `SupervisorLimitError` before incrementing `activeChildren`. Hook rejection and timeout decrement the count exactly once (no leaked timers). |
 
 ## Outputs / response / events
 
 `delegate()` returns the child's `AgentRunResult` or throws its `AgentRunError`/a supervisor denial or limit error. `subscribe()` emits bounded `delegation_started`, `delegation_finished`, `delegation_rejected`, and `delegation_error` metadata events. Graceful close drains already-queued terminal events before the iterator completes (same core multiplexer contract). Hosts may project those events through observability `handleDelegation()` using the parent Prism run ID; no OpenTelemetry dependency enters this package.
+
+### Child event passthrough (opt-in)
+
+`createSupervisor({ childEvents: true })` projects a redacted, size-capped **milestone** subset of child `AgentEvent`s onto the same stream as `delegation_child_event` (tagged `childId`, `delegationId`, `depth`). v1 covers run start/finish/`suspended`/`denied` and tool-execution started/finished/error/blocked — not per-token `message_delta`. Default off: the stream is byte-identical to today (no subscribe, no allocation). Caps: `limits.maxChildEventsPerDelegation` (256/4096) and `limits.maxChildEventBytes` (32 KiB/256 KiB); exceeding either drops further child events and emits one `delegation_child_events_capped` marker (never throws). Events pass through the supervisor `redactor` before emission. Children never receive supervisor internals or store/subscription access. Resume-path rebuilds (`resumeNestedRun`) do not currently project child events — live passthrough is the initial `delegate()` session only.
 
 ## Request/response example
 
@@ -50,6 +54,8 @@ const supervisor = createSupervisor({
 const result = await supervisor.delegate({ childId: "research", input: "Check sources" });
 ```
 
+> **Contract — child factories return `Agent`.** `createAgent` must return an `Agent`, not an `AgentSession` (or a plain object). Wrong type throws `SupervisorError: child "<id>" factory must return an Agent, got <type>` on both initial `delegate()` and nested resume. Nested approvals also need a **stable config** plus a **durable (or rebuild-stable) store** — calling `createSession()` inside the factory and returning that session loses the child's checkpointed leaf. Live demo: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) (`childAgent` returns `createAgent(...)`).
+
 ## Durable child approvals
 
 With `checkpoints` + `definitionRevision`, every child run is durable with `interruptBeforeTool: true`. A child that suspends on pending decisions throws `AgentDelegationSuspendedError` out of `delegate()`; when the delegation runs inside a root agent's tool, core converts it into a root suspension whose `interruption.pendingDecisions` carry hashed root-visible approval ids (`sub_<sha256(runId:childApprovalId)>`) and `attribution.path` (redacted child ids, root first, at most 8 deep). Root decisions route back through the same CAS rules: pass `supervisor.resumeNestedRun` as `resumeNestedRun` in the root run's `runState` and in every `resumeAgentRun` options object. The supervisor rebuilds the child from a bounded delegation mapping stored in the same checkpoint store (child id, delegation/thread ids, redacted input, version), re-runs the `before` hook so its narrowing applies to the resumed run (hooks must be idempotent), and re-attributes re-suspensions recursively, so grandchild decisions surface with the full path. A delegating child's own `interruptBeforeTool` also gates its delegate tool, so hosts approve delegation and the child's own side effects as separate stages. Root `*_for_run` stickies record the attribution path and only match the same delegation path; child stickies live on the child run and expire with it. A root approval never widens the child: the child's narrowed permission re-runs at dispatch. Unknown or foreign nested run ids fail closed with one non-enumerating error. Child factories must return stable configs and a durable (or rebuild-stable) session store for resume to work.
@@ -75,6 +81,7 @@ Supervisors propagate parent `identity` and `effectStore` to every child agent/r
 - [Agent identity](agent-identity.md): host-verified identity and narrow delegation.
 - [A2A interoperability](a2a.md): separate remote protocol boundary. `A2ATaskLifecycle` adapts host durable agent/workflow state directly; it does not route A2A execution through local supervisor child planning.
 - [Workflows](workflows.md): preferred deterministic orchestration.
+- Example: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) — per-child models, factory returns `Agent`.
 - [Working and semantic memory](working-and-semantic-memory.md): child scope construction.
 - [Host security](host-security.md): permission and credential boundaries.
 - [Obscura browser engine](obscura.md): optional binary-backed generic tools for child agents.

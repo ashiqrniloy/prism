@@ -34,7 +34,10 @@ export function resolveAgentDefinition(def: AgentDefinition, context: AgentDefin
 }
 
 function buildBaseConfig(def: AgentDefinition, context: AgentDefinitionResolutionContext): AgentConfig {
-  const model = resolveModel(def.name, def.model, context);
+  // Model precedence: explicit def.model wins; a definition without a model
+  // falls back to context.overrides.model (host-injected selection). Neither
+  // present still fails closed in resolveModel.
+  const model = resolveModel(def.name, def.model ?? context.overrides?.model, context);
   const tools = resolveTools(def.tools, context);
   const skills = resolveSkills(def.skills, tools, context);
   return {

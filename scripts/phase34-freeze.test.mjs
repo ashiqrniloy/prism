@@ -1,16 +1,18 @@
 /**
  * Plan 034 Task 12: Decision B — only rag/memory/otel move to 0.3.1.
- * Superseded by plan 039 (changed-package cut from the plan-035 baseline): the
- * freeze now derives expected versions from that baseline with the same
- * release.mjs logic instead of pinning 034-era literals forever.
+ * Superseded by plan 039, then by plan 050 (changed-package cut from the
+ * plan-039 cut baseline): the freeze derives expected versions from the
+ * current baseline with the same release.mjs logic instead of pinning
+ * era literals forever.
  */
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 import { changedPackages, defaultBaselineVersion, incrementVersion, loadRelease } from "./release.mjs";
 
-// Plan 035 completion commit parent — the release baseline for plan 039.
-const BASELINE = "c600eaa18f65b56764ec2fb408ec813536eff6f7";
+// Plan 050 baseline — the parent commit of the plan 050 implementation work
+// (the plan 039 cut result).
+const BASELINE = "edb4fcf69689683bf0dd3a9d1f2e88299db06603";
 
 function loadManifests() {
   const pkgs = [{ path: ".", ...JSON.parse(readFileSync(new URL("../package.json", import.meta.url))) }];
@@ -45,7 +47,7 @@ test("phase34 freeze (plan 039 derivation): root peers carry ^<root>; non-root i
         if (String(range).startsWith("file:")) continue;
         if (name === "@arnilo/prism") {
           assert.ok(
-            range === `^${rootVersion}` || range === "^0.3.0",
+            range === `^${rootVersion}` || range === "^0.3.0" || range === "^0.3.1",
             `${pkg.name} ${field}.${name} outside the Decision B window: ${range}`,
           );
         } else {

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2] - 2026-08-29
+
+### Fixed
+- `sessionStore.path: ":memory:"` is now passed through verbatim to the sqlite
+  store (in-memory database) instead of being resolved to a literal
+  `<baseDir>/:memory:` file. Removes the stray `:memory:` artifact from the
+  package root.
+
 ## [0.3.1] - 2026-08-29
 
 ### Changed

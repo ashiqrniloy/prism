@@ -27,7 +27,7 @@ Do not use the bundle loader to discover providers — provider/model packages s
 | --- | --- |
 | `name` | Required agent name. |
 | `description?` | Optional description. |
-| `model?` | `ModelConfig` object, or a `"<provider>/<model>"` string resolved through `registries.models`. |
+| `model?` | `ModelConfig` object, or a `"<provider>/<model>"` string resolved through `registries.models`. Optional at authoring time: when omitted, resolution falls back to `context.overrides.model` (host-injected selection); an explicit definition `model` drives registry resolution, and neither present fails closed with `Agent "<name>" has no model`. |
 | `tools?` | Tool names to activate from the active tool registry / `registries.tools`. Omitted means no active tools unless `activateAllCapabilities: true` is passed for migration. |
 | `skills?` | Skill names resolved via `resolveActiveSkills()`; omitted means no active skills unless `activateAllCapabilities: true` is passed for migration. `toolNames` enforcement applies at activation. |
 | `context?` | Context provider names from `registries.contextProviders`. |

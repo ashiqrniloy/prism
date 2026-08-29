@@ -4,6 +4,7 @@ import type {
   AgentEvent,
   AgentSession,
   CommandDefinition,
+  CommandDrivers,
   CommandResult,
   InstructionInjector,
   JsonObject,
@@ -38,6 +39,9 @@ export interface RpcRequest {
 export interface RpcSessionFactory {
   createSession(id?: string): AgentSession;
   readonly commands?: readonly CommandDefinition[];
+  /** Host-opt-in driver capabilities forwarded to contributed commands on the
+   *  `command` execution context. Absent ⇒ context shape unchanged. */
+  readonly drivers?: CommandDrivers;
   /** Optional registry for resolving `instructionInjectors` names in `prompt`/`followUp`
    *  params (Phase 30). Names resolve fail-closed. */
   readonly instructionInjectors?: ContributionRegistry<InstructionInjector>;
@@ -55,6 +59,7 @@ interface RpcState {
   readonly sessions: Map<string, AgentSession>;
   readonly commands: Map<string, CommandDefinition>;
   readonly createSession: (id?: string) => AgentSession;
+  readonly drivers?: CommandDrivers;
   readonly instructionInjectors?: ContributionRegistry<InstructionInjector>;
 }
 
@@ -71,6 +76,7 @@ export async function runRpcServer(options: RpcServerOptions): Promise<void> {
     sessions: new Map([[first.id, first]]),
     commands: new Map((options.commands ?? []).map((command) => [command.name, command])),
     createSession: options.createSession,
+    ...(options.drivers ? { drivers: options.drivers } : {}),
     ...(options.instructionInjectors ? { instructionInjectors: options.instructionInjectors } : {}),
   };
   const activeRuns = new Map<string, ActiveRun>();
@@ -232,7 +238,12 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
       const command = state.commands.get(name);
       if (!command) throw new Error(`Unknown command: ${name}`);
       const args = objectParam(request.params, "args") ?? {};
-      const result: CommandResult = await command.execute(args as JsonObject, { sessionId: state.current.id });
+      const result: CommandResult = await command.execute(
+        args as JsonObject,
+        // FEATURE-3 (plan 050 Task 5): host-opt-in drivers forwarded verbatim; the
+        // context carries no `drivers` key when the host supplied none.
+        state.drivers ? { sessionId: state.current.id, drivers: state.drivers } : { sessionId: state.current.id },
+      );
       write(stdout, { id: request.id, ok: true, result });
       break;
     }

@@ -1,7 +1,9 @@
 import {
   AgentDelegationSuspendedError,
+  type AgentEvent,
   AgentRunError,
   type AgentRunResult,
+  type AgentSession,
   assertIdentityActive,
   assertIdentityMatchesOwnership,
   createAgent,
@@ -11,9 +13,10 @@ import {
   type PermissionRequest,
   type ResumeNestedRun,
   resumeAgentRun,
+  type SecretRedactor,
 } from "@arnilo/prism";
 import { SupervisorDeniedError, SupervisorError, SupervisorLimitError, SupervisorValidationError } from "./errors.js";
-import { narrowSupervisorLimits, resolveSupervisorLimits } from "./limits.js";
+import { narrowSupervisorLimits, type ResolvedSupervisorLimits, resolveSupervisorLimits } from "./limits.js";
 import type { CreateSupervisorOptions, DelegationCompletion, DelegationRequest, Supervisor, SupervisorEvent } from "./types.js";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
@@ -23,6 +26,84 @@ interface ChainContext {
 }
 
 const DELEGATION_NAMESPACE = "prism.supervisor-delegation";
+
+/**
+ * BUG-2 guard (Clay integration findings): a child factory returning a session
+ * (or anything non-Agent) used to crash at `.config.permission` with a cryptic
+ * TypeError. One shared shape check at both factory-result consumption sites;
+ * constructor name ("AgentSession", "Object", ...) names the received type.
+ */
+function assertChildAgent(value: unknown, childId: string): void {
+  const candidate = value as { config?: unknown; createSession?: unknown } | null;
+  if (
+    !candidate ||
+    typeof candidate !== "object" ||
+    !candidate.config ||
+    typeof candidate.config !== "object" ||
+    typeof candidate.createSession !== "function"
+  ) {
+    const name =
+      value === null || value === undefined
+        ? String(value)
+        : typeof value === "object" || typeof value === "function"
+          ? ((value as { constructor?: { name?: unknown } }).constructor?.name ?? typeof value)
+          : typeof value;
+    throw new SupervisorError(`child "${childId}" factory must return an Agent, got ${name}`);
+  }
+}
+
+/** Milestone subset for v1 child-event passthrough (tool calls + run start/finish). */
+const MILESTONE_CHILD_EVENT_TYPES = new Set<AgentEvent["type"]>([
+  "agent_started",
+  "agent_finished",
+  "agent_suspended",
+  "agent_denied",
+  "tool_execution_started",
+  "tool_execution_finished",
+  "tool_execution_error",
+  "tool_execution_blocked",
+]);
+
+/** FEATURE-4: wrap a child session subscribe with filter + redact + cap + tag. */
+function startChildEventPump(
+  session: AgentSession,
+  tags: { readonly childId: string; readonly delegationId: string; readonly depth: number },
+  limits: ResolvedSupervisorLimits,
+  redactor: SecretRedactor | undefined,
+  publish: (event: SupervisorEvent) => void,
+): () => Promise<void> {
+  const iterator = session.subscribe()[Symbol.asyncIterator]();
+  let emitted = 0;
+  let capped = false;
+  const pump = (async () => {
+    try {
+      for (;;) {
+        const next = await iterator.next();
+        if (next.done) break;
+        const event = next.value;
+        if (!MILESTONE_CHILD_EVENT_TYPES.has(event.type) || capped) continue;
+        const payload = redactor ? redactor.redact(event) : event;
+        if (emitted >= limits.maxChildEventsPerDelegation || JSON.stringify(payload).length > limits.maxChildEventBytes) {
+          capped = true;
+          publish({
+            type: "delegation_child_events_capped",
+            ...tags,
+            maxChildEvents: limits.maxChildEventsPerDelegation,
+          });
+          continue;
+        }
+        emitted += 1;
+        publish({ type: "delegation_child_event", ...tags, childEvent: payload });
+      }
+    } catch {
+      // subscriber closed with the delegation
+    }
+  })();
+  return async () => {
+    await iterator.return?.();
+    await pump;
+  };
+}
 
 /** Durable mapping that lets `resumeNestedRun` rebuild a suspended child after a restart. */
 interface DelegationMapping {
@@ -140,6 +221,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         ),
         controller.signal,
       );
+      assertChildAgent(childAgent, request.childId);
       const agent = createAgent({
         ...childAgent.config,
         permission: intersectPolicies(preliminaryPermission, childAgent.config.permission),
@@ -152,6 +234,12 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         id: `${delegationId}-session`,
         metadata: { supervisorId: id, delegationId, resourceId, threadId },
       });
+      const stopChildEvents =
+        options.childEvents === true
+          ? startChildEventPump(session, { childId: request.childId, delegationId, depth }, limits, options.redactor, (event) =>
+              events.publish(event),
+            )
+          : undefined;
       let result: AgentRunResult;
       try {
         result = await abortable(
@@ -192,6 +280,8 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
           throw new SupervisorLimitError(`Delegation ${label} limit exceeded`);
         }
         throw error;
+      } finally {
+        await stopChildEvents?.();
       }
       if (result.status === "suspended") {
         // Child approvals surface on the hosting root run: persist the rebuild mapping, then
@@ -311,6 +401,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         delegate: (nestedRequest: DelegationRequest) => delegate(nestedRequest, { path: mapping.path, signal: controller.signal }),
       }),
     );
+    assertChildAgent(childAgent, mapping.childId);
     const agent = createAgent({
       ...childAgent.config,
       permission: intersectPolicies(permission, childAgent.config.permission),
