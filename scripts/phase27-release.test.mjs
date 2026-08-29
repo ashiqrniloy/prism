@@ -52,10 +52,12 @@ describe("Plan 027 Task 10 release closeout", () => {
       Number(hasObscuraPackage);
     assert.equal(truth.counts.publishable, 55 + added, "current publishable package count");
     assert.equal(truth.counts.workspace, 54 + added, "current workspace package count");
-    assert.equal(truth.root.version, "0.3.0", "root manifest is 0.3.0");
-    assert.equal(truth.peerPolicy.spec, "^0.3.0", "peer policy spec is ^0.3.0");
+    // Decision B: the root may patch independently after the 0.3.0 cut
+    // (plan 039 changed-package cut moved the root to 0.3.1).
+    assert.ok(["0.3.0", "0.3.1"].includes(truth.root.version), `root manifest ${truth.root.version}`);
+    assert.equal(truth.peerPolicy.spec, `^${truth.root.version}`, "peer policy spec tracks the root");
     const lock = readJson("package-lock.json");
-    assert.equal(lock.version, "0.3.0", "package-lock.json root version is 0.3.0");
+    assert.equal(lock.version, truth.root.version, "package-lock.json root version matches the manifest");
     // release.mjs validates every manifest version + peer range + lockfile entry
     // (release:check with --allow-dirty already passed for 0.2.7); the deeper
     // per-package peer/version contract is enforced by phase24-truth + phase27-freeze.

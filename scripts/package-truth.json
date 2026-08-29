@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-29T11:11:03.110Z",
+  "generatedAt": "2026-08-29T12:16:38.288Z",
   "root": {
     "name": "@arnilo/prism",
-    "version": "0.3.0"
+    "version": "0.3.1"
   },
   "counts": {
     "publishable": 60,
@@ -238,7 +238,7 @@
   },
   "peerPolicy": {
     "decision": "B",
-    "spec": "^0.3.0",
+    "spec": "^0.3.1",
     "atomicUpgrade": false
   }
 }

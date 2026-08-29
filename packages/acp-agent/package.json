@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-acp-agent",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Spawnable ACP agent: serves createPrismAcpAgent over stdio from a config file.",
   "type": "module",
   "main": "./dist/src/index.js",
@@ -33,7 +33,7 @@
     "@arnilo/prism-session-store-sqlite": "^0.3.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.3.0",
+    "@arnilo/prism": "^0.3.1",
     "@arnilo/prism-ag-ui": "^0.3.0"
   },
   "devDependencies": {

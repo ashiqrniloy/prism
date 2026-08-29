@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-rag",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Optional bounded text and Markdown RAG primitives for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -33,7 +33,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.3.0",
+    "@arnilo/prism": "^0.3.1",
     "@arnilo/prism-memory": "^0.3.0"
   },
   "devDependencies": {

@@ -1,15 +1,16 @@
 /**
  * Plan 034 Task 12: Decision B — only rag/memory/otel move to 0.3.1.
+ * Superseded by plan 039 (changed-package cut from the plan-035 baseline): the
+ * freeze now derives expected versions from that baseline with the same
+ * release.mjs logic instead of pinning 034-era literals forever.
  */
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { test } from "node:test";
+import { changedPackages, defaultBaselineVersion, incrementVersion, loadRelease } from "./release.mjs";
 
-const BUMPED = new Set(["@arnilo/prism-rag", "@arnilo/prism-memory", "@arnilo/prism-observability-opentelemetry"]);
-const FROZEN = {
-  "@arnilo/prism-graft": "0.0.1",
-  "@arnilo/prism-wiki": "0.0.1",
-};
+// Plan 035 completion commit parent — the release baseline for plan 039.
+const BASELINE = "c600eaa18f65b56764ec2fb408ec813536eff6f7";
 
 function loadManifests() {
   const pkgs = [{ path: ".", ...JSON.parse(readFileSync(new URL("../package.json", import.meta.url))) }];
@@ -24,24 +25,32 @@ function loadManifests() {
   return pkgs;
 }
 
-test("phase34 freeze: exactly three manifests at 0.3.1; others stay pre-plan", () => {
-  const pkgs = loadManifests();
-  const bumped = [];
-  for (const pkg of pkgs) {
-    const expected = BUMPED.has(pkg.name) ? "0.3.1" : (FROZEN[pkg.name] ?? "0.3.0");
+test("phase34 freeze (plan 039 derivation): versions match the changed-package cut from the plan-035 baseline", () => {
+  const release = loadRelease(new URL("..", import.meta.url).pathname);
+  const changed = new Set(changedPackages(release, { baseline: BASELINE }).map((pkg) => pkg.manifest.name));
+  for (const pkg of loadManifests()) {
+    const base = defaultBaselineVersion(new URL("..", import.meta.url).pathname, BASELINE, pkg.path);
+    // New packages since the baseline publish at their reviewed initial version.
+    const expected = base === undefined ? pkg.version : changed.has(pkg.name) ? incrementVersion(base, "patch") : base;
     assert.equal(pkg.version, expected, `${pkg.name} expected ${expected}, got ${pkg.version}`);
-    if (pkg.version === "0.3.1") bumped.push(pkg.name);
   }
-  assert.deepEqual(bumped.sort(), [...BUMPED].sort());
 });
 
-test("phase34 freeze: internal first-party ranges stay ^0.3.0", () => {
+test("phase34 freeze (plan 039 derivation): root peers carry ^<root>; non-root internal ranges stay in the ^0.3.0 window", () => {
+  const rootVersion = JSON.parse(readFileSync(new URL("../package.json", import.meta.url))).version;
   for (const pkg of loadManifests()) {
     for (const field of ["dependencies", "peerDependencies", "optionalDependencies"]) {
       for (const [name, range] of Object.entries(pkg[field] ?? {})) {
         if (!name.startsWith("@arnilo/")) continue;
         if (String(range).startsWith("file:")) continue;
-        assert.equal(range, "^0.3.0", `${pkg.name} ${field}.${name} is ${range}`);
+        if (name === "@arnilo/prism") {
+          assert.ok(
+            range === `^${rootVersion}` || range === "^0.3.0",
+            `${pkg.name} ${field}.${name} outside the Decision B window: ${range}`,
+          );
+        } else {
+          assert.equal(range, "^0.3.0", `${pkg.name} ${field}.${name} is ${range}`);
+        }
       }
     }
   }

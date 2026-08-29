@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-wiki",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Karpathy LLM Wiki system with local qmd hybrid search and Context7 navigation for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -30,7 +30,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.3.0"
+    "@arnilo/prism": "^0.3.1"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

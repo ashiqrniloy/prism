@@ -253,9 +253,12 @@ test("phase30 freeze: package budget 55→57; graph gains desktop then Antigravi
     assert.equal(packageTruth.peerPolicy.decision, "A");
     assert.equal(packageTruth.root.version, "0.2.9");
   } else {
-    assert.equal(packageTruth.root.version, "0.3.0");
+    // Decision B allows the root to patch independently after the 0.3.0 cut
+    // (plan 039 moved the root to 0.3.1 with every changed package).
+    assert.ok(["0.3.0", "0.3.1"].includes(packageTruth.root.version), `root version ${packageTruth.root.version}`);
     assert.equal(packageTruth.peerPolicy.decision, "B");
-    assert.equal(packageTruth.peerPolicy.spec, "^0.3.0");
+    // Peer spec follows the root version (plan 039: ^0.3.0 window peers rewritten to ^0.3.1).
+    assert.equal(packageTruth.peerPolicy.spec, `^${packageTruth.root.version}`);
     assert.equal(packageTruth.peerPolicy.atomicUpgrade, false);
   }
 });
@@ -264,7 +267,7 @@ test("phase30 closeout: current docs, roadmap, and changelogs record the cut", (
   assert.equal(manifest.tasks.task10, "done");
   const read = (path) => readFileSync(url(`../${path}`), "utf8");
   const index = read("docs/index.md");
-  assert.match(index, /current \*\*0\.3\.0\*\*/);
+  assert.match(index, /current \*\*0\.3\.\d+\*\*/); // current line advances with Decision B root patches
   for (const token of ["computer-use-linux", "findText", "Decision B", "ACP editor-buffer"]) {
     assert.ok(index.includes(token), `docs/index.md missing ${token}`);
   }

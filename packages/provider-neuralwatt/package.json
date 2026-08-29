@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-provider-neuralwatt",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "NeuralWatt provider package for Prism.",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,7 +25,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.3.0"
+    "@arnilo/prism": "^0.3.1"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."
