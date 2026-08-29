@@ -12,7 +12,8 @@ describe("@arnilo/prism-provider-neuralwatt package manifest", () => {
   it("provider_package_has_no_runtime_dependencies_and_peers_prism", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.deepEqual(pkg.dependencies ?? {}, {}, "package must have zero runtime deps");
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.3.0");
+    // peer follows the package's Decision B window (^0.3.1 since the plan 039 cut).
+    assert.ok(["^0.3.0", "^0.3.1"].includes(pkg.peerDependencies["@arnilo/prism"]));
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 

@@ -14,7 +14,8 @@ describe("@arnilo/prism-provider-clinepass skeleton", () => {
   it("provider_packages_do_not_add_runtime_dependencies", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.deepEqual(pkg.dependencies ?? {}, {});
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.3.0");
+    // ponytail: peer follows the package's Decision B window (^0.3.1 since the plan 039 cut).
+    assert.ok(["^0.3.0", "^0.3.1"].includes(pkg.peerDependencies["@arnilo/prism"]));
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 });

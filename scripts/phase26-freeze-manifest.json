@@ -1,5 +1,5 @@
 {
-  "$comment": "Phase 26 (0.2.6) fully-featured-coding-agent-readiness scope gate and evidence record. Machine-readable source of truth for plans/026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md: the nine implementation items (primitive review; host-selected PTY backend; indexed/semantic search seam; multi-worktree/repository workspace lifecycle; demand-gated forge breadth; durable process/ACP recovery; bounded patch review + incremental diagnostics; protected real coding journey; docs finalization + 0.2.6 bump + exit gate) with per-task evidence tokens, allowed files, content markers, the demand registry (gitlab-forge and bitbucket-forge deferred at Task 0 \u2014 activation requires a named consumer), the frozen state machines and caps, the T1-T8 threat model mapped to task tests, the additive-only compat policy (expected deltas: version literal 0.2.5 -> 0.2.6 plus additive exports; removedOrChanged 0; no --allow-break without an amended migration-backed decision), the protected-gate policy (missing credentials/infrastructure records blocked and fails the release gate, never a passing skip), migration tokens, and the deviation log. Baseline evidence for the exit gate lives in scripts/phase26-baseline.json (exitGate null until Task 8 records it green). Support matrix stays frozen at scripts/phase12-freeze-manifest.json; 0.2.6 changes none of it.",
+  "$comment": "Phase 26 (0.2.6) fully-featured-coding-agent-readiness scope gate and evidence record. Machine-readable source of truth for plans/026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md: the nine implementation items (primitive review; host-selected PTY backend; indexed/semantic search seam; multi-worktree/repository workspace lifecycle; demand-gated forge breadth; durable process/ACP recovery; bounded patch review + incremental diagnostics; protected real coding journey; docs finalization + 0.2.6 bump + exit gate) with per-task evidence tokens, allowed files, content markers, the demand registry (gitlab-forge and bitbucket-forge deferred at Task 0 — activation requires a named consumer), the frozen state machines and caps, the T1-T8 threat model mapped to task tests, the additive-only compat policy (expected deltas: version literal 0.2.5 -> 0.2.6 plus additive exports; removedOrChanged 0; no --allow-break without an amended migration-backed decision), the protected-gate policy (missing credentials/infrastructure records blocked and fails the release gate, never a passing skip), migration tokens, and the deviation log. Baseline evidence for the exit gate lives in scripts/phase26-baseline.json (exitGate null until Task 8 records it green). Support matrix stays frozen at scripts/phase12-freeze-manifest.json; 0.2.6 changes none of it.",
   "release": "0.2.6",
   "line": "0.2.x",
   "type": "fully-featured-coding-agent-readiness",
@@ -19,8 +19,8 @@
       "markers": {
         "docs/_evidence/phase26-primitive-review.md": [
           "## 1. Primitive Inventory",
-          "## 4. Threat Model (T1\u2013T8)",
-          "D8 \u2014 Budget, docs, exit (Task 8)"
+          "## 4. Threat Model (T1–T8)",
+          "D8 — Budget, docs, exit (Task 8)"
         ],
         "scripts/phase26-freeze-manifest.json": [
           "\"demand\"",
@@ -339,13 +339,13 @@
           "0.2.7"
         ],
         "docs/0.1.0-readiness.md": [
-          "0.3.0"
+          "0.3.1"
         ],
         "roadmap.md": [
           "- [x] **Host-selected PTY/interactive terminal backend.**"
         ],
         "scripts/package-truth.json": [
-          "0.3.0"
+          "0.3.1"
         ]
       },
       "securityTests": [
@@ -362,7 +362,7 @@
         "phase26-freeze.test.mjs"
       ],
       "task8": [
-        "\"version\": \"0.3.0\""
+        "\"version\": \"0.3.1\""
       ]
     },
     "plans/026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md": {
@@ -569,10 +569,10 @@
     },
     "docs/migration.md": {
       "task5": [
-        "0.2.5 \u2192 0.2.6"
+        "0.2.5 → 0.2.6"
       ],
       "task8": [
-        "## 0.2.5 \u2192 0.2.6"
+        "## 0.2.5 → 0.2.6"
       ]
     },
     "docs/forge-integration.md": {

@@ -19,9 +19,10 @@ describe("prism-wiki primitive seams & package scaffold", () => {
   it("package_metadata_conforms_to_independent_release_spec", () => {
     const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
     assert.equal(pkg.name, "@arnilo/prism-wiki");
-    assert.equal(pkg.version, "0.0.1");
+    assert.equal(pkg.version, "0.0.2"); // plan 039 cut: prism-wiki 0.0.1 → 0.0.2
     assert.deepEqual(pkg.exports["."], { types: "./dist/index.d.ts", default: "./dist/index.js" });
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.3.0");
+    // peer follows the package's Decision B window (^0.3.1 since the plan 039 cut).
+    assert.ok(["^0.3.0", "^0.3.1"].includes(pkg.peerDependencies["@arnilo/prism"]));
     assert.equal(pkg.publishConfig?.access, "public");
   });
 

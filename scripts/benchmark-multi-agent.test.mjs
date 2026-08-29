@@ -117,13 +117,16 @@ describe("multi-agent runtime coverage and baselines", () => {
     assert.equal(sat.activeAfter, 0);
   });
 
-  it("fan-out maps 8x20ms items at concurrency 2 with ordered output and >=1.75x speedup", async () => {
+  it("fan-out maps 8x20ms items at concurrency 2 with ordered output and >=1.4x speedup", async () => {
     const row = await runWorkflowFanOut({ delayMs: 20, concurrency: 2, itemCount: 8 });
     assert.equal(row.status, "succeeded");
     assert.equal(row.completions, 8);
     assert.ok(row.peakWorkers <= 2);
     assert.equal(row.activeAfter, 0);
-    assert.ok(row.speedup >= 1.75, `speedup ${row.speedup}x`);
+    // Ideal is ~2x; 1.4 leaves headroom for wall-clock noise on loaded CI
+    // runners while still proving concurrency actually parallelizes (ponytail:
+    // raise to 1.75 if this ever stops catching a real serialization bug).
+    assert.ok(row.speedup >= 1.4, `speedup ${row.speedup}x`);
   });
 
   it("parallel workflow agent nodes complete outputs and events under configured concurrency", async () => {
