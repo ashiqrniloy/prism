@@ -44,16 +44,15 @@ Active numbered execution plans for Prism roadmap phases.
 | [038-CodeQL-Security-Remediation.md](038-CodeQL-Security-Remediation.md) | Security audit — 59 open GitHub CodeQL alerts and extended coverage | in progress (Task 1 complete) |
 | [039-Obscura-Full-Host-Support-And-Changed-Package-Release.md](039-Obscura-Full-Host-Support-And-Changed-Package-Release.md) | Phase 39 — Obscura full host support (`@arnilo/prism-obscura`) and changed-package release | in progress |
 
-| [040-Dev-Inspector-Prism-Dev-Local-Playground.md](040-Dev-Inspector-Prism-Dev-Local-Playground.md) | 0.3.x — Dev Inspector: `prism dev` local playground server | planned |
-| [041-Tool-Search-Progressive-Tool-Loading.md](041-Tool-Search-Progressive-Tool-Loading.md) | Runtime audit — tool search / progressive tool loading | planned |
-| [042-Prompt-Registry-Versioned-Prompts-And-Eval-Gated-Promotion.md](042-Prompt-Registry-Versioned-Prompts-And-Eval-Gated-Promotion.md) | Runtime audit — versioned prompt registry with eval-gated promotion | planned |
-| [043-Trace-To-Dataset-Curation.md](043-Trace-To-Dataset-Curation.md) | Runtime audit — trace-to-dataset curation (`datasetFromRuns`) | planned |
-| [044-Composite-Memory-Recall-Scoring.md](044-Composite-Memory-Recall-Scoring.md) | Runtime audit — composite memory recall scoring (recency + importance) | planned |
-| [045-Bounded-Loop-Workflow-Node.md](045-Bounded-Loop-Workflow-Node.md) | Workflow audit — bounded loop workflow node | planned |
-| [046-Outbound-Webhook-Notifier.md](046-Outbound-Webhook-Notifier.md) | Workflow audit — outbound webhook notifier seam | planned |
-| [047-In-Session-Handoff-Pattern-Recipe.md](047-In-Session-Handoff-Pattern-Recipe.md) | Recipe — in-session handoff pattern | planned |
-| [048-Hierarchical-Crew-Recipe.md](048-Hierarchical-Crew-Recipe.md) | Recipe — hierarchical "crew" with manager agent | planned |
-
+| [040-Dev-Inspector-Prism-Dev-Local-Playground.md](040-Dev-Inspector-Prism-Dev-Local-Playground.md) | 0.3.x — Dev Inspector: `prism dev` local playground server (`@arnilo/prism-dev`) | planned |
+| [041-Tool-Search-Progressive-Tool-Loading.md](041-Tool-Search-Progressive-Tool-Loading.md) | 0.3.x — tool search / progressive tool loading (core middleware) | planned |
+| [042-Prompt-Registry-Versioned-Prompts-And-Eval-Gated-Promotion.md](042-Prompt-Registry-Versioned-Prompts-And-Eval-Gated-Promotion.md) | 0.3.x — versioned prompt registry with eval-gated promotion (`@arnilo/prism-prompts`) | planned |
+| [043-Trace-To-Dataset-Curation.md](043-Trace-To-Dataset-Curation.md) | 0.3.x — trace-to-dataset curation (`datasetFromRuns`) | planned |
+| [044-Composite-Memory-Recall-Scoring.md](044-Composite-Memory-Recall-Scoring.md) | 0.3.x — composite memory recall scoring (recency + importance) | planned |
+| [045-Bounded-Loop-Workflow-Node.md](045-Bounded-Loop-Workflow-Node.md) | 0.3.x — bounded loop workflow node | planned |
+| [046-Outbound-Webhook-Notifier.md](046-Outbound-Webhook-Notifier.md) | 0.3.x — outbound webhook notifier seam (`@arnilo/prism-server`) | planned |
+| [047-In-Session-Handoff-Pattern-Recipe.md](047-In-Session-Handoff-Pattern-Recipe.md) | 0.3.x — recipe: in-session handoff pattern | planned |
+| [048-Hierarchical-Crew-Recipe.md](048-Hierarchical-Crew-Recipe.md) | 0.3.x — recipe: hierarchical "crew" with manager agent | planned |
 | [049-Template-Gallery-Deep-Research.md](049-Template-Gallery-Deep-Research.md) | 0.3.x — template gallery: `prism init --template` (Deep Research first) | planned |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.
