@@ -2545,7 +2545,9 @@ describe("docs", () => {
   it("docs avoid real-looking secret examples", () => {
     for (const file of markdownFiles(docsDir)) {
       const text = readFileSync(file, "utf8");
-      assert.equal(/sk-[A-Za-z0-9_-]{8,}/.test(text), false, `${file} has real-looking secret`);
+      // Real sk- keys are 20+ random chars; {8,} false-positived on prose paths
+      // like `ask-user-decision.ts` / `task-boundary` ("sk-user-decision").
+      assert.equal(/sk-[A-Za-z0-9_-]{20,}/.test(text), false, `${file} has real-looking secret`);
     }
   });
 
