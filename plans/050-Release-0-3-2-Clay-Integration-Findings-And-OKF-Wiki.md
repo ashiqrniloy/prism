@@ -942,7 +942,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       bundles (GoogleCloudPlatform/open-knowledge-format)".
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 12 — Final verification, patch bumps, and npm publish of all changed packages
+- [x] Task 12 — Final verification, patch bumps, and npm publish of all changed packages (2026-08-29: complete — 5-package cut published: root `@arnilo/prism@0.3.2`, `@arnilo/prism-coding-agent@0.3.2`, `@arnilo/prism-supervisor@0.3.2`, `@arnilo/prism-wiki@0.0.3`, `@arnilo/prism-acp-agent@0.3.2`)
   - Acceptance Criteria:
     - Functional: every task above checked; full gate green
       (`npm run sdk:ready`: typecheck, lint, format, test, coverage, pack
@@ -1080,6 +1080,21 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
   `../entities/` for concepts/decisions); no legacy-page migrator (`wiki-refresh`
   upgrades pages it touches). PKM profile schema text still mentions wikilinks —
   linter flags them.
+  Task 12 (2026-08-29): changed set grew to 5 — `@arnilo/prism-acp-agent` joins the
+  cut because `sessionStore.path: ":memory:"` was being resolved to a literal
+  `<baseDir>/:memory:` file (root-cause fix + regression test; the stray tracked
+  `:memory:` artifact is removed from the package). Version-literal freezes advanced
+  per cut convention (docs current-line pins, phase24/26/34 windows and markers,
+  wiki primitive-seams, packaging peer window, root `version` export, compat
+  baselines regenerated — additive/version-literal only). CI verify initially failed
+  on the root baseline (regenerated before the `src/index.ts` version bump); fixed
+  by re-amending with the refreshed baseline before re-tagging. Tag pushes did not
+  fire workflow events when pushed alongside the branch push (event coalescing);
+  re-firing required delete + re-push of the tags one at a time. Protected
+  Postgres row stayed blocked locally (no docker/pg on this machine); CI's
+  postgres-integration job provided the durable evidence (green) and the publish
+  jobs ran with OIDC provenance. Registry manifests verified post-publish:
+  `samePublishedManifest` matches for all 5 packages; `npm view` confirms versions.
 
 ## Further Actions
 - To be filled after task completion with improvements, rationale, and
