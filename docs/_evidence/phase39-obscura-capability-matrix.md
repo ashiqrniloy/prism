@@ -153,3 +153,11 @@ inclusion while the binary/image is not supplied by installation.
 | Concurrent-caps / abort-storm evidence | behavioral: mutation serialization presents one live page; abort legs settle in-flight calls and kill owned children (host conformance abort test; process/web timeout+abort tests) — no leak committed to a timing gate |
 | Enabled-but-missing live leg fails loudly | `PRISM_LIVE_OBSCURA=1` without `PRISM_OBSCURA_BIN` throws (never silent pass); unset env keeps the skip |
 | Protected live legs blocked evidence | no Obscura binary/credentials on this machine: Docker/binary/Playwright legs remain named protected rows with `PRISM_LIVE_OBSCURA` requiredEnv in `scripts/release-skip-manifest.mjs` and the optional leg in `.github/workflows/sandbox-browser.yml`; missing prerequisites never degrade to pass |
+
+## 6. Task 8 release-cut evidence (2026-08-29)
+
+- Baseline: `c600eaa` (plan 035 completion parent). Cut: root `@arnilo/prism` + 27 changed workspace packages → **0.3.1**; `@arnilo/prism-rag` 0.3.1 → **0.3.2**; `@arnilo/prism-obscura` publishes new at **0.3.0** — 30 package tags, dependency order.
+- `release.mjs check --independent --baseline c600eaa`: 30/30 `available`; `publish --dry-run`: 30/30 `dry-run` (report `docs/_evidence/phase39-publish-dry-run.json`).
+- Compat baselines regenerated (`--update-baseline`): version literal, obscura CDP/web types, plan 036/037 additive exports; zero removals; no `--allow-break`.
+- Unchanged packages stay byte-identical (root-peer window policy: `^0.3.0` unchanged / `^0.3.1` republished; both satisfy the root inside Decision B).
+- Publication remains the operator handoff: push the 30 annotated package tags; `release.yml` publishes with OIDC provenance.

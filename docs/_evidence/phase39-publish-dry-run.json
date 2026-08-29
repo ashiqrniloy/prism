@@ -1,0 +1,159 @@
+{
+  "version": "independent",
+  "independent": true,
+  "dryRun": true,
+  "order": [
+    "@arnilo/prism",
+    "@arnilo/prism-browser",
+    "@arnilo/prism-model-router",
+    "@arnilo/prism-ponytail",
+    "@arnilo/prism-provider-ai-sdk",
+    "@arnilo/prism-provider-alibaba",
+    "@arnilo/prism-provider-anthropic",
+    "@arnilo/prism-provider-azure",
+    "@arnilo/prism-provider-bedrock",
+    "@arnilo/prism-provider-clinepass",
+    "@arnilo/prism-provider-deepseek",
+    "@arnilo/prism-provider-google",
+    "@arnilo/prism-provider-kimi",
+    "@arnilo/prism-provider-neuralwatt",
+    "@arnilo/prism-provider-ollama",
+    "@arnilo/prism-provider-openai",
+    "@arnilo/prism-provider-opencode-go",
+    "@arnilo/prism-provider-openrouter",
+    "@arnilo/prism-provider-vertex",
+    "@arnilo/prism-provider-xai",
+    "@arnilo/prism-provider-zai",
+    "@arnilo/prism-supervisor",
+    "@arnilo/prism-web-tools",
+    "@arnilo/prism-wiki",
+    "@arnilo/prism-workflows",
+    "@arnilo/prism-coding-agent",
+    "@arnilo/prism-obscura",
+    "@arnilo/prism-rag",
+    "@arnilo/prism-server",
+    "@arnilo/prism-acp-agent"
+  ],
+  "packages": [
+    {
+      "name": "@arnilo/prism",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-browser",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-model-router",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-ponytail",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-ai-sdk",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-alibaba",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-anthropic",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-azure",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-bedrock",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-clinepass",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-deepseek",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-google",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-kimi",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-neuralwatt",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-ollama",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-openai",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-opencode-go",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-openrouter",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-vertex",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-xai",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-provider-zai",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-supervisor",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-web-tools",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-wiki",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-workflows",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-coding-agent",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-obscura",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-rag",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-server",
+      "status": "dry-run"
+    },
+    {
+      "name": "@arnilo/prism-acp-agent",
+      "status": "dry-run"
+    }
+  ]
+}
