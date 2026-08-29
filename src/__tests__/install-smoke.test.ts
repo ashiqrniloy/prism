@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+
+// Root manifest version drives the core tarball name (arnilo-prism-<v>.tgz).
+const ROOT_VERSION = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
+
 import { dirname, join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -807,12 +811,13 @@ describe("install smoke (fresh offline tarball install)", () => {
     );
   });
 
-  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) -> arnilo-prism-0.3.0.tgz.
-  // Regression guard so a future rename can't silently re-mangle the published filename.
-  it("core tarball filename is arnilo-prism-0.3.0.tgz (npm strips the @scope/)", () => {
+  // ponytail: npm strips @scope/ from tarball names; core (@arnilo/prism) ->
+  // arnilo-prism-<root version>.tgz. Regression guard so a future rename can't
+  // silently re-mangle the published filename; umbrella metas pin their own cuts.
+  it(`core tarball filename is arnilo-prism-${ROOT_VERSION}.tgz (npm strips the @scope/)`, () => {
     assert.ok(
-      result.tarballNames.includes("arnilo-prism-0.3.0.tgz"),
-      `expected 'arnilo-prism-0.3.0.tgz' in ${JSON.stringify(result.tarballNames)}`,
+      result.tarballNames.includes(`arnilo-prism-${ROOT_VERSION}.tgz`),
+      `expected 'arnilo-prism-${ROOT_VERSION}.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The 3 umbrella metas must be present too.
@@ -854,7 +859,7 @@ describe("peer-version policy (plan 030 Task 9, Decision B: caret ranges)", () =
     writeFileSync(join(consumer, "package.json"), JSON.stringify({ name: "prism-peer-mix-consumer", type: "module" }, null, 2));
     const coreInstall = run(
       "npm",
-      ["install", join(stage, "arnilo-prism-0.3.0.tgz"), "--offline", "--no-audit", "--no-fund", "--no-update-notifier"],
+      ["install", join(stage, `arnilo-prism-${ROOT_VERSION}.tgz`), "--offline", "--no-audit", "--no-fund", "--no-update-notifier"],
       consumer,
     );
     assert.equal(coreInstall.status, 0, coreInstall.stdout + coreInstall.stderr);

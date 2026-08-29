@@ -57,7 +57,6 @@ export type {
   CacheUsageReport,
 } from "./cache-helpers.js";
 export {
-  systemCacheControlField,
   applyCacheControl,
   cacheHitRate,
   cacheSavings,
@@ -65,6 +64,7 @@ export {
   mapCacheRetention,
   resolveBreakpoint,
   sanitizeCacheKey,
+  systemCacheControlField,
 } from "./cache-helpers.js";
 export type {
   CacheTelemetry,
@@ -78,7 +78,6 @@ export {
   createCacheTelemetry,
   DEFAULT_CACHE_TELEMETRY_CAP,
 } from "./cache-telemetry.js";
-export { canonicalizeJsonSchema } from "./providers/schema.js";
 export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
 export { CHECKPOINT_CONFLICT_CODE, CheckpointConflictError, createMemoryCheckpointStore } from "./checkpoints.js";
 export type { DefaultCompactionStrategyOptions } from "./compaction.js";
@@ -415,7 +414,6 @@ export {
   throwIfAborted,
 } from "./oauth-device-code.js";
 export { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
-export { trimTrailingSlashes } from "./trim-trailing-slashes.js";
 export type {
   ApplyRetentionInput,
   ApplyRetentionResult,
@@ -468,6 +466,7 @@ export {
 export { authMethodKey, defineProviderPackage, systemPromptContributionKey } from "./provider-packages.js";
 export type { SessionCachePolicyOptions } from "./provider-request-policy.js";
 export { createProviderRequestPolicyChain, createSessionCachePolicy, mergeProviderRequestOptions } from "./provider-request-policy.js";
+export { canonicalizeJsonSchema } from "./providers/schema.js";
 export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js";
 export { createProviderRegistry, createProviderResolver } from "./providers.js";
 export type { SecretRedactor } from "./redaction.js";
@@ -629,6 +628,7 @@ export type {
   ToolValidator,
 } from "./tools.js";
 export { createToolParameterValidator, createToolRegistry, dispatchToolCall, filterTools } from "./tools.js";
+export { trimTrailingSlashes } from "./trim-trailing-slashes.js";
 export type {
   ResolvedUseCaseModel,
   ResolveUseCaseModelInput,

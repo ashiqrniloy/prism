@@ -14,7 +14,6 @@ import type {
   Usage,
 } from "@arnilo/prism";
 import {
-  systemCacheControlField,
   assertStructuredOutputRequestSupported,
   canonicalizeJsonSchema,
   providerDone,
@@ -24,6 +23,7 @@ import {
   providerToolCall,
   providerToolCallDelta,
   providerUsage,
+  systemCacheControlField,
   toolCallFromArgumentsText,
 } from "@arnilo/prism";
 import {

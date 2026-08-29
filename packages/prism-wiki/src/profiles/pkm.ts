@@ -1,5 +1,5 @@
-import type { WikiProfileType } from "../types.js";
 import { parseMarkdownHeading } from "../heading.js";
+import type { WikiProfileType } from "../types.js";
 import type { ExtractedEntityDraft, ExtractedSymbol, ScannedFile } from "./codebase.js";
 
 export class PkmProfile {

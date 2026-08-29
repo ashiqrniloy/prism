@@ -35,8 +35,8 @@ export function createOpenAIProviderPackage(options: OpenAIProviderPackageOption
 }
 
 export {
-  OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH,
   applyPromptCacheBreakpoints,
+  OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH,
   promptCacheKey,
   promptCacheOptions,
   promptCacheRetention,

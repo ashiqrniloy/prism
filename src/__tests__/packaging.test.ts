@@ -175,7 +175,12 @@ describe("packaging guard", () => {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
-          assert.equal(peers?.["@arnilo/prism"], "^0.3.0", `${pkg.name} @arnilo/prism peer must be ^0.3.0`);
+          // Decision B window: ^0.3.0 everywhere; packages republishing in the
+          // plan 039 cut track the root patch (^0.3.1).
+          assert.ok(
+            peers?.["@arnilo/prism"] === "^0.3.0" || peers?.["@arnilo/prism"] === "^0.3.1",
+            `${pkg.name} @arnilo/prism peer must be inside the Decision B window, got ${peers?.["@arnilo/prism"]}`,
+          );
           const meta = manifest.peerDependenciesMeta as Readonly<Record<string, { readonly optional?: boolean }>> | undefined;
           assert.ok(!meta?.["@arnilo/prism"]?.optional, `${pkg.name} must not mark the @arnilo/prism peer optional`);
         });

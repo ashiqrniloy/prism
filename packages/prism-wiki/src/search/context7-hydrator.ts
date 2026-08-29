@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
-import type { HydratedSearchHit, QmdSearchResult, SearchMode, WikiManifest, WikiSearchResponse, WikiSourceAnchor } from "../types.js";
 import { parseMarkdownHeading } from "../heading.js";
+import type { HydratedSearchHit, QmdSearchResult, SearchMode, WikiManifest, WikiSearchResponse, WikiSourceAnchor } from "../types.js";
 
 export class Context7Hydrator {
   private readonly workspaceRoot: string;
