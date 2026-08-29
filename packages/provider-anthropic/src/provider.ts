@@ -1,5 +1,5 @@
 import type { AIProvider, CredentialValueSource, ProviderRequestOptions } from "@arnilo/prism";
-import { providerError, resolveCredentialValue } from "@arnilo/prism";
+import { providerError, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
 import { httpStatusError, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { anthropicMessagesBody, anthropicMessagesEvents } from "./messages.js";
 import { ANTHROPIC_API_VERSION, ANTHROPIC_DEFAULT_BASE_URL } from "./models.js";
@@ -33,7 +33,7 @@ export function anthropicOwnedHeaders(
 
 export function createAnthropicMessagesProvider(options: AnthropicMessagesProviderOptions = {}): AIProvider {
   const id = options.id ?? "anthropic";
-  const baseUrl = (options.baseUrl ?? ANTHROPIC_DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(options.baseUrl ?? ANTHROPIC_DEFAULT_BASE_URL);
   return {
     id,
     async *generate(request) {

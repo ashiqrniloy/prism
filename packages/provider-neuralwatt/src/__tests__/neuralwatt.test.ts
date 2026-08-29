@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, JsonObject, ModelConfig, ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
 import { applyThinkingLevel, cacheSavings } from "@arnilo/prism";
 import {
+  assertNoForeignCacheFields,
   assertProviderOwnedHeadersWin,
   assertProviderStreamConforms,
   assertSerializedRequestCoversContent,
@@ -39,6 +40,10 @@ const request: ProviderRequest = {
 };
 
 describe("@arnilo/prism-provider-neuralwatt (provider shell)", () => {
+  it("neuralwatt_implicit_requests_carry_no_foreign_cache_fields", () => {
+    assertNoForeignCacheFields(neuralWattBody({ ...request, options: { cacheKey: "session-1", cacheRetention: "long" } }));
+  });
+
   it("neuralwatt_post_url_and_auth_header", async () => {
     let capturedUrl = "";
     let headers = new Headers();

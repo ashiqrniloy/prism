@@ -56,7 +56,8 @@
     - `docs/index.md` update: no; security evidence is internal.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Fix path containment, symlink escape, and wiki write injection/bounds
+- [x] Fix path containment, symlink escape, and wiki write injection/bounds
+  - Completed: separator-aware `path.relative` + `fs.realpath` containment in `read-page.ts` (denied throws, contained-missing returns `found: false`); bounds + single-line title handling in `record-insight.ts` (non-empty title/content, 200-char/65,536-byte caps, control-char collapse, non-empty slug fallback). Tests in `packages/prism-wiki/src/__tests__/tools.test.ts` (38/38 pass); docs updated in `docs/wiki.md`, `docs/host-security.md`, and the Task 1 ledger.
   - Acceptance Criteria:
     - Functional: Wiki page reads cannot escape by sibling-prefix (`.wiki-evil`), `..`, absolute path, alternate separator, or symlink; recorded insights reject empty/oversize titles/content and prevent title newlines/control text from injecting headings/index/log entries.
     - Performance: Path validation performs bounded `resolve`/`relative` plus at most necessary `realpath` calls; writes remain one page/index/log operation.
@@ -103,7 +104,8 @@
     - `docs/index.md` update: yes only if no Prism Wiki tool page currently exists; add under “Tools”.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Remove dynamic regex denial-of-service and predictable temporary paths
+- [x] Remove dynamic regex denial-of-service and predictable temporary paths
+  - Completed: `ponytail-subagent.js` compiles no `RegExp` from the environment — safe subset parser (`a|b` literal alternatives, `^a$` exact, case-insensitive bounded string comparison, 256-char cap, invalid/unset fails open to inject-all). `phase23-build-race.test.mjs` uses `mkdtempSync` + `try/finally` cleanup plus a uniqueness/cleanup test. Tests: `packages/prism-ponytail/src/__tests__/subagent-hook.test.ts` (27/27 package pass) and phase23 race suite (9/9). Docs: `docs/ponytail.md` matcher subset; ledger local-findings rows added.
   - Acceptance Criteria:
     - Functional: Ponytail subagent matching retains documented common forms without evaluating arbitrary hostile regex; temporary test directories are atomically unique and always cleaned in `finally`.
     - Performance: Matching is linear in bounded pattern/agent-type length; no catastrophic backtracking or worker process.
@@ -146,7 +148,8 @@
     - `docs/index.md` update: no; Ponytail page already indexed.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Remediate all remaining alert groups at shared trust-boundary roots
+- [x] Remediate all remaining alert groups at shared trust-boundary roots
+  - Completed: Group A — shared `trimTrailingSlashes()` exported from `@arnilo/prism`, all 36 slash-trim call sites converted (root/server/all providers). Group B — linear scanners in `browser/targets.ts`, `coding-checkpoint.ts`, `rag/parsers.ts`, `prism-wiki` (`parseMarkdownHeading` shared in `src/heading.ts`, skills line scanner). Group C — single-pass `htmlToText`. Group D — `sanitizeCacheKey` index/slice trim. Group E — `randomBytes` fixture suffix. Group F — fixed-message DR drill failure log. Groups G/H — unchanged, queued for narrow dismissal in Task 5. Regression suite `scripts/phase38-codeql-regression.test.mjs` added to `security:threat-suites` (58/58 pass); typecheck, all 52 workspace suites, docs suite, and lint pass; docs updated (`docs/host-security.md`, ledger Task 4 section).
   - Acceptance Criteria:
     - Functional: Every alert not closed by Tasks 2-3 has a code fix and regression test, or a narrowly evidenced false-positive disposition; alert ledger reaches 100% accounting.
     - Performance: Fixes preserve streaming/bounded behavior and add no unbounded scans, buffering, retries, DNS calls, or subprocesses.
@@ -189,7 +192,9 @@
     - `docs/index.md` update: yes only for newly created public security pages; prefer existing pages.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Enable security-extended CodeQL coverage without hiding first-party fixtures
+- [x] Enable security-extended CodeQL coverage without hiding first-party fixtures
+  - Completed: `.github/codeql/codeql-config.yml` adds `queries: [{ uses: security-extended }]` alongside the default suite for `javascript-typescript`; `security.yml` already runs it on push/PR/schedule with `timeout-minutes: 10` (measured ~3m22s — no raise) and the existing `paths-ignore` covers only `dist`, `packages/*/dist`, `node_modules`, `release-artifacts`, and `security-artifacts` (generated/build artifacts; no first-party source, threat suites, fixtures, or docs excluded). Config guardrails asserted in `scripts/phase38-codeql-regression.test.mjs` (9/9; threat suites 58→61... see run below). Docs updated (`docs/host-security.md` CodeQL query-suite statement; ledger Task 5 section). Stale freeze tests refreshed deliberately: `FROZEN_VALUE_EXPORTS` += `trimTrailingSlashes` (Task 4), release package count 59 → 60 per `scripts/package-truth.json`, `docs/index.md` count literal 59 → 60. Extended-suite delta alerts reconcile after the first GitHub run on push.
+  - Note (pre-existing, out of scope): 15 failures in the full root suite trace to the in-flight untracked `packages/obscura` workspace (plan 039) shifting manifest counts in the phase13/14/15 freeze, benchmark inventory, plan-027 lockfile, and release-closeout tests; they fail identically without this task's changes and belong to plan 039's count refresh.
   - Acceptance Criteria:
     - Functional: CodeQL runs `security-extended` for JavaScript/TypeScript on push/PR/schedule and uploads results successfully.
     - Performance: Security job remains within an evidence-backed timeout (target existing 10 minutes; raise narrowly only if measured).
@@ -228,6 +233,7 @@
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
 - [ ] Prove local security gates and zero remaining GitHub alerts
+  - Progress (2026-08-29): local gates that do not require a GitHub analyze pass are green (typecheck, lint 0 SARIF diagnostics, format, 1690 root dist tests, threat suites 59/59, phase38 9/9, npm audit 0, secret scan 0/1957, SBOM verify, root pack dry-run). GitHub refetch still **59 open** on audited SHA `c600eaa18f65b56764ec2fb408ec813536eff6f7` — remediations unpushed, so CodeQL has not re-analyzed the fixed tree. Groups G/H documented as maintainer-reviewed false positives in the ledger; dismissal deferred until the remediated SHA is the analyzed head. Full `npm test`/`sdk:ready` still hits mixed-tree freeze/count failures (plan 039 obscura + historical byte-immutable hashes from Task 4 slash-trim); out of scope for closing GitHub true positives.
   - Acceptance Criteria:
     - Functional: Typecheck, lint, format, all tests, coverage, pack, threat suites, npm audit, secret scan, SBOM verification, and GitHub security workflow pass on remediated head.
     - Performance: Security workflow and threat suites remain within bounded time/memory; no fix regresses Plan 035/036/037 performance ceilings.

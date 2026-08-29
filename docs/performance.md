@@ -749,6 +749,18 @@ Enterprise governance and connector caps (defaults / hard). Timings: `node scrip
 
 Offline behavior tests (identity propagation, policy export, router deny paths, fake CLI argv) are release gates; live tenant canaries remain operator-gated.
 
+### 0.3.x Phase 39 Obscura browser-engine envelopes (2026-08-29)
+
+`@arnilo/prism-obscura` binary-backed legs, network-free, driven by a deterministic fake CLI: `node scripts/benchmark-obscura.mjs` (3 runs, medians vs reviewed ceilings; artifact `scripts/benchmark-obscura.json`). Startup leg probes SIG-0 liveness after spawn — a real host waits on its readiness endpoint inside the same bound.
+
+| Leg | Median (3 runs) | Ceiling | Notes |
+| --- | --- | --- | --- |
+| Managed startup (`spawnObscuraProcess` + `waitReady`) | ~0.02 ms | 250 ms | fake child; machine-dependent sanity bound, catches catastrophic lifecycle regression |
+| Bounded CLI `web_search` call | ~20 ms | 100 ms | one `runObscuraCli` round trip through the public tool surface |
+| Group close (SIGTERM drain) | ~0.6 ms | 250 ms | idempotent group-wide close; real children exit on signal |
+
+No new release gate: the ceilings are evidence, not gates. Concurrent-resource evidence is behavioral, not timing: the MCP bridge serializes mutations (one live page), and abort tests prove an aborted in-flight call settles and kills the owned child with zero leaked processes (`scripts/obscura-host-conformance.test.mjs` abort leg; process/web suite timeout/abort-kill tests). Packed tarball 34.4 kB / 16 files; the package installs no binary, image, or browser.
+
 ## Related APIs
 
 - [Agent events](agent-events.md): `SubscribeOptions` and `event_subscriber_overflow` event details.

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { createWikiReadPageTool } from "../tools/read-page.js";
@@ -80,5 +80,59 @@ describe("prism-wiki tools suite", () => {
     // Verify log.md updated
     const logContent = await readFile(join(TEST_DIR, ".wiki/log.md"), "utf8");
     assert.ok(logContent.includes("Recorded decision"));
+  });
+
+  it("wiki_read_page_denies_sibling_prefix_traversal", async () => {
+    const tool = createWikiReadPageTool({ workspaceRoot: TEST_DIR, wikiRoot: ".wiki" });
+    await mkdir(join(TEST_DIR, ".wiki-evil"), { recursive: true });
+    await writeFile(join(TEST_DIR, ".wiki-evil/secret.md"), "secret", "utf8");
+
+    await assert.rejects(async () => {
+      await tool.execute({ pagePath: "../.wiki-evil/secret.md" }, { sessionId: "s1", runId: "r1", toolCallId: "c5" });
+    }, /Access denied/);
+  });
+
+  it("wiki_read_page_denies_symlink_escape", async () => {
+    const tool = createWikiReadPageTool({ workspaceRoot: TEST_DIR, wikiRoot: ".wiki" });
+    await writeFile(join(TEST_DIR, "outside-secret.md"), "outside", "utf8");
+    await symlink(join(TEST_DIR, "outside-secret.md"), join(TEST_DIR, ".wiki/entities/escape.md"));
+
+    await assert.rejects(async () => {
+      await tool.execute({ pagePath: "entities/escape.md" }, { sessionId: "s1", runId: "r1", toolCallId: "c6" });
+    }, /Access denied/);
+  });
+
+  it("wiki_read_page_reports_missing_contained_page_as_not_found", async () => {
+    const tool = createWikiReadPageTool({ workspaceRoot: TEST_DIR, wikiRoot: ".wiki" });
+
+    const result = await tool.execute({ pagePath: "entities/missing.md" }, { sessionId: "s1", runId: "r1", toolCallId: "c7" });
+    assert.equal((result.value as { found: boolean }).found, false);
+  });
+
+  it("wiki_record_insight_rejects_empty_oversize_and_injecting_titles", async () => {
+    const tool = createWikiRecordInsightTool({ workspaceRoot: TEST_DIR, wikiRoot: ".wiki" });
+
+    await assert.rejects(async () => {
+      await tool.execute({ title: "   ", content: "x" }, { sessionId: "s1", runId: "r1", toolCallId: "c8" });
+    }, /title must be a non-empty/);
+    await assert.rejects(async () => {
+      await tool.execute({ title: "ok", content: "  " }, { sessionId: "s1", runId: "r1", toolCallId: "c9" });
+    }, /content must be a non-empty/);
+    await assert.rejects(async () => {
+      await tool.execute({ title: "t".repeat(201), content: "x" }, { sessionId: "s1", runId: "r1", toolCallId: "c10" });
+    }, /title exceeds/);
+    await assert.rejects(async () => {
+      await tool.execute({ title: "ok", content: "x".repeat(65_537) }, { sessionId: "s1", runId: "r1", toolCallId: "c11" });
+    }, /content exceeds/);
+
+    // Newline/control injection collapses to a single line: no extra heading/index/log entry.
+    await tool.execute(
+      { title: "evil insight\n## injected heading", content: "body" },
+      { sessionId: "s1", runId: "r1", toolCallId: "c12" },
+    );
+    const log = await readFile(join(TEST_DIR, ".wiki/log.md"), "utf8");
+    const index = await readFile(join(TEST_DIR, ".wiki/index.md"), "utf8");
+    assert.ok(!log.includes("\n## injected heading"));
+    assert.ok(!index.includes("\n## injected heading"));
   });
 });

@@ -1,5 +1,5 @@
 import type { AIProvider, CredentialValueSource, ModelConfig, ProviderPackage } from "@arnilo/prism";
-import { defineProviderPackage, providerError, resolveCredentialValue as resolveOnce } from "@arnilo/prism";
+import { defineProviderPackage, providerError, resolveCredentialValue as resolveOnce, trimTrailingSlashes } from "@arnilo/prism";
 import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
 
 /** Default Azure OpenAI API version (hosts may override; package never rewrites endpoint host). */
@@ -42,7 +42,7 @@ function requireEndpoint(endpoint: string | undefined): string {
     if (error instanceof Error && error.message.startsWith("Azure")) throw error;
     throw new Error("Azure OpenAI endpoint must be an absolute https URL");
   }
-  return endpoint.replace(/\/+$/, "");
+  return trimTrailingSlashes(endpoint);
 }
 
 /** Build deployment chat-completions URL without rewriting the endpoint host. */

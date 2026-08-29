@@ -404,6 +404,7 @@ describe("docs", () => {
         "@arnilo/prism-antigravity-agent": "antigravity-agent",
         "@arnilo/prism-wiki": "wiki",
         "@arnilo/prism-graft": "Graft",
+        "@arnilo/prism-obscura": "Obscura",
       };
       for (const omitted of all.omits) {
         const readable = omissionReadable[omitted];
@@ -1659,7 +1660,7 @@ describe("docs", () => {
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 59, "publishable package documentation count drifted");
+    assert.equal(dirs.length, 60, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
@@ -1688,6 +1689,7 @@ describe("docs", () => {
       "Provider-owned auth/session/security headers always win over caller headers",
       "sanitizeCacheKey",
       "applyCacheControl",
+      "systemCacheControlField",
       "cacheHitRate",
       "cacheSavings",
       "cacheUsageReport",
@@ -3817,7 +3819,7 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 59, "frozen publishable package count drifted");
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, 60, "frozen publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {

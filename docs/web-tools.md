@@ -8,6 +8,8 @@
 
 Use when agent needs explicit public-web discovery or host-approved document retrieval/extraction. Keep search separate from fetch/extract so model cannot select provider, credential, API origin, extraction schema, or cost path.
 
+**Obscura-backed alternative**: the optional [`@arnilo/prism-obscura`](obscura.md) package provides `web_search`/`web_fetch` behavior backed by a host-installed Obscura headless browser through its CLI (one replaceable HTML search profile instead of an API key), plus explicit native `obscura_fetch`/`obscura_scrape` batch tools. It reuses this package's normalized citation/untrusted shapes (`provider: "obscura"`) but does not require credentials; the API-backed Brave/Exa/Firecrawl adapters here remain the preferred path when an API key is available.
+
 ## Inputs / request
 
 | Tool | Model-visible input | Host-only construction input |

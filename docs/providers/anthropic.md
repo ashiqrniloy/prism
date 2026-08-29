@@ -41,7 +41,7 @@ Featured offline aliases: `claude-opus-4-8`, `claude-sonnet-5`, `claude-haiku-4-
 | Surface | Behavior |
 | --- | --- |
 | Stream | Prism text, thinking deltas, tool-call delta/final, usage (incl. cache read/create when present), `done`, redacted `error`. |
-| Cache | Featured models use `cache.kind: "cache_control"`; markers on selected breakpoints (`long` → `ttl: "1h"`). |
+| Cache | Featured models use `cache.kind: "cache_control"`; markers on selected breakpoints (`long` → `ttl: "1h"`). A `system_prompt` breakpoint serializes `system` as native text blocks with the marker (plain string otherwise). |
 | Thinking | Model-family aware (`adaptive` vs `enabled`+`budget_tokens`); helpers `anthropicThinking` / `anthropicEffort` / `anthropicPreserveThinking`. |
 | Auth | `api_key` for provider id; provider-owned `content-type`, `x-api-key`, `anthropic-version` win over caller headers. No OAuth descriptor or subscription adapter is registered. |
 

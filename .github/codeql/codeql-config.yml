@@ -1,4 +1,6 @@
 name: prism-codeql
+queries:
+  - uses: security-extended
 paths-ignore:
   - dist
   - "packages/*/dist"

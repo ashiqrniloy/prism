@@ -1,5 +1,6 @@
 import type { AIProvider, ContentBlock, JsonObject, ProviderEvent, ProviderRequest, ToolCallContent, Usage } from "../contracts.js";
 import { reconstructToolCallDeltas } from "../provider-events.js";
+import { canonicalizeJsonSchema } from "../providers/schema.js";
 
 export interface ProviderStreamConformanceOptions {
   readonly provider: AIProvider;
@@ -106,6 +107,13 @@ export function assertSerializedRequestCoversContent(
   }
 }
 
+export function assertCanonicalToolParameters(serialized: unknown, original: unknown): void {
+  const expected = canonicalizeJsonSchema(original ?? { type: "object" });
+  if (JSON.stringify(serialized) !== JSON.stringify(expected)) {
+    throw new Error("Tool parameters were not canonicalized");
+  }
+}
+
 export function assertProviderOwnedHeadersWin(captured: Headers, options: ProviderHeaderOwnershipConformanceOptions): void {
   const ownedLower: Record<string, string> = {};
   for (const [name, expected] of Object.entries(options.owned)) ownedLower[name.toLowerCase()] = expected;
@@ -132,6 +140,36 @@ export function assertNoSecretLeak(events: readonly ProviderEvent[], secrets: re
     if (!secret) continue;
     if (eventText.includes(secret)) throw new Error(`Secret leaked into provider events: ${secret.slice(0, 8)}...`);
   }
+}
+
+/** Known cache wire fields across protocols; any of these in a request body is an explicit cache control. */
+const CACHE_WIRE_FIELDS = [
+  "cache_control",
+  "prompt_cache_key",
+  "prompt_cache_retention",
+  "prompt_cache_options",
+  "prompt_cache_breakpoint",
+  "cachedContent",
+  "cachePoint",
+] as const;
+
+/**
+ * Implicit/none-cache providers must serialize no foreign cache fields: implicit
+ * caching works by byte-stable prefix reuse, not request payloads. `allowed` names
+ * fields the provider documents for that route (e.g. `cachedContent` via the host
+ * `extra.cachedContent` escape hatch on Gemini).
+ */
+export function assertNoForeignCacheFields(body: unknown, allowed: readonly string[] = []): void {
+  const bodyText = JSON.stringify(body);
+  for (const field of CACHE_WIRE_FIELDS) {
+    if (allowed.includes(field)) continue;
+    if (bodyText.includes(field)) throw new Error(`Serialized request carries foreign cache field "${field}"`);
+  }
+}
+
+/** Provider construction and setup must perform zero network calls; discovery and streams are caller-gated. */
+export function assertNoFetches(calls: readonly unknown[]): void {
+  if (calls.length > 0) throw new Error(`Provider fetched ${calls.length} time(s) outside caller-gated discovery/stream`);
 }
 
 export function assertUsageAccounting(events: readonly ProviderEvent[], expected: Usage): Usage {

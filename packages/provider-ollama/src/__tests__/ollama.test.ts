@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "@arnilo/prism";
-import { assertProviderStreamConforms, assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
+import {
+  assertNoForeignCacheFields,
+  assertProviderStreamConforms,
+  assertToolCallDeltasReconstruct,
+} from "@arnilo/prism/testing/provider-conformance";
 import {
   createOllamaProvider,
   createOllamaProviderPackage,
@@ -28,6 +32,10 @@ const request: ProviderRequest = {
 };
 
 describe("@arnilo/prism-provider-ollama", () => {
+  it("ollama_implicit_requests_carry_no_foreign_cache_fields", () => {
+    assertNoForeignCacheFields(ollamaBody({ ...request, options: { cacheKey: "session-1", cacheRetention: "long" } }));
+  });
+
   it("base_url_resolver_covers_cloud_local_and_explicit_override", () => {
     assert.equal(ollamaBaseUrl(), "https://ollama.com/v1");
     assert.equal(ollamaBaseUrl({ preset: "cloud" }), "https://ollama.com/v1");

@@ -17,6 +17,7 @@ const hasDesktopPackage = phase30Manifest.tasks.task7 === "done";
 const hasAntigravityPackage = phase30Manifest.amendments?.antigravity?.tasks?.task6 === "done";
 const hasWikiPackage = existsSync(join(ROOT, "packages", "prism-wiki", "package.json"));
 const hasGraftPackage = existsSync(join(ROOT, "packages", "prism-graft")); // plan 033 optional context-graph package
+const hasObscuraPackage = existsSync(join(ROOT, "packages", "obscura", "package.json")); // plan 039 optional Obscura browser package
 
 test("generator reproducible: two runs byte-identical modulo generatedAt", () => {
   assert.deepEqual(stripStamp(computePackageTruth()), stripStamp(computePackageTruth()));
@@ -33,7 +34,12 @@ test("committed artifact equals the generator output (regenerate via node script
 
 test("counts match manifests at the 0.3.0 truth graph plus the Task 7 desktop package", () => {
   const t = computePackageTruth();
-  const added = Number(hasDesktopPackage) + Number(hasAntigravityPackage) + Number(hasWikiPackage) + Number(hasGraftPackage);
+  const added =
+    Number(hasDesktopPackage) +
+    Number(hasAntigravityPackage) +
+    Number(hasWikiPackage) +
+    Number(hasGraftPackage) +
+    Number(hasObscuraPackage);
   assert.equal(t.counts.publishable, 55 + added);
   assert.equal(t.counts.workspace, 54 + added);
   assert.equal(t.counts.provider, 17);
@@ -63,7 +69,12 @@ test("umbrella closures match manifests", () => {
   assert.equal(all.closure, 47, "21 direct deps expand through code/sdk/profile deps to 47 workspace packages");
   assert.equal(
     all.omits.length,
-    6 + Number(hasDesktopPackage) + Number(hasAntigravityPackage) + Number(hasWikiPackage) + Number(hasGraftPackage),
+    6 +
+      Number(hasDesktopPackage) +
+      Number(hasAntigravityPackage) +
+      Number(hasWikiPackage) +
+      Number(hasGraftPackage) +
+      Number(hasObscuraPackage),
   );
   for (const name of [
     "@arnilo/prism-caveman",
@@ -76,6 +87,7 @@ test("umbrella closures match manifests", () => {
     ...(hasAntigravityPackage ? ["@arnilo/prism-antigravity-agent"] : []),
     ...(hasWikiPackage ? ["@arnilo/prism-wiki"] : []),
     ...(hasGraftPackage ? ["@arnilo/prism-graft"] : []),
+    ...(hasObscuraPackage ? ["@arnilo/prism-obscura"] : []),
   ]) {
     assert.ok(all.omits.includes(name), `prism-all omits ${name}`);
   }
@@ -124,6 +136,7 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
     "@arnilo/prism-coding-agent": ["@arnilo/prism-workflows"],
     "@arnilo/prism-coding-security": ["@arnilo/prism-coding-agent"],
     ...(hasDesktopPackage ? { "@arnilo/prism-computer-use-linux": ["@arnilo/prism-mcp"] } : {}),
+    ...(hasObscuraPackage ? { "@arnilo/prism-obscura": ["@arnilo/prism-mcp", "@arnilo/prism-browser", "@arnilo/prism-web-tools"] } : {}),
     ...(hasAntigravityPackage ? { "@arnilo/prism-antigravity-agent": ["@arnilo/prism-coding-agent", "@arnilo/prism-mcp"] } : {}),
     "@arnilo/prism-document-reader": ["@arnilo/prism-coding-agent"],
     "@arnilo/prism-rag": ["@arnilo/prism-memory"],

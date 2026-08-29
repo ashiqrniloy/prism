@@ -228,6 +228,20 @@ function buildSurfaces({ baseline, artifact, thresholds, packages }) {
     });
   }
 
+  // Protected: Obscura live browser legs (plan 039). Binary/Docker/Playwright
+  // live smoke behind the test:live script; offline fake-CLI suite covers the
+  // same argv/serialization surface. Never a silent pass: enabling without a
+  // binary throws in live.test.ts.
+  surfaces.push({
+    name: "Obscura live browser legs",
+    state: "protected",
+    protected: true,
+    live: true,
+    requiredEnv: "PRISM_LIVE_OBSCURA",
+    reason:
+      "requires a host-installed Obscura binary (PRISM_OBSCURA_BIN) and public web access; offline suites drive a deterministic fake CLI and the host-conformance abort leg kills owned children; never a silent pass",
+  });
+
   // Protected: real coding journey (plan 026 Task 7). Consumes the retained
   // phase26-coding-journey-report.json: pass only for a real pass run;
   // blocked/partial reports block release evidence (fail closed); not_run or

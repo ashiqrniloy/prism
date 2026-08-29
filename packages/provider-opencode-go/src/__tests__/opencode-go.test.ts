@@ -335,6 +335,34 @@ describe("@arnilo/prism-provider-opencode-go", () => {
     assert.deepEqual(body.messages.find((m: any) => m.role === "assistant").content.at(-1).cache_control, { type: "ephemeral", ttl: "1h" });
   });
 
+  it("opencode_go_anthropic_route_preserves_system_prompt_breakpoints_as_native_blocks", async () => {
+    let body: any;
+    const provider = createOpenCodeGoProvider({
+      apiKey: "fake-opencode-key",
+      fetch: (async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    const messages: Message[] = [
+      { role: "system", content: [{ type: "text", text: "stable" }] },
+      { role: "user", content: [{ type: "text", text: "preamble" }] },
+      { role: "assistant", content: [{ type: "text", text: "ok" }] },
+      { role: "user", content: [{ type: "text", text: "current turn" }] },
+    ];
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...baseRequest,
+        model: anthropicModel,
+        messages,
+        options: { cacheKey: "sess", cache: { breakpoints: [{ location: "system_prompt" as const }] } },
+      },
+    });
+    assert.deepEqual(body.system, [{ type: "text", text: "stable", cache_control: { type: "ephemeral" } }]);
+    assert.equal((messages[0]!.content[0] as any).cache_control, undefined);
+  });
+
   it("opencode_go_anthropic_route_no_breakpoints_emits_no_cache_control", async () => {
     let body: any;
     const provider = createOpenCodeGoProvider({

@@ -1,4 +1,4 @@
-import { type CredentialValueSource, resolveCredentialValue } from "@arnilo/prism";
+import { type CredentialValueSource, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
 import {
   bytesToBase64,
   createBoundedUploadCache,
@@ -30,7 +30,7 @@ export interface OpenAIResolvedFileWire {
 
 export function createOpenAIFileUploadManager(options: OpenAIFileUploadManagerOptions = {}) {
   const providerId = options.providerId ?? "openai";
-  const baseUrl = (options.baseUrl ?? "https://api.openai.com/v1").replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(options.baseUrl ?? "https://api.openai.com/v1");
   const fetchImpl = options.fetch ?? fetch;
   const inlineMaxBytes = options.inlineMaxBytes ?? DEFAULT_OPENAI_INLINE_FILE_BYTES;
   const purpose = options.purpose ?? "user_data";

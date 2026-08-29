@@ -12,6 +12,30 @@ import {
 } from "../providers/openai-primitives.js";
 
 describe("openai provider primitives", () => {
+  it("canonicalizes shuffled tool schema keys and preserves semantic arrays", () => {
+    const execute = () => ({ toolCallId: "c1", name: "lookup", value: "ok" });
+    const left = {
+      type: "object" as const,
+      required: ["z", "a"],
+      enum: ["z", "a"],
+      properties: { z: { type: "string" }, a: { type: "number" } },
+    };
+    const right = {
+      properties: { a: { type: "number" }, z: { type: "string" } },
+      enum: ["z", "a"],
+      required: ["a", "z"],
+      type: "object" as const,
+    };
+    const serialized = serializeOpenAITool({ name: "lookup", parameters: left, execute });
+    assert.equal(JSON.stringify(serialized), JSON.stringify(serializeOpenAITool({ name: "lookup", parameters: right, execute })));
+    const parameters = (serialized as { function: { parameters: { required: string[]; enum: string[]; properties: object } } }).function
+      .parameters;
+    assert.deepEqual(parameters.required, ["a", "z"]);
+    assert.deepEqual(parameters.enum, ["z", "a"]);
+    assert.deepEqual(Object.keys(parameters.properties), ["a", "z"]);
+    assert.deepEqual(left.required, ["z", "a"]);
+  });
+
   it("serializes tools with default object parameters", () => {
     assert.deepEqual(
       serializeOpenAITool({

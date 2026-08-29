@@ -28,7 +28,7 @@
  */
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
@@ -66,7 +66,7 @@ import { createArtifactService } from "@arnilo/prism-server";
 import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres";
 
 const env = process.env;
-const suffix = env.PRISM_JOURNEY_SUFFIX ?? `j${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+const suffix = env.PRISM_JOURNEY_SUFFIX ?? `j${Date.now().toString(36)}${randomBytes(4).toString("hex")}`; // random suffix (CodeQL js/insecure-randomness, alerts 52-55)
 const ws = env.PRISM_JOURNEY_WORKSPACE ?? join(tmpdir(), `prism-journey-${suffix}`);
 const reportPath = env.PRISM_PHASE26_JOURNEY_REPORT ?? join(ws, "report.json");
 const startedAt = Date.now();

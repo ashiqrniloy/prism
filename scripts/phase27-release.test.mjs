@@ -40,10 +40,16 @@ const hasDesktopPackage = truth.capability.includes("@arnilo/prism-computer-use-
 const hasAntigravityPackage = truth.capability.includes("@arnilo/prism-antigravity-agent");
 const hasWikiPackage = truth.capability.includes("@arnilo/prism-wiki");
 const hasGraftPackage = truth.capability.includes("@arnilo/prism-graft"); // plan 033 optional context-graph package
+const hasObscuraPackage = truth.capability.includes("@arnilo/prism-obscura"); // plan 039 optional binary-backed package
 
 describe("Plan 027 Task 10 release closeout", () => {
   test("release metadata remains consistent after the 0.3.0 cut", () => {
-    const added = Number(hasDesktopPackage) + Number(hasAntigravityPackage) + Number(hasWikiPackage) + Number(hasGraftPackage);
+    const added =
+      Number(hasDesktopPackage) +
+      Number(hasAntigravityPackage) +
+      Number(hasWikiPackage) +
+      Number(hasGraftPackage) +
+      Number(hasObscuraPackage);
     assert.equal(truth.counts.publishable, 55 + added, "current publishable package count");
     assert.equal(truth.counts.workspace, 54 + added, "current workspace package count");
     assert.equal(truth.root.version, "0.3.0", "root manifest is 0.3.0");

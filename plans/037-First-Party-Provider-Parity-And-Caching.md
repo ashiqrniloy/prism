@@ -13,7 +13,7 @@
 
 ## Tasks
 
-- [ ] Perform provider primitive review and freeze a current 17-package matrix
+- [x] Perform provider primitive review and freeze a current 17-package matrix
   - Acceptance Criteria:
     - Functional: For every provider record protocol, setup I/O, credentials, models/discovery, stream completion evidence, abort, media, tools, reasoning, structured output, cache kind/hints/usage, headers, retry ownership, and live-canary status.
     - Performance: Record serializer/SSE throughput and heap for representative request/stream fixtures; identify only measured or protocol-confirmed gaps.
@@ -42,8 +42,10 @@
       await assertProviderOwnedHeadersWin({ /* provider fixture */ });
       ```
     - Files to Create/Edit:
-      - `docs/_evidence/phase37-provider-matrix.md`: complete matrix, official URLs, confirmed gaps.
-      - No production files in this review task.
+      - `docs/_evidence/phase37-provider-matrix.md`: complete 17-package matrix, official URLs, measured serializer/SSE, implement-or-defer.
+      - `scripts/phase37-provider-matrix.test.mjs`: package-row completeness + explicit cache-field claim check.
+      - `package.json`: wire freeze test into `npm test`.
+      - No production adapter files in this review task.
     - References:
       - `src/testing/provider-conformance.ts`.
       - `src/providers/transport.ts`, `src/providers/media.ts`, `src/providers/openai-primitives.ts`.
@@ -58,7 +60,7 @@
     - `docs/index.md` update: no; internal evidence.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Promote correct deterministic JSON Schema serialization and provider conformance
+- [x] Promote correct deterministic JSON Schema serialization and provider conformance
   - Acceptance Criteria:
     - Functional: Logically identical schemas with different object insertion order serialize identically; semantic array order (`prefixItems`, examples, tuple schemas) is preserved; only unordered `required` names may be sorted.
     - Performance: Canonicalization is O(schema nodes + sorted object keys), bounded by existing schema/request limits, and performed once per request/tool declaration.
@@ -81,11 +83,13 @@
       // keys and required names stable; ordered schema arrays remain ordered
       ```
     - Files to Create/Edit:
-      - `src/providers/schema.ts` (tentative minimal shared primitive) and public provider-primitives export.
-      - `packages/provider-deepseek/src/cache.ts`: remove/re-export shared helper and preserve compatibility.
-      - Tool serializers in each applicable provider package (exact list frozen by Task 1).
-      - `src/testing/provider-conformance.ts`: deterministic-schema assertion.
-      - Provider conformance tests and `docs/provider-primitives.md`, `docs/provider-caching.md`.
+      - `src/providers/schema.ts`: shared `canonicalizeJsonSchema`; exported from `src/index.ts` and `@arnilo/prism/providers/schema`.
+      - `src/providers/openai-primitives.ts`: `serializeOpenAITool` reuses it (covers OpenAI-compatible packages).
+      - Native `toTool` in Anthropic, Kimi, OpenCode Go, Google, OpenAI Responses, AI SDK.
+      - `packages/provider-deepseek/src/cache.ts`: re-export shared helper.
+      - `src/testing/provider-conformance.ts`: `assertCanonicalToolParameters`.
+      - `src/__tests__/schema.test.ts` plus serializer/conformance/package tests.
+      - `docs/provider-primitives.md`, `docs/provider-caching.md`, `docs/provider-conformance.md`.
     - References:
       - `packages/provider-deepseek/src/cache.ts:1-44`.
       - `src/input.ts:469-481` existing private sorted JSON precedent.
@@ -104,7 +108,7 @@
     - `docs/index.md` update: no; pages already indexed.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Preserve system-prompt cache breakpoints on Anthropic-compatible routes
+- [x] Preserve system-prompt cache breakpoints on Anthropic-compatible routes
   - Acceptance Criteria:
     - Functional: `system_prompt` breakpoints survive serialization as native system content blocks with `cache_control`; message/tool-result markers and max-breakpoint/TTL rules remain correct for Anthropic, Kimi Coding, and OpenCode Go Anthropic routes.
     - Performance: Stable system prompts produce byte-identical native blocks; no duplicate system text or extra provider call.
@@ -126,10 +130,10 @@
       {"system":[{"type":"text","text":"stable","cache_control":{"type":"ephemeral","ttl":"1h"}}]}
       ```
     - Files to Create/Edit:
-      - `packages/provider-anthropic/src/messages.ts` and tests.
-      - `packages/provider-kimi/src/provider.ts` and tests.
-      - `packages/provider-opencode-go/src/anthropic-messages.ts` and tests.
-      - Related provider docs and `docs/provider-caching.md`.
+      - `src/cache-helpers.ts`: shared `anthropicSystemField(messages, toText)` — joined string when unmarked, native text blocks when any system block carries `cache_control`; exported from root.
+      - `packages/provider-anthropic/src/messages.ts`, `packages/provider-kimi/src/provider.ts`, `packages/provider-opencode-go/src/anthropic-messages.ts`: `system:` field now routes through the shared helper (the three copies were structurally identical).
+      - Tests: system-breakpoint block-shape tests in all three package suites.
+      - Docs: `docs/providers/anthropic.md`, `docs/providers/kimi.md`, `docs/providers/opencode-go.md`, `docs/provider-caching.md`, `docs/release-and-install.md` (providers/schema row), frozen export lists in `src/__tests__/public-export-contract.test.ts` + `src/__tests__/docs.test.ts`.
     - References:
       - `packages/provider-anthropic/src/messages.ts:46-72` currently joins system blocks into a string.
       - Equivalent Kimi/OpenCode Go serializers identified in Task 1.
@@ -147,7 +151,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Implement current OpenAI Responses cache options and complete usage mapping
+- [x] Implement current OpenAI Responses cache options and complete usage mapping
   - Acceptance Criteria:
     - Functional: Supported newer models map generic cache breakpoints/TTL to current `prompt_cache_options`; older models keep valid legacy retention behavior; `input_tokens_details.cache_write_tokens` maps to `Usage.cacheWriteTokens` when returned.
     - Performance: Stable key/options/prefix reuse is deterministic; no extra request or cache-management lifecycle.
@@ -169,11 +173,14 @@
       options: { cache: { key: "tenant-agent", breakpoints: [{ location: "last_stable_message", ttl: "long" }] } }
       ```
     - Files to Create/Edit:
-      - `packages/provider-openai/src/cache.ts`: current option mapping.
-      - `packages/provider-openai/src/responses.ts`: request/usage wire types and fields.
-      - `packages/provider-openai/src/models.ts`: capability metadata from official model rules.
-      - `packages/provider-openai/src/__tests__/openai.test.ts`.
-      - `docs/providers/openai.md`, `docs/provider-caching.md`, `docs/provider-packages.md`.
+      - `src/contracts-core/provider.ts`: `ModelCacheCapabilities.explicitBreakpoints` capability flag.
+      - `src/cache-helpers.ts`: `resolveBreakpoint` exported (shared anchor selection); root export + frozen lists.
+      - `packages/provider-openai/src/cache.ts`: `promptCacheOptions()` (explicit mode gate) + `applyPromptCacheBreakpoints()` (≤4 writes, last text block markers).
+      - `packages/provider-openai/src/responses.ts`: owned cache fields re-applied after `extra`; `prompt_cache_breakpoint` carried on input/output text; `cache_write_tokens` → `Usage.cacheWriteTokens`.
+      - `packages/provider-openai/src/models.ts`: `supportsExplicitCacheBreakpoints()` (GPT-5.6+) in `mapOpenAIModel`.
+      - `packages/provider-openai/src/__tests__/openai.test.ts`: 5 new cache tests + write-token usage assertion.
+      - `docs/providers/openai.md`, `docs/provider-caching.md`, `docs/provider-packages.md`, `docs/_evidence/phase37-provider-matrix.md`.
+      - Freeze baselines re-hashed for intentionally evolved preserved files: `scripts/phase19-baseline.json` (`src/cache-helpers.ts`), `scripts/phase21-baseline.json` (anthropic messages, google generate-content).
     - References:
       - `packages/provider-openai/src/responses.ts:262-292`, `:416-471`.
       - `packages/provider-openai/src/models.ts:162-163`.
@@ -192,7 +199,7 @@
     - `docs/index.md` update: no; existing entries remain.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Close native, gateway, and implicit-cache parity gaps without inventing wire fields
+- [x] Close native, gateway, and implicit-cache parity gaps without inventing wire fields
   - Acceptance Criteria:
     - Functional: Alibaba, Google, OpenRouter, Z.AI, NeuralWatt, Ollama, DeepSeek, xAI, ClinePass, and Kimi Moonshot correctly map documented cache usage/reasoning/tool fields and omit unsupported cache controls; discovery metadata matches official responses.
     - Performance: Implicit-cache providers receive byte-stable full history with dynamic suffix last; no provider setup fetch or duplicate retry loop is added.
@@ -215,9 +222,10 @@
       assert.equal(JSON.stringify(body).includes("prompt_cache_key"), false);
       ```
     - Files to Create/Edit:
-      - Exact provider source/tests determined by failing Task 1 matrix (tentative).
-      - `src/testing/provider-conformance.ts`: cache omission/usage cases.
-      - Corresponding `docs/providers/*.md`, `docs/provider-caching.md`.
+      - `src/testing/provider-conformance.ts`: `assertNoForeignCacheFields()` (cache wire-field scan with per-route `allowed` list) + `assertNoFetches()`.
+      - `packages/provider-openrouter/src/cache.ts`: `openRouterSessionId` reads structured `cache.key` first (parity with xAI `xGrokConvId`).
+      - Per-provider tests (9 packages): implicit/none body cleanliness via `assertNoForeignCacheFields` (alibaba incl. opt-in-markers-only, google incl. `extra.cachedContent` allowed, openrouter incl. implicit-model + key precedence, zai, neuralwatt, deepseek, clinepass, xai incl. conv-id-stays-in-header, kimi moonshot); alibaba `assertProviderOwnedHeadersWin` authorization test (was noted gap).
+      - `docs/providers/openrouter.md`, `docs/provider-caching.md`, `docs/provider-conformance.md`, `docs/_evidence/phase37-provider-matrix.md`.
     - References:
       - `packages/provider-google/src/generate-content.ts:233-243` maps `cachedContentTokenCount`.
       - `src/providers/openai-primitives.ts:114-149` shared compatible usage.
@@ -235,7 +243,7 @@
     - `docs/index.md` update: no unless a new provider page is created; none planned.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Validate AI SDK and enterprise cloud wrappers against their declared protocols
+- [x] Validate AI SDK and enterprise cloud wrappers against their declared protocols
   - Acceptance Criteria:
     - Functional: AI SDK v4 mapping and Azure/Bedrock/Vertex OpenAI-compatible wrappers pass abort, tools, usage, header, endpoint, credential, and zero-setup-I/O conformance.
     - Performance: Wrappers add no buffering/retry/catalog call beyond shared streaming adapter; serializer/stream overhead stays within Task 1 baseline.
@@ -258,10 +266,12 @@
       const pkg = createBedrockProviderPackage({ credential, models });
       ```
     - Files to Create/Edit:
-      - Provider tests for AI SDK/Azure/Bedrock/Vertex.
-      - Source only if tests expose a confirmed defect.
-      - `docs/providers/ai-sdk.md`, `azure.md`, `bedrock.md`, `vertex.md` for precise cache/protocol boundary.
-      - `docs/_evidence/phase37-provider-matrix.md`.
+      - `packages/provider-ai-sdk/src/stream.ts` (only defect found): host stream ending without a `finish` part now fails loudly (`AiSdkProviderError { code: "model_error" }`) instead of synthesizing `done`.
+      - `packages/provider-ai-sdk/src/__tests__/ai-sdk-provider.test.ts`: truncated-stream failure test (abort/usage/redaction/no-cache-fields already covered).
+      - `packages/provider-azure/src/__tests__/azure.test.ts`: setup zero-fetch + zero-credential-resolution, `assertAbortIsObserved`, truncated-stream error, cache-hint omission + `cached_tokens` usage via `assertNoForeignCacheFields`.
+      - `packages/provider-bedrock/src/__tests__/bedrock.test.ts`: same conformance set (cachePoint unsupported, body clean despite Prism hints).
+      - `packages/provider-vertex/src/__tests__/vertex.test.ts`: same conformance set (cached-content lifecycle unsupported, body clean despite Prism hints).
+      - `docs/providers/ai-sdk.md`, `docs/providers/azure.md`, `docs/providers/bedrock.md`, `docs/providers/vertex.md`, `docs/_evidence/phase37-provider-matrix.md`.
     - References:
       - `packages/provider-ai-sdk/src`.
       - `packages/provider-azure/src/provider.ts`.
@@ -279,7 +289,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Run all provider gates and protected live canaries
+- [x] Run all provider gates and protected live canaries
   - Acceptance Criteria:
     - Functional: All 17 package suites, root provider tests, typecheck/lint/format, pack, provider conformance, and release gates pass; protected canaries run where credentials exist and every skip is explicit.
     - Performance: Serializer/SSE/cache-prefix benchmark rows meet frozen ceilings with no >10% unexplained regression.
@@ -303,8 +313,12 @@
       PRISM_LIVE_PROVIDER_TESTS=1 npm test --workspaces --if-present
       ```
     - Files to Create/Edit:
-      - `docs/_evidence/phase37-provider-matrix.md`: final test/canary status.
-      - `docs/provider-packages.md`, `docs/provider-caching.md`: final canonical matrices.
+      - `docs/_evidence/phase37-provider-matrix.md`: Task 7 gate run table (build/typecheck/lint/format/test/pack green; `PRISM_LIVE_PROVIDER_TESTS=1` 2225 tests / 0 fail / 46 explicit env-gated skips; live-canary script fails closed locally; release:gate blocked on missing `PRISM_TEST_POSTGRES_URL`).
+      - `docs/provider-packages.md`, `docs/provider-caching.md`: already canonical through Tasks 1–6 edits; no further change needed.
+    - Gate results (2026-08-28):
+      - One format auto-fix pass was required after task 4–6 edits (`npm run format`), then all style gates green.
+      - Full `npm test` green including phase37-provider-matrix freeze test.
+      - Protected CI canaries (`live-canaries.yml` in `live-canaries` environment) remain the canonical green matrix; local run proves fail-closed behavior with the explicit missing-secret list.
     - References:
       - `package.json#scripts.sdk:ready`.
       - Provider package `test:live` scripts.

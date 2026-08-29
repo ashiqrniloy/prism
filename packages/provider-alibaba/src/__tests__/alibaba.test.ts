@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
 import {
+  assertNoForeignCacheFields,
+  assertProviderOwnedHeadersWin,
   assertProviderStreamConforms,
   assertSerializedRequestCoversContent,
   assertToolCallDeltasReconstruct,
@@ -422,6 +424,39 @@ describe("@arnilo/prism-provider-alibaba", () => {
     assert.ok(registered.some((item: any) => item.id === "alibaba"));
     assert.ok(registered.some((item: any) => item.provider === "alibaba" && item.model === "qwen-plus"));
     assert.ok(registered.some((item: any) => item.provider === "alibaba" && item.kind === "api_key"));
+  });
+
+  it("alibaba_implicit_default_carries_no_foreign_cache_fields", () => {
+    assertNoForeignCacheFields(alibabaBody({ ...request, options: { cacheKey: "session-1", cacheRetention: "long" } }));
+  });
+
+  it("alibaba_opt_in_markers_are_the_only_cache_fields", () => {
+    const optIn = { ...request, model: { ...request.model, cache: { kind: "cache_control" as const } } };
+    const body = alibabaBody({
+      ...optIn,
+      options: { cacheRetention: "long" as const, cache: { breakpoints: [{ location: "system_prompt" as const }] } },
+    });
+    assertNoForeignCacheFields(body, ["cache_control"]);
+    assert.ok(JSON.stringify(body).includes("cache_control"));
+  });
+
+  it("alibaba_provider_owned_authorization_wins_over_caller_header", async () => {
+    let captured: Headers | undefined;
+    const provider = createAlibabaProvider({
+      apiKey: "sk-real-key",
+      fetch: (async (_input: any, init: any) => {
+        captured = new Headers(init?.headers);
+        return ok(chatSse([]));
+      }) as typeof fetch,
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: { ...request, options: { headers: { authorization: "Bearer caller-forged", "x-custom": "keep-me" } } },
+    });
+    assertProviderOwnedHeadersWin(captured!, {
+      owned: { authorization: "Bearer sk-real-key" },
+      caller: { "x-custom": "keep-me" },
+    });
   });
 });
 

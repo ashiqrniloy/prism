@@ -1,4 +1,11 @@
-import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
+import {
+  type CredentialValueSource,
+  type JsonObject,
+  type ModelConfig,
+  redactSecrets,
+  resolveCredentialValue,
+  trimTrailingSlashes,
+} from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 export interface KimiModelConfig extends Omit<ModelConfig, "provider" | "compat"> {
@@ -69,7 +76,7 @@ export function defineKimiModel(config: KimiModelConfig): ModelConfig {
  */
 export async function listKimiModels(options: ListKimiModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "moonshot";
-  const baseUrl = (options.baseUrl ?? "https://api.moonshot.ai/v1").replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(options.baseUrl ?? "https://api.moonshot.ai/v1");
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",

@@ -1,4 +1,11 @@
-import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
+import {
+  type CredentialValueSource,
+  type JsonObject,
+  type ModelConfig,
+  redactSecrets,
+  resolveCredentialValue,
+  trimTrailingSlashes,
+} from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 export interface DeepSeekModelConfig extends Omit<ModelConfig, "provider" | "compat"> {
@@ -57,7 +64,7 @@ export function defineDeepSeekModel(config: DeepSeekModelConfig): ModelConfig {
  */
 export async function listDeepSeekModels(options: ListDeepSeekModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "deepseek";
-  const baseUrl = (options.baseUrl ?? "https://api.deepseek.com").replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(options.baseUrl ?? "https://api.deepseek.com");
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",

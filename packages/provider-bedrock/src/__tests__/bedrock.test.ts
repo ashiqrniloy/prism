@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import { assertAbortIsObserved, assertNoFetches, assertNoForeignCacheFields } from "@arnilo/prism/testing/provider-conformance";
 import { bedrockRuntimeEndpoint, createBedrockProvider, createBedrockProviderPackage, signAwsRequest } from "../index.js";
 
 describe("@arnilo/prism-provider-bedrock", () => {
@@ -53,6 +54,75 @@ describe("@arnilo/prism-provider-bedrock", () => {
     }))
       events.push(event);
     assert.equal(events[0]?.type, "error");
+  });
+
+  it("setup stays inert with zero fetch and zero credential resolution", async () => {
+    const calls: unknown[] = [];
+    const pkg = createBedrockProviderPackage({
+      region: "us-east-1",
+      credential: () => {
+        calls.push("credential");
+        return { accessKeyId: "a", secretAccessKey: "b" };
+      },
+      models: [{ provider: "bedrock", model: "m" }],
+      fetch: (async (...args: Parameters<typeof fetch>) => {
+        calls.push(args[0]);
+        throw new Error("should not fetch");
+      }) as typeof fetch,
+    });
+    await pkg.setup({
+      registerProvider: () => {},
+      registerModel: () => {},
+      registerAuthMethod: () => {},
+    } as any);
+    assertNoFetches(calls);
+  });
+
+  it("observes an already-aborted signal", async () => {
+    const provider = createBedrockProvider({
+      region: "us-east-1",
+      credential: { accessKeyId: "a", secretAccessKey: "b" },
+      fetch: (async () => new Response("data: [DONE]\n\n", { status: 200 })) as typeof fetch,
+    });
+    await assertAbortIsObserved({
+      provider,
+      request: { model: { provider: "bedrock", model: "m" }, messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] },
+    });
+  });
+
+  it("truncated stream without done fails loudly", async () => {
+    const provider = createBedrockProvider({
+      region: "us-east-1",
+      credential: { accessKeyId: "a", secretAccessKey: "b" },
+      fetch: (async () => new Response('data: {"choices":[{"delta":{"content":"partial"}}]}\n\n', { status: 200 })) as typeof fetch,
+    });
+    const events = [];
+    for await (const event of provider.generate({
+      model: { provider: "bedrock", model: "m" },
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+    }))
+      events.push(event);
+    assert.equal(events.at(-1)?.type, "error");
+  });
+
+  it("native Bedrock cache (cachePoint) is unsupported and no cache hints reach the OpenAI-compatible body", async () => {
+    let body: any;
+    const provider = createBedrockProvider({
+      region: "us-east-1",
+      credential: { accessKeyId: "a", secretAccessKey: "b" },
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return new Response('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', { status: 200 });
+      }) as typeof fetch,
+    });
+    for await (const _ of provider.generate({
+      model: { provider: "bedrock", model: "m", cache: { kind: "none" } },
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { cacheKey: "session-1", cacheRetention: "long", cache: { breakpoints: [{ location: "system_prompt" }] } },
+    })) {
+      /* drain */
+    }
+    assertNoForeignCacheFields(body);
   });
 
   it("sigv4 is deterministic and package has no runtime deps", () => {

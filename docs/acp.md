@@ -164,3 +164,4 @@ const agent = createPrismAcpAgent({
 - [Host security guide](host-security.md): fail-closed checklist rows for ACP boundaries (authorize, ownership, redaction, untrusted MCP).
 - [Migration guide](migration.md): 0.0.26 → 0.0.27 advertise/surface changes for hosts that parsed the old `initialize`.
 - [AG-UI adoption evaluation](ag-ui-adoption.md): the underlying input/event/capability matrix.
+- [Obscura browser engine](obscura.md): optional binary-backed generic tools behind the session prompt loop.

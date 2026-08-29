@@ -112,7 +112,7 @@ console.log(result.text);
 
 There is **no Prism-side model catalog** and **no `list*Models()` export** by design. Hosts supply a ready-made `LanguageModelV4` instance (typically from `@ai-sdk/openai`, `@ai-sdk/anthropic`, AI Gateway, or a custom provider) and register a matching `ModelConfig` for capabilities/limits.
 
-Prism setup remains network-free: `createAiSdkProvider` only wraps the supplied model and never fetches catalogs or credentials.
+Prism setup remains network-free: `createAiSdkProvider` only wraps the supplied model and never fetches catalogs or credentials. Stream and abort behavior are conformance-proven: an already-aborted signal fails fast as an `error` event, a host stream ending without a `finish` part fails loudly (typed `AiSdkProviderError { code: "model_error" }`) instead of synthesizing a `done`, and unmappable stream parts fail closed.
 
 ## Prompt caching
 

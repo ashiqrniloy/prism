@@ -833,6 +833,8 @@ const drill = async () => {
 };
 
 await drill().catch((error) => {
-  console.error(`DR DRILL FAILED: ${error.message}\n${error.stack}`);
+  // Fixed message + bounded diagnostic: the drill path handles password checks, so raw
+  // error.message/stack is never printed (CodeQL js/clear-text-logging, alert 56).
+  console.error(`DR DRILL FAILED (error class: ${error?.name ?? "unknown"}). Inspect drill output above for the failing step.`);
   process.exit(1);
 });

@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
+  assertCanonicalToolParameters,
   assertNoSecretLeak,
   assertProviderOwnedHeadersWin,
   assertProviderStreamConforms,
@@ -13,6 +14,7 @@ import {
 import {
   ANTHROPIC_API_VERSION,
   ANTHROPIC_DEFAULT_BASE_URL,
+  anthropicMessagesBody,
   anthropicModels,
   createAnthropicMessagesProvider,
   createAnthropicProviderPackage,
@@ -120,6 +122,22 @@ describe("@arnilo/prism-provider-anthropic", () => {
     assert.equal(body.effort, "medium");
   });
 
+  it("canonicalizes_tool_input_schema", async () => {
+    const parameters = {
+      type: "object",
+      required: ["z", "a"],
+      enum: ["z", "a"],
+      properties: { z: { type: "string" }, a: { type: "number" } },
+    };
+    const body = await anthropicMessagesBody({
+      ...request,
+      tools: [{ name: "lookup", parameters, execute: () => ({ toolCallId: "call_1", name: "lookup", content: [] }) }],
+    });
+    const schema = (body.tools as { input_schema: unknown }[])[0]?.input_schema;
+    assertCanonicalToolParameters(schema, parameters);
+    assert.deepEqual((schema as { enum: string[] }).enum, ["z", "a"]);
+  });
+
   it("applies_cache_control_only_to_selected_breakpoints_with_1h_ttl", async () => {
     let body: any;
     const provider = createAnthropicMessagesProvider({
@@ -153,6 +171,38 @@ describe("@arnilo/prism-provider-anthropic", () => {
     for (const m of body.messages.filter((row: any) => row.role !== "assistant")) {
       for (const block of m.content) assert.equal(block.cache_control, undefined);
     }
+  });
+
+  it("preserves_system_prompt_breakpoints_as_native_system_blocks", async () => {
+    let body: any;
+    const provider = createAnthropicMessagesProvider({
+      apiKey: "fake-anthropic-key",
+      fetch: (async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([{ type: "message_stop" }]));
+      }) as typeof fetch,
+    });
+    const messages: Message[] = [
+      { role: "system", content: [{ type: "text", text: "stable" }] },
+      { role: "user", content: [{ type: "text", text: "preamble" }] },
+      { role: "assistant", content: [{ type: "text", text: "ok" }] },
+      { role: "user", content: [{ type: "text", text: "current turn" }] },
+    ];
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        messages,
+        options: {
+          cacheKey: "sess",
+          cacheRetention: "long",
+          cache: { breakpoints: [{ location: "system_prompt" as const }, { location: "last_stable_message" as const }] },
+        },
+      },
+    });
+    assert.deepEqual(body.system, [{ type: "text", text: "stable", cache_control: { type: "ephemeral", ttl: "1h" } }]);
+    assert.deepEqual(body.messages.find((m: any) => m.role === "assistant").content.at(-1).cache_control, { type: "ephemeral", ttl: "1h" });
+    assert.equal((messages[0]!.content[0] as any).cache_control, undefined);
   });
 
   it("serializes_pdf_document_and_file_blocks", async () => {

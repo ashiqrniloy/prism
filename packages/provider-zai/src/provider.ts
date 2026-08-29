@@ -1,5 +1,5 @@
 import type { AIProvider, ContentBlock, JsonObject, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
-import { type CredentialValueSource } from "@arnilo/prism";
+import { type CredentialValueSource, trimTrailingSlashes } from "@arnilo/prism";
 import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { zaiPreserveThinking, zaiReasoningEffort, zaiThinking, zaiToolStream } from "./thinking.js";
@@ -17,7 +17,7 @@ export interface ZaiProviderOptions {
 export function createZaiProvider(options: ZaiProviderOptions = {}): AIProvider {
   return createOpenAICompatibleProvider({
     id: options.id ?? "zai",
-    baseUrl: (options.baseUrl ?? ZAI_DEFAULT_BASE_URL).replace(/\/+$/, ""),
+    baseUrl: trimTrailingSlashes(options.baseUrl ?? ZAI_DEFAULT_BASE_URL),
     apiKey: options.apiKey,
     fetch: options.fetch,
     doneUsage: true,

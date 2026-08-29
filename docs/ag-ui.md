@@ -221,6 +221,7 @@ Defaults / hard caps: request 64 KiB / 1 MiB; input 128 / 1024 messages, 32 / 25
 - [A2A interoperability](a2a.md): remote agent-to-agent tasks, not frontend protocol mapping.
 - [AG-UI adoption evaluation](ag-ui-adoption.md): official 0.0.57 event/input matrix and shipped explicit MCP/MCP Apps/A2A handshakes.
 - [ACP coding-host interop](acp.md): the full ACP reference — seam-based capability advertisement, session modes/config, MCP select, fs/terminal adapters, lifecycle mapping, elicitation, and caps.
+- [Obscura browser engine](obscura.md): optional binary-backed generic tools selectable through the MCP adapter.
 - [MCP bridge/server](mcp-tools.md): `mcpApps` negotiation, bounded resources, and remote tool trust.
 - [A2A interoperability](a2a.md): verified rich task client and remote task lifecycle.
 - [Host security guide](host-security.md): authorization, ownership, redaction, and credential boundaries.

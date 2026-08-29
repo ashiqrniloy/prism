@@ -1,4 +1,5 @@
 import type { WikiProfileType } from "../types.js";
+import { parseMarkdownHeading } from "../heading.js";
 import type { ExtractedEntityDraft, ExtractedSymbol, ScannedFile } from "./codebase.js";
 
 export class PkmProfile {
@@ -17,11 +18,11 @@ export class PkmProfile {
       const line = lines[i];
       const lineNum = i + 1;
 
-      // Extract markdown headings (# Title, ## Section)
-      const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+      // Extract markdown headings (# Title, ## Section) — linear heading parse (CodeQL js/polynomial-redos, alert 63)
+      const headingMatch = parseMarkdownHeading(line);
       if (headingMatch) {
         symbols.push({
-          name: headingMatch[2].trim(),
+          name: headingMatch.text,
           kind: "heading",
           startLine: lineNum,
           endLine: lineNum,

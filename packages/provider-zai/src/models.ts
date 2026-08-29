@@ -5,6 +5,7 @@ import {
   type ModelConfig,
   redactSecrets,
   resolveCredentialValue,
+  trimTrailingSlashes,
 } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
@@ -79,7 +80,7 @@ export function defineZaiModel(config: ZaiModelConfig): ModelConfig {
  */
 export async function listZaiModels(options: ListZaiModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "zai";
-  const baseUrl = (options.baseUrl ?? "https://api.z.ai/api/paas/v4").replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(options.baseUrl ?? "https://api.z.ai/api/paas/v4");
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",

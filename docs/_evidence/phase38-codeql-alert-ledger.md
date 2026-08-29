@@ -147,6 +147,42 @@ Alert: `62`.
 | [65](https://github.com/ashiqrniloy/prism/security/code-scanning/65) | `js/polynomial-redos` | `packages/prism-wiki/src/search/context7-hydrator.ts:36` | B | Prefix/index heading parser |
 | [66](https://github.com/ashiqrniloy/prism/security/code-scanning/66) | `js/polynomial-redos` | `packages/prism-wiki/src/skills.ts:35` | B | Line/frontmatter parser |
 
+## Local Findings Closed Outside the GitHub Alert Set (Plan 038 Task 2)
+
+| Finding | Location | Fix | Regression test |
+| --- | --- | --- | --- |
+| Path escape via `startsWith(absWikiRoot)` prefix bypass and symlink escape | `packages/prism-wiki/src/tools/read-page.ts:26-35` | Separator-aware `path.relative` lexical containment plus `fs.realpath` containment of the wiki root and every successfully read file; fail closed before read; missing contained pages return `found: false`, denied paths throw access-denied (no catch-all not-found) | `wiki_read_page_denies_sibling_prefix_traversal`, `wiki_read_page_denies_symlink_escape`, `wiki_read_page_reports_missing_contained_page_as_not_found` in `packages/prism-wiki/src/__tests__/tools.test.ts` |
+| Wiki write injection/bounds: unbounded title/content, newline/control text injecting headings/index/log entries | `packages/prism-wiki/src/tools/record-insight.ts:28-83` | Reject empty titles/content; cap titles at 200 characters and content at 65,536 bytes; collapse control characters/newlines in titles to single-line display text before page/frontmatter/index/log writes; slug allow-list `[a-z0-9-_]` with non-empty fallback | `wiki_record_insight_rejects_empty_oversize_and_injecting_titles` in `packages/prism-wiki/src/__tests__/tools.test.ts` |
+| Dynamic regex from environment (`PONYTAIL_SUBAGENT_MATCHER` fed to `new RegExp`) — ReDoS/code-eval surface | `packages/prism-ponytail/fixtures/upstream-full/hooks/ponytail-subagent.js:32-39` | Parse only the documented safe subset (`a\|b` literal alternatives, `^a$` exact), case-insensitive bounded string comparison, 256-char cap, invalid forms fail open to inject-all; no `RegExp` is ever compiled | `ponytail-subagent safe matcher` suite in `packages/prism-ponytail/src/__tests__/subagent-hook.test.ts` (literal/exact/mixed-case/invalid/oversize/catastrophic-input cases) |
+| Predictable temporary test directory (`pid`+timestamp name, cleanup not on failure path) | `scripts/phase23-build-race.test.mjs:77-91` | `fs.mkdtempSync` atomic unique dirs + `try/finally` cleanup; uniqueness test added | `sensitivity` test restructured with `finally`; new `temp fixture directories are atomically unique` test in `scripts/phase23-build-race.test.mjs` |
+
+These findings are local trust-boundary hardening from the audited review, not GitHub CodeQL alerts; they are tracked here so every Plan 038 Task 2 fix has a mapped test.
+
+## Task 5: security-extended coverage (2026-08-27)
+
+- `.github/codeql/codeql-config.yml` now selects `queries: [{ uses: security-extended }]` in addition to the default suite for `javascript-typescript`. The single config file is referenced by `security.yml` (push/PR/schedule, codeql job remains `timeout-minutes: 10` — measured ~3m22s on the audited SHA, so no raise).
+- `paths-ignore` remains exactly: `dist`, `packages/*/dist`, `node_modules`, `release-artifacts`, `security-artifacts` — generated/build artifacts only. No first-party packages, threat suites, fixtures, or docs are excluded; every extended-suite alert enters the plan-038 ledger/remediation loop.
+- Guardrails triaged in `scripts/phase38-codeql-regression.test.mjs` (“CodeQL config enables security-extended with no first-party exclusions”): security-extended present, ignore list allow-listed to the five generated paths, workflows/fixture/doc/test paths asserted not ignored, workflow triggers (push/PR/schedule) and the 10-minute bound asserted.
+- Git history note: enabling the suite locally also surfaced two stale freeze tests — `public-export-contract` frozen value exports (added `trimTrailingSlashes` from Task 4 Group A) and the `release.test.ts` package count (59 → 60 after `@arnilo/prism-ponytail` joined at the 0.3.0 cut); `docs/index.md` package-count literal refreshed to match `scripts/package-truth.json` (60 publishable = root + 59 workspaces).
+- Local triage evidence pre-push: baseline alert count reconciled in the ledger after the first `security-extended` run on GitHub (pending next run on push).
+
+## Task 4 Group Fixes (2026-08-27)
+
+All true-positive groups A–F fixed at shared roots; G and H remain the documented false-positive candidates for narrow maintainer dismissal (Task 5).
+
+| Group | Alerts | Fix | Regression tests |
+| --- | --- | --- | --- |
+| A | `7`, `8`, `23`–`51`, `57`–`61` | Shared `trimTrailingSlashes()` primitive (`src/trim-trailing-slashes.ts`, exported from `@arnilo/prism`); all 36 `value.replace(/\\/+$/, "")` call sites across root, server, and every provider package replaced with the linear index scan (semantics identical) | `scripts/phase38-codeql-regression.test.mjs` (semantics + 1M-slash linear bound); provider/server suites |
+| B | `3`–`5`, `11`, `15`, `16`, `19`–`21`, `63`–`66` | Linear scanners/index parsers: browser quote scanner (`targets.ts`), checkpoint todo/id parsers (`coding-checkpoint.ts`), rag BT/ET block + PDF literal scanners and single-pass heading/skills extraction (`profiles/pkm.ts`, `search/context7-hydrator.ts`, `skills.ts`, shared `parseMarkdownHeading`) | `phase38-codeql-regression.test.mjs` hazards + package suites (browser 78, coding-agent 411, rag 35, prism-wiki 38) |
+| C | `17`, `18` | rag `htmlToText` is a single-pass index scanner (comments, script/style bodies, and tags consumed by position); whitespace normalization is linear; adjacency cannot re-form tags | `phase38-codeql-regression.test.mjs` adjacency-bypass cases |
+| D | `22` | `sanitizeCacheKey` edge trim is index/slice; allowlist + max-length semantics preserved | `phase38-codeql-regression.test.mjs` + `src/__tests__/cache-helpers.test.ts` |
+| E | `52`–`55` | `scripts/fixtures/phase26-coding-journey.mjs` suffix uses `randomBytes()` from `node:crypto` | `phase38-codeql-regression.test.mjs` fixture assertion |
+| F | `56` | DR drill prints a fixed message + `error.name` only; no raw `error.message`/`stack` on the password-handling path | `phase38-codeql-regression.test.mjs` static assertions |
+| G | `6` | No code change: RFC 7636 S256 is correct; false-positive dismissal queued (Task 5) | n/a |
+| H | `62` | No code change: negative docs assertion does not route URLs; false-positive dismissal queued (Task 5) | n/a |
+
+`scripts/phase38-codeql-regression.test.mjs` is wired into `security:threat-suites`.
+
 ## Previously Fixed Alerts
 
 | # | Rule | Historical location | Fixed at |
@@ -161,14 +197,48 @@ Alert: `62`.
 
 Alerts `2`, `9`, `10`, `12`, `13`, and `14` were fixed on an earlier revision, but equivalent current paths now have open alerts `22` and `17`–`21`. Regression tests must prevent another reintroduction.
 
+## Task 6: local security gates (2026-08-29)
+
+Local HEAD during this pass: `d74b2db4f3bf3b963d599f77923d9ce8a6729355`. GitHub CodeQL instances remain on audited `c600eaa18f65b56764ec2fb408ec813536eff6f7` (`refs/heads/main`); remediations from Tasks 2–5 are unpushed, so remote `state=open` is still **59** (same numbers as the Task 1 snapshot). Latest `security.yml` success on main: run `33059128198` (3m25s, 2026-08-27).
+
+### Local gates that passed
+
+| Gate | Result |
+| --- | --- |
+| `npm run typecheck` (build + workspaces + `examples`) | pass |
+| `npm run lint` + SARIF diagnostics | 0 diagnostics |
+| `npm run format:check` | pass |
+| `dist/__tests__/*.test.js` | 1690/1690 |
+| `npm run security:threat-suites` (incl. phase38) | 59/59 |
+| `scripts/phase38-codeql-regression.test.mjs` | 9/9 |
+| `npm audit --audit-level=moderate` | 0 vulnerabilities |
+| `git ls-files \| xargs node scripts/scan-secrets.mjs` | 1957 files, 0 findings |
+| `npm sbom` + `scripts/verify-sbom.mjs` | 264 packages, 12 licenses, pass |
+| `npm pack --dry-run` (root) | pass |
+| phase23 lint quality gate | pass |
+
+Workspace suites for remidiated packages (`prism-wiki`, `prism-ponytail`, `rag`, `browser`, `coding-agent`, `server`, `credentials-node`) ran green in this tree.
+
+### Groups G/H (maintainer-reviewed false positives; not dismissed yet)
+
+| Alert | Rule | Why false positive | Dismissal |
+| ---: | --- | --- | --- |
+| [6](https://github.com/ashiqrniloy/prism/security/code-scanning/6) | `js/insufficient-password-hash` | `computeOAuth2S256Challenge` is RFC 7636 §4.2 S256: `base64url(SHA-256(PKCE verifier))`. Verifier is `randomBytes(32)` one-time secret, not a stored password. Changing the hash would break OAuth. | `false positive` after remediations land on the analyzed SHA |
+| [62](https://github.com/ashiqrniloy/prism/security/code-scanning/62) | `js/incomplete-url-substring-sanitization` | `src/__tests__/docs.test.ts` asserts docs **do not** contain `cli-chat-proxy.grok.com`. Negative documentation string check; no URL parse, route, or fetch. | `false positive` after remediations land |
+
+### Not proven in this pass
+
+- GitHub `state=open` after CodeQL on the remediated head (needs a push of Tasks 2–5, then `security.yml` analyze + refetch).
+- Full `npm test` / `sdk:ready` / coverage: 11 freeze/count failures remain in this mixed working tree — historical byte-immutable hashes (Task 4 slash-trim on frozen provider files), package-count 59 vs 60, and plan-039 `packages/obscura` manifest-count drift. Same class as the Task 5 out-of-scope note; not 038 true-positive leftovers.
+
 ## Verification
 
-- Flattened open-page count: `59`.
-- Unique open alert numbers: `59`.
+- Flattened open-page count (GitHub, 2026-08-29 refetch): `59`.
+- Unique open alert numbers: `59` (3–8, 11, 15–66 excluding historically fixed 1, 2, 9, 10, 12–14).
 - Rule-count sum: `59`.
 - All open instances use `refs/heads/main`.
-- All open instances use commit `c600eaa18f65b56764ec2fb408ec813536eff6f7`.
-- Local HEAD matched that commit during snapshot.
+- All open instances still use commit `c600eaa18f65b56764ec2fb408ec813536eff6f7`.
+- Local HEAD is now `d74b2db4f3bf3b963d599f77923d9ce8a6729355` with unpushed Tasks 2–5 remediations.
 - No token or raw API response is stored in this file.
 
 ## Scope Note

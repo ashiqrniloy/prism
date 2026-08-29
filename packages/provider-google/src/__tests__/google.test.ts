@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
+  assertCanonicalToolParameters,
+  assertNoForeignCacheFields,
   assertNoSecretLeak,
   assertProviderOwnedHeadersWin,
   assertProviderStreamConforms,
@@ -12,6 +14,7 @@ import {
 import {
   createGoogleGenerateContentProvider,
   createGoogleProviderPackage,
+  googleGenerateContentBody,
   GOOGLE_DEFAULT_BASE_URL,
   googleModels,
   listGoogleModels,
@@ -32,6 +35,19 @@ const request: ProviderRequest = {
 };
 
 describe("@arnilo/prism-provider-google", () => {
+  it("google_implicit_requests_carry_no_foreign_cache_fields", async () => {
+    assertNoForeignCacheFields(await googleGenerateContentBody(request));
+  });
+
+  it("google_extra_cachedContent_escape_hatch_is_the_only_allowed_cache_field", async () => {
+    const body = await googleGenerateContentBody({
+      ...request,
+      options: { ...request.options, extra: { cachedContent: "projects/x/cachedContents/y" } },
+    });
+    assertNoForeignCacheFields(body, ["cachedContent"]);
+    assert.ok(JSON.stringify(body).includes("cachedContent"));
+  });
+
   it("registers_featured_models_and_setup_does_not_fetch", async () => {
     let fetchCalls = 0;
     const fetchImpl = (async () => {
@@ -129,6 +145,22 @@ describe("@arnilo/prism-provider-google", () => {
     assert.equal(body.generationConfig.temperature, 0.2);
     assert.deepEqual(body.generationConfig.thinkingConfig, { includeThoughts: true, thinkingBudget: 1024 });
     assert.equal(body.tools[0].functionDeclarations[0].name, "lookup");
+  });
+
+  it("canonicalizes_function_declaration_parameters", async () => {
+    const parameters = {
+      type: "object",
+      required: ["z", "a"],
+      enum: ["z", "a"],
+      properties: { z: { type: "string" }, a: { type: "number" } },
+    };
+    const body = await googleGenerateContentBody({
+      ...request,
+      tools: [{ name: "lookup", parameters, execute: () => ({ toolCallId: "call_1", name: "lookup", content: [] }) }],
+    });
+    const schema = (body.tools as { functionDeclarations: { parameters: unknown }[] }[])[0]?.functionDeclarations[0]?.parameters;
+    assertCanonicalToolParameters(schema, parameters);
+    assert.deepEqual((schema as { enum: string[] }).enum, ["z", "a"]);
   });
 
   it("serializes_image_and_pdf_inline_data", async () => {

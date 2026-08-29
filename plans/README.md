@@ -42,5 +42,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [036-Tools-Skills-Loops-And-Cache-Prefix.md](036-Tools-Skills-Loops-And-Cache-Prefix.md) | Runtime audit — tools, skills, loops, and stable cache prefixes | planned |
 | [037-First-Party-Provider-Parity-And-Caching.md](037-First-Party-Provider-Parity-And-Caching.md) | Provider audit — all 17 first-party provider packages | planned |
 | [038-CodeQL-Security-Remediation.md](038-CodeQL-Security-Remediation.md) | Security audit — 59 open GitHub CodeQL alerts and extended coverage | in progress (Task 1 complete) |
+| [039-Obscura-Full-Host-Support-And-Changed-Package-Release.md](039-Obscura-Full-Host-Support-And-Changed-Package-Release.md) | Phase 39 — Obscura full host support (`@arnilo/prism-obscura`) and changed-package release | in progress |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

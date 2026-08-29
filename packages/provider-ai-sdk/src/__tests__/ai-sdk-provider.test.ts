@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { LanguageModelV4, LanguageModelV4CallOptions, LanguageModelV4StreamPart, LanguageModelV4Usage } from "@ai-sdk/provider";
 import { createSecretRedactor, type ModelConfig, type ProviderRequest, type ToolDefinition } from "@arnilo/prism";
-import { assertToolCallDeltasReconstruct, collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
+import {
+  assertCanonicalToolParameters,
+  assertToolCallDeltasReconstruct,
+  collectProviderEvents,
+} from "@arnilo/prism/testing/provider-conformance";
 import { AiSdkProviderError } from "../errors.js";
 import * as aiSdkExports from "../index.js";
-import { toAiSdkCallOptions } from "../prompt.js";
+import { toAiSdkCallOptions, toAiSdkTool } from "../prompt.js";
 import { createAiSdkProvider } from "../provider.js";
 import { mapUsage } from "../stream.js";
 import { assertSupportedAiSdkVersion, SUPPORTED_AI_SDK_VERSION_MATRIX } from "../types.js";
@@ -76,6 +80,24 @@ function request(partial: Partial<ProviderRequest> = {}): ProviderRequest {
     ...partial,
   };
 }
+
+describe("toAiSdkTool", () => {
+  it("canonicalizes inputSchema and preserves enum order", () => {
+    const parameters = {
+      type: "object",
+      required: ["z", "a"],
+      enum: ["z", "a"],
+      properties: { z: { type: "string" }, a: { type: "number" } },
+    };
+    const tool = toAiSdkTool({
+      name: "lookup",
+      parameters,
+      execute: async () => ({ toolCallId: "call_1", name: "lookup", value: 1 }),
+    });
+    assertCanonicalToolParameters(tool.inputSchema, parameters);
+    assert.deepEqual((tool.inputSchema as { enum: string[] }).enum, ["z", "a"]);
+  });
+});
 
 describe("createAiSdkProvider", () => {
   it("maps text/reasoning/tool fragments, usage, finish, and metadata without buffering", async () => {
@@ -306,6 +328,18 @@ describe("createAiSdkProvider", () => {
     assert.equal(failed.length, 1);
     assert.equal(failed[0]?.type, "error");
     assert.match(failed[0]?.type === "error" ? failed[0].error.message : "", /upstream boom/);
+  });
+
+  it("truncated host stream without a finish part fails loudly", async () => {
+    const provider = createAiSdkProvider({
+      model: createFakeModel({
+        parts: [{ type: "text-delta", id: "t", delta: "partial" }],
+      }),
+    });
+    const events = await collectProviderEvents(provider, request());
+    const last = events.at(-1);
+    assert.equal(last?.type, "error");
+    assert.match(last?.type === "error" ? last.error.message : "", /without a finish part/);
   });
 
   it("rejects non-v4 language models", () => {

@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import { createMockProvider, providerDone, providerTextDelta, providerToolCallDelta, providerUsage } from "../index.js";
 import {
   assertAbortIsObserved,
+  assertCanonicalToolParameters,
   assertNoSecretLeak,
   assertProviderOwnedHeadersWin,
   assertProviderStreamConforms,
@@ -72,6 +73,12 @@ void describe("provider conformance", () => {
     });
 
     assert.equal(assertUsageAccounting(events, { inputTokens: 3 }).inputTokens, 3);
+  });
+
+  it("conformance_requires_canonical_tool_parameters", () => {
+    const original = { type: "object", required: ["z", "a"], properties: { z: {}, a: {} } };
+    assertCanonicalToolParameters({ properties: { a: {}, z: {} }, required: ["a", "z"], type: "object" }, original);
+    assert.throws(() => assertCanonicalToolParameters({ required: ["z", "a"], type: "object" }, original), /not canonicalized/);
   });
 
   it("testing_subpath_is_exported", () => {

@@ -179,7 +179,8 @@ await kernel.load([
 - When opted in, `cache_control: { type: "ephemeral" }` markers apply only to
   caller-selected `ProviderRequestOptions.cache.breakpoints` on the last content
   block of each selected message. `cacheRetention: "long"` adds `ttl: "1h"` when
-  the model allows long retention.
+  the model allows long retention. A `system_prompt` breakpoint serializes
+  `system` as native text blocks with the marker (plain string otherwise).
 - The Moonshot Open Platform route never receives Anthropic `cache_control` fields.
 - Coding usage: `cache_read_input_tokens` → `Usage.cacheReadTokens`,
   `cache_creation_input_tokens` → `Usage.cacheWriteTokens`.

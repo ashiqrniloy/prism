@@ -1,4 +1,4 @@
-import { type CredentialValueSource, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
+import { type CredentialValueSource, redactSecrets, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 export interface GetNeuralWattQuotaOptions {
@@ -71,7 +71,7 @@ export interface NeuralWattQuota {
  * any error message.
  */
 export async function getNeuralWattQuota(options: GetNeuralWattQuotaOptions): Promise<NeuralWattQuota> {
-  const baseUrl = (options.baseUrl ?? "https://api.neuralwatt.com/v1").replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(options.baseUrl ?? "https://api.neuralwatt.com/v1");
   const token = await resolveCredentialValue(options.apiKey, { provider: "neuralwatt", name: "apiKey" });
   if (!token) throw new Error("NeuralWatt quota requires an API key");
   const response = await (options.fetch ?? fetch)(`${baseUrl}/quota`, {

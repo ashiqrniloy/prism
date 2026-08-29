@@ -241,6 +241,11 @@
     },
     "@arnilo/prism-session-store-nats": {
       "protectedException": "requires a real NATS server (real-jetstream legs; offline fake-jetstream seam only in default runs)"
+    },
+    "@arnilo/prism-obscura": {
+      "lines": 94.61,
+      "branches": 86.36,
+      "functions": 90.28
     }
   },
   "note": "Freeze 2026-08-14: two back-to-back post-fix runs were byte-identical (max lines delta 0.000pp). Threshold = min(run1,run2) - 3pp on lines; branches/functions recorded from the freeze runs, not gated. Protected packages (durable legs needing PRISM_TEST_POSTGRES_URL, real NATS, or OS-capability legs that skip in the measuring environment) are exempt and shown separately. CI remediation 2026-08-14: @arnilo/prism-coding-security moved to protectedException — its native-sandbox legs probe `unshare --net` (NETNS) at load and skip on GitHub Actions runners (measured 72.80 lines there vs 80.18 on a host with NETNS; the 77.18 freeze threshold was host-captured)."

@@ -1,6 +1,6 @@
 import type { CredentialResolver, JsonObject, JsonValue, SsrfPolicy, ToolArgumentValidator, ToolDefinition } from "@arnilo/prism";
 
-export type WebProvider = "brave" | "exa" | "firecrawl";
+export type WebProvider = "brave" | "exa" | "firecrawl" | "obscura";
 export interface WebRateMetadata {
   readonly limit?: number;
   readonly remaining?: number;

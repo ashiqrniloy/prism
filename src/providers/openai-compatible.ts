@@ -11,6 +11,7 @@ import {
   toolCallFromArgumentsText,
 } from "../provider-events.js";
 import { assertStructuredOutputRequestSupported } from "../structured-output.js";
+import { trimTrailingSlashes } from "../trim-trailing-slashes.js";
 import {
   applyOpenAIChatStructuredOutput,
   assertOpenAIChatMessage,
@@ -174,7 +175,7 @@ export function createOpenAICompatibleProvider(options: OpenAICompatibleProvider
         const url =
           typeof options.chatCompletionsUrl === "function"
             ? options.chatCompletionsUrl(request)
-            : (options.chatCompletionsUrl ?? `${options.baseUrl.replace(/\/+$/, "")}/chat/completions`);
+            : (options.chatCompletionsUrl ?? `${trimTrailingSlashes(options.baseUrl)}/chat/completions`);
         const authStyle = options.authStyle ?? "bearer";
         const headers: Record<string, string> = {
           ...Object.fromEntries(

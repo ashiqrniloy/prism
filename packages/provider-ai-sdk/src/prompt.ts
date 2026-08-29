@@ -21,6 +21,7 @@ import type {
   ProviderRequestOptions,
   ToolDefinition,
 } from "@arnilo/prism";
+import { canonicalizeJsonSchema } from "@arnilo/prism";
 import { AiSdkProviderError } from "./errors.js";
 
 type UserPart = LanguageModelV4TextPart | LanguageModelV4FilePart;
@@ -183,7 +184,7 @@ export function toAiSdkTool(tool: ToolDefinition): LanguageModelV4FunctionTool {
     type: "function",
     name: tool.name,
     description: tool.description,
-    inputSchema: (tool.parameters ?? { type: "object", properties: {} }) as JSONSchema7,
+    inputSchema: canonicalizeJsonSchema(tool.parameters ?? { type: "object", properties: {} }) as JSONSchema7,
   };
 }
 

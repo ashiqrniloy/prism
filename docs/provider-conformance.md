@@ -12,6 +12,9 @@ Exported from `@arnilo/prism/testing/provider-conformance`:
 - `assertToolCallDeltasReconstruct(events, expected)`
 - `assertUsageAccounting(events, expected)`
 - `assertSerializedRequestCoversContent(request, body, options?)`
+- `assertCanonicalToolParameters(serialized, original)`
+- `assertNoForeignCacheFields(body, allowed?)`
+- `assertNoFetches(calls)`
 - `assertProviderOwnedHeadersWin(captured, options)`
 - `assertNoSecretLeak(events, secrets)`
 
@@ -68,6 +71,9 @@ Helpers accept normal `AIProvider`, `ProviderRequest`, `ProviderEvent`, `Usage`,
 - `assertAbortIsObserved()` passes an already-aborted signal and expects provider generation to reject. This is the supported timeout primitive; use a host abort controller or `RunOptions.signal`.
 - `assertToolCallDeltasReconstruct()` rebuilds streamed `tool_call_delta` fragments into tool calls and validates expected id/name/arguments. Malformed JSON with id+name present yields `argumentsError` (no throw); missing id/name throws typed `incomplete_delta`. The runtime uses the same reconstruction before tool execution when a provider streams deltas.
 - `assertUsageAccounting()` finds `usage` or `done.usage` and checks selected token fields including `cacheReadTokens` and `cacheWriteTokens`. This is the provider-neutral check for normalized cache read/write token extraction; every first-party provider package exercises it against server-specific fields (`cached_tokens`, `cache_read_input_tokens`, etc.).
+- `assertCanonicalToolParameters()` checks a serialized tool schema matches `canonicalizeJsonSchema(original)` so property insertion order and `required` name order cannot drift on the wire while `enum`/`prefixItems`/`examples` stay caller-ordered.
+- `assertNoForeignCacheFields()` fails when a request body carries a cache wire field the route does not document (`cache_control`, `prompt_cache_*`, `cachedContent`, `cachePoint`); pass documented fields in `allowed` for routes that opt in (Alibaba/OpenRouter markers, Gemini `extra.cachedContent`). Implicit-cache providers must serialize no foreign cache fields — implicit caching works by byte-stable prefix reuse, not request payloads.
+- `assertNoFetches()` fails when a provider performed network calls outside caller-gated discovery/stream; provider construction and `setup()` must be network-free.
 - `assertSerializedRequestCoversContent()` scans a serialized provider request body for primitive canaries from each Prism content block and fails if any supported block type is silently dropped. Provider-valid transcripts place assistant `tool_call` messages before matching role `tool` `tool_result` messages; runtime, cache-aware input layout, and observational-memory worker loops preserve that order before serialization.
 - `assertProviderOwnedHeadersWin()` compares captured request headers against the provider's authoritative owned header values and a caller-supplied header bag; it fails if any owned header (`authorization`, `content-type`, session/security headers) was overridden by caller headers, and also fails if a non-owned caller header was dropped. This is the provider-neutral check that caller `ProviderRequest.options.headers` cannot hijack provider credentials or sessions; every first-party provider package exercises it.
 - `assertNoSecretLeak()` stringifies all collected events and fails if any known secret string is present.

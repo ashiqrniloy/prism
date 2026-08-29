@@ -173,6 +173,7 @@ A2A routes are not added to `createPrismHandler()`. Install `@arnilo/prism-super
 - [MCP client and server exposure](mcp-tools.md): selected MCP capabilities and web-standard MCP transport.
 - [Host security guide](host-security.md): remote-boundary checklist.
 - [A2A interoperability](a2a.md): separately mounted A2A 1.0 handler/client.
+- [Obscura browser engine](obscura.md): optional binary-backed generic tools for hosted agents.
 - [Conversations](conversations.md): durable user-scoped conversation service, replay, branches, export, deletion.
 - [Work artifacts and review](work-artifacts-and-review.md): durable artifact review service, revisions, approvals, authorized expiring delivery links.
 - [Frontend interoperability (AG-UI and ACP)](ag-ui.md): separately installed authorized AG-UI Web handler.

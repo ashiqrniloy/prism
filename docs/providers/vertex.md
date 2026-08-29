@@ -60,6 +60,7 @@ const provider = createVertexProvider({
 - No Google Cloud SDK dependency in the package.
 - Custom/private endpoint hosts are preserved.
 - Tokens redacted from errors; no import-time credential prefetch — the credential is resolved exactly once per request (a rotating `CredentialValueSource` is never consumed twice; the same resolved token drives the wrapper check and the inner auth header).
+- Conformance-proven (Task 6): package `setup()` performs zero fetch and zero credential resolution; an already-aborted signal fails fast; a truncated SSE stream (no `data: [DONE]`) ends in an `error` event; native Vertex cached-content lifecycle is intentionally unsupported on the OpenAI-compatible route — no cache wire fields are emitted even when the request carries Prism cache hints (use `@arnilo/prism-provider-google`'s `extra.cachedContent` on that package, or manage cache resources host-side).
 - Pair with model-router residency allow-lists on `location`.
 
 ## Related APIs

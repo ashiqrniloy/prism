@@ -171,6 +171,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-provider-vertex` | Google Vertex provider |
 | `@arnilo/prism-provider-ai-sdk` | AI SDK interoperability adapter |
 | `@arnilo/prism-browser` | optional host-wired Playwright browser automation (not core; not auto-activated) |
+| `@arnilo/prism-obscura` | optional Obscura headless-browser engine over a host-installed binary: MCP surface, CDP + Playwright, bounded CLI web tools (not in umbrellas; install explicitly) |
 | `@arnilo/prism-computer-use-linux` | optional Linux desktop-control tools over a host-owned `computer-use-linux` MCP binary |
 | `@arnilo/prism-antigravity-agent` | optional Antigravity CLI delegated agent adapter with per-run Prism MCP capability exposure |
 | `@arnilo/prism-wiki` | optional Karpathy LLM Wiki knowledge compiler with local `qmd` hybrid search and Context7 line navigation |
@@ -192,7 +193,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-base` | profile: core + compaction + JSON Schema validation |
 | `@arnilo/prism-code` | profile: base + coding tools/security + MCP |
 | `@arnilo/prism-sdk` | profile: base + workflows + MCP + credentials + OpenTelemetry |
-| `@arnilo/prism-all` | broad umbrella: 21 first-party packages (47 transitive) across a 47-package workspace closure — omits document-reader, OpenAPI tools, NATS, Caveman, Ponytail, Impeccable, computer-use-linux, antigravity-agent, Graft, and wiki |
+| `@arnilo/prism-all` | broad umbrella: 21 first-party packages (47 transitive) across a 47-package workspace closure — omits document-reader, OpenAPI tools, NATS, Caveman, Ponytail, Impeccable, computer-use-linux, antigravity-agent, Graft, Obscura, and wiki |
 
 ## Scripts
 

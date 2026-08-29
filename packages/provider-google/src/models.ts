@@ -1,4 +1,11 @@
-import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
+import {
+  type CredentialValueSource,
+  type JsonObject,
+  type ModelConfig,
+  redactSecrets,
+  resolveCredentialValue,
+  trimTrailingSlashes,
+} from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 /** Official Gemini API base (`v1beta`). Vertex is out of scope for 0.0.12. */
@@ -73,7 +80,7 @@ export function defineGoogleModel(config: GoogleModelConfig): ModelConfig {
  */
 export async function listGoogleModels(options: ListGoogleModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "google";
-  const baseUrl = (options.baseUrl ?? GOOGLE_DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(options.baseUrl ?? GOOGLE_DEFAULT_BASE_URL);
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const url = new URL(`${baseUrl}/models`);
   if (options.pageSize !== undefined) url.searchParams.set("pageSize", String(options.pageSize));

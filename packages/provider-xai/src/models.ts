@@ -1,4 +1,11 @@
-import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
+import {
+  type CredentialValueSource,
+  type JsonObject,
+  type ModelConfig,
+  redactSecrets,
+  resolveCredentialValue,
+  trimTrailingSlashes,
+} from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 
 export const XAI_DEFAULT_BASE_URL = "https://api.x.ai/v1";
@@ -66,7 +73,7 @@ export function defineXaiModel(config: XaiModelConfig): ModelConfig {
 /** Caller-gated `GET {base}/models`. Never invoked by `createXaiProviderPackage`. */
 export async function listXaiModels(options: ListXaiModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "xai";
-  const baseUrl = (options.baseUrl ?? XAI_DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(options.baseUrl ?? XAI_DEFAULT_BASE_URL);
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",

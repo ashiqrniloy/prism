@@ -33,16 +33,33 @@ export function parseSnapshotRefs(
     const ref = refMatch[1]!;
     if (refs.has(ref)) continue;
     const roleMatch = /^\s*-\s+([A-Za-z][A-Za-z0-9_-]*)/u.exec(line);
-    const nameMatch = /"((?:\\.|[^"\\])*)"/u.exec(line);
+    const nameMatch = matchQuotedYamlString(line);
     refs.set(ref, {
       ref,
       role: roleMatch?.[1],
-      name: nameMatch ? unescapeYamlString(nameMatch[1]!) : undefined,
+      name: nameMatch !== undefined ? unescapeYamlString(nameMatch) : undefined,
     });
   }
   return { refs, truncatedByRefs };
 }
 
+// Linear quoted-string scanner replaces `/"((?:\\.|[^"\\])*)"/u` (CodeQL js/polynomial-redos, alert 3):
+// first unescaped-quote-delimited segment, undefined when absent or unterminated.
+function matchQuotedYamlString(line: string): string | undefined {
+  const open = line.indexOf('"');
+  if (open === -1) return undefined;
+  let i = open + 1;
+  while (i < line.length) {
+    const c = line[i];
+    if (c === "\\") {
+      i += 2;
+      continue;
+    }
+    if (c === '"') return line.slice(open + 1, i);
+    i += 1;
+  }
+  return undefined;
+}
 function unescapeYamlString(value: string): string {
   return value.replace(/\\(["\\])/gu, "$1");
 }

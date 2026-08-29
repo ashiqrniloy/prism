@@ -1,5 +1,5 @@
 import type { AIProvider, CredentialValueSource, ModelConfig, ProviderPackage } from "@arnilo/prism";
-import { defineProviderPackage, providerError, resolveCredentialValue as resolveOnce } from "@arnilo/prism";
+import { defineProviderPackage, providerError, resolveCredentialValue as resolveOnce, trimTrailingSlashes } from "@arnilo/prism";
 import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
 
 export interface VertexProviderOptions {
@@ -34,7 +34,7 @@ export function vertexOpenApiBaseUrl(input: { readonly projectId: string; readon
       if (error instanceof Error && error.message.startsWith("Vertex")) throw error;
       throw new Error("Vertex endpoint must be an absolute https URL");
     }
-    return input.endpoint.replace(/\/+$/, "");
+    return trimTrailingSlashes(input.endpoint);
   }
   if (!input.projectId.trim()) throw new Error("Vertex projectId is required");
   if (!input.location.trim()) throw new Error("Vertex location is required");

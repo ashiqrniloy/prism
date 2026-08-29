@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "@arnilo/prism";
 import { applyThinkingLevel } from "@arnilo/prism";
 import {
+  assertNoForeignCacheFields,
   assertProviderOwnedHeadersWin,
   assertProviderStreamConforms,
   assertSerializedRequestCoversContent,
@@ -31,6 +32,10 @@ const toolRequest: ProviderRequest = {
 };
 
 describe("@arnilo/prism-provider-deepseek", () => {
+  it("deepseek_implicit_requests_carry_no_foreign_cache_fields", () => {
+    assertNoForeignCacheFields(deepseekBody({ ...request, options: { cacheKey: "session-1", cacheRetention: "long" } }));
+  });
+
   it("deepseek_registers_featured_catalog_and_api_key", async () => {
     const registered: unknown[] = [];
     await createDeepSeekProviderPackage({ apiKey: "fake-deepseek-key" }).setup({
@@ -143,16 +148,20 @@ describe("@arnilo/prism-provider-deepseek", () => {
           parameters: {
             type: "object",
             required: ["z", "a"],
+            enum: ["z", "a"],
             properties: { z: { type: "string" }, a: { type: "number" } },
           },
           execute: () => ({ toolCallId: "c", name: "lookup", content: [] }),
         },
       ],
     });
-    const tools = body.tools as unknown as readonly { function: { parameters: { properties: object; required: string[] } } }[];
+    const tools = body.tools as unknown as readonly {
+      function: { parameters: { properties: object; required: string[]; enum: string[] } };
+    }[];
     const parameters = tools[0]?.function.parameters;
     assert.deepEqual(Object.keys(parameters?.properties ?? {}), ["a", "z"]);
     assert.deepEqual(parameters?.required, ["a", "z"]);
+    assert.deepEqual(parameters?.enum, ["z", "a"]);
   });
 
   it("deepseek_maps_prompt_cache_hit_tokens_to_cacheReadTokens", async () => {

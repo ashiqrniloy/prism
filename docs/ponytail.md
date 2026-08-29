@@ -106,7 +106,7 @@ See `examples/caveman-ponytail.ts` for combined Caveman + Ponytail progressive d
 - Import alone registers nothing (`sideEffects: false`); no timers, watchers, network, or shell scripts.
 - Upstream hook modules load via `createRequire` from resolved root — instruction strings are not forked in Prism.
 - Mode restore scans `getEntries()` for latest `data.type === "ponytail-mode"` (OM attach pattern).
-- `ponytail-subagent` hook is not wired; nested-agent behavior is host responsibility.
+- `ponytail-subagent` hook is not wired; nested-agent behavior is host responsibility. When hosts wire the upstream hook, `PONYTAIL_SUBAGENT_MATCHER` accepts only the documented safe subset — `"explore|general"` (any literal substring) or `"^general$"` (exact), case-insensitive, max 256 chars. No `RegExp` is compiled from the environment, so arbitrary regex (including catastrophic nested quantifiers) is never evaluated; unset/invalid patterns inject into every subagent.
 - No TUI statusline scripts; use `ponytail status` command or extension events.
 - Not included in `@arnilo/prism-code` or `@arnilo/prism-sdk` profiles — opt-in install only.
 

@@ -108,7 +108,7 @@ export async function* mapAiSdkStream(
     }
   }
 
-  if (!sawFinish) yield providerDone(usage);
+  if (!sawFinish) yield toErrorEvent(new AiSdkProviderError("model_error", "AI SDK stream ended without a finish part"), state.redactor);
 }
 
 function mapStreamPart(part: LanguageModelV4StreamPart, state: StreamState): readonly ProviderEvent[] {

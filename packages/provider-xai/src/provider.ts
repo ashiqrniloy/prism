@@ -1,5 +1,5 @@
 import type { AIProvider, JsonObject, Message, ProviderEvent, ProviderRequest } from "@arnilo/prism";
-import { type CredentialValueSource } from "@arnilo/prism";
+import { type CredentialValueSource, trimTrailingSlashes } from "@arnilo/prism";
 import { applyOpenAIChatStructuredOutput, serializeOpenAIChatMessage } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { xGrokConvId } from "./cache.js";
@@ -18,7 +18,7 @@ export interface XaiProviderOptions {
 export function createXaiProvider(options: XaiProviderOptions = {}): AIProvider {
   return createOpenAICompatibleProvider({
     id: options.id ?? "xai",
-    baseUrl: (options.baseUrl ?? XAI_DEFAULT_BASE_URL).replace(/\/+$/, ""),
+    baseUrl: trimTrailingSlashes(options.baseUrl ?? XAI_DEFAULT_BASE_URL),
     apiKey: options.apiKey,
     fetch: options.fetch,
     doneUsage: true,

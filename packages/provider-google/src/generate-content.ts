@@ -14,6 +14,7 @@ import type {
 } from "@arnilo/prism";
 import {
   assertStructuredOutputRequestSupported,
+  canonicalizeJsonSchema,
   providerDone,
   providerError,
   providerTextDelta,
@@ -213,7 +214,7 @@ function toTool(tool: ToolDefinition): JsonObject {
   return clean({
     name: tool.name,
     description: tool.description,
-    parameters: tool.parameters ?? { type: "object" },
+    parameters: canonicalizeJsonSchema(tool.parameters ?? { type: "object" }) as JsonObject,
   });
 }
 

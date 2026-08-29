@@ -8,6 +8,7 @@ import type {
   ProviderEvent,
   ProviderRequest,
 } from "@arnilo/prism";
+import { trimTrailingSlashes } from "@arnilo/prism";
 import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { kimiPreserveThinking, kimiReasoningEffort, kimiThinking, stripKimiThinkingCompat } from "./thinking.js";
@@ -29,7 +30,7 @@ export interface MoonshotProviderOptions {
 export function createMoonshotProvider(options: MoonshotProviderOptions = {}): AIProvider {
   return createOpenAICompatibleProvider({
     id: options.id ?? "moonshot",
-    baseUrl: (options.baseUrl ?? "https://api.moonshot.ai/v1").replace(/\/+$/, ""),
+    baseUrl: trimTrailingSlashes(options.baseUrl ?? "https://api.moonshot.ai/v1"),
     apiKey: options.apiKey,
     fetch: options.fetch,
     strictCompletion: true,

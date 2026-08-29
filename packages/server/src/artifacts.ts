@@ -18,6 +18,7 @@ import {
   type OwnershipScope,
   type PersistencePage,
   type SecretRedactor,
+  trimTrailingSlashes,
 } from "@arnilo/prism";
 import type { PrismRequestHandler, PrismServerAuthorization } from "./types.js";
 import { PrismServerError } from "./types.js";
@@ -910,7 +911,7 @@ function artifactErrorResponse(error: unknown): Response {
 
 function normalizeBasePath(value: string): string {
   if (!value.startsWith("/") || value.includes("?") || value.includes("#")) throw new RangeError("basePath must be an absolute URL path");
-  const normalized = value.length > 1 ? value.replace(/\/+$/, "") : value;
+  const normalized = value.length > 1 ? trimTrailingSlashes(value) : value;
   if (normalized === "/") throw new RangeError("basePath cannot expose the URL root");
   return normalized;
 }

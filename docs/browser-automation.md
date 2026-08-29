@@ -122,6 +122,7 @@ Default tests use fake Playwright APIs only. Protected live gate: `PRISM_LIVE_PL
 
 ## Related APIs
 
+- [Obscura browser engine](obscura.md): optional host-installed Obscura headless browser connected with `chromium.connectOverCDP` through `connectObscuraCdp` — its returned browser plugs directly into `createBrowserTools`/`createBrowserManager` as the host-supplied Playwright browser; pages on one Obscura worker share one V8 isolate, and screenshots/PDF need a render-enabled build.
 - [Tools](tools.md): registry, exclusive dispatch, validation, and ledger.
 - [Web search, fetch, and extraction](web-tools.md): preferred non-interactive retrieval path.
 - [Guardrails](guardrails.md): untrusted external content handling.

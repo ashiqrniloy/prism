@@ -5,6 +5,7 @@ import {
   type ModelCost,
   redactSecrets,
   resolveCredentialValue,
+  trimTrailingSlashes,
 } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { defineOpenRouterModel } from "./model.js";
@@ -69,7 +70,7 @@ interface OpenRouterModelsResponse {
  */
 export async function listOpenRouterModels(options: ListOpenRouterModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "openrouter";
-  const baseUrl = (options.baseUrl ?? "https://openrouter.ai/api/v1").replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(options.baseUrl ?? "https://openrouter.ai/api/v1");
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",

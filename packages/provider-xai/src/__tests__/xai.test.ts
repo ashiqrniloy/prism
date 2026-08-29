@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "@arnilo/prism";
 import {
+  assertNoForeignCacheFields,
   assertProviderOwnedHeadersWin,
   assertProviderStreamConforms,
   assertSerializedRequestCoversContent,
@@ -27,6 +28,13 @@ const request: ProviderRequest = {
 };
 
 describe("@arnilo/prism-provider-xai", () => {
+  it("xai_implicit_body_carries_no_foreign_cache_fields_and_conv_id_stays_out_of_body", () => {
+    const body = xaiBody({ ...request, options: { cache: { key: "conv-1" }, cacheRetention: "long" } });
+    assertNoForeignCacheFields(body);
+    assert.ok(!JSON.stringify(body).includes("conv-1"));
+    assert.equal(xGrokConvId({ ...request, options: { cache: { key: "conv-1" } } }), "conv-1");
+  });
+
   it("xai_registers_featured_catalog_api_key_and_oauth", async () => {
     const registered: unknown[] = [];
     await createXaiProviderPackage({ apiKey: "fake-xai-key" }).setup({

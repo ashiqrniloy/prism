@@ -1,4 +1,5 @@
 import type { ContentBlock, JsonObject, Message, ModelCapabilities, StructuredOutputOptions, ToolDefinition, Usage } from "../contracts.js";
+import { canonicalizeJsonSchema } from "./schema.js";
 
 export function assertOpenAIChatMessage(message: unknown, path: string): asserts message is Message {
   if (!message || typeof message !== "object") {
@@ -51,7 +52,7 @@ export function serializeOpenAITool(tool: ToolDefinition): JsonObject {
     function: {
       name: tool.name,
       description: tool.description,
-      parameters: tool.parameters ?? { type: "object" },
+      parameters: canonicalizeJsonSchema(tool.parameters ?? { type: "object" }) as JsonObject,
     },
   } as JsonObject;
 }

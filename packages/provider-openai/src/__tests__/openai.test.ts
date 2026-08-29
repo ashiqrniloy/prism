@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AIProvider, AuthMethod, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import {
+  assertCanonicalToolParameters,
   assertProviderOwnedHeadersWin,
   assertProviderStreamConforms,
   assertSerializedRequestCoversContent,
@@ -35,7 +36,14 @@ describe("@arnilo/prism-provider-openai responses", () => {
           { type: "response.function_call_arguments.done", output_index: 0, arguments: '{"q":"x"}' },
           {
             type: "response.completed",
-            response: { usage: { input_tokens: 10, output_tokens: 3, total_tokens: 13, input_tokens_details: { cached_tokens: 4 } } },
+            response: {
+              usage: {
+                input_tokens: 10,
+                output_tokens: 3,
+                total_tokens: 13,
+                input_tokens_details: { cached_tokens: 4, cache_write_tokens: 12 },
+              },
+            },
           },
         ]),
       ),
@@ -44,7 +52,7 @@ describe("@arnilo/prism-provider-openai responses", () => {
     const events = await assertProviderStreamConforms({
       provider,
       request,
-      expect: { text: "hello", usage: { inputTokens: 10, outputTokens: 3, totalTokens: 13, cacheReadTokens: 4 } },
+      expect: { text: "hello", usage: { inputTokens: 10, outputTokens: 3, totalTokens: 13, cacheReadTokens: 4, cacheWriteTokens: 12 } },
     });
     assert(
       events.some(
@@ -116,6 +124,32 @@ describe("@arnilo/prism-provider-openai responses", () => {
     assert.equal(headers!.get("authorization"), "Bearer fake-openai-key");
   });
 
+  it("canonicalizes_function_parameters", async () => {
+    const parameters = {
+      type: "object",
+      required: ["z", "a"],
+      enum: ["z", "a"],
+      properties: { z: { type: "string" }, a: { type: "number" } },
+    };
+    let body: any;
+    const provider = createOpenAIResponsesProvider({
+      apiKey: "fake-openai-key",
+      fetch: async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      },
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        tools: [{ name: "lookup", parameters, execute: () => ({ toolCallId: "call_1", name: "lookup", content: [] }) }],
+      },
+    });
+    assertCanonicalToolParameters(body.tools[0].parameters, parameters);
+    assert.deepEqual(body.tools[0].parameters.enum, ["z", "a"]);
+  });
+
   it("openai_responses_prompt_cache_key_and_24h_retention_match_docs", async () => {
     let body: any;
     const provider = createOpenAIResponsesProvider({
@@ -185,6 +219,168 @@ describe("@arnilo/prism-provider-openai responses", () => {
     // Disallowed chars stripped to "-", leading/trailing dashes trimmed, clamped to 64.
     assert.equal(body.prompt_cache_key.length, 64);
     assert.match(body.prompt_cache_key, /^team-agent-1-x+$/);
+  });
+
+  const gpt56Model = {
+    ...request.model,
+    model: "gpt-5.6",
+    cache: { kind: "openai_key" as const, longRetention: false, explicitBreakpoints: true },
+  };
+
+  it("openai_responses_56_explicit_breakpoints_emit_prompt_cache_options_and_markers", async () => {
+    let body: any;
+    const provider = createOpenAIResponsesProvider({
+      apiKey: "fake-openai-key",
+      fetch: async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      },
+    });
+    const messages: Message[] = [
+      { role: "system", content: [{ type: "text", text: "stable" }] },
+      { role: "user", content: [{ type: "text", text: "preamble" }] },
+      { role: "assistant", content: [{ type: "text", text: "ok" }] },
+      { role: "user", content: [{ type: "text", text: "current turn" }] },
+    ];
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        model: gpt56Model,
+        messages,
+        options: {
+          cacheKey: "tenant:demo:v1",
+          cacheRetention: "long" as const,
+          cache: { breakpoints: [{ location: "system_prompt" as const }, { location: "last_stable_message" as const }] },
+        },
+      },
+    });
+    assert.deepEqual(body.prompt_cache_options, { mode: "explicit" });
+    // 5.6+ has no 24h retention; ttl is always the 30m default.
+    assert.equal(body.prompt_cache_retention, undefined);
+    assert.deepEqual(body.input[0].content[0].prompt_cache_breakpoint, { mode: "explicit" });
+    assert.deepEqual(body.input.find((item: any) => item.role === "assistant").content[0].prompt_cache_breakpoint, { mode: "explicit" });
+    assert.equal(body.input.at(-1).content[0].prompt_cache_breakpoint, undefined);
+    assert.equal((messages[0]!.content[0] as any).prompt_cache_breakpoint, undefined);
+  });
+
+  it("openai_responses_explicit_breakpoints_cap_at_four_cache_writes", async () => {
+    let body: any;
+    const provider = createOpenAIResponsesProvider({
+      apiKey: "fake-openai-key",
+      fetch: async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      },
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        model: gpt56Model,
+        messages: [
+          { role: "system", content: [{ type: "text", text: "stable" }] },
+          { role: "user", content: [{ type: "text", text: "preamble" }] },
+          { role: "assistant", content: [{ type: "text", text: "ok" }] },
+          { role: "user", content: [{ type: "text", text: "current turn" }] },
+        ],
+        options: {
+          cacheKey: "sess",
+          cache: {
+            breakpoints: [
+              { location: "system_prompt" as const },
+              { location: "stable_context" as const },
+              { location: "last_stable_message" as const },
+              { location: "last_user_message" as const },
+              { location: "message_id" as const, messageId: "missing" },
+            ],
+          },
+        },
+      },
+    });
+    const marked = body.input.filter((item: any) => item.content?.some?.((block: any) => block.prompt_cache_breakpoint)).length;
+    assert.equal(marked, 4);
+  });
+
+  it("openai_responses_legacy_models_keep_retention_and_skip_explicit_options", async () => {
+    let body: any;
+    const provider = createOpenAIResponsesProvider({
+      apiKey: "fake-openai-key",
+      fetch: async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      },
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        model: { ...request.model, cache: { kind: "openai_key" as const, longRetention: true } },
+        options: {
+          cacheKey: "k",
+          cacheRetention: "long" as const,
+          cache: { breakpoints: [{ location: "last_user_message" as const }] },
+        },
+      },
+    });
+    assert.equal(body.prompt_cache_retention, "24h");
+    assert.equal(body.prompt_cache_options, undefined);
+    assert.ok(!JSON.stringify(body.input).includes("prompt_cache_breakpoint"));
+  });
+
+  it("openai_responses_cache_mode_off_emits_no_explicit_options", async () => {
+    let body: any;
+    const provider = createOpenAIResponsesProvider({
+      apiKey: "fake-openai-key",
+      fetch: async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      },
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        model: gpt56Model,
+        options: {
+          cacheKey: "sess",
+          cache: { mode: "off" as const, breakpoints: [{ location: "system_prompt" as const }] },
+        },
+      },
+    });
+    assert.equal(body.prompt_cache_options, undefined);
+    assert.equal(body.prompt_cache_retention, undefined);
+    assert.ok(!JSON.stringify(body.input).includes("prompt_cache_breakpoint"));
+  });
+
+  it("openai_responses_resolved_cache_fields_win_over_caller_extra", async () => {
+    let body: any;
+    const provider = createOpenAIResponsesProvider({
+      apiKey: "fake-openai-key",
+      fetch: async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      },
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        model: { ...request.model, cache: { kind: "openai_key" as const, longRetention: true } },
+        options: {
+          cacheKey: "resolved-key",
+          cacheRetention: "long" as const,
+          extra: {
+            prompt_cache_key: "caller-key",
+            prompt_cache_retention: "bogus",
+            prompt_cache_options: { mode: "bogus" },
+          },
+        },
+      },
+    });
+    assert.equal(body.prompt_cache_key, "resolved-key");
+    assert.equal(body.prompt_cache_retention, "24h");
+    assert.equal(body.prompt_cache_options, undefined);
   });
 
   it("openai_responses_reasoning_effort_from_compat_and_per_turn_override", async () => {

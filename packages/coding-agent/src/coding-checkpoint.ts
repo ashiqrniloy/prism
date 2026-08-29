@@ -36,7 +36,27 @@ export const CODING_STATE_KEY = "coding";
 const SHA256_HEX = /^[a-f0-9]{64}$/;
 const TASK_ID = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$/;
 const BRANCH = /^[^\s]{1,255}$/;
-const TODO_LINE = /^\s*[-*]\s+\[([ xX])\]\s+(.+?)\s*$/;
+// Linear todo-line scanner replaces `/^\s*[-*]\s+\[([ xX])\]\s+(.+?)\s*$/` (CodeQL js/polynomial-redos, alert 4)
+function parseTodoLine(line: string): { done: boolean; raw: string } | undefined {
+  let i = 0;
+  while (i < line.length && /\s/.test(line[i])) i += 1;
+  if (line[i] !== "-" && line[i] !== "*") return undefined;
+  i += 1;
+  while (i < line.length && /\s/.test(line[i])) i += 1;
+  if (line[i] !== "[") return undefined;
+  i += 1;
+  const doneChar = line[i];
+  if (doneChar !== "x" && doneChar !== "X" && doneChar !== " ") return undefined;
+  i += 1;
+  if (line[i] !== "]") return undefined;
+  i += 1;
+  while (i < line.length && /\s/.test(line[i])) i += 1;
+  let end = line.length;
+  while (end > i && /\s/.test(line[end - 1])) end -= 1;
+  if (end <= i) return undefined;
+  return { done: doneChar.toLowerCase() === "x", raw: line.slice(i, end) };
+}
+
 const FORBIDDEN_METADATA_KEYS = new Set([
   "credentials",
   "credential",
@@ -269,16 +289,33 @@ export function parseCodingPlanTodos(markdown: string, limits?: CodingCheckpoint
   assertByteLimit("plan", markdown, resolved.maxPlanBytes);
   const todos: CodingTodoItem[] = [];
   for (const line of markdown.split(/\r?\n/)) {
-    const match = TODO_LINE.exec(line);
+    const match = parseTodoLine(line);
     if (!match) continue;
-    const done = match[1]!.toLowerCase() === "x";
-    const raw = match[2]!.trim();
+    const done = match.done;
+    const raw = match.raw;
     assertTodoText(raw, resolved.maxTodoTextBytes);
-    const idMatch = /^\[([A-Za-z0-9._-]{1,64})\]\s+(.+)$/.exec(raw);
-    const id = idMatch?.[1] ?? `todo-${todos.length + 1}`;
-    const text = idMatch?.[2] ?? raw;
+    // Linear id-prefix parse replaces `/^\[([A-Za-z0-9._-]{1,64})\]\s+(.+)$/` (CodeQL js/polynomial-redos, alert 5)
+    let id: string | undefined;
+    let text = raw;
+    if (raw.startsWith("[")) {
+      const close = raw.indexOf("]", 1);
+      if (close !== -1) {
+        const candidate = raw.slice(1, close);
+        const after = raw.slice(close + 1);
+        if (
+          candidate.length >= 1 &&
+          candidate.length <= 64 &&
+          /^[A-Za-z0-9._-]+$/u.test(candidate) &&
+          /^\s/u.test(after) &&
+          after.trim().length > 0
+        ) {
+          id = candidate;
+          text = after.trim();
+        }
+      }
+    }
     assertTodoText(text, resolved.maxTodoTextBytes);
-    todos.push({ id, text, done });
+    todos.push({ id: id ?? `todo-${todos.length + 1}`, text, done });
     if (todos.length > resolved.maxTodos) {
       throw new CodingCheckpointError(`Plan exceeds ${resolved.maxTodos} todo limit`);
     }

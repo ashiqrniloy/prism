@@ -34,7 +34,13 @@ export function createOpenAIProviderPackage(options: OpenAIProviderPackageOption
   });
 }
 
-export { OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH, promptCacheKey, promptCacheRetention } from "./cache.js";
+export {
+  OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH,
+  applyPromptCacheBreakpoints,
+  promptCacheKey,
+  promptCacheOptions,
+  promptCacheRetention,
+} from "./cache.js";
 export { createOpenAICodexProvider, type OpenAICodexProviderOptions } from "./codex.js";
 export {
   defineOpenAIModel,

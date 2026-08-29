@@ -1,4 +1,11 @@
-import { type CredentialValueSource, type JsonObject, type ModelConfig, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
+import {
+  type CredentialValueSource,
+  type JsonObject,
+  type ModelConfig,
+  redactSecrets,
+  resolveCredentialValue,
+  trimTrailingSlashes,
+} from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH } from "./cache.js";
 
@@ -66,7 +73,7 @@ export function defineOpenAIModel(config: OpenAIModelConfig): ModelConfig {
  */
 export async function listOpenAIModels(options: ListOpenAIModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "openai";
-  const baseUrl = (options.baseUrl ?? "https://api.openai.com/v1").replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(options.baseUrl ?? "https://api.openai.com/v1");
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",
@@ -108,6 +115,7 @@ export function mapOpenAIModel(entry: OpenAIModelEntry, options: { readonly prov
     cache: {
       kind: "openai_key",
       longRetention,
+      explicitBreakpoints: supportsExplicitCacheBreakpoints(id),
       maxKeyLength: OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH,
     },
     compat: cleanJson({
@@ -176,6 +184,16 @@ function supportsExtendedPromptCacheRetention(modelId: string): boolean {
     id.includes("gpt-5") ||
     id.includes("gpt-4.1")
   );
+}
+
+/**
+ * GPT-5.6+ models accept explicit per-message cache breakpoints
+ * (`prompt_cache_breakpoint`); earlier families are implicit-only.
+ * @see https://developers.openai.com/api/docs/guides/prompt-caching
+ */
+function supportsExplicitCacheBreakpoints(modelId: string): boolean {
+  const id = modelId.toLowerCase();
+  return id.includes("gpt-5.6") || id.includes("gpt-5.7") || id.includes("gpt-5.8") || id.includes("gpt-5.9");
 }
 
 function looksLikeReasoningModel(modelId: string): boolean {

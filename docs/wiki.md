@@ -37,8 +37,8 @@ The Karpathy LLM Wiki pattern is structured into 3 distinct tiers:
 ### Tools
 
 - `wiki_search`: `{ query: string, mode?: "search" | "vsearch" | "query", maxResults?: number }`
-- `wiki_read_page`: `{ pagePath: string }`
-- `wiki_record_insight`: `{ title: string, content: string, category?: "decision" | "concept" | "entity" }`
+- `wiki_read_page`: `{ pagePath: string }` — `pagePath` must resolve inside the wiki root (lexical + `fs.realpath` containment). Traversal (sibling-prefix, `..`, absolute paths) and symlinks pointing outside the wiki throw an access-denied error; a missing contained page returns `found: false`.
+- `wiki_record_insight`: `{ title: string, content: string, category?: "decision" | "concept" | "entity" }` — title and content must be non-empty; titles are capped at 200 characters, content at 65,536 bytes, and control characters/newlines in titles are collapsed to spaces so titles cannot inject Markdown headings, index entries, or log entries.
 
 ### Slash Commands
 

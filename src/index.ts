@@ -56,7 +56,16 @@ export type {
   CacheControlValue,
   CacheUsageReport,
 } from "./cache-helpers.js";
-export { applyCacheControl, cacheHitRate, cacheSavings, cacheUsageReport, mapCacheRetention, sanitizeCacheKey } from "./cache-helpers.js";
+export {
+  systemCacheControlField,
+  applyCacheControl,
+  cacheHitRate,
+  cacheSavings,
+  cacheUsageReport,
+  mapCacheRetention,
+  resolveBreakpoint,
+  sanitizeCacheKey,
+} from "./cache-helpers.js";
 export type {
   CacheTelemetry,
   CacheTelemetryOptions,
@@ -69,6 +78,7 @@ export {
   createCacheTelemetry,
   DEFAULT_CACHE_TELEMETRY_CAP,
 } from "./cache-telemetry.js";
+export { canonicalizeJsonSchema } from "./providers/schema.js";
 export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
 export { CHECKPOINT_CONFLICT_CODE, CheckpointConflictError, createMemoryCheckpointStore } from "./checkpoints.js";
 export type { DefaultCompactionStrategyOptions } from "./compaction.js";
@@ -405,6 +415,7 @@ export {
   throwIfAborted,
 } from "./oauth-device-code.js";
 export { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
+export { trimTrailingSlashes } from "./trim-trailing-slashes.js";
 export type {
   ApplyRetentionInput,
   ApplyRetentionResult,

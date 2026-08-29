@@ -77,3 +77,4 @@ Supervisors propagate parent `identity` and `effectStore` to every child agent/r
 - [Workflows](workflows.md): preferred deterministic orchestration.
 - [Working and semantic memory](working-and-semantic-memory.md): child scope construction.
 - [Host security](host-security.md): permission and credential boundaries.
+- [Obscura browser engine](obscura.md): optional binary-backed generic tools for child agents.

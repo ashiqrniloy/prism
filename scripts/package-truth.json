@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-08-28T09:20:43.326Z",
+  "generatedAt": "2026-08-29T11:11:03.110Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.3.0"
   },
   "counts": {
-    "publishable": 59,
-    "workspace": 58,
+    "publishable": 60,
+    "workspace": 59,
     "provider": 17,
     "prismFamily": 10,
-    "capability": 31,
-    "codeWithPeer": 52,
+    "capability": 32,
+    "codeWithPeer": 53,
     "pureManifest": 6
   },
   "providers": [
@@ -62,6 +62,7 @@
     "@arnilo/prism-mcp",
     "@arnilo/prism-memory",
     "@arnilo/prism-model-router",
+    "@arnilo/prism-obscura",
     "@arnilo/prism-observability-opentelemetry",
     "@arnilo/prism-policy",
     "@arnilo/prism-rag",
@@ -133,6 +134,7 @@
         "@arnilo/prism-document-reader",
         "@arnilo/prism-graft",
         "@arnilo/prism-impeccable",
+        "@arnilo/prism-obscura",
         "@arnilo/prism-openapi-tools",
         "@arnilo/prism-ponytail",
         "@arnilo/prism-session-store-nats",

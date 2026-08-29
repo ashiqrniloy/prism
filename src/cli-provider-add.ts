@@ -3,6 +3,7 @@ import { access, mkdir, readdir, readFile, realpath, writeFile } from "node:fs/p
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
+import { trimTrailingSlashes } from "./trim-trailing-slashes.js";
 
 export class ProviderAddUsageError extends Error {}
 
@@ -266,7 +267,7 @@ function buildTokens(input: {
     __PROVIDER_PASCAL__: pascal,
     __PACKAGE_NAME__: input.name,
     __PRISM_VERSION__: input.version,
-    __BASE_URL__: input.baseUrl.replace(/\/+$/, ""),
+    __BASE_URL__: trimTrailingSlashes(input.baseUrl),
     __ENV_KEY__: input.envKey,
     __MODEL_ID__: input.model,
   };

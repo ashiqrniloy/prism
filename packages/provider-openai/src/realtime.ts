@@ -8,7 +8,7 @@ import type {
   RealtimeSession,
   SecretRedactor,
 } from "@arnilo/prism";
-import { redactSecrets, resolveCredentialValue } from "@arnilo/prism";
+import { redactSecrets, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
 
 export interface RealtimeTransportOptions {
   /** Official Realtime WebSocket authentication headers. */
@@ -172,7 +172,7 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
         releaseOwnerSlot();
         return;
       }
-      const base = (options.baseUrl ?? "wss://api.openai.com/v1").replace(/\/+$/, "");
+      const base = trimTrailingSlashes(options.baseUrl ?? "wss://api.openai.com/v1");
       if (!base.startsWith("wss://")) throw new Error("OpenAI realtime baseUrl must use wss://");
       const url = `${base}/realtime?model=${encodeURIComponent(options.model.model)}`;
       const headers = {

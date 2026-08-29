@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import {
+  assertNoForeignCacheFields,
   assertProviderOwnedHeadersWin,
   assertProviderStreamConforms,
   assertSerializedRequestCoversContent,
@@ -27,6 +28,10 @@ const request: ProviderRequest = {
 };
 
 describe("@arnilo/prism-provider-zai", () => {
+  it("zai_implicit_requests_carry_no_foreign_cache_fields", () => {
+    assertNoForeignCacheFields(zaiBody({ ...request, options: { cacheKey: "session-1", cacheRetention: "long" } }));
+  });
+
   it("zai_registers_glm_model_metadata", async () => {
     const registered: unknown[] = [];
     await createZaiProviderPackage({ apiKey: "fake-zai-key", fetch: mockFetch(sse([])) }).setup({

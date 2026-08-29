@@ -1,3 +1,10 @@
+## [Unreleased] — plan 039 (Obscura full host support)
+
+### Added
+- `@arnilo/prism-obscura` (new workspace package, 0.3.0): optional Obscura headless-browser engine over a **host-installed** binary — fail-closed `spawnObscuraProcess` lifecycle (absolute shell-free command, Docker argv, bounded readiness, group close), `createObscuraMcpTools` bridging the complete advertised MCP surface (reads effect-free; mutations and unknown future tools exclusive/serialized; `obscura_` prefix; loopback-default HTTP), `connectObscuraCdp` managed/external CDP + Playwright `connectOverCDP` composition, and `createObscuraWebTools` (standard `web_search`/`web_fetch` through one replaceable HTML search profile plus native `obscura_fetch`/`obscura_scrape`; public-HTTP(S)-only URL validation, byte/count/timeout caps, `allowEval`-gated custom expressions, untrusted-content labeling). Deliberately omitted from `prism-all`/`prism-base`/`prism-sdk` umbrella profiles — installation does not supply the binary/image; consumers install it explicitly.
+- Cross-host conformance (`scripts/obscura-host-conformance.test.mjs`, wired into `npm test`): the same Obscura `ToolDefinition[]` executes through core agent sessions, the Prism MCP server, the server handler, AG-UI, ACP, workflow nodes, supervisor children, and Antigravity delegated exposure — no host branch; host authorization/selection deny before execution; abort kills owned children.
+- New required peers: `@arnilo/prism-obscura` peers `@arnilo/prism` and `@arnilo/prism-web-tools` (reused citation/normalized shapes; `WebProvider` widened with `"obscura"`); `@arnilo/prism-obscura` also peers `@arnilo/prism-mcp`, `@arnilo/prism-browser`, and optional `playwright-core@1.61.0`.
+
 ## [0.3.1] - 2026-08-26
 
 ### Added

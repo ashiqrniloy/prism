@@ -5,9 +5,10 @@ import { applyCacheControl, sanitizeCacheKey } from "@arnilo/prism";
 export const OPENROUTER_SESSION_ID_MAX_LENGTH = 256;
 
 export function openRouterSessionId(options: ProviderRequestOptions | undefined): string | undefined {
-  // Sanitize + clamp via the shared core helper. Session ids route requests and
-  // identify conversations; they must never carry credentials or raw prompts.
-  return sanitizeCacheKey(options?.cacheKey ?? options?.sessionId, OPENROUTER_SESSION_ID_MAX_LENGTH);
+  // Sanitize + clamp via the shared core helper. Structured `cache.key` wins, then
+  // legacy `cacheKey` / `sessionId`. Session ids route requests and identify
+  // conversations; they must never carry credentials or raw prompts.
+  return sanitizeCacheKey(options?.cache?.key ?? options?.cacheKey ?? options?.sessionId, OPENROUTER_SESSION_ID_MAX_LENGTH);
 }
 
 /**

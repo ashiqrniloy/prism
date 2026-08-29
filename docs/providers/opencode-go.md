@@ -219,7 +219,9 @@ Owned compat keys (`route`, `thinking`, `reasoning`, `reasoning_effort`,
   shared `applyCacheControl()` helper) on the last content block of each selected
   message — not to every block. Caching is enabled unless disabled
   (`cacheRetention: "none"` / `cache.mode: "off"`) and the model opts in via
-  `ModelConfig.cache.kind: "cache_control"` (or `cache.mode: "on"`).
+  `ModelConfig.cache.kind: "cache_control"` (or `cache.mode: "on"`). A
+  `system_prompt` breakpoint serializes `system` as native text blocks with the
+  marker (plain string otherwise).
 - `cacheRetention: "long"` emits `cache_control: { type: "ephemeral", ttl: "1h" }`
   markers when the model allows long retention
   (`ModelConfig.cache.longRetention !== false`); otherwise the default ephemeral

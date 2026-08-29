@@ -13,6 +13,8 @@ export interface ModelCacheCapabilities {
   readonly maxBreakpoints?: number;
   readonly minCacheableTokens?: number;
   readonly longRetention?: boolean;
+  /** Model accepts explicit per-block cache breakpoints (e.g. OpenAI GPT-5.6+ `prompt_cache_breakpoint`). */
+  readonly explicitBreakpoints?: boolean;
 }
 
 export type PromptCacheMode = "auto" | "on" | "off";

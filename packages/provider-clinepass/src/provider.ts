@@ -1,5 +1,5 @@
 import type { AIProvider, JsonObject, ProviderEvent, ProviderRequest } from "@arnilo/prism";
-import { type CredentialValueSource } from "@arnilo/prism";
+import { type CredentialValueSource, trimTrailingSlashes } from "@arnilo/prism";
 import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { CLINEPASS_DEFAULT_BASE_URL } from "./models.js";
@@ -17,7 +17,7 @@ export interface ClinePassProviderOptions {
 export function createClinePassProvider(options: ClinePassProviderOptions = {}): AIProvider {
   return createOpenAICompatibleProvider({
     id: options.id ?? "clinepass",
-    baseUrl: (options.baseUrl ?? CLINEPASS_DEFAULT_BASE_URL).replace(/\/+$/, ""),
+    baseUrl: trimTrailingSlashes(options.baseUrl ?? CLINEPASS_DEFAULT_BASE_URL),
     apiKey: options.apiKey,
     fetch: options.fetch,
     doneUsage: true,

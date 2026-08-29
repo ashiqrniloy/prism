@@ -8,7 +8,7 @@ Implementation is **shipped** for transport and OpenAI serialization primitives 
 
 ## When to use it
 
-- **Provider package authors** implementing or migrating a first-party adapter should import shared primitives from `@arnilo/prism/providers/transport` and `@arnilo/prism/providers/openai` instead of copying `sse.ts`, `safeText`, `parseArgs`, or serializers.
+- **Provider package authors** implementing or migrating a first-party adapter should import shared primitives from `@arnilo/prism/providers/transport`, `@arnilo/prism/providers/openai`, and `@arnilo/prism/providers/schema` instead of copying `sse.ts`, `safeText`, `parseArgs`, serializers, or JSON Schema key-sorting.
 - **Host apps** choose native structured output via `ProviderRequestOptions.structuredOutput` when the model declares support; otherwise they keep the artifact generate→validate→revise loop ([Structured output](structured-output.md)).
 - **Operators** enable observability through extended agent events and the optional OpenTelemetry adapter package ([Observability](observability.md)).
 
@@ -190,6 +190,19 @@ export function assertOpenAIChatMessage(message: unknown, path: string): asserts
 
 `src/providers/openai-compatible.ts` becomes a thin adapter over these helpers in Task 2.
 
+### `@arnilo/prism/providers/schema` — **shipped**
+
+Deterministic JSON Schema clone for tool/function parameters. Sorts object keys and unordered `required` names. Leaves semantic arrays (`prefixItems`, `examples`, `enum`, tuple `items`) in caller order. Does not resolve `$ref`, mutate input, or enforce schema bounds.
+
+```ts
+import { canonicalizeJsonSchema } from "@arnilo/prism/providers/schema";
+
+canonicalizeJsonSchema({ required: ["b", "a"], properties: { b: {}, a: {} } });
+// keys and required names stable; ordered schema arrays remain ordered
+```
+
+`serializeOpenAITool` and first-party native `toTool` mappers reuse this helper so logically identical schemas stringify identically.
+
 ### Structured output capability (Task 4 — **shipped**)
 
 ```ts
@@ -286,7 +299,7 @@ Every migrated provider must pass this shared matrix (implemented in Task 1 test
 ## Related APIs
 
 - [Provider layer](provider-layer.md): registry, mock provider, event helpers
-- [Provider conformance](provider-conformance.md): stream order, abort, header ownership
+- [Provider conformance](provider-conformance.md): stream order, abort, header ownership, canonical tool schemas
 - [OpenAI-compatible provider](providers/openai-compatible.md): reference adapter subpath
 - [Structured output](structured-output.md): artifact loop fallback
 - [Provider request policies](provider-request-policies.md): cache and request hooks

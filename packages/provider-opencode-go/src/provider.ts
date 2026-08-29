@@ -1,5 +1,5 @@
 import type { AIProvider, CredentialValueSource, ProviderRequest } from "@arnilo/prism";
-import { providerError, resolveCredentialValue } from "@arnilo/prism";
+import { providerError, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
 import { httpStatusError, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { anthropicMessagesBody, anthropicMessagesEvents } from "./anthropic-messages.js";
 import { opencodeOwnedHeaders } from "./cache.js";
@@ -16,7 +16,7 @@ export interface OpenCodeGoProviderOptions {
 
 export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}): AIProvider {
   const id = options.id ?? "opencode-go";
-  const baseUrl = (options.baseUrl ?? OPENCODE_GO_DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(options.baseUrl ?? OPENCODE_GO_DEFAULT_BASE_URL);
   return {
     id,
     async *generate(request) {

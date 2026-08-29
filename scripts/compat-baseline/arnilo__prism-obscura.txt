@@ -1,0 +1,40 @@
+DEFAULT_OBSCURA_NAME_PREFIX	export declare const DEFAULT_OBSCURA_NAME_PREFIX = "obscura_"
+DEFAULT_OBSCURA_PROCESS_LIMITS	export declare const DEFAULT_OBSCURA_PROCESS_LIMITS: ObscuraProcessLimits
+DEFAULT_OBSCURA_SEARCH_PROFILE	export declare const DEFAULT_OBSCURA_SEARCH_PROFILE: ObscuraSearchProfile
+DEFAULT_OBSCURA_SERVER_ID	export declare const DEFAULT_OBSCURA_SERVER_ID = "obscura"
+DEFAULT_OBSCURA_WEB_LIMITS	export declare const DEFAULT_OBSCURA_WEB_LIMITS: ObscuraWebLimits
+HARD_OBSCURA_PROCESS_LIMITS	export declare const HARD_OBSCURA_PROCESS_LIMITS: ObscuraProcessLimits
+HARD_OBSCURA_WEB_LIMITS	export declare const HARD_OBSCURA_WEB_LIMITS: ObscuraWebLimits
+ObscuraCdpSession	export type { ObscuraChromium, ObscuraCdpSession, ObscuraPlaywright } from "./cdp.js"
+ObscuraChromium	export type { ObscuraChromium, ObscuraCdpSession, ObscuraPlaywright } from "./cdp.js"
+ObscuraCliRunOptions	export type { ObscuraCliRunOptions, ObscuraCliRunResult } from "./cli.js"
+ObscuraCliRunResult	export type { ObscuraCliRunOptions, ObscuraCliRunResult } from "./cli.js"
+ObscuraCloseOptions	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
+ObscuraError	export declare class ObscuraError extends Error
+ObscuraExit	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
+ObscuraMcpError	export declare class ObscuraMcpError extends Error
+ObscuraPlaywright	export type { ObscuraChromium, ObscuraCdpSession, ObscuraPlaywright } from "./cdp.js"
+ObscuraProcessOptions	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
+OwnedObscuraProcess	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
+connectObscuraCdp	export declare function connectObscuraCdp(options: ConnectObscuraCdpOptions): Promise<ObscuraCdpSession>
+createObscuraMcpTools	export declare function createObscuraMcpTools(options: ObscuraMcpToolsOptions): Promise<ObscuraMcpTools>
+createObscuraWebTools	export declare function createObscuraWebTools(options: ObscuraWebToolsOptions): ObscuraWebTools
+endpointFromServeArgs	export declare function endpointFromServeArgs(args: readonly string[]): string
+fakeObscuraCliPath	export declare function fakeObscuraCliPath(): string
+isObscuraReadTool	export declare function isObscuraReadTool(name: string): boolean
+packageName	export declare const packageName = "@arnilo/prism-obscura"
+resolveObscuraProcessLimits	export declare function resolveObscuraProcessLimits(input?: Partial<ObscuraProcessLimits>): ObscuraProcessLimits
+resolveObscuraSearchProfile	export declare function resolveObscuraSearchProfile(profile: ObscuraSearchProfile | undefined, maxEvalBytes: number): ObscuraSearchProfile
+resolveObscuraWebLimits	export declare function resolveObscuraWebLimits(input?: Partial<ObscuraWebLimits>): ObscuraWebLimits
+runObscuraCli	export declare function runObscuraCli(options: ObscuraCliRunOptions): Promise<ObscuraCliRunResult>
+spawnObscuraProcess	export declare function spawnObscuraProcess(options: ObscuraProcessOptions): OwnedObscuraProcess
+type ObscuraMcpTools	export { createObscuraMcpTools, DEFAULT_OBSCURA_NAME_PREFIX, DEFAULT_OBSCURA_SERVER_ID, ObscuraMcpError, type ObscuraMcpTools, type ObscuraMcpToolsOptions, } from "./mcp.js"
+type ObscuraMcpToolsOptions	export { createObscuraMcpTools, DEFAULT_OBSCURA_NAME_PREFIX, DEFAULT_OBSCURA_SERVER_ID, ObscuraMcpError, type ObscuraMcpTools, type ObscuraMcpToolsOptions, } from "./mcp.js"
+type ObscuraProcessLimits	export { DEFAULT_OBSCURA_PROCESS_LIMITS, HARD_OBSCURA_PROCESS_LIMITS, type ObscuraProcessLimits, resolveObscuraProcessLimits, } from "./limits.js"
+type ObscuraSearchProfile	export { DEFAULT_OBSCURA_SEARCH_PROFILE, resolveObscuraSearchProfile, type ObscuraSearchProfile } from "./search-profile.js"
+type ObscuraWebLimits	export { DEFAULT_OBSCURA_WEB_LIMITS, HARD_OBSCURA_WEB_LIMITS, resolveObscuraWebLimits, type ObscuraWebLimits, } from "./limits.js"
+type ObscuraWebTools	export { createObscuraWebTools, type ObscuraWebTools, type ObscuraWebToolsOptions } from "./web.js"
+type ObscuraWebToolsOptions	export { createObscuraWebTools, type ObscuraWebTools, type ObscuraWebToolsOptions } from "./web.js"
+validateObscuraCommand	export declare function validateObscuraCommand(options: ObscuraProcessOptions, limits: ObscuraProcessLimits): void
+validateObscuraEndpoint	export declare function validateObscuraEndpoint(raw: string, allowRemote: boolean): URL
+validateObscuraWebUrl	export declare function validateObscuraWebUrl(input: string, allowedHostnames?: readonly string[]): string

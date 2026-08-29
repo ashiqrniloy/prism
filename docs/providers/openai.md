@@ -159,14 +159,26 @@ Official: [Prompt caching](https://developers.openai.com/api/docs/guides/prompt-
   model declares `ModelConfig.cache.longRetention === true`; models without that
   metadata omit the field. Featured `gpt-5.1` declares
   `cache: { kind: "openai_key", longRetention: true, maxKeyLength: 64 }`.
-- GPT-5.6+ official docs prefer `prompt_cache_options` / explicit breakpoints;
-  `listOpenAIModels` sets `longRetention: false` for those ids so Prism does not
-  emit deprecated `prompt_cache_retention` for them. Breakpoint helpers are not
-  shipped in this package yet — hosts may pass `prompt_cache_options` through
-  `compat` / `extra` when needed.
+- GPT-5.6+ models use current `prompt_cache_options` instead of retention:
+  `listOpenAIModels` / `mapOpenAIModel` set `cache.explicitBreakpoints: true` and
+  `longRetention: false` for those ids, so Prism never emits
+  `prompt_cache_retention` for them. When the host supplies
+  `cache.breakpoints` (or forces `cache.mode: "on"`), Prism emits
+  `prompt_cache_options: { mode: "explicit" }` and stamps
+  `prompt_cache_breakpoint: { mode: "explicit" }` on the last text block of each
+  selected message anchor (shared breakpoint selection with
+  `applyCacheControl`, capped at the official 4 cache writes per request;
+  `tools` breakpoints are skipped — tool definitions are not markable blocks).
+  The only supported TTL is `"30m"` (also the default), so no ttl field is ever
+  emitted. `cache.mode: "off"` suppresses explicit options and markers.
+- Resolved cache fields win over caller `extra`: `prompt_cache_key`,
+  `prompt_cache_retention`, and `prompt_cache_options` are re-applied after the
+  `extra` spread, so invalid caller values cannot replace the resolved policy.
 - Cache accounting is preserved in normalized `Usage`: OpenAI
-  `input_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`. OpenAI
-  Responses does not report a cache-write token field on older models.
+  `input_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens` and
+  `input_tokens_details.cache_write_tokens` maps to `Usage.cacheWriteTokens`
+  (GPT-5.6+ report cache writes; older models omit the field, leaving
+  `Usage.cacheWriteTokens` undefined).
 - Provider-owned headers (`content-type`, `authorization`, `x-client-request-id`)
   are applied after caller `ProviderRequestOptions.headers` so caller config
   cannot replace credentials, content type, or the session request id; non-owned

@@ -1,3 +1,4 @@
+import { trimTrailingSlashes } from "@arnilo/prism";
 import type { PrismDrainController } from "./drain.js";
 import { type PrismDeploymentLimits, type ResolvedPrismDeploymentLimits, resolvePrismDeploymentLimits } from "./limits.js";
 import { type PrismRequestHandler, PrismServerError } from "./types.js";
@@ -31,7 +32,7 @@ export function createPrismHealthHandler(options: CreatePrismHealthHandlerOption
         throw new PrismServerError("Method not allowed", 405, "ERR_PRISM_SERVER_METHOD");
       }
       const url = new URL(request.url);
-      const path = url.pathname.replace(/\/+$/, "") || "/";
+      const path = trimTrailingSlashes(url.pathname) || "/";
       const livePath = `${base}/livez`;
       const readyPath = `${base}/readyz`;
       if (path !== base && path !== livePath && path !== readyPath) {
@@ -118,7 +119,7 @@ function normalizeHealthBase(basePath: string): string {
   if (!basePath.startsWith("/") || basePath.includes("?") || basePath.includes("#")) {
     throw new PrismServerError("Invalid health basePath", 500, "ERR_PRISM_SERVER_CONFIG");
   }
-  return basePath.replace(/\/+$/, "") || "/health";
+  return trimTrailingSlashes(basePath) || "/health";
 }
 
 function assertSafeDetail(value: Readonly<Record<string, unknown>>): void {

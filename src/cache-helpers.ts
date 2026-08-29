@@ -22,10 +22,14 @@ export interface CacheUsageReport {
 }
 
 export function sanitizeCacheKey(value: string | undefined, maxLength: number): string | undefined {
-  const key = value
-    ?.replace(/[^A-Za-z0-9_.:-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, Math.max(0, maxLength));
+  const replaced = value?.replace(/[^A-Za-z0-9_.:-]+/g, "-");
+  if (!replaced) return undefined;
+  // Index/slice edge trim instead of the `/^-+|-+$/g` alternation (CodeQL js/polynomial-redos, alert 22).
+  let start = 0;
+  let end = replaced.length;
+  while (start < end && replaced.charCodeAt(start) === 45) start += 1;
+  while (end > start && replaced.charCodeAt(end - 1) === 45) end -= 1;
+  const key = replaced.slice(start, end).slice(0, Math.max(0, maxLength));
   return key || undefined;
 }
 
@@ -57,6 +61,32 @@ export function applyCacheControl(
   });
 }
 
+export interface SystemCacheControlTextBlock {
+  readonly type: "text";
+  readonly text: string;
+  readonly cache_control?: CacheControlValue;
+}
+
+/**
+ * Provider-style `system` field: plain joined string by default; native text
+ * blocks only when cache-control markers must survive (system_prompt breakpoints).
+ */
+export function systemCacheControlField(
+  messages: readonly CacheControlledMessage[],
+  toText: (message: Message) => string,
+): string | readonly SystemCacheControlTextBlock[] | undefined {
+  const system = messages.filter((message) => message.role === "system");
+  if (!system.length) return undefined;
+  if (!system.some((message) => message.content.some((block) => (block as CacheControlledContentBlock).cache_control))) {
+    return system.map(toText).join("\n\n") || undefined;
+  }
+  return system.map((message) => {
+    const cache_control = message.content.find((block) => (block as CacheControlledContentBlock).cache_control)?.cache_control;
+    const block: SystemCacheControlTextBlock = { type: "text", text: toText(message) };
+    return cache_control ? { ...block, cache_control } : block;
+  });
+}
+
 export function cacheHitRate(usage: Usage | undefined): number | undefined {
   const read = usage?.cacheReadTokens;
   const input = usage?.inputTokens;
@@ -83,7 +113,7 @@ export function cacheUsageReport(usage: Usage | undefined, model?: ModelConfig):
   };
 }
 
-function resolveBreakpoint(messages: readonly Message[], breakpoint: PromptCacheBreakpoint): number {
+export function resolveBreakpoint(messages: readonly Message[], breakpoint: PromptCacheBreakpoint): number {
   switch (breakpoint.location) {
     case "system_prompt":
       return messages.findIndex((message) => message.role === "system");

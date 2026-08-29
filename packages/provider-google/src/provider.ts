@@ -1,5 +1,5 @@
 import type { AIProvider, CredentialValueSource, ProviderRequestOptions } from "@arnilo/prism";
-import { providerError, resolveCredentialValue } from "@arnilo/prism";
+import { providerError, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
 import { httpStatusError, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { googleGenerateContentBody, googleGenerateContentEvents } from "./generate-content.js";
 import { GOOGLE_DEFAULT_BASE_URL, stripModelsPrefix } from "./models.js";
@@ -32,7 +32,7 @@ export function googleOwnedHeaders(
 
 export function createGoogleGenerateContentProvider(options: GoogleGenerateContentProviderOptions = {}): AIProvider {
   const id = options.id ?? "google";
-  const baseUrl = (options.baseUrl ?? GOOGLE_DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(options.baseUrl ?? GOOGLE_DEFAULT_BASE_URL);
   return {
     id,
     async *generate(request) {

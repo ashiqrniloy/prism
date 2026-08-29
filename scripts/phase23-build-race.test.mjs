@@ -16,7 +16,7 @@
 // concurrency scenarios prove the wrapped leaves hold up under the four named combos.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -75,18 +75,36 @@ async function distConsistent() {
 }
 
 test("sensitivity: the consistency check catches a partial dist (deterministic pre-fix repro)", async () => {
-  const dir = join(tmpdir(), `prism-partial-${process.pid}-${Date.now()}`);
-  const dist = join(dir, "dist");
-  // A module graph missing one known export — the shape a mid-emit tsc could leave behind.
-  mkdirSync(dist, { recursive: true });
-  writeFileSync(join(dist, "index.js"), "export const AgentRunError = class {};\n");
-  const partial = await node(
-    "-e",
-    `import('file://${join(dist, "index.js")}').then(m=>{for(const k of ${JSON.stringify(KNOWN_EXPORTS)}){if(!(k in m)){process.exit(3)}}})`,
-  );
-  rmSync(dir, { recursive: true, force: true });
-  assert.notEqual(partial.code, 0, "partial dist must fail the consistency check");
-  assert.equal(await distConsistent(), true, "real dist must pass the consistency check");
+  // mkdtemp: atomically unique dir, no pid/time collision or overwrite of an attacker-precreated path.
+  const dir = mkdtempSync(join(tmpdir(), "prism-partial-"));
+  try {
+    const dist = join(dir, "dist");
+    // A module graph missing one known export — the shape a mid-emit tsc could leave behind.
+    mkdirSync(dist, { recursive: true });
+    writeFileSync(join(dist, "index.js"), "export const AgentRunError = class {};\n");
+    const partial = await node(
+      "-e",
+      `import('file://${join(dist, "index.js")}').then(m=>{for(const k of ${JSON.stringify(KNOWN_EXPORTS)}){if(!(k in m)){process.exit(3)}}})`,
+    );
+    assert.notEqual(partial.code, 0, "partial dist must fail the consistency check");
+    assert.equal(await distConsistent(), true, "real dist must pass the consistency check");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("temp fixture directories are atomically unique and cleaned up even on assertion failure", () => {
+  const dirs = [];
+  try {
+    for (let i = 0; i < 2; i++) dirs.push(mkdtempSync(join(tmpdir(), "prism-phase23-")));
+    assert.notEqual(dirs[0], dirs[1], "concurrent temp dirs must never collide");
+    assert.throws(() => {
+      throw new Error("simulated assertion failure");
+    });
+  } finally {
+    for (const d of dirs) rmSync(d, { recursive: true, force: true });
+  }
+  for (const d of dirs) assert.equal(existsSync(d), false, "finally must clean up on failure");
 });
 
 test("stale lock (dead holder) is reclaimed and the child runs", async () => {

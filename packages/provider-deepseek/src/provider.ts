@@ -1,5 +1,5 @@
 import type { AIProvider, ContentBlock, JsonObject, Message, ProviderEvent, ProviderRequest } from "@arnilo/prism";
-import { type CredentialValueSource } from "@arnilo/prism";
+import { type CredentialValueSource, trimTrailingSlashes } from "@arnilo/prism";
 import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { canonicalizeDeepSeekTools } from "./cache.js";
@@ -17,7 +17,7 @@ export interface DeepSeekProviderOptions {
 export function createDeepSeekProvider(options: DeepSeekProviderOptions = {}): AIProvider {
   return createOpenAICompatibleProvider({
     id: options.id ?? "deepseek",
-    baseUrl: (options.baseUrl ?? DEEPSEEK_DEFAULT_BASE_URL).replace(/\/+$/, ""),
+    baseUrl: trimTrailingSlashes(options.baseUrl ?? DEEPSEEK_DEFAULT_BASE_URL),
     apiKey: options.apiKey,
     fetch: options.fetch,
     doneUsage: true,

@@ -32,19 +32,38 @@ export function parseSkillMarkdown(content: string): { name: string; description
   let name = "unknown-skill";
   let description = "";
 
-  const nameMatch = rawYaml.match(/^name:\s*(.+)$/m);
-  if (nameMatch) name = nameMatch[1].trim();
+  // Linear line-scan field extraction replaces `/^key:\s*(.+(?:\n\s+.+)*)$/m` style regexes
+  // (CodeQL js/polynomial-redos, alert 66): walk lines, join indented continuations.
+  const nameMatch = matchYamlValue(rawYaml, "name");
+  if (nameMatch) name = nameMatch.trim();
 
-  const descMatch = rawYaml.match(/^description:\s*([^\n]+(?:\n\s+[^\n]+)*)/m);
-  if (descMatch) {
-    description = descMatch[1].replace(/\n\s+/g, " ").trim();
-  }
+  const descMatch = matchYamlValue(rawYaml, "description");
+  if (descMatch) description = descMatch.trim();
 
   return {
     name,
     description,
     instructions: body.trim(),
   };
+}
+
+function matchYamlValue(rawYaml: string, key: string): string | undefined {
+  const lines = rawYaml.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    if (!lines[i].startsWith(`${key}:`)) continue;
+    const parts = [lines[i].slice(key.length + 1).trim()];
+    let j = i + 1;
+    while (j < lines.length && /^[ \t]+\S/.test(lines[j])) {
+      parts.push(lines[j].trim());
+      j += 1;
+    }
+    const value = parts
+      .filter((p) => p !== "")
+      .join(" ")
+      .trim();
+    return value === "" ? undefined : value;
+  }
+  return undefined;
 }
 
 export async function deployWikiSkills(workspaceRoot: string, options: DeployOptions = {}): Promise<string[]> {

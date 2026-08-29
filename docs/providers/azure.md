@@ -64,6 +64,7 @@ Register via `createExtensionKernel().load([createAzureOpenAIProviderPackage(...
 - Endpoint host is never rewritten to public DNS.
 - Errors redact credential values via shared transport helpers.
 - No Azure SDK dependency.
+- Conformance-proven (Task 6): package `setup()` performs zero fetch and zero credential resolution; an already-aborted signal fails fast; a truncated SSE stream (no `data: [DONE]`) ends in an `error` event; Azure cache policy stays host-owned, so no cache wire fields (`cache_control`, `prompt_cache_*`) are emitted even when the request carries Prism cache hints — only upstream-reported `prompt_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`.
 
 ## Related APIs
 

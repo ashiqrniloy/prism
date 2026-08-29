@@ -1,5 +1,5 @@
 {
-  "$comment": "Phase 21 (0.2.1) Task 1 baseline evidence, captured at 0.2.0 (HEAD cb9369d, Release 0.2.0 tag state) before any phase-21 implementation edit. npm test / coverage / biome / format / secrets / audit / pack figures are fresh verified runs in this session at cb9369d; typecheck/release-gate/plan-020-exit numbers cite the plan 020 exit gate recorded at the same HEAD. fileHashes are computed live at capture; the freeze test compares them against the working tree at every task state. [2026-08-18] manifestCount refreshed 49->50 workspace / 50->51 publishable: plan 028 shipped the spawnable ACP agent package @arnilo/prism-acp-agent. [2026-08-18] dependencyNames fingerprint refreshed: plan 028 added @arnilo/prism-acp-agent (its deps reuse existing names; the package itself is a new workspace entry). [2026-08-19] manifestCount refreshed 50->54 workspace / 51->55 publishable: plan 029 shipped DeepSeek/xAI/ClinePass + prism-impeccable. [2026-08-25] manifestCount refreshed for plan 033: optional context-graph package @arnilo/prism-graft (+1 prism-family workspace package).",
+  "$comment": "Phase 21 (0.2.1) Task 1 baseline evidence, captured at 0.2.0 (HEAD cb9369d, Release 0.2.0 tag state) before any phase-21 implementation edit. npm test / coverage / biome / format / secrets / audit / pack figures are fresh verified runs in this session at cb9369d; typecheck/release-gate/plan-020-exit numbers cite the plan 020 exit gate recorded at the same HEAD. fileHashes are computed live at capture; the freeze test compares them against the working tree at every task state. [2026-08-18] manifestCount refreshed 49->50 workspace / 50->51 publishable: plan 028 shipped the spawnable ACP agent package @arnilo/prism-acp-agent. [2026-08-18] dependencyNames fingerprint refreshed: plan 028 added @arnilo/prism-acp-agent (its deps reuse existing names; the package itself is a new workspace entry). [2026-08-19] manifestCount refreshed 50->54 workspace / 51->55 publishable: plan 029 shipped DeepSeek/xAI/ClinePass + prism-impeccable. [2026-08-25] manifestCount refreshed for plan 033: optional context-graph package @arnilo/prism-graft (+1 prism-family workspace package). [2026-08-29] preservedSurface packages/provider-kimi/src/moonshot.ts hash refreshed for the plan 037 first-party provider parity implementation; other preserved files unchanged.",
   "captured": "2026-08-13T09:15:55.539Z",
   "release": "0.2.0",
   "node": "v24.18.0",
@@ -298,11 +298,11 @@
     "packages/credentials-node/src/microsoft365-oauth.ts": "b41fdaea54cac1b7ea5beec67e20ea29a12a02eefc37caa41d2b8d23f76ddca2",
     "packages/credentials-node/src/google-workspace-oauth.ts": "da49376aebcecbe89ebcb10689a19f0983ddb145f0d89210869ec01dd16211ac",
     "packages/provider-alibaba/src/provider.ts": "5c135dbb633b8966d763a8a048ea38d99f6f41213a943ea876deb7237b4de4e4",
-    "packages/provider-kimi/src/moonshot.ts": "65d7822e5812cfbf2cd0d18b6afe6817af099848f837fdef4d1f262250ab27f8",
+    "packages/provider-kimi/src/moonshot.ts": "92c42d95608a3f2607cc81a692414448c54c843b32a51453b2722ffdfbefbe3a",
     "packages/provider-ollama/src/provider.ts": "003304e819a425564dd919a455a92e399b596d13c8dcec8ed99ec9d19ae2bf25",
     "packages/provider-opencode-go/src/openai-chat.ts": "887934cde9e6037530dc07cab05c64c16cb9bb70e8579a666917dcde1a66f89c",
-    "packages/provider-anthropic/src/messages.ts": "259eb44480eddd3b67743bf85884220a6a69797564840abc5ff88ec594f2cea1",
-    "packages/provider-google/src/generate-content.ts": "d8b70da5ac8f8c8ef915406eab445c0eab21ca10a0af98be0a619180722c7ef6"
+    "packages/provider-anthropic/src/messages.ts": "711b6a822ce9dec5f5f19d0646c63754deef4e9f809dde8f17f439b737ee63a0",
+    "packages/provider-google/src/generate-content.ts": "7c52ef3a6cde1a4e4b5e9b6aad6239db08c12bdbcf3d26c319e992bddf5cb64a"
   },
   "strictCompletionOptIns": {
     "current": [

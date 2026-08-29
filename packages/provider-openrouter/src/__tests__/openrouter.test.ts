@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
 import {
+  assertNoForeignCacheFields,
   assertProviderOwnedHeadersWin,
   assertProviderStreamConforms,
   assertSerializedRequestCoversContent,
@@ -13,6 +14,8 @@ import {
   defineOpenRouterModel,
   listOpenRouterModels,
   mapOpenRouterModel,
+  openRouterBody,
+  openRouterSessionId,
   resolveOpenRouterReasoning,
 } from "../index.js";
 
@@ -36,6 +39,21 @@ const request: ProviderRequest = {
 };
 
 describe("@arnilo/prism-provider-openrouter", () => {
+  it("openrouter_session_id_prefers_structured_cache_key_over_legacy_fields", () => {
+    assert.equal(openRouterSessionId({ cache: { key: "structured" }, cacheKey: "legacy", sessionId: "sess" }), "structured");
+    assert.equal(openRouterSessionId({ cacheKey: "legacy", sessionId: "sess" }), "legacy");
+    assert.equal(openRouterSessionId({ sessionId: "sess" }), "sess");
+  });
+
+  it("openrouter_implicit_model_carries_no_foreign_cache_fields", () => {
+    const implicit = {
+      ...request,
+      model: { ...request.model, cache: { kind: "none" as const } },
+      options: { cacheKey: "session-1", cacheRetention: "long" as const },
+    };
+    assertNoForeignCacheFields(openRouterBody(implicit));
+  });
+
   it("openrouter_registers_only_app_supplied_models", async () => {
     const registered: unknown[] = [];
     await createOpenRouterProviderPackage({ apiKey: "fake-openrouter-key", models: [model], fetch: mockFetch(sse([])) }).setup({

@@ -7,7 +7,6 @@ import type {
   FileContent,
   JsonObject,
   MediaContentBlock,
-  Message,
   ModelConfig,
   ProviderRequest,
   ProviderRequestOptions,
@@ -17,6 +16,7 @@ import type {
 } from "@arnilo/prism";
 import {
   assertStructuredOutputRequestSupported,
+  canonicalizeJsonSchema,
   providerContinuationRequired,
   providerDone,
   providerError,
@@ -27,6 +27,7 @@ import {
   providerUsage,
   resolveCredentialValue,
   toolCallFromArgumentsText,
+  trimTrailingSlashes,
 } from "@arnilo/prism";
 import {
   bytesToBase64,
@@ -38,7 +39,13 @@ import {
 } from "@arnilo/prism/providers/media";
 import { applyOpenAIResponsesStructuredOutput } from "@arnilo/prism/providers/openai";
 import { httpStatusError, readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
-import { promptCacheKey, promptCacheRetention } from "./cache.js";
+import {
+  applyPromptCacheBreakpoints,
+  type OpenAIBreakpointMessage,
+  promptCacheKey,
+  promptCacheOptions,
+  promptCacheRetention,
+} from "./cache.js";
 import { createOpenAIFileUploadManager, type OpenAIFileUploadManager } from "./uploads.js";
 
 export interface OpenAIResponsesProviderOptions {
@@ -112,7 +119,7 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
             secrets.push(token);
           }
           const response = await (options.fetch ?? fetch)(
-            `${(options.baseUrl ?? "https://api.openai.com/v1").replace(/\/+$/, "")}/responses`,
+            `${trimTrailingSlashes(options.baseUrl ?? "https://api.openai.com/v1")}/responses`,
             {
               method: "POST",
               headers: {
@@ -270,21 +277,24 @@ async function toResponsesRequest(request: ProviderRequest, mediaContext: Respon
   const optionsCompat = { ...(request.options?.compat ?? {}) } as Record<string, unknown>;
   const reasoning = resolveOpenAIReasoning(request.model, request.options);
   delete optionsCompat.reasoning;
+  const messages = applyPromptCacheBreakpoints(request);
   const payload: Record<string, unknown> = {
     model: request.model.model,
     // `previous_response_id` carries prior context. Replaying history here would
     // duplicate prompt tokens and undermine cursor resumption.
-    input: cursor ? [] : await toResponsesInput(request.messages, resolvedContext),
+    input: cursor ? [] : await toResponsesInput(messages, resolvedContext),
     tools: request.tools?.map(toTool),
     stream: true,
     store: false,
-    prompt_cache_key: promptCacheKey(request.options),
-    prompt_cache_retention: promptCacheRetention(request.options, request.model),
     ...parameters,
     max_output_tokens: maxTokens,
     ...optionsCompat,
     ...(reasoning ? { reasoning } : {}),
     ...(request.options?.extra ?? {}),
+    // Resolved official cache fields win over raw extra/compat escape hatches.
+    prompt_cache_key: promptCacheKey(request.options),
+    prompt_cache_retention: promptCacheRetention(request.options, request.model),
+    prompt_cache_options: promptCacheOptions(request.options, request.model),
     ...(cursor ? { previous_response_id: cursor } : {}),
   };
   applyOpenAIResponsesStructuredOutput(payload, request.options?.structuredOutput);
@@ -297,7 +307,7 @@ async function toResponsesRequest(request: ProviderRequest, mediaContext: Respon
  * are top-level items with `call_id` (not nested message content with `id`).
  * @see https://developers.openai.com/api/docs/guides/function-calling
  */
-async function toResponsesInput(messages: readonly Message[], mediaContext: ResponsesMediaContext): Promise<JsonObject[]> {
+async function toResponsesInput(messages: readonly OpenAIBreakpointMessage[], mediaContext: ResponsesMediaContext): Promise<JsonObject[]> {
   const items: JsonObject[] = [];
   for (const message of messages) {
     if (message.role === "tool") {
@@ -317,7 +327,8 @@ async function toResponsesInput(messages: readonly Message[], mediaContext: Resp
       const functionCalls: JsonObject[] = [];
       for (const part of message.content) {
         if (part.type === "text") {
-          contentParts.push({ type: "output_text", text: part.text });
+          const block = part as typeof part & { prompt_cache_breakpoint?: { mode: "explicit" } };
+          contentParts.push(clean({ type: "output_text", text: part.text, prompt_cache_breakpoint: block.prompt_cache_breakpoint }));
         } else if (part.type === "thinking") {
         } else if (part.type === "tool_call") {
           // Provider-hosted calls (web_search_call, etc.) were executed server-side; resending
@@ -345,7 +356,8 @@ async function toResponsesInput(messages: readonly Message[], mediaContext: Resp
     const contentParts: JsonObject[] = [];
     for (const part of message.content) {
       if (part.type === "text" || part.type === "thinking") {
-        contentParts.push({ type: "input_text", text: part.text });
+        const block = part as typeof part & { prompt_cache_breakpoint?: { mode: "explicit" } };
+        contentParts.push(clean({ type: "input_text", text: part.text, prompt_cache_breakpoint: block.prompt_cache_breakpoint }));
       } else if (part.type === "image") {
         contentParts.push(toResponsesImage(mediaContext.resolvedMedia!.get(part)!));
       } else if (part.type === "audio") {
@@ -404,7 +416,12 @@ async function toResponsesFile(part: FileContent | DocumentContent, mediaContext
 }
 
 function toTool(tool: ToolDefinition): JsonObject {
-  return clean({ type: "function", name: tool.name, description: tool.description, parameters: tool.parameters ?? { type: "object" } });
+  return clean({
+    type: "function",
+    name: tool.name,
+    description: tool.description,
+    parameters: canonicalizeJsonSchema(tool.parameters ?? { type: "object" }) as JsonObject,
+  });
 }
 
 function toUsage(usage: OpenAIUsage | undefined): Usage | undefined {
@@ -414,6 +431,7 @@ function toUsage(usage: OpenAIUsage | undefined): Usage | undefined {
     outputTokens: usage.output_tokens,
     totalTokens: usage.total_tokens,
     cacheReadTokens: usage.input_tokens_details?.cached_tokens,
+    cacheWriteTokens: usage.input_tokens_details?.cache_write_tokens,
   };
 }
 
@@ -468,5 +486,5 @@ interface OpenAIUsage {
   readonly input_tokens?: number;
   readonly output_tokens?: number;
   readonly total_tokens?: number;
-  readonly input_tokens_details?: { readonly cached_tokens?: number };
+  readonly input_tokens_details?: { readonly cached_tokens?: number; readonly cache_write_tokens?: number };
 }

@@ -1,0 +1,32 @@
+{
+  "captured": "2026-08-29T11:03:53.739Z",
+  "methodology": "fake-Obscura child (deterministic JSON); startup probes SIG-0 liveness, search is one bounded CLI call through the public web tool, close is group SIGTERM drain",
+  "runs": 3,
+  "medians": {
+    "managedStartupMs": 0.01,
+    "webSearchMs": 20.27,
+    "groupCloseMs": 0.5
+  },
+  "ceilings": {
+    "managedStartupMs": 250,
+    "webSearchMs": 100,
+    "groupCloseMs": 250
+  },
+  "raw": {
+    "managedStartupMs": [
+      0.07002300000000616,
+      0.012424000000009983,
+      0.013956999999990671
+    ],
+    "webSearchMs": [
+      23.927549,
+      20.265867,
+      19.67702399999999
+    ],
+    "groupCloseMs": [
+      0.6668399999999934,
+      0.4972669999999937,
+      0.42975800000002096
+    ]
+  }
+}

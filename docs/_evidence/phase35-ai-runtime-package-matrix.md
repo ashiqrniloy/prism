@@ -1,6 +1,6 @@
 # Phase 35 — AI runtime package coverage and multi-agent baselines
 
-Network-free audit of every first-party manifest (root + 58 workspaces = 59). Mock providers and in-process stores only; no credentials, live endpoints, prompt bodies, or secrets.
+Network-free audit of every first-party manifest (root + 59 workspaces = 60). Mock providers and in-process stores only; no credentials, live endpoints, prompt bodies, or secrets.
 
 **Class:** `hot-path` (on every model call) · `optional-in-run` (selected into a run) · `persistence-coordination` (durable/state seams) · `setup-only` (umbrellas / DX, not on the call path).
 
@@ -8,7 +8,7 @@ Network-free audit of every first-party manifest (root + 58 workspaces = 59). Mo
 
 **Effects** (latency / concurrency / memory / I/O / artifact): `none` · `low` · `medium` · `high`.
 
-## Manifest inventory (59)
+## Manifest inventory (60)
 
 | Manifest | Workspace | Class | Path | Latency | Concurrency | Memory | I/O | Artifact |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -17,6 +17,7 @@ Network-free audit of every first-party manifest (root + 58 workspaces = 59). Mo
 | @arnilo/prism-ag-ui | `packages/ag-ui` | optional-in-run | telemetry | low | medium | medium | low | medium |
 | @arnilo/prism-antigravity-agent | `packages/antigravity-agent` | optional-in-run | model-call | high | medium | medium | medium | low |
 | @arnilo/prism-browser | `packages/browser` | optional-in-run | tool-execution | high | low | high | high | low |
+| @arnilo/prism-obscura | `packages/obscura` | optional-in-run | tool-execution | medium | low | medium | medium | low |
 | @arnilo/prism-coding-agent | `packages/coding-agent` | optional-in-run | tool-execution | medium | medium | high | high | medium |
 | @arnilo/prism-coding-security | `packages/coding-security` | optional-in-run | tool-execution | low | low | medium | medium | low |
 | @arnilo/prism-compaction-llm | `packages/compaction-llm` | optional-in-run | prompt-assembly | high | low | medium | low | low |

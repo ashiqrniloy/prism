@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import type { HydratedSearchHit, QmdSearchResult, SearchMode, WikiManifest, WikiSearchResponse, WikiSourceAnchor } from "../types.js";
+import { parseMarkdownHeading } from "../heading.js";
 
 export class Context7Hydrator {
   private readonly workspaceRoot: string;
@@ -30,12 +31,13 @@ export class Context7Hydrator {
       let currentH2 = "";
 
       for (const line of lines) {
-        const h1Match = line.match(/^#\s+(.+)$/);
-        if (h1Match) currentH1 = h1Match[1].trim();
+        // Linear heading parses (CodeQL js/polynomial-redos, alerts 64-65)
+        const h1Match = parseMarkdownHeading(line);
+        if (h1Match?.level === 1) currentH1 = h1Match.text;
 
-        const h2Match = line.match(/^##\s+(.+)$/);
-        if (h2Match) {
-          currentH2 = h2Match[1].trim();
+        const h2Match = parseMarkdownHeading(line);
+        if (h2Match?.level === 2) {
+          currentH2 = h2Match.text;
           if (currentH1 && currentH2) {
             breadcrumbs.push(`${currentH1} > ${currentH2}`);
           }

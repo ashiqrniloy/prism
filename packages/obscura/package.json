@@ -1,0 +1,75 @@
+{
+  "name": "@arnilo/prism-obscura",
+  "version": "0.3.0",
+  "description": "Optional Prism tools for a host-installed Obscura headless browser: fail-closed process lifecycle, full MCP tool bridge, CDP/Playwright composition, and bounded CLI web tools.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run",
+    "test:live": "node --test dist/__tests__/live.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/obscura"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/obscura#readme",
+  "keywords": [
+    "prism",
+    "obscura",
+    "browser",
+    "cdp",
+    "playwright",
+    "mcp",
+    "tools",
+    "agent",
+    "mcp"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "^0.3.0",
+    "@arnilo/prism-mcp": "^0.3.0",
+    "@arnilo/prism-browser": "^0.3.0",
+    "@arnilo/prism-web-tools": "^0.3.0",
+    "playwright-core": "1.61.0"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../..",
+    "@arnilo/prism-mcp": "file:../mcp",
+    "@arnilo/prism-browser": "file:../browser",
+    "playwright-core": "1.61.0",
+    "@arnilo/prism-web-tools": "file:../web-tools"
+  },
+  "peerDependenciesMeta": {
+    "playwright-core": {
+      "optional": true
+    }
+  }
+}

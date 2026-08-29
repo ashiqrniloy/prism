@@ -62,6 +62,7 @@ Uses Bedrock’s OpenAI-compatible runtime route (not Converse eventstream). Hos
 - No AWS SDK; package-local SigV4 only for `bedrock` service.
 - Input headers are normalized once before signing: names are lowercased and duplicate-case keys merge last-wins, so the canonical request always matches the signed header list (no duplicate-case mismatch); query parameters are canonicalized sorted by encoded key then value.
 - Private endpoint hosts are not rewritten to public DNS.
+- Conformance-proven (Task 6): package `setup()` performs zero fetch and zero credential resolution; an already-aborted signal fails fast; a truncated SSE stream (no `data: [DONE]`) ends in an `error` event; native Bedrock caching (`Converse cachePoint`) is intentionally unsupported on the OpenAI-compatible route — no cache wire fields are emitted even when the request carries Prism cache hints.
 - Credential secrets are redacted from provider errors.
 - No credential prefetch at import.
 

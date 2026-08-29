@@ -14,7 +14,9 @@ import type {
   Usage,
 } from "@arnilo/prism";
 import {
+  systemCacheControlField,
   assertStructuredOutputRequestSupported,
+  canonicalizeJsonSchema,
   providerDone,
   providerError,
   providerTextDelta,
@@ -54,11 +56,7 @@ export async function anthropicMessagesBody(request: ProviderRequest): Promise<J
     messages: await Promise.all(
       messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model, preserveThinking, resolvedMedia)),
     ),
-    system:
-      messages
-        .filter((m) => m.role === "system")
-        .map((m) => text(m, preserveThinking))
-        .join("\n\n") || undefined,
+    system: systemCacheControlField(messages, (m) => text(m, preserveThinking)),
     tools: request.tools?.map(toTool),
     stream: true,
     ...parameters,
@@ -210,7 +208,11 @@ function withMarker(item: JsonObject, marker: JsonObject | undefined): JsonObjec
 }
 
 function toTool(tool: ToolDefinition): JsonObject {
-  return clean({ name: tool.name, description: tool.description, input_schema: tool.parameters ?? { type: "object" } });
+  return clean({
+    name: tool.name,
+    description: tool.description,
+    input_schema: canonicalizeJsonSchema(tool.parameters ?? { type: "object" }) as JsonObject,
+  });
 }
 
 function text(message: Message, preserveThinking = false): string {

@@ -6,6 +6,7 @@ export * from "./engine/compiler.js";
 export * from "./engine/contradictions.js";
 export * from "./engine/linter.js";
 export * from "./engine/scaffolder.js";
+export * from "./heading.js";
 export * from "./extension.js";
 export * from "./manifest.js";
 export * from "./profiles/codebase.js";

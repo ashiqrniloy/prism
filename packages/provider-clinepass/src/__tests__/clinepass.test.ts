@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "@arnilo/prism";
 import { applyThinkingLevel } from "@arnilo/prism";
-import { assertProviderOwnedHeadersWin, assertProviderStreamConforms } from "@arnilo/prism/testing/provider-conformance";
+import {
+  assertNoForeignCacheFields,
+  assertProviderOwnedHeadersWin,
+  assertProviderStreamConforms,
+} from "@arnilo/prism/testing/provider-conformance";
 import {
   CLINEPASS_DEFAULT_BASE_URL,
   CLINEPASS_FEATURED_SLUGS,
@@ -21,6 +25,10 @@ const requestFor = (id: string, options?: ProviderRequest["options"]): ProviderR
 });
 
 describe("@arnilo/prism-provider-clinepass", () => {
+  it("clinepass_implicit_requests_carry_no_foreign_cache_fields", () => {
+    assertNoForeignCacheFields(clinePassBody(requestFor("cline-pass/glm-5.2", { cacheKey: "session-1", cacheRetention: "long" })));
+  });
+
   it("clinepass_registers_each_featured_slug_once_and_api_key_only", async () => {
     const models: string[] = [];
     const methods: string[] = [];

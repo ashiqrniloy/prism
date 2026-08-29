@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
 import {
+  assertNoForeignCacheFields,
   assertProviderOwnedHeadersWin,
   assertProviderStreamConforms,
   assertSerializedRequestCoversContent,
@@ -234,6 +235,39 @@ describe("@arnilo/prism-provider-kimi", () => {
     for (const m of others) for (const block of m.content) assert.equal(block.cache_control, undefined);
   });
 
+  it("kimi_anthropic_route_preserves_system_prompt_breakpoints_as_native_blocks", async () => {
+    let body: any;
+    const provider = createKimiCodingProvider({
+      apiKey: "fake-kimi-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    const messages: Message[] = [
+      { role: "system", content: [{ type: "text", text: "stable" }] },
+      { role: "user", content: [{ type: "text", text: "preamble" }] },
+      { role: "assistant", content: [{ type: "text", text: "ok" }] },
+      { role: "user", content: [{ type: "text", text: "current" }] },
+    ];
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        model: { ...request.model, cache: { kind: "cache_control" as const, longRetention: true } },
+        messages,
+        options: {
+          cacheKey: "sess",
+          cacheRetention: "long" as const,
+          cache: { breakpoints: [{ location: "system_prompt" as const }, { location: "last_stable_message" as const }] },
+        },
+      },
+    });
+    assert.deepEqual(body.system, [{ type: "text", text: "stable", cache_control: { type: "ephemeral", ttl: "1h" } }]);
+    assert.deepEqual(body.messages.find((m: any) => m.role === "assistant").content.at(-1).cache_control, { type: "ephemeral", ttl: "1h" });
+    assert.equal((messages[0]!.content[0] as any).cache_control, undefined);
+  });
+
   it("moonshot_openai_route_never_emits_anthropic_cache_control", async () => {
     const body = moonshotBody({
       model: { ...moonshotKimiModels[0], cache: { kind: "cache_control" as const } },
@@ -244,6 +278,16 @@ describe("@arnilo/prism-provider-kimi", () => {
       },
     });
     assert.ok(!JSON.stringify(body).includes("cache_control"));
+  });
+
+  it("moonshot_implicit_requests_carry_no_foreign_cache_fields", () => {
+    assertNoForeignCacheFields(
+      moonshotBody({
+        model: moonshotKimiModels[0],
+        messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+        options: { cacheKey: "session-1", cacheRetention: "long" },
+      }),
+    );
   });
 
   it("moonshot_preserves_reasoning_content_on_assistant_replay", async () => {

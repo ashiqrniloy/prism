@@ -8,6 +8,7 @@ import type {
   ProviderEvent,
   ProviderRequest,
 } from "@arnilo/prism";
+import { trimTrailingSlashes } from "@arnilo/prism";
 import { rejectProviderMediaBlock } from "@arnilo/prism/providers/media";
 import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
@@ -26,7 +27,7 @@ export interface OpenRouterProviderOptions {
 export function createOpenRouterProvider(options: OpenRouterProviderOptions = {}): AIProvider {
   return createOpenAICompatibleProvider({
     id: options.id ?? "openrouter",
-    baseUrl: (options.baseUrl ?? "https://openrouter.ai/api/v1").replace(/\/+$/, ""),
+    baseUrl: trimTrailingSlashes(options.baseUrl ?? "https://openrouter.ai/api/v1"),
     apiKey: options.apiKey,
     fetch: options.fetch,
     doneUsage: true,

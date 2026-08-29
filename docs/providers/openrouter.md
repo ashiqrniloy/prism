@@ -136,9 +136,10 @@ await kernel.load([
 ### Cache and session behavior
 
 - `session_id` (request body) and the `X-Session-Id` header are derived from
-  `ProviderRequestOptions.cacheKey` (falling back to `sessionId`) and sanitized
-  + clamped to 256 characters via the shared `sanitizeCacheKey()` helper.
-  OpenRouter uses this for provider sticky routing to maximize cache hits.
+  `ProviderRequestOptions.cache.key` (falling back to legacy `cacheKey`, then
+  `sessionId`) and sanitized + clamped to 256 characters via the shared
+  `sanitizeCacheKey()` helper. OpenRouter uses this for provider sticky routing
+  to maximize cache hits.
 - **Automatic caching** (no breakpoints): when caching is enabled for an
   explicit `cache_control` model (or `compat.openRouterCache` /
   `cache.mode: "on"`), Prism emits a top-level

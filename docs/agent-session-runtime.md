@@ -221,6 +221,7 @@ Per-run options may narrow `limits` and append `guardrails`; they cannot replace
 - [Session stores and branching](session-stores-and-branching.md): `SessionStore`, memory store, branch helpers, and context rebuild.
 - [Compaction and retry policies](compaction-and-retry.md): compaction strategy/config APIs used by `session.compact()` and auto-compaction, plus retry policy/config APIs.
 - [Tools](tools.md): host-owned tool harness used by the bounded runtime tool loop.
+- [Obscura browser engine](obscura.md): optional binary-backed tool array that composes into `createAgent({ tools })` with no host branch.
 - [Middleware hooks](middleware-hooks.md): hooks that configured assembly/runtime can run.
 - [CLI/RPC](cli-rpc.md): terminal and JSONL adapters over this runtime.
 - [Workflows](workflows.md): optional DAG orchestration that calls `AgentSession.run()` for agent nodes.
