@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.1] - 2026-08-29
+
+### Changed
+- Plan 035-039 changed-package cut: additive runtime performance, tooling, and documentation deltas; peer window refresh.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed

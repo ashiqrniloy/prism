@@ -1,4 +1,6 @@
-## [Unreleased] — plan 039 (Obscura full host support)
+## [0.3.1] - 2026-08-29
+
+> Root + 28 changed packages move to 0.3.1 in the plan 039 changed-package cut; `@arnilo/prism-rag` moves 0.3.1 → 0.3.2; `@arnilo/prism-obscura` publishes new at 0.3.0. Distinct from the 2026-08-26 rag/memory/otel 0.3.1 patch below (independent Decision B tags).
 
 ### Added
 - `@arnilo/prism-obscura` (new workspace package, 0.3.0): optional Obscura headless-browser engine over a **host-installed** binary — fail-closed `spawnObscuraProcess` lifecycle (absolute shell-free command, Docker argv, bounded readiness, group close), `createObscuraMcpTools` bridging the complete advertised MCP surface (reads effect-free; mutations and unknown future tools exclusive/serialized; `obscura_` prefix; loopback-default HTTP), `connectObscuraCdp` managed/external CDP + Playwright `connectOverCDP` composition, and `createObscuraWebTools` (standard `web_search`/`web_fetch` through one replaceable HTML search profile plus native `obscura_fetch`/`obscura_scrape`; public-HTTP(S)-only URL validation, byte/count/timeout caps, `allowEval`-gated custom expressions, untrusted-content labeling). Deliberately omitted from `prism-all`/`prism-base`/`prism-sdk` umbrella profiles — installation does not supply the binary/image; consumers install it explicitly.

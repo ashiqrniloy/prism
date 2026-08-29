@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.1] - 2026-08-29
+
+### Changed
+- Plan 037 provider parity and caching closeouts (additive model/adapter surface, shared canonical tool-parameters and bounded JSON-schema canonicalization); plan 035+ runtime additions carried by the changed-package cut.
+
 ## [0.1.0] - 2026-08-09
 
 ### Changed
