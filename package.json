@@ -171,7 +171,7 @@
     "release:evidence": "node scripts/release-skip-manifest.mjs",
     "sdk:ready": "npm run typecheck && npm run lint && npm run format:check && npm test && npm run test:coverage && npm run pack:dry-run && npm run release:gate",
     "release:gate": "node scripts/release-skip-manifest.mjs && node scripts/check-client-neutrality.mjs && node scripts/release.mjs gate",
-    "security:threat-suites": "node --test scripts/phase8-conformance.test.mjs scripts/phase9-conformance.test.mjs scripts/phase10-conformance.test.mjs scripts/phase11-conformance.test.mjs scripts/phase20-security.test.mjs scripts/phase21-security.test.mjs scripts/phase22-security.test.mjs scripts/phase23-security.test.mjs scripts/phase38-codeql-regression.test.mjs"
+    "security:threat-suites": "node --test scripts/phase8-conformance.test.mjs scripts/phase9-conformance.test.mjs scripts/phase10-conformance.test.mjs scripts/phase11-conformance.test.mjs scripts/phase20-security.test.mjs scripts/phase21-security.test.mjs scripts/phase22-security.test.mjs scripts/phase23-security.test.mjs scripts/phase38-codeql-regression.test.mjs scripts/phase40-security.test.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.5",

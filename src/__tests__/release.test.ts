@@ -41,8 +41,8 @@ const missing = async () => new Response("not found", { status: 404 });
 
 test("0.3.0 release graph is independent, publishable, and documented", () => {
   const release = loadRelease(process.cwd());
-  // 60 = root + 59 workspace packages, including the host-owned desktop wrapper, antigravity agent, prism-wiki, prism-graft, and prism-ponytail.
-  assert.equal(release.packages.length, 60);
+  // 61 = root + 60 workspace packages, including the host-owned desktop wrapper, antigravity agent, prism-wiki, prism-graft, prism-ponytail, and the dev-only inspector (plan 040).
+  assert.equal(release.packages.length, 61);
   assert.doesNotThrow(() =>
     validateReleaseIndependent(release, {
       baseline: "HEAD",

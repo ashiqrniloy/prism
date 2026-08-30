@@ -8,6 +8,7 @@ The `prism` bin is a thin adapter over `AgentSession` plus a tiny project scaffo
 - `prism --mode json -p "prompt"`: write one normalized event envelope per line.
 - `prism --mode rpc`: read LF-delimited JSON requests from stdin and write correlated JSON responses/events to stdout.
 - `prism init <dir>`: create a minimal TypeScript project with one selected provider, `.env.example`, and one offline mock test.
+- `prism dev`: boot the loopback dev inspector over the scaffolded agent (delegates into `@arnilo/prism-dev` when resolvable; plan 040 Task 4).
 
 It does not add a TUI, app tools, provider globals, extension discovery, resource discovery, or credential storage. `init` uses Node standard-library filesystem APIs and checked-in templates only — no interactive prompts or template-engine dependency.
 
@@ -67,6 +68,22 @@ offline (mock fetch) and proves stream shape, tool-call delta reconstruction,
 header ownership, secret-leak redaction, and serialized-content coverage
 against the base provider. Replace the starter model metadata and the docs
 stub with docs-verified values before publishing.
+
+### `prism dev` (0.3.2)
+
+```bash
+prism dev [--port <n>] [--host <addr>]
+```
+
+Runs the local dev inspector over the current `prism init` scaffold's agent. Delegation, not duplication: the subcommand resolves `@arnilo/prism-dev` from the project's own `node_modules` (falling back to the CLI's own installation) and hands over to its `runDevCli` entry; unresolvable → install hint, exit `2`.
+
+| Flag / arg | Purpose |
+| --- | --- |
+| `--port <n>` | Bind port. Default `4311`. |
+| `--host <addr>` | Bind host. Default `127.0.0.1`; any non-loopback value is refused before binding (`ERR_PRISM_DEV_REMOTE_BIND`) unless remote authorization is wired programmatically. |
+| `-h`, `--help` | Print dev usage. |
+
+Manifests of the negotiation are simple: the agent is loaded from the scaffold contract `dist/agent.js` exporting `createAppAgent()` (missing → "build the project first", exit `2`); the inspector binds loopback, prints `prism dev → http://127.0.0.1:<port>/…`, and `SIGINT` drains and closes (exit `0`). Credentials stay in the scaffold's agent config — the CLI never reads environment secrets itself. Scaffolded projects ship a matching `"dev": "prism dev"` npm script.
 
 ### Run/RPC CLI flags
 

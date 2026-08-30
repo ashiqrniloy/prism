@@ -3,6 +3,7 @@ import { basename, dirname } from "node:path";
 import process from "node:process";
 import type { Readable, Writable } from "node:stream";
 import { type InitRuntime, initUsage, runInitCommand } from "./cli-init.js";
+import { runPrismDevSubcommand } from "./cli-dev.js";
 import { type ProviderAddRuntime, providerAddUsage, runProviderAddCommand } from "./cli-provider-add.js";
 import type {
   AgentSession,
@@ -97,11 +98,14 @@ export interface CliRuntime {
   readonly providerPackageVersion?: string;
   /** Working directory for relative `prism init` destinations (tests). */
   readonly cwd?: string;
+  /** Test injection for `prism dev`: overrides `@arnilo/prism-dev` resolution. */
+  readonly loadDevCli?: () => Promise<unknown>;
 }
 
 export const usage = `Usage: prism [--mode print|json|rpc] [-p prompt] [options]
        prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]
        prism providers add <name> [--base-url <url>] [--env-key <name>] [--model <id>] [--force]
+       prism dev [--port <n>] [--host <addr>]   (loopback inspector; delegates into @arnilo/prism-dev)
 
 Options:
   -p, --prompt <text>        Prompt to run in print/json mode
@@ -288,6 +292,13 @@ function parseKinds(csv: string, flag: string): readonly ContributionFileKind[] 
 }
 
 export async function runCli(argv: readonly string[], runtime: CliRuntime): Promise<number> {
+  if (argv[0] === "dev") {
+    return runPrismDevSubcommand(argv.slice(1), {
+      stdout: runtime.stdout,
+      stderr: runtime.stderr,
+      ...(runtime.loadDevCli ? { loadDevCli: runtime.loadDevCli as Parameters<typeof runPrismDevSubcommand>[1]["loadDevCli"] } : {}),
+    });
+  }
   if (argv[0] === "init") {
     const initRuntime: InitRuntime = {
       stdout: runtime.stdout,

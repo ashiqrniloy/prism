@@ -20,3 +20,6 @@ Plan 031 Task 1 live proof initially assumed workspace-local MCP permission/conf
 ## 26-08-29 20:59 — npm publish via 30 package tags: no events (>3 tags/push), then E409 races
 
 Two release-pipeline landmines cost ~30min during the plan-039 npm publish: (1) GitHub Actions silently drops workflow events when a single git push contains more than 3 tags — must push package tags in batches of ≤3; (2) firing all 30 package-tag publish runs concurrently makes them race each other, losers E409 on 'previously staged version' until registry consistency settles, requiring rerun waves. Next multi-package cut (plans 040+): script the tag push as batched (≤3) and consider staggering or a single dispatcher run instead of 30 parallel full-gate publishes.
+## 26-08-30 15:00 — bash cwd resets between calls, ~10 retries per subtask
+
+Shell cwd resets to the project root between many bash invocations in this harness (inconsistently), which repeatedly caused "No such file or directory" and stale-cwd mistakes when working inside packages/prism-dev. Workaround used repeatedly: prefix every command with `(cd <dir> && …)`. Would prevent backtracking if cwd persisted per-session or if commands always executed in an explicit, stable directory.

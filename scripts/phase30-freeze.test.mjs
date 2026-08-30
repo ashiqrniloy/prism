@@ -238,13 +238,15 @@ test("phase30 freeze: package budget 55→57; graph gains desktop then Antigravi
   // Plan 039: optional host-owned-binary Obscura package (deliberately outside umbrella profiles).
   const hasObscura = packageTruth.capability.includes("@arnilo/prism-obscura");
   const obscuraTerm = Number(hasObscura);
+  // Plan 040: dev-only inspector package (deliberately outside umbrella profiles).
+  const hasDevInspector = packageTruth.capability.includes("@arnilo/prism-dev");
   assert.equal(
     packageTruth.counts.publishable,
-    55 + Number(desktopDone) + Number(antigravityDone) + Number(hasWiki) + graftTerm + obscuraTerm,
+    55 + Number(desktopDone) + Number(antigravityDone) + Number(hasWiki) + graftTerm + obscuraTerm + Number(hasDevInspector),
   );
   assert.equal(
     packageTruth.counts.workspace,
-    54 + Number(desktopDone) + Number(antigravityDone) + Number(hasWiki) + graftTerm + obscuraTerm,
+    54 + Number(desktopDone) + Number(antigravityDone) + Number(hasWiki) + graftTerm + obscuraTerm + Number(hasDevInspector),
   );
   if (desktopDone) assert.ok(packageTruth.capability.includes("@arnilo/prism-computer-use-linux"));
   if (antigravityDone) assert.ok(packageTruth.capability.includes("@arnilo/prism-antigravity-agent"));

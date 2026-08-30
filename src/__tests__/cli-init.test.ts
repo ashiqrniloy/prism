@@ -166,8 +166,11 @@ describe("prism init", () => {
       const pkg = JSON.parse(readFileSync(join(target, "package.json"), "utf8")) as {
         dependencies: Record<string, string>;
         devDependencies: Record<string, string>;
+        scripts: Record<string, string | undefined>;
       };
       assert.deepEqual(Object.keys(pkg.dependencies).sort(), ["@arnilo/prism"]);
+      // Plan 040 Task 4: scaffolded projects gain the inspector dev script.
+      assert.equal(pkg.scripts.dev, "prism dev");
       assert.equal(pkg.dependencies["@arnilo/prism"], "0.0.13");
 
       const packed = runInProject("npm", ["pack", "--pack-destination", packDir], repoRoot);

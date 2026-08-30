@@ -193,7 +193,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-base` | profile: core + compaction + JSON Schema validation |
 | `@arnilo/prism-code` | profile: base + coding tools/security + MCP |
 | `@arnilo/prism-sdk` | profile: base + workflows + MCP + credentials + OpenTelemetry |
-| `@arnilo/prism-all` | broad umbrella: 21 first-party packages (47 transitive) across a 47-package workspace closure — omits document-reader, OpenAPI tools, NATS, Caveman, Ponytail, Impeccable, computer-use-linux, antigravity-agent, Graft, Obscura, and wiki |
+| `@arnilo/prism-all` | broad umbrella: 21 first-party packages (47 transitive) across a 47-package workspace closure — omits document-reader, OpenAPI tools, NATS, Caveman, Ponytail, Impeccable, computer-use-linux, antigravity-agent, Graft, Obscura, wiki, and dev-inspector |
 
 ## Scripts
 

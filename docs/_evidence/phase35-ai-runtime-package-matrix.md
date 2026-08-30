@@ -1,6 +1,6 @@
 # Phase 35 — AI runtime package coverage and multi-agent baselines
 
-Network-free audit of every first-party manifest (root + 59 workspaces = 60). Mock providers and in-process stores only; no credentials, live endpoints, prompt bodies, or secrets.
+Network-free audit of every first-party manifest (root + 60 workspaces = 61). Mock providers and in-process stores only; no credentials, live endpoints, prompt bodies, or secrets.
 
 **Class:** `hot-path` (on every model call) · `optional-in-run` (selected into a run) · `persistence-coordination` (durable/state seams) · `setup-only` (umbrellas / DX, not on the call path).
 
@@ -8,7 +8,7 @@ Network-free audit of every first-party manifest (root + 59 workspaces = 60). Mo
 
 **Effects** (latency / concurrency / memory / I/O / artifact): `none` · `low` · `medium` · `high`.
 
-## Manifest inventory (60)
+## Manifest inventory (61)
 
 | Manifest | Workspace | Class | Path | Latency | Concurrency | Memory | I/O | Artifact |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -37,6 +37,7 @@ Network-free audit of every first-party manifest (root + 59 workspaces = 60). Mo
 | @arnilo/prism-caveman | `packages/prism-caveman` | setup-only | setup-only | none | none | none | none | medium |
 | @arnilo/prism-code | `packages/prism-code` | setup-only | setup-only | none | none | none | none | medium |
 | @arnilo/prism-compaction | `packages/prism-compaction` | setup-only | setup-only | none | none | none | none | medium |
+| @arnilo/prism-dev | `packages/prism-dev` | setup-only | setup-only | none | none | none | none | medium |
 | @arnilo/prism-graft | `packages/prism-graft` | setup-only | setup-only | none | none | none | none | medium |
 | @arnilo/prism-impeccable | `packages/prism-impeccable` | setup-only | setup-only | none | none | none | none | medium |
 | @arnilo/prism-openapi-tools | `packages/prism-openapi-tools` | optional-in-run | tool-execution | medium | low | low | medium | low |

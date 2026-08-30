@@ -18,6 +18,7 @@ const hasAntigravityPackage = phase30Manifest.amendments?.antigravity?.tasks?.ta
 const hasWikiPackage = existsSync(join(ROOT, "packages", "prism-wiki", "package.json"));
 const hasGraftPackage = existsSync(join(ROOT, "packages", "prism-graft")); // plan 033 optional context-graph package
 const hasObscuraPackage = existsSync(join(ROOT, "packages", "obscura", "package.json")); // plan 039 optional Obscura browser package
+const hasDevInspectorPackage = existsSync(join(ROOT, "packages", "prism-dev", "package.json")); // plan 040 dev inspector (omitted from umbrellas)
 
 test("generator reproducible: two runs byte-identical modulo generatedAt", () => {
   assert.deepEqual(stripStamp(computePackageTruth()), stripStamp(computePackageTruth()));
@@ -39,7 +40,8 @@ test("counts match manifests at the 0.3.0 truth graph plus the Task 7 desktop pa
     Number(hasAntigravityPackage) +
     Number(hasWikiPackage) +
     Number(hasGraftPackage) +
-    Number(hasObscuraPackage);
+    Number(hasObscuraPackage) +
+    Number(hasDevInspectorPackage);
   assert.equal(t.counts.publishable, 55 + added);
   assert.equal(t.counts.workspace, 54 + added);
   assert.equal(t.counts.provider, 17);
@@ -74,7 +76,8 @@ test("umbrella closures match manifests", () => {
       Number(hasAntigravityPackage) +
       Number(hasWikiPackage) +
       Number(hasGraftPackage) +
-      Number(hasObscuraPackage),
+      Number(hasObscuraPackage) +
+      Number(hasDevInspectorPackage),
   );
   for (const name of [
     "@arnilo/prism-caveman",
@@ -88,6 +91,7 @@ test("umbrella closures match manifests", () => {
     ...(hasWikiPackage ? ["@arnilo/prism-wiki"] : []),
     ...(hasGraftPackage ? ["@arnilo/prism-graft"] : []),
     ...(hasObscuraPackage ? ["@arnilo/prism-obscura"] : []),
+    ...(hasDevInspectorPackage ? ["@arnilo/prism-dev"] : []),
   ]) {
     assert.ok(all.omits.includes(name), `prism-all omits ${name}`);
   }
@@ -143,6 +147,7 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
     "@arnilo/prism-coding-security": ["@arnilo/prism-coding-agent"],
     ...(hasDesktopPackage ? { "@arnilo/prism-computer-use-linux": ["@arnilo/prism-mcp"] } : {}),
     ...(hasObscuraPackage ? { "@arnilo/prism-obscura": ["@arnilo/prism-mcp", "@arnilo/prism-browser", "@arnilo/prism-web-tools"] } : {}),
+    ...(hasDevInspectorPackage ? { "@arnilo/prism-dev": ["@arnilo/prism-ag-ui", "@arnilo/prism-server"] } : {}),
     ...(hasAntigravityPackage ? { "@arnilo/prism-antigravity-agent": ["@arnilo/prism-coding-agent", "@arnilo/prism-mcp"] } : {}),
     "@arnilo/prism-document-reader": ["@arnilo/prism-coding-agent"],
     "@arnilo/prism-rag": ["@arnilo/prism-memory"],

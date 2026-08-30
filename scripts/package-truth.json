@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-08-29T18:34:57.959Z",
+  "generatedAt": "2026-08-30T10:20:56.550Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.3.2"
   },
   "counts": {
-    "publishable": 60,
-    "workspace": 59,
+    "publishable": 61,
+    "workspace": 60,
     "provider": 17,
     "prismFamily": 10,
-    "capability": 32,
-    "codeWithPeer": 53,
+    "capability": 33,
+    "codeWithPeer": 54,
     "pureManifest": 6
   },
   "providers": [
@@ -55,6 +55,7 @@
     "@arnilo/prism-compaction-observational-memory",
     "@arnilo/prism-computer-use-linux",
     "@arnilo/prism-credentials-node",
+    "@arnilo/prism-dev",
     "@arnilo/prism-document-reader",
     "@arnilo/prism-enterprise-postgres",
     "@arnilo/prism-evals",
@@ -131,6 +132,7 @@
         "@arnilo/prism-antigravity-agent",
         "@arnilo/prism-caveman",
         "@arnilo/prism-computer-use-linux",
+        "@arnilo/prism-dev",
         "@arnilo/prism-document-reader",
         "@arnilo/prism-graft",
         "@arnilo/prism-impeccable",

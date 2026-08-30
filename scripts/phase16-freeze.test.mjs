@@ -216,7 +216,14 @@ test("baseline manifest count is coherent with the real filesystem", () => {
   const workspaceDirs = readdirSync(url("../packages"), { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .filter((e) => existsSync(url(`../packages/${e.name}/package.json`)))
-    .filter((e) => e.name !== "computer-use-linux" && e.name !== "antigravity-agent" && e.name !== "prism-wiki" && e.name !== "obscura");
+    .filter(
+      (e) =>
+        e.name !== "computer-use-linux" &&
+        e.name !== "antigravity-agent" &&
+        e.name !== "prism-wiki" &&
+        e.name !== "obscura" &&
+        e.name !== "prism-dev",
+    );
   const providerDirs = workspaceDirs.filter((d) => d.name.startsWith("provider-"));
   const prismDirs = workspaceDirs.filter((d) => d.name.startsWith("prism-"));
   assert.equal(mc.workspacePackages, workspaceDirs.length, "workspacePackages matches packages/*/package.json count");
@@ -400,7 +407,9 @@ test("exit gate (Task 6): lockfile gained no dependencies (name-set unchanged vs
         // plan 033: optional peer-dependency-only workspace package (no new external deps)
         k !== "packages/prism-graft" &&
         // plan 039: optional binary-backed workspace package (no new external dependency names)
-        k !== "packages/obscura",
+        k !== "packages/obscura" &&
+        // plan 040: dev-only inspector package (peers only, no new external dependency names)
+        k !== "packages/prism-dev",
     )
     .sort();
   const hash = createHash("sha256").update(names.join("\n")).digest("hex");

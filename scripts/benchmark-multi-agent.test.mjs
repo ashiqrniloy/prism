@@ -57,9 +57,9 @@ function workspaceManifests() {
 }
 
 describe("multi-agent runtime coverage and baselines", () => {
-  it("inventories all 60 manifests in the evidence matrix", () => {
+  it("inventories all 61 manifests in the evidence matrix", () => {
     const names = workspaceManifests();
-    assert.equal(names.length, 60, `expected 60 manifests, found ${names.length}`);
+    assert.equal(names.length, 61, `expected 61 manifests, found ${names.length}`);
     const evidence = readFileSync(evidencePath, "utf8");
     for (const name of names) {
       assert.ok(evidence.includes(`| ${name} |`), `evidence missing ${name}`);
@@ -67,7 +67,7 @@ describe("multi-agent runtime coverage and baselines", () => {
     const classes = ["hot-path", "optional-in-run", "persistence-coordination", "setup-only"];
     const paths = ["model-call", "prompt-assembly", "tool-execution", "coordination", "storage", "telemetry", "setup-only"];
     const rows = evidence.split("\n").filter((line) => line.startsWith("| @"));
-    assert.equal(rows.length, 60, "evidence table has 60 package rows");
+    assert.equal(rows.length, 61, "evidence table has 61 package rows");
     for (const row of rows) {
       assert.ok(
         classes.some((value) => row.includes(`| ${value} |`)),

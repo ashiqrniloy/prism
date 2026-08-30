@@ -139,12 +139,15 @@ test("phase29 freeze: package budget matches current graph until Task 10", () =>
   } else {
     // Plan 039 adds the optional host-owned-binary Obscura package outside umbrella profiles.
     const hasObscuraPackage = packageTruth.capability.includes("@arnilo/prism-obscura");
+    // Plan 040 adds the dev-only inspector package outside umbrella profiles.
+    const hasDevInspectorPackage = packageTruth.capability.includes("@arnilo/prism-dev");
     const added =
       Number(hasDesktopPackage) +
       Number(hasAntigravityPackage) +
       Number(hasWikiPackage) +
       Number(hasGraftPackage) +
-      Number(hasObscuraPackage);
+      Number(hasObscuraPackage) +
+      Number(hasDevInspectorPackage);
     assert.equal(packageTruth.counts.publishable, 55 + added);
     assert.equal(packageTruth.counts.workspace, 54 + added);
     assert.equal(packageTruth.counts.provider, 17);

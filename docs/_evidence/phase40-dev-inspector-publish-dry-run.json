@@ -1,0 +1,14 @@
+{
+  "version": "independent",
+  "independent": true,
+  "dryRun": true,
+  "order": [
+    "@arnilo/prism-dev"
+  ],
+  "packages": [
+    {
+      "name": "@arnilo/prism-dev",
+      "status": "dry-run"
+    }
+  ]
+}
