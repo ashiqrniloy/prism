@@ -30,14 +30,14 @@
     "@arnilo/prism-model-router": "^0.3.0",
     "@arnilo/prism-policy": "^0.3.0",
     "@arnilo/prism-work-tools": "^0.3.0",
-    "pg": "^8.22.0"
+    "pg": "^8.23.0"
   },
   "peerDependencies": {
     "@arnilo/prism": "^0.3.0"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
-    "@types/pg": "^8.11.11"
+    "@types/pg": "^8.23.1"
   },
   "engines": {
     "node": ">=20"

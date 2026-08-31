@@ -33,8 +33,8 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@ag-ui/core": "0.0.57",
-    "@agentclientprotocol/sdk": "1.3.0",
+    "@ag-ui/core": "0.0.59",
+    "@agentclientprotocol/sdk": "1.4.0",
     "@arnilo/prism-coding-agent": "^0.3.0"
   },
   "peerDependencies": {
