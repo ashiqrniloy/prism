@@ -38,7 +38,7 @@
     "@office-open/xlsx": "0.12.3",
     "@office-open/xml": "0.12.3",
     "ajv": "^8.17.1",
-    "fast-xml-parser": "4.5.0"
+    "fast-xml-parser": "5.11.1"
   },
   "peerDependencies": {
     "@arnilo/prism": "^0.4.0",
