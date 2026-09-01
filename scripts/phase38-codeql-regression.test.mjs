@@ -7,7 +7,7 @@
 //     linear index scan with `.replace(/\/+$/, "")` semantics — a 200k-slash
 //     hostile input completes within a strict bound and no regex is compiled.
 //   B (13 alerts, js/polynomial-redos): parsing surfaces (code-checkpoint
-//     todos, rag PDF/html, prism-wiki headings/skills) handle hostile
+//     todos, rag PDF/html, wiki headings/skills) handle hostile
 //     nested/unterminated structures with linear work, never re-forming tags.
 //   C (2 alerts, incomplete-multi-character-sanitization): the single-pass
 //     rag HTML scanner cannot leak script bodies through adjacency tricks.
@@ -22,9 +22,9 @@ import { readFileSync } from "node:fs";
 import { performance } from "node:perf_hooks";
 import { describe, it } from "node:test";
 import { sanitizeCacheKey, trimTrailingSlashes } from "@arnilo/prism";
-import { parseCodingPlanTodos } from "@arnilo/prism-coding-agent";
-import { htmlParser, pdfParser } from "@arnilo/prism-rag";
-import { parseMarkdownHeading, parseSkillMarkdown } from "@arnilo/prism-wiki";
+import { htmlParser, pdfParser } from "@arnilo/prism-memory/rag";
+import { parseMarkdownHeading, parseSkillMarkdown } from "@arnilo/prism-memory/wiki";
+import { parseCodingPlanTodos } from "../packages/prism-coding-tools/dist/agent/index.js";
 
 describe("phase38 codeql regressions", () => {
   it("trimTrailingSlashes matches replace semantics and is linear on hostile input", () => {

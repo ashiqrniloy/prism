@@ -57,12 +57,9 @@ const packages = [
   { dir: "packages/coding-agent", name: "@arnilo/prism-coding-agent" },
   { dir: "packages/coding-security", name: "@arnilo/prism-coding-security" },
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
-  { dir: "packages/browser", name: "@arnilo/prism-browser" },
-  { dir: "packages/server", name: "@arnilo/prism-server" },
-  { dir: "packages/session-store-postgres", name: "@arnilo/prism-session-store-postgres" },
+  { dir: "packages/web-tools", name: "@arnilo/prism-web-tools" },
+  { dir: "packages/prism-core", name: "@arnilo/prism-core" },
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
-  { dir: "packages/workflows", name: "@arnilo/prism-workflows" },
-  { dir: "packages/supervisor", name: "@arnilo/prism-supervisor" },
 ];
 
 // ---------------------------------------------------------------------------

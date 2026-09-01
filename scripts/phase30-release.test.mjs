@@ -252,8 +252,8 @@ describe("phase30 release: Task 9 independent default", () => {
 
   it("workflow publishes v0.3.0 once and package tags independently", () => {
     const workflow = readFileSync(join(import.meta.dirname, "..", ".github/workflows/release.yml"), "utf8");
-    assert.match(workflow, /tags: \["v0\.3\.0", "@arnilo\/\*@\*"\]/);
-    assert.match(workflow, /release:publish -- --lockstep --version 0\.3\.0/);
+    assert.match(workflow, /tags: \["v0\.3\.0", "v0\.4\.0", "@arnilo\/\*@\*"\]/);
+    assert.match(workflow, /release:publish -- --lockstep --version /);
     assert.match(workflow, /release:publish -- --resume --report/);
     assert.doesNotMatch(workflow, /publish[\s\S]*startsWith\(github\.ref, 'refs\/tags\/v'\)/);
   });

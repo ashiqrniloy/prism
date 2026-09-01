@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres";
-import { createWorkflowCheckpoints, defineWorkflow, functionNode, resumeWorkflow, runWorkflow } from "@arnilo/prism-workflows";
+import { createWorkflowCheckpoints, defineWorkflow, functionNode, resumeWorkflow, runWorkflow } from "@arnilo/prism-core/runtime/workflows";
+import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
 import { Pool } from "pg";
 
 // Opt-in PostgreSQL restart/resume example. Default execution is network-free

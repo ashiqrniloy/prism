@@ -1,0 +1,5 @@
+transaction_id,description,currency_symbol,total_amount,unit_price,refund_fee
+TXN-1001,Software Consulting,"$1,234.56",1234.56,99.95,-50.00
+TXN-1002,Hardware Bundle,"€450.00",450.00,450.00,(10.00)
+TXN-1003,Subscription,"£99.99",99.99,9.99,-0.50
+TXN-1004,Consulting Hours,"¥12,345",12345.00,1234.50,-1.00

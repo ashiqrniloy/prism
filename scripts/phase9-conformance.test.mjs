@@ -26,10 +26,10 @@ import {
   ForgeError,
   LanguageIntelligenceError,
   ProcessSessionError,
-} from "../packages/coding-agent/dist/index.js";
-import { createAllowListEgressProxy, createEgressPolicy } from "../packages/coding-security/dist/index.js";
+} from "../packages/prism-coding-tools/dist/agent/index.js";
+import { createAllowListEgressProxy, createEgressPolicy } from "../packages/prism-coding-tools/dist/security/index.js";
 
-const FAKE_LSP = fileURLToPath(new URL("../packages/coding-agent/src/__tests__/fixtures/fake-lsp.mjs", import.meta.url));
+const FAKE_LSP = fileURLToPath(new URL("../packages/prism-coding-tools/src/agent/__tests__/fixtures/fake-lsp.mjs", import.meta.url));
 const IDENTITY = {
   tenantId: "tenant-1",
   userId: "u1",

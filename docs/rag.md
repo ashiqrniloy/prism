@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-rag` is an optional package for deterministic text/Markdown chunking (with ATX heading-stack metadata), bounded embedding/vector indexing with embedder-identity drift guards, atomic scoped source replacement/deletion with content-hash skip and generation visibility, hybrid vector+lexical retrieval with reciprocal-rank fusion (one embed / one RRF / one rerank across one or many exact scopes), focused text/Markdown/HTML/PDF parsing, bounded reranking (host seam plus a TEI REST adapter), ingestion status, attributable citations, content-trust metadata, and explicit `ContextProvider` injection. It reuses `Embedder` and `VectorStore` from `@arnilo/prism-memory`; Prism core input assembly is unchanged.
+The `@arnilo/prism-memory/rag` subpath is an optional surface for deterministic text/Markdown chunking (with ATX heading-stack metadata), bounded embedding/vector indexing with embedder-identity drift guards, atomic scoped source replacement/deletion with content-hash skip and generation visibility, hybrid vector+lexical retrieval with reciprocal-rank fusion (one embed / one RRF / one rerank across one or many exact scopes), focused text/Markdown/HTML/PDF parsing, bounded reranking (host seam plus a TEI REST adapter), ingestion status, attributable citations, content-trust metadata, and explicit `ContextProvider` injection. It reuses `Embedder` and `VectorStore` from the memory root entry; Prism core input assembly is unchanged.
 
 ## When to use it
 
@@ -27,7 +27,7 @@ Document lifecycle:
 | `replaceSource({ sourceId, chunks, store, scope, ... })` | Atomically replaces one source after all bounded embedding succeeds; the store must implement scoped `getBySource()` and `transaction()`. |
 | `deleteSource({ sourceId, store, scope })` | Deletes only matching IDs under exact tenant/resource/corpus scope. |
 | `replaceDocument({ uri, loader, parser, store, scope, ... })` | Loads through a host seam, parses, chunks, and atomically replaces. `sourceId` is required unless loader supplies one. |
-| `DocumentLoader` / `Parser` | Small host-replaceable seams. Root and `@arnilo/prism-rag/loaders` / `@arnilo/prism-rag/parsers` export reference adapters. |
+| `DocumentLoader` / `Parser` | Small host-replaceable seams. `@arnilo/prism-memory/rag/loaders` and `/rag/parsers` export reference adapters. |
 | `textParser` / `markdownParser` / `htmlParser` / `pdfParser` | UTF-8 text, Markdown, script/style-stripping HTML, and uncompressed-text PDF parsers. |
 
 Index/retrieve:
@@ -84,7 +84,7 @@ Default/hard ceilings include 1,000/16,384 chunk characters, 100/4,096 overlap, 
 ```ts
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory";
-import { chunkMarkdown, createMemoryIngestionStatusStore, createRagContextProvider, indexChunks, listIngestionStatus, retrieveContext } from "@arnilo/prism-rag";
+import { chunkMarkdown, createMemoryIngestionStatusStore, createRagContextProvider, indexChunks, listIngestionStatus, retrieveContext } from "@arnilo/prism-memory/rag";
 
 const embedder = createHashEmbedder(); // deterministic demo/test helper, not production semantic quality
 const store = createMemoryVectorStore();
@@ -118,7 +118,7 @@ console.log(found.text, await agent.createSession().run("How do approvals work?"
 Content-hash skip and hash validation:
 
 ```ts
-import { isValidContentHash } from "@arnilo/prism-rag";
+import { isValidContentHash } from "@arnilo/prism-memory/rag";
 
 const digest = "ab12..."; // host-computed SHA-256 hex of the document
 if (!isValidContentHash(digest)) throw new Error("invalid digest");
@@ -129,7 +129,7 @@ Hybrid retrieval, TEI reranking, and telemetry:
 
 ```ts
 import { createRagTelemetry } from "@arnilo/prism-observability-opentelemetry";
-import { createTeiReranker } from "@arnilo/prism-rag";
+import { createTeiReranker } from "@arnilo/prism-memory/rag";
 
 const telemetry = createRagTelemetry({ tracer, meter }); // @opentelemetry/api instruments
 const org = { tenantId: "t1", resourceId: "docs", corpusId: "org" };

@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-google` is the first-party Gemini `generateContent` / `streamGenerateContent` provider for Prism (`POST /v1beta/models/{model}:streamGenerateContent?alt=sse`). Setup is side-effect-free: no network, env scan, or keychain lookup during import/setup. Uses native `fetch` + SSE — no `@google/genai` runtime dependency.
+`@arnilo/prism-providers/google` is the first-party Gemini `generateContent` / `streamGenerateContent` provider for Prism (`POST /v1beta/models/{model}:streamGenerateContent?alt=sse`). Setup is side-effect-free: no network, env scan, or keychain lookup during import/setup. Uses native `fetch` + SSE — no `@google/genai` runtime dependency.
 
 ## When to use it
 
@@ -18,7 +18,7 @@ import {
   createGoogleGenerateContentProvider,
   listGoogleModels,
   defineGoogleModel,
-} from "@arnilo/prism-provider-google";
+} from "@arnilo/prism-providers/google";
 
 createGoogleProviderPackage(options?: GoogleProviderPackageOptions): ProviderPackage
 createGoogleGenerateContentProvider(options?): AIProvider
@@ -57,7 +57,7 @@ Featured offline aliases include `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2
 ## Implementation example
 
 ```ts
-import { createGoogleProviderPackage, listGoogleModels } from "@arnilo/prism-provider-google";
+import { createGoogleProviderPackage, listGoogleModels } from "@arnilo/prism-providers/google";
 
 api.registerProviderPackage(createGoogleProviderPackage({ apiKey: hostKey }));
 
@@ -86,4 +86,4 @@ api.registerProviderPackage(createGoogleProviderPackage({ apiKey: hostKey, model
 - [Provider packages](../provider-packages.md): package setup + discovery contract.
 - [Thinking and reasoning](../thinking-and-reasoning.md): portable thinking helpers.
 - [Provider conformance](../provider-conformance.md): network-free assertions.
-- Package README: [`packages/provider-google/README.md`](../../packages/provider-google/README.md)
+- Package README: [`@arnilo/prism-providers` family README](../../packages/prism-providers/README.md)

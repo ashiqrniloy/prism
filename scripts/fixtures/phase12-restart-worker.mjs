@@ -34,8 +34,8 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "../../dist/index.js";
-import { createPostgresEnterpriseState } from "../../packages/enterprise-postgres/dist/index.js";
-import { createPostgresPersistence } from "../../packages/session-store-postgres/dist/index.js";
+import { createPostgresEnterpriseState } from "../../packages/prism-core/dist/enterprise/postgres/index.js";
+import { createPostgresPersistence } from "../../packages/prism-core/dist/sessions/postgres/index.js";
 
 const input = JSON.parse(process.env.PRISM_PHASE12_WORKER_INPUT ?? "null");
 if (!input || typeof input !== "object" || !["run", "resume", "append", "warm"].includes(input.mode ?? "")) {

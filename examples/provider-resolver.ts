@@ -7,7 +7,7 @@ import {
   providerDone,
   providerTextDelta,
 } from "@arnilo/prism";
-import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
+import { createOpenAIProviderPackage } from "@arnilo/prism-providers/openai";
 
 // Build a provider resolver from a mix of first-party provider package
 // contributions (loaded through the extension kernel) and a third-party own

@@ -13,8 +13,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import { createSecretRedactor } from "@arnilo/prism";
-import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-agent";
 import { createPrismAcpAgent } from "../packages/ag-ui/dist/acp/index.js";
+import { createCodingLifecycleEmitter } from "../packages/prism-coding-tools/dist/agent/index.js";
 
 const AUTHORIZATION = { ownership: { userId: "user-1" } };
 

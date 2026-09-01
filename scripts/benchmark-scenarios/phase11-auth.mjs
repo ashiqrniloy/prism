@@ -13,10 +13,10 @@
 import { createHash, subtle } from "node:crypto";
 import { createServer } from "node:http";
 import { performance } from "node:perf_hooks";
-import { createOidcIdentityVerifier } from "@arnilo/prism-credentials-node/oidc";
+import { createOidcIdentityVerifier } from "@arnilo/prism-core/credentials/node/oidc";
+import { createOpaPolicyEvaluator } from "@arnilo/prism-core/governance/policy";
 import { createMcpOAuthTransport, createPrismMcpServer, createPrismMcpWebHandler } from "@arnilo/prism-mcp";
 import { createOpenApiTools } from "@arnilo/prism-openapi-tools";
-import { createOpaPolicyEvaluator } from "@arnilo/prism-policy";
 import { createS3ArtifactBodyStore } from "@arnilo/prism-server/artifact-bodies";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 

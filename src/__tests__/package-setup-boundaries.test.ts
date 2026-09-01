@@ -27,7 +27,7 @@ const providerPackages = [
 describe("optional package setup boundaries", () => {
   it("provider packages expose their public factory and discovery", async () => {
     for (const [name, factory, discovery] of providerPackages) {
-      const mod = (await import(`../../packages/provider-${name}/dist/index.js`)) as Record<string, unknown>;
+      const mod = (await import(`../../packages/prism-providers/dist/${name}/index.js`)) as Record<string, unknown>;
       assert.equal(typeof mod[factory], "function", `missing ${factory}`);
       assert.equal(typeof mod[discovery], "function", `missing ${discovery}`);
     }
@@ -37,7 +37,7 @@ describe("optional package setup boundaries", () => {
     for (const [name, factory, , options] of providerPackages) {
       let fetchCalls = 0;
       const registered: unknown[] = [];
-      const specifier = `../../packages/provider-${name}/dist/index.js`;
+      const specifier = `../../packages/prism-providers/dist/${name}/index.js`;
       const mod = (await import(specifier)) as Record<string, (options: unknown) => { setup(api: unknown): unknown }>;
       await mod[factory]!({
         ...options,
@@ -61,7 +61,7 @@ describe("optional package setup boundaries", () => {
   });
 
   it("compaction-llm exposes its public entrypoint and sets up inert", async () => {
-    const mod = (await import("../../packages/compaction-llm/" + "dist/index.js")) as Record<string, unknown>;
+    const mod = (await import("../../packages/memory/" + "dist/compaction/llm/index.js")) as Record<string, unknown>;
     for (const name of [
       "createLlmCompactionStrategy",
       "createLlmCompactionExtension",
@@ -96,7 +96,7 @@ describe("optional package setup boundaries", () => {
   });
 
   it("observational-memory exposes its public entrypoint and sets up inert", async () => {
-    const mod = (await import("../../packages/compaction-observational-memory/" + "dist/index.js")) as Record<string, unknown>;
+    const mod = (await import("../../packages/memory/" + "dist/compaction/observational-memory/index.js")) as Record<string, unknown>;
     for (const name of [
       "createObservationalMemoryRuntime",
       "createObservationalMemoryCompactionStrategy",
@@ -113,7 +113,7 @@ describe("optional package setup boundaries", () => {
       "createMemoryId",
     ])
       assert.equal(typeof mod[name], "function", `missing ${name}`);
-    assert.equal(mod.packageName, "@arnilo/prism-compaction-observational-memory");
+    assert.equal(mod.packageName, "@arnilo/prism-memory/compaction/observational-memory");
 
     type ObservationalMemoryModule = {
       createObservationalMemoryRuntime(options: {

@@ -77,7 +77,7 @@ const handleMcp = await createPrismMcpWebHandler(server, {
 ## When to use it
 
 - **Integrate external MCP tool servers** (filesystem, databases, SaaS adapters) without reimplementing JSON-RPC transports in your app.
-- **Bridge a specific upstream server through a reviewed adapter** — e.g. the optional [`@arnilo/prism-obscura`](obscura.md) wraps `connectMcpTools` with Obscura-specific command validation and conservative effect classification for the complete advertised tool surface.
+- **Bridge a specific upstream server through a reviewed adapter** — e.g. the optional [`@arnilo/prism-web-tools/obscura`](obscura.md) subpath wraps `connectMcpTools` with Obscura-specific command validation and conservative effect classification for the complete advertised tool surface.
 - **Keep core dispatch gates** — register returned tools and let `dispatchToolCall` enforce permission, JSON Schema validation (`ToolValidator`), middleware, abort, and parallel execution (Plan 055 Tasks 1–2).
 - **Explicit lifecycle** — connect, refresh on `notifications/tools/list_changed`, and `close()` when the session ends.
 - **Expose selected capabilities** — register a reviewed tool/command allow-list for MCP clients without a custom JSON-RPC server.

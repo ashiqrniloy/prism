@@ -11,15 +11,21 @@ import {
   type SessionStore,
   toolCallContent,
 } from "@arnilo/prism";
-import { createAskUserDecisionResumeValidator, suspendAskUserDecision } from "@arnilo/prism-coding-agent";
+import { createAskUserDecisionResumeValidator, suspendAskUserDecision } from "@arnilo/prism-coding-tools/agent";
+import { createSupervisor } from "@arnilo/prism-core/runtime/supervisor";
+import {
+  createMemoryWorkflowCheckpoints,
+  defineWorkflow,
+  functionNode,
+  resumeWorkflow,
+  runWorkflow,
+} from "@arnilo/prism-core/runtime/workflows";
 import {
   buildObservationalMemoryProjection,
   createObservationalMemory,
   createObservationalMemoryCompactionStrategy,
   recallObservationalMemory,
-} from "@arnilo/prism-compaction-observational-memory";
-import { createSupervisor } from "@arnilo/prism-supervisor";
-import { createMemoryWorkflowCheckpoints, defineWorkflow, functionNode, resumeWorkflow, runWorkflow } from "@arnilo/prism-workflows";
+} from "@arnilo/prism-memory/compaction/observational-memory";
 
 /**
  * Conformance reference: goal → roadmap → per-task execute/validate with

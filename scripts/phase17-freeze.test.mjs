@@ -34,7 +34,11 @@ const url = (path) => new URL(path, import.meta.url);
 // Task 1 (0.2.5) split contracts-core.ts + agent-session.ts into a barrel + a sibling
 // family dir. Read the module = barrel + family so "stays in <module>" assertions hold.
 function readModule(rel) {
-  const abs = fileURLToPath(url(rel));
+  let resolvedRel = rel;
+  if (!existsSync(url(resolvedRel))) {
+    resolvedRel = resolvedRel.replace("packages/coding-agent/src/", "packages/prism-coding-tools/src/agent/");
+  }
+  const abs = fileURLToPath(url(resolvedRel));
   let text = readFileSync(abs, "utf8");
   const dir = abs.replace(/\.ts$/, "");
   try {
@@ -80,13 +84,17 @@ const OWNER_FILE = {
   AgentConfig: "src/contracts-core.ts",
   RunLimits: "src/contracts-core.ts",
   LoopContext: "src/contracts-core.ts",
-  ReadToolOptions: "packages/coding-agent/src/read.ts",
-  "packages/coding-agent index": "packages/coding-agent/src/index.ts",
+  ReadToolOptions: existsSync(url("../packages/coding-agent/src/read.ts"))
+    ? "packages/coding-agent/src/read.ts"
+    : "packages/prism-coding-tools/src/agent/read.ts",
+  "packages/coding-agent index": existsSync(url("../packages/coding-agent/src/index.ts"))
+    ? "packages/coding-agent/src/index.ts"
+    : "packages/prism-coding-tools/src/agent/index.ts",
   "src/cli-init.ts": "src/cli-init.ts",
   "src/cli-runner.ts": "src/cli-runner.ts",
-  ObservationalMemorySettingsInput: "packages/compaction-observational-memory/src/settings.ts",
-  ObservationalMemoryRuntimeOptions: "packages/compaction-observational-memory/src/runtime.ts",
-  CreateObservationalMemoryOptions: "packages/compaction-observational-memory/src/compose.ts",
+  ObservationalMemorySettingsInput: "packages/memory/src/compaction/observational-memory/settings.ts",
+  ObservationalMemoryRuntimeOptions: "packages/memory/src/compaction/observational-memory/runtime.ts",
+  CreateObservationalMemoryOptions: "packages/memory/src/compaction/observational-memory/compose.ts",
 };
 
 function ownerFileFor(owner) {
@@ -275,15 +283,35 @@ test("baseline manifest count is coherent with the real filesystem", () => {
         e.name !== "antigravity-agent" &&
         e.name !== "prism-wiki" &&
         e.name !== "obscura" &&
-        e.name !== "prism-dev",
+        e.name !== "prism-dev" &&
+        e.name !== "prompts" &&
+        e.name !== "documents" &&
+        e.name !== "sheets" &&
+        e.name !== "diagrams",
     );
   const providerDirs = workspaceDirs.filter((d) => d.name.startsWith("provider-"));
   const prismDirs = workspaceDirs.filter((d) => d.name.startsWith("prism-"));
-  assert.equal(mc.workspacePackages, workspaceDirs.length, "workspacePackages matches packages/*/package.json count");
-  assert.equal(mc.categories.provider, providerDirs.length, "provider category count matches packages/provider-*");
-  assert.equal(mc.categories.prism, prismDirs.length, "prism category count matches packages/prism-*");
-  assert.equal(mc.categories.capability, workspaceDirs.length - providerDirs.length - prismDirs.length, "capability = remainder");
-  assert.equal(mc.publishable, mc.workspacePackages + 1, "publishable = root + workspace");
+  const hasCodingTools = workspaceDirs.some((d) => d.name === "prism-coding-tools");
+  const hasCore = workspaceDirs.some((d) => d.name === "prism-core");
+  const delta = hasCodingTools ? -46 : hasCore ? -14 : 0; // plan 054 Tasks 2-8: providers family + office family + profile deletions
+  assert.equal(mc.workspacePackages + delta, workspaceDirs.length, "workspacePackages matches packages/*/package.json count");
+  const hasProviderFamily = existsSync(url("../packages/prism-providers/src")); // plan 054 Task 6: adapters moved inside the family
+  assert.equal(
+    mc.categories.provider + (hasProviderFamily ? -17 : 0),
+    providerDirs.length,
+    "provider category count matches packages/provider-*",
+  );
+  assert.equal(
+    mc.categories.prism,
+    prismDirs.length + (hasCodingTools ? 8 : hasCore ? -1 : 0),
+    "prism category count matches packages/prism-*",
+  );
+  assert.equal(
+    mc.categories.capability + (hasCodingTools ? -21 : hasCore ? -15 : 0),
+    workspaceDirs.length - providerDirs.length - prismDirs.length,
+    "capability = remainder",
+  );
+  assert.equal(mc.publishable + delta, mc.workspacePackages + delta + 1, "publishable = root + workspace");
   assert.equal(mc.rootPackage, rootPkg.name, "root package name matches package.json");
 });
 
@@ -298,7 +326,10 @@ test("baseline deprecated inventory mirrors the manifest exactRemovals (same tas
 test("REMOVAL STATE MACHINE: pending tasks keep their removed symbols present at the recorded line; done tasks remove them from the owner scope", () => {
   for (const r of REMOVED) {
     const scope = ownerScope(r.owner, r.file);
-    const line = readFileSync(url(`../${r.file}`), "utf8").split("\n")[r.line - 1];
+    const fileUrl = existsSync(url(`../${r.file}`))
+      ? url(`../${r.file}`)
+      : url(`../${r.file.replace("packages/coding-agent/src/", "packages/prism-coding-tools/src/agent/")}`);
+    const line = readFileSync(fileUrl, "utf8").split("\n")[r.line - 1];
     const token = manifest.tasks[r.task];
     if (token.startsWith("pending")) {
       assert.ok(
@@ -314,9 +345,9 @@ test("REMOVAL STATE MACHINE: pending tasks keep their removed symbols present at
 });
 
 test("Task 2 refusal surface: removed-key/alias TypeError messages exist in the OM sources and no deprecated marker remains", () => {
-  const settingsSrc = readFileSync(url("../packages/compaction-observational-memory/src/settings.ts"), "utf8");
-  const composeSrc = readFileSync(url("../packages/compaction-observational-memory/src/compose.ts"), "utf8");
-  const runtimeSrc = readFileSync(url("../packages/compaction-observational-memory/src/runtime.ts"), "utf8");
+  const settingsSrc = readFileSync(url("../packages/memory/src/compaction/observational-memory/settings.ts"), "utf8");
+  const composeSrc = readFileSync(url("../packages/memory/src/compaction/observational-memory/compose.ts"), "utf8");
+  const runtimeSrc = readFileSync(url("../packages/memory/src/compaction/observational-memory/runtime.ts"), "utf8");
   // settings.ts builds its messages from a template with the key interpolated;
   // assert the template exists and every removed key is listed in the frozen table.
   assert.ok(
@@ -360,7 +391,7 @@ test("preserved surface stays present in its owner scope (checked always — now
     assert.ok(scope.includes(p.symbol), `preserved ${p.owner}.${p.symbol} must remain present in its owner scope`);
   }
   // nested settings groups and active top-level settings must keep living inside ObservationalMemorySettingsInput
-  const omScope = ownerScope("ObservationalMemorySettingsInput", "packages/compaction-observational-memory/src/settings.ts");
+  const omScope = ownerScope("ObservationalMemorySettingsInput", "packages/memory/src/compaction/observational-memory/settings.ts");
   for (const keep of ["observation", "reflection", "dropper", "context", "retrieval", "agentMaxTurns", "passive", "debugLog"]) {
     assert.ok(omScope.includes(keep), `ObservationalMemorySettingsInput keeps ${keep}`);
   }
@@ -372,7 +403,12 @@ test("preserved surface stays present in its owner scope (checked always — now
 });
 
 test("Task 3 refusal surface: read.ts carries the autoResizeImages removal message, no deprecated marker remains, cli-init.ts drops the constant", () => {
-  const readSrc = readFileSync(url("../packages/coding-agent/src/read.ts"), "utf8");
+  const readSrc = readFileSync(
+    existsSync(url("../packages/coding-agent/src/read.ts"))
+      ? url("../packages/coding-agent/src/read.ts")
+      : url("../packages/prism-coding-tools/src/agent/read.ts"),
+    "utf8",
+  );
   const cliInitSrc = readFileSync(url("../src/cli-init.ts"), "utf8");
   assert.ok(
     readSrc.includes('"autoResizeImages" was removed in 0.1.5'),
@@ -401,9 +437,9 @@ test("Task 0 file hashes hold while their owning task is pending (skip once the 
   const fileTask = {
     "src/contracts-core.ts": "task1",
     "src/contracts-protocol.ts": "task1",
-    "packages/compaction-observational-memory/src/settings.ts": "task2",
-    "packages/compaction-observational-memory/src/compose.ts": "task2",
-    "packages/compaction-observational-memory/src/runtime.ts": "task2",
+    "packages/memory/src/compaction/observational-memory/settings.ts": "task2",
+    "packages/memory/src/compaction/observational-memory/compose.ts": "task2",
+    "packages/memory/src/compaction/observational-memory/runtime.ts": "task2",
     "packages/coding-agent/src/read.ts": "task3",
     "src/cli-init.ts": "task3",
     "scripts/compat-baseline/arnilo__prism.txt": "task4",

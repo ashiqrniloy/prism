@@ -8,7 +8,13 @@ import {
   providerTextDelta,
   providerUsage,
 } from "@arnilo/prism";
-import { agentNode, createMemoryWorkflowCheckpoints, defineWorkflow, runWorkflow, type WorkflowEvent } from "@arnilo/prism-workflows";
+import {
+  agentNode,
+  createMemoryWorkflowCheckpoints,
+  defineWorkflow,
+  runWorkflow,
+  type WorkflowEvent,
+} from "@arnilo/prism-core/runtime/workflows";
 
 // Sequential research → draft → review pipeline with in-memory checkpoints.
 // Three agent nodes chained: researcher gathers facts, writer produces draft,

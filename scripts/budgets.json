@@ -1,20 +1,20 @@
 {
-  "$comment": "Release 0.0.24 baselines plus protected enterprise PostgreSQL evidence; root re-baselined for Phase 9 Task 6 allow-list egress module (0.0.26). Root packed/unpacked baselines corrected at 0.1.1 (plan 013 Task 4) to the published @arnilo/prism@0.1.0 registry artifact sizes (718738 packed / 2505460 unpacked) \u2014 the previously recorded 713454/2388118 were measured from an incomplete dist build. Pack bytes/file count are deterministic -> tight tolerance. Startup and network-free benchmark medians are machine-dependent -> generous ceiling/tolerance. Enterprise timing remains opt-in behind PRISM_TEST_POSTGRES_URL and is checked against fixed p95 ceilings by scripts/benchmark.mjs --scenario phase6-postgres.",
+  "$comment": "Release 0.0.24 baselines plus protected enterprise PostgreSQL evidence; root re-baselined for Phase 9 Task 6 allow-list egress module (0.0.26). Root packed/unpacked baselines corrected at 0.1.1 (plan 013 Task 4) to the published @arnilo/prism@0.1.0 registry artifact sizes (718738 packed / 2505460 unpacked) \u2014 the previously recorded 713454/2388118 were measured from an incomplete dist build. Pack bytes/file count are deterministic -> tight tolerance. Startup and network-free benchmark medians are machine-dependent -> generous ceiling/tolerance. Enterprise timing remains opt-in behind PRISM_TEST_POSTGRES_URL and is checked against fixed p95 ceilings by scripts/benchmark.mjs --scenario phase6-postgres. Root packed/unpacked/fileCount refreshed 2026-08-31 for the plans 041-044 changed-package cut (970580/3290347/386).",
   "root": {
     "packedBytes": {
-      "baseline": 923045,
+      "baseline": 970580,
       "tolerance": 0.05,
-      "$comment": "[2026-08-27] plan 035 Task 2 diet: exclude docs/_evidence, docs/release-*-evidence.md, docs/api-page-template.md (was 945869/377). Remaining is public API. Groups: dist 226 files / 1.10 MiB (js+d.ts), docs 124 index-linked pages, other 25 (manifest/README/LICENSE/CHANGELOG/templates). 0.1.0 freeze 713454/293 stays historical; live gate is this current-line diet."
+      "$comment": "[2026-08-31] plans 041-044 cut: dist/tool-search.js+d.ts (progressive tool loading), run-ledger promptVersion plumbing, docs/prompt-registry.md + composite scoring docs (prior 923045/2026-08-27 diet)."
     },
     "unpackedBytes": {
-      "baseline": 3149665,
+      "baseline": 3290347,
       "tolerance": 0.05,
-      "$comment": "[2026-08-27] plan 035 Task 2 diet: 3149665 after dropping release-0.2.7-evidence.md + api-page-template.md from the tarball (was 3216033)."
+      "$comment": "[2026-08-31] plans 041-044 cut (tool-search dist + prompt/memory docs; prior 3149665/2026-08-27)."
     },
     "fileCount": {
-      "baseline": 375,
+      "baseline": 406,
       "tolerance": 0.05,
-      "$comment": "[2026-08-27] plan 035 Task 2: 226 dist + 124 docs + 25 other = 375. File growth vs 0.1.0 (293) is god-module splits (js+d.ts pairs) plus later public API pages, not evidence."
+      "$comment": "[2026-09-01] plan 054 Task 2 cut: core consolidation and docs/core.md (measured 406 vs prior 386)."
     },
     "$comment": " [2026-08-12] root packed/unpacked/fileCount baselines refreshed at 0.1.7 Task 2 (HEAD 2ebc08e + cache-telemetry module): dist/cache-telemetry.js + dist/cache-telemetry.d.ts + docs/provider-caching.md telemetry section + docs/index.md entry push the tarball past the 5% ceiling (measured 756151/2627877/310 vs prior 718738/2505460/307)."
   },
@@ -109,6 +109,16 @@
       "a2uiPaint": 10
     }
   },
+  "workflowLoop": {
+    "$comment": "Plan 045 Task 3 network-free workflow-loop evidence: five serial loop iterations, each with one mock-provider node-execution envelope. The 50 ms per-iteration ceiling is intentionally generous for machine-dependent local timing; total p95 ceiling is 250 ms.",
+    "fixture": {
+      "warmups": 5,
+      "measuredOperations": 20,
+      "iterations": 5
+    },
+    "nodeExecutionP95CeilingMs": 50,
+    "p95CeilingMs": 250
+  },
   "phase9": {
     "$comment": "Release 0.0.26 network-free Phase 9 evidence (plan 009 Task 7). Enumeration: 100k-file synthetic repo, \u2264 2 git invocations per list, results capped at 10k. Process: 1 GiB produced, 64 MiB retained + spill, 50 KiB chunk pages. LSP: 1000-diagnostic normalization at the hard per-file cap. Forge: 100 pages x 100 check-runs, no duplication. Proxy: 64 MiB download at the default response cap, resident buffering \u2264 2x maxBytes. Ceilings match Task 0 freeze. Renderer: 1,000-op A2UI surface stream as 16 snapshot batches of 64 ops + full tree render through the default catalog (Task 14) Sync-path AG-UI mapper: 4,000 events (text/tool/result/message) through the async pipeline with sync hooks only (Task 15).",
     "fixture": {
@@ -196,7 +206,12 @@
       "warmups": 5,
       "measuredOperations": 20,
       "providerDelayMs": 8,
-      "sessionCounts": [1, 4, 16, 32],
+      "sessionCounts": [
+        1,
+        4,
+        16,
+        32
+      ],
       "supervisorMaxActiveChildren": 4,
       "workflowConcurrency": 2,
       "workflowAgentNodes": 4,
@@ -219,6 +234,17 @@
       "toolConcurrency": 500,
       "abortStorm": 2000
     }
+  },
+  "toolSearch": {
+    "$comment": "Plan 041 Task 3 network-free tool-disclosure scenario (plan 041 Task 2 measurement module). Fixture: 128-tool registry, topK 16, one provider-assembly pass per mode plus one index+score pass. Recorded 2026-08-30 Node v24.19.0/Linux x64: tool_request_reduction 0.8644 (floor 0.6), index_score_ms 1.9-2.2 (ceiling 50), disclosed_tool_count_search 17 (top-k 16 + search_tools). Caps are non-flaky sanity bounds (machine-dependent), not portable SLOs. Mock assembly, in-memory, no credentials.",
+    "fixture": {
+      "toolCount": 128,
+      "topK": 16,
+      "minReduction": 0.6
+    },
+    "toolRequestReductionFloor": 0.6,
+    "indexScoreCeilingMs": 50,
+    "disclosedToolCountCeiling": 33
   },
   "docReader": {
     "$comment": "plan 018 Task 4 (doc-reader) extraction envelope, measured 2026-08-11 on the dev host: 1000-page max-cap PDF fixture (288031 bytes) extracts in ~162ms with ~17MB heap delta via pdf-parse. The ceiling is a non-flaky sanity bound; max-page documents must either complete within it or refuse with the documented size/page error.",

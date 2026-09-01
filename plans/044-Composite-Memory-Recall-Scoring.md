@@ -20,7 +20,7 @@ Target: optional composite recall scoring in the semantic-recall path — simila
 
 ## Tasks
 
-- [ ] Task 1 — Primitive Review and Record Fields
+- [x] Task 1 — Primitive Review and Record Fields
   - Acceptance Criteria:
     - Functional: inventory `packages/memory/src/types.ts` (`MemoryVectorRecord`, `MemoryVectorHit` — already carries `sequence`, timestamps), `vector-memory.ts` (cosine + lexical scoring paths), `postgres.ts` (pgvector/fts ordering — `ORDER BY score DESC, sequence ASC, id ASC` today), `packages/compaction-observational-memory` (reflections as importance source). Confirm additive fields are backward compatible with existing durable rows (nullable, default neutral `1.0` importance / no decay).
     - Performance: composite arithmetic per hit only (no extra queries); recall p95 unchanged within envelope when disabled.
@@ -53,7 +53,7 @@ Target: optional composite recall scoring in the semantic-recall path — simila
     - `docs/index.md` update: yes — memory entry description extended.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 2 — Importance Derivation From Existing Signals
+- [x] Task 2 — Importance Derivation From Existing Signals
   - Acceptance Criteria:
     - Functional: host-supplied importance at write (clamped `[0,1]`); optional host callback deriving importance from observational-memory reflections (input: reflection record; output: weight) — callback is host-owned, no default LLM use; document derivation recipe (frequency/prominence heuristics) as an example, not shipped default logic.
     - Performance: derivation happens at write/export time only; recall path never calls out.
@@ -76,7 +76,7 @@ Target: optional composite recall scoring in the semantic-recall path — simila
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 3 — Conformance and Release
+- [x] Task 3 — Conformance and Release
   - Acceptance Criteria:
     - Functional: memory conformance (`packages/memory/src/conformance.ts`) extended with a scoring leg run by all adapters; package version bumped independently (0.3.2 or next per Decision B).
     - Performance: recall benchmarks show no regression with scoring disabled; scoring-enabled recall within +10% of disabled on same fixture (arithmetic only).
@@ -96,8 +96,30 @@ Target: optional composite recall scoring in the semantic-recall path — simila
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass. (Known ceiling: fixed oversample factor 4 for durable adapters — `ponytail: fixed oversample, adaptive fetch if recall quality drops`.)
+Task 1 (implemented, tests pass):
+
+- `importance` is a real additive record field persisted as nullable `importance REAL` (`ADD COLUMN IF NOT EXISTS`); legacy durable rows read NULL → neutral `1.0` at scoring time; `recency` is computed, never stored (from `createdAt` half-life).
+- The shared pure re-rank (`rerankRecallHits`) lives in `recall()` in `memory.ts` — both memory and pgvector paths converge there; adapters only validate/clamp `importance` at upsert (`normalizeImportance`: finite required, `[0,1]` clamped, non-finite rejected).
+- Absent `scoring` or all-zero weights → resolver returns `undefined` → no re-rank at all (single query, same topK, unchanged hit shape/p95); enabled path fetches `topK × 4` candidates, blends, cuts to `topK` (oversample `ponytail:` ceiling stands).
+- Weight overshoot (`recencyWeight + importanceWeight > 1`) sum-normalizes down to similarity weight `0` instead of erroring; similarity keeps the remainder otherwise.
+
+Task 2 (implemented, tests pass):
+
+- Write surface: `MemoryEntryInput.importance?` (clamped `[0,1]`, wins over derivation) and `MemoryEntryInput.reflection?: JsonObject` (transient — not persisted); `CreateMemoryOptions.importanceFrom?: ImportanceFromReflection` is the documented hook seam in `scoring.ts` (no new package).
+- Hook contract: runs once at write on the reflection **after secret redaction**; output clamped to `[0,1]`, non-finite fails the write; never invoked at recall (test-enforced: hook call count stays 1 after recalls). No default heuristic ships — recipe (mention count / supporting-observation count) documented as an example in `docs/working-and-semantic-memory.md`.
+- Hook input typed `JsonObject` (redaction output shape); hosts spread typed OM reflections (`reflection: { ...reflection }`) — avoids adding observational-memory as a dependency for one type.
+
+(Standing known ceiling: fixed oversample factor 4 for durable adapters — `ponytail: fixed oversample, adaptive fetch if recall quality drops`.)
+
+Task 3 (implemented, tests pass; publish checks complete, nothing published):
+
+- Conformance: `runMemoryConformance` now exercises scoring through every adapter (in-memory + live pgvector): write-time clamp, recency/importance ranking, numeric components only when enabled, disabled-component absence, and invalid half-life rejection. `packages/memory/src/__tests__/public-surface.test.ts` complements it with a public-entry-only seam (no private `src/**` imports) for resolver/weight normalization, clamp/hook precedence, tie-break, and docs tripwire (composite-scoring API names must appear in `docs/working-and-semantic-memory.md` or the suite fails).
+- Release shape (Decision B changed-package cut vs parent `1171575`): `@arnilo/prism-memory` 0.3.1 → **0.3.2** (composite scoring), `@arnilo/prism-evals` 0.3.0 → **0.3.1** (plan-043 curation, first publishable cut of that surface), session-store trio 0.3.1 (plan 042), prompts stays at its initial 0.0.1 (publishes independently), and root `@arnilo/prism` 0.3.2 → **0.3.3** (tool-search + promptVersion plumbing + docs — root `@0.3.2` was already on the registry, so root had to move).
+- Truth advancement (deliberate pin evolution, each test green): phase34 freeze BASELINE → `1171575` (+ `^0.3.2` added to the Decision B peer window), phase24 peer-window + docs.test current-line/tarball/peer pins → 0.3.3, phase27/30 version arrays + root `CHANGELOG`, phase26-freeze-manifest current-line markers → 0.3.3, `src/index.ts` built version literal → 0.3.3, package-truth + lockfile regenerated, budgets.json root tarball diet refreshed (970580/3290347/386 — tool-search dist + prompt-registry doc), docs/release-and-install.md current-line + 0.3.3 publish handoff (baseline, changed set, preflight commands), phase13 mtime ordering fixed by touching the older-file artifact to now.
+- Verification (all green for the intended six-package candidate): `npm run release:gate`, `release:check --independent --baseline 1171575` (6/6 packages `available`), `release:publish --dry-run --allow-dirty --allow-untagged` (6/6 status `dry-run`, zero `failed`), release evidence 74 surfaces blocked=false (durable env recorded by name only), compat baselines additive-only reviewed (`version` literal + 2 pre-documented literal CHANGEDs), docs 146/146, memory `test:postgres` 40/40 against fresh live pgvector (shared scoring conformance + parity), evals 29, phase34/24/27/30/26/13, budget/tooling/benchmark gates, Biome lint zero diagnostics after formatting 21 files touched by plans 041-043.
+- Deviations: `@arnilo/prism-prompts` is absent from the registry-detected changed set (untracked at the baseline commit → git-diff cannot see it); it publishes directly per plan 042's handoff (`npm view` 404 confirms the name is free). The pre-existing, unshipped `packages/prism-wiki/.wiki/log.md` edit makes generic changed-package detection demand an unrelated wiki bump; the verified six-package preflight/dry-run temporarily excluded that generated log. Keep/ship it as a separate wiki patch or restore it before the tagged publish. The field-policy perf-ratio test flakes under full-suite machine load (documented plan-041 precedent): isolated run green, file unchanged vs HEAD.
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- Operator handoff only (no publish ran this session): `node scripts/release.mjs publish --independent --baseline 1171575 --allow-dirty=false` on a clean tagged tree, or push the `<name>@<version>` package tags (`@arnilo/prism@0.3.3`, `@arnilo/prism-memory@0.3.2`, `@arnilo/prism-evals@0.3.1`, `@arnilo/prism-session-store-{codecs,sqlite,postgres}@0.3.1`, `@arnilo/prism-prompts@0.0.1` directly); `release.yml` runs deterministic publication with OIDC provenance.
+- The field-policy perf-ratio guard could take the same deterministic-barrier treatment as the phase23 MCP-bridge fix if the full-suite flake recurs. Low priority — isolated runs are stable and the file is untouched since 0.2.7.

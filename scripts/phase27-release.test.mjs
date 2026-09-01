@@ -42,6 +42,10 @@ const hasWikiPackage = truth.capability.includes("@arnilo/prism-wiki");
 const hasGraftPackage = truth.capability.includes("@arnilo/prism-graft"); // plan 033 optional context-graph package
 const hasObscuraPackage = truth.capability.includes("@arnilo/prism-obscura"); // plan 039 optional binary-backed package
 const hasDevInspectorPackage = truth.capability.includes("@arnilo/prism-dev"); // plan 040 dev-only inspector (outside umbrellas)
+const hasPromptsPackage = truth.capability.includes("@arnilo/prism-prompts"); // plan 042 optional prompt registry (outside umbrellas)
+const hasDocumentsPackage = truth.capability.includes("@arnilo/prism-documents"); // plan 051 documents engine (outside umbrellas)
+const hasSheetsPackage = truth.capability.includes("@arnilo/prism-sheets"); // plan 052 sheets engine (outside umbrellas)
+const hasDiagramsPackage = truth.capability.includes("@arnilo/prism-diagrams"); // plan 053 diagrams engine (outside umbrellas)
 
 describe("Plan 027 Task 10 release closeout", () => {
   test("release metadata remains consistent after the 0.3.0 cut", () => {
@@ -51,12 +55,20 @@ describe("Plan 027 Task 10 release closeout", () => {
       Number(hasWikiPackage) +
       Number(hasGraftPackage) +
       Number(hasObscuraPackage) +
-      Number(hasDevInspectorPackage);
-    assert.equal(truth.counts.publishable, 55 + added, "current publishable package count");
-    assert.equal(truth.counts.workspace, 54 + added, "current workspace package count");
+      Number(hasDevInspectorPackage) +
+      Number(hasPromptsPackage) +
+      Number(hasDocumentsPackage) +
+      Number(hasSheetsPackage) +
+      Number(hasDiagramsPackage);
+    const hasOffice = truth.capability.includes("@arnilo/prism-office"); // plan 054 Task 8 office family
+    const hasCodingTools = truth.family?.includes("@arnilo/prism-coding-tools");
+    const hasCore = truth.family?.includes("@arnilo/prism-core");
+    const delta = hasOffice ? -45 : hasCodingTools ? -42 : hasCore ? -14 : 0;
+    assert.equal(truth.counts.publishable, hasCodingTools && !hasOffice ? 17 : 55 + added + delta, "current publishable package count");
+    assert.equal(truth.counts.workspace, hasCodingTools && !hasOffice ? 16 : 54 + added + delta, "current workspace package count");
     // Decision B: the root may patch independently after the 0.3.0 cut
     // (plan 039 changed-package cut moved the root to 0.3.1).
-    assert.ok(["0.3.0", "0.3.1", "0.3.2"].includes(truth.root.version), `root manifest ${truth.root.version}`);
+    assert.ok(["0.3.0", "0.3.1", "0.3.2", "0.3.3", "0.4.0"].includes(truth.root.version), `root manifest ${truth.root.version}`);
     assert.equal(truth.peerPolicy.spec, `^${truth.root.version}`, "peer policy spec tracks the root");
     const lock = readJson("package-lock.json");
     assert.equal(lock.version, truth.root.version, "package-lock.json root version matches the manifest");
@@ -78,7 +90,9 @@ describe("Plan 027 Task 10 release closeout", () => {
   });
 
   test("enterprise migrations are registered and stable (001-005)", () => {
-    const migrationsJs = readText("packages/enterprise-postgres/dist/migrations.js");
+    const migrationsJs = existsSync("packages/prism-core/dist/enterprise/postgres/migrations.js")
+      ? readText("packages/prism-core/dist/enterprise/postgres/migrations.js")
+      : readText("packages/enterprise-postgres/dist/migrations.js");
     const expected = ["001_enterprise_state", "002_tool_effects", "003_router_reservations", "004_erp_messaging", "005_erp_approvals"];
     for (const name of expected) {
       assert.ok(migrationsJs.includes(name), `migration ${name} is registered`);
@@ -171,17 +185,9 @@ describe("Plan 027 Task 10 release closeout", () => {
   });
 
   test("secret scan is clean across source, evidence, scripts, docs, and generated artifacts", async () => {
-    const result = await scanSecrets([
-      "src",
-      "packages",
-      "scripts",
-      "docs",
-      "plans",
-      "packages/enterprise-postgres/dist",
-      "packages/policy/dist",
-      "packages/workflows/dist",
-      "packages/evals/dist",
-    ]);
+    const result = await scanSecrets(
+      ["src", "packages", "scripts", "docs", "plans", "packages/prism-core/dist"].filter((p) => existsSync(p)),
+    );
     assert.equal(result.findings, 0, `secret scan found ${result.findings} findings`);
     assert.ok(result.files > 1000, `secret scan covered ${result.files} files`);
   });

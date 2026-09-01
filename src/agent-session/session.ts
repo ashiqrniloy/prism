@@ -36,6 +36,7 @@ import type {
   NestedRunRef,
   OwnershipScope,
   PendingDecision,
+  PromptVersionRef,
   ProviderEvent,
   ProviderRequest,
   ProviderTurnMetadata,
@@ -103,7 +104,8 @@ import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } fro
 import { composeSystemPrompt, mergeSystemPromptConfig } from "../system-prompts.js";
 import { canonicalToolEffectJson, toolEffectArgumentsHash } from "../tool-effects.js";
 import { resolveToolResultFold } from "../tool-result-fold.js";
-import { dispatchToolCall, resolveToolEffectDeclaration } from "../tools.js";
+import { createActiveToolSet, createSearchToolsTool, createToolSearchState, resolveToolsDisclosure } from "../tool-search.js";
+import { createToolRegistry, dispatchToolCall, resolveToolEffectDeclaration } from "../tools.js";
 import { createAgentSession } from "./create-agent.js";
 import { EventSubscriber } from "./event-subscriber.js";
 import {
@@ -129,6 +131,26 @@ import {
   withoutTrailingInput,
 } from "./helpers.js";
 
+const PROMPT_VERSION_MAX_NAME_BYTES = 256;
+const PROMPT_VERSION_HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
+
+/** Plan 042: validate the opaque provenance ref fail-closed before any session mutation. */
+function assertPromptVersionRef(ref: PromptVersionRef | undefined): PromptVersionRef | undefined {
+  if (ref === undefined) return undefined;
+  if (typeof ref !== "object" || ref === null) throw new TypeError("RunOptions.promptVersion must be a PromptVersionRef object");
+  const { name, version, hash } = ref;
+  if (typeof name !== "string" || name.length === 0 || Buffer.byteLength(name, "utf8") > PROMPT_VERSION_MAX_NAME_BYTES) {
+    throw new TypeError(`RunOptions.promptVersion.name must be 1-${PROMPT_VERSION_MAX_NAME_BYTES} UTF-8 bytes`);
+  }
+  if (!Number.isInteger(version) || version < 1 || version > 0x7fffffff) {
+    throw new TypeError("RunOptions.promptVersion.version must be an integer in [1, 2147483647]");
+  }
+  if (typeof hash !== "string" || !PROMPT_VERSION_HASH_PATTERN.test(hash)) {
+    throw new TypeError('RunOptions.promptVersion.hash must be "sha256:" plus 64 lowercase hex characters');
+  }
+  return ref;
+}
+
 export class RuntimeAgentSession implements AgentSession {
   readonly id: string;
   private readonly agent: Agent;
@@ -152,6 +174,7 @@ export class RuntimeAgentSession implements AgentSession {
   private activeIdempotencyKey?: string;
   private activeGuardrails?: Guardrails;
   private activeMetadata?: Readonly<Record<string, unknown>>;
+  private activePromptVersion?: PromptVersionRef;
   private activeLimits?: RunLimitTracker;
   private activeLimitOutputBuffer = false;
   private activeDurable?: ActiveDurableRun;
@@ -160,6 +183,8 @@ export class RuntimeAgentSession implements AgentSession {
   private activeGatedRound?: Map<string, { entry: PendingToolCall; decision: PendingDecision }>;
   private activeLoopTurn = 1;
   private readonly loadedSkills = createLoadedSkillSet();
+  /** Tools activated via `search_tools` this session (plan 041); names-only in persistence. */
+  private readonly activatedTools = createActiveToolSet();
   /** Plan 018 Task 6 (closeout `checkpoint-bodies`): persisted exact instructions, registry-independent. */
   private restoredSkillBodies: readonly LoadedSkillBodiesEntry[] = [];
   /** Skills of the current run (for the bodies snapshot); replaced at each run start. */
@@ -168,6 +193,16 @@ export class RuntimeAgentSession implements AgentSession {
   /** Plan 015 Task 4: re-add persisted loaded-skill names (names only; bodies re-resolve on demand). */
   restoreLoadedSkills(names: readonly string[]): void {
     for (const name of names) this.loadedSkills.add(name);
+  }
+
+  /** Plan 041: re-add persisted activated-tool names (names only; inert for absent tools). */
+  restoreActivatedTools(names: readonly string[]): void {
+    for (const name of names) this.activatedTools.add(name);
+  }
+
+  /** Plan 041: host reset of search-activated tools. */
+  clearActivatedTools(): void {
+    this.activatedTools.clear();
   }
 
   /** Plan 018 Task 6: restore persisted loaded-skill bodies (already validated fail-closed at load). */
@@ -292,6 +327,7 @@ export class RuntimeAgentSession implements AgentSession {
     if (legacyMaxToolRounds !== undefined) {
       throw new TypeError("RunOptions.maxToolRounds was removed in 0.1.5; use RunOptions.limits.maxToolRounds instead");
     }
+    const promptVersion = assertPromptVersionRef(options.promptVersion);
     if (
       this.agent.config.secure &&
       (options.redactor !== undefined ||
@@ -358,6 +394,7 @@ export class RuntimeAgentSession implements AgentSession {
       ...(this.activeIdentity ? identityTelemetryAttributes(this.activeIdentity) : {}),
     };
     this.activeMetadata = metadata;
+    this.activePromptVersion = promptVersion;
     const limits = new RunLimitTracker(resolvedLimits, {
       onExceeded: (breach) => {
         this.emit({ type: "run_limit_exceeded", sessionId: this.id, runId, breach });
@@ -386,12 +423,29 @@ export class RuntimeAgentSession implements AgentSession {
         idempotencyKey: this.activeIdempotencyKey,
         status: "running",
         startedAt,
+        ...(promptVersion ? { promptVersion } : {}),
         ...this.activeOwnership,
       };
       await this.activeLedger?.appendRun(redactRunLedgerRecord(startRecord, this.activeRedactor));
 
       await this.rebuildHistory();
-      const { registry, tools } = activeTools(this.agent.config.tools);
+      const { registry: baseRegistry, tools: activeToolList } = activeTools(this.agent.config.tools);
+      const toolsDisclosure = resolveToolsDisclosure(options.toolsDisclosure, this.agent.config.toolsDisclosure);
+      // Search mode: run-local registry copy plus the generated `search_tools` tool; the host
+      // registry is never mutated. Activation names are intersected at disclosure only.
+      const toolSearch =
+        toolsDisclosure === "search" && activeToolList.length > 0
+          ? {
+              state: createToolSearchState({
+                tools: activeToolList,
+                activated: this.activatedTools,
+                search: this.agent.config.toolsSearch,
+              }),
+            }
+          : undefined;
+      const searchTool = toolSearch ? createSearchToolsTool(toolSearch.state) : undefined;
+      const registry = searchTool ? createToolRegistry([...activeToolList, searchTool]) : baseRegistry;
+      const tools = searchTool ? [...activeToolList, searchTool] : activeToolList;
       const activeSkills = this.resolveRunSkills(options, tools);
       this.activeRunSkills = activeSkills; // for the durable bodies snapshot (plan 018 Task 6)
       if (options.model && JSON.stringify(options.model) !== JSON.stringify(this.agent.config.model)) {
@@ -626,6 +680,9 @@ export class RuntimeAgentSession implements AgentSession {
             contextProviders,
             skills: this.restoredSkillBodies.length ? applyRestoredSkillBodies(activeSkills, this.restoredSkillBodies) : activeSkills,
             skillsDisclosure: resolveSkillsDisclosure(options.skillsDisclosure, this.agent.config.skillsDisclosure),
+            toolsDisclosure,
+            toolsSearch: this.agent.config.toolsSearch,
+            activatedTools: this.activatedTools,
             toolResultFold: resolveToolResultFold(options.toolResultFold, this.agent.config.toolResultFold),
             loadedSkills: this.loadedSkills,
             tools,
@@ -1077,6 +1134,7 @@ export class RuntimeAgentSession implements AgentSession {
             finishedAt: new Date().toISOString(),
             abortReason: controller.signal.aborted ? String(controller.signal.reason) : undefined,
             error: runError,
+            ...(this.activePromptVersion ? { promptVersion: this.activePromptVersion } : {}),
             ...this.activeOwnership,
           };
           await this.activeLedger.appendRun(redactRunLedgerRecord(finishRecord, this.activeRedactor));
@@ -1091,6 +1149,7 @@ export class RuntimeAgentSession implements AgentSession {
         this.activeIdempotencyKey = undefined;
         this.activeGuardrails = undefined;
         this.activeMetadata = undefined;
+        this.activePromptVersion = undefined;
         this.activeLimits?.dispose();
         this.activeLimits = undefined;
         this.activeLimitOutputBuffer = false;
@@ -1306,6 +1365,7 @@ export class RuntimeAgentSession implements AgentSession {
           ...state,
           sessionState: {
             loadedSkillNames: this.loadedSkills.list(),
+            ...(this.activatedTools.list().length ? { activatedToolNames: this.activatedTools.list() } : {}),
             ...(durable.options.includeSkillBodies
               ? {
                   loadedSkillBodies: snapshotLoadedSkillBodies(

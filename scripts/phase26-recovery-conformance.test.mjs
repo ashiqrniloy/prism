@@ -37,7 +37,7 @@ if (blocked) {
 // Load the store adapters (Postgres from the session-store-postgres package, same as the 0.2.5 test:postgres profile).
 let createPostgresPersistence;
 try {
-  ({ createPostgresPersistence } = await import("@arnilo/prism-session-store-postgres"));
+  ({ createPostgresPersistence } = await import("@arnilo/prism-core/sessions/postgres"));
 } catch (error) {
   console.error("BLOCKED GATE: @arnilo/prism-session-store-postgres did not load:", String(error));
   process.exit(1);

@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-clinepass` provides explicit, side-effect-free setup for
+`@arnilo/prism-providers/clinepass` provides explicit, side-effect-free setup for
 the ClinePass OpenAI-compatible Chat Completions API at
 `https://api.cline.bot/api/v1`. Requests always stream. Model ids are official
 `cline-pass/…` slugs from a static featured catalog.
@@ -19,7 +19,7 @@ or caller-gated `GET /models` (no documented OpenAI models endpoint).
 ## Inputs / request
 
 ```ts
-import { createClinePassProviderPackage } from "@arnilo/prism-provider-clinepass";
+import { createClinePassProviderPackage } from "@arnilo/prism-providers/clinepass";
 
 createClinePassProviderPackage(options: ClinePassProviderPackageOptions): ProviderPackage
 ```
@@ -74,7 +74,7 @@ Completion budget is `max_completion_tokens` (not `max_tokens`).
 
 ```ts
 import { createExtensionKernel } from "@arnilo/prism";
-import { createClinePassProviderPackage } from "@arnilo/prism-provider-clinepass";
+import { createClinePassProviderPackage } from "@arnilo/prism-providers/clinepass";
 
 const kernel = createExtensionKernel();
 await kernel.load([createClinePassProviderPackage({ apiKey: "fake-cline-key" })]);

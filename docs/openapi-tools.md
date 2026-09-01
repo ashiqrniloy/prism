@@ -53,4 +53,4 @@ Defaults and hard caps (frozen in `scripts/phase11-freeze-manifest.json`): `maxD
 - [Tools](tools.md): registry, dispatch, validation
 - [Recoverable tool effects](tool-effects.md): approval + idempotency contracts
 - [Host security guide](host-security.md): permission, trust, validation checklist
-- Package README: [`@arnilo/prism-openapi-tools`](../packages/prism-openapi-tools/README.md)
+- Package README: [`@arnilo/prism-coding-tools`](../packages/prism-coding-tools/README.md)

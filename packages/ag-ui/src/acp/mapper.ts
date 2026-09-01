@@ -1,6 +1,6 @@
 import type { SessionUpdate, ToolCallContent, ToolCallLocation, ToolKind } from "@agentclientprotocol/sdk";
 import type { AgentEvent, ToolCallContent as PrismToolCall, SecretRedactor, ToolResult, Usage } from "@arnilo/prism";
-import type { CodingLifecycleEvent, FileChangedEvent } from "@arnilo/prism-coding-agent";
+import type { CodingLifecycleEvent, FileChangedEvent } from "@arnilo/prism-coding-tools/agent";
 import { type AgUiLimitOptions, resolveAgUiLimits } from "../limits.js";
 import { type AgUiProjection, projectCoWorkEvent } from "../projection.js";
 import type { CoWorkEvent } from "../types.js";

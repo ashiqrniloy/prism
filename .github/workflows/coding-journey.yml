@@ -49,7 +49,7 @@ jobs:
           # Resides inside the workspace so the bare provider specifier
           # resolves through the repo node_modules (never a /tmp import path).
           cat > .github/prism-journey-provider.mjs <<'EOF'
-          import { createOpenAIResponsesProvider, openAIModels } from "@arnilo/prism-provider-openai";
+          import { createOpenAIResponsesProvider, openAIModels } from "@arnilo/prism-providers/openai";
           export function createJourneyProvider() {
             const model = process.env.PRISM_CODING_PROVIDER_MODEL
               ? { provider: "openai", model: process.env.PRISM_CODING_PROVIDER_MODEL }

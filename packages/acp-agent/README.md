@@ -47,7 +47,7 @@ The served agent uses the mock provider by default (full lifecycle, no tokens). 
 
 ```ts
 import { createSpawnableAgent, loadConfig } from "@arnilo/prism-acp-agent";
-import { createOpenAIResponsesProvider } from "@arnilo/prism-provider-openai";
+import { createOpenAIResponsesProvider } from "@arnilo/prism-providers/openai";
 
 const agent = createSpawnableAgent({
   config: loadConfig("prism-acp-agent.json"),

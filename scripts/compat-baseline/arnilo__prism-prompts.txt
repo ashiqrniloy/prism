@@ -1,0 +1,88 @@
+AssertPromptPromotionOptions	export type { AssertPromptPromotionOptions, PromptPromotionScorerStats, PromptPromotionVerdict, } from "./promotion.js"
+DEFAULT_MAX_PROMPT_BODY_BYTES	export declare const DEFAULT_MAX_PROMPT_BODY_BYTES: number
+DEFAULT_MAX_PROMPT_CURSOR_BYTES	export declare const DEFAULT_MAX_PROMPT_CURSOR_BYTES = 4096
+DEFAULT_MAX_PROMPT_DIFF_LINES	export declare const DEFAULT_MAX_PROMPT_DIFF_LINES = 1024
+DEFAULT_MAX_PROMPT_LABELS	export declare const DEFAULT_MAX_PROMPT_LABELS = 32
+DEFAULT_MAX_PROMPT_LABEL_BYTES	export declare const DEFAULT_MAX_PROMPT_LABEL_BYTES = 128
+DEFAULT_MAX_PROMPT_METADATA_BYTES	export declare const DEFAULT_MAX_PROMPT_METADATA_BYTES: number
+DEFAULT_MAX_PROMPT_NAME_BYTES	export declare const DEFAULT_MAX_PROMPT_NAME_BYTES = 256
+DEFAULT_PROMPT_PAGE_SIZE	export declare const DEFAULT_PROMPT_PAGE_SIZE = 100
+DEFAULT_PROMPT_SCHEMA	export declare const DEFAULT_PROMPT_SCHEMA = "prism"
+HARD_MAX_PROMPT_BODY_BYTES	export declare const HARD_MAX_PROMPT_BODY_BYTES: number
+HARD_MAX_PROMPT_CURSOR_BYTES	export declare const HARD_MAX_PROMPT_CURSOR_BYTES: number
+HARD_MAX_PROMPT_DIFF_LINES	export declare const HARD_MAX_PROMPT_DIFF_LINES = 4096
+HARD_MAX_PROMPT_LABELS	export declare const HARD_MAX_PROMPT_LABELS = 128
+HARD_MAX_PROMPT_LABEL_BYTES	export declare const HARD_MAX_PROMPT_LABEL_BYTES = 512
+HARD_MAX_PROMPT_METADATA_BYTES	export declare const HARD_MAX_PROMPT_METADATA_BYTES: number
+HARD_MAX_PROMPT_NAME_BYTES	export declare const HARD_MAX_PROMPT_NAME_BYTES = 1024
+HARD_PROMPT_PAGE_SIZE	export declare const HARD_PROMPT_PAGE_SIZE = 500
+PROMPT_INDEX_NAMES	export declare const PROMPT_INDEX_NAMES: readonly ["prism_prompts_list_idx", "prism_prompt_labels_resolve_idx"]
+PROMPT_MIGRATION_001_INIT	export declare const PROMPT_MIGRATION_001_INIT = "\nCREATE TABLE IF NOT EXISTS prism_prompt_migrations (\n id TEXT NOT NULL PRIMARY KEY,\n name TEXT NOT NULL,\n version INTEGER NOT NULL,\n applied_at TEXT NOT NULL,\n applied_by TEXT NOT NULL,\n checksum TEXT NOT NULL,\n UNIQUE (name, version)\n)
+PROMPT_MIGRATION_CONTRACT	export declare const PROMPT_MIGRATION_CONTRACT: readonly Readonly<
+PostgresPromptStore	export type { PostgresPromptStore, PostgresPromptStoreOptions } from "./postgres.js"
+PostgresPromptStoreOptions	export type { PostgresPromptStore, PostgresPromptStoreOptions } from "./postgres.js"
+PromptDiff	export type { PromptDiff, PromptDiffInput, PromptDiffLine, PromptListQuery, PromptOwnership, PromptRecord, PromptResolveInput, PromptStore, PromptStoreOptions, PromptVersionRef, PutPromptInput, } from "./types.js"
+PromptDiffInput	export type { PromptDiff, PromptDiffInput, PromptDiffLine, PromptListQuery, PromptOwnership, PromptRecord, PromptResolveInput, PromptStore, PromptStoreOptions, PromptVersionRef, PutPromptInput, } from "./types.js"
+PromptDiffLine	export type { PromptDiff, PromptDiffInput, PromptDiffLine, PromptListQuery, PromptOwnership, PromptRecord, PromptResolveInput, PromptStore, PromptStoreOptions, PromptVersionRef, PutPromptInput, } from "./types.js"
+PromptError	export declare class PromptError extends Error
+PromptIntegrityError	export declare class PromptIntegrityError extends PromptError
+PromptLimitError	export declare class PromptLimitError extends PromptError
+PromptLimits	export type { PromptLimits, PromptLimitsInput } from "./limits.js"
+PromptLimitsInput	export type { PromptLimits, PromptLimitsInput } from "./limits.js"
+PromptListQuery	export type { PromptDiff, PromptDiffInput, PromptDiffLine, PromptListQuery, PromptOwnership, PromptRecord, PromptResolveInput, PromptStore, PromptStoreOptions, PromptVersionRef, PutPromptInput, } from "./types.js"
+PromptMigrationError	export declare class PromptMigrationError extends PromptError
+PromptNotFoundError	export declare class PromptNotFoundError extends PromptError
+PromptOwnership	export type { PromptDiff, PromptDiffInput, PromptDiffLine, PromptListQuery, PromptOwnership, PromptRecord, PromptResolveInput, PromptStore, PromptStoreOptions, PromptVersionRef, PutPromptInput, } from "./types.js"
+PromptOwnershipError	export declare class PromptOwnershipError extends PromptError
+PromptPromotionScorerStats	export type { AssertPromptPromotionOptions, PromptPromotionScorerStats, PromptPromotionVerdict, } from "./promotion.js"
+PromptPromotionVerdict	export type { AssertPromptPromotionOptions, PromptPromotionScorerStats, PromptPromotionVerdict, } from "./promotion.js"
+PromptRecord	export type { PromptDiff, PromptDiffInput, PromptDiffLine, PromptListQuery, PromptOwnership, PromptRecord, PromptResolveInput, PromptStore, PromptStoreOptions, PromptVersionRef, PutPromptInput, } from "./types.js"
+PromptResolveInput	export type { PromptDiff, PromptDiffInput, PromptDiffLine, PromptListQuery, PromptOwnership, PromptRecord, PromptResolveInput, PromptStore, PromptStoreOptions, PromptVersionRef, PutPromptInput, } from "./types.js"
+PromptStore	export type { PromptDiff, PromptDiffInput, PromptDiffLine, PromptListQuery, PromptOwnership, PromptRecord, PromptResolveInput, PromptStore, PromptStoreOptions, PromptVersionRef, PutPromptInput, } from "./types.js"
+PromptStoreConformanceFactory	export type { PromptStoreConformanceFactory } from "./conformance.js"
+PromptStoreOptions	export type { PromptDiff, PromptDiffInput, PromptDiffLine, PromptListQuery, PromptOwnership, PromptRecord, PromptResolveInput, PromptStore, PromptStoreOptions, PromptVersionRef, PutPromptInput, } from "./types.js"
+PromptValidationError	export declare class PromptValidationError extends PromptError
+PromptVersionRef	export type { PromptDiff, PromptDiffInput, PromptDiffLine, PromptListQuery, PromptOwnership, PromptRecord, PromptResolveInput, PromptStore, PromptStoreOptions, PromptVersionRef, PutPromptInput, } from "./types.js"
+PutPromptInput	export type { PromptDiff, PromptDiffInput, PromptDiffLine, PromptListQuery, PromptOwnership, PromptRecord, PromptResolveInput, PromptStore, PromptStoreOptions, PromptVersionRef, PutPromptInput, } from "./types.js"
+SqlitePromptStore	export type { SqlitePromptStore, SqlitePromptStoreOptions } from "./sqlite.js"
+SqlitePromptStoreOptions	export type { SqlitePromptStore, SqlitePromptStoreOptions } from "./sqlite.js"
+applyPostgresPromptMigrations	export declare function applyPostgresPromptMigrations(pool: Pool, schema?: string): Promise<readonly AppliedPromptMigration[]>
+applySqlitePromptMigrations	export declare function applySqlitePromptMigrations(db: Database.Database): readonly AppliedPromptMigration[]
+assertBytes	export declare function assertBytes(value: string, maxBytes: number, label: string): void
+assertDiffLines	export declare function assertDiffLines(value: number, maxLines: number, label: string): void
+assertPostgresPromptSchemaReady	export declare function assertPostgresPromptSchemaReady(client: Pick<PoolClient, "query">, schema?: string): Promise<void>
+assertPromptPromotion	export declare function assertPromptPromotion<TInput = unknown, TExpected = unknown>(options: AssertPromptPromotionOptions<TInput, TExpected>): Promise<PromptPromotionVerdict>
+assertSqlitePromptSchemaReady	export declare function assertSqlitePromptSchemaReady(db: Database.Database): void
+buildPromptMigration001Ddl	export declare function buildPromptMigration001Ddl(schemaInput?: string): string
+buildPromptMigrationMetaDdl	export declare function buildPromptMigrationMetaDdl(schemaInput?: string): string
+comparePromptPosition	export declare function comparePromptPosition(name: string, version: number, cursor: PromptCursor | undefined, order: "asc" | "desc"): number
+createMemoryPromptStore	export declare function createMemoryPromptStore(optionsOrInitial?: PromptStoreOptions | readonly PromptRecord[]): PromptStore
+createPostgresPromptStore	export declare function createPostgresPromptStore(options: PostgresPromptStoreOptions): Promise<PostgresPromptStore>
+createPromptStoreOptions	export declare function createPromptStoreOptions(options?: PromptStoreOptions):
+createSqlitePromptStore	export declare function createSqlitePromptStore(options?: SqlitePromptStoreOptions): SqlitePromptStore
+decodePromptCursor	export declare function decodePromptCursor(encoded: string | undefined, scope: NormalizedOwnership, query: Pick<PromptListQuery, "name" | "label" | "order">, limits: PromptLimits): PromptCursor | undefined
+diffPromptRecords	export declare function diffPromptRecords(from: PromptRecord, to: PromptRecord, maxLines: number): PromptDiff
+encodeMetadata	export declare function encodeMetadata(metadata: Readonly<Record<string, unknown>> | undefined, limits: PromptLimits): string | null
+encodePromptCursor	export declare function encodePromptCursor(scope: NormalizedOwnership, query: Pick<PromptListQuery, "name" | "label" | "order">, lastName: string, lastVersion: number): string
+hashPromptBody	export declare function hashPromptBody(body: string): string
+listPostgresPromptMigrations	export declare function listPostgresPromptMigrations(client: Pick<PoolClient, "query">, table: string): Promise<AppliedPromptMigration[]>
+listSqlitePromptMigrations	export declare function listSqlitePromptMigrations(db: Database.Database): AppliedPromptMigration[]
+normalizeLabels	export declare function normalizeLabels(labels: readonly string[] | undefined, limits: PromptLimits): readonly string[]
+normalizeOwnership	export declare function normalizeOwnership(input?: PromptOwnership, fallback?: PromptOwnership): NormalizedOwnership
+normalizeStoredPrompt	export declare function normalizeStoredPrompt(row:
+packageName	export declare const packageName = "@arnilo/prism-prompts"
+preparePrompt	export declare function preparePrompt(input: PutPromptInput, version: number, scope: NormalizedOwnership, limits: PromptLimits, now: () => number): PromptRecord
+promptMigrationContract	export declare function promptMigrationContract(schema?: string): readonly AppliedPromptMigration[]
+publicOwnership	export declare function publicOwnership(scope: NormalizedOwnership): PromptOwnership
+qualifyPromptTable	export declare function qualifyPromptTable(schema: string, table: string): string
+quotePromptIdentifier	export declare function quotePromptIdentifier(value: string): string
+reopenSqlitePromptStore	export declare function reopenSqlitePromptStore(filename: string, options?: Omit<SqlitePromptStoreOptions, "filename" | "database">): SqlitePromptStore
+requireLabel	export declare function requireLabel(value: unknown, limits: PromptLimits): string
+requireName	export declare function requireName(value: unknown, limits: PromptLimits): string
+requireVersion	export declare function requireVersion(value: unknown, label?: string): number
+resolvePromptLimits	export declare function resolvePromptLimits(input?: PromptLimitsInput): PromptLimits
+resolvePromptPageLimit	export declare function resolvePromptPageLimit(value: number | undefined, limits: PromptLimits): number
+runPromptStoreConformance	export declare function runPromptStoreConformance(factory: PromptStoreConformanceFactory): Promise<void>
+scopeKey	export declare function scopeKey(scope: NormalizedOwnership, name: string): string
+throwIfAborted	export declare function throwIfAborted(signal?: AbortSignal): void
+validatePromptIdentifier	export declare function validatePromptIdentifier(value: string, label: string): string

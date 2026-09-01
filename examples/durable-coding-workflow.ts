@@ -16,7 +16,7 @@ import {
   readCodingCheckpointFromState,
   readCodingPlanFile,
   writeCodingPlanFile,
-} from "@arnilo/prism-coding-agent";
+} from "@arnilo/prism-coding-tools/agent";
 import {
   cancelWorkflowRun,
   createWorkflowCheckpoints,
@@ -29,7 +29,7 @@ import {
   startWorkflowBackground,
   suspend,
   type WorkflowEvent,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-core/runtime/workflows";
 
 /**
  * Network-free durable coding-task composition.

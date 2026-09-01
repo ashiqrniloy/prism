@@ -25,7 +25,7 @@ import { assertCompactionStrategyConforms } from "../testing/compaction-conforma
 import { assertExtensionConforms } from "../testing/extension-conformance.js";
 import { assertRunLedgerConforms, runRunLedgerConformance } from "../testing/run-ledger-conformance.js";
 import { assertSessionStoreConforms, runSessionStoreConformance } from "../testing/session-store-conformance.js";
-import { assertToolBlocked, assertToolDispatchConforms } from "../testing/tool-conformance.js";
+import { assertToolBlocked, assertToolDisclosureConforms, assertToolDispatchConforms } from "../testing/tool-conformance.js";
 import { assertToolEffectStoreConforms } from "../testing/tool-effect-store-conformance.js";
 
 void describe("session-store conformance helper", () => {
@@ -220,6 +220,52 @@ void describe("tool conformance helper", () => {
   it("testing/tool-conformance subpath is exported", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.ok(pkg.exports["./testing/tool-conformance"]);
+  });
+});
+
+void describe("tool disclosure conformance helper (plan 041)", () => {
+  function disclosureTools(count: number): ToolDefinition[] {
+    return Array.from({ length: count }, (_, index) => ({
+      name: `disc_${index}`,
+      description: `Handles fixture domain ${index % 8}. Conformance disclosure tool ${index}.`,
+      parameters: { type: "object", properties: {} },
+      execute: (args, context) => ({ toolCallId: context.toolCallId, name: `cap_${index}`, value: args }),
+    }));
+  }
+
+  it("conforms: subset narrowing, deny intersection, deterministic order, inert search output", () => {
+    assertToolDisclosureConforms({
+      tools: [
+        ...disclosureTools(32),
+        {
+          name: "schema_carrier",
+          description: "Carrier of an untrusted JSON schema.",
+          parameters: { type: "object", properties: { query: { type: "string", description: "find-me-unique-schema-token" } } },
+          execute: (args, context) => ({ toolCallId: context.toolCallId, name: "schema_carrier", value: args }),
+        },
+      ],
+      search: { topK: 16 },
+      secrets: ["sk-conformance-secret-value"],
+    });
+  });
+
+  it("secret values never surface even when a description carries one", () => {
+    assert.throws(
+      () =>
+        assertToolDisclosureConforms({
+          tools: [
+            {
+              name: "leaky",
+              description: "sk-conformance-secret-value inside a description.",
+              parameters: { type: "object", properties: {} },
+              execute: (args, context) => ({ toolCallId: context.toolCallId, name: "leaky", value: args }),
+            },
+          ],
+          search: { topK: 4 },
+          secrets: ["sk-conformance-secret-value"],
+        }),
+      /leaked a configured secret/,
+    );
   });
 });
 

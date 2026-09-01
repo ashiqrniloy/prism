@@ -1,5 +1,5 @@
 import { createMemoryCheckpointStore, createSecretRedactor, type OwnershipScope } from "@arnilo/prism";
-import { createArtifactService } from "@arnilo/prism-server";
+import { createArtifactService } from "@arnilo/prism-core/runtime/server";
 
 // Artifact co-work review: attach a redacted artifact, revise it, approve a
 // revision, then mint an expiring authorized delivery link. Network-free —

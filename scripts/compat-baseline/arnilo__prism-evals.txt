@@ -2,6 +2,11 @@ AppendEvaluationFeedbackInput	export type { AppendEvaluationFeedbackInput } from
 ComparisonCandidate	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonOptions, RunExperimentOptions, Sc
 ComparisonRecord	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonOptions, RunExperimentOptions, Sc
 ComparisonReport	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonOptions, RunExperimentOptions, Sc
+CurateResult	export type { CuratedItemDraft, CuratedRun, CurateResult, CurateToItem, CurationSkip, DatasetFromRunsInput, } from "./curate.js"
+CurateToItem	export type { CuratedItemDraft, CuratedRun, CurateResult, CurateToItem, CurationSkip, DatasetFromRunsInput, } from "./curate.js"
+CuratedItemDraft	export type { CuratedItemDraft, CuratedRun, CurateResult, CurateToItem, CurationSkip, DatasetFromRunsInput, } from "./curate.js"
+CuratedRun	export type { CuratedItemDraft, CuratedRun, CurateResult, CurateToItem, CurationSkip, DatasetFromRunsInput, } from "./curate.js"
+CurationSkip	export type { CuratedItemDraft, CuratedRun, CurateResult, CurateToItem, CurationSkip, DatasetFromRunsInput, } from "./curate.js"
 DEFAULT_CANDIDATE_MAX_BYTES	export declare const DEFAULT_CANDIDATE_MAX_BYTES: number
 DEFAULT_COMPARISON_CANDIDATES	export declare const DEFAULT_COMPARISON_CANDIDATES = 8
 DEFAULT_EVALUATION_PAGE_SIZE	export declare const DEFAULT_EVALUATION_PAGE_SIZE = 100
@@ -17,6 +22,7 @@ DEFAULT_TRACE_MAX_BYTES	export declare const DEFAULT_TRACE_MAX_BYTES: number
 DEFAULT_TRACE_PAGES	export declare const DEFAULT_TRACE_PAGES = 20
 DEFAULT_TRACE_PAGE_SIZE	export declare const DEFAULT_TRACE_PAGE_SIZE = 100
 Dataset	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonOptions, RunExperimentOptions, Sc
+DatasetFromRunsInput	export type { CuratedItemDraft, CuratedRun, CurateResult, CurateToItem, CurationSkip, DatasetFromRunsInput, } from "./curate.js"
 DatasetItem	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonOptions, RunExperimentOptions, Sc
 DefineDatasetInput	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonOptions, RunExperimentOptions, Sc
 DefineScorerInput	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonOptions, RunExperimentOptions, Sc
@@ -37,6 +43,7 @@ ExperimentItemResult	export type { ComparisonCandidate, ComparisonRecord, Compar
 ExperimentReport	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonOptions, RunExperimentOptions, Sc
 HARD_CANDIDATE_MAX_BYTES	export declare const HARD_CANDIDATE_MAX_BYTES: number
 HARD_COMPARISON_CANDIDATES	export declare const HARD_COMPARISON_CANDIDATES = 32
+HARD_CURATION_ITEM_MAX_BYTES	export declare const HARD_CURATION_ITEM_MAX_BYTES: number
 HARD_DATASET_ITEMS	export declare const HARD_DATASET_ITEMS = 10000
 HARD_EVALUATION_PAGE_CAP	export declare const HARD_EVALUATION_PAGE_CAP = 1000
 HARD_EXPERIMENT_CONCURRENCY_CAP	export declare const HARD_EXPERIMENT_CONCURRENCY_CAP = 32
@@ -72,16 +79,20 @@ createErpInvariantScorers	export declare function createErpInvariantScorers(): r
 createMemoryEvaluationStore	export declare function createMemoryEvaluationStore(initial?: readonly EvaluationRecord[]): EvaluationStore
 createModelJudge	export declare function createModelJudge<TInput = unknown, TExpected = unknown>(options: ModelJudgeOptions<TInput, TExpected>): Scorer<TInput, TExpected>
 createPersistenceTraceResolver	export declare function createPersistenceTraceResolver(store: ProductionPersistenceStore): TraceResolver
+datasetFromRuns	export declare function datasetFromRuns<TInput = unknown, TExpected = unknown>(input: DatasetFromRunsInput<TInput, TExpected>): Promise<CurateResult<TInput, TExpected>>
+defaultCurateToItem	export declare const defaultCurateToItem: CurateToItem
 defaultToAgentInput	export declare function defaultToAgentInput(input: unknown): string | Message | readonly Message[]
 defineDataset	export declare function defineDataset<TInput = unknown, TExpected = unknown>(input: DefineDatasetInput<TInput, TExpected>): Dataset<TInput, TExpected>
 defineScorer	export declare function defineScorer<TInput = unknown, TExpected = unknown>(input: DefineScorerInput<TInput, TExpected>): Scorer<TInput, TExpected>
 erpInvariantDataset	export declare const erpInvariantDataset: Dataset<unknown, unknown>
 exactOwnershipMatches	export declare function exactOwnershipMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean
+limit	export declare function limit(value: number | undefined, fallback: number, hard: number, name: string): number
 mapPool	export declare function mapPool<T, R>(items: readonly T[], concurrency: number, worker: (item: T, index: number) => Promise<R>, signal?: AbortSignal): Promise<R[]>
 normalizeConcurrency	export declare function normalizeConcurrency(concurrency: number | undefined): number
 normalizePageLimit	export declare function normalizePageLimit(limit: number | undefined): number
 normalizeSampleRate	export declare function normalizeSampleRate(sampleRate: number | undefined): number
 ownershipMatches	export declare function ownershipMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean
+pages	export declare function pages<T>(query: (cursor?: string) => Promise<
 randomId	export declare function randomId(prefix: string): string
 redactEvaluationRecord	export declare function redactEvaluationRecord(record: EvaluationRecord, redactor?: SecretRedactor, secrets?: readonly (string | undefined)[]): EvaluationRecord
 runComparison	export declare function runComparison<TInput = unknown, TExpected = unknown>(options: RunComparisonOptions<TInput, TExpected>): Promise<ComparisonReport>

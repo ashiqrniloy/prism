@@ -98,24 +98,27 @@ const apiPages = [
   "docs/release-and-install.md",
   "docs/performance.md",
   "docs/migration.md",
+  "docs/documents.md",
+  "docs/sheets.md",
+  "docs/diagrams.md",
 ];
 
 const providerPackagePages: ReadonlyArray<[string, string]> = [
-  ["docs/providers/openai.md", "packages/provider-openai/src/index.ts"],
-  ["docs/providers/opencode-go.md", "packages/provider-opencode-go/src/index.ts"],
-  ["docs/providers/openrouter.md", "packages/provider-openrouter/src/index.ts"],
-  ["docs/providers/zai.md", "packages/provider-zai/src/index.ts"],
-  ["docs/providers/deepseek.md", "packages/provider-deepseek/src/index.ts"],
-  ["docs/providers/xai.md", "packages/provider-xai/src/index.ts"],
-  ["docs/providers/clinepass.md", "packages/provider-clinepass/src/index.ts"],
-  ["docs/providers/kimi.md", "packages/provider-kimi/src/index.ts"],
-  ["docs/providers/alibaba.md", "packages/provider-alibaba/src/index.ts"],
-  ["docs/providers/ollama.md", "packages/provider-ollama/src/index.ts"],
-  ["docs/providers/neuralwatt.md", "packages/provider-neuralwatt/src/index.ts"],
-  ["docs/providers/ai-sdk.md", "packages/provider-ai-sdk/src/index.ts"],
-  ["docs/providers/azure.md", "packages/provider-azure/src/index.ts"],
-  ["docs/providers/bedrock.md", "packages/provider-bedrock/src/index.ts"],
-  ["docs/providers/vertex.md", "packages/provider-vertex/src/index.ts"],
+  ["docs/providers/openai.md", "packages/prism-providers/src/openai/index.ts"],
+  ["docs/providers/opencode-go.md", "packages/prism-providers/src/opencode-go/index.ts"],
+  ["docs/providers/openrouter.md", "packages/prism-providers/src/openrouter/index.ts"],
+  ["docs/providers/zai.md", "packages/prism-providers/src/zai/index.ts"],
+  ["docs/providers/deepseek.md", "packages/prism-providers/src/deepseek/index.ts"],
+  ["docs/providers/xai.md", "packages/prism-providers/src/xai/index.ts"],
+  ["docs/providers/clinepass.md", "packages/prism-providers/src/clinepass/index.ts"],
+  ["docs/providers/kimi.md", "packages/prism-providers/src/kimi/index.ts"],
+  ["docs/providers/alibaba.md", "packages/prism-providers/src/alibaba/index.ts"],
+  ["docs/providers/ollama.md", "packages/prism-providers/src/ollama/index.ts"],
+  ["docs/providers/neuralwatt.md", "packages/prism-providers/src/neuralwatt/index.ts"],
+  ["docs/providers/ai-sdk.md", "packages/prism-providers/src/ai-sdk/index.ts"],
+  ["docs/providers/azure.md", "packages/prism-providers/src/azure/index.ts"],
+  ["docs/providers/bedrock.md", "packages/prism-providers/src/bedrock/index.ts"],
+  ["docs/providers/vertex.md", "packages/prism-providers/src/vertex/index.ts"],
 ];
 
 function exportedIdentifiers(packageIndex: string): string[] {
@@ -328,8 +331,8 @@ describe("docs", () => {
       counts: { publishable: number; workspace: number; provider: number; prismFamily: number; capability: number };
       providers: string[];
       umbrella: {
-        "prism-providers": { deps: string[]; omitsProviders: string[] };
-        "prism-all": { deps: string[]; closure: number; omits: string[] };
+        "prism-providers": { deps: string[]; subpaths?: string[]; omitsProviders: string[] };
+        "prism-all"?: { deps: string[]; closure: number; omits: string[] };
       };
       profiles: Record<string, string[]>;
     };
@@ -362,7 +365,14 @@ describe("docs", () => {
 
     it("every generated provider is documented in README and the release page", () => {
       for (const provider of truth.providers) {
-        assert.ok(readme.includes(provider), `README.md must list generated provider ${provider}`);
+        // Plan 054 Task 6: subpath providers appear in the README family row by
+        // short adapter name and in the release page as full specifiers.
+        const short = provider.replace("@arnilo/prism-providers/", "");
+        if (provider.startsWith("@arnilo/prism-providers/")) {
+          assert.ok(readme.includes(short), `README.md must list generated adapter ${short}`);
+        } else {
+          assert.ok(readme.includes(provider), `README.md must list generated provider ${provider}`);
+        }
         assert.ok(release.includes(provider), `release page must list generated provider ${provider}`);
       }
     });
@@ -370,47 +380,42 @@ describe("docs", () => {
     it("umbrella wording matches the generated closures and omissions", () => {
       const providers = truth.umbrella["prism-providers"];
       const all = truth.umbrella["prism-all"];
-      assert.ok(
-        readme.includes(`${providers.deps.length} of ${truth.counts.provider} first-party provider adapters`),
-        `README prism-providers row must state the generated ${providers.deps.length} of ${truth.counts.provider}`,
-      );
-      assert.ok(
-        readme.includes(`${all.deps.length} first-party packages (${all.closure} transitive)`),
-        `README prism-all row must state the generated ${all.deps.length}/${all.closure} closure`,
-      );
-      assert.ok(
-        release.includes(`${providers.deps.length} of ${truth.counts.provider}`),
-        `release page must state ${providers.deps.length} of ${truth.counts.provider} for the provider family`,
-      );
-      assert.ok(
-        release.includes(
-          `reaches ${all.closure} of the ${truth.counts.workspace} workspace packages (${all.deps.length} direct + ${all.closure - all.deps.length} transitive)`,
-        ),
-        "release checklist must state the generated prism-all closure",
-      );
+      if (providers.subpaths !== undefined && providers.deps.length === 0) {
+        // Plan 054 Task 6 family form: all adapters ship as subpaths.
+        assert.ok(
+          readme.includes(`all ${truth.counts.provider} first-party adapters`),
+          `README prism-providers row must state all ${truth.counts.provider} adapters as subpaths`,
+        );
+        assert.ok(
+          release.includes(`${truth.counts.provider} provider adapter subpaths`),
+          `release page must state ${truth.counts.provider} provider adapter subpaths`,
+        );
+      } else {
+        assert.ok(
+          readme.includes(`${providers.deps.length} of ${truth.counts.provider} first-party provider adapters`),
+          `README prism-providers row must state the generated ${providers.deps.length} of ${truth.counts.provider}`,
+        );
+        assert.ok(
+          release.includes(`${providers.deps.length} of ${truth.counts.provider}`),
+          `release page must state ${providers.deps.length} of ${truth.counts.provider} for the provider family`,
+        );
+      }
+      if (all) {
+        assert.ok(
+          release.includes(
+            `reaches ${all.closure} of the ${truth.counts.workspace} workspace packages (${all.deps.length} direct + ${all.closure - all.deps.length} transitive)`,
+          ),
+          "release checklist must state the generated prism-all closure",
+        );
+      } else {
+        // Plan 054 Task 8: prism-all is retired; docs must not claim an umbrella closure.
+        assert.ok(
+          release.includes("Profile manifests (`prism-base`/`prism-code`/`prism-sdk`/`prism-all`) are retired"),
+          "release checklist must record that profile manifests are retired",
+        );
+      }
       for (const omitted of providers.omitsProviders) {
         assert.ok(readme.includes(omitted.replace("@arnilo/prism-provider-", "")), `README must name omitted provider ${omitted}`);
-      }
-      // roadmap-notable omission names as README presents them; a new omission
-      // (0.3.0 membership change) fails here until README + this map grow.
-      const omissionReadable: Record<string, string> = {
-        "@arnilo/prism-document-reader": "document-reader",
-        "@arnilo/prism-openapi-tools": "OpenAPI tools",
-        "@arnilo/prism-session-store-nats": "NATS",
-        "@arnilo/prism-caveman": "Caveman",
-        "@arnilo/prism-ponytail": "Ponytail",
-        "@arnilo/prism-impeccable": "Impeccable",
-        "@arnilo/prism-computer-use-linux": "computer-use-linux",
-        "@arnilo/prism-antigravity-agent": "antigravity-agent",
-        "@arnilo/prism-wiki": "wiki",
-        "@arnilo/prism-graft": "Graft",
-        "@arnilo/prism-obscura": "Obscura",
-        "@arnilo/prism-dev": "dev-inspector",
-      };
-      for (const omitted of all.omits) {
-        const readable = omissionReadable[omitted];
-        assert.ok(readable, `unexpected prism-all omission ${omitted} — add it to the README wording and this map`);
-        assert.ok(readme.includes(readable), `README must name omitted package ${readable}`);
       }
     });
 
@@ -538,7 +543,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.3.2", "root manifest must be at the plan-050 changed-package cut version");
+    assert.equal(pkg.version, "0.4.0", "root manifest must be at the plan 054 0.4 lockstep cut version");
     assert.ok(release.includes("### 0.2.7 publish handoff (plan 027 Task 10)"), "release page missing 0.2.7 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.7 handoff missing rollback notes");
     // Semantic tripwire: the nine 0.2.7 ERP roadmap items are present in the handoff
@@ -575,7 +580,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.3.2", "root manifest must be at the plan-050 changed-package cut version");
+    assert.equal(pkg.version, "0.4.0", "root manifest must be at the plan 054 0.4 lockstep cut version");
     assert.ok(release.includes("### 0.2.8 publish handoff (plan 028 Task 18)"), "release page missing 0.2.8 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.8 handoff missing rollback notes");
     assert.ok(release.includes("client-neutrality"), "0.2.8 handoff must cover client-neutrality");
@@ -605,7 +610,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.3.2", "root manifest must be at the plan-050 changed-package cut version");
+    assert.equal(pkg.version, "0.4.0", "root manifest must be at the plan 054 0.4 lockstep cut version");
     assert.ok(release.includes("### 0.2.9 publish handoff (plan 029 Task 10)"), "release page missing 0.2.9 handoff");
     assert.ok(release.includes("SuperGrok"), "0.2.9 handoff must cover SuperGrok");
     assert.ok(release.includes("@arnilo/prism-impeccable"), "0.2.9 handoff must name impeccable");
@@ -633,7 +638,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.3.2", "root manifest must be at the plan-050 changed-package cut version");
+    assert.equal(pkg.version, "0.4.0", "root manifest must be at the plan 054 0.4 lockstep cut version");
     assert.ok(release.includes("### 0.2.6 publish handoff (plan 026 Task 8)"), "release page missing 0.2.6 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.6 handoff missing rollback notes");
     // Semantic tripwire: the seven 0.2.6 roadmap items are present in the handoff
@@ -730,9 +735,11 @@ describe("docs", () => {
     assert.ok(release.includes("### 0.1.2 publish handoff (plan 014 Task 6)"), "release page missing 0.1.2 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.2 handoff missing rollback notes");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.2] - 2026-08-10"), "root changelog missing 0.1.2 entry");
+    // plan 054 Task 6: the alibaba adapter lives in the providers family; the
+    // 0.1.2 per-package changelog retired with the standalone manifest.
     assert.ok(
-      readFileSync("packages/provider-alibaba/CHANGELOG.md", "utf8").includes("## [0.1.2] - 2026-08-10"),
-      "provider-alibaba/CHANGELOG.md missing 0.1.2 entry",
+      existsSync("packages/prism-providers/src/alibaba/index.ts"),
+      "alibaba adapter must exist in the providers family after plan 054 Task 6",
     );
     assert.ok(alibaba.includes("createAlibabaEmbedder"), "alibaba.md missing embeddings surface");
     assert.ok(alibaba.includes("video_url"), "alibaba.md missing video input surface");
@@ -803,7 +810,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes(`@arnilo/prism@^${pkg.version}`), `release page peer range must be ^${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.equal(pkg.version, "0.3.2", "root manifest must be at the plan-050 changed-package cut version");
+    assert.equal(pkg.version, "0.4.0", "root manifest must be at the plan 054 0.4 lockstep cut version");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -1034,7 +1041,7 @@ describe("docs", () => {
     ]) {
       assert.ok(evidence.includes(deferred), `Phase 7 evidence missing out-of-scope item ${deferred}`);
     }
-    const providerIndexes = ["packages/provider-anthropic/src/index.ts", "packages/provider-google/src/index.ts"]
+    const providerIndexes = ["packages/prism-providers/src/anthropic/index.ts", "packages/prism-providers/src/google/index.ts"]
       .map((path) => readFileSync(path, "utf8"))
       .join("\n");
     for (const forbidden of ["createAnthropicSubscriptionOAuthProvider", "createGeminiCliOAuthProvider", 'kind: "oauth"']) {
@@ -1092,25 +1099,40 @@ describe("docs", () => {
     ]) {
       assert.ok(evidence.includes(deferred), `Phase 8 evidence missing out-of-scope item ${deferred}`);
     }
-    const anthropic = readFileSync("packages/provider-anthropic/package.json", "utf8");
-    const google = readFileSync("packages/provider-google/package.json", "utf8");
+    const anthropic = readFileSync("packages/prism-providers/src/anthropic/index.ts", "utf8");
+    const google = readFileSync("packages/prism-providers/src/google/index.ts", "utf8");
     assert.ok(
-      !anthropic.includes("provider-azure") && !google.includes("provider-vertex"),
-      "consumer providers must stay separate from enterprise cloud packages",
+      !anthropic.includes("../azure/") && !google.includes("../vertex/"),
+      "consumer providers must stay separate from enterprise cloud adapters",
     );
-    assert.ok(existsSync("packages/work-tools"), "work-tools package must exist after Task 7");
-    assert.ok(existsSync("packages/provider-azure"), "provider-azure must exist after Task 4");
-    assert.ok(existsSync("packages/provider-bedrock"), "provider-bedrock must exist after Task 4");
-    assert.ok(existsSync("packages/provider-vertex"), "provider-vertex must exist after Task 4");
+    assert.ok(
+      existsSync("packages/work-tools") || existsSync("packages/prism-core/src/integrations/work"),
+      "work-tools package must exist after Task 7",
+    );
+    // plan 054 Task 6: enterprise cloud adapters ship as family subpaths.
+    const familyExports = JSON.parse(readFileSync("packages/prism-providers/package.json", "utf8")).exports;
+    for (const adapter of ["azure", "bedrock", "vertex"]) {
+      assert.ok(familyExports[`./${adapter}`], `provider-${adapter} must exist as a family subpath after Task 4`);
+    }
     assert.ok(index.includes("(_evidence/)"), "docs/index.md missing review coverage archive entry");
     assert.ok(
       index.includes("providers/azure.md") && index.includes("providers/bedrock.md") && index.includes("providers/vertex.md"),
       "docs/index.md missing enterprise provider links",
     );
     assert.ok(index.includes("(work-tools.md)") && index.includes("(work-connectors.md)"), "docs/index.md missing work-tools navigation");
-    assert.ok(existsSync("packages/work-tools/src/microsoft365.ts"), "microsoft365 adapter source missing");
-    assert.ok(existsSync("packages/work-tools/src/google-workspace.ts"), "google-workspace adapter must exist after Task 8");
-    assert.ok(existsSync("packages/work-tools/src/normalize.ts"), "shared work-tools normalizers missing");
+    assert.ok(
+      existsSync("packages/work-tools/src/microsoft365.ts") || existsSync("packages/prism-core/src/integrations/work/microsoft365.ts"),
+      "microsoft365 adapter source missing",
+    );
+    assert.ok(
+      existsSync("packages/work-tools/src/google-workspace.ts") ||
+        existsSync("packages/prism-core/src/integrations/work/google-workspace.ts"),
+      "google-workspace adapter must exist after Task 8",
+    );
+    assert.ok(
+      existsSync("packages/work-tools/src/normalize.ts") || existsSync("packages/prism-core/src/integrations/work/normalize.ts"),
+      "shared work-tools normalizers missing",
+    );
   });
 
   it("phase 9 evidence freezes conversations, artifacts, consent, co-work, device gating, and 0.1.x exclusions", () => {
@@ -1176,10 +1198,14 @@ describe("docs", () => {
     for (const seam of [
       "packages/ag-ui/src/handler.ts",
       "packages/memory/src/memory.ts",
-      "packages/browser/src/policy.ts",
-      "packages/work-tools/src/idempotency.ts",
-      "packages/credentials-node/src/resolver.ts",
-      "packages/server/src/replay.ts",
+      existsSync("packages/browser/src/policy.ts") ? "packages/browser/src/policy.ts" : "packages/web-tools/src/browser/policy.ts",
+      existsSync("packages/work-tools/src/idempotency.ts")
+        ? "packages/work-tools/src/idempotency.ts"
+        : "packages/prism-core/src/integrations/work/idempotency.ts",
+      existsSync("packages/credentials-node/src/resolver.ts")
+        ? "packages/credentials-node/src/resolver.ts"
+        : "packages/prism-core/src/credentials/node/resolver.ts",
+      existsSync("packages/server/src/replay.ts") ? "packages/server/src/replay.ts" : "packages/prism-core/src/runtime/server/replay.ts",
     ]) {
       assert.ok(existsSync(seam), `Phase 9 must extend existing seam: ${seam}`);
     }
@@ -1250,13 +1276,13 @@ describe("docs", () => {
     for (const seam of [
       "src/contracts.ts",
       "src/resources.ts",
-      "packages/rag/src/indexing.ts",
-      "packages/rag/src/retrieve.ts",
+      "packages/memory/src/rag/indexing.ts",
+      "packages/memory/src/rag/retrieve.ts",
       "packages/memory/src/memory.ts",
       "packages/memory/src/conformance.ts",
       "packages/web-tools/src/normalize.ts",
-      "packages/provider-openai/src/responses.ts",
-      "packages/provider-ai-sdk/src/provider.ts",
+      "packages/prism-providers/src/openai/responses.ts",
+      "packages/prism-providers/src/ai-sdk/provider.ts",
     ]) {
       assert.ok(existsSync(seam), `Phase 10 must extend existing seam: ${seam}`);
     }
@@ -1412,11 +1438,11 @@ describe("docs", () => {
       assert.ok(providerPackages.includes(`| ${provider} |`), `package matrix missing ${provider}`);
     }
     for (const token of [
-      "@arnilo/prism-provider-anthropic",
-      "@arnilo/prism-provider-google",
-      "@arnilo/prism-provider-alibaba",
-      "@arnilo/prism-provider-ollama",
-      "@arnilo/prism-provider-vertex",
+      "@arnilo/prism-providers/anthropic",
+      "@arnilo/prism-providers/google",
+      "@arnilo/prism-providers/alibaba",
+      "@arnilo/prism-providers/ollama",
+      "@arnilo/prism-providers/vertex",
     ]) {
       assert.ok(providerCaching.includes(token), `cache matrix missing ${token}`);
     }
@@ -1447,7 +1473,15 @@ describe("docs", () => {
     for (const dir of ["packages/slack", "packages/teams", "docs/slack.md", "docs/teams.md"]) {
       assert.ok(!existsSync(dir), `Slack/Teams channel surface must not ship in 0.0.14: ${dir}`);
     }
-    for (const barrel of ["packages/credentials-node/src/index.ts", "packages/work-tools/src/index.ts"]) {
+    const barrels = [
+      existsSync("packages/credentials-node/src/index.ts")
+        ? "packages/credentials-node/src/index.ts"
+        : "packages/prism-core/src/credentials/node/index.ts",
+      existsSync("packages/work-tools/src/index.ts")
+        ? "packages/work-tools/src/index.ts"
+        : "packages/prism-core/src/integrations/work/index.ts",
+    ];
+    for (const barrel of barrels) {
       const text = readFileSync(barrel, "utf8").toLowerCase();
       assert.ok(!text.includes("slack"), `${barrel} must not export a Slack channel adapter`);
       assert.ok(!/teams(?!.*capability)/i.test(readFileSync(barrel, "utf8")), `${barrel} must not export a Teams channel adapter`);
@@ -1459,7 +1493,10 @@ describe("docs", () => {
   it("task 6 scope guard: device contracts + browser checkpoint ship; voice/desktop vendor packages deferred", () => {
     // Contracts + deny-by-default policy only; vendor implementations demand-gated to 0.1.x.
     assert.ok(existsSync("src/devices.ts"), "device adapter contract must ship");
-    assert.ok(existsSync("packages/browser/src/checkpoint.ts"), "browser verified-state checkpoint seam must ship");
+    assert.ok(
+      existsSync("packages/browser/src/checkpoint.ts") || existsSync("packages/web-tools/src/browser/checkpoint.ts"),
+      "browser verified-state checkpoint seam must ship",
+    );
     const devices = readFileSync("src/devices.ts", "utf8");
     assert.ok(devices.includes("deny-by-default") || devices.includes("disabled by default"), "device contract must be deny-by-default");
     for (const dir of ["packages/voice", "packages/desktop", "packages/device"]) {
@@ -1494,6 +1531,43 @@ describe("docs", () => {
     }
   });
 
+  // Plan 047 Task 2: the multi-agent patterns page must stay a decision table
+  // (handoff vs supervisor delegation vs A2A) with security truth, and stay
+  // discoverable from the index ("handoff"/"swarm" searchers land here).
+  it("multi-agent-patterns decision table is indexed, cross-linked, and references the handoff example", () => {
+    const page = readFileSync("docs/multi-agent-patterns.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    const supervisors = readFileSync("docs/supervisors.md", "utf8");
+    const patternPage = "multi-agent-patterns.md";
+    // Decision table rows + each pattern's ownership/telemetry implication.
+    for (const token of ["In-session handoff", "Supervisor delegation", "A2A 1.0", "handoff", "swarm"]) {
+      assert.ok(page.includes(token), `docs/multi-agent-patterns.md missing "${token}"`);
+    }
+    assert.ok(index.includes(patternPage), "docs/index.md missing multi-agent-patterns entry");
+    assert.ok(supervisors.includes(patternPage), "docs/supervisors.md missing cross-link to multi-agent-patterns.md");
+    // Security truth: narrowing/no-escalation, redaction, attribution, example link.
+    for (const token of ["narrowIdentity", "unknown_tool", "redactSessionEntry", "identityTelemetryAttributes", "leafId"])
+      assert.ok(page.includes(token), `docs/multi-agent-patterns.md missing security/telemetry token ${token}`);
+    assert.ok(page.includes("../examples/handoff-swarm.ts"), "pattern page missing handoff-swarm example link");
+    assert.ok(existsSync("examples/handoff-swarm.ts"), "missing examples/handoff-swarm.ts");
+
+    // Hierarchical crew (plan 048 Task 2) mapping table + comparative notes + example link
+    for (const token of [
+      "Hierarchical crew",
+      "CrewAI to Prism mapping table",
+      "Where Prism is stronger",
+      "fanOutNode",
+      "joinNode",
+      "conditionalNode",
+      "ArtifactValidator",
+      "../examples/crew-hierarchy.ts",
+    ]) {
+      assert.ok(page.includes(token), `docs/multi-agent-patterns.md missing "${token}"`);
+    }
+    assert.ok(existsSync("examples/crew-hierarchy.ts"), "missing examples/crew-hierarchy.ts");
+    assert.ok(page.includes("untrusted model output"), "docs/multi-agent-patterns.md missing untrusted model output validation note");
+  });
+
   it("phase 8 task 9 docs cover migration, performance benchmark placeholder, and enterprise examples", () => {
     const migration = readFileSync("docs/migration.md", "utf8");
     const performance = readFileSync("docs/performance.md", "utf8");
@@ -1503,7 +1577,10 @@ describe("docs", () => {
       assert.ok(migration.includes(token), `migration.md missing Task 9 token ${token}`);
     }
     assert.ok(performance.includes("benchmark-0.0.13.mjs"), "performance.md missing 0.0.13 benchmark placeholder");
-    assert.ok(release.includes("@arnilo/prism-work-tools"), "release-and-install.md missing work-tools");
+    assert.ok(
+      release.includes("@arnilo/prism-work-tools") || release.includes("@arnilo/prism-core"),
+      "release-and-install.md missing work-tools or prism-core",
+    );
     assert.ok(release.includes("43"), "release-and-install.md missing 43-package count");
     for (const example of [
       "enterprise-identity.ts",
@@ -1538,12 +1615,12 @@ describe("docs", () => {
     ])
       assert.ok(docs.includes(token), `Phase 7 OAuth docs missing ${token}`);
 
-    const providerIndexes = ["packages/provider-anthropic/src/index.ts", "packages/provider-google/src/index.ts"]
+    const providerIndexes = ["packages/prism-providers/src/anthropic/index.ts", "packages/prism-providers/src/google/index.ts"]
       .map((path) => readFileSync(path, "utf8"))
       .join("\n");
     for (const forbidden of ["createAnthropicSubscriptionOAuthProvider", "createGeminiCliOAuthProvider", 'kind: "oauth"'])
       assert.ok(!providerIndexes.includes(forbidden), `unsupported OAuth registration leaked: ${forbidden}`);
-    const openai = readFileSync("packages/provider-openai/src/index.ts", "utf8");
+    const openai = readFileSync("packages/prism-providers/src/openai/index.ts", "utf8");
     assert.ok(openai.includes("createOpenAICodexOAuthProvider") && openai.includes('kind: "oauth"'));
   });
 
@@ -1661,7 +1738,19 @@ describe("docs", () => {
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(dirs.length, 61, "publishable package documentation count drifted");
+    assert.equal(
+      dirs.length,
+      existsSync("packages/office/src")
+        ? 11
+        : existsSync("packages/prism-providers/src")
+          ? 17
+          : existsSync("packages/prism-coding-tools")
+            ? 34
+            : existsSync("packages/prism-core")
+              ? 50
+              : 65,
+      "publishable package documentation count drifted",
+    );
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
@@ -2164,12 +2253,12 @@ describe("docs", () => {
     assert.ok(workflow.includes("PRISM_TEST_POSTGRES_URL"), "postgres-integration must set PRISM_TEST_POSTGRES_URL");
     assert.ok(workflow.includes("npm run test:postgres"), "postgres-integration must run test:postgres");
     assert.ok(
-      workflow.includes("needs: [verify, node20-compat, postgres-integration, codeql-release, supply-chain]"),
+      workflow.includes("needs: [verify, node20-compat, postgres-integration, office-validation, codeql-release, supply-chain]"),
       "publish must wait for compatibility, PostgreSQL, and supply-chain coverage",
     );
     assert.equal(
       packageJson.scripts["test:postgres"],
-      "node scripts/require-postgres-url.mjs && npm run test:postgres --workspace @arnilo/prism-session-store-postgres && npm run test:postgres --workspace @arnilo/prism-memory && npm run test:postgres --workspace @arnilo/prism-enterprise-postgres && node --test scripts/phase7-conformance.test.mjs scripts/phase12-restart-recovery.test.mjs scripts/phase22-conformance.test.mjs",
+      "node scripts/require-postgres-url.mjs && npm run test:postgres --workspace @arnilo/prism-core --if-present && npm run test:postgres --workspace @arnilo/prism-memory && node --test scripts/phase7-conformance.test.mjs scripts/phase12-restart-recovery.test.mjs scripts/phase22-conformance.test.mjs",
       "root test:postgres should require an explicit PostgreSQL URL and cover adapters plus Phase 7/12/22 process conformance, restart recovery, and state concurrency",
     );
 
@@ -2334,7 +2423,7 @@ describe("docs", () => {
       "no auto package discovery",
       "no secret persistence in core",
       "Enterprise PostgreSQL package/docs/example gate",
-      "@arnilo/prism-provider-neuralwatt",
+      "@arnilo/prism-providers/neuralwatt",
       "dist/index.d.ts",
       "examples/neuralwatt-agent-run.ts",
     ]) {
@@ -2659,16 +2748,16 @@ describe("docs", () => {
 
   it("first_party_providers_do_not_implement_deprecated_provider_timeout_retry_knobs", () => {
     for (const dir of [
-      "provider-openai",
-      "provider-openrouter",
-      "provider-opencode-go",
-      "provider-zai",
-      "provider-deepseek",
-      "provider-xai",
-      "provider-clinepass",
-      "provider-kimi",
+      "prism-providers/src/openai",
+      "prism-providers/src/openrouter",
+      "prism-providers/src/opencode-go",
+      "prism-providers/src/zai",
+      "prism-providers/src/deepseek",
+      "prism-providers/src/xai",
+      "prism-providers/src/clinepass",
+      "prism-providers/src/kimi",
     ]) {
-      const combined = tsFiles(`packages/${dir}/src`)
+      const combined = tsFiles(`packages/${dir}`)
         .map((file) => readFileSync(file, "utf8"))
         .join("\n");
       for (const knob of ["timeoutMs", "maxRetries", "maxRetryDelayMs"]) {
@@ -2707,9 +2796,9 @@ describe("docs", () => {
       "src/__tests__/agents.test.ts",
       "src/__tests__/agent-loops.test.ts",
       "src/__tests__/docs.test.ts",
-      "packages/compaction-llm/src/__tests__/strategy.test.ts",
-      "packages/compaction-observational-memory/src/__tests__/runtime.test.ts",
-      "packages/compaction-observational-memory/src/__tests__/workers.test.ts",
+      "packages/memory/src/compaction/llm/__tests__/strategy.test.ts",
+      "packages/memory/src/compaction/observational-memory/__tests__/runtime.test.ts",
+      "packages/memory/src/compaction/observational-memory/__tests__/workers.test.ts",
     ]
       .map((file) => readFileSync(file, "utf8"))
       .join("\n");
@@ -2785,23 +2874,15 @@ describe("docs", () => {
     for (const name of ["createAgent", "createAgentSession"]) {
       assert.ok(readme.includes(name), `README.md does not mention ${name}`);
     }
-    for (const pkg of [
-      "@arnilo/prism-provider-openai",
-      "@arnilo/prism-provider-opencode-go",
-      "@arnilo/prism-provider-openrouter",
-      "@arnilo/prism-provider-zai",
-      "@arnilo/prism-provider-kimi",
-      "@arnilo/prism-provider-neuralwatt",
-      "@arnilo/prism-provider-alibaba",
-      "@arnilo/prism-provider-ollama",
-    ]) {
-      assert.ok(readme.includes(pkg), `README.md does not mention ${pkg}`);
+    for (const adapter of ["openai", "opencode-go", "openrouter", "zai", "kimi", "neuralwatt", "alibaba", "ollama"]) {
+      assert.ok(readme.includes(adapter), `README.md does not mention the ${adapter} provider adapter`);
     }
+    assert.ok(readme.includes("@arnilo/prism-providers"), "README.md does not mention the provider family");
     for (const phrase of [
       "docs/provider-caching.md",
       "best-effort explicit cache hints",
       "best-effort implicit prefix caching",
-      "14 of 17 first-party provider adapters",
+      "all 17 first-party adapters",
     ]) {
       assert.ok(readme.includes(phrase), `README.md cache/provider summary missing ${phrase}`);
     }
@@ -2974,7 +3055,7 @@ describe("docs", () => {
     }
     for (const phrase of [
       "**49 publishable manifests**: the root `@arnilo/prism` core package plus **48 workspace packages**",
-      "all fourteen `@arnilo/prism-provider-*` packages",
+      "all 17 adapters ship as `dist/<adapter>` subpaths in one tarball",
       "All 56 manifests (root + 55 workspace packages: 49 code packages + 6 pure-manifest family/profile packages",
       "eight provider packages' `src/__tests__/live.test.ts`",
       "Enterprise PostgreSQL package/docs/example gate",
@@ -2982,16 +3063,22 @@ describe("docs", () => {
     ]) {
       assert.ok(release.includes(phrase), `docs/release-and-install.md missing ${phrase}`);
     }
-    for (const phrase of [
-      "phase48 neuralwatt package exports types and umbrella membership are release-gated",
-      "@arnilo/prism-provider-neuralwatt",
-      "dist/index.js",
-      "dist/index.d.ts",
-      "@arnilo/prism-providers must hard-depend on NeuralWatt",
-      "@arnilo/prism-all must hard-depend on provider umbrella",
-      "@arnilo/prism-all must hard-depend on work-tools",
-      "@arnilo/prism-all must hard-depend on policy",
-    ]) {
+    const expectedPackagingPhrases = [
+      "phase48 neuralwatt adapter ships in the provider family and umbrella membership is release-gated",
+      "@arnilo/prism-providers/neuralwatt",
+      "dist/neuralwatt/index.js",
+      "dist/neuralwatt/index.d.ts",
+      ...(existsSync("packages/prism-all")
+        ? [
+            "@arnilo/prism-all must hard-depend on the provider family",
+            "@arnilo/prism-all must hard-depend on AG-UI only",
+            ...(existsSync("packages/prism-core")
+              ? ["@arnilo/prism-all must hard-depend on prism-core"]
+              : ["@arnilo/prism-all must hard-depend on work-tools", "@arnilo/prism-all must hard-depend on policy"]),
+          ]
+        : ["provider family must peer @arnilo/prism"]),
+    ];
+    for (const phrase of expectedPackagingPhrases) {
       assert.ok(packaging.includes(phrase), `packaging.test.ts missing ${phrase}`);
     }
   });
@@ -3579,18 +3666,18 @@ describe("docs", () => {
 
     assert.ok(caching.includes("### Per-provider cache behavior"), "provider-caching.md missing per-provider matrix");
     for (const pkg of [
-      "@arnilo/prism-provider-openai",
-      "@arnilo/prism-provider-openrouter",
-      "@arnilo/prism-provider-opencode-go",
-      "@arnilo/prism-provider-zai",
-      "@arnilo/prism-provider-kimi",
-      "@arnilo/prism-provider-neuralwatt",
-      "@arnilo/prism-provider-ai-sdk",
-      "@arnilo/prism-provider-alibaba",
-      "@arnilo/prism-provider-ollama",
-      "@arnilo/prism-provider-deepseek",
-      "@arnilo/prism-provider-xai",
-      "@arnilo/prism-provider-clinepass",
+      "@arnilo/prism-providers/openai",
+      "@arnilo/prism-providers/openrouter",
+      "@arnilo/prism-providers/opencode-go",
+      "@arnilo/prism-providers/zai",
+      "@arnilo/prism-providers/kimi",
+      "@arnilo/prism-providers/neuralwatt",
+      "@arnilo/prism-providers/ai-sdk",
+      "@arnilo/prism-providers/alibaba",
+      "@arnilo/prism-providers/ollama",
+      "@arnilo/prism-providers/deepseek",
+      "@arnilo/prism-providers/xai",
+      "@arnilo/prism-providers/clinepass",
     ]) {
       assert.ok(caching.includes(pkg), `provider-caching.md matrix missing ${pkg}`);
     }
@@ -3624,9 +3711,9 @@ describe("docs", () => {
     assert.ok(deepseek.includes("prompt_cache_hit_tokens"), "deepseek.md missing prompt_cache_hit_tokens");
     assert.ok(deepseek.includes("reasoning_content"), "deepseek.md missing reasoning_content");
     assert.ok(thinking.includes("reasoning_content"), "thinking-and-reasoning.md missing reasoning_content");
-    assert.ok(thinking.includes("@arnilo/prism-provider-deepseek"), "thinking-and-reasoning.md missing DeepSeek");
-    assert.ok(thinking.includes("@arnilo/prism-provider-xai"), "thinking-and-reasoning.md missing xAI");
-    assert.ok(thinking.includes("@arnilo/prism-provider-clinepass"), "thinking-and-reasoning.md missing ClinePass");
+    assert.ok(thinking.includes("@arnilo/prism-providers/deepseek"), "thinking-and-reasoning.md missing DeepSeek");
+    assert.ok(thinking.includes("@arnilo/prism-providers/xai"), "thinking-and-reasoning.md missing xAI");
+    assert.ok(thinking.includes("@arnilo/prism-providers/clinepass"), "thinking-and-reasoning.md missing ClinePass");
     assert.ok(clinepass.includes("cline-pass/"), "clinepass.md missing cline-pass/");
     assert.ok(!caching.includes("cli-chat-proxy.grok.com"), "provider-caching.md must not document cli-chat-proxy");
   });
@@ -3636,16 +3723,8 @@ describe("docs", () => {
     assert.ok(index.includes("(_evidence/)"), "docs/index.md does not link the review coverage archive");
 
     const coverage = readFileSync("docs/_evidence/review-coverage-2026-07-17-provider-validation.md", "utf8");
-    for (const pkg of [
-      "provider-openai",
-      "provider-kimi",
-      "provider-zai",
-      "provider-openrouter",
-      "provider-opencode-go",
-      "provider-neuralwatt",
-      "provider-ai-sdk",
-    ]) {
-      assert.ok(coverage.includes(pkg), `provider validation matrix missing ${pkg}`);
+    for (const adapter of ["openai", "kimi", "zai", "openrouter", "opencode-go", "neuralwatt", "ai-sdk"]) {
+      assert.ok(coverage.includes(`@arnilo/prism-providers/${adapter}`), `provider validation matrix missing ${adapter}`);
     }
     for (const id of ["R-001", "R-002", "R-003", "R-004", "R-005", "R-006", "R-008", "R-009", "R-010", "R-011", "R-012"]) {
       assert.ok(coverage.includes(id), `provider validation matrix missing review id ${id}`);
@@ -3762,7 +3841,7 @@ describe("docs", () => {
     ]) {
       assert.ok(page.includes(phrase), `docs/providers/ai-sdk.md missing ${phrase}`);
     }
-    assert.ok(caching.includes("@arnilo/prism-provider-ai-sdk"), "provider-caching.md missing AI SDK adapter row");
+    assert.ok(caching.includes("@arnilo/prism-providers/ai-sdk"), "provider-caching.md missing AI SDK adapter row");
     assert.ok(conformance.includes("## AI SDK adapter checklist"), "provider-conformance.md missing AI SDK checklist");
     assert.ok(conformance.includes("Version + specification gate"), "provider-conformance.md missing AI SDK matrix gate");
     assert.ok(packages.includes("No Prism-side catalog by design"), "provider-packages.md missing AI SDK no-catalog note");
@@ -3780,7 +3859,7 @@ describe("docs", () => {
       coverage.split("## Provider package validation matrix\n")[1]?.split("\n## Frozen official evidence sources")[0] ?? "";
 
     for (const name of ["openai", "kimi", "zai", "openrouter", "opencode-go", "neuralwatt", "ai-sdk"]) {
-      const pkg = `@arnilo/prism-provider-${name}`;
+      const pkg = `@arnilo/prism-providers/${name}`;
       assert.ok(index.includes(`(providers/${name}.md)`), `docs/index.md missing providers/${name}.md`);
       assert.ok(caching.includes(pkg), `provider-caching.md missing ${pkg}`);
       assert.ok(thinking.includes(pkg), `thinking-and-reasoning.md missing ${pkg}`);
@@ -3822,7 +3901,19 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(manifests.filter((manifest) => !manifest.private).length, 61, "frozen publishable package count drifted");
+    assert.equal(
+      manifests.filter((manifest) => !manifest.private).length,
+      existsSync("packages/office/src")
+        ? 11
+        : existsSync("packages/prism-providers/src")
+          ? 17
+          : existsSync("packages/prism-coding-tools")
+            ? 34
+            : existsSync("packages/prism-core")
+              ? 50
+              : 65,
+      "frozen publishable package count drifted",
+    );
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {
@@ -3922,7 +4013,9 @@ describe("docs", () => {
   it("phase 4 coding-tool capability gaps docs cover outputMode glob delete move RBW fuzzy non-goals", () => {
     const tools = readFileSync("docs/coding-agent-tools.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const readme = readFileSync("packages/coding-agent/README.md", "utf8");
+    const readme = existsSync("packages/coding-agent/README.md")
+      ? readFileSync("packages/coding-agent/README.md", "utf8")
+      : readFileSync("packages/prism-coding-tools/README.md", "utf8");
     for (const [name, text, tokens] of [
       [
         "coding-agent-tools.md",

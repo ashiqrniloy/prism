@@ -12,6 +12,8 @@ Interactive TUI (**C-012**) is **out of scope** for Plan 057 and deferred. Workf
 
 **Phase 11 addendum (2026-07-16):** schedules use a separate generic checkpoint namespace plus per-fire `LeaseStore` claims and deterministic queued-run IDs; SQLite/PostgreSQL need no workflow-specific table or migration. Background execution remains `enqueueWorkflow` + the existing coordinator. Nested workflow nodes call the same runner with inherited policy/ownership/checkpoint/event seams. Shared JSON state is validated, redacted, byte/history bounded, and checkpointed by version. Replay creates a new checkpoint with immutable source lineage and copied terminal evidence; approval-bearing prior paths cannot be copied.
 
+**Plan 045 Task 2 addendum (2026-08-31):** loop nodes keep one acyclic graph node while durable checkpoints append bounded, versioned iteration records. A tool sub-step can suspend before side effects; approved resume re-enters only the incomplete iteration. `node_iteration_started` / `node_iteration_finished` expose stable iteration IDs and bounded/redacted outputs. Replay starts a fresh cursor and emits new iteration events. A host saga treats the loop as one aggregate step and compensates its iteration IDs in reverse order; no workflow-specific SQL or implicit saga coupling is added.
+
 ## When to use it
 
 - **Workflow package authors** should start here, then follow [Agent/session runtime](agent-session-runtime.md), [Agent loops](agent-loops.md), [Runs and usage ledger](runs-and-usage.md), [CLI/RPC](cli-rpc.md), and [Database persistence](database-persistence.md).
@@ -139,6 +141,7 @@ import type { OwnershipScope, SecretRedactor } from "@arnilo/prism";
 
 /** Schema version for checkpoint payload layout (package-owned). */
 export const WORKFLOW_CHECKPOINT_SCHEMA_VERSION = 1 as const;
+export const WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION = 1 as const;
 
 export type WorkflowRunStatus =
   | "queued"
@@ -158,6 +161,16 @@ export interface WorkflowNodeCheckpoint {
   readonly sessionId?: string;
   readonly leafId?: string;
   readonly runId?: string;
+  /** Optional additive loop cursor/ledger; absent on legacy checkpoints. */
+  readonly iteration?: number;
+  readonly lastOutput?: unknown;
+  readonly iterations?: readonly {
+    readonly schemaVersion: typeof WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION;
+    readonly iteration: number;
+    readonly iterationId: string;
+    readonly done: boolean;
+    readonly output?: unknown;
+  }[];
 }
 
 export interface WorkflowCheckpointValue {
@@ -259,6 +272,17 @@ export type WorkflowEvent =
   | { readonly type: "workflow_finished"; readonly workflowId: string; readonly runId: string; readonly status: WorkflowRunStatus; readonly timestamp: string }
   | { readonly type: "node_started"; readonly workflowId: string; readonly runId: string; readonly nodeId: string; readonly timestamp: string }
   | { readonly type: "node_finished"; readonly workflowId: string; readonly runId: string; readonly nodeId: string; readonly timestamp: string }
+  | {
+      readonly type: "node_iteration_started" | "node_iteration_finished";
+      readonly workflowId: string;
+      readonly runId: string;
+      readonly nodeId: string;
+      readonly iteration: number;
+      readonly iterationId: string;
+      readonly done?: boolean;
+      readonly output?: unknown;
+      readonly timestamp: string;
+    }
   | { readonly type: "node_failed"; readonly workflowId: string; readonly runId: string; readonly nodeId: string; readonly error: { readonly message: string; readonly code?: string | number }; readonly timestamp: string }
   | { readonly type: "node_skipped"; readonly workflowId: string; readonly runId: string; readonly nodeId: string; readonly reason?: string; readonly timestamp: string }
   | { readonly type: "checkpoint_saved"; readonly workflowId: string; readonly runId: string; readonly version: number; readonly timestamp: string }

@@ -38,8 +38,12 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "@arnilo/prism";
-import { createCodingApprovalPolicy, createSandboxCodingComposition, resolveSandboxCapabilities } from "@arnilo/prism-coding-security";
-import { createCliRunner } from "@arnilo/prism-work-tools";
+import { createCliRunner } from "@arnilo/prism-core/integrations/work";
+import {
+  createCodingApprovalPolicy,
+  createSandboxCodingComposition,
+  resolveSandboxCapabilities,
+} from "../packages/prism-coding-tools/dist/security/index.js";
 
 const BLOCKER_IDS = ["resume-validation", "work-tools-env", "sandbox-capabilities"];
 const blockerIds = new Set();

@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-azure` registers an Azure OpenAI / Foundry Chat Completions provider that uses host-supplied Entra workload identity (Bearer) or Azure resource keys (`api-key`). Deployment URLs keep the configured endpoint host (custom subdomain, private endpoint, or VNet FQDN).
+`@arnilo/prism-providers/azure` registers an Azure OpenAI / Foundry Chat Completions provider that uses host-supplied Entra workload identity (Bearer) or Azure resource keys (`api-key`). Deployment URLs keep the configured endpoint host (custom subdomain, private endpoint, or VNet FQDN).
 
 ## When to use it
 
@@ -11,7 +11,7 @@ Use it for enterprise Azure OpenAI / Foundry deployments with Managed Identity o
 ## Inputs / request
 
 ```ts
-import { createAzureOpenAIProviderPackage } from "@arnilo/prism-provider-azure";
+import { createAzureOpenAIProviderPackage } from "@arnilo/prism-providers/azure";
 
 createAzureOpenAIProviderPackage({
   endpoint: "https://my-resource.openai.azure.com",
@@ -72,4 +72,4 @@ Register via `createExtensionKernel().load([createAzureOpenAIProviderPackage(...
 - [Provider packages](../provider-packages.md)
 - [Model routing](../model-routing.md)
 - [Credential storage](../credential-storage.md)
-- Package README: [`@arnilo/prism-provider-azure`](../../packages/provider-azure/README.md)
+- Package README: [`@arnilo/prism-providers` family README](../../packages/prism-providers/README.md)

@@ -1,0 +1,64 @@
+{
+  "version": "0.4.0",
+  "independent": false,
+  "dryRun": false,
+  "order": [
+    "@arnilo/prism",
+    "@arnilo/prism-coding-tools",
+    "@arnilo/prism-mcp",
+    "@arnilo/prism-memory",
+    "@arnilo/prism-office",
+    "@arnilo/prism-providers",
+    "@arnilo/prism-antigravity-agent",
+    "@arnilo/prism-core",
+    "@arnilo/prism-web-tools",
+    "@arnilo/prism-ag-ui",
+    "@arnilo/prism-acp-agent"
+  ],
+  "packages": [
+    {
+      "name": "@arnilo/prism",
+      "status": "available"
+    },
+    {
+      "name": "@arnilo/prism-coding-tools",
+      "status": "available"
+    },
+    {
+      "name": "@arnilo/prism-mcp",
+      "status": "available"
+    },
+    {
+      "name": "@arnilo/prism-memory",
+      "status": "available"
+    },
+    {
+      "name": "@arnilo/prism-office",
+      "status": "available"
+    },
+    {
+      "name": "@arnilo/prism-providers",
+      "status": "available"
+    },
+    {
+      "name": "@arnilo/prism-antigravity-agent",
+      "status": "available"
+    },
+    {
+      "name": "@arnilo/prism-core",
+      "status": "available"
+    },
+    {
+      "name": "@arnilo/prism-web-tools",
+      "status": "available"
+    },
+    {
+      "name": "@arnilo/prism-ag-ui",
+      "status": "available"
+    },
+    {
+      "name": "@arnilo/prism-acp-agent",
+      "status": "available"
+    }
+  ]
+}

@@ -14,7 +14,7 @@ Implementation is **shipped** for transport and OpenAI serialization primitives 
 
 ## Inventory (2026-07-14 baseline)
 
-Static scan of root `src/providers/` and `packages/provider-*/src/` before Plan 054 implementation.
+Static scan of root `src/providers/` and `packages/prism-providers/src/*/` before Plan 054 implementation.
 
 ### Duplicated protocol helpers (baseline → Task 2)
 
@@ -34,8 +34,8 @@ Static scan of root `src/providers/` and `packages/provider-*/src/` before Plan 
 | --- | --- | --- |
 | Runtime retry | `@arnilo/prism` `AgentConfig.retry` / `RunOptions.retry` | Classifies `ErrorInfo.code`; provider packages set numeric HTTP `code` on errors |
 | `ProviderRequestOptions.maxRetries` / `timeoutMs` | Contracts | **Removed in 0.1.5**; use `RunOptions.signal` / `AgentConfig.retry` / `RunOptions.retry` |
-| NeuralWatt `classifyNeuralWattError` | `packages/provider-neuralwatt` | Parses `Retry-After`, `error.retry_after`, `retry_strategy`; no extra network calls |
-| Quota endpoint throttling | `packages/provider-neuralwatt/quota.ts` | Documents 1 rps limit; caller-owned cache |
+| NeuralWatt `classifyNeuralWattError` | `packages/prism-providers/src/neuralwatt` | Parses `Retry-After`, `error.retry_after`, `retry_strategy`; no extra network calls |
+| Quota endpoint throttling | `packages/prism-providers/src/neuralwatt/quota.ts` | Documents 1 rps limit; caller-owned cache |
 
 No generic core helper extracts `Retry-After` / `x-request-id` for all providers yet.
 
@@ -310,7 +310,7 @@ Every migrated provider must pass this shared matrix (implemented in Task 1 test
 | Finding / capability | Plan 054 task | Primitive / doc |
 | --- | --- | --- |
 | R-008 Unbounded SSE/error bodies | 1, 2 | `readSseEvents`, `readBoundedResponseText` |
-| R-009 OAuth device polling | 3 | `packages/provider-openai/src/oauth.ts` |
+| R-009 OAuth device polling | 3 | `packages/prism-providers/src/openai/src/oauth.ts` |
 | R-010 Duplicated helpers | 1, 2 | This page + subpaths |
 | C-002 Native structured output | 4 | `StructuredOutputOptions` |
 | C-004 Shared resilient transport | 1, 2 | `providers/transport` |

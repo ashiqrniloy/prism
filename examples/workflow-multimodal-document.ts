@@ -9,7 +9,13 @@ import {
   providerTextDelta,
   providerUsage,
 } from "@arnilo/prism";
-import { agentNode, createMemoryWorkflowCheckpoints, defineWorkflow, functionNode, runWorkflow } from "@arnilo/prism-workflows";
+import {
+  agentNode,
+  createMemoryWorkflowCheckpoints,
+  defineWorkflow,
+  functionNode,
+  runWorkflow,
+} from "@arnilo/prism-core/runtime/workflows";
 
 // Offline multimodal document workflow. Host constructs a bounded inline PDF
 // block, passes it through a function node, then an agent node summarizes it.

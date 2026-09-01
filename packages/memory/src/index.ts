@@ -59,6 +59,17 @@ export {
 export { buildMemoryDdl, buildVectorSearchDdl, DEFAULT_MEMORY_SCHEMA, DEFAULT_VECTOR_TABLE } from "./postgres-ddl.js";
 export { qualifyTable, quoteIdentifier, validateIdentifier } from "./postgres-identifiers.js";
 export { validateAgainstJsonSchema } from "./schema.js";
+export type { ImportanceFromReflection, ResolvedRecallScoring } from "./scoring.js";
+export {
+  clampImportance,
+  deriveEntryImportance,
+  NEUTRAL_IMPORTANCE,
+  normalizeImportance,
+  RECALL_OVERSAMPLE,
+  recencyOf,
+  rerankRecallHits,
+  resolveRecallScoring,
+} from "./scoring.js";
 export type {
   CreateMemoryOptions,
   Embedder,
@@ -85,6 +96,7 @@ export type {
   RebuildIndexResult,
   RecallOptions,
   RecallResult,
+  RecallScoringOptions,
   RememberInput,
   RememberOptions,
   RememberResult,

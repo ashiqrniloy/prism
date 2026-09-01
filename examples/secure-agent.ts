@@ -8,7 +8,7 @@ import {
   providerDone,
   providerTextDelta,
 } from "@arnilo/prism";
-import { createJsonSchemaArgumentValidator } from "@arnilo/prism-tool-validator-json-schema";
+import { createJsonSchemaArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
 
 // Network-free secure baseline. Tool calls suspend before side effects.
 export async function demo() {

@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-ai-sdk` adapts a host-supplied AI SDK `LanguageModelV4` into a Prism `AIProvider`. It maps Prism messages, tools, and structured-output options into `doStream` call options, then translates stream parts into Prism provider events incrementally.
+`@arnilo/prism-providers/ai-sdk` adapts a host-supplied AI SDK `LanguageModelV4` into a Prism `AIProvider`. It maps Prism messages, tools, and structured-output options into `doStream` call options, then translates stream parts into Prism provider events incrementally.
 
 Core `@arnilo/prism` does not depend on the AI SDK.
 
@@ -24,7 +24,7 @@ Do not use it as a credential store, model catalog, or high-level `streamText`/`
 ## Inputs / request
 
 ```ts
-import { createAiSdkProvider } from "@arnilo/prism-provider-ai-sdk";
+import { createAiSdkProvider } from "@arnilo/prism-providers/ai-sdk";
 
 createAiSdkProvider(options: {
   model: LanguageModelV4;
@@ -91,7 +91,7 @@ No AI SDK stream part is silently coerced into Prism content: the table above ma
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import { createAiSdkProvider } from "@arnilo/prism-provider-ai-sdk";
+import { createAiSdkProvider } from "@arnilo/prism-providers/ai-sdk";
 
 const provider = createAiSdkProvider({ model: hostCreatedLanguageModelV4 });
 

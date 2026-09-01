@@ -1,4 +1,4 @@
-import { constants as fsConstants, readFileSync } from "node:fs";
+import { existsSync, constants as fsConstants, readdirSync, readFileSync } from "node:fs";
 import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import type { Writable } from "node:stream";
@@ -10,6 +10,8 @@ export type InitProvider = string;
 
 export interface InitOptions {
   readonly directory: string;
+  readonly template?: string;
+  readonly listTemplates?: boolean;
   readonly provider: InitProvider;
   readonly withWorkflows: boolean;
   readonly withEvals: boolean;
@@ -22,6 +24,8 @@ export interface InitRuntime {
   readonly stderr: Writable;
   /** Override template root (tests). Defaults to package `templates/init`. */
   readonly templatesRoot?: string;
+  /** Override gallery root (tests). Defaults to package `templates`. */
+  readonly galleryRoot?: string;
   /** Override package version stamped into generated package.json. */
   readonly packageVersion?: string;
   /** Working directory used to resolve relative destinations. Defaults to process.cwd(). */
@@ -31,10 +35,18 @@ export interface InitRuntime {
 export interface InitResult {
   readonly targetDir: string;
   readonly writtenFiles: readonly string[];
+  readonly template?: string;
   readonly provider: InitProvider;
   readonly withWorkflows: boolean;
   readonly withEvals: boolean;
   readonly totalBytes: number;
+}
+
+export interface TemplateInfo {
+  readonly name: string;
+  readonly description: string;
+  readonly version?: string;
+  readonly path: string;
 }
 
 interface ProviderSpec {
@@ -80,16 +92,75 @@ export function listInitProviders(templatesRoot?: string): readonly string[] {
   return Object.freeze([...loadProvidersCatalog(templatesRoot).keys()]);
 }
 
-export function getInitUsage(templatesRoot?: string): string {
-  const providers = listInitProviders(templatesRoot).join("|");
-  return `Usage: prism init <dir> [options]
+/** Template list discovered from the templates gallery. */
+export function listInitTemplates(galleryRoot = defaultGalleryRoot()): readonly TemplateInfo[] {
+  try {
+    const entries = readdirSync(galleryRoot, { withFileTypes: true });
+    const templates: TemplateInfo[] = [];
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const manifestPath = join(galleryRoot, entry.name, "manifest.json");
+        if (existsSync(manifestPath)) {
+          try {
+            const raw = JSON.parse(readFileSync(manifestPath, "utf8"));
+            if (raw && typeof raw === "object" && typeof raw.name === "string") {
+              templates.push({
+                name: raw.name,
+                description: typeof raw.description === "string" ? raw.description : "",
+                version: typeof raw.version === "string" ? raw.version : undefined,
+                path: join(galleryRoot, entry.name),
+              });
+            }
+          } catch {
+            // skip invalid manifests
+          }
+        } else if (entry.name === "init") {
+          templates.push({
+            name: "init",
+            description: "Minimal starter Prism agent with one selected provider and offline mock test",
+            path: join(galleryRoot, "init"),
+          });
+        }
+      }
+    }
+    return Object.freeze(
+      templates.sort((a, b) => {
+        if (a.name === "init") return -1;
+        if (b.name === "init") return 1;
+        return a.name.localeCompare(b.name);
+      }),
+    );
+  } catch {
+    return Object.freeze([
+      {
+        name: "init",
+        description: "Minimal starter Prism agent with one selected provider and offline mock test",
+        path: join(galleryRoot, "init"),
+      },
+    ]);
+  }
+}
 
-Create a minimal TypeScript Prism project with one explicit provider and an offline mock test.
+export function isInitTemplate(value: string, galleryRoot?: string): boolean {
+  return listInitTemplates(galleryRoot).some((t) => t.name === value);
+}
+
+export function getInitUsage(templatesRoot?: string, galleryRoot?: string): string {
+  const providers = listInitProviders(templatesRoot).join("|");
+  const templates = listInitTemplates(galleryRoot)
+    .map((t) => t.name)
+    .join("|");
+  return `Usage: prism init <dir> [options]
+       prism init --list-templates
+
+Create a minimal TypeScript Prism project or scaffold from a template gallery.
 
 Arguments:
   <dir>                      Destination directory (created if missing)
 
 Options:
+  --template <name>          Template name (${templates || "init|deep-research"}). Default: init
+  --list-templates           List available templates from the gallery
   --provider <name>          Provider id (${providers}). Default: mock
   --with-workflows           Add optional workflows dependency and example
   --with-evals               Add optional evals dependency and example
@@ -98,6 +169,8 @@ Options:
 
 Examples:
   prism init my-agent
+  prism init my-research --template deep-research
+  prism init --list-templates
   prism init my-agent --provider openai
   prism init my-agent --provider openai --with-workflows
 `;
@@ -105,14 +178,17 @@ Examples:
 
 export const initUsage = getInitUsage();
 
-export function parseInitArgs(argv: readonly string[], templatesRoot?: string): InitOptions {
+export function parseInitArgs(argv: readonly string[], templatesRoot?: string, galleryRoot?: string): InitOptions {
   let directory: string | undefined;
+  let template: string | undefined;
+  let listTemplates = false;
   let provider: InitProvider = "mock";
   let withWorkflows = false;
   let withEvals = false;
   let force = false;
   let help = false;
   const providers = listInitProviders(templatesRoot);
+  const availableTemplates = listInitTemplates(galleryRoot);
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]!;
@@ -124,12 +200,28 @@ export function parseInitArgs(argv: readonly string[], templatesRoot?: string): 
       force = true;
       continue;
     }
+    if (arg === "--list-templates") {
+      listTemplates = true;
+      continue;
+    }
     if (arg === "--with-workflows") {
       withWorkflows = true;
       continue;
     }
     if (arg === "--with-evals") {
       withEvals = true;
+      continue;
+    }
+    if (arg === "--template") {
+      const value = argv[i + 1];
+      if (value === undefined || value.startsWith("-")) {
+        throw new InitUsageError("Missing value for --template");
+      }
+      i += 1;
+      if (!availableTemplates.some((t) => t.name === value)) {
+        throw new InitUsageError(`Unknown template: ${value}. Expected one of ${availableTemplates.map((t) => t.name).join(", ")}`);
+      }
+      template = value;
       continue;
     }
     if (arg === "--provider") {
@@ -153,12 +245,14 @@ export function parseInitArgs(argv: readonly string[], templatesRoot?: string): 
     directory = arg;
   }
 
-  if (!help && directory === undefined) {
+  if (!help && !listTemplates && directory === undefined) {
     throw new InitUsageError("Missing destination directory");
   }
 
   return {
     directory: directory ?? ".",
+    template,
+    listTemplates,
     provider,
     withWorkflows,
     withEvals,
@@ -170,14 +264,31 @@ export function parseInitArgs(argv: readonly string[], templatesRoot?: string): 
 export async function runInitCommand(argv: readonly string[], runtime: InitRuntime): Promise<number> {
   let options: InitOptions;
   try {
-    options = parseInitArgs(argv, runtime.templatesRoot);
+    options = parseInitArgs(argv, runtime.templatesRoot, runtime.galleryRoot);
   } catch (error) {
-    write(runtime.stderr, `${error instanceof Error ? error.message : String(error)}\n${getInitUsage(runtime.templatesRoot)}`);
+    write(
+      runtime.stderr,
+      `${error instanceof Error ? error.message : String(error)}\n${getInitUsage(runtime.templatesRoot, runtime.galleryRoot)}`,
+    );
     return 2;
   }
 
   if (options.help) {
-    write(runtime.stdout, getInitUsage(runtime.templatesRoot));
+    write(runtime.stdout, getInitUsage(runtime.templatesRoot, runtime.galleryRoot));
+    return 0;
+  }
+
+  if (options.listTemplates) {
+    const templates = listInitTemplates(runtime.galleryRoot);
+    const lines = [
+      "Available templates:",
+      ...templates.map((t) => `  ${t.name.padEnd(16)} - ${t.description}`),
+      "",
+      "Usage:",
+      "  prism init <dir> --template <name>",
+      "",
+    ];
+    write(runtime.stdout, lines.join("\n"));
     return 0;
   }
 
@@ -187,6 +298,7 @@ export async function runInitCommand(argv: readonly string[], runtime: InitRunti
       runtime.stdout,
       [
         `Created Prism project in ${result.targetDir}`,
+        ...(result.template ? [`  template: ${result.template}`] : []),
         `  provider: ${result.provider}`,
         `  files: ${result.writtenFiles.length}`,
         `  bytes: ${result.totalBytes}`,
@@ -204,7 +316,7 @@ export async function runInitCommand(argv: readonly string[], runtime: InitRunti
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (error instanceof InitUsageError) {
-      write(runtime.stderr, `${message}\n${getInitUsage(runtime.templatesRoot)}`);
+      write(runtime.stderr, `${message}\n${getInitUsage(runtime.templatesRoot, runtime.galleryRoot)}`);
       return 2;
     }
     write(runtime.stderr, `${message}\n`);
@@ -222,6 +334,7 @@ export async function createInitProject(
   const cwd = runtime.cwd ?? process.cwd();
   const targetDir = resolveInitDirectory(options.directory, cwd);
   const templatesRoot = runtime.templatesRoot ?? defaultTemplatesRoot();
+  const galleryRoot = runtime.galleryRoot ?? defaultGalleryRoot();
   const version = runtime.packageVersion ?? (await readPackageVersion());
   const catalog = loadProvidersCatalog(templatesRoot);
   const provider = catalog.get(options.provider);
@@ -232,19 +345,38 @@ export async function createInitProject(
 
   await assertDestinationWritable(targetDir, options.force);
 
-  const tokens = buildTokens({
-    projectName,
-    version,
-    provider,
-    withWorkflows: options.withWorkflows,
-    withEvals: options.withEvals,
-  });
+  const isCustomTemplate = Boolean(options.template && options.template !== "init");
+  let planned: readonly { relativePath: string; sourcePath: string }[];
+  let tokens: Record<string, string>;
 
-  const planned = await planFiles({
-    templatesRoot,
-    withWorkflows: options.withWorkflows,
-    withEvals: options.withEvals,
-  });
+  if (isCustomTemplate) {
+    const templateName = options.template!;
+    const templateDir = join(galleryRoot, templateName);
+    if (!(await exists(templateDir))) {
+      const available = listInitTemplates(galleryRoot);
+      throw new InitUsageError(`Unknown template: ${templateName}. Expected one of ${available.map((t) => t.name).join(", ")}`);
+    }
+    planned = await planTemplateFiles(templateDir);
+    tokens = buildTokensForTemplate({
+      projectName,
+      version,
+      templateName,
+      provider,
+    });
+  } else {
+    tokens = buildTokens({
+      projectName,
+      version,
+      provider,
+      withWorkflows: options.withWorkflows,
+      withEvals: options.withEvals,
+    });
+    planned = await planFiles({
+      templatesRoot,
+      withWorkflows: options.withWorkflows,
+      withEvals: options.withEvals,
+    });
+  }
 
   if (!options.force) {
     for (const file of planned) {
@@ -272,6 +404,7 @@ export async function createInitProject(
   return {
     targetDir,
     writtenFiles,
+    template: options.template,
     provider: options.provider,
     withWorkflows: options.withWorkflows,
     withEvals: options.withEvals,
@@ -281,6 +414,70 @@ export async function createInitProject(
 
 export function defaultTemplatesRoot(): string {
   return join(dirname(fileURLToPath(import.meta.url)), "..", "templates", "init");
+}
+
+export function defaultGalleryRoot(): string {
+  return join(dirname(fileURLToPath(import.meta.url)), "..", "templates");
+}
+
+async function planTemplateFiles(templateDir: string): Promise<readonly { relativePath: string; sourcePath: string }[]> {
+  const files: { relativePath: string; sourcePath: string }[] = [];
+
+  async function walk(dir: string, baseRel = ""): Promise<void> {
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name);
+      const relPath = baseRel ? `${baseRel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        await walk(fullPath, relPath);
+      } else if (entry.isFile()) {
+        if (entry.name === "manifest.json") continue;
+        let targetRel = relPath.endsWith(".tmpl") ? relPath.slice(0, -5) : relPath;
+        if (targetRel.startsWith("src/tests/")) {
+          targetRel = `src/__tests__/${targetRel.slice("src/tests/".length)}`;
+        }
+        files.push({ relativePath: targetRel, sourcePath: fullPath });
+      }
+    }
+  }
+
+  await walk(templateDir);
+  return files.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+}
+
+function buildTokensForTemplate(input: {
+  readonly projectName: string;
+  readonly version: string;
+  readonly templateName: string;
+  readonly provider: ProviderSpec;
+}): Record<string, string> {
+  const dependencies: Record<string, string> = {
+    "@arnilo/prism": input.version,
+    "@arnilo/prism-memory": input.version,
+    "@arnilo/prism-web-tools": input.version,
+    "@arnilo/prism-workflows": input.version,
+  };
+
+  const dependencyLines = Object.entries(dependencies)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, ver]) => `    ${JSON.stringify(name)}: ${JSON.stringify(ver)}`)
+    .join(",\n");
+
+  return {
+    __PROJECT_NAME__: input.projectName,
+    __PRISM_VERSION__: input.version,
+    __TEMPLATE_NAME__: input.templateName,
+    __PROVIDER_ID__: input.provider.id,
+    __PROVIDER_PACKAGE__: input.provider.packageName ?? "",
+    __DEPENDENCIES__: dependencyLines,
+    __PROVIDER_IMPORTS__: input.provider.imports,
+    __PROVIDER_EXPRESSION__: input.provider.providerExpression,
+    __MODEL_EXPRESSION__: input.provider.modelExpression,
+    __ENV_EXAMPLE__: "",
+    __NEXT_STEPS_LIVE__: "",
+    __OPTIONAL_DOCS__: "",
+    __PROVIDER_README_NOTE__: "",
+  };
 }
 
 export function isInitProvider(value: string, templatesRoot?: string): value is InitProvider {

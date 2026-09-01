@@ -1,6 +1,6 @@
 import type { Message as AgUiMessage, Interrupt } from "@ag-ui/core";
 import type { AgentEvent, SecretRedactor, ThinkingContent, ToolCallContent, ToolResult } from "@arnilo/prism";
-import type { CodingLifecycleEvent, FileChangedEvent } from "@arnilo/prism-coding-agent";
+import type { CodingLifecycleEvent, FileChangedEvent } from "@arnilo/prism-coding-tools/agent";
 import { assertBoundedJson } from "./input.js";
 import type { ResolvedAgUiLimits } from "./limits.js";
 import type { CoWorkEvent, CoWorkKind } from "./types.js";

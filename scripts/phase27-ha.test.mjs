@@ -25,8 +25,8 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { createPostgresEnterpriseState } from "@arnilo/prism-enterprise-postgres";
-import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres";
+import { createPostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
+import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
 import { Pool } from "pg";
 
 const url = process.env.PRISM_TEST_POSTGRES_URL;

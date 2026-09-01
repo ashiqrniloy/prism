@@ -450,3 +450,94 @@ describe("RunLedger runtime wiring", () => {
     await assert.rejects(agent.createSession({ id: "s-ledger-fail" }).run("stream and fail"), /ledger write failed/);
   });
 });
+
+describe("RunLedger prompt provenance (plan 042 Task 3)", () => {
+  const validRef = { name: "support-agent", version: 7, hash: `sha256:${"a".repeat(64)}` };
+
+  it("copies the promptVersion ref onto start and finish run records", async () => {
+    const { ledger, runs } = createMemoryLedger();
+    const agent = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta("hello"), providerDone()]),
+      runLedger: ledger,
+    });
+    const session = agent.createSession({ id: "s-prompt" });
+
+    await session.run("hi", { promptVersion: validRef });
+
+    assert.equal(runs.length, 2);
+    assert.deepEqual((runs[0] as { promptVersion?: unknown }).promptVersion, validRef);
+    assert.deepEqual((runs[1] as { promptVersion?: unknown }).promptVersion, validRef);
+  });
+
+  it("leaves promptVersion absent when the host does not supply it", async () => {
+    const { ledger, runs } = createMemoryLedger();
+    const agent = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta("hello"), providerDone()]),
+      runLedger: ledger,
+    });
+
+    await agent.createSession({ id: "s-plain" }).run("hi");
+
+    assert.equal(runs.length, 2);
+    assert.ok(
+      runs.every((record) => !("promptVersion" in record)),
+      "absent ref must not add a field",
+    );
+  });
+
+  it("rejects malformed promptVersion refs fail-closed before the run starts", async () => {
+    const { ledger, runs } = createMemoryLedger();
+    const agent = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta("hello"), providerDone()]),
+      runLedger: ledger,
+    });
+    const session = agent.createSession({ id: "s-invalid" });
+
+    await assert.rejects(
+      session.run("hi", { promptVersion: { name: "support-agent", version: 7, hash: "sha256:ABCD" } }),
+      /hash must be "sha256:" plus 64 lowercase hex/,
+    );
+    await assert.rejects(
+      session.run("hi", { promptVersion: { name: "support-agent", version: 0, hash: validRef.hash } }),
+      /version must be an integer in/,
+    );
+    await assert.rejects(
+      session.run("hi", { promptVersion: { name: "", version: 7, hash: validRef.hash } }),
+      /name must be 1-256 UTF-8 bytes/,
+    );
+    await assert.rejects(
+      session.run("hi", { promptVersion: { name: "x".repeat(257), version: 7, hash: validRef.hash } }),
+      /name must be 1-256 UTF-8 bytes/,
+    );
+    await assert.rejects(
+      // @ts-expect-error deliberately malformed ref for the fail-closed check
+      session.run("hi", { promptVersion: "support-agent@7" }),
+      /must be a PromptVersionRef object/,
+    );
+    assert.equal(runs.length, 0, "invalid refs must never reach the ledger");
+  });
+
+  it("ledger export drops refs denied by field policy and redacts secret material inside refs", () => {
+    const denied = redactRunLedgerRecord(
+      { id: "run_1", sessionId: "s1", status: "succeeded", startedAt: "2024-01-01T00:00:00Z", promptVersion: validRef },
+      undefined,
+      (input) => (input.path === "promptVersion" ? { action: "deny" } : { action: "allow" }),
+    ) as { promptVersion?: unknown };
+    assert.equal(denied.promptVersion, "[DENIED]");
+
+    const redacted = redactRunLedgerRecord(
+      {
+        id: "run_2",
+        sessionId: "s1",
+        status: "succeeded",
+        startedAt: "2024-01-01T00:00:00Z",
+        promptVersion: { name: "secret-token", version: 1, hash: `sha256:${"b".repeat(64)}` },
+      },
+      createSecretRedactor(["secret-token"]),
+    ) as { promptVersion?: { name?: string } };
+    assert.equal(redacted.promptVersion?.name, "[REDACTED]");
+  });
+});

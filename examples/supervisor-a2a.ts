@@ -1,5 +1,5 @@
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
-import { type A2AAgentCard, createA2AClient, createA2AHandler, createSupervisor } from "@arnilo/prism-supervisor";
+import { type A2AAgentCard, createA2AClient, createA2AHandler, createSupervisor } from "@arnilo/prism-core/runtime/supervisor";
 
 const ownership = { tenantId: "example", userId: "operator" };
 const child = () =>

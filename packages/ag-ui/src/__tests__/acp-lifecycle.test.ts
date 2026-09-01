@@ -10,7 +10,7 @@ import { describe, it } from "node:test";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import type { AgentRunLifecycle, AgentSession } from "@arnilo/prism";
 import { createSecretRedactor } from "@arnilo/prism";
-import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-agent";
+import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-tools/agent";
 import { createAcpLifecycleMapper, createPrismAcpAgent } from "../acp/index.js";
 
 const authorization = { ownership: { userId: "user-1" } };

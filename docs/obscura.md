@@ -1,6 +1,6 @@
 # Obscura browser engine
 
-Optional `@arnilo/prism-obscura` support for a host-installed
+Optional `@arnilo/prism-web-tools/obscura` support for a host-installed
 [Obscura](https://github.com/h4ckf0r0day/obscura) headless browser. Obscura is never
 bundled — install the binary (or use the `h4ckf0r0day/obscura` Docker image) and point
 the package at it.
@@ -11,7 +11,7 @@ the package at it.
 ## Install
 
 ```bash
-npm install @arnilo/prism-obscura
+npm install @arnilo/prism-web-tools @arnilo/prism-mcp
 ```
 
 ## Process lifecycle (`spawnObscuraProcess`)
@@ -23,7 +23,7 @@ environment (`PATH`, `HOME`), and insecure flags (`--allow-private-network`,
 is set explicitly.
 
 ```ts
-import { spawnObscuraProcess } from "@arnilo/prism-obscura";
+import { spawnObscuraProcess } from "@arnilo/prism-web-tools/obscura";
 
 const obscura = spawnObscuraProcess({
   command: "/usr/local/bin/obscura",
@@ -53,7 +53,7 @@ Connects to `obscura mcp` (stdio or Streamable HTTP) through
 allow-list, so future Obscura tools keep flowing through.
 
 ```ts
-import { createObscuraMcpTools } from "@arnilo/prism-obscura";
+import { createObscuraMcpTools } from "@arnilo/prism-web-tools/obscura";
 
 const obscura = await createObscuraMcpTools({
   transport: { type: "stdio", command: "/usr/local/bin/obscura", args: ["mcp"] },
@@ -68,7 +68,7 @@ await obscura.close();
 - Effects: read/diagnostic/waiter/capture tools are effect-free; navigation,
   interaction, evaluation, cookie/storage writes, tabs, and any unknown future tool
   are exclusive, serialized external mutations (Obscura keeps one live page).
-- Naming: default `obscura_` prefix coexists with `@arnilo/prism-browser`;
+- Naming: default `obscura_` prefix coexists with the `browser` subpath;
   `namePrefix: ""` preserves native Obscura names.
 - Transports: stdio configs are validated with the same fail-closed command policy;
   Streamable HTTP endpoints outside loopback require explicit `allowRemoteHttp` and
@@ -82,8 +82,8 @@ host's Playwright via `chromium.connectOverCDP`. `connect()` and browser launch 
 never used; Prism never launches browsers.
 
 ```ts
-import { connectObscuraCdp } from "@arnilo/prism-obscura";
-import { createBrowserTools } from "@arnilo/prism-browser";
+import { connectObscuraCdp } from "@arnilo/prism-web-tools/obscura";
+import { createBrowserTools } from "@arnilo/prism-web-tools/browser";
 
 const session = await connectObscuraCdp({
   command: "/usr/local/bin/obscura",
@@ -107,7 +107,7 @@ await session.close(); // browser first, then the owned process
   APIs (`browser.newBrowserCDPSession()`, `context.newCDPSession(page)`); the package
   adds no CDP command allow-list.
 - Concurrency limit: pages served by one Obscura worker share one V8 isolate —
-  CPU-bound page JavaScript can delay sibling pages. Keep `@arnilo/prism-browser`
+  CPU-bound page JavaScript can delay sibling pages. Keep the `browser` subpath
   limits authoritative; size Obscura's `--workers` for the host.
 - Screenshots/PDF require a render-enabled Obscura build and still obey the browser
   package's artifact/byte policy.
@@ -119,7 +119,7 @@ child processes. Returns standard Prism `web_search`/`web_fetch` tools plus expl
 `obscura_fetch`/`obscura_scrape` (disable with `nativeTools: false`).
 
 ```ts
-import { createObscuraWebTools } from "@arnilo/prism-obscura";
+import { createObscuraWebTools } from "@arnilo/prism-web-tools/obscura";
 
 const web = createObscuraWebTools({ command: "/usr/local/bin/obscura" });
 agent.tools = [...agent.tools, ...web.tools];
@@ -149,7 +149,7 @@ agent.tools = [...agent.tools, ...web.tools];
 - Docker-style invocations work through `argsBefore` (e.g.
   `["run", "--rm", "-i", "h4ckf0r0day/obscura"]`).
 - An opt-in live smoke test runs against a real installed binary with
-  `npm run test:live -w @arnilo/prism-obscura` plus `PRISM_LIVE_OBSCURA=1` and
+  `npm run test:live -w @arnilo/prism-web-tools` plus `PRISM_LIVE_OBSCURA=1` and
   `PRISM_OBSCURA_BIN=/path/to/obscura`.
 
 ## Host conformance (one generic integration)

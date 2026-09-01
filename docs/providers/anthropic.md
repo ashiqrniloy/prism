@@ -2,13 +2,13 @@
 
 ## What it does
 
-`@arnilo/prism-provider-anthropic` is the first-party Anthropic Messages provider for Prism (`POST /v1/messages`). Setup is side-effect-free: no network, env scan, or keychain lookup during import/setup. Wire format is package-local (OpenCode Go / Kimi Anthropic routes are pattern-only, not a shared core serializer).
+`@arnilo/prism-providers/anthropic` is the first-party Anthropic Messages provider for Prism (`POST /v1/messages`). Setup is side-effect-free: no network, env scan, or keychain lookup during import/setup. Wire format is package-local (OpenCode Go / Kimi Anthropic routes are pattern-only, not a shared core serializer).
 
 ## When to use it
 
 Use for native Claude Messages (tools, `cache_control`, thinking/reasoning, media, usage, abort). Prefer this over the AI SDK escape hatch when Anthropic is a primary coding host.
 
-Do **not** use for OpenCode Go Anthropic *route* hosting (`@arnilo/prism-provider-opencode-go`), automatic credential discovery, Claude Code credential-file/setup-token import, or Claude.ai subscription login/routing. This package is API-key-only.
+Do **not** use for OpenCode Go Anthropic *route* hosting (`@arnilo/prism-providers/opencode-go`), automatic credential discovery, Claude Code credential-file/setup-token import, or Claude.ai subscription login/routing. This package is API-key-only.
 
 ## Inputs / request
 
@@ -18,7 +18,7 @@ import {
   createAnthropicMessagesProvider,
   listAnthropicModels,
   defineAnthropicModel,
-} from "@arnilo/prism-provider-anthropic";
+} from "@arnilo/prism-providers/anthropic";
 
 createAnthropicProviderPackage(options?: AnthropicProviderPackageOptions): ProviderPackage
 createAnthropicMessagesProvider(options?): AIProvider
@@ -60,7 +60,7 @@ Featured offline aliases: `claude-opus-4-8`, `claude-sonnet-5`, `claude-haiku-4-
 
 ```ts
 import { createProviderRegistry, createModelRegistry } from "@arnilo/prism";
-import { createAnthropicProviderPackage, listAnthropicModels } from "@arnilo/prism-provider-anthropic";
+import { createAnthropicProviderPackage, listAnthropicModels } from "@arnilo/prism-providers/anthropic";
 
 const api = /* ExtensionAPI or host registries */;
 api.registerProviderPackage(createAnthropicProviderPackage({ apiKey: hostKey }));
@@ -73,7 +73,7 @@ api.registerProviderPackage(createAnthropicProviderPackage({ apiKey: hostKey, mo
 ## Extension and configuration notes
 
 - Register via `defineProviderPackage` / host registries; no package auto-discovery.
-- AI SDK (`@arnilo/prism-provider-ai-sdk`) remains an escape hatch, not the primary Anthropic path.
+- AI SDK (`@arnilo/prism-providers/ai-sdk`) remains an escape hatch, not the primary Anthropic path.
 - Live smoke: `PRISM_LIVE_PROVIDER_TESTS=1` + `ANTHROPIC_API_KEY`.
 - Anthropic says OAuth is for purchasers' ordinary Claude Code/native-app use; developers building products must use Claude Console API keys or a supported cloud provider and may not offer Claude.ai login or route Free/Pro/Max credentials ([legal and compliance](https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance)). Prism therefore has no Anthropic subscription OAuth API or token-import shortcut.
 
@@ -90,4 +90,4 @@ api.registerProviderPackage(createAnthropicProviderPackage({ apiKey: hostKey, mo
 - [Provider caching](../provider-caching.md): `cache_control` breakpoints.
 - [Thinking and reasoning](../thinking-and-reasoning.md): portable thinking helpers.
 - [Provider conformance](../provider-conformance.md): network-free assertions.
-- Package README: [`packages/provider-anthropic/README.md`](../../packages/provider-anthropic/README.md)
+- Package README: [`@arnilo/prism-providers` family README](../../packages/prism-providers/README.md)

@@ -363,16 +363,19 @@ const coverageActive = process.execArgv.some((a) => /^--test-coverage-(?:lines|f
     for (const [name, bytes] of Object.entries(fixtures)) {
       const payload = payloadFor(bytes);
       applyFieldPolicy(payload, protectedPolicy, protectedOptions("audit"));
-      redactSecrets(payload, ["absent-needle"]);
-      let best = { baseline: Number.POSITIVE_INFINITY, policy: Number.POSITIVE_INFINITY, total: Number.POSITIVE_INFINITY };
-      for (let run = 0; run < 3; run += 1) {
+      for (let w = 0; w < 100; w += 1) {
+        redactSecrets(payload, ["absent-needle"]);
+        applyFieldPolicy(payload, protectedPolicy, protectedOptions("audit"));
+      }
+      let best = { baseline: 0, policy: 0, ratio: Number.POSITIVE_INFINITY };
+      for (let run = 0; run < 5; run += 1) {
         const pair = measurePair(payload, iterations[name as keyof typeof iterations]);
-        const total = pair.baseline + pair.policy;
-        if (total < best.total) best = { ...pair, total };
+        const ratio = pair.policy / pair.baseline;
+        if (ratio < best.ratio) best = { ...pair, ratio };
       }
       const baselineMs = best.baseline;
       const policyMs = best.policy;
-      const ratio = policyMs / baselineMs;
+      const ratio = best.ratio;
       ratios.push(
         `${name} (${bytes} B): policy ${policyMs.toFixed(2)} ms vs redactor-walk ${baselineMs.toFixed(2)} ms → ${(ratio * 100).toFixed(1)}%`,
       );

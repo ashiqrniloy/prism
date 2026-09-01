@@ -114,6 +114,7 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "SessionSearchUnsupportedError",
   "SkillDisclosureError",
   "SkillLoadError",
+  "ToolDisclosureError",
   "RunFeedbackError",
   "TrustDeniedError",
   "DEFAULT_SESSION_SEARCH_LIMIT",
@@ -159,7 +160,10 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "isContextBudgetError",
   "isSkillDisclosureError",
   "isSkillLoadError",
+  "isToolDisclosureError",
+  "resolveToolsDisclosure",
   "SKILL_LOAD_ERROR_CODE",
+  "TOOL_DISCLOSURE_ERROR_CODE",
   "resolveContextBudget",
   "DEFAULT_LEDGER_BATCH_ENTRIES",
   "HARD_LEDGER_BATCH_ENTRIES",
@@ -252,6 +256,18 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "createStaticTrustPolicy",
   "createToolParameterValidator",
   "createToolRegistry",
+  "createActiveToolSet",
+  "createSearchToolsTool",
+  "createToolSearchIndex",
+  "createToolSearchState",
+  "DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES",
+  "DEFAULT_TOOLS_SEARCH_TOP_K",
+  "HARD_MAX_TOOLS_INDEX",
+  "HARD_MAX_TOOLS_SEARCH_QUERY_BYTES",
+  "HARD_MAX_TOOLS_SEARCH_TOP_K",
+  "scoreTools",
+  "SEARCH_TOOLS_TOOL_NAME",
+  "selectDisclosedTools",
   "DEFAULT_LOAD_SKILL_TOOL_NAME",
   "DEFAULT_MAX_AUDIO_DURATION_MS",
   "DEFAULT_MAX_CONVERSATION_CURSOR_BYTES",
@@ -438,6 +454,7 @@ const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [
   "RunLimitBreach",
   "RunLimits",
   "RunOptions",
+  "PromptVersionRef",
   "ToolDefinition",
   "ToolRegistry",
   "ToolResult",
@@ -593,6 +610,12 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "LoadedExtension",
   "LoadedSkillBodiesEntry",
   "LoadedSkillSet",
+  "ActiveToolSet",
+  "ToolSearchIndex",
+  "ToolSearchMatch",
+  "ToolSearchState",
+  "ToolsDisclosure",
+  "ToolsSearchOptions",
   "FileContent",
   "FoldToolResultsContext",
   "ExecutionAction",
@@ -747,16 +770,9 @@ function extractIndexExports(src: string): { value: Set<string>; type: Set<strin
 // with packaging.test.ts / install-smoke.test.ts). Adding a package is one line.
 const packages = [
   { dir: ".", name: "@arnilo/prism", isCore: true },
-  { dir: "packages/provider-openai", name: "@arnilo/prism-provider-openai" },
-  { dir: "packages/provider-opencode-go", name: "@arnilo/prism-provider-opencode-go" },
-  { dir: "packages/provider-openrouter", name: "@arnilo/prism-provider-openrouter" },
-  { dir: "packages/provider-zai", name: "@arnilo/prism-provider-zai" },
-  { dir: "packages/provider-kimi", name: "@arnilo/prism-provider-kimi" },
-  { dir: "packages/provider-neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
-  { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
-  { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
+  { dir: "packages/prism-providers", name: "@arnilo/prism-providers" },
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
-  { dir: "packages/enterprise-postgres", name: "@arnilo/prism-enterprise-postgres" },
+  { dir: "packages/prism-core", name: "@arnilo/prism-core" },
 ];
 
 type Manifest = {
@@ -866,7 +882,7 @@ describe("public-export contract (build-time, pre-pack)", () => {
       default: "./dist/testing/provider-conformance.js",
     });
 
-    const memoryRuntimeDts = readFileSync(join(repoRoot, "packages/compaction-observational-memory/dist/runtime.d.ts"), "utf8");
+    const memoryRuntimeDts = readFileSync(join(repoRoot, "packages/memory/dist/compaction/observational-memory/runtime.d.ts"), "utf8");
     assert.ok(memoryRuntimeDts.includes("appendEntry"), "observational-memory runtime d.ts missing appendEntry");
     assert.equal(memoryRuntimeDts.includes("readonly store"), false, "observational-memory runtime d.ts still exposes store option");
   });

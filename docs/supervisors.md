@@ -78,6 +78,7 @@ Supervisors propagate parent `identity` and `effectStore` to every child agent/r
 
 ## Related APIs
 
+- [Multi-agent patterns](multi-agent-patterns.md): the decision table comparing this delegation pattern with in-session handoff (swarm) and A2A; handoff keeps one transcript, delegation keeps separate child runs — choose by boundary, budget, and telemetry needs.
 - [Agent identity](agent-identity.md): host-verified identity and narrow delegation.
 - [A2A interoperability](a2a.md): separate remote protocol boundary. `A2ATaskLifecycle` adapts host durable agent/workflow state directly; it does not route A2A execution through local supervisor child planning.
 - [Workflows](workflows.md): preferred deterministic orchestration.

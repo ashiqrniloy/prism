@@ -15,7 +15,7 @@ import {
   recallObservationalMemory,
   recallObservationalMemoryBranchPage,
   renderObservationalMemory,
-} from "@arnilo/prism-compaction-observational-memory";
+} from "@arnilo/prism-memory/compaction/observational-memory";
 
 const model = { provider: "mock", model: "demo" };
 const workerModel = { provider: "mock", model: "memory" };

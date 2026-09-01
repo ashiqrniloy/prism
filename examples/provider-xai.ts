@@ -1,5 +1,5 @@
 import { createExtensionKernel } from "@arnilo/prism";
-import { createXaiProviderPackage } from "@arnilo/prism-provider-xai";
+import { createXaiProviderPackage } from "@arnilo/prism-providers/xai";
 
 export async function demo() {
   const kernel = createExtensionKernel({ errorPolicy: "throw" });

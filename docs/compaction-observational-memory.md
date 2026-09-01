@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-compaction-observational-memory` is an optional package for source-backed observational memory and fast compaction.
+`@arnilo/prism-memory/compaction/observational-memory` is an optional subpath for source-backed observational memory and fast compaction.
 
 Current status: ledger/projection/render/recall utilities, explicit worker runtime, fast compaction strategy, inert extension helper, recall tool, and status/view command factories are available.
 
@@ -107,7 +107,7 @@ import {
   createRecallMemoryTool,
   recallObservationalMemory,
   renderObservationalMemory,
-} from "@arnilo/prism-compaction-observational-memory";
+} from "@arnilo/prism-memory/compaction/observational-memory";
 
 const om = createObservationalMemory({
   observation: { provider: observerProvider, model: observerModel, messageTokens: 10_000 },
@@ -174,7 +174,7 @@ Hosts that need parent recall of child *source* work compose it themselves: wrap
 
 ```ts
 import { createId, type SessionStore } from "@arnilo/prism";
-import { isEligibleObservationSourceEntry } from "@arnilo/prism-compaction-observational-memory";
+import { isEligibleObservationSourceEntry } from "@arnilo/prism-memory/compaction/observational-memory";
 
 function funnelChildMessagesToWorkspace(store: SessionStore, workspaceSessionId: string): SessionStore {
   return {

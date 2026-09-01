@@ -1,4 +1,4 @@
-import { createJsonSchemaArgumentValidator } from "@arnilo/prism-tool-validator-json-schema";
+import { createJsonSchemaArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
 import { createBraveSearch, createFirecrawlExtractor, createFirecrawlFetch, createWebTools } from "@arnilo/prism-web-tools";
 
 const reply = (value: unknown) => new Response(JSON.stringify(value), { headers: { "content-type": "application/json" } });

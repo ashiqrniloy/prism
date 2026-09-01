@@ -18,7 +18,7 @@ Baseline: `@arnilo/prism` **0.3.0**+; `templates/init` and `templates/provider` 
 
 ## Tasks
 
-- [ ] Task 1 — Primitive Review: Template Mechanism Over Existing Scaffold
+- [x] Task 1 — Primitive Review: Template Mechanism Over Existing Scaffold (2026-08-31)
   - Acceptance Criteria:
     - Functional: inventory `src/cli-init.ts` (current scaffold flow, provider selection, offline test generation) and `templates/init`/`templates/provider` (directory conventions, manifest shape). Confirm: templates are static directories + a data manifest; `--template <name>` selects the root; unknown name fails closed with the available list.
     - Performance: scaffold time within existing init envelope.
@@ -38,7 +38,7 @@ Baseline: `@arnilo/prism` **0.3.0**+; `templates/init` and `templates/provider` 
       npx --package @arnilo/prism prism init my-research --list-templates
       ```
     - Files to Create/Edit:
-      - `src/cli-init.ts` (flag + registry), `templates/deep-research/` (new).
+      - `docs/_evidence/phase49-template-primitive-review.md` (evidence), `src/cli-init.ts` (flag + registry), `templates/deep-research/` (new).
   - Test Cases to Write:
     - Unknown template → fail-closed with available names.
     - `--list-templates` output stable and manifest-driven.
@@ -48,8 +48,13 @@ Baseline: `@arnilo/prism` **0.3.0**+; `templates/init` and `templates/provider` 
     - Docs pages to create/edit: `docs/cli-rpc.md` (init template section), template gallery section.
     - `docs/index.md` update: yes — CLI/RPC entry extended.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion Notes:
+    - Completed primitive review and recorded existing scaffold flow, directory conventions, manifest validation, security and performance bounds, and confirmed zero new core primitives in `docs/_evidence/phase49-template-primitive-review.md`.
+    - Verified existing `src/cli-init.ts`, `templates/init/`, `templates/provider/`, and config/manifest validation patterns.
+    - Confirmed template gallery architecture: local inert directories `templates/<name>/` with `manifest.json`, `--template <name>` selection, `--list-templates` listing, fail-closed handling for unknown templates, and prototype-pollution rejection.
 
-- [ ] Task 2 — `deep-research` Flagship Template
+
+- [x] Task 2 — `deep-research` Flagship Template
   - Acceptance Criteria:
     - Functional: scaffolded agent flow: (1) planning agent emits a typed research plan (structured output), (2) search step via `@arnilo/prism-web-tools` (mock-backed in offline test; real keys documented as opt-in), (3) bounded refine loop (node `retries` now / plan-045 loop node when shipped — link it), (4) citations wired to the RAG/source-citation seam, (5) HITL clarify via the durable pending-decision tool (`createAskUserDecisionTool`), (6) run budget caps set in config. README maps each component to its doc page.
     - Performance: offline test suite completes within existing scaffold test envelope (mock provider; no network).
@@ -79,8 +84,15 @@ Baseline: `@arnilo/prism` **0.3.0**+; `templates/init` and `templates/provider` 
     - Docs pages to create/edit: `docs/cli-rpc.md`, `docs/web-tools.md` cross-link from template README, `docs/release-and-install.md` (scaffold contents note).
     - `docs/index.md` update: no (Task 1 entry covers).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion Notes:
+    - Created `templates/manifest.json`, `templates/init/manifest.json`, `templates/README.md` (gallery registry index), and `templates/deep-research/manifest.json`.
+    - Created flagship template files in `templates/deep-research/`: `package.json.tmpl`, `tsconfig.json.tmpl`, `gitignore.tmpl`, `env.example.tmpl`, `README.md.tmpl`, `src/types.ts.tmpl`, `src/tools.ts.tmpl`, `src/agent.ts.tmpl`, `src/workflow.ts.tmpl`, `src/index.ts.tmpl`, and `src/tests/research.test.ts.tmpl`.
+    - Integrated template gallery discovery, `--template <name>`, and `--list-templates` flags into `src/cli-init.ts` (`listInitTemplates`, `defaultGalleryRoot`, `planTemplateFiles`, `buildTokensForTemplate`) and `src/cli-runner.ts` (`initGalleryRoot`, `usage`).
+    - Added unit and integration tests in `src/__tests__/cli-init.test.ts` verifying template listing, template argument parsing, unknown template error handling, and `deep-research` scaffolding (full directory layout, peer package dependencies `@arnilo/prism`, `@arnilo/prism-web-tools`, `@arnilo/prism-rag`, `@arnilo/prism-workflows`, doc links, secret scanning, and offline execution).
+    - Updated `scripts/phase19-baseline.json` hash for `src/cli-init.ts`, fixed Biome formatting across all files, and verified full monorepo test suite passing (1700+ tests green).
 
-- [ ] Task 3 — Docs Truth, README, and Release
+
+- [x] Task 3 — Docs Truth, README, and Release
   - Acceptance Criteria:
     - Functional: root README "Quick start" gains the template line; `docs/release-and-install.md` records that templates ship inside the `@arnilo/prism` tarball within existing budget ceilings (verify tarball size gate).
     - Performance: tarball size within frozen budget; init + test within envelopes.
@@ -97,11 +109,20 @@ Baseline: `@arnilo/prism` **0.3.0**+; `templates/init` and `templates/provider` 
     - Docs pages to create/edit: listed above.
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion Notes:
+    - Updated root `README.md` Quick start with `prism init my-research --template deep-research` and `prism init --list-templates` examples.
+    - Updated `docs/cli-rpc.md` documenting `--template <name>` and `--list-templates` syntax, option table, examples, and description.
+    - Updated `docs/release-and-install.md` recording that `templates/` gallery ships inside the core tarball within existing budget limits, with zero credentials at init, no postinstall scripts, and covered by release secret scans.
+    - Updated `src/__tests__/packaging.test.ts` to assert that `templates/README.md`, `templates/deep-research/package.json.tmpl`, and `templates/deep-research/manifest.json` ship in the core tarball.
+    - Verified all docs tripwires, packaging tests, and CLI init test suites pass cleanly.
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass. (Known constraint: single-template gallery at start — additional templates demand-gated.)
+- **Single Flagship Starter (`deep-research`)**: Shipped `deep-research` alongside the default `init` starter rather than bloating the repo with unrequested starters. Additional templates (`rag-chat`, `coding-agent`, `crew`) remain demand-gated.
+- **Template Test Subdirectory Naming (`src/tests/`)**: Test templates are stored inside `templates/<name>/src/tests/` rather than `__tests__/` so that packaging tripwires that exclude `__tests__` from npm tarballs do not drop template files; `planTemplateFiles` maps `src/tests/` to `src/__tests__/` during scaffolding.
+- **Zero-Network Offline Test Verification**: Offline mock provider and search adapter allow scaffolded project test suites to run completely offline in milliseconds without API keys or network dependencies.
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- **Additional Gallery Templates on Demand** (Low Priority): Scaffold additional domain-specific starter templates (`rag-chat`, `multi-agent-crew`) when demand arises.
+- **External Template Resolvers** (Low Priority): Support external npm or git template sources if host ecosystems request remote template discovery.

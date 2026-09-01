@@ -1,0 +1,53 @@
+import { createAppAgent, createPlannerAgent, createSynthesizerAgent } from "./agent.js";
+import { createClarifyTool, createResearchSearchAdapter, createResearchWebTools } from "./tools.js";
+import type { ResearchFinding, ResearchPlan, ResearchReport } from "./types.js";
+import { createResearchWorkflow, executeResearch } from "./workflow.js";
+
+export {
+  createAppAgent,
+  createPlannerAgent,
+  createSynthesizerAgent,
+  createResearchSearchAdapter,
+  createResearchWebTools,
+  createClarifyTool,
+  createResearchWorkflow,
+  executeResearch,
+  type ResearchPlan,
+  type ResearchFinding,
+  type ResearchReport,
+};
+
+export async function main() {
+  const topic = process.argv.slice(2).join(" ") || "Prism Agent Architecture";
+  console.log(`Starting deep research on: "${topic}"\n`);
+
+  const report = await executeResearch(topic, {
+    onEvent: (event) => {
+      if (event.type === "node_started") {
+        console.log(`  -> [${event.nodeId}] started...`);
+      } else if (event.type === "node_finished") {
+        console.log(`  ✓ [${event.nodeId}] finished`);
+      }
+    },
+  });
+
+  console.log("\n========================================================");
+  console.log(`RESEARCH REPORT: ${report.topic}`);
+  console.log("========================================================");
+  console.log(`\n${report.summary}\n`);
+  console.log("Key Findings:");
+  for (const f of report.findings) {
+    console.log(`- [${f.citationId}] ${f.title}`);
+    console.log(`  ${f.snippet}`);
+    console.log(`  Source: ${f.url}\n`);
+  }
+  console.log("Citations & References:");
+  for (const c of report.citations) {
+    console.log(`  [${c.citationId}] ${c.title} — ${c.url}`);
+  }
+  console.log("========================================================\n");
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  await main();
+}

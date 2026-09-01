@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-alibaba` is a side-effect-free adapter for Alibaba Cloud
+`@arnilo/prism-providers/alibaba` is a side-effect-free adapter for Alibaba Cloud
 Model Studio / DashScope (including the Coding Plan) over the **OpenAI-compatible**
 `POST {base}/chat/completions` endpoint.
 
@@ -64,7 +64,7 @@ import {
   listAlibabaModels,
   defineAlibabaModel,
   alibabaBaseUrl,
-} from "@arnilo/prism-provider-alibaba";
+} from "@arnilo/prism-providers/alibaba";
 
 createAlibabaProviderPackage(options: AlibabaProviderPackageOptions): ProviderPackage
 createAlibabaProvider(options?: AlibabaProviderOptions): AIProvider
@@ -104,7 +104,7 @@ verbatim via `baseUrl`.
 dependency-free).
 
 ```ts
-import { createAlibabaEmbedder } from "@arnilo/prism-provider-alibaba";
+import { createAlibabaEmbedder } from "@arnilo/prism-providers/alibaba";
 
 const embedder = createAlibabaEmbedder({
   apiKey: process.env.DASHSCOPE_API_KEY,
@@ -208,7 +208,7 @@ import { createExtensionKernel } from "@arnilo/prism";
 import {
   createAlibabaProviderPackage,
   listAlibabaModels,
-} from "@arnilo/prism-provider-alibaba";
+} from "@arnilo/prism-providers/alibaba";
 
 const kernel = createExtensionKernel();
 
@@ -255,7 +255,7 @@ await kernel.load([
   `Authorization: Bearer`; keys are redacted from all thrown errors (including
   discovery failures). No local filesystem paths enter request payloads.
 - Opt-in live probe (never part of `npm test`/CI):
-  `PRISM_LIVE_DASHSCOPE_KEY=… npm run test:live --workspace @arnilo/prism-provider-alibaba`
+  `PRISM_LIVE_DASHSCOPE_KEY=… npm run test:live --workspace @arnilo/prism-providers/alibaba`
   exercises an embeddings round-trip against the real endpoint (model override via
   `PRISM_LIVE_DASHSCOPE_MODEL`); absent env = documented skip, never a failure.
 - Caller-supplied `ProviderRequest.options.headers` can add non-owned headers, but

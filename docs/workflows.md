@@ -2,14 +2,14 @@
 
 ## What it does
 
-`@arnilo/prism-workflows` is an optional package for typed, bounded DAG orchestration over Prism sessions, tools, events, and persistence seams. Hosts define acyclic workflows with agent/function/tool/conditional/fan-out/join/nested-workflow nodes; the package runs a Kahn-style scheduler with a bounded worker pool, emits package-local `WorkflowEvent`s, checkpoints progress, can coordinate queued runs across multiple host processes using durable leases and fencing, and can run bounded linear sagas with durable compensation.
+`@arnilo/prism-workflows` is an optional package for typed, bounded DAG orchestration over Prism sessions, tools, events, and persistence seams. Hosts define acyclic workflows with agent/function/tool/conditional/fan-out/join/nested-workflow/loop nodes; the package runs a Kahn-style scheduler with a bounded worker pool, emits package-local `WorkflowEvent`s, checkpoints progress, can coordinate queued runs across multiple host processes using durable leases and fencing, and can run bounded linear sagas with durable compensation.
 
 Primary exports:
 
 | Export | Purpose |
 | --- | --- |
 | `defineWorkflow` / `buildGraph` | Validate definitions (acyclicity, edge refs, limits) and build deterministic successor/indegree maps |
-| `agentNode`, `functionNode`, `toolNode`, `conditionalNode`, `fanOutNode`, `joinNode`, `workflowNode` | Typed node factories, including composition through the same runner |
+| `agentNode`, `functionNode`, `loopNode`, `toolNode`, `conditionalNode`, `fanOutNode`, `joinNode`, `workflowNode` | Typed node factories, including bounded iterative refinement and composition through the same runner |
 | `runWorkflow` / `resumeWorkflow` / `suspend` / `replayWorkflow` | Execute, durably suspend, exactly-once resume, or create an immutable-lineage replay from a succeeded node |
 | `createMemoryWorkflowCheckpoints` | In-process `WorkflowCheckpointAdapter` over core `createMemoryCheckpointStore()` |
 | `createWorkflowCheckpoints` | Adapt core `CheckpointStore` (including SQLite/PostgreSQL persistence capabilities) to workflow checkpoint shapes |
@@ -50,7 +50,21 @@ Use `defineSaga`/`runSaga` for a linear business sequence whose remote effects n
 | `limits.maxStateBytes` / hard cap | 64 KiB / 512 KiB |
 | `limits.maxStateHistory` / hard cap | 32 / 128 state snapshots; updates stop before evidence would be discarded |
 | `limits.maxReplayDepth` / hard cap | 8 / 32 lineage generations |
+| loop `maxIterations` | Required per loop / hard cap 64 |
 | `state.initial` / `state.schema` | Initial shared JSON object and optional host-validated schema |
+
+### Node kinds
+
+| Kind | Factory | Behavior |
+| --- | --- | --- |
+| `agent` | `agentNode` | Runs `AgentSession` from `agentFactory` |
+| `function` | `functionNode` | Runs one host async function |
+| `loop` | `loopNode` | Runs one bounded inline or function/tool body repeatedly until `until(ctx)` is true |
+| `tool` | `toolNode` | Dispatches one registered tool, optionally behind durable approval |
+| `conditional` | `conditionalNode` | Evaluates a predicate and skips configured successors |
+| `fan_out` | `fanOutNode` | Maps a bounded list with workflow concurrency |
+| `join` | `joinNode` | Reduces an upstream array |
+| `workflow` | `workflowNode` | Runs a nested workflow with inherited capabilities |
 
 All workflow limits and runtime `concurrency` reject non-safe integers, zero, negatives, NaN, `Infinity`, and values above the named hard cap. Node retries allow 0–100; an explicit node timeout allows 1–86,400,000 ms. Omitting `timeoutMs` remains an explicit host choice.
 
@@ -130,7 +144,7 @@ Saga `onEvent` callbacks receive metadata-only `saga_transition` events with ten
 
 Schedule `onEvent` receives bounded-attribution `schedule_fired` or metadata-only `schedule_failed`; schedule input is never copied into these events.
 
-Package-local `WorkflowEvent` types: `workflow_started`, `workflow_suspended`, `workflow_resumed`, `workflow_finished`, `node_started`, `node_finished`, `node_failed`, `node_skipped`, `checkpoint_saved`, `agent_event` (wraps a redacted `AgentEvent`), `workflow_event_overflow`. Sequences are monotonic; drain/order is deterministic by `(sequence, nodeId)`.
+Package-local `WorkflowEvent` types: `workflow_started`, `workflow_suspended`, `workflow_resumed`, `workflow_finished`, `node_started`, `node_finished`, `node_iteration_started`, `node_iteration_finished`, `node_failed`, `node_skipped`, `checkpoint_saved`, `agent_event` (wraps a redacted `AgentEvent`), `workflow_event_overflow`. Loop iteration-finished events carry bounded/redacted output and stable `iterationId`. Sequences are monotonic; drain/order is deterministic by `(sequence, nodeId)`.
 
 ## Request/response example
 
@@ -164,6 +178,7 @@ import {
   runWorkflow,
   resumeWorkflow,
   functionNode,
+  loopNode,
   agentNode,
   createWorkflowCheckpoints,
   createWorkflowCommands,
@@ -310,9 +325,54 @@ runRpcServer({
 });
 ```
 
+## Iterative refinement (`loopNode`)
+
+`loopNode` keeps the workflow graph acyclic while executing one body repeatedly. `ctx.iteration` is zero-based, `ctx.iterationId` is a stable compensation key (tenant-prefixed when ownership is supplied), and the body receives the prior body output as `ctx.previousOutput`. `until(ctx)` receives the current body output through that same property. Body and predicate can use `ctx.updateState()` for durable accumulation.
+
+Use inline `execute` for pure refinement, or `body` for one interior function/tool sub-step. A tool body uses the normal durable approval gate; approval suspends before its side effect and an approved resume re-enters the same iteration. Completed prior iterations remain in the checkpoint ledger and are not re-executed.
+
+`maxIterations` is required and capped at 64 (`HARD_MAX_LOOP_ITERATIONS`). The scheduler enforces the cap even when `until` never passes. Exhaustion throws `WorkflowLoopLimitError` with code `ERR_PRISM_WORKFLOW_LOOP_LIMIT`, `iterations`, and a bounded/redacted `lastOutput`. Each completed iteration stores a versioned, bounded/redacted output record before the next body starts; `maxNodeOutputBytes` applies to every body output.
+
+### Frozen budget accounting
+
+`maxNodes` counts declared DAG nodes once. `maxIterations` independently caps loop body executions; iterations never consume `maxNodes`. Both limits are validated before execution and fail closed at their hard caps.
+
+`node_iteration_started` and `node_iteration_finished` events expose `iteration` and `iterationId`; finished events also expose `done` and bounded/redacted output. A replay started from a completed loop re-runs its body and emits the same iteration sequence for the new run. Hosts that persist events should treat `iterationId` as the idempotency key.
+
+```ts
+const refine = loopNode({
+  execute: async (ctx) => ({
+    iteration: ctx.iteration,
+    draft: improve((ctx.previousOutput as { draft?: string } | undefined)?.draft),
+  }),
+  until: (ctx) => (ctx.previousOutput as { passed?: boolean } | undefined)?.passed === true,
+  maxIterations: 5,
+});
+
+const approvedRefine = loopNode({
+  body: toolNode({
+    tool: publishDraft,
+    args: () => ({ action: "refine" }),
+    approval: { reason: "approve refinement side effect" },
+  }),
+  until: (ctx) => ctx.previousOutput === "accepted",
+  maxIterations: 3,
+});
+
+const workflow = defineWorkflow({
+  id: "refine-draft",
+  revision: "1",
+  nodes: { refine, approvedRefine },
+});
+```
+
+### Saga compensation boundary
+
+A loop remains one DAG node and one host saga step. Persist the loop's `iterations` as that step's aggregate output, and register external compensation under each record's `iterationId`; compensate records in reverse iteration order. The workflow runner does not invoke saga handlers implicitly, so the host retains ownership of side-effect policy and audit records while replay/resume stay deterministic.
+
 ## Bounded iterate-until-done (host-loop pattern)
 
-Workflows stay acyclic. "Loop until the goal passes" is a **host** `for`/`while` over `runWorkflow`, not a graph cycle. One run per iteration; iteration state in workflow **inputs**; the host owns the termination predicate and budgets. No extra runtime. Runnable proof: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) (N iterations, mid-loop human gate with simulated restart, typed budget exhaustion).
+Workflows can now use `loopNode` for bounded in-graph refinement. A host `for`/`while` over `runWorkflow` remains useful when each iteration must be a separate run id, use a different workflow definition, or run on versions before this node kind. Runnable proof: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) (N runs, mid-loop human gate with simulated restart, typed budget exhaustion).
 
 1. Keep the DAG acyclic (roadmap → execute → validate → gate → compact).
 2. Pass `{ goal, iteration }` as `runWorkflow` input — never a back-edge.
@@ -331,13 +391,13 @@ for (let i = 0; i < MAX_ITERATIONS; i++) {
 if (!passed(last.outputs)) throw new BudgetExhaustedError(MAX_ITERATIONS);
 ```
 
-Budgets are the host's job until [plan 045](../plans/045-Bounded-Loop-Workflow-Node.md) ships an in-graph `loop` node (`until` + hard `maxIterations`, still finite). Do not wait on that primitive for this pattern.
+For a single bounded refinement, prefer `loopNode`. Keep this host-loop pattern when separate run ids, per-run checkpoints, or a new workflow definition are part of the contract.
 
 ## Extension and configuration notes
 
 - Workflow semantics stay in this optional package; generic checkpoint persistence and bounded event fan-in live in core.
 - `ProductionPersistenceStore.checkpoints` and `.leases` are optional generic capabilities. First-party SQLite/PostgreSQL adapters own `prism_checkpoints` / `prism_leases`; workflows only adapt them. Sagas use the same `WorkflowCheckpointAdapter` and `LeaseStore`; they add no SQL table or scheduler.
-- `createWorkflowEventBus()` delegates queueing, source fan-in, overflow, abort, and close behavior to core `createEventMultiplexer()`, including its single-consumer contract: a second concurrent `subscribe()` is rejected with `EventMultiplexerError` (`ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER`) instead of silently splitting the stream. Graceful `close()` stops new emits/sources and drains already-queued events (in `(sequence, nodeId)` order) before the subscriber completes; overflow `close` still emits one `workflow_event_overflow` notice and terminates.
+- `createWorkflowEventBus()` delegates queueing, source fan-in, overflow, abort, and close behavior to core `createEventMultiplexer()`, including its single-consumer contract: a second concurrent `subscribe()` is rejected with `EventMultiplexerError` (`ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER`) instead of silently splitting the stream. Graceful `close()` stops new emits/sources and drains already-queued events (in `(sequence, nodeId)` order) before the subscriber completes; overflow `close` still emits one `workflow_event_overflow` notice and terminates. Loop iteration events carry bounded/redacted output and stable `iterationId` values for durable sinks.
 - The in-process active-run registry (`registerActiveWorkflowRun` / `getActiveWorkflowRun` / `abortActiveWorkflowRun`) is **non-durable, in-process only — it does not survive restart**; durable active-run recovery is a later milestone. It is bounded: every register sweeps aborted/leaked entries (runs whose promise never settled) and the registry fails closed at `MAX_ACTIVE_WORKFLOW_RUNS` (512) rather than evicting a live run; `sweepActiveWorkflowRuns()` is available for hosts. Cross-tenant lookups stay ownership-isolated.
 - `createWorkflowCommands()` is optional; hosts can drive `workflow.start` / `enqueue` / `replay` / `status` / `list` / `cancel` / `resume`. The six `schedule.*` commands appear only when a scoped `schedules` service is supplied.
 - Hosts may bridge `WorkflowEvent` into OpenTelemetry or custom sinks; there is no built-in TUI.
@@ -346,7 +406,8 @@ Budgets are the host's job until [plan 045](../plans/045-Bounded-Loop-Workflow-N
 
 ## Security and performance notes
 
-- Definitions require a non-empty host-authored `revision` and fail closed on cycles, unknown edges, self-edges, invalid limits, and `maxNodes` overflow. Revision and every nested revision enter the deterministic definition hash; hosts must bump revision when function/tool behavior changes.
+- Definitions require a non-empty host-authored `revision` and fail closed on cycles, unknown edges, self-edges, invalid limits, and `maxNodes` overflow. Revision and every nested revision enter the deterministic definition hash; hosts must bump revision when function/tool behavior changes. Loop `maxIterations` is required and capped at 64.
+- Loop bodies run serially inside one scheduler node; every body output and durable iteration record is bounded/redacted with `maxNodeOutputBytes`, and the scheduler persists the completed-iteration cursor before advancing. Approved durable resumes re-enter only the incomplete iteration.
 - Fan-out length is bounded by `maxFanOut`. Independent `map` items run in a local worker pool capped by the resolved workflow `maxConcurrency` (and `options.concurrency`); output stays in input order. Abort or the first map failure stops further items. There is no extra global admission service.
 - Node outputs, shared state/history, schedule input/records, and checkpoints are byte/count/depth bounded. Checkpoint size remains the final aggregate ceiling.
 - Event buses use a bounded buffer (default 2048) with `close` / `drop_oldest` / `drop_newest` overflow.
@@ -358,13 +419,13 @@ Budgets are the host's job until [plan 045](../plans/045-Bounded-Loop-Workflow-N
 - Active registry identity includes workflow ID, run ID, and exact ownership. Exact duplicates fail instead of overwriting; distinct owners remain isolated in lookup/list/cancel/unregister.
 - Tool nodes attach `workflowId` / `nodeId` on `ExecutionAction.metadata` for approval/audit context.
 - Nested workflows inherit host registries/policies and cannot inject broader tools, agents, ownership, or credentials. Nested depth is inherited; child suspension bubbles to the parent review cursor.
-- Replay source ownership/hash/status/node eligibility are checked before a new checkpoint is created. Source records are immutable, lineage is bounded, and copied approval-bearing paths are rejected.
+- Replay source ownership/hash/status/node eligibility are checked before a new checkpoint is created. Source records are immutable, lineage is bounded, and copied approval-bearing paths are rejected. Replaying from a completed loop starts a fresh loop cursor and emits its per-iteration records; it never mutates source evidence.
 - Schedule services are ownership-scoped and explicitly started. Per-fire leases plus deterministic run IDs/CAS prevent duplicate enqueue across coordinators and crash retry. Host calculator IDs resolve only from the supplied map; no callback or cron expression is persisted.
 - Proactive schedules require an explicit capability grant. Revocation pauses the schedule (never fired by `pollOnce`) and `assertActive` fails closed on missing/revoked/expired tokens; enable/revoke/deny events carry redacted actor refs for the host policy ledger. Capability TTL is capped (default 24h / hard 31d) and the token record is byte-bounded (≤ 16 KiB); tokens are ownership-scoped, so foreign access fails closed rather than leaking existence.
 - Scheduler stores O(nodes + active outputs + bounded state history); ready-node work uses indegree maps, not repeated full scans.
 - Lease acquisition is atomic; opaque tokens protect renew/release; monotonically increasing fencing tokens plus checkpoint compare-and-swap prevent expired workers from committing after takeover. Node functions must honor `ctx.signal` for prompt cooperative cancellation.
 - Saga runs require `tenantId`; checkpoint keys and leases include tenant ownership. Every transition uses checkpoint CAS plus the current lease fence. Forward/compensation retries are capped at 3 by default / 10 hard; ambiguous outcomes require reconciliation and unresolved state becomes `manual_intervention`.
-- Saga input, step outputs, and error text are byte-bounded and passed through the configured `SecretRedactor` before persistence or compensation. Manual resolution requires an active verified actor for the tenant, exact checkpoint version, bounded reason, and a non-empty host audit reference; Prism does not pretend to verify the external audit record.
+- Saga input, step outputs, and error text are byte-bounded and passed through the configured `SecretRedactor` before persistence or compensation. A loop used as one saga step remains one aggregate compensation record; hosts register and compensate its durable iteration IDs in reverse order. Manual resolution requires an active verified actor for the tenant, exact checkpoint version, bounded reason, and a non-empty host audit reference; Prism does not pretend to verify the external audit record.
 
 Use workflows for known, durable, replayable graphs. Use optional supervisor delegation only when child selection must be dynamic at runtime; do not replace deterministic nodes with model routing without a concrete need.
 

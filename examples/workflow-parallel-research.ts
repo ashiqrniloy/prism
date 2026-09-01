@@ -16,7 +16,7 @@ import {
   joinNode,
   runWorkflow,
   type WorkflowEvent,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-core/runtime/workflows";
 
 // True parallel research DAG: fan-out normalizes bounded topics, join exposes
 // the array, three independent research branches execute concurrently, then a

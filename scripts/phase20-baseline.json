@@ -188,7 +188,7 @@
     "docs/release-and-install.md": "2c237a4e8da360f1f7c1057925e95b6b7be8a99d22adc592d516f39d9a488137",
     "package-lock.json": "752043defd6e182bad543a79e7a4ec677fc426857858611b0746568f40ea7187",
     "src/contracts-run-state.ts": "faf501b479d59ca4dedd0d9d90ace5bedbb0b9648ecf3acb51085f6fb91c5808",
-    "src/agent-run-state.ts": "203e831429a5c4155bdadf28cc03eeb56e8aa839a7fe568cca30ad4423fcb541",
+    "src/agent-run-state.ts": "065f9d890b3ae6e7e9257a3bdd0e40a3aba6ce7f68093d3fddb61b32b352b2a1",
     "packages/work-tools/src/errors.ts": "20aa9b717bd91b3acfe7e4f98e5ea52c01519505e48efd54b43c15bbcce6da1f",
     "packages/work-tools/src/limits.ts": "096992fb79ad543c71912b0aef3034b8a48669d1aa489ebd58b0d33a79647235",
     "packages/work-tools/src/types.ts": "e0f20e7fc7804e2f2c4030f8f3798caab54a74e0e5455bee29ac8f88c76de63c",
@@ -196,7 +196,7 @@
   },
   "preservedSurface": {
     "src/contracts-run-state.ts": "faf501b479d59ca4dedd0d9d90ace5bedbb0b9648ecf3acb51085f6fb91c5808",
-    "src/agent-run-state.ts": "203e831429a5c4155bdadf28cc03eeb56e8aa839a7fe568cca30ad4423fcb541",
+    "src/agent-run-state.ts": "065f9d890b3ae6e7e9257a3bdd0e40a3aba6ce7f68093d3fddb61b32b352b2a1",
     "packages/work-tools/src/errors.ts": "20aa9b717bd91b3acfe7e4f98e5ea52c01519505e48efd54b43c15bbcce6da1f",
     "packages/work-tools/src/limits.ts": "096992fb79ad543c71912b0aef3034b8a48669d1aa489ebd58b0d33a79647235",
     "packages/work-tools/src/types.ts": "e0f20e7fc7804e2f2c4030f8f3798caab54a74e0e5455bee29ac8f88c76de63c",

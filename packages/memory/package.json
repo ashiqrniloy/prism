@@ -1,39 +1,79 @@
 {
   "name": "@arnilo/prism-memory",
-  "version": "0.3.1",
-  "description": "Optional working memory and semantic recall primitives with Embedder/VectorStore contracts for Prism.",
+  "version": "0.4.0",
+  "description": "Memory and context family for Prism: working/semantic memory, RAG, compaction strategies, Graft bridge, and Wiki with bundled skills.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "prism-wiki": "./dist/wiki/cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./rag": {
+      "types": "./dist/rag/index.d.ts",
+      "default": "./dist/rag/index.js"
+    },
+    "./rag/loaders": {
+      "types": "./dist/rag/loaders.d.ts",
+      "default": "./dist/rag/loaders.js"
+    },
+    "./rag/parsers": {
+      "types": "./dist/rag/parsers.d.ts",
+      "default": "./dist/rag/parsers.js"
+    },
+    "./compaction/llm": {
+      "types": "./dist/compaction/llm/index.d.ts",
+      "default": "./dist/compaction/llm/index.js"
+    },
+    "./compaction/observational-memory": {
+      "types": "./dist/compaction/observational-memory/index.d.ts",
+      "default": "./dist/compaction/observational-memory/index.js"
+    },
+    "./graft": {
+      "types": "./dist/graft/index.d.ts",
+      "default": "./dist/graft/index.js"
+    },
+    "./wiki": {
+      "types": "./dist/wiki/index.d.ts",
+      "default": "./dist/wiki/index.js"
     }
   },
   "files": [
     "dist",
-    "!dist/__tests__",
+    "!dist/**/__tests__",
     "!dist/**/*.map",
+    "skills",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/memory.test.js dist/__tests__/postgres-vector.integration.test.js",
-    "test:postgres": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/memory.test.js dist/__tests__/postgres-memory.integration.test.js dist/__tests__/postgres-vector.integration.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/memory.test.js dist/__tests__/public-surface.test.js dist/__tests__/postgres-vector.integration.test.js dist/rag/__tests__/*.test.js dist/compaction/llm/__tests__/*.test.js dist/compaction/observational-memory/__tests__/*.test.js dist/graft/__tests__/*.test.js dist/wiki/__tests__/*.test.js",
+    "test:postgres": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/memory.test.js dist/__tests__/postgres-memory.integration.test.js dist/__tests__/postgres-vector.integration.test.js dist/rag/__tests__/*.test.js dist/compaction/llm/__tests__/*.test.js dist/compaction/observational-memory/__tests__/*.test.js dist/graft/__tests__/*.test.js dist/wiki/__tests__/*.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.3.0"
+    "@arnilo/prism": "^0.4.0",
+    "@nanonets/graft": "^0.13.0"
+  },
+  "peerDependenciesMeta": {
+    "@nanonets/graft": {
+      "optional": true
+    }
   },
   "dependencies": {
     "pg": "^8.22.0"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
-    "@types/pg": "^8.11.11"
+    "@types/pg": "^8.11.11",
+    "@arnilo/prism-providers": "file:../prism-providers"
   },
   "engines": {
     "node": ">=20"
@@ -53,6 +93,10 @@
     "memory",
     "working-memory",
     "semantic-recall",
+    "rag",
+    "compaction",
+    "graft",
+    "wiki",
     "embedder",
     "vector-store",
     "pgvector",

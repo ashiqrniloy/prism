@@ -16,7 +16,7 @@ import {
   getWorkflowRun,
   resumeWorkflow,
   runWorkflow,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-core/runtime/workflows";
 
 // Programmatic cancel and resume (RPC/command surface). A host starts a
 // workflow, cancels it mid-flight via cancelWorkflowRun() after first node

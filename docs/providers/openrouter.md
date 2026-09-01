@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-openrouter` provides explicit, side-effect-free setup for the
+`@arnilo/prism-providers/openrouter` provides explicit, side-effect-free setup for the
 OpenRouter API-key provider with **app-controlled** model registration, routing
 passthrough, official `reasoning` controls, and Anthropic-style `cache_control`
 (plus sticky `session_id` routing).
@@ -29,7 +29,7 @@ import {
   createOpenRouterProviderPackage,
   defineOpenRouterModel,
   listOpenRouterModels,
-} from "@arnilo/prism-provider-openrouter";
+} from "@arnilo/prism-providers/openrouter";
 
 createOpenRouterProviderPackage(options: OpenRouterProviderPackageOptions): ProviderPackage
 defineOpenRouterModel(config: OpenRouterModelConfig): ModelConfig
@@ -83,7 +83,7 @@ import {
   createOpenRouterProviderPackage,
   defineOpenRouterModel,
   listOpenRouterModels,
-} from "@arnilo/prism-provider-openrouter";
+} from "@arnilo/prism-providers/openrouter";
 
 // App-controlled registration (default — no fetch):
 const sonnet = defineOpenRouterModel({

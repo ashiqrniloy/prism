@@ -49,9 +49,64 @@ const ITEM_IDS = [
   "docs-bump-exit",
 ];
 
+function resolveFile(file) {
+  if (existsSync(url(`../${file}`))) return url(`../${file}`);
+  const coreMap = {
+    "packages/server/": "packages/prism-core/src/runtime/server/",
+    "packages/supervisor/": "packages/prism-core/src/runtime/supervisor/",
+    "packages/workflows/": "packages/prism-core/src/runtime/workflows/",
+    "packages/session-store-codecs/": "packages/prism-core/src/sessions/codecs/",
+    "packages/session-store-sqlite/": "packages/prism-core/src/sessions/sqlite/",
+    "packages/session-store-postgres/": "packages/prism-core/src/sessions/postgres/",
+    "packages/session-store-nats/": "packages/prism-core/src/sessions/nats/",
+    "packages/policy/": "packages/prism-core/src/governance/policy/",
+    "packages/evals/": "packages/prism-core/src/governance/evals/",
+    "packages/prompts/": "packages/prism-core/src/governance/prompts/",
+    "packages/model-router/": "packages/prism-core/src/governance/model-router/",
+    "packages/observability-opentelemetry/": "packages/prism-core/src/governance/observability/",
+    "packages/credentials-node/": "packages/prism-core/src/credentials/node/",
+    "packages/enterprise-postgres/": "packages/prism-core/src/enterprise/postgres/",
+    "packages/work-tools/": "packages/prism-core/src/integrations/work/",
+    "packages/tool-validator-json-schema/": "packages/prism-core/src/validation/json-schema/",
+    "packages/coding-agent/": "packages/prism-coding-tools/src/agent/",
+    "packages/coding-security/": "packages/prism-coding-tools/src/security/",
+    "packages/document-reader/": "packages/prism-coding-tools/src/document-reader/",
+    "packages/prism-openapi-tools/": "packages/prism-coding-tools/src/openapi/",
+    "packages/computer-use-linux/": "packages/prism-coding-tools/src/computer-use-linux/",
+    "packages/prism-dev/": "packages/prism-coding-tools/src/dev/",
+    "packages/prism-caveman/": "packages/prism-coding-tools/src/caveman/",
+    "packages/prism-ponytail/": "packages/prism-coding-tools/src/ponytail/",
+    "packages/prism-impeccable/": "packages/prism-coding-tools/src/impeccable/",
+  };
+  for (const [prefix, target] of Object.entries(coreMap)) {
+    if (file.startsWith(prefix)) {
+      const rest = file.slice(prefix.length).replace(/^src\//, "");
+      const cand = target + rest;
+      if (existsSync(url(`../${cand}`))) return url(`../${cand}`);
+      if (file.endsWith("CHANGELOG.md")) {
+        if (target.includes("prism-coding-tools") && existsSync(url("../packages/prism-coding-tools/CHANGELOG.md"))) {
+          return url("../packages/prism-coding-tools/CHANGELOG.md");
+        }
+        if (existsSync(url("../packages/prism-core/CHANGELOG.md"))) {
+          return url("../packages/prism-core/CHANGELOG.md");
+        }
+      }
+      if (file.endsWith("README.md")) {
+        if (target.includes("prism-coding-tools") && existsSync(url("../packages/prism-coding-tools/README.md"))) {
+          return url("../packages/prism-coding-tools/README.md");
+        }
+        if (existsSync(url("../packages/prism-core/README.md"))) {
+          return url("../packages/prism-core/README.md");
+        }
+      }
+    }
+  }
+  return url(`../${file}`);
+}
+
 function sha256(file) {
   return createHash("sha256")
-    .update(readFileSync(url(`../${file}`)))
+    .update(readFileSync(resolveFile(file)))
     .digest("hex");
 }
 
@@ -122,7 +177,7 @@ test("Task 0 state: baseline captured, primitive review shipped, freeze test wir
     "scripts/phase26-baseline.mjs",
     "scripts/phase26-freeze.test.mjs",
   ]) {
-    assert.ok(existsSync(url(`../${file}`)), `${file} exists`);
+    assert.ok(existsSync(resolveFile(file)), `${file} exists`);
   }
   const review = readFileSync(url("../docs/_evidence/phase26-primitive-review.md"), "utf8");
   for (const marker of itemById("primitive-review").markers["docs/_evidence/phase26-primitive-review.md"])
@@ -141,19 +196,19 @@ test("pending items are byte-identical to the Task 0 baseline (single-editor fil
       assert.ok(seam, `baseline records seam ${file} (item ${item.id})`);
       const regenerated = file in (manifest.regeneratedFiles ?? {});
       if (token === "pending") {
-        if (seam.status === "absent") assert.ok(!existsSync(url(`../${file}`)), `${file} must stay absent while ${item.task} is pending`);
+        if (seam.status === "absent") assert.ok(!existsSync(resolveFile(file)), `${file} must stay absent while ${item.task} is pending`);
         else if (regenerated) {
-          assert.ok(existsSync(url(`../${file}`)), `${file} present (chain-regenerated, hash not locked)`);
+          assert.ok(existsSync(resolveFile(file)), `${file} present (chain-regenerated, hash not locked)`);
         } else if (file === "roadmap.md" && isRoadmapExempted()) {
           // coordination exemption: working tree is exactly a recorded user-authored roadmap edit
         } else assert.equal(sha256(file), seam.sha256, `${file} byte-identical while ${item.task} is pending (task0 baseline)`);
       } else {
         for (const marker of item.markers[file] ?? []) {
-          assert.ok(readFileSync(url(`../${file}`), "utf8").includes(marker), `${file} contains marker ${marker} (${item.task} done)`);
+          assert.ok(readFileSync(resolveFile(file), "utf8").includes(marker), `${file} contains marker ${marker} (${item.task} done)`);
         }
         for (const negative of item.negativeMarkers?.[file] ?? []) {
           if (!negative) continue;
-          assert.ok(!readFileSync(url(`../${file}`), "utf8").includes(negative), `${file} avoids negative marker ${negative}`);
+          assert.ok(!readFileSync(resolveFile(file), "utf8").includes(negative), `${file} avoids negative marker ${negative}`);
         }
       }
     }
@@ -191,10 +246,10 @@ test("shared coordination markers: done tasks' markers present, pending tasks' p
   for (const [file, markersByTask] of Object.entries(manifest.sharedFiles)) {
     for (const [task, markers] of Object.entries(markersByTask)) {
       if (manifest.tasks[task] !== "done") continue;
-      if (!existsSync(url(`../${file}`))) {
+      if (!existsSync(resolveFile(file))) {
         assert.fail(`shared file ${file} must exist once ${task} is done`);
       }
-      const content = readFileSync(url(`../${file}`), "utf8");
+      const content = readFileSync(resolveFile(file), "utf8");
       for (const marker of markers) assert.ok(content.includes(marker), `${file} contains marker ${marker} (${task} done)`);
     }
   }
@@ -214,17 +269,17 @@ test("demand registry: deferred adapters stay absent; demanded records a named c
     assert.ok(entry, `demand entry ${key}`);
     assert.ok(["deferred", "demanded"].includes(entry.status));
   }
-  const forgeBarrel = readFileSync(url("../packages/coding-agent/src/forge/index.ts"), "utf8");
+  const forgeBarrel = readFileSync(resolveFile("packages/coding-agent/src/forge/index.ts"), "utf8");
   for (const provider of ["gitlab", "bitbucket"]) {
     const entry = manifest.demand[`${provider}-forge`];
     const adapterFile = `packages/coding-agent/src/forge/${provider}.ts`;
     if (entry.status === "deferred") {
-      assert.ok(!existsSync(url(`../${adapterFile}`)), `${adapterFile} must not exist while deferred`);
+      assert.ok(!existsSync(resolveFile(adapterFile)), `${adapterFile} must not exist while deferred`);
       assert.ok(!forgeBarrel.toLowerCase().includes(provider), `forge barrel exports no ${provider} adapter while deferred`);
       assert.ok(entry.consumer === null, `deferred ${provider} has no consumer`);
     } else {
       assert.ok(entry.consumer?.host && entry.consumer?.date, `demanded ${provider} records a named consumer`);
-      assert.ok(existsSync(url(`../${adapterFile}`)), `${adapterFile} exists when demanded`);
+      assert.ok(existsSync(resolveFile(adapterFile)), `${adapterFile} exists when demanded`);
     }
   }
 });
@@ -240,7 +295,7 @@ test("threat model T1-T8 maps to task tests; mapped tests exist for done tasks",
       for (const testRef of threat.tests) {
         const testFile = testRef.split(" ")[0];
         assert.ok(
-          existsSync(url(`../${testFile}`)) || testFile === "scripts/phase26-freeze.test.mjs",
+          existsSync(resolveFile(testFile)) || testFile === "scripts/phase26-freeze.test.mjs",
           `T${i} mapped test ${testFile} exists (${threat.task} done)`,
         );
       }
@@ -268,7 +323,7 @@ test("baseline seam coverage matches the manifest (every single-editor allowed f
   const seamKeys = Object.keys(baseline.seams);
   assert.deepEqual(seamKeys.sort(), [...singleEditor].sort(), "baseline.seams covers exactly the single-editor allowed files");
   for (const [file, seam] of Object.entries(baseline.seams)) {
-    const present = existsSync(url(`../${file}`));
+    const present = existsSync(resolveFile(file));
     assert.equal(seam.status, present ? "present" : "absent", `seam status matches filesystem for ${file}`);
     if (present) assert.equal(typeof seam.sha256, "string", `sha256 recorded for ${file}`);
   }

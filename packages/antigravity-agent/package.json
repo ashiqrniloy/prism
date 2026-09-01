@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-antigravity-agent",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Delegated agent adapter for official Antigravity CLI (agy) with per-run Prism MCP capability exposure and AG-UI timeline projection.",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,19 +25,19 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@arnilo/prism-coding-agent": "^0.3.0",
-    "@arnilo/prism-mcp": "^0.3.0",
+    "@arnilo/prism-coding-tools": "^0.4.0",
+    "@arnilo/prism-mcp": "^0.4.0",
     "@modelcontextprotocol/sdk": "1.30.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.3.0",
-    "@arnilo/prism-coding-agent": "^0.3.0",
-    "@arnilo/prism-mcp": "^0.3.0"
+    "@arnilo/prism": "^0.4.0",
+    "@arnilo/prism-coding-tools": "^0.4.0",
+    "@arnilo/prism-mcp": "^0.4.0"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
     "@arnilo/prism-ag-ui": "file:../ag-ui",
-    "@arnilo/prism-coding-agent": "file:../coding-agent",
+    "@arnilo/prism-coding-tools": "file:../prism-coding-tools",
     "@arnilo/prism-mcp": "file:../mcp"
   },
   "engines": {

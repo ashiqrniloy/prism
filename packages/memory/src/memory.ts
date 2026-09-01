@@ -3,6 +3,7 @@ import { embedBatched } from "./embedder.js";
 import { MemoryAbortError, MemoryLimitError, MemoryScopeError, MemoryValidationError } from "./errors.js";
 import { DEFAULT_MEMORY_RETENTION_BATCH, estimateTokens, HARD_MEMORY_RETENTION_BATCH_CAP, resolveMemoryLimits } from "./limits.js";
 import { validateAgainstJsonSchema } from "./schema.js";
+import { deriveEntryImportance, RECALL_OVERSAMPLE, rerankRecallHits, resolveRecallScoring } from "./scoring.js";
 import type {
   CreateMemoryOptions,
   ExportMemoryOptions,
@@ -115,6 +116,7 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       if (entry.sequence !== undefined) sequenceCounter = Math.max(sequenceCounter, entry.sequence);
       const metadata = entry.metadata ? redactJson(entry.metadata, redactor) : undefined;
       const createdAt = entry.createdAt ?? new Date().toISOString();
+      const importance = deriveEntryImportance(entry, options.importanceFrom, redactor);
       const record: MemoryVectorRecord = {
         id: entry.id,
         tenantId: threadScope.tenantId,
@@ -126,6 +128,7 @@ export function createMemory(options: CreateMemoryOptions): Memory {
         createdAt,
         consent: normalizeConsent(entry.consent, undefined, createdAt),
         ...(metadata ? { metadata } : {}),
+        ...(importance !== undefined ? { importance } : {}),
       };
       const payloadBytes = Buffer.byteLength(JSON.stringify(record), "utf8");
       if (payloadBytes > limits.maxPayloadBytes) {
@@ -165,12 +168,16 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       maxDimensions: limits.maxVectorDimensions,
     });
 
-    const hits = await vectorStore.query({
+    // Composite scoring: fetch an oversized candidate batch, blend in-TS, cut to topK.
+    // The same pure re-rank serves the postgres path, keeping adapter orderings in parity.
+    const scoring = resolveRecallScoring(recallOptions.scoring);
+    const candidates = await vectorStore.query({
       ...threadScope,
       embedding: embedding!,
-      topK: boundedTopK,
+      topK: scoring ? boundedTopK * RECALL_OVERSAMPLE : boundedTopK,
       signal: recallOptions.signal,
     });
+    const hits = scoring ? rerankRecallHits(candidates, scoring).slice(0, boundedTopK) : candidates;
 
     let adjacent: MemoryVectorRecord[] = [];
     if (boundedRange > 0) {

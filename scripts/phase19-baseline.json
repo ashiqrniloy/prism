@@ -97,7 +97,8 @@
   "preservedSurface": {
     "src/cache-helpers.ts": "6b45fd6547b989c9fedae21811a02b035a4ec57d90d5a323c9e6d4f12dd6043c",
     "src/provider-events.ts": "3c522f5c1ada948136e0d7c76e13b26d7baf5e3091ebe53aa9da6f8c4a3f60ce",
-    "src/cli-init.ts": "d537a493a6bc2fefe9e917a17e7e97c2ec1bbd3449e500b8df4c862c7477f552",
+    "src/cli-init.ts": "107aa06b86315e280f0c6012e42dde9b614172c4c93e4bed522b42b7aac022fc",
+
     "packages/model-router/src/state.ts": "b07d06e07777ce5889c44e4d3367dda6c53d119a40eeba9a5e74be9b7f917fb1"
   },
   "fileHashes": {

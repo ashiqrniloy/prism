@@ -1,0 +1,7 @@
+id,author,comment,score
+1,alice,"Paragraph 1
+Paragraph 2 with, commas
+Paragraph 3",5
+2,bob,"Customer said: ""Everything looks great!""
+Confirmed on 2026-08-31",4
+3,carol,plain,3

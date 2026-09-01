@@ -1,5 +1,6 @@
 import { MemoryScopeError, MemoryValidationError } from "./errors.js";
 import { compareMemoryRecord, compareMemoryRecords, decodeMemoryCursor, encodeMemoryCursor } from "./pagination.js";
+import { normalizeImportance } from "./scoring.js";
 import type { MemoryVectorHit, MemoryVectorOrder, MemoryVectorRecord, VectorDeleteFilter, VectorQuery, VectorStore } from "./types.js";
 import {
   assertFiniteVector,
@@ -75,13 +76,17 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
           assertFiniteVector(record.embedding, "embedding");
           if (!Number.isInteger(record.sequence)) throw new MemoryValidationError("sequence must be an integer");
           if (record.generation !== undefined) requireValidGeneration(record.generation);
+          const importance = normalizeImportance(record.importance);
           if (
             record.embedderId !== undefined &&
             (typeof record.embedderId !== "string" || record.embedderId.length === 0 || record.embedderId.length > 256)
           ) {
             throw new MemoryValidationError("embedderId must be a non-empty string of at most 256 characters");
           }
-          target.set(recordKey(record), Object.freeze({ ...record, embedding: [...record.embedding] }));
+          target.set(
+            recordKey(record),
+            Object.freeze({ ...record, embedding: [...record.embedding], ...(importance !== undefined ? { importance } : {}) }),
+          );
         }
       },
 

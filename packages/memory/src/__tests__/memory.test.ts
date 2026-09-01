@@ -12,6 +12,7 @@ import {
   HARD_TOP_K_CAP,
   packageName,
   resolveMemoryLimits,
+  resolveRecallScoring,
   runMemoryConformance,
   validateAgainstJsonSchema,
   validateIdentifier,
@@ -523,5 +524,282 @@ describe("@arnilo/prism-memory", () => {
     });
     assert.equal((await strictMemory.recall("legacy note", { topK: 4 })).hits.length, 0);
     assert.equal((await lenientMemory.recall("legacy note", { topK: 4 })).hits.length, 1);
+  });
+
+  /** Stub embedder + store so similarity is fixed at 1 and ordering hinges on recency/importance alone. */
+  function flatEmbedder() {
+    return {
+      id: "stub",
+      dimensions: 2,
+      async embed(texts: readonly string[]) {
+        return texts.map(() => [1, 0]);
+      },
+    } as const;
+  }
+
+  function scoredVectorRecord(overrides: Partial<MemoryVectorRecord> & Pick<MemoryVectorRecord, "id" | "threadId">): MemoryVectorRecord {
+    return {
+      tenantId: "t1",
+      resourceId: "u1",
+      text: `text ${overrides.id}`,
+      embedding: [1, 0],
+      sequence: 1,
+      createdAt: new Date(0).toISOString(),
+      ...overrides,
+    };
+  }
+
+  it("keeps default ordering and hit shape when scoring is disabled", async () => {
+    const memory = createMemory({
+      tenantId: "t1",
+      resourceId: "u1",
+      threadId: "th-score-off",
+      embedder: flatEmbedder(),
+    });
+    const now = Date.now();
+    await memory.remember(
+      {
+        entries: [
+          { id: "stale", text: "stale fact", sequence: 1, createdAt: new Date(now - 10_000_000).toISOString() },
+          { id: "fresh", text: "fresh fact", sequence: 2, createdAt: new Date(now).toISOString() },
+        ],
+      },
+      { wait: true },
+    );
+    const plain = await memory.recall("fact", { topK: 5 });
+    assert.deepEqual(
+      plain.hits.map((hit) => hit.id),
+      ["stale", "fresh"],
+    ); // tie-break: sequence asc, as before
+    assert.ok(plain.hits.every((hit) => !("similarity" in hit) && !("recency" in hit)));
+  });
+
+  it("demotes stale-but-similar facts under recency blending and exposes components", async () => {
+    const vectorStore = createMemoryVectorStore();
+    const now = Date.now();
+    await vectorStore.upsert([
+      scoredVectorRecord({ id: "stale", threadId: "th-recency", sequence: 1, createdAt: new Date(now - 10_000_000).toISOString() }),
+      scoredVectorRecord({ id: "fresh", threadId: "th-recency", sequence: 2, createdAt: new Date(now + 1_000).toISOString() }), // future-dated: recall cannot age it, recency stays exactly 1
+    ]);
+    const memory = createMemory({
+      tenantId: "t1",
+      resourceId: "u1",
+      threadId: "th-recency",
+      embedder: flatEmbedder(),
+      vectorStore,
+    });
+    const blended = await memory.recall("text", { topK: 5, scoring: { recencyWeight: 0.4, halfLifeMs: 1_000 } });
+    assert.deepEqual(
+      blended.hits.map((hit) => hit.id),
+      ["fresh", "stale"],
+    );
+    const fresh = blended.hits[0]!;
+    const stale = blended.hits[1]!;
+    assert.equal(fresh.similarity, 1);
+    assert.equal(fresh.recency, 1);
+    assert.equal(fresh.importance, 1); // neutral for records without stored importance
+    assert.ok(Math.abs(fresh.score - 1) < 1e-9);
+    assert.ok(stale.score < fresh.score);
+  });
+
+  it("orders by clamped stored importance under importance blending", async () => {
+    const vectorStore = createMemoryVectorStore();
+    const now = new Date().toISOString();
+    await vectorStore.upsert([
+      scoredVectorRecord({ id: "cold", threadId: "th-importance", sequence: 1, createdAt: now, importance: 0 }),
+      scoredVectorRecord({ id: "hot", threadId: "th-importance", sequence: 2, createdAt: now, importance: 2 }), // clamps to 1 at write
+    ]);
+    const memory = createMemory({
+      tenantId: "t1",
+      resourceId: "u1",
+      threadId: "th-importance",
+      embedder: flatEmbedder(),
+      vectorStore,
+    });
+    assert.deepEqual(
+      (await memory.recall("text", { topK: 5 })).hits.map((hit) => hit.id),
+      ["cold", "hot"],
+    ); // default tie-break
+    const blended = await memory.recall("text", { topK: 5, scoring: { importanceWeight: 0.5 } });
+    assert.deepEqual(
+      blended.hits.map((hit) => hit.id),
+      ["hot", "cold"],
+    );
+    assert.equal(blended.hits[0]!.importance, 1);
+    assert.equal(blended.hits[1]!.importance, 0);
+  });
+
+  it("validates scoring weights and sum-normalizes via the resolver", async () => {
+    assert.equal(resolveRecallScoring(undefined), undefined);
+    assert.equal(resolveRecallScoring({}), undefined);
+    assert.deepEqual(resolveRecallScoring({ recencyWeight: 0.3, importanceWeight: 0.2, halfLifeMs: 1_000 }), {
+      similarity: 0.5,
+      recency: 0.3,
+      importance: 0.2,
+      halfLifeMs: 1_000,
+    });
+    assert.deepEqual(resolveRecallScoring({ recencyWeight: 0.8, importanceWeight: 0.8, halfLifeMs: 1 }), {
+      similarity: 0,
+      recency: 0.5,
+      importance: 0.5,
+      halfLifeMs: 1,
+    });
+    assert.throws(() => resolveRecallScoring({ recencyWeight: Number.NaN, halfLifeMs: 1 }), MemoryValidationError);
+    assert.throws(() => resolveRecallScoring({ recencyWeight: 1.5, halfLifeMs: 1 }), MemoryValidationError);
+    assert.throws(() => resolveRecallScoring({ importanceWeight: -0.1 }), MemoryValidationError);
+    assert.throws(() => resolveRecallScoring({ recencyWeight: 0.5 }), MemoryValidationError); // halfLifeMs required
+    assert.throws(() => resolveRecallScoring({ recencyWeight: 0.5, halfLifeMs: 0 }), MemoryValidationError);
+
+    const memory = createMemory({ tenantId: "t1", resourceId: "u1", threadId: "th-score-bad", embedder: flatEmbedder() });
+    await assert.rejects(memory.recall("x", { scoring: { recencyWeight: 2, halfLifeMs: 1 } }), MemoryValidationError);
+  });
+
+  it("validates and clamps stored importance at the memory store boundary", async () => {
+    const store = createMemoryVectorStore();
+    await store.upsert([
+      scoredVectorRecord({ id: "hi", threadId: "th-imp-store", importance: 3 }),
+      scoredVectorRecord({ id: "lo", threadId: "th-imp-store", importance: -5 }),
+      scoredVectorRecord({ id: "absent", threadId: "th-imp-store" }),
+    ]);
+    const rows = await store.getByThread({ tenantId: "t1", resourceId: "u1", threadId: "th-imp-store" });
+    assert.equal(rows.find((row) => row.id === "hi")?.importance, 1);
+    assert.equal(rows.find((row) => row.id === "lo")?.importance, 0);
+    assert.ok(!("importance" in rows.find((row) => row.id === "absent")!));
+    await assert.rejects(
+      store.upsert([scoredVectorRecord({ id: "bad", threadId: "th-imp-store", importance: Number.NaN })]),
+      MemoryValidationError,
+    );
+    await assert.rejects(
+      store.upsert([scoredVectorRecord({ id: "bad2", threadId: "th-imp-store", importance: "3" as unknown as number })]),
+      MemoryValidationError,
+    );
+  });
+
+  it("derives importance from reflection payloads at write time only", async () => {
+    const hookCalls: unknown[] = [];
+    const memory = createMemory({
+      tenantId: "t1",
+      resourceId: "u1",
+      threadId: "th-derive",
+      embedder: flatEmbedder(),
+      // Recipe example (documented, not shipped default): frequency of mentions, no LLM.
+      importanceFrom: (reflection) => {
+        hookCalls.push(reflection);
+        const mentions = Number(reflection.mentions ?? 1);
+        return Number.isFinite(mentions) ? mentions / 10 : 1;
+      },
+      vectorStore: createMemoryVectorStore(),
+    });
+    await memory.remember(
+      {
+        entries: [
+          {
+            id: "hot",
+            text: "frequent reflection",
+            sequence: 1,
+            reflection: { content: "user workflow", mentions: 7 },
+          },
+        ],
+      },
+      { wait: true },
+    );
+    assert.equal(hookCalls.length, 1); // write path only
+    const recalled = await memory.recall("reflection", { topK: 5, scoring: { importanceWeight: 0.5 } });
+    assert.equal(recalled.hits[0]!.id, "hot");
+    assert.equal(recalled.hits[0]!.importance, 0.7); // clamped/normalized host heuristic result
+    // Recall path never calls out.
+    await memory.recall("reflection", { topK: 5, scoring: { importanceWeight: 0.5 } });
+    assert.equal(hookCalls.length, 1);
+  });
+
+  it("falls back to neutral importance without a hook and honors explicit entry importance", async () => {
+    const memory = createMemory({ tenantId: "t1", resourceId: "u1", threadId: "th-neutral", embedder: flatEmbedder() });
+    await memory.remember(
+      {
+        entries: [
+          { id: "plain", text: "plain note", sequence: 1 },
+          { id: "orphan", text: "reflection without hook", sequence: 2, reflection: { content: "x", mentions: 9 } },
+        ],
+      },
+      { wait: true },
+    );
+    const recalled = await memory.recall("note", { topK: 5, scoring: { importanceWeight: 0.5 } });
+    for (const hit of recalled.hits) {
+      assert.equal(hit.importance, 1); // absent hook / absent reflection → neutral at scoring
+    }
+  });
+
+  it("clamps hook output and explicit entry importance at write", async () => {
+    const memory = createMemory({
+      tenantId: "t1",
+      resourceId: "u1",
+      threadId: "th-clamp",
+      embedder: flatEmbedder(),
+      importanceFrom: () => 5, // clamped to 1
+    });
+    await memory.remember(
+      {
+        entries: [
+          { id: "hooked", text: "hooked clamp", sequence: 1, reflection: { content: "x" } },
+          { id: "explicit-high", text: "explicit high", sequence: 2, importance: 4 },
+          { id: "explicit-low", text: "explicit low", sequence: 3, importance: -0.2 },
+          { id: "override", text: "both sources", sequence: 4, reflection: { mentions: 5 }, importance: 0.4 },
+        ],
+      },
+      { wait: true },
+    );
+    const recalled = await memory.recall("clamp", { topK: 5, scoring: { importanceWeight: 0.5 } });
+    const byId = new Map(recalled.hits.map((hit) => [hit.id, hit]));
+    assert.equal(byId.get("hooked")!.importance, 1);
+    assert.equal(byId.get("explicit-high")!.importance, 1);
+    assert.equal(byId.get("explicit-low")!.importance, 0);
+    assert.equal(byId.get("override")!.importance, 0.4); // explicit entry.importance wins over the hook
+    await assert.rejects(
+      memory.remember({ entries: [{ id: "bad", text: "bad", importance: "3" as unknown as number }] }, { wait: true }),
+      MemoryValidationError,
+    );
+  });
+
+  it("passes redacted reflections to the importance hook", async () => {
+    const canary = "HOOK_CANARY_44c1";
+    const seen: unknown[] = [];
+    const memory = createMemory({
+      tenantId: "t1",
+      resourceId: "u1",
+      threadId: "th-redact-hook",
+      embedder: flatEmbedder(),
+      secrets: [canary],
+      redactor: createSecretRedactor([canary]),
+      importanceFrom: (reflection) => {
+        seen.push(reflection);
+        return 0.5;
+      },
+    });
+    await memory.remember(
+      { entries: [{ id: "red", text: `note ${canary}`, sequence: 1, reflection: { content: `secret ${canary}` } }] },
+      { wait: true },
+    );
+    assert.equal(seen.length, 1);
+    assert.equal(JSON.stringify(seen[0]).includes(canary), false);
+  });
+
+  it("cuts the oversized re-rank candidate batch back to topK", async () => {
+    const vectorStore = createMemoryVectorStore();
+    const now = new Date().toISOString();
+    await vectorStore.upsert(
+      Array.from({ length: 8 }, (_, index) =>
+        scoredVectorRecord({ id: `r${index}`, threadId: "th-oversample", sequence: index + 1, createdAt: now }),
+      ),
+    );
+    const memory = createMemory({
+      tenantId: "t1",
+      resourceId: "u1",
+      threadId: "th-oversample",
+      embedder: flatEmbedder(),
+      vectorStore,
+    });
+    const blended = await memory.recall("text", { topK: 3, scoring: { recencyWeight: 0.2, halfLifeMs: 1_000 } });
+    assert.equal(blended.hits.length, 3);
+    assert.ok(blended.hits.every((hit) => hit.id.startsWith("r")));
   });
 });

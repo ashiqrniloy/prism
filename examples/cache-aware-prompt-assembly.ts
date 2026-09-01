@@ -8,8 +8,8 @@ import {
   type ProviderRequest,
   type Usage,
 } from "@arnilo/prism";
-import { createNeuralWattProvider, defineNeuralWattModel } from "@arnilo/prism-provider-neuralwatt";
-import { createOpenRouterProvider, defineOpenRouterModel } from "@arnilo/prism-provider-openrouter";
+import { createNeuralWattProvider, defineNeuralWattModel } from "@arnilo/prism-providers/neuralwatt";
+import { createOpenRouterProvider, defineOpenRouterModel } from "@arnilo/prism-providers/openrouter";
 
 const explicitCacheModel = defineOpenRouterModel({
   model: "anthropic/claude-sonnet-4",

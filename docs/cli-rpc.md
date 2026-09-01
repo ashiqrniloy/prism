@@ -23,19 +23,22 @@ Use the SDK directly when an app needs custom providers, tools, resources, crede
 ### `prism init`
 
 ```bash
-prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]
+prism init <dir> [--template <name>] [--list-templates] [--provider <name>] [--with-workflows] [--with-evals] [--force]
 ```
 
 | Flag / arg | Purpose |
 | --- | --- |
-| `<dir>` | Destination directory (created if missing). |
+| `<dir>` | Destination directory (created if missing). Required unless `--list-templates` is specified. |
+| `--template <name>` | Template starter name (`init` [default], `deep-research`). |
+| `--list-templates` | List available starter templates from the templates gallery. |
 | `--provider <name>` | `mock` (default), `openai`, `openrouter`, `kimi`, `zai`, `opencode-go`, or `neuralwatt`. |
 | `--with-workflows` | Add `@arnilo/prism-workflows` and `src/workflows-example.ts`. |
 | `--with-evals` | Add `@arnilo/prism-evals` and `src/evals-example.ts`. |
 | `--force` | Overwrite generated files when the destination already exists. |
 | `-h`, `--help` | Print init usage. |
 
-Default generation installs only `@arnilo/prism` (mock provider). Selecting a real provider adds exactly one `@arnilo/prism-provider-*` package. Storage, telemetry, memory, and server packages are never added unless a later phase introduces an explicit flag for them. Rerunning without `--force` refuses non-empty destinations and existing generated files. `.env.example` contains placeholders only; `.gitignore` excludes `.env` and local stores.
+Default generation (`init` template) installs only `@arnilo/prism` (mock provider). Selecting a real provider adds exactly one dependency: the `@arnilo/prism-providers` family package (the selected adapter imports from `@arnilo/prism-providers/<id>`). Specifying `--template deep-research` scaffolds a flagship deep research agent pipeline (`@arnilo/prism`, `@arnilo/prism-web-tools`, `@arnilo/prism-rag`, `@arnilo/prism-workflows`) with planning, attributable citations, bounded refine loops, and HITL decision clarification. Rerunning without `--force` refuses non-empty destinations and existing generated files. `.env.example` contains placeholders only; `.gitignore` excludes `.env` and local stores.
+
 
 ### `prism providers add` (0.1.7)
 
@@ -195,7 +198,10 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' | prism --provi
 prism init my-agent
 prism init my-agent --provider openai
 prism init my-agent --provider openrouter --with-workflows --with-evals
+prism init my-research --template deep-research
+prism init --list-templates
 cd my-agent && npm install && npm test
+
 ```
 
 Programmatic hosts should use the public runtime directly:

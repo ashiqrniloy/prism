@@ -1,8 +1,8 @@
-# LLM Wiki (@arnilo/prism-wiki)
+# LLM Wiki (@arnilo/prism-memory/wiki)
 
 ## What it does
 
-`@arnilo/prism-wiki` implements Andrej Karpathy's **LLM Wiki Pattern** for the Prism agent ecosystem. It acts as a knowledge compiler that transforms raw, immutable sources (source code, AST symbols, notes, markdown clips, transcripts, journal entries) into a persistent, compounding, cross-linked Markdown knowledge base (`.wiki/`).
+The `@arnilo/prism-memory/wiki` subpath implements Andrej Karpathy's **LLM Wiki Pattern** for the Prism agent ecosystem. It acts as a knowledge compiler that transforms raw, immutable sources (source code, AST symbols, notes, markdown clips, transcripts, journal entries) into a persistent, compounding, cross-linked Markdown knowledge base (`.wiki/`).
 
 It integrates Tobias Lütke's [`qmd`](https://github.com/tobi/qmd) on-device hybrid search engine (BM25, vector search, and LLM reranking) and hydrates search results with Context7-inspired hierarchical breadcrumbs (`# Category > ## Topic`) and live clickable source line anchors (`file:///path/to/file#Lxx-Lyy` format), enabling agents and humans to navigate code and notes directly without blind regex loops (`grep`/`rg`).
 
@@ -98,7 +98,7 @@ The authentication layer uses asymmetric Ed25519 JWT verification in middleware,
 
 ```ts
 import { createExtensionKernel } from "@arnilo/prism";
-import { createWikiExtension, initWiki, refreshWiki, lintWiki } from "@arnilo/prism-wiki";
+import { createWikiExtension, initWiki, refreshWiki, lintWiki } from "@arnilo/prism-memory/wiki";
 
 const kernel = createExtensionKernel();
 
@@ -112,7 +112,7 @@ await kernel.load([wiki]);
 
 ## Skills and Auto-Deployment
 
-`@arnilo/prism-wiki` includes two specialized skills formatted according to `.agents/skills/skill-creator`:
+The wiki subpath includes two specialized skills formatted according to `.agents/skills/skill-creator`:
 
 1. **`wiki-maintainer`**: Ingestion, compilation, line-anchor validation, and contradiction reconciliation rules.
 2. **`wiki-searcher`**: Context7 hierarchical breadcrumb query resolution, zero-grep instructions, and compounding insight recording.
@@ -135,7 +135,7 @@ Emitted `.wiki/` trees are [OKF v0.2](https://github.com/GoogleCloudPlatform/ope
 
 ## Extension and configuration notes
 
-- `@arnilo/prism-wiki` registers tools (`wiki_search`, `wiki_read_page`, `wiki_record_insight`), commands (`wiki-init`, `wiki-refresh`, `wiki-lint`), skills (`wiki-maintainer`, `wiki-searcher`), and instruction injectors (`wiki-guidance`) into Prism registries.
+- The wiki subpath registers tools (`wiki_search`, `wiki_read_page`, `wiki_record_insight`), commands (`wiki-init`, `wiki-refresh`, `wiki-lint`), skills (`wiki-maintainer`, `wiki-searcher`), and instruction injectors (`wiki-guidance`) into Prism registries.
 - It operates with zero core modifications and can be used with any `@arnilo/prism` agent.
 - `qmd` is optional but recommended. When `@tobilu/qmd` is not installed, the search engine falls back to catalog matching against `index.md`.
 
@@ -148,7 +148,7 @@ Emitted `.wiki/` trees are [OKF v0.2](https://github.com/GoogleCloudPlatform/ope
 
 ## Related APIs
 
-- [`@arnilo/prism-rag`](rag.md): Bounded document chunking and vector context injection.
+- [`@arnilo/prism-memory/rag`](rag.md): Bounded document chunking and vector context injection.
 - [`@arnilo/prism-memory`](working-and-semantic-memory.md): Embedder and VectorStore primitives.
 - [`@arnilo/prism-coding-agent`](coding-agent-tools.md): Code manipulation and reading tools.
 - [`Contribution registries`](contribution-registries.md): Extension contribution model.

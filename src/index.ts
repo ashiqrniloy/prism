@@ -617,6 +617,32 @@ export {
   TOOL_RESULT_FOLD_TURN_METADATA_KEY,
 } from "./tool-result-fold.js";
 export type {
+  ActiveToolSet,
+  ToolSearchIndex,
+  ToolSearchMatch,
+  ToolSearchState,
+  ToolsDisclosure,
+  ToolsSearchOptions,
+} from "./tool-search.js";
+export {
+  createActiveToolSet,
+  createSearchToolsTool,
+  createToolSearchIndex,
+  createToolSearchState,
+  DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES,
+  DEFAULT_TOOLS_SEARCH_TOP_K,
+  HARD_MAX_TOOLS_INDEX,
+  HARD_MAX_TOOLS_SEARCH_QUERY_BYTES,
+  HARD_MAX_TOOLS_SEARCH_TOP_K,
+  isToolDisclosureError,
+  resolveToolsDisclosure,
+  SEARCH_TOOLS_TOOL_NAME,
+  scoreTools,
+  selectDisclosedTools,
+  TOOL_DISCLOSURE_ERROR_CODE,
+  ToolDisclosureError,
+} from "./tool-search.js";
+export type {
   DispatchToolCallOptions,
   ToolArgumentValidationError,
   ToolArgumentValidationResult,
@@ -641,5 +667,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.3.2";
+export const version = "0.4.0";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

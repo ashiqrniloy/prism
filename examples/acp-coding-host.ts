@@ -1,7 +1,7 @@
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import type { AgentRunLifecycle, AgentRunRef, AgentRunResume, AgentSession } from "@arnilo/prism";
 import { createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
-import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-agent";
+import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-tools/agent";
 
 /**
  * Phase 10 ACP coding-host example (plan 010 Task 8).

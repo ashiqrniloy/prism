@@ -10,7 +10,7 @@ import type {
   ToolRegistry,
   ToolValidator,
 } from "@arnilo/prism";
-import type { ProcessSessions } from "@arnilo/prism-coding-agent";
+import type { ProcessSessions } from "@arnilo/prism-coding-tools/agent";
 import type { PrismMcpAuthorizer } from "@arnilo/prism-mcp";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 

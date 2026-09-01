@@ -189,7 +189,7 @@ Canonical contract: [Thinking and reasoning](thinking-and-reasoning.md).
 
 ## AI SDK adapter checklist
 
-`@arnilo/prism-provider-ai-sdk` is a host-owned `LanguageModelV4` bridge. It does not participate in the discovery or thinking/reasoning checklists above. Cover instead:
+`@arnilo/prism-providers/ai-sdk` is a host-owned `LanguageModelV4` bridge. It does not participate in the discovery or thinking/reasoning checklists above. Cover instead:
 
 1. **No catalog / no setup fetch** — package exports no `list*Models()`; `createAiSdkProvider` wraps a host model only.
 2. **Version + specification gate** — exact `@ai-sdk/provider` matrix version is verified at setup; rejects version skew, non-v4 models (`specificationVersion !== "v4"`), or missing `doStream`.

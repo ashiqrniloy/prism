@@ -1,0 +1,50 @@
+CellValue	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+ColumnSchema	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+ColumnType	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+CsvDialect	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+CsvParse	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+DEFAULT_INFERENCE_WINDOW_ROWS	export declare const DEFAULT_INFERENCE_WINDOW_ROWS = 500
+DEFAULT_MAX_COLUMNS	export declare const DEFAULT_MAX_COLUMNS = 1000
+DEFAULT_MAX_ROWS	export declare const DEFAULT_MAX_ROWS = 100000
+DEFAULT_MAX_SHEETS	export declare const DEFAULT_MAX_SHEETS = 100
+DEFAULT_MAX_SHEET_BYTES	export declare const DEFAULT_MAX_SHEET_BYTES: number
+DEFAULT_MAX_WARNINGS	export declare const DEFAULT_MAX_WARNINGS = 100
+DateCellValue	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+DateTimeCellValue	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+DecimalCellValue	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+FormulaCellValue	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+HARD_INFERENCE_WINDOW_ROWS	export declare const HARD_INFERENCE_WINDOW_ROWS = 5000
+HARD_MAX_COLUMNS	export declare const HARD_MAX_COLUMNS = 16384
+HARD_MAX_ROWS	export declare const HARD_MAX_ROWS = 1000000
+HARD_MAX_SHEETS	export declare const HARD_MAX_SHEETS = 1000
+HARD_MAX_SHEET_BYTES	export declare const HARD_MAX_SHEET_BYTES: number
+HARD_MAX_WARNINGS	export declare const HARD_MAX_WARNINGS = 1000
+InferenceWarning	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+ParseCsvOptions	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+ParseWorkbookOptions	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+ResolvedSheetsCaps	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+SheetParse	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+SheetsCapError	export declare class SheetsCapError extends SheetsError
+SheetsCaps	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+SheetsError	export declare class SheetsError extends Error
+SheetsFormatError	export declare class SheetsFormatError extends SheetsError
+SheetsParseError	export declare class SheetsParseError extends SheetsError
+SheetsValidationError	export declare class SheetsValidationError extends SheetsError
+WorkbookParse	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+inferAndTransformRows	export declare function inferAndTransformRows(rawRows: readonly (readonly CellValue[])[], caps: ResolvedSheetsCaps): InferAndTransformResult
+isCanonicalDecimal	export declare function isCanonicalDecimal(str: string): boolean
+isCurrencyString	export declare function isCurrencyString(str: string): boolean
+isScientificNotation	export declare function isScientificNotation(str: string): boolean
+noopSheetsSpan	export declare const noopSheetsSpan: SheetsTelemetrySpan
+noopSheetsTelemetry	export declare const noopSheetsTelemetry: SheetsTelemetry
+normalizeDecimal	export declare function normalizeDecimal(input: string): NormalizedDecimalResult | null
+parseCsv	export declare function parseCsv(input: string | Uint8Array, options?: ParseCsvOptions): Promise<CsvParse>
+parseWorkbook	export declare function parseWorkbook(bytes: Uint8Array, options?: ParseWorkbookOptions): Promise<WorkbookParse>
+resolveSheetsCaps	export declare function resolveSheetsCaps(caps?: SheetsCaps): ResolvedSheetsCaps
+type InferAndTransformResult	export { inferAndTransformRows, type InferAndTransformResult, } from "./inference.js"
+type NormalizedDecimalResult	export { isCanonicalDecimal, isCurrencyString, isScientificNotation, normalizeDecimal, type NormalizedDecimalResult, } from "./decimal.js"
+type SheetsTelemetry	export { noopSheetsSpan, noopSheetsTelemetry, type SheetsTelemetry, type SheetsTelemetryAttributeValue, type SheetsTelemetrySpan, } from "./telemetry.js"
+type SheetsTelemetryAttributeValue	export { noopSheetsSpan, noopSheetsTelemetry, type SheetsTelemetry, type SheetsTelemetryAttributeValue, type SheetsTelemetrySpan, } from "./telemetry.js"
+type SheetsTelemetrySpan	export { noopSheetsSpan, noopSheetsTelemetry, type SheetsTelemetry, type SheetsTelemetryAttributeValue, type SheetsTelemetrySpan, } from "./telemetry.js"
+validateByteCap	export declare function validateByteCap(byteLength: number, caps: ResolvedSheetsCaps): void
+validateZipSignature	export declare function validateZipSignature(bytes: Uint8Array): void

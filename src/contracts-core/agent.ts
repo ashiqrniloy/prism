@@ -63,6 +63,9 @@ export interface AgentConfig {
   readonly activateAllSkills?: true;
   /** Progressive: catalog (name+description) unless loaded; eager: full instructions every turn. Default progressive. */
   readonly skillsDisclosure?: import("../skill-disclosure.js").SkillsDisclosure;
+  /** Tools disclosure: "all" (default) sends every active tool schema; "search" sends top-k + the generated `search_tools` tool. */
+  readonly toolsDisclosure?: import("../tool-search.js").ToolsDisclosure;
+  readonly toolsSearch?: import("../tool-search.js").ToolsSearchOptions;
   /** Opt-in projection-only fold for aged large tool results in provider view; store untouched. */
   readonly toolResultFold?: import("../tool-result-fold.js").ToolResultFoldOptions;
   readonly inputBuilder?: InputBuilder;
@@ -283,6 +286,9 @@ export interface PromptBuildRequest {
   readonly skills?: readonly Skill[];
   readonly skillsDisclosure?: import("../skill-disclosure.js").SkillsDisclosure;
   readonly loadedSkills?: import("../skill-disclosure.js").LoadedSkillSet;
+  /** Tools disclosure: "all" (default) sends every active tool schema; "search" sends top-k + the generated `search_tools` tool. */
+  readonly toolsDisclosure?: import("../tool-search.js").ToolsDisclosure;
+  readonly toolsSearch?: import("../tool-search.js").ToolsSearchOptions;
   /** Skills demoted to catalog-only by context budget this turn. */
   readonly demotedSkillBodies?: readonly string[];
   readonly tools?: readonly ToolDefinition[];

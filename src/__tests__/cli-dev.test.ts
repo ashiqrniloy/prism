@@ -47,7 +47,7 @@ describe("prism dev subcommand (plan 040 Task 4)", () => {
       loadDevCli: async () => undefined,
     });
     assert.equal(code, 2);
-    assert.match(io.stderr.text(), /npm install --save-dev \S*prism-dev/);
+    assert.match(io.stderr.text(), /npm install --save-dev \S*prism-(dev|coding-tools)/);
     assert.equal(io.stdout.text(), "");
   });
 

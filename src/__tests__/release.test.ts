@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -41,8 +41,8 @@ const missing = async () => new Response("not found", { status: 404 });
 
 test("0.3.0 release graph is independent, publishable, and documented", () => {
   const release = loadRelease(process.cwd());
-  // 61 = root + 60 workspace packages, including the host-owned desktop wrapper, antigravity agent, prism-wiki, prism-graft, prism-ponytail, and the dev-only inspector (plan 040).
-  assert.equal(release.packages.length, 61);
+  // 11 = root + 10 workspace packages after plan 054 Task 8 (office family + profile deletions).
+  assert.equal(release.packages.length, 11);
   assert.doesNotThrow(() =>
     validateReleaseIndependent(release, {
       baseline: "HEAD",
@@ -58,10 +58,12 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
   const changelog = readFileSync(join(process.cwd(), "CHANGELOG.md"), "utf8");
   assert.ok(changelog.includes("## [0.2.0] - 2026-08-13"), "root changelog missing 0.2.0 entry");
   assert.ok(changelog.includes("## [0.1.7] - 2026-08-12"), "root changelog missing 0.1.7 entry");
-  for (const pkg of ["packages/provider-alibaba"]) {
-    const path = join(process.cwd(), pkg, "CHANGELOG.md");
-    assert.ok(readFileSync(path, "utf8").includes("## [0.1.2] - 2026-08-10"), `${pkg} changelog missing 0.1.2 entry`);
-  }
+  // plan 054 Task 6: standalone provider manifests (and their changelogs) retired
+  // into the @arnilo/prism-providers family; the 0.1.2 handoff lives in the docs.
+  assert.ok(
+    existsSync(join(process.cwd(), "packages/prism-providers/src/alibaba/index.ts")),
+    "alibaba adapter must exist in the providers family",
+  );
   const docs = readFileSync(join(process.cwd(), "docs/release-and-install.md"), "utf8");
   assert.ok(docs.includes("### 0.1.2 publish handoff (plan 014 Task 6)"));
   assert.ok(docs.includes("48 publishable manifests") || docs.includes("**48** manifests"));
@@ -186,9 +188,9 @@ test("registry failures stay attributable without leaking environment tokens", a
 
 test("release workflow publishes the lockstep cut once and package tags independently", () => {
   const workflow = readFileSync(join(process.cwd(), ".github/workflows/release.yml"), "utf8");
-  assert.match(workflow, /tags:\s*\["v0\.3\.0", "@arnilo\/\*@\*"\]/);
+  assert.match(workflow, /tags:\s*\["v0\.3\.0", "v0\.4\.0", "@arnilo\/\*@\*"\]/);
   assert.match(workflow, /id-token:\s*write/);
-  assert.match(workflow, /release:publish -- --lockstep --version 0\.3\.0/);
+  assert.match(workflow, /release:publish -- --lockstep --version /);
   assert.match(workflow, /release:publish -- --resume/);
   assert.doesNotMatch(workflow, /publish[\s\S]*startsWith\(github\.ref, 'refs\/tags\/v'\)/);
   const releaseCli = readFileSync(join(process.cwd(), "scripts/release.mjs"), "utf8");

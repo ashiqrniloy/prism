@@ -1,4 +1,20 @@
+## [0.4.0] - 2026-09-01
+
+- Plan 054: family ships as part of the 11-package 0.4 lockstep; peer `@arnilo/prism@^0.4.0`.
+
 # Changelog
+
+## [Unreleased] (plan 054 Task 5)
+
+### Changed
+- **Memory/context family conversion**: `@arnilo/prism-rag` (with `/loaders` and `/parsers`), `@arnilo/prism-compaction-llm`, `@arnilo/prism-compaction-observational-memory`, `@arnilo/prism-graft`, and `@arnilo/prism-wiki` fold into this package as `./rag`, `./rag/loaders`, `./rag/parsers`, `./compaction/llm`, `./compaction/observational-memory`, `./graft`, and `./wiki` subpaths. The `prism-wiki` bin and bundled `skills/` ship from this tarball; Graft stays optional-peer gated on `@nanonets/graft`; the root memory entry stays dependency-free apart from `pg` and imports no subpath code. Extension identifiers move to the subpath names (`@arnilo/prism-memory/graft`, `/wiki`, `/compaction/*`).
+
+## [0.3.2] - 2026-08-31 (plan 044)
+
+### Added
+- **Composite recall scoring (opt-in)**: `RecallOptions.scoring` blends stored `importance` and timestamp half-life recency with similarity (sum-normalized weights, similarity keeps the remainder; overshoot normalizes down). Hits expose `similarity`/`recency`/`importance` components; tie-break and ordering match the stores; candidates fetch at `topK × 4` then cut to `topK` (one shared pure re-rank for memory and pgvector ordering parity).
+- **Importance at write**: `MemoryEntryInput.importance` (clamped to `[0,1]`, wins over derivation) and `MemoryEntryInput.reflection` + `CreateMemoryOptions.importanceFrom` (host-owned hook over the redacted reflection payload, write time only, output clamped, never invoked at recall; no default heuristic ships). Stored as nullable `importance` on durable rows via additive `ADD COLUMN IF NOT EXISTS`; legacy rows score neutral `1.0`.
+- Public helpers `clampImportance`/`normalizeImportance`/`resolveRecallScoring`/`rerankRecallHits`/`deriveEntryImportance` + `RECALL_OVERSAMPLE`/`NEUTRAL_IMPORTANCE` and the `ImportanceFromReflection`/`ResolvedRecallScoring` types; public-surface conformance leg + docs tripwire (`dist/__tests__/public-surface.test.js`).
 
 ## [0.3.1] - 2026-08-26
 

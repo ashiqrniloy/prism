@@ -2,8 +2,8 @@ import { readFile } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 import process from "node:process";
 import type { Readable, Writable } from "node:stream";
-import { type InitRuntime, initUsage, runInitCommand } from "./cli-init.js";
 import { runPrismDevSubcommand } from "./cli-dev.js";
+import { type InitRuntime, initUsage, runInitCommand } from "./cli-init.js";
 import { type ProviderAddRuntime, providerAddUsage, runProviderAddCommand } from "./cli-provider-add.js";
 import type {
   AgentSession,
@@ -90,6 +90,8 @@ export interface CliRuntime {
   readonly globalRoot?: string;
   /** Override init template root (tests). */
   readonly initTemplatesRoot?: string;
+  /** Override template gallery root (tests). */
+  readonly initGalleryRoot?: string;
   /** Override version stamped by `prism init` (tests). */
   readonly initPackageVersion?: string;
   /** Override provider-scaffold template root (tests). */
@@ -103,9 +105,10 @@ export interface CliRuntime {
 }
 
 export const usage = `Usage: prism [--mode print|json|rpc] [-p prompt] [options]
-       prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]
+       prism init <dir> [--template <name>] [--list-templates] [--provider <name>] [--with-workflows] [--with-evals] [--force]
        prism providers add <name> [--base-url <url>] [--env-key <name>] [--model <id>] [--force]
        prism dev [--port <n>] [--host <addr>]   (loopback inspector; delegates into @arnilo/prism-dev)
+
 
 Options:
   -p, --prompt <text>        Prompt to run in print/json mode
@@ -304,6 +307,7 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
       stdout: runtime.stdout,
       stderr: runtime.stderr,
       ...(runtime.initTemplatesRoot !== undefined ? { templatesRoot: runtime.initTemplatesRoot } : {}),
+      ...(runtime.initGalleryRoot !== undefined ? { galleryRoot: runtime.initGalleryRoot } : {}),
       ...(runtime.initPackageVersion !== undefined ? { packageVersion: runtime.initPackageVersion } : {}),
       ...(runtime.cwd !== undefined ? { cwd: runtime.cwd } : {}),
     };

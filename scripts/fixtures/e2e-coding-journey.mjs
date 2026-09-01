@@ -33,8 +33,8 @@ import {
   createProcessSessions,
   createReadPathSet,
   createWriteTool,
-} from "@arnilo/prism-coding-agent";
-import { createCodingApprovalPolicy } from "@arnilo/prism-coding-security";
+} from "@arnilo/prism-coding-tools/agent";
+import { createCodingApprovalPolicy } from "@arnilo/prism-coding-tools/security";
 
 const SECRET = "packed-coding-secret";
 const redactor = createSecretRedactor([SECRET]);

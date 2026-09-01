@@ -1,0 +1,5 @@
+{
+  "name": "init",
+  "description": "Minimal starter Prism agent with one selected provider and offline mock test",
+  "version": "0.1.0"
+}

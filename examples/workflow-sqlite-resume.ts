@@ -8,7 +8,6 @@ import {
   providerTextDelta,
   providerUsage,
 } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 import {
   agentNode,
   createWorkflowCheckpoints,
@@ -18,7 +17,8 @@ import {
   runWorkflow,
   type WorkflowEvent,
   type WorkflowRunResult,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-core/runtime/workflows";
+import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
 
 // SQLite durable checkpoint, abort, and resume. A two-node workflow writes
 // to a temp SQLite database; checkpoint survives the function node then

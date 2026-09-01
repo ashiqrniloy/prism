@@ -46,7 +46,6 @@ import {
 } from "@arnilo/prism";
 import { collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
 import { ACP_RUN_CANCEL_NAMESPACE, createAcpRunRecovery, createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
-import { createBrowserManager, createBrowserTools } from "@arnilo/prism-browser";
 import {
   assertCodingPatchAccepted,
   createCodingCheckTool,
@@ -62,8 +61,9 @@ import {
   normalizeDiagnostics,
 } from "@arnilo/prism-coding-agent";
 import { createCodingApprovalPolicy, createDockerSandbox } from "@arnilo/prism-coding-security";
-import { createArtifactService } from "@arnilo/prism-server";
-import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres";
+import { createArtifactService } from "@arnilo/prism-core/runtime/server";
+import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
+import { createBrowserManager, createBrowserTools } from "@arnilo/prism-web-tools/browser";
 
 const env = process.env;
 const suffix = env.PRISM_JOURNEY_SUFFIX ?? `j${Date.now().toString(36)}${randomBytes(4).toString("hex")}`; // random suffix (CodeQL js/insecure-randomness, alerts 52-55)

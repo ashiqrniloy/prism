@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-kimi` provides two distinct, side-effect-free routes:
+`@arnilo/prism-providers/kimi` provides two distinct, side-effect-free routes:
 
 1. **Kimi For Coding** (default) — Anthropic-compatible `POST /messages` on
    `https://api.kimi.com/coding` with `User-Agent: KimiCLI/1.5` (unless overridden).
@@ -33,7 +33,7 @@ import {
   createKimiProviderPackage,
   listKimiModels,
   defineKimiModel,
-} from "@arnilo/prism-provider-kimi";
+} from "@arnilo/prism-providers/kimi";
 
 createKimiProviderPackage(options: KimiProviderPackageOptions): ProviderPackage
 listKimiModels(options?: ListKimiModelsOptions): Promise<ModelConfig[]>
@@ -137,7 +137,7 @@ import { createExtensionKernel } from "@arnilo/prism";
 import {
   createKimiProviderPackage,
   listKimiModels,
-} from "@arnilo/prism-provider-kimi";
+} from "@arnilo/prism-providers/kimi";
 
 const kernel = createExtensionKernel();
 await kernel.load([

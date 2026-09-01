@@ -2,14 +2,15 @@
 
 ## What it does
 
-Tool conformance helpers are dependency-free assertions for tool-dispatch configuration tests. They exercise the blocked-reason matrix and the success path of `dispatchToolCall` without network or credentials.
+Tool conformance helpers are dependency-free assertions for tool-dispatch configuration tests. They exercise the blocked-reason matrix and the success path of `dispatchToolCall` without network or credentials, and the tool-disclosure contract (progressive tool loading, plan 041) without any provider call.
 
 Exported from `@arnilo/prism/testing/tool-conformance`:
 
 - `assertToolDispatchConforms(registry, options)`
+- `assertToolDisclosureConforms(options)`
 - `assertToolBlocked(probe, expectedReason)`
 - `dispatchAndCollect(probe)`
-- `ToolConformanceOptions`, `ToolDispatchProbeOptions`
+- `ToolConformanceOptions`, `ToolDispatchProbeOptions`, `ToolDisclosureConformanceOptions`
 
 ## When to use it
 
@@ -44,6 +45,29 @@ await assertToolDispatchConforms(createToolRegistry(), {
 ## Outputs / response / events
 
 `assertToolDispatchConforms` returns `Promise<void>` and throws on the first violation. `dispatchAndCollect` returns `{ result, events }` capturing the emitted `AgentEvent`s for custom assertions.
+
+`assertToolDispatchConforms` returns `Promise<void>` and throws on the first violation. `dispatchAndCollect` returns `{ result, events }` capturing the emitted `AgentEvent`s for custom assertions.
+
+### Disclosure leg (toolsDisclosure "search")
+
+`assertToolDisclosureConforms(options)` asserts the progressive tool-loading contract against the same narrowing the runtime applies (`filterTools` allow/deny bounds, then `selectDisclosedTools`):
+
+- search mode only narrows: the disclosed set is a subset of the allow/deny-filtered input, never wider, never zero, deterministic order for identical turns; a deny-listed tool is never described to the provider
+- the generated `search_tools` tool is always kept in the disclosed set
+- fail closed: an index over the frozen 1024-tool cap discloses the full eligible list
+- `search_tools` output is inert: names plus byte-truncated (512-char) descriptions only — no JSON structure, no tool schemas — oversized hosts descriptions are truncated, never executed, and configured `secrets` never surface even when a description carries one
+- activation is bounded to topK and only ever selects from the eligible set; activated tools stay disclosed on the next turn
+
+```ts
+import { assertToolDisclosureConforms } from "@arnilo/prism/testing/tool-conformance";
+
+assertToolDisclosureConforms({
+  tools: hostTools,                        // incl. schema-bearing and oversized-description tools
+  filter: { deny: ["legacy_tool"] },       // host allow/deny bounds
+  search: { topK: 16 },
+  secrets: [hostSecret],                   // secret-scan of model-facing search output
+});
+```
 
 ## Request/response example
 
@@ -84,5 +108,6 @@ await assertToolDispatchConforms(createToolRegistry(), {
 ## Related APIs
 
 - [Tools](tools.md)
+- [Tool effects](tool-effects.md)
 - [Settings, auth, trust, security](settings-auth-trust-security.md)
 - [Provider conformance](provider-conformance.md)

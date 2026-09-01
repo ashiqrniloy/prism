@@ -251,13 +251,40 @@ createJsonSchemaToolArgumentValidator({
 });
 ```
 
+## Tool disclosure (progressive tool loading)
+
+`toolsDisclosure` on `AgentConfig` / `RunOptions` (run wins; default `"all"`) controls how active tools reach the provider request. Default `"all"` sends every active tool schema — byte-identical to releases before the option existed. Opt-in `"search"` surfaces a bounded top-k subset per turn (scored lexically against the turn input over name and description) plus the generated `search_tools` tool; the model requests more by calling it.
+
+```ts
+const agent = createAgent({
+  model, provider,
+  tools,                                  // host-active ToolDefinitions (or registry)
+  toolsDisclosure: "search",              // default "all"
+  toolsSearch: { topK: 16 },              // optional; clamped to the hard cap
+});
+```
+
+Limits (mirroring the skill-disclosure DEFAULT/HARD cap pattern):
+
+| Limit | Default | Hard cap |
+| --- | --- | --- |
+| Disclosed tools per turn (`topK`) | 16 | 64 |
+| Indexed tools | — | 1024 (fail closed to full disclosure) |
+| Search query bytes | 4096 | 65536 |
+
+- `search_tools({ query, k? })` returns inert `name: short description [matched: …]` lines — no schemas or tool bodies — and marks returned tools active for the session. Activation is names-only in run persistence (`sessionState.activatedToolNames`, capped at 128 names) and inert for tools absent from the current registry; a host can reset it with `session.clearActivatedTools()`.
+- Fail closed: any index or scoring error discloses the full input list — never zero tools, never wider than the input list. Exhausting the frozen 1024-tool index cap is surfaced the same way.
+- Disclosure never grants access: dispatch re-checks registry membership and allow/deny (`unknown_tool` / `tool_denied`) on every call regardless of what was described. Search results are intersected with the disclosed list structurally — searched tools are only ever selected from that list, never widened.
+- Scoring is BM25-lite lexical (name tokens weigh ×3, IDF from the registry): bounded, dependency-free, deterministic tie-breaks. ponytail ceiling: embedder-backed scoring via `@arnilo/prism-rag` if accuracy fixtures fall short.
+- Cross-link: skills apply the same discipline to prompt text — see [Context and skills](context-and-skills.md).
+
 ## Guardrails
 
 `DispatchToolCallOptions.guardrails` evaluates `tool_input` after `tool_call` middleware normalization and before lookup, permission, validation, execution policy, or side effect. `tool_output` evaluates raw completed results before redaction, event emission, ledger rows, and transcript append. A block returns a blocked result; tripwire fails the enclosing run. See [Guardrails](guardrails.md).
 
 ## Related APIs
 
-- [OpenAPI tools adapter](openapi-tools.md): optional `@arnilo/prism-openapi-tools` `createOpenApiTools` — compile host-selected OpenAPI 3.1 operationIds into bounded `ToolDefinition`s (allow-list only, pinned origin, resolved/bounded schemas, approval + effect-store idempotency on mutations, bounded body/response/retries/pagination, host credential resolver, untrusted output).
+- [OpenAPI tools adapter](openapi-tools.md): optional `@arnilo/prism-coding-tools/openapi` `createOpenApiTools` — compile host-selected OpenAPI 3.1 operationIds into bounded `ToolDefinition`s (allow-list only, pinned origin, resolved/bounded schemas, approval + effect-store idempotency on mutations, bounded body/response/retries/pagination, host credential resolver, untrusted output).
 - [Agent/session runtime](agent-session-runtime.md): dispatches complete provider tool calls through the host-active tool harness and returns tool results on the next provider turn.
 - [Public contracts](public-contracts.md): `ToolDefinition`, `ToolRegistry`, `ToolExecutionContext`, `ToolResult`, and tool `AgentEvent` contracts.
 - [Contribution registries](contribution-registries.md): inert extension/package tool contribution storage.
@@ -270,6 +297,6 @@ createJsonSchemaToolArgumentValidator({
 - [MCP client bridge](mcp-tools.md): optional remote tool mapping plus separate bounded resource/prompt facades; non-tool MCP capabilities never bypass tool dispatch by masquerading as `ToolDefinition`.
 - [Recoverable tool effects](tool-effects.md): optional `tool.effect` + `effectStore` claim/CAS recovery around dispatch.
 - [Recoverable tool effects](tool-effects.md): optional `tool.effect` + `effectStore` claim/CAS recovery around dispatch.
-- [Coding agent tools](coding-agent-tools.md): optional first-party `@arnilo/prism-coding-agent` `shell`/`read`/`write`/`edit` tools a host registers into this harness.
+- [Coding agent tools](coding-agent-tools.md): optional first-party `@arnilo/prism-coding-tools/agent` `shell`/`read`/`write`/`edit` tools a host registers into this harness.
 
 `DispatchToolCallOptions.trust` and `.permission` run before validation or `execute()`; denial emits `tool_execution_blocked`. Middleware cannot bypass either guard. `AgentConfig.validator`/`RunOptions.validate` run after these guards; their output is redacted through the active `SecretRedactor`. `createSecureAgent()` requires all three seams plus non-empty schemas and durable pre-tool approval. Prism does not sandbox tools. See [Security/auth/trust](settings-auth-trust-security.md).

@@ -14,8 +14,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 
-const { spawnObscuraProcess } = await import("../packages/obscura/dist/process.js");
-const { createObscuraWebTools } = await import("../packages/obscura/dist/web.js");
+const { spawnObscuraProcess } = await import("../packages/web-tools/dist/obscura/process.js");
+const { createObscuraWebTools } = await import("../packages/web-tools/dist/obscura/web.js");
 
 function median(values) {
   const sorted = [...values].sort((a, b) => a - b);
@@ -24,7 +24,7 @@ function median(values) {
 
 const dir = mkdtempSync(join(tmpdir(), "prism-obscura-bench-"));
 // Deterministic fake `obscura` binary: emits the same JSON shapes the real CLI
-// produces for `search`/`fetch` (see packages/obscura/src/__tests__/fake-cli.ts).
+// produces for `search`/`fetch` (see packages/web-tools/src/obscura/__tests__/fake-cli.ts).
 const fakePath = join(dir, "fake-cli.mjs");
 writeFileSync(
   fakePath,

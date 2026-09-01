@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { AgentEvent, AgentIdentity, Guardrails, OwnershipScope, SecretRedactor, ToolDefinition, ToolRegistry } from "@arnilo/prism";
-import type { ProcessSessions } from "@arnilo/prism-coding-agent";
+import type { ProcessSessions } from "@arnilo/prism-coding-tools/agent";
 import type { PrismMcpAuthorizer } from "@arnilo/prism-mcp";
 import { DEFAULT_PRISM_AGENT_NAME, writeEphemeralAgentFile } from "./agent-file.js";
 import { createAntigravityConversationStore } from "./conversation.js";

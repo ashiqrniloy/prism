@@ -5,7 +5,7 @@
  * Every protocol detail lives in `createPrismAcpAgent` (@arnilo/prism-ag-ui);
  * this package never re-implements ACP. The default provider is the mock
  * provider so the lifecycle works out of the box; wire a real `AIProvider`
- * (e.g. @arnilo/prism-provider-openai) for actual generation.
+ * (e.g. @arnilo/prism-providers/openai) for actual generation.
  */
 import { randomUUID } from "node:crypto";
 import type { AgentApp, McpServer } from "@agentclientprotocol/sdk";
@@ -24,8 +24,8 @@ import {
   type SessionStore,
 } from "@arnilo/prism";
 import { createAcpClientFilesystem, createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
-import { createAcpFilesystemOperations, createCodingTools } from "@arnilo/prism-coding-agent";
-import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
+import { createAcpFilesystemOperations, createCodingTools } from "@arnilo/prism-coding-tools/agent";
+import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
 import type { PrismAcpAgentConfig } from "./config.js";
 
 export type { PrismAcpAgentConfig } from "./config.js";

@@ -14,12 +14,12 @@ import {
   type Skill,
   toolCallContent,
 } from "@arnilo/prism";
-import { createCavemanExtension } from "@arnilo/prism-caveman";
-import { createPonytailExtension } from "@arnilo/prism-ponytail";
+import { createCavemanExtension } from "@arnilo/prism-coding-tools/caveman";
+import { createPonytailExtension } from "@arnilo/prism-coding-tools/ponytail";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const cavemanUpstream = join(here, "../packages/prism-caveman/fixtures/upstream-full");
-const ponytailUpstream = join(here, "../packages/prism-ponytail/fixtures/upstream-full");
+const cavemanUpstream = join(here, "../packages/prism-coding-tools/fixtures/caveman/upstream-full");
+const ponytailUpstream = join(here, "../packages/prism-coding-tools/fixtures/ponytail/upstream-full");
 const sessionId = "behavior-demo";
 
 const PONYTAIL_BODY_MARKER = "seen every over-engineered codebase";

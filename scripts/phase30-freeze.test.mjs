@@ -230,7 +230,17 @@ test("phase30 freeze: package budget 55→57; graph gains desktop then Antigravi
   assert.equal(budget.newRuntimeDependencyNames, 0);
   assert.equal(packageTruth.counts.provider, 17);
   const hasGraft = packageTruth.capability.includes("@arnilo/prism-graft"); // plan 033 optional context-graph package
-  assert.equal(packageTruth.counts.prismFamily, 10);
+  const hasOffice = packageTruth.capability.includes("@arnilo/prism-office"); // plan 054 Task 8 office family
+  assert.equal(
+    packageTruth.counts.prismFamily,
+    hasOffice
+      ? 3
+      : packageTruth.family?.includes("@arnilo/prism-coding-tools")
+        ? 7
+        : packageTruth.family?.includes("@arnilo/prism-core")
+          ? 11
+          : 10,
+  );
   const desktopDone = manifest.tasks.task7 === "done";
   const antigravityDone = manifest.amendments.antigravity.tasks.task6 === "done";
   const hasWiki = packageTruth.capability.includes("@arnilo/prism-wiki");
@@ -240,15 +250,51 @@ test("phase30 freeze: package budget 55→57; graph gains desktop then Antigravi
   const obscuraTerm = Number(hasObscura);
   // Plan 040: dev-only inspector package (deliberately outside umbrella profiles).
   const hasDevInspector = packageTruth.capability.includes("@arnilo/prism-dev");
+  // Plan 042: optional versioned prompt registry (deliberately outside umbrella profiles).
+  const hasPrompts = packageTruth.capability.includes("@arnilo/prism-prompts");
+  // Plan 051: documents engine (deliberately outside umbrella profiles).
+  const hasDocuments = packageTruth.capability.includes("@arnilo/prism-documents");
+  // Plan 052: sheets engine (deliberately outside umbrella profiles).
+  const hasSheets = packageTruth.capability.includes("@arnilo/prism-sheets");
+  // Plan 053: diagrams engine (deliberately outside umbrella profiles).
+  const hasDiagrams = packageTruth.capability.includes("@arnilo/prism-diagrams");
+  const hasCodingTools = packageTruth.family?.includes("@arnilo/prism-coding-tools");
+  const hasCore = packageTruth.family?.includes("@arnilo/prism-core");
+  // Plan 054 Task 8: -46 folds the 4 profiles + 3 office drafts into the office family
+  // (2 done-terms + 1 = 55+3-46 = 11 publishable / 10 workspace).
+  const delta = hasOffice ? -46 : hasCodingTools ? -43 : hasCore ? -14 : 0;
   assert.equal(
     packageTruth.counts.publishable,
-    55 + Number(desktopDone) + Number(antigravityDone) + Number(hasWiki) + graftTerm + obscuraTerm + Number(hasDevInspector),
+    55 +
+      Number(desktopDone) +
+      Number(antigravityDone) +
+      Number(hasWiki) +
+      graftTerm +
+      obscuraTerm +
+      Number(hasDevInspector) +
+      Number(hasPrompts) +
+      Number(hasDocuments) +
+      Number(hasSheets) +
+      Number(hasDiagrams) +
+      delta,
   );
   assert.equal(
     packageTruth.counts.workspace,
-    54 + Number(desktopDone) + Number(antigravityDone) + Number(hasWiki) + graftTerm + obscuraTerm + Number(hasDevInspector),
+    54 +
+      Number(desktopDone) +
+      Number(antigravityDone) +
+      Number(hasWiki) +
+      graftTerm +
+      obscuraTerm +
+      Number(hasDevInspector) +
+      Number(hasPrompts) +
+      Number(hasDocuments) +
+      Number(hasSheets) +
+      Number(hasDiagrams) +
+      delta,
   );
-  if (desktopDone) assert.ok(packageTruth.capability.includes("@arnilo/prism-computer-use-linux"));
+  if (desktopDone && !hasCodingTools) assert.ok(packageTruth.capability.includes("@arnilo/prism-computer-use-linux"));
+  if (hasCodingTools) assert.ok(packageTruth.family.includes("@arnilo/prism-coding-tools"));
   if (antigravityDone) assert.ok(packageTruth.capability.includes("@arnilo/prism-antigravity-agent"));
   if (hasWiki) assert.ok(packageTruth.capability.includes("@arnilo/prism-wiki"));
   if (manifest.tasks.task9 === "pending") {
@@ -257,7 +303,10 @@ test("phase30 freeze: package budget 55→57; graph gains desktop then Antigravi
   } else {
     // Decision B allows the root to patch independently after the 0.3.0 cut
     // (plan 039 moved the root to 0.3.1 with every changed package).
-    assert.ok(["0.3.0", "0.3.1", "0.3.2"].includes(packageTruth.root.version), `root version ${packageTruth.root.version}`);
+    assert.ok(
+      ["0.3.0", "0.3.1", "0.3.2", "0.3.3", "0.4.0"].includes(packageTruth.root.version),
+      `root version ${packageTruth.root.version}`,
+    );
     assert.equal(packageTruth.peerPolicy.decision, "B");
     // Peer spec follows the root version (plan 039: ^0.3.0 window peers rewritten to ^0.3.1).
     assert.equal(packageTruth.peerPolicy.spec, `^${packageTruth.root.version}`);
@@ -269,7 +318,7 @@ test("phase30 closeout: current docs, roadmap, and changelogs record the cut", (
   assert.equal(manifest.tasks.task10, "done");
   const read = (path) => readFileSync(url(`../${path}`), "utf8");
   const index = read("docs/index.md");
-  assert.match(index, /current \*\*0\.3\.\d+\*\*/); // current line advances with Decision B root patches
+  assert.match(index, /current \*\*0\.[34]\.\d+\*\*/); // current line advances with Decision B / 0.4 lockstep
   for (const token of ["computer-use-linux", "findText", "Decision B", "ACP editor-buffer"]) {
     assert.ok(index.includes(token), `docs/index.md missing ${token}`);
   }
@@ -282,8 +331,12 @@ test("phase30 closeout: current docs, roadmap, and changelogs record the cut", (
   assert.match(migration, /image\/document reads fail closed/);
   for (const path of [
     "CHANGELOG.md",
-    "packages/computer-use-linux/CHANGELOG.md",
-    "packages/coding-agent/CHANGELOG.md",
+    existsSync(url("../packages/computer-use-linux/CHANGELOG.md"))
+      ? "packages/computer-use-linux/CHANGELOG.md"
+      : "packages/prism-coding-tools/CHANGELOG.md",
+    existsSync(url("../packages/coding-agent/CHANGELOG.md"))
+      ? "packages/coding-agent/CHANGELOG.md"
+      : "packages/prism-coding-tools/CHANGELOG.md",
     "packages/ag-ui/CHANGELOG.md",
     "packages/acp-agent/CHANGELOG.md",
     "packages/antigravity-agent/CHANGELOG.md",

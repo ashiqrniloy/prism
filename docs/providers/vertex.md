@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-vertex` registers a Vertex AI OpenAPI-compatible Chat Completions provider authenticated with host ADC / workload identity tokens. It is intentionally separate from `@arnilo/prism-provider-google` (consumer Gemini API keys).
+`@arnilo/prism-providers/vertex` registers a Vertex AI OpenAPI-compatible Chat Completions provider authenticated with host ADC / workload identity tokens. It is intentionally separate from `@arnilo/prism-providers/google` (consumer Gemini API keys).
 
 ## When to use it
 
@@ -11,7 +11,7 @@ Use it for GCP enterprise Vertex deployments with Application Default Credential
 ## Inputs / request
 
 ```ts
-import { createVertexProviderPackage } from "@arnilo/prism-provider-vertex";
+import { createVertexProviderPackage } from "@arnilo/prism-providers/vertex";
 
 createVertexProviderPackage({
   projectId: "my-gcp-project",
@@ -53,14 +53,14 @@ const provider = createVertexProvider({
 
 ## Extension and configuration notes
 
-`@arnilo/prism-provider-google` remains API-key Gemini (`generativelanguage.googleapis.com`) and must not register Vertex OAuth/ADC. Load this package explicitly for Vertex.
+`@arnilo/prism-providers/google` remains API-key Gemini (`generativelanguage.googleapis.com`) and must not register Vertex OAuth/ADC. Load this package explicitly for Vertex.
 
 ## Security and performance notes
 
 - No Google Cloud SDK dependency in the package.
 - Custom/private endpoint hosts are preserved.
 - Tokens redacted from errors; no import-time credential prefetch — the credential is resolved exactly once per request (a rotating `CredentialValueSource` is never consumed twice; the same resolved token drives the wrapper check and the inner auth header).
-- Conformance-proven (Task 6): package `setup()` performs zero fetch and zero credential resolution; an already-aborted signal fails fast; a truncated SSE stream (no `data: [DONE]`) ends in an `error` event; native Vertex cached-content lifecycle is intentionally unsupported on the OpenAI-compatible route — no cache wire fields are emitted even when the request carries Prism cache hints (use `@arnilo/prism-provider-google`'s `extra.cachedContent` on that package, or manage cache resources host-side).
+- Conformance-proven (Task 6): package `setup()` performs zero fetch and zero credential resolution; an already-aborted signal fails fast; a truncated SSE stream (no `data: [DONE]`) ends in an `error` event; native Vertex cached-content lifecycle is intentionally unsupported on the OpenAI-compatible route — no cache wire fields are emitted even when the request carries Prism cache hints (use `@arnilo/prism-providers/google`'s `extra.cachedContent` on that package, or manage cache resources host-side).
 - Pair with model-router residency allow-lists on `location`.
 
 ## Related APIs
@@ -69,4 +69,4 @@ const provider = createVertexProvider({
 - [OpenAI-compatible provider](openai-compatible.md)
 - [Provider packages](../provider-packages.md)
 - [Model routing](../model-routing.md)
-- Package README: [`@arnilo/prism-provider-vertex`](../../packages/provider-vertex/README.md)
+- Package README: [`@arnilo/prism-providers` family README](../../packages/prism-providers/README.md)

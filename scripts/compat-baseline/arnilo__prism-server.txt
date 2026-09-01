@@ -146,11 +146,22 @@ ResolvedPrismDeploymentLimits	export type { PrismDeploymentLimits, PrismServerLi
 ResolvedPrismServerLimits	export type { PrismDeploymentLimits, PrismServerLimits, ResolvedPrismDeploymentLimits, ResolvedPrismServerLimits, } from "./limits.js"
 S3ArtifactBodyError	export declare class S3ArtifactBodyError extends Error
 SSE_HEADERS	export declare const SSE_HEADERS:
+WebhookDeliveryOptions	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
+WebhookEnvelope	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
+WebhookEventName	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
+WebhookFailureRecord	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
+WebhookNotification	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
+WebhookNotifier	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
+WebhookNotifierDiagnostics	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
+WebhookNotifierLimits	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
+WebhookNotifierOptions	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
+WebhookTarget	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
 addHeaders	export declare function addHeaders(response: Response, extra?: Readonly<Record<string, string>>): Response
 assertRequestPolicy	export declare function assertRequestPolicy(request: Request, hosts?: readonly string[], origins?: readonly string[]): void
 authorize	export declare function authorize(options: CreatePrismHandlerOptions, request: Request, operation: PrismServerOperation, capabilityId: string, timeoutMs: number): Promise<PrismServerAuthorization | false>
 awaitWithSignal	export declare function awaitWithSignal<T>(promise: Promise<T>, signal: AbortSignal): Promise<T>
 awsUriEncode	export declare function awsUriEncode(value: string): string
+buildWebhookEnvelope	export declare function buildWebhookEnvelope(event: WebhookNotification, redactor: SecretRedactor, id: string): WebhookEnvelope
 canonicalHeaders	export declare function canonicalHeaders(headers: Readonly<Record<string, string>>, signedHeaders: readonly string[]): string
 canonicalQueryString	export declare function canonicalQueryString(query: Readonly<Record<string, string>>): string
 createArtifactHandler	export declare function createArtifactHandler(options: CreateArtifactHandlerOptions): PrismRequestHandler
@@ -167,6 +178,7 @@ createPrismHealthHandler	export declare function createPrismHealthHandler(option
 createPrismReplayHandler	export declare function createPrismReplayHandler(options: CreatePrismReplayHandlerOptions): import("./types.js").PrismRequestHandler
 createS3ArtifactBodyStore	export declare function createS3ArtifactBodyStore(options: S3ArtifactBodyStoreOptions): ArtifactBodyStore
 createSession	export declare function createSession(exposure: Agent | PrismAgentExposure, authorization: PrismServerAuthorization): Promise<
+createWebhookNotifier	export declare function createWebhookNotifier(options: WebhookNotifierOptions): WebhookNotifier
 errorResponse	export declare function errorResponse(error: unknown, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions): Response
 isAdmitOperation	export declare function isAdmitOperation(operation: string): boolean
 json	export declare function json(value: unknown, status: number, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions): Response
@@ -191,12 +203,14 @@ resolveArtifactLimits	export declare function resolveArtifactLimits(input?: Arti
 resolveConversationLimits	export declare function resolveConversationLimits(input?: ConversationLimits): ResolvedConversationLimits
 resolvePrismDeploymentLimits	export declare function resolvePrismDeploymentLimits(input?: PrismDeploymentLimits): ResolvedPrismDeploymentLimits
 resolvePrismServerLimits	export declare function resolvePrismServerLimits(input?: PrismServerLimits): ResolvedPrismServerLimits
+retryWebhookDelivery	export declare function retryWebhookDelivery(attempt: (signal: AbortSignal) => Promise<WebhookRetryAttempt>, limits: WebhookRetryLimits, redactor: SecretRedactor, signal?: AbortSignal): Promise<WebhookDeliveryOutcome>
 s3ObjectKey	export declare function s3ObjectKey(ref: ArtifactBodyRef): string
 sameOwnership	export declare function sameOwnership(left: PrismServerAuthorization["ownership"], right: PrismServerAuthorization["ownership"]): boolean
 sha256Hex	export declare function sha256Hex(data: Uint8Array): Promise<string>
 signArtifactDeliveryLink	export declare function signArtifactDeliveryLink(token: ArtifactDeliveryToken, secret: string): string
 signRequestV4	export declare function signRequestV4(input: SigV4RequestSignInput): Promise<
 signV4	export declare function signV4(input: SigV4SignInput): Promise<SigV4Signature>
+signWebhookBody	export declare function signWebhookBody(body: string, key: Uint8Array): string
 sse	export declare function sse(source: AsyncIterable<AgentEvent | WorkflowEvent>, owned: ReturnType<typeof ownedSignal>, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions, release: () => void): Response
 sseAgentEvents	export declare function sseAgentEvents(source: AsyncIterable<AgentEventEnvelope>, owned: ReturnType<typeof ownedSignal>, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions, release: () => void): Response
 validId	export declare function validId(value: string): boolean

@@ -1,5 +1,5 @@
 import { createExtensionKernel } from "@arnilo/prism";
-import { createClinePassProviderPackage } from "@arnilo/prism-provider-clinepass";
+import { createClinePassProviderPackage } from "@arnilo/prism-providers/clinepass";
 
 export async function demo() {
   const kernel = createExtensionKernel({ errorPolicy: "throw" });

@@ -11,7 +11,7 @@ import type {
   SecretRedactor,
   ToolRegistry,
 } from "@arnilo/prism";
-import type { CodingLifecycleEmitter } from "@arnilo/prism-coding-agent";
+import type { CodingLifecycleEmitter } from "@arnilo/prism-coding-tools/agent";
 import type { AgUiLimitOptions } from "../../limits.js";
 import type { AgUiProjection } from "../../projection.js";
 import type { AgUiAuthorization } from "../../types.js";

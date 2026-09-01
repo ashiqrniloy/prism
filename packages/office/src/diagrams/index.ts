@@ -1,0 +1,81 @@
+export {
+  canonicalizeDrawioXml,
+  type DrawioCanonicalizeOptions,
+} from "./canonicalize.js";
+export {
+  DEFAULT_MAX_ATTRIBUTES,
+  DEFAULT_MAX_ELEMENTS,
+  DEFAULT_MAX_XML_BYTES,
+  type DrawioXmlCaps,
+  HARD_MAX_ATTRIBUTES,
+  HARD_MAX_ELEMENTS,
+  HARD_MAX_XML_BYTES,
+  type ResolvedDrawioXmlCaps,
+  resolveDiagramsCaps,
+  validateByteCap,
+} from "./caps.js";
+export {
+  createDrawioEmbed,
+  type DrawioEmbed,
+  type DrawioEmbedFrame,
+  type DrawioEmbedOptions,
+  type DrawioEventMap,
+  type DrawioExportOptions,
+  type DrawioExportResult,
+  type DrawioLoadOptions,
+  type DrawioMessageEvent,
+  type DrawioMessageSource,
+} from "./embed.js";
+export {
+  DiagramsCapError,
+  DiagramsError,
+  type DiagramsErrorCode,
+  DiagramsFormatError,
+  DiagramsModelInvalidError,
+  DiagramsOriginError,
+  DiagramsProtocolError,
+  DiagramsTimeoutError,
+  DiagramsXmlMalformedError,
+  DiagramsXxeError,
+} from "./errors.js";
+export type {
+  DrawioAutosaveEvent,
+  DrawioConfigureAction,
+  DrawioConfigureEvent,
+  DrawioDialogAction,
+  DrawioDraftAction,
+  DrawioErrorEvent,
+  DrawioExitEvent,
+  DrawioExportAction,
+  DrawioExportBounds,
+  DrawioExportEvent,
+  DrawioExportFormat,
+  DrawioFitAction,
+  DrawioInboundEvent,
+  DrawioInitEvent,
+  DrawioLoadAction,
+  DrawioLoadEvent,
+  DrawioMergeAction,
+  DrawioOutboundAction,
+  DrawioPromptAction,
+  DrawioResetEditorAction,
+  DrawioSaveEvent,
+  DrawioSpinnerAction,
+  DrawioStatusAction,
+  DrawioTemplateAction,
+} from "./messages.js";
+export { validateDiagramsOrigin } from "./origin.js";
+export {
+  type DiagramsTelemetry,
+  type DiagramsTelemetryAttributeValue,
+  type DiagramsTelemetrySpan,
+  noopDiagramsSpan,
+  noopDiagramsTelemetry,
+} from "./telemetry.js";
+export {
+  assertNotVisio,
+  type DrawioModelSummary,
+  type DrawioXmlOptions,
+  UNSAFE_XML_DECLARATION_PATTERN,
+  validateDrawioXml,
+} from "./xml.js";

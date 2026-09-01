@@ -199,6 +199,10 @@ async function prepareAgentRunResume(
   if (options.persistSessionState && state.sessionState?.loadedSkillNames) {
     session.restoreLoadedSkills(state.sessionState.loadedSkillNames);
   }
+  // Plan 041: re-add search-activated tool names (names only; absent tools stay inert until re-searched).
+  if (options.persistSessionState && state.sessionState?.activatedToolNames) {
+    session.restoreActivatedTools(state.sessionState.activatedToolNames);
+  }
   // Plan 018 Task 6 (closeout `checkpoint-bodies`): restore exact instructions so the
   // resumed session renders them registry-independently (no load_skill round-trip).
   if (options.persistSessionState && options.includeSkillBodies && state.sessionState?.loadedSkillBodies) {

@@ -81,8 +81,9 @@ describe("core source boundaries", () => {
     assert.equal(Object.keys(deps).length, 0, "core has runtime dependencies (expected none)");
   });
 
-  it("source does not import first-party provider packages", () => {
+  it("source does not import first-party provider packages or the providers family", () => {
     assert.equal(/from ["']@arnilo\/prism-provider-/.test(allSrcText), false, "src/ imports a first-party provider package");
+    assert.equal(/from ["']@arnilo\/prism-providers\//.test(allSrcText), false, "src/ imports the @arnilo/prism-providers family");
   });
 
   it("core does not default to optional observational memory", () => {

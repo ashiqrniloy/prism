@@ -1,0 +1,34 @@
+{
+  "kind": "doc",
+  "modelVersion": 1,
+  "title": "Prism Documents Golden Specification",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 1,
+      "text": "1. Executive Summary"
+    },
+    {
+      "type": "paragraph",
+      "text": "The Prism Documents package provides specification-compliant, AI-native document generation, parsing, patching, and preview rendering for Word (DOCX), Excel (XLSX), and PowerPoint (PPTX) artifacts."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "2. Benchmark Metrics"
+    },
+    {
+      "type": "table",
+      "rows": 3,
+      "columns": 3,
+      "cells": [
+        ["Format", "Target Latency", "Strict Memory Bound"],
+        ["DOCX", "50ms", "32MB"],
+        ["XLSX", "30ms", "32MB"]
+      ]
+    },
+    {
+      "type": "page-break"
+    }
+  ]
+}

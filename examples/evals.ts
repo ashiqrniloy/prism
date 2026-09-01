@@ -1,5 +1,5 @@
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createMemoryEvaluationStore, defineDataset, defineScorer, runExperiment, scoreRunLive } from "@arnilo/prism-evals";
+import { createMemoryEvaluationStore, defineDataset, defineScorer, runExperiment, scoreRunLive } from "@arnilo/prism-core/governance/evals";
 
 const scorer = defineScorer({
   id: "contains-citation",

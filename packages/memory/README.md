@@ -1,6 +1,6 @@
 # @arnilo/prism-memory
 
-Optional working memory and semantic recall for Prism agents.
+Optional memory and context family for Prism agents: working/semantic memory at the root plus `/rag`, `/compaction/llm`, `/compaction/observational-memory`, `/graft`, and `/wiki` subpaths (including the `prism-wiki` bin and bundled skills).
 
 Install explicitly. This package is not included in profile bundles until a size/use review. Ordinary Prism sessions do not require a vector backend.
 

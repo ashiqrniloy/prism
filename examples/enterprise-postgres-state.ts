@@ -1,5 +1,5 @@
 import type { AgentIdentity } from "@arnilo/prism";
-import type { PostgresEnterpriseState } from "@arnilo/prism-enterprise-postgres";
+import type { PostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
 
 const identity: AgentIdentity = {
   tenantId: "tenant-1",

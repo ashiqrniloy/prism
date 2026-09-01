@@ -1,4 +1,4 @@
-import { computeS256Challenge, createOpenAICodexOAuthProvider, createPkceVerifier } from "@arnilo/prism-provider-openai";
+import { computeS256Challenge, createOpenAICodexOAuthProvider, createPkceVerifier } from "@arnilo/prism-providers/openai";
 
 // Codex OAuth login uses RFC 7636 PKCE with S256. The verifier is exchanged at
 // the token endpoint, never sent on the authorize URL. This example only builds

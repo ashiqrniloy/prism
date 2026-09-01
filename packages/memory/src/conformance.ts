@@ -83,6 +83,47 @@ export async function runMemoryConformance(createStores: () => Promise<MemoryCon
     assert.ok(recalled.hits[0]!.score >= recalled.hits[1]!.score);
   }
 
+  // Composite scoring crosses the same adapter contract: stored importance clamps
+  // at write, recency uses createdAt/half-life, components appear only when enabled,
+  // and the shared deterministic re-rank puts fresh/high-importance ahead.
+  const scoringNow = Date.now();
+  await memory.remember(
+    {
+      entries: [
+        {
+          id: "scoring-stale",
+          text: "scoring conformance marker",
+          sequence: 10,
+          createdAt: new Date(scoringNow - 10_000_000).toISOString(),
+          importance: -5,
+        },
+        {
+          id: "scoring-fresh",
+          text: "scoring conformance marker",
+          sequence: 11,
+          createdAt: new Date(scoringNow).toISOString(),
+          importance: 5,
+        },
+      ],
+    },
+    { wait: true },
+  );
+  const scored = await memory.recall("scoring conformance marker", {
+    topK: 8,
+    scoring: { recencyWeight: 0.4, importanceWeight: 0.4, halfLifeMs: 10_000 },
+  });
+  const stale = scored.hits.find((hit) => hit.id === "scoring-stale");
+  const fresh = scored.hits.find((hit) => hit.id === "scoring-fresh");
+  assert.ok(stale && fresh, "composite candidates must survive the shared adapter recall");
+  assert.equal(stale.importance, 0);
+  assert.equal(fresh.importance, 1);
+  assert.ok(fresh.recency! > 0.9);
+  assert.ok(stale.recency! < fresh.recency!);
+  assert.ok(fresh.score > stale.score, "fresh/high-importance hit must outrank stale/low-importance hit");
+  const plainScoring = await memory.recall("scoring conformance marker", { topK: 8 });
+  assert.ok(plainScoring.hits.every((hit) => !("similarity" in hit) && !("recency" in hit)));
+  await assert.rejects(memory.recall("scoring conformance marker", { scoring: { recencyWeight: 0.5 } }), MemoryValidationError);
+
   const empty = await memory.recall("zzzz-no-match-token-xyz", { topK: 3 });
   assert.ok(Array.isArray(empty.hits));
 

@@ -1,0 +1,12 @@
+{
+  "name": "deep-research",
+  "description": "Deep research agent: plan -> search -> extract -> refine loop -> citations -> HITL clarify",
+  "version": "0.1.0",
+  "tags": ["research", "workflows", "web-tools", "rag", "hitl"],
+  "packages": [
+    "@arnilo/prism",
+    "@arnilo/prism-web-tools",
+    "@arnilo/prism-memory",
+    "@arnilo/prism-workflows"
+  ]
+}

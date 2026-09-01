@@ -56,6 +56,9 @@ for (const id of Object.keys(PROVIDERS)) {
   if (existsSync(adapter)) violations.push(`${PROVIDERS[id]} exists — adapter must not be scaffolded without a demand record`);
 }
 
+const credsDir = existsSync(fileURLToPath(new URL("../packages/prism-core/src/credentials/node/", import.meta.url)))
+  ? fileURLToPath(new URL("../packages/prism-core/src/credentials/node/", import.meta.url))
+  : fileURLToPath(new URL("../packages/credentials-node/src/", import.meta.url));
 const srcFiles = [];
 (function walk(dir) {
   for (const name of readdirSync(dir)) {
@@ -63,7 +66,7 @@ const srcFiles = [];
     if (statSync(full).isDirectory()) walk(full);
     else if (/\.ts$/.test(name)) srcFiles.push(full);
   }
-})(fileURLToPath(new URL("../packages/credentials-node/src/", import.meta.url)));
+})(credsDir);
 
 for (const file of srcFiles) {
   const text = readFileSync(file, "utf8");

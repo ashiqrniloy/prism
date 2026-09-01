@@ -23,7 +23,7 @@ Use `@arnilo/prism-antigravity-agent` when:
 - You want conversation continuation across multiple user turns in a persistent session.
 
 Do **not** use it:
-- As a generic LLM model provider. For direct Gemini API or Vertex AI foundation model inference without an autonomous loop, use [`@arnilo/prism-provider-google`](providers/google.md) or [`@arnilo/prism-provider-vertex`](providers/vertex.md).
+- As a generic LLM model provider. For direct Gemini API or Vertex AI foundation model inference without an autonomous loop, use [`@arnilo/prism-providers/google`](providers/google.md) or [`@arnilo/prism-providers/vertex`](providers/vertex.md).
 - If you require step-by-step turn replacement of Antigravity's internal model loop, compaction, or planning strategy.
 - If you require unreleased raw internal chain-of-thought text. Antigravity reasoning effort is projected as token counts and timeline activity steps, not raw hidden thoughts.
 

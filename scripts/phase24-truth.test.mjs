@@ -19,6 +19,14 @@ const hasWikiPackage = existsSync(join(ROOT, "packages", "prism-wiki", "package.
 const hasGraftPackage = existsSync(join(ROOT, "packages", "prism-graft")); // plan 033 optional context-graph package
 const hasObscuraPackage = existsSync(join(ROOT, "packages", "obscura", "package.json")); // plan 039 optional Obscura browser package
 const hasDevInspectorPackage = existsSync(join(ROOT, "packages", "prism-dev", "package.json")); // plan 040 dev inspector (omitted from umbrellas)
+const hasPromptPackage = existsSync(join(ROOT, "packages", "prompts", "package.json")); // plan 042 versioned prompt registry (omitted from umbrellas)
+const hasOfficePackage = existsSync(join(ROOT, "packages", "office", "package.json")); // plan 054 Task 8 office family
+const hasDocumentsPackage = existsSync(join(ROOT, "packages", "documents", "package.json")); // plan 051 documents engine (omitted from umbrellas)
+const hasSheetsPackage = existsSync(join(ROOT, "packages", "sheets", "package.json")); // plan 052 sheets engine (omitted from umbrellas)
+const hasDiagramsPackage = existsSync(join(ROOT, "packages", "diagrams", "package.json")); // plan 053 diagrams engine (omitted from umbrellas)
+
+const hasCodingToolsPackage = existsSync(join(ROOT, "packages", "prism-coding-tools", "package.json"));
+const hasCorePackage = existsSync(join(ROOT, "packages", "prism-core", "package.json"));
 
 test("generator reproducible: two runs byte-identical modulo generatedAt", () => {
   assert.deepEqual(stripStamp(computePackageTruth()), stripStamp(computePackageTruth()));
@@ -33,7 +41,7 @@ test("committed artifact equals the generator output (regenerate via node script
   );
 });
 
-test("counts match manifests at the 0.3.0 truth graph plus the Task 7 desktop package", () => {
+test("counts match manifests at the truth graph", () => {
   const t = computePackageTruth();
   const added =
     Number(hasDesktopPackage) +
@@ -41,17 +49,48 @@ test("counts match manifests at the 0.3.0 truth graph plus the Task 7 desktop pa
     Number(hasWikiPackage) +
     Number(hasGraftPackage) +
     Number(hasObscuraPackage) +
-    Number(hasDevInspectorPackage);
-  assert.equal(t.counts.publishable, 55 + added);
-  assert.equal(t.counts.workspace, 54 + added);
-  assert.equal(t.counts.provider, 17);
-  assert.equal(t.counts.prismFamily, 10);
-  assert.equal(t.counts.capability, 27 + added);
-  assert.equal(t.counts.codeWithPeer, 48 + added);
-  assert.equal(t.counts.pureManifest, 6);
-  assert.equal(t.providers.length, 17);
-  assert.equal(t.family.length, 10);
-  assert.equal(t.capability.length, 27 + added);
+    Number(hasDevInspectorPackage) +
+    Number(hasPromptPackage) +
+    Number(hasDocumentsPackage) +
+    Number(hasSheetsPackage) +
+    Number(hasDiagramsPackage);
+  if (hasOfficePackage) {
+    // Plan 054 Task 8: 11 active packages — profiles deleted, office family landed.
+    assert.equal(t.counts.publishable, 11);
+    assert.equal(t.counts.workspace, 10);
+    assert.equal(t.counts.provider, 17);
+    assert.equal(t.counts.prismFamily, 3);
+    assert.equal(t.counts.capability, 7);
+    assert.equal(t.counts.codeWithPeer, 10);
+    assert.equal(t.counts.pureManifest, 0);
+  } else if (hasCodingToolsPackage) {
+    assert.equal(t.counts.publishable, 17);
+    assert.equal(t.counts.workspace, 16);
+    assert.equal(t.counts.provider, 17);
+    assert.equal(t.counts.prismFamily, 7);
+    assert.equal(t.counts.capability, 9);
+    assert.equal(t.counts.codeWithPeer, 12);
+    assert.equal(t.counts.pureManifest, 4);
+  } else if (hasCorePackage) {
+    assert.equal(t.counts.publishable, 50);
+    assert.equal(t.counts.workspace, 49);
+    assert.equal(t.counts.provider, 17);
+    assert.equal(t.counts.prismFamily, 11);
+    assert.equal(t.counts.capability, 21);
+    assert.equal(t.counts.codeWithPeer, 43);
+    assert.equal(t.counts.pureManifest, 6);
+  } else {
+    assert.equal(t.counts.publishable, 55 + added);
+    assert.equal(t.counts.workspace, 54 + added);
+    assert.equal(t.counts.provider, 17);
+    assert.equal(t.counts.prismFamily, 10);
+    assert.equal(t.counts.capability, 27 + added);
+    assert.equal(t.counts.codeWithPeer, 48 + added);
+    assert.equal(t.counts.pureManifest, 6);
+    assert.equal(t.providers.length, 17);
+    assert.equal(t.family.length, 10);
+    assert.equal(t.capability.length, 27 + added);
+  }
   assert.equal(t.peerPolicy.decision, "B");
   assert.equal(t.peerPolicy.spec, `^${t.root.version}`);
   assert.equal(t.peerPolicy.atomicUpgrade, false);
@@ -60,55 +99,62 @@ test("counts match manifests at the 0.3.0 truth graph plus the Task 7 desktop pa
 test("umbrella closures match manifests", () => {
   const t = computePackageTruth();
   const providers = t.umbrella["prism-providers"];
-  assert.equal(providers.deps.length, 14);
-  assert.deepEqual(providers.omitsProviders, [
-    "@arnilo/prism-provider-azure",
-    "@arnilo/prism-provider-bedrock",
-    "@arnilo/prism-provider-vertex",
-  ]);
+  if (hasCodingToolsPackage) {
+    // Plan 054 Task 6: the family ships the 17 adapters as subpaths, not deps.
+    assert.deepEqual(providers.deps, []);
+    assert.equal(providers.subpaths.length, 17);
+    assert.deepEqual(providers.omitsProviders, []);
+  } else {
+    assert.equal(providers.deps.length, 14);
+    assert.deepEqual(providers.omitsProviders, [
+      "@arnilo/prism-provider-azure",
+      "@arnilo/prism-provider-bedrock",
+      "@arnilo/prism-provider-vertex",
+    ]);
+  }
+  if (hasOfficePackage) {
+    // Plan 054 Task 8: prism-all is retired; the provider family is the only umbrella.
+    assert.equal(t.umbrella["prism-all"], undefined);
+    assert.deepEqual(providers.deps, []);
+    return;
+  }
   const all = t.umbrella["prism-all"];
-  assert.equal(all.deps.length, 21);
-  assert.equal(all.closure, 47, "21 direct deps expand through code/sdk/profile deps to 47 workspace packages");
-  assert.equal(
-    all.omits.length,
-    6 +
-      Number(hasDesktopPackage) +
-      Number(hasAntigravityPackage) +
-      Number(hasWikiPackage) +
-      Number(hasGraftPackage) +
-      Number(hasObscuraPackage) +
-      Number(hasDevInspectorPackage),
-  );
-  for (const name of [
-    "@arnilo/prism-caveman",
-    "@arnilo/prism-document-reader",
-    "@arnilo/prism-impeccable",
-    "@arnilo/prism-openapi-tools",
-    "@arnilo/prism-ponytail",
-    "@arnilo/prism-session-store-nats",
-    ...(hasDesktopPackage ? ["@arnilo/prism-computer-use-linux"] : []),
-    ...(hasAntigravityPackage ? ["@arnilo/prism-antigravity-agent"] : []),
-    ...(hasWikiPackage ? ["@arnilo/prism-wiki"] : []),
-    ...(hasGraftPackage ? ["@arnilo/prism-graft"] : []),
-    ...(hasObscuraPackage ? ["@arnilo/prism-obscura"] : []),
-    ...(hasDevInspectorPackage ? ["@arnilo/prism-dev"] : []),
-  ]) {
-    assert.ok(all.omits.includes(name), `prism-all omits ${name}`);
+  if (hasCodingToolsPackage) {
+    assert.equal(all.deps.length, 8);
+  } else if (hasCorePackage) {
+    assert.equal(all.deps.length, 13);
+  } else {
+    assert.equal(all.deps.length, 21);
+    assert.equal(all.closure, 47, "21 direct deps expand through code/sdk/profile deps to 47 workspace packages");
   }
 });
 
 test("profile closures match manifests", () => {
   const t = computePackageTruth();
-  assert.equal(t.profiles["prism-providers"].length, 14);
-  assert.equal(t.profiles["prism-all"].length, 47);
-  for (const name of ["@arnilo/prism-compaction", "@arnilo/prism-tool-validator-json-schema", "@arnilo/prism-compaction-llm"]) {
-    assert.ok(t.profiles["prism-base"].includes(name), `prism-base closure includes ${name}`);
+  if (hasOfficePackage) {
+    // Plan 054 Task 8: profile manifests are deleted; only the provider family remains.
+    assert.deepEqual(t.profiles, {});
+    return;
   }
-  for (const name of ["@arnilo/prism-base", "@arnilo/prism-coding-agent", "@arnilo/prism-mcp"]) {
-    assert.ok(t.profiles["prism-code"].includes(name), `prism-code closure includes ${name}`);
-  }
-  for (const name of ["@arnilo/prism-workflows", "@arnilo/prism-credentials-node", "@arnilo/prism-observability-opentelemetry"]) {
-    assert.ok(t.profiles["prism-sdk"].includes(name), `prism-sdk closure includes ${name}`);
+  assert.equal(t.profiles["prism-providers"].length, hasCodingToolsPackage ? 0 : 14);
+  if (hasCodingToolsPackage) {
+    assert.ok(t.profiles["prism-base"].includes("@arnilo/prism-core"));
+    assert.ok(t.profiles["prism-code"].includes("@arnilo/prism-coding-tools"));
+    assert.ok(t.profiles["prism-sdk"].includes("@arnilo/prism-core"));
+  } else if (hasCorePackage) {
+    assert.ok(t.profiles["prism-base"].includes("@arnilo/prism-core"));
+    assert.ok(t.profiles["prism-sdk"].includes("@arnilo/prism-core"));
+  } else {
+    assert.equal(t.profiles["prism-all"].length, 47);
+    for (const name of ["@arnilo/prism-compaction", "@arnilo/prism-tool-validator-json-schema", "@arnilo/prism-compaction-llm"]) {
+      assert.ok(t.profiles["prism-base"].includes(name), `prism-base closure includes ${name}`);
+    }
+    for (const name of ["@arnilo/prism-base", "@arnilo/prism-coding-agent", "@arnilo/prism-mcp"]) {
+      assert.ok(t.profiles["prism-code"].includes(name), `prism-code closure includes ${name}`);
+    }
+    for (const name of ["@arnilo/prism-workflows", "@arnilo/prism-credentials-node", "@arnilo/prism-observability-opentelemetry"]) {
+      assert.ok(t.profiles["prism-sdk"].includes(name), `prism-sdk closure includes ${name}`);
+    }
   }
 });
 
@@ -124,13 +170,7 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
   const secondPeers = {};
   for (const p of codeWithPeer) {
     const spec = p.peerDependencies["@arnilo/prism"];
-    // Decision B window: peers either track the current root patch (^0.3.2 for
-    // the plan 050 set, ^0.3.1 for the plan 039 set) or keep the prior ^0.3.0
-    // window peer — all satisfy the root while the line is 0.3.x.
-    assert.ok(
-      spec === `^${t.root.version}` || spec === "^0.3.0" || spec === "^0.3.1",
-      `${p.name} must peer @arnilo/prism inside the Decision B window, got ${spec}`,
-    );
+    assert.equal(spec, "^0.4.0", `${p.name} must peer @arnilo/prism@^0.4.0, got ${spec}`);
     assert.match(spec, /^\^\d+\.\d+\.\d+$/, `${p.name} peer spec must be a 0.x caret range, got ${spec}`);
     const extra = Object.keys(p.peerDependencies).filter((n) => n.startsWith("@arnilo/prism-"));
     if (extra.length > 0) secondPeers[p.name] = extra;
@@ -140,31 +180,52 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
       assert.equal(p.devDependencies?.["@arnilo/prism"], "file:../..", `${p.name} must devDepend on the root`);
     }
   }
-  assert.deepEqual(secondPeers, {
-    "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui"],
-    "@arnilo/prism-ag-ui": ["@arnilo/prism-mcp", "@arnilo/prism-supervisor"],
-    "@arnilo/prism-coding-agent": ["@arnilo/prism-workflows"],
-    "@arnilo/prism-coding-security": ["@arnilo/prism-coding-agent"],
-    ...(hasDesktopPackage ? { "@arnilo/prism-computer-use-linux": ["@arnilo/prism-mcp"] } : {}),
-    ...(hasObscuraPackage ? { "@arnilo/prism-obscura": ["@arnilo/prism-mcp", "@arnilo/prism-browser", "@arnilo/prism-web-tools"] } : {}),
-    ...(hasDevInspectorPackage ? { "@arnilo/prism-dev": ["@arnilo/prism-ag-ui", "@arnilo/prism-server"] } : {}),
-    ...(hasAntigravityPackage ? { "@arnilo/prism-antigravity-agent": ["@arnilo/prism-coding-agent", "@arnilo/prism-mcp"] } : {}),
-    "@arnilo/prism-document-reader": ["@arnilo/prism-coding-agent"],
-    "@arnilo/prism-rag": ["@arnilo/prism-memory"],
-    "@arnilo/prism-server": ["@arnilo/prism-workflows"],
-  });
-  const ponytail = pkgs.find((p) => p.name === "@arnilo/prism-ponytail");
+  if (hasCodingToolsPackage) {
+    // Plan 054 Task 6: the provider family is now a code package with a core peer.
+    assert.deepEqual(secondPeers, {
+      "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui"],
+      "@arnilo/prism-ag-ui": ["@arnilo/prism-core", "@arnilo/prism-mcp"],
+      ...(hasAntigravityPackage ? { "@arnilo/prism-antigravity-agent": ["@arnilo/prism-coding-tools", "@arnilo/prism-mcp"] } : {}),
+      "@arnilo/prism-core": ["@arnilo/prism-memory"], // type-only optional peer: rag telemetry seam
+      "@arnilo/prism-web-tools": ["@arnilo/prism-mcp"],
+    });
+  } else if (hasCorePackage) {
+    assert.deepEqual(secondPeers, {
+      "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui"],
+      "@arnilo/prism-ag-ui": ["@arnilo/prism-core", "@arnilo/prism-mcp"],
+      ...(hasAntigravityPackage ? { "@arnilo/prism-antigravity-agent": ["@arnilo/prism-coding-agent", "@arnilo/prism-mcp"] } : {}),
+      "@arnilo/prism-coding-agent": ["@arnilo/prism-core"],
+      "@arnilo/prism-coding-security": ["@arnilo/prism-coding-agent"],
+      ...(hasDesktopPackage ? { "@arnilo/prism-computer-use-linux": ["@arnilo/prism-mcp"] } : {}),
+      ...(hasDevInspectorPackage ? { "@arnilo/prism-dev": ["@arnilo/prism-ag-ui", "@arnilo/prism-core"] } : {}),
+      "@arnilo/prism-document-reader": ["@arnilo/prism-coding-agent"],
+      ...(hasObscuraPackage ? { "@arnilo/prism-obscura": ["@arnilo/prism-mcp", "@arnilo/prism-browser", "@arnilo/prism-web-tools"] } : {}),
+      "@arnilo/prism-rag": ["@arnilo/prism-memory"],
+    });
+  } else {
+    assert.deepEqual(secondPeers, {
+      "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui"],
+      "@arnilo/prism-ag-ui": ["@arnilo/prism-mcp", "@arnilo/prism-supervisor"],
+      "@arnilo/prism-coding-agent": ["@arnilo/prism-workflows"],
+      "@arnilo/prism-coding-security": ["@arnilo/prism-coding-agent"],
+      ...(hasDesktopPackage ? { "@arnilo/prism-computer-use-linux": ["@arnilo/prism-mcp"] } : {}),
+      ...(hasObscuraPackage ? { "@arnilo/prism-obscura": ["@arnilo/prism-mcp", "@arnilo/prism-browser", "@arnilo/prism-web-tools"] } : {}),
+      ...(hasDevInspectorPackage ? { "@arnilo/prism-dev": ["@arnilo/prism-ag-ui", "@arnilo/prism-server"] } : {}),
+      ...(hasAntigravityPackage ? { "@arnilo/prism-antigravity-agent": ["@arnilo/prism-coding-agent", "@arnilo/prism-mcp"] } : {}),
+      "@arnilo/prism-document-reader": ["@arnilo/prism-coding-agent"],
+      "@arnilo/prism-rag": ["@arnilo/prism-memory"],
+      "@arnilo/prism-server": ["@arnilo/prism-workflows"],
+      ...(hasPromptPackage ? { "@arnilo/prism-prompts": ["@arnilo/prism-evals"] } : {}),
+    });
+  }
+  const ponytail = pkgs.find((p) => p.name === (hasCodingToolsPackage ? "@arnilo/prism-coding-tools" : "@arnilo/prism-ponytail"));
   assert.equal(ponytail.peerDependencies["@dietrichgebert/ponytail"], "^4.9.0");
-  // the 6 pure-manifest family/profile packages declare no core peer
-  for (const n of [
-    "@arnilo/prism-all",
-    "@arnilo/prism-base",
-    "@arnilo/prism-code",
-    "@arnilo/prism-compaction",
-    "@arnilo/prism-providers",
-    "@arnilo/prism-sdk",
-  ]) {
-    assert.equal(pkgs.find((x) => x.name === n).peerDependencies?.["@arnilo/prism"], undefined, `${n} must have no core peer`);
+  // Plan 054 Task 8: profile manifests are deleted; every workspace package is a
+  // code package with a core peer, so nothing may lack one.
+  if (hasOfficePackage) {
+    for (const p of pkgs) {
+      assert.notEqual(p.peerDependencies?.["@arnilo/prism"], undefined, `${p.name} must peer @arnilo/prism`);
+    }
   }
 });
 
@@ -224,7 +285,7 @@ test("no page claims all/every for the two umbrellas without closure proof", () 
     "docs/index.md",
     "docs/0.1.0-readiness.md",
     "packages/prism-providers/README.md",
-    "packages/prism-all/README.md",
+    ...(existsSync(join(ROOT, "packages/prism-all/README.md")) ? ["packages/prism-all/README.md"] : []),
   ];
   // The false-claim shapes Task 1 removed; Task 4's derived tests pin the true
   // wording, this scan bans the unproven shapes from returning. Quantified or

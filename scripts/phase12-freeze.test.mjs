@@ -68,7 +68,10 @@ test("postgres schemaVersion matches the shipped migration contract", async () =
 
 test("protocol SDK pins match the shipped package manifests exactly", () => {
   const deps = (dir) => {
-    const pkg = JSON.parse(readFileSync(url(`../packages/${dir}/package.json`), "utf8"));
+    const pkgPath = existsSync(url(`../packages/${dir}/package.json`))
+      ? url(`../packages/${dir}/package.json`)
+      : url("../packages/prism-core/package.json");
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
     return { ...pkg.dependencies, ...pkg.peerDependencies, ...pkg.optionalDependencies };
   };
   const checks = [

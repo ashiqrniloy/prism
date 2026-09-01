@@ -56,7 +56,7 @@ The binary is pure wiring (~200 lines) — no protocol code lives here. It build
 
 ```ts
 import { createSpawnableAgent, loadConfig } from "@arnilo/prism-acp-agent";
-import { createOpenAIResponsesProvider } from "@arnilo/prism-provider-openai";
+import { createOpenAIResponsesProvider } from "@arnilo/prism-providers/openai";
 
 const agent = createSpawnableAgent({
   config: loadConfig("prism-acp-agent.json"),

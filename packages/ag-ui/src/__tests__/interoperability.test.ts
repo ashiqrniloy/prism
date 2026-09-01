@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { EventType } from "@ag-ui/core";
 import { createAgent, providerDone, providerTextDelta, type ToolDefinition, toolCallContent } from "@arnilo/prism";
+import type { A2AClient, A2AStreamEvent, A2ATask } from "@arnilo/prism-core/runtime/supervisor";
 import type { McpAppsBridge, McpToolBridge } from "@arnilo/prism-mcp";
-import type { A2AClient, A2AStreamEvent, A2ATask } from "@arnilo/prism-supervisor";
 import {
   createAgUiA2AAdapter,
   createAgUiHandler,

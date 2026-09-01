@@ -12,7 +12,7 @@ import {
   type NeuralWattCostTelemetry,
   type NeuralWattEnergyTelemetry,
   neuralWattEventsWithTelemetry,
-} from "@arnilo/prism-provider-neuralwatt";
+} from "@arnilo/prism-providers/neuralwatt";
 
 const requestBodies: JsonObject[] = [];
 

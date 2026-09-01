@@ -1,7 +1,7 @@
 {
   "name": "@arnilo/prism-web-tools",
-  "version": "0.3.1",
-  "description": "Optional bounded Brave, Exa, and Firecrawl web research tools for Prism.",
+  "version": "0.4.0",
+  "description": "Unified web tools family for Prism: bounded Brave/Exa/Firecrawl web research, Playwright browser automation with egress policy and quarantine, and Obscura browser-engine tools over a host-installed binary.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -21,27 +21,46 @@
     "./firecrawl": {
       "types": "./dist/firecrawl.d.ts",
       "default": "./dist/firecrawl.js"
+    },
+    "./browser": {
+      "types": "./dist/browser/index.d.ts",
+      "default": "./dist/browser/index.js"
+    },
+    "./obscura": {
+      "types": "./dist/obscura/index.d.ts",
+      "default": "./dist/obscura/index.js"
     }
   },
   "files": [
     "dist",
-    "!dist/__tests__",
+    "!dist/**/__tests__",
     "!dist/**/*.map",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/web-tools.test.js",
-    "test:live": "node --test dist/__tests__/live.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/*.test.js dist/browser/__tests__/*.test.js dist/obscura/__tests__/*.test.js",
+    "test:live": "node --test dist/__tests__/live.test.js dist/browser/__tests__/live.test.js dist/obscura/__tests__/live.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.3.1"
+    "@arnilo/prism": "^0.4.0",
+    "@arnilo/prism-mcp": "^0.4.0",
+    "playwright-core": "1.61.0"
+  },
+  "peerDependenciesMeta": {
+    "playwright-core": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "@arnilo/prism": "file:../.."
+    "@arnilo/prism": "file:../..",
+    "@arnilo/prism-core": "file:../prism-core",
+    "@arnilo/prism-mcp": "file:../mcp",
+    "playwright-core": "1.61.0"
   },
   "engines": {
     "node": ">=20"
@@ -61,7 +80,11 @@
     "web-search",
     "exa",
     "brave",
-    "firecrawl"
+    "firecrawl",
+    "browser",
+    "playwright",
+    "obscura",
+    "cdp"
   ],
   "sideEffects": false,
   "publishConfig": {

@@ -1,7 +1,6 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
 import {
   createWorkflowCheckpoints,
   createWorkflowCoordinator,
@@ -9,7 +8,8 @@ import {
   enqueueWorkflow,
   functionNode,
   getWorkflowRun,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-core/runtime/workflows";
+import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
 
 export async function demo(): Promise<Record<string, unknown>> {
   const dir = mkdtempSync(join(tmpdir(), "prism-coordinator-"));

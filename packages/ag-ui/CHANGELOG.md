@@ -1,3 +1,7 @@
+## [0.4.0] - 2026-09-01
+
+- Plan 054: family ships as part of the 11-package 0.4 lockstep; peer `@arnilo/prism@^0.4.0`.
+
 # Changelog
 
 ## [0.3.0] - 2026-08-20

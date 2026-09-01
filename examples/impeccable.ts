@@ -1,9 +1,9 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createExtensionKernel } from "@arnilo/prism";
-import { createImpeccableExtension } from "@arnilo/prism-impeccable";
+import { createImpeccableExtension } from "@arnilo/prism-coding-tools/impeccable";
 
-const upstreamPath = join(dirname(fileURLToPath(import.meta.url)), "../packages/prism-impeccable/fixtures/upstream-minimal");
+const upstreamPath = join(dirname(fileURLToPath(import.meta.url)), "../packages/prism-coding-tools/fixtures/impeccable/upstream-minimal");
 
 export async function demo() {
   const kernel = createExtensionKernel({ errorPolicy: "throw" });

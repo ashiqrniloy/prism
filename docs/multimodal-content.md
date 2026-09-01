@@ -136,7 +136,7 @@ try {
 - Supplying `fetch` is a trusted compatibility/custom-transport escape hatch: Prism still checks URL literals and host allow-lists, but the host-provided fetch owns DNS resolution, rebinding protection, redirects, proxies, TLS, auth, and logging.
 - `resourceUri` resolution requires a caller-provided `ResourceLoader` and optional `ResourceLoadContext.permission` check.
 - Local filesystem paths should use trust policies such as `createPathTrustPolicy()` before exposing URIs to loaders.
-- Provider upload/create/delete lifecycles are provider-package-local. `@arnilo/prism-provider-openai` inlines files under 4 MiB as `data:<mediaType>;base64,...` `file_data`, otherwise uses a bounded per-run upload cache and best-effort `DELETE /v1/files` cleanup after each stream.
+- Provider upload/create/delete lifecycles are provider-package-local. `@arnilo/prism-providers/openai` inlines files under 4 MiB as `data:<mediaType>;base64,...` `file_data`, otherwise uses a bounded per-run upload cache and best-effort `DELETE /v1/files` cleanup after each stream.
 - Shared wire helpers live in `@arnilo/prism/providers/media` (`resolveProviderMediaMessages`, `serializeOpenAIResponsesInputFile`, `serializePdfDocumentWireBlock`, `createBoundedUploadCache`). OpenAI Responses, Kimi, and OpenCode Go Anthropic routes resolve their complete media collection once before serialization or upload.
 - OpenAI Realtime audio is a bidirectional `RealtimeSession` stream, not a `ContentBlock`: provide host-captured `Uint8Array` chunks with `sendAudio()` and consume untrusted `audio_delta` / transcript events. It has a fixed 256 events/s, 1 MiB/s, and 600 s default ceiling.
 

@@ -5,17 +5,15 @@
  * package from the current project's own `node_modules` and hands the CLI
  * over. Unresolvable → actionable install hint, exit 2.
  */
-import process from "node:process";
+
 import { createRequire } from "node:module";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import process from "node:process";
 import type { Writable } from "node:stream";
+import { pathToFileURL } from "node:url";
 
 export interface DevCliModule {
-  runDevCli(
-    argv: readonly string[],
-    runtime: { stdout: Writable; stderr: Writable; cwd?: string },
-  ): Promise<number>;
+  runDevCli(argv: readonly string[], runtime: { stdout: Writable; stderr: Writable; cwd?: string }): Promise<number>;
 }
 
 export type PrismDevLoader = () => Promise<DevCliModule | undefined>;
@@ -29,36 +27,35 @@ export interface PrismDevSubcommandRuntime {
 
 const installHint =
   "prism dev requires the dev inspector package in this project.\n" +
-  "  npm install --save-dev @arnilo/prism-dev\n" +
+  "  npm install --save-dev @arnilo/prism-coding-tools\n" +
   "(Scaffolded projects from newer `prism init` templates already include it.)\n";
 
 /**
- * Default loader: resolve `@arnilo/prism-dev/cli` from the project the user
- * is standing in (scaffolded project owns its own dev dependency), falling
- * back to this CLI's own installation for global setups.
+ * Default loader: resolve `@arnilo/prism-coding-tools/dev/cli` (or `@arnilo/prism-dev/cli`)
+ * from the project the user is standing in, falling back to this CLI's own installation.
  */
 export const defaultLoadDevCli: PrismDevLoader = async () => {
-  try {
-    const require = createRequire(join(process.cwd(), "package.json"));
-    const resolved = require.resolve("@arnilo/prism-dev/cli");
-    const mod = (await import(pathToFileURL(resolved).href)) as Partial<DevCliModule>;
-    return typeof mod.runDevCli === "function" ? (mod as DevCliModule) : undefined;
-  } catch {
+  const specifiers = ["@arnilo/prism-coding-tools/dev/cli", "@arnilo/prism-dev/cli"];
+  for (const specifier of specifiers) {
     try {
-      const specifier = "@arnilo/prism-dev/cli";
-      const mod = (await import(specifier)) as Partial<DevCliModule>;
-      return typeof mod.runDevCli === "function" ? (mod as DevCliModule) : undefined;
+      const require = createRequire(join(process.cwd(), "package.json"));
+      const resolved = require.resolve(specifier);
+      const mod = (await import(pathToFileURL(resolved).href)) as Partial<DevCliModule>;
+      if (typeof mod.runDevCli === "function") return mod as DevCliModule;
     } catch {
-      return undefined;
+      try {
+        const mod = (await import(specifier)) as Partial<DevCliModule>;
+        if (typeof mod.runDevCli === "function") return mod as DevCliModule;
+      } catch {
+        // try next specifier
+      }
     }
   }
+  return undefined;
 };
 
 /** Runs the `prism dev` subcommand by delegating into the resolved package. */
-export async function runPrismDevSubcommand(
-  argv: readonly string[],
-  runtime: PrismDevSubcommandRuntime,
-): Promise<number> {
+export async function runPrismDevSubcommand(argv: readonly string[], runtime: PrismDevSubcommandRuntime): Promise<number> {
   const load = runtime.loadDevCli ?? defaultLoadDevCli;
   const mod = await load();
   if (!mod || typeof mod.runDevCli !== "function") {

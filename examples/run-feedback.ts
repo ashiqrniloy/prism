@@ -1,6 +1,6 @@
 import { createMemoryRunFeedbackStore } from "@arnilo/prism";
-import { appendEvaluationFeedback, createMemoryEvaluationStore, type EvaluationRecord } from "@arnilo/prism-evals";
-import { createInMemoryTelemetry, createOpenTelemetryInstrumentation } from "@arnilo/prism-observability-opentelemetry";
+import { appendEvaluationFeedback, createMemoryEvaluationStore, type EvaluationRecord } from "@arnilo/prism-core/governance/evals";
+import { createInMemoryTelemetry, createOpenTelemetryInstrumentation } from "@arnilo/prism-core/governance/observability";
 
 const ownership = { tenantId: "example-tenant", userId: "example-user" } as const;
 const run = { runId: "run-1", sessionId: "session-1", traceId: "trace-1", ...ownership };

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Prism Diagrams Embed Client Fixture</title>
+  <style>
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: sans-serif; }
+    #drawio-frame { width: 100%; height: 100%; border: none; }
+  </style>
+</head>
+<body>
+  <iframe id="drawio-frame" title="draw.io embed container"></iframe>
+
+  <script type="module">
+    // In fixture tests, bundle or module imports can be wired or mocked
+    window.__DRAWIO_EVENTS = [];
+    window.__DRAWIO_SAVED = null;
+    window.__DRAWIO_AUTOSAVED = null;
+    window.__DRAWIO_EXPORTED = null;
+    window.__DRAWIO_PROTOCOL_ERRORS = [];
+    window.__IS_INITIALIZED = false;
+
+    const params = new URLSearchParams(window.location.search);
+    const drawioOrigin = params.get("origin") || window.location.origin;
+    const iframe = document.getElementById("drawio-frame");
+
+    // Configure iframe src
+    const embedUrl = new URL(drawioOrigin);
+    embedUrl.searchParams.set("embed", "1");
+    embedUrl.searchParams.set("proto", "json");
+    embedUrl.searchParams.set("spin", "1");
+    iframe.src = embedUrl.toString();
+
+    // Inline embed listener implementation matching @arnilo/prism-diagrams createDrawioEmbed
+    function setupEmbed(origin) {
+      function handleMessage(event) {
+        // Enforce exact origin and source frame verification
+        if (event.origin !== origin) {
+          window.__DRAWIO_EVENTS.push({ type: "dropped_wrong_origin", origin: event.origin });
+          return;
+        }
+        if (event.source !== iframe.contentWindow) {
+          window.__DRAWIO_EVENTS.push({ type: "dropped_wrong_source" });
+          return;
+        }
+
+        let payload;
+        try {
+          payload = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        } catch (e) {
+          window.__DRAWIO_PROTOCOL_ERRORS.push(e.message);
+          return;
+        }
+
+        if (!payload || typeof payload !== "object") return;
+        window.__DRAWIO_EVENTS.push({ type: payload.event, payload });
+
+        if (payload.event === "init") {
+          window.__IS_INITIALIZED = true;
+        } else if (payload.event === "save") {
+          window.__DRAWIO_SAVED = payload;
+        } else if (payload.event === "autosave") {
+          window.__DRAWIO_AUTOSAVED = payload;
+        } else if (payload.event === "export") {
+          window.__DRAWIO_EXPORTED = payload;
+        }
+      }
+
+      window.addEventListener("message", handleMessage);
+
+      return {
+        postAction(action) {
+          if (!iframe.contentWindow) throw new Error("No iframe contentWindow");
+          iframe.contentWindow.postMessage(JSON.stringify(action), origin);
+        },
+        load(opts) {
+          this.postAction({ action: "load", ...opts });
+        },
+        merge(xml) {
+          this.postAction({ action: "merge", xml });
+        },
+        exportDiagram(format = "xmlsvg") {
+          this.postAction({ action: "export", format });
+        },
+        destroy() {
+          window.removeEventListener("message", handleMessage);
+        }
+      };
+    }
+
+    window.__embed = setupEmbed(drawioOrigin);
+  </script>
+</body>
+</html>

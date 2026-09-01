@@ -1,0 +1,168 @@
+CellValue	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+ColumnSchema	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+ColumnType	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+CsvDialect	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+CsvParse	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+DEFAULT_INFERENCE_WINDOW_ROWS	export declare const DEFAULT_INFERENCE_WINDOW_ROWS = 500
+DEFAULT_MAX_ATTRIBUTES	export declare const DEFAULT_MAX_ATTRIBUTES = 500000
+DEFAULT_MAX_BLOCKS	export declare const DEFAULT_MAX_BLOCKS = 10000
+DEFAULT_MAX_CELLS	export declare const DEFAULT_MAX_CELLS = 500000
+DEFAULT_MAX_COLUMNS	export declare const DEFAULT_MAX_COLUMNS = 1000
+DEFAULT_MAX_DOCUMENT_BYTES	export declare const DEFAULT_MAX_DOCUMENT_BYTES: number
+DEFAULT_MAX_ELEMENTS	export declare const DEFAULT_MAX_ELEMENTS = 100000
+DEFAULT_MAX_IMAGES	export declare const DEFAULT_MAX_IMAGES = 100
+DEFAULT_MAX_ROWS	export declare const DEFAULT_MAX_ROWS = 100000
+DEFAULT_MAX_SHEETS	export declare const DEFAULT_MAX_SHEETS = 100
+DEFAULT_MAX_SHEET_BYTES	export declare const DEFAULT_MAX_SHEET_BYTES: number
+DEFAULT_MAX_SLIDES	export declare const DEFAULT_MAX_SLIDES = 500
+DEFAULT_MAX_WARNINGS	export declare const DEFAULT_MAX_WARNINGS = 100
+DEFAULT_MAX_XML_BYTES	export declare const DEFAULT_MAX_XML_BYTES: number
+DateCellValue	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+DateTimeCellValue	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+DecimalCellValue	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+DiagramsCapError	export declare class DiagramsCapError extends DiagramsError
+DiagramsError	export declare class DiagramsError extends Error
+DiagramsFormatError	export declare class DiagramsFormatError extends DiagramsError
+DiagramsModelInvalidError	export declare class DiagramsModelInvalidError extends DiagramsError
+DiagramsOriginError	export declare class DiagramsOriginError extends DiagramsError
+DiagramsProtocolError	export declare class DiagramsProtocolError extends DiagramsError
+DiagramsTimeoutError	export declare class DiagramsTimeoutError extends DiagramsError
+DiagramsXmlMalformedError	export declare class DiagramsXmlMalformedError extends DiagramsError
+DiagramsXxeError	export declare class DiagramsXxeError extends DiagramsError
+DocumentsCapError	export declare class DocumentsCapError extends DocumentsError
+DocumentsError	export declare class DocumentsError extends Error
+DocumentsFormatError	export declare class DocumentsFormatError extends DocumentsError
+DocumentsParseError	export declare class DocumentsParseError extends DocumentsError
+DocumentsValidationError	export declare class DocumentsValidationError extends DocumentsError
+DrawioAutosaveEvent	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioConfigureAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioConfigureEvent	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioDialogAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioDraftAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioErrorEvent	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioExitEvent	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioExportAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioExportBounds	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioExportEvent	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioExportFormat	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioFitAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioInboundEvent	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioInitEvent	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioLoadAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioLoadEvent	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioMergeAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioOutboundAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioPromptAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioResetEditorAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioSaveEvent	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioSpinnerAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioStatusAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+DrawioTemplateAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
+FormulaCellValue	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+HARD_INFERENCE_WINDOW_ROWS	export declare const HARD_INFERENCE_WINDOW_ROWS = 5000
+HARD_MAX_ATTRIBUTES	export declare const HARD_MAX_ATTRIBUTES = 2000000
+HARD_MAX_BLOCKS	export declare const HARD_MAX_BLOCKS = 50000
+HARD_MAX_CELLS	export declare const HARD_MAX_CELLS = 2000000
+HARD_MAX_COLUMNS	export declare const HARD_MAX_COLUMNS = 16384
+HARD_MAX_DOCUMENT_BYTES	export declare const HARD_MAX_DOCUMENT_BYTES: number
+HARD_MAX_ELEMENTS	export declare const HARD_MAX_ELEMENTS = 500000
+HARD_MAX_IMAGES	export declare const HARD_MAX_IMAGES = 1000
+HARD_MAX_ROWS	export declare const HARD_MAX_ROWS = 1000000
+HARD_MAX_SHEETS	export declare const HARD_MAX_SHEETS = 1000
+HARD_MAX_SHEET_BYTES	export declare const HARD_MAX_SHEET_BYTES: number
+HARD_MAX_SLIDES	export declare const HARD_MAX_SLIDES = 2000
+HARD_MAX_WARNINGS	export declare const HARD_MAX_WARNINGS = 1000
+HARD_MAX_XML_BYTES	export declare const HARD_MAX_XML_BYTES: number
+InferenceWarning	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+ParseCsvOptions	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+ParseWorkbookOptions	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+ResolvedSheetsCaps	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+SheetParse	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+SheetsCapError	export declare class SheetsCapError extends SheetsError
+SheetsCaps	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+SheetsError	export declare class SheetsError extends Error
+SheetsFormatError	export declare class SheetsFormatError extends SheetsError
+SheetsParseError	export declare class SheetsParseError extends SheetsError
+SheetsValidationError	export declare class SheetsValidationError extends SheetsError
+UNSAFE_XML_DECLARATION_PATTERN	export declare const UNSAFE_XML_DECLARATION_PATTERN: RegExp
+WorkbookParse	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+assertDeckModelEqual	export declare function assertDeckModelEqual(actual: DeckModel, expected: DeckModel): void
+assertDocBlockEqual	export declare function assertDocBlockEqual(actual: DocBlock, expected: DocBlock): void
+assertDocModelEqual	export declare function assertDocModelEqual(actual: DocModel, expected: DocModel): void
+assertDocRunEqual	export declare function assertDocRunEqual(actual: DocRun, expected: DocRun): void
+assertDocumentModelEqual	export declare function assertDocumentModelEqual(actual: DocumentModel, expected: DocumentModel): void
+assertNotVisio	export declare function assertNotVisio(input: string | Uint8Array): void
+assertSheetModelEqual	export declare function assertSheetModelEqual(actual: SheetModel, expected: SheetModel): void
+assertSlideEqual	export declare function assertSlideEqual(actual: SlideData, expected: SlideData, slideIndex: number): void
+canonicalizeDrawioXml	export declare function canonicalizeDrawioXml(xml: string | Uint8Array, options?: DrawioCanonicalizeOptions): string
+createDrawioEmbed	export declare function createDrawioEmbed(options: DrawioEmbedOptions): DrawioEmbed
+createPatchHistory	export declare function createPatchHistory(initialModel: DocumentModel): PatchHistory
+deckModelSchema	export declare const deckModelSchema: JsonSchema
+deckModelToPptxOptions	export declare function deckModelToPptxOptions(model: DeckModel): PresentationOptions
+docModelSchema	export declare const docModelSchema: JsonSchema
+docModelToDocxOptions	export declare function docModelToDocxOptions(model: DocModel): DocumentOptions
+documentModelSchema	export declare function documentModelSchema(kind: DocumentKind, slice?: string | readonly string[]): JsonSchema
+escapeHtml	export declare function escapeHtml(input: string): string
+generateDocument	export declare function generateDocument(model: DocumentModel, options: GenerateDocumentOptions): Promise<GenerateDocumentResult>
+generateDocxBytes	export declare function generateDocxBytes(model: DocModel): Uint8Array
+generatePptxBytes	export declare function generatePptxBytes(model: DeckModel): Uint8Array
+generateXlsxBytes	export declare function generateXlsxBytes(model: SheetModel): Uint8Array
+inferAndTransformRows	export declare function inferAndTransformRows(rawRows: readonly (readonly CellValue[])[], caps: ResolvedSheetsCaps): InferAndTransformResult
+isCanonicalDecimal	export declare function isCanonicalDecimal(str: string): boolean
+isCurrencyString	export declare function isCurrencyString(str: string): boolean
+isScientificNotation	export declare function isScientificNotation(str: string): boolean
+isZipContainer	export declare function isZipContainer(bytes: Uint8Array): boolean
+noopDiagramsSpan	export declare const noopDiagramsSpan: DiagramsTelemetrySpan
+noopDiagramsTelemetry	export declare const noopDiagramsTelemetry: DiagramsTelemetry
+noopDocumentsSpan	export declare const noopDocumentsSpan: DocumentsTelemetrySpan
+noopDocumentsTelemetry	export declare const noopDocumentsTelemetry: DocumentsTelemetry
+noopSheetsSpan	export declare const noopSheetsSpan: SheetsTelemetrySpan
+noopSheetsTelemetry	export declare const noopSheetsTelemetry: SheetsTelemetry
+normalizeCellValue	export declare function normalizeCellValue(value: CellValue): unknown
+normalizeDecimal	export declare function normalizeDecimal(input: string): NormalizedDecimalResult | null
+parseCsv	export declare function parseCsv(input: string | Uint8Array, options?: ParseCsvOptions): Promise<CsvParse>
+parseDocument	export declare function parseDocument(bytes: Uint8Array, options: ParseDocumentOptions): Promise<DocumentModel>
+parseDocxBytes	export declare function parseDocxBytes(bytes: Uint8Array): DocModel
+parsePptxBytes	export declare function parsePptxBytes(bytes: Uint8Array): DeckModel
+parseWorkbook	export declare function parseWorkbook(bytes: Uint8Array, options?: ParseWorkbookOptions): Promise<WorkbookParse>
+parseXlsxBytes	export declare function parseXlsxBytes(bytes: Uint8Array): SheetModel
+patchDocument	export declare function patchDocument(model: DocumentModel, patches: readonly DocumentPatch[], options?: PatchDocumentOptions): DocumentModel
+regenerateGoldens	export declare function regenerateGoldens(): Promise<void>
+regenerateSheetsFixtures	export declare function regenerateSheetsFixtures(): void
+renderPreviewBlocks	export declare function renderPreviewBlocks(model: DocumentModel, options?: PreviewBlocksOptions): PreviewBlock[]
+renderPreviewHtml	export declare function renderPreviewHtml(model: DocumentModel, options?: PreviewHtmlOptions): string
+resolveDiagramsCaps	export declare function resolveDiagramsCaps(caps?: DrawioXmlCaps): ResolvedDrawioXmlCaps
+resolveDocumentCaps	export declare function resolveDocumentCaps(caps?: DocumentCaps): ResolvedDocumentCaps
+resolveSheetsCaps	export declare function resolveSheetsCaps(caps?: SheetsCaps): ResolvedSheetsCaps
+sha256Hex	export declare function sha256Hex(bytes: Uint8Array): string
+sheetModelSchema	export declare const sheetModelSchema: JsonSchema
+sheetModelToXlsxOptions	export declare function sheetModelToXlsxOptions(model: SheetModel): WorkbookOptions
+type DiagramsErrorCode	export { DiagramsCapError, DiagramsError, type DiagramsErrorCode, DiagramsFormatError, DiagramsModelInvalidError, DiagramsOriginError, DiagramsProtocolError, DiagramsTimeoutError, DiagramsXmlMalformedError, DiagramsXxeError, } from "./errors.js"
+type DiagramsTelemetry	export { type DiagramsTelemetry, type DiagramsTelemetryAttributeValue, type DiagramsTelemetrySpan, noopDiagramsSpan, noopDiagramsTelemetry, } from "./telemetry.js"
+type DiagramsTelemetryAttributeValue	export { type DiagramsTelemetry, type DiagramsTelemetryAttributeValue, type DiagramsTelemetrySpan, noopDiagramsSpan, noopDiagramsTelemetry, } from "./telemetry.js"
+type DiagramsTelemetrySpan	export { type DiagramsTelemetry, type DiagramsTelemetryAttributeValue, type DiagramsTelemetrySpan, noopDiagramsSpan, noopDiagramsTelemetry, } from "./telemetry.js"
+type DrawioCanonicalizeOptions	export { canonicalizeDrawioXml, type DrawioCanonicalizeOptions, } from "./canonicalize.js"
+type DrawioEmbed	export { createDrawioEmbed, type DrawioEmbed, type DrawioEmbedFrame, type DrawioEmbedOptions, type DrawioEventMap, type DrawioExportOptions, type DrawioExportResult, type DrawioLoadOptions, type DrawioMessageEvent, type DrawioMessageSource, } from "./embed.js"
+type DrawioEmbedFrame	export { createDrawioEmbed, type DrawioEmbed, type DrawioEmbedFrame, type DrawioEmbedOptions, type DrawioEventMap, type DrawioExportOptions, type DrawioExportResult, type DrawioLoadOptions, type DrawioMessageEvent, type DrawioMessageSource, } from "./embed.js"
+type DrawioEmbedOptions	export { createDrawioEmbed, type DrawioEmbed, type DrawioEmbedFrame, type DrawioEmbedOptions, type DrawioEventMap, type DrawioExportOptions, type DrawioExportResult, type DrawioLoadOptions, type DrawioMessageEvent, type DrawioMessageSource, } from "./embed.js"
+type DrawioEventMap	export { createDrawioEmbed, type DrawioEmbed, type DrawioEmbedFrame, type DrawioEmbedOptions, type DrawioEventMap, type DrawioExportOptions, type DrawioExportResult, type DrawioLoadOptions, type DrawioMessageEvent, type DrawioMessageSource, } from "./embed.js"
+type DrawioExportOptions	export { createDrawioEmbed, type DrawioEmbed, type DrawioEmbedFrame, type DrawioEmbedOptions, type DrawioEventMap, type DrawioExportOptions, type DrawioExportResult, type DrawioLoadOptions, type DrawioMessageEvent, type DrawioMessageSource, } from "./embed.js"
+type DrawioExportResult	export { createDrawioEmbed, type DrawioEmbed, type DrawioEmbedFrame, type DrawioEmbedOptions, type DrawioEventMap, type DrawioExportOptions, type DrawioExportResult, type DrawioLoadOptions, type DrawioMessageEvent, type DrawioMessageSource, } from "./embed.js"
+type DrawioLoadOptions	export { createDrawioEmbed, type DrawioEmbed, type DrawioEmbedFrame, type DrawioEmbedOptions, type DrawioEventMap, type DrawioExportOptions, type DrawioExportResult, type DrawioLoadOptions, type DrawioMessageEvent, type DrawioMessageSource, } from "./embed.js"
+type DrawioMessageEvent	export { createDrawioEmbed, type DrawioEmbed, type DrawioEmbedFrame, type DrawioEmbedOptions, type DrawioEventMap, type DrawioExportOptions, type DrawioExportResult, type DrawioLoadOptions, type DrawioMessageEvent, type DrawioMessageSource, } from "./embed.js"
+type DrawioMessageSource	export { createDrawioEmbed, type DrawioEmbed, type DrawioEmbedFrame, type DrawioEmbedOptions, type DrawioEventMap, type DrawioExportOptions, type DrawioExportResult, type DrawioLoadOptions, type DrawioMessageEvent, type DrawioMessageSource, } from "./embed.js"
+type DrawioModelSummary	export { assertNotVisio, type DrawioModelSummary, type DrawioXmlOptions, UNSAFE_XML_DECLARATION_PATTERN, validateDrawioXml, } from "./xml.js"
+type DrawioXmlCaps	export { DEFAULT_MAX_ATTRIBUTES, DEFAULT_MAX_ELEMENTS, DEFAULT_MAX_XML_BYTES, type DrawioXmlCaps, HARD_MAX_ATTRIBUTES, HARD_MAX_ELEMENTS, HARD_MAX_XML_BYTES, type ResolvedDrawioXmlCaps, resolveDiagramsCaps, validateByteCap, } from "./caps.js"
+type DrawioXmlOptions	export { assertNotVisio, type DrawioModelSummary, type DrawioXmlOptions, UNSAFE_XML_DECLARATION_PATTERN, validateDrawioXml, } from "./xml.js"
+type InferAndTransformResult	export { type InferAndTransformResult, inferAndTransformRows, } from "./inference.js"
+type NormalizedDecimalResult	export { isCanonicalDecimal, isCurrencyString, isScientificNotation, type NormalizedDecimalResult, normalizeDecimal, } from "./decimal.js"
+type ResolvedDrawioXmlCaps	export { DEFAULT_MAX_ATTRIBUTES, DEFAULT_MAX_ELEMENTS, DEFAULT_MAX_XML_BYTES, type DrawioXmlCaps, HARD_MAX_ATTRIBUTES, HARD_MAX_ELEMENTS, HARD_MAX_XML_BYTES, type ResolvedDrawioXmlCaps, resolveDiagramsCaps, validateByteCap, } from "./caps.js"
+type SheetsTelemetry	export { noopSheetsSpan, noopSheetsTelemetry, type SheetsTelemetry, type SheetsTelemetryAttributeValue, type SheetsTelemetrySpan, } from "./telemetry.js"
+type SheetsTelemetryAttributeValue	export { noopSheetsSpan, noopSheetsTelemetry, type SheetsTelemetry, type SheetsTelemetryAttributeValue, type SheetsTelemetrySpan, } from "./telemetry.js"
+type SheetsTelemetrySpan	export { noopSheetsSpan, noopSheetsTelemetry, type SheetsTelemetry, type SheetsTelemetryAttributeValue, type SheetsTelemetrySpan, } from "./telemetry.js"
+validateByteCap	export declare function validateByteCap(byteLength: number, caps: ResolvedSheetsCaps): void
+validateDiagramsOrigin	export declare function validateDiagramsOrigin(value: unknown): string
+validateDocumentModel	export declare function validateDocumentModel(model: unknown): asserts model is DocumentModel
+validateDrawioXml	export declare function validateDrawioXml(xml: string | Uint8Array, options?: DrawioXmlOptions): DrawioModelSummary
+validateModelCaps	export declare function validateModelCaps(model: DocumentModel, caps: ResolvedDocumentCaps): void
+validateZipSignature	export declare function validateZipSignature(bytes: Uint8Array): void

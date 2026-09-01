@@ -1,30 +1,105 @@
 {
   "name": "@arnilo/prism-providers",
-  "version": "0.3.0",
-  "description": "Umbrella package: installs 14 of the 17 first-party Prism provider adapters (omits Azure, Bedrock, Vertex — added separately by @arnilo/prism-all), including Anthropic, Google, DeepSeek, xAI, ClinePass, and AI SDK interoperability.",
+  "version": "0.4.0",
+  "description": "Unified provider family: all 17 first-party Prism provider adapters as explicit subpaths (openai, anthropic, google, azure, bedrock, vertex, deepseek, xai, zai, alibaba, kimi, clinepass, neuralwatt, ollama, opencode-go, openrouter, ai-sdk). Importing one adapter never evaluates another.",
   "license": "MIT",
-  "scripts": {
-    "pack:dry-run": "npm pack --dry-run"
+  "type": "module",
+  "exports": {
+    "./ai-sdk": {
+      "types": "./dist/ai-sdk/index.d.ts",
+      "default": "./dist/ai-sdk/index.js"
+    },
+    "./alibaba": {
+      "types": "./dist/alibaba/index.d.ts",
+      "default": "./dist/alibaba/index.js"
+    },
+    "./anthropic": {
+      "types": "./dist/anthropic/index.d.ts",
+      "default": "./dist/anthropic/index.js"
+    },
+    "./azure": {
+      "types": "./dist/azure/index.d.ts",
+      "default": "./dist/azure/index.js"
+    },
+    "./bedrock": {
+      "types": "./dist/bedrock/index.d.ts",
+      "default": "./dist/bedrock/index.js"
+    },
+    "./clinepass": {
+      "types": "./dist/clinepass/index.d.ts",
+      "default": "./dist/clinepass/index.js"
+    },
+    "./deepseek": {
+      "types": "./dist/deepseek/index.d.ts",
+      "default": "./dist/deepseek/index.js"
+    },
+    "./google": {
+      "types": "./dist/google/index.d.ts",
+      "default": "./dist/google/index.js"
+    },
+    "./kimi": {
+      "types": "./dist/kimi/index.d.ts",
+      "default": "./dist/kimi/index.js"
+    },
+    "./neuralwatt": {
+      "types": "./dist/neuralwatt/index.d.ts",
+      "default": "./dist/neuralwatt/index.js"
+    },
+    "./ollama": {
+      "types": "./dist/ollama/index.d.ts",
+      "default": "./dist/ollama/index.js"
+    },
+    "./openai": {
+      "types": "./dist/openai/index.d.ts",
+      "default": "./dist/openai/index.js"
+    },
+    "./opencode-go": {
+      "types": "./dist/opencode-go/index.d.ts",
+      "default": "./dist/opencode-go/index.js"
+    },
+    "./openrouter": {
+      "types": "./dist/openrouter/index.d.ts",
+      "default": "./dist/openrouter/index.js"
+    },
+    "./vertex": {
+      "types": "./dist/vertex/index.d.ts",
+      "default": "./dist/vertex/index.js"
+    },
+    "./xai": {
+      "types": "./dist/xai/index.d.ts",
+      "default": "./dist/xai/index.js"
+    },
+    "./zai": {
+      "types": "./dist/zai/index.d.ts",
+      "default": "./dist/zai/index.js"
+    }
   },
   "files": [
+    "dist",
+    "!dist/**/__tests__",
+    "!dist/**/*.map",
+    "LICENSE",
     "README.md",
     "CHANGELOG.md"
   ],
-  "dependencies": {
-    "@arnilo/prism-provider-ai-sdk": "^0.3.0",
-    "@arnilo/prism-provider-alibaba": "^0.3.0",
-    "@arnilo/prism-provider-anthropic": "^0.3.0",
-    "@arnilo/prism-provider-clinepass": "^0.3.0",
-    "@arnilo/prism-provider-deepseek": "^0.3.0",
-    "@arnilo/prism-provider-google": "^0.3.0",
-    "@arnilo/prism-provider-kimi": "^0.3.0",
-    "@arnilo/prism-provider-neuralwatt": "^0.3.0",
-    "@arnilo/prism-provider-ollama": "^0.3.0",
-    "@arnilo/prism-provider-openai": "^0.3.0",
-    "@arnilo/prism-provider-opencode-go": "^0.3.0",
-    "@arnilo/prism-provider-openrouter": "^0.3.0",
-    "@arnilo/prism-provider-xai": "^0.3.0",
-    "@arnilo/prism-provider-zai": "^0.3.0"
+  "scripts": {
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/*/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@ai-sdk/provider": "4.0.4",
+    "@arnilo/prism": "^0.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@ai-sdk/provider": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@ai-sdk/provider": "4.0.4",
+    "@arnilo/prism": "file:../.."
   },
   "engines": {
     "node": ">=20"
@@ -41,7 +116,6 @@
   "keywords": [
     "prism",
     "providers",
-    "umbrella",
     "agent",
     "llm"
   ],

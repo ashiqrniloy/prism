@@ -17,12 +17,10 @@ const CEILING_MS = freeze.capacity.e2eJourneyFixtureMsCeiling;
 
 const packages = [
   { dir: ".", name: "@arnilo/prism" },
-  { dir: "packages/coding-agent", name: "@arnilo/prism-coding-agent" },
-  { dir: "packages/coding-security", name: "@arnilo/prism-coding-security" },
+  { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools" },
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
-  { dir: "packages/workflows", name: "@arnilo/prism-workflows" },
+  { dir: "packages/prism-core", name: "@arnilo/prism-core" },
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
-  { dir: "packages/supervisor", name: "@arnilo/prism-supervisor" },
 ];
 
 let consumer, run;
@@ -52,7 +50,7 @@ describe("packed-install coding journey", () => {
   });
 
   it("resolves public imports from the packed install, not the workspace", () => {
-    const resolved = resolveFromConsumer(consumer.consumer, "@arnilo/prism-coding-agent");
+    const resolved = resolveFromConsumer(consumer.consumer, "@arnilo/prism-coding-tools/agent");
     assert.ok(resolved.startsWith(`file://${consumer.consumer}`), `resolved to ${resolved}, expected consumer node_modules`);
     assert.ok(!resolved.includes(repoRoot), "must not resolve into the workspace tree");
   });

@@ -10,13 +10,13 @@ import {
   type SessionEntry,
   type ToolResult,
 } from "@arnilo/prism";
-import { childEnv, resolveGraftCli, runGraftJson } from "@arnilo/prism-graft";
+import { childEnv, resolveGraftCli, runGraftJson } from "@arnilo/prism-memory/graft";
 
 const here = new URL(".", import.meta.url).pathname;
 // One fixture, two consumers: this is the same stub the package tests drive.
 // It accepts only explicit mode sentinels (`__PACK__`, `__NOGRAPH__`, `.ts` blast
 // targets) and echoes argv otherwise — no network, no native modules, no real graft.
-const fixtureRoot = join(here, "../packages/prism-graft/fixtures/graft-package-fixture");
+const fixtureRoot = join(here, "../packages/memory/fixtures/graft-package-fixture");
 // packageRoot resolution runs the manifest-declared bin via node (no exec bit needed);
 // an absolute cliPath would also work when the stub is chmod +x.
 const stubCliPackageRoot = fixtureRoot;
@@ -48,7 +48,7 @@ async function demo() {
   const kernel = createExtensionKernel({ errorPolicy: "throw" });
   await kernel.load([
     // mode "both": pull tools + push provider/orientation + edit-watch middleware.
-    (await import("@arnilo/prism-graft")).createGraftExtension({
+    (await import("@arnilo/prism-memory/graft")).createGraftExtension({
       packageRoot: stubCliPackageRoot,
       projectDir: fixtureRoot,
       mode: "both",

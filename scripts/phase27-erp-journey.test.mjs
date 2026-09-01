@@ -39,11 +39,11 @@ import {
   createProtectedFieldPolicy,
   narrowIdentity,
 } from "@arnilo/prism";
-import { createPostgresApprovalStore, createPostgresEnterpriseState } from "@arnilo/prism-enterprise-postgres";
-import { createErpInvariantScorers, erpInvariantDataset, scoreRun } from "@arnilo/prism-evals";
-import { createAuditExporter, createMemoryAuditCursorStore, verifyAuditBatch } from "@arnilo/prism-policy";
-import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres";
-import { createMemoryWorkflowCheckpoints, defineSaga, resumeSaga, runSaga } from "@arnilo/prism-workflows";
+import { createPostgresApprovalStore, createPostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
+import { createErpInvariantScorers, erpInvariantDataset, scoreRun } from "@arnilo/prism-core/governance/evals";
+import { createAuditExporter, createMemoryAuditCursorStore, verifyAuditBatch } from "@arnilo/prism-core/governance/policy";
+import { createMemoryWorkflowCheckpoints, defineSaga, resumeSaga, runSaga } from "@arnilo/prism-core/runtime/workflows";
+import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
 import { Pool } from "pg";
 
 const url = process.env.PRISM_TEST_POSTGRES_URL;

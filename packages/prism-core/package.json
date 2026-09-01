@@ -1,0 +1,185 @@
+{
+  "name": "@arnilo/prism-core",
+  "version": "0.4.0",
+  "description": "Core runtime, sessions, governance, credentials, enterprise state, and work integrations family package for Prism.",
+  "type": "module",
+  "exports": {
+    "./runtime/server": {
+      "types": "./dist/runtime/server/index.d.ts",
+      "default": "./dist/runtime/server/index.js"
+    },
+    "./runtime/server/artifact-bodies": {
+      "types": "./dist/runtime/server/artifact-bodies.d.ts",
+      "default": "./dist/runtime/server/artifact-bodies.js"
+    },
+    "./runtime/supervisor": {
+      "types": "./dist/runtime/supervisor/index.d.ts",
+      "default": "./dist/runtime/supervisor/index.js"
+    },
+    "./runtime/workflows": {
+      "types": "./dist/runtime/workflows/index.d.ts",
+      "default": "./dist/runtime/workflows/index.js"
+    },
+    "./sessions/codecs": {
+      "types": "./dist/sessions/codecs/index.d.ts",
+      "default": "./dist/sessions/codecs/index.js"
+    },
+    "./sessions/sqlite": {
+      "types": "./dist/sessions/sqlite/index.d.ts",
+      "default": "./dist/sessions/sqlite/index.js"
+    },
+    "./sessions/postgres": {
+      "types": "./dist/sessions/postgres/index.d.ts",
+      "default": "./dist/sessions/postgres/index.js"
+    },
+    "./sessions/nats": {
+      "types": "./dist/sessions/nats/index.d.ts",
+      "default": "./dist/sessions/nats/index.js"
+    },
+    "./governance/policy": {
+      "types": "./dist/governance/policy/index.d.ts",
+      "default": "./dist/governance/policy/index.js"
+    },
+    "./governance/policy/opa": {
+      "types": "./dist/governance/policy/opa.d.ts",
+      "default": "./dist/governance/policy/opa.js"
+    },
+    "./governance/evals": {
+      "types": "./dist/governance/evals/index.d.ts",
+      "default": "./dist/governance/evals/index.js"
+    },
+    "./governance/prompts": {
+      "types": "./dist/governance/prompts/index.d.ts",
+      "default": "./dist/governance/prompts/index.js"
+    },
+    "./governance/model-router": {
+      "types": "./dist/governance/model-router/index.d.ts",
+      "default": "./dist/governance/model-router/index.js"
+    },
+    "./governance/observability": {
+      "types": "./dist/governance/observability/index.d.ts",
+      "default": "./dist/governance/observability/index.js"
+    },
+    "./credentials/node": {
+      "types": "./dist/credentials/node/index.d.ts",
+      "default": "./dist/credentials/node/index.js"
+    },
+    "./credentials/node/oidc": {
+      "types": "./dist/credentials/node/oidc.d.ts",
+      "default": "./dist/credentials/node/oidc.js"
+    },
+    "./enterprise/postgres": {
+      "types": "./dist/enterprise/postgres/index.d.ts",
+      "default": "./dist/enterprise/postgres/index.js"
+    },
+    "./integrations/work": {
+      "types": "./dist/integrations/work/index.d.ts",
+      "default": "./dist/integrations/work/index.js"
+    },
+    "./integrations/work/microsoft365": {
+      "types": "./dist/integrations/work/microsoft365.d.ts",
+      "default": "./dist/integrations/work/microsoft365.js"
+    },
+    "./integrations/work/google-workspace": {
+      "types": "./dist/integrations/work/google-workspace.d.ts",
+      "default": "./dist/integrations/work/google-workspace.js"
+    },
+    "./validation/json-schema": {
+      "types": "./dist/validation/json-schema/index.d.ts",
+      "default": "./dist/validation/json-schema/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/**/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@napi-rs/keyring": "^1.3.0",
+    "ajv": "^8.17.1"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "^0.4.0",
+    "@nats-io/jetstream": "^3.4.0",
+    "@nats-io/transport-node": "^3.4.0",
+    "better-sqlite3": "^12.11.1",
+    "pg": "^8.22.0",
+    "@arnilo/prism-memory": "^0.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@nats-io/jetstream": {
+      "optional": true
+    },
+    "@nats-io/transport-node": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    },
+    "@arnilo/prism-memory": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../..",
+    "@arnilo/prism-memory": "file:../memory",
+    "@nats-io/jetstream": "^3.4.0",
+    "@nats-io/transport-node": "^3.4.0",
+    "@opentelemetry/api": "^1.9.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/pg": "^8.11.11",
+    "better-sqlite3": "^12.11.1",
+    "pg": "^8.22.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/prism-core"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-core#readme",
+  "keywords": [
+    "prism",
+    "core",
+    "runtime",
+    "server",
+    "supervisor",
+    "workflows",
+    "sessions",
+    "sqlite",
+    "postgres",
+    "nats",
+    "governance",
+    "policy",
+    "evals",
+    "prompts",
+    "model-router",
+    "observability",
+    "credentials",
+    "enterprise",
+    "work-tools",
+    "json-schema"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

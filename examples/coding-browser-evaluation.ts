@@ -7,8 +7,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { classifyBrowserUrl, normalizeTarget } from "@arnilo/prism-browser";
-import { createReadOnlyTools } from "@arnilo/prism-coding-agent";
+import { createReadOnlyTools } from "@arnilo/prism-coding-tools/agent";
 import {
   assertEvaluationThreshold,
   defineDataset,
@@ -16,7 +15,8 @@ import {
   type ExperimentReport,
   scoreRun,
   serializeEvaluationReport,
-} from "@arnilo/prism-evals";
+} from "@arnilo/prism-core/governance/evals";
+import { classifyBrowserUrl, normalizeTarget } from "@arnilo/prism-web-tools/browser";
 
 const scorer = defineScorer<{ kind: string }, { pass: boolean }>({
   id: "pass-flag",

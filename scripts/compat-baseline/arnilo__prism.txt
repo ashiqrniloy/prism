@@ -3,6 +3,7 @@ AGENT_RUN_STATE_SCHEMA_VERSION	export declare const AGENT_RUN_STATE_SCHEMA_VERSI
 ALLOW_FIELD_POLICY	export declare const ALLOW_FIELD_POLICY: FieldPolicy
 ARTIFACT_BODY_ERROR_CODES	export declare const ARTIFACT_BODY_ERROR_CODES: Readonly<Record<ArtifactBodyErrorCode, `ERR_PRISM_ARTIFACT_BODY_$
 ARTIFACT_CHECKPOINT_NAMESPACE	export declare const ARTIFACT_CHECKPOINT_NAMESPACE = "prism.artifact"
+ActiveToolSet	export type { ActiveToolSet, ToolSearchIndex, ToolSearchMatch, ToolSearchState, ToolsDisclosure, ToolsSearchOptions, } from "./tool-search.js"
 AgentDecisionError	export declare class AgentDecisionError extends Error
 AgentDelegationSuspendedError	export declare class AgentDelegationSuspendedError extends Error
 AgentEventSourceError	export declare class AgentEventSourceError extends Error
@@ -129,12 +130,14 @@ DEFAULT_MAX_SKILL_INSTRUCTION_BYTES	export declare const DEFAULT_MAX_SKILL_INSTR
 DEFAULT_MAX_STICKY_DECISIONS	export declare const DEFAULT_MAX_STICKY_DECISIONS = 64
 DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH	export declare const DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH = 128
 DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES	export declare const DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES = 65536
+DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES	export declare const DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES = 4096
 DEFAULT_MEDIA_FETCH_TIMEOUT_MS	export declare const DEFAULT_MEDIA_FETCH_TIMEOUT_MS = 30000
 DEFAULT_OPENAI_INLINE_FILE_BYTES	export declare const DEFAULT_OPENAI_INLINE_FILE_BYTES: number
 DEFAULT_PROVIDER_MEDIA_ITEM_BYTES	export declare const DEFAULT_PROVIDER_MEDIA_ITEM_BYTES = 10000000
 DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES	export declare const DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES = 32
 DEFAULT_RUN_LIMITS	export declare const DEFAULT_RUN_LIMITS: Required<Omit<RunLimits, "maxCost">>
 DEFAULT_SESSION_SEARCH_LIMIT	export declare const DEFAULT_SESSION_SEARCH_LIMIT = 20
+DEFAULT_TOOLS_SEARCH_TOP_K	export declare const DEFAULT_TOOLS_SEARCH_TOP_K = 16
 DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 512
 DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS	export declare const DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS = 2
 DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES	export declare const DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES = 4096
@@ -228,6 +231,9 @@ HARD_MAX_SKILL_CATALOG_ENTRIES	export declare const HARD_MAX_SKILL_CATALOG_ENTRI
 HARD_MAX_SKILL_DESCRIPTION_BYTES	export declare const HARD_MAX_SKILL_DESCRIPTION_BYTES = 4096
 HARD_MAX_SKILL_INSTRUCTION_BYTES	export declare const HARD_MAX_SKILL_INSTRUCTION_BYTES = 262144
 HARD_MAX_STICKY_DECISIONS	export declare const HARD_MAX_STICKY_DECISIONS = 256
+HARD_MAX_TOOLS_INDEX	export declare const HARD_MAX_TOOLS_INDEX = 1024
+HARD_MAX_TOOLS_SEARCH_QUERY_BYTES	export declare const HARD_MAX_TOOLS_SEARCH_QUERY_BYTES = 65536
+HARD_MAX_TOOLS_SEARCH_TOP_K	export declare const HARD_MAX_TOOLS_SEARCH_TOP_K = 64
 HARD_RUN_LIMITS	export declare const HARD_RUN_LIMITS: Required<Omit<RunLimits, "maxCost">>
 HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 4096
 IdentityError	export declare class IdentityError extends Error
@@ -259,6 +265,7 @@ MAX_FEEDBACK_ID_LENGTH	export declare const MAX_FEEDBACK_ID_LENGTH = 128
 MAX_FEEDBACK_TAG_LENGTH	export declare const MAX_FEEDBACK_TAG_LENGTH = 64
 MAX_GUARDRAIL_CONCURRENCY	export declare const MAX_GUARDRAIL_CONCURRENCY = 16
 MAX_LOAD_SKILL_RESULT_BYTES	export declare const MAX_LOAD_SKILL_RESULT_BYTES = 512
+MAX_PERSISTED_ACTIVATED_TOOL_NAMES	export declare const MAX_PERSISTED_ACTIVATED_TOOL_NAMES = 128
 MAX_PERSISTED_SKILL_BODIES	export declare const MAX_PERSISTED_SKILL_BODIES = 64
 MAX_PERSISTED_SKILL_BODY_BYTES	export declare const MAX_PERSISTED_SKILL_BODY_BYTES = 262144
 MAX_PERSISTED_SKILL_BODY_NAME_CHARS	export declare const MAX_PERSISTED_SKILL_BODY_NAME_CHARS = 256
@@ -294,7 +301,7 @@ NestedRunApproval	export type { ApprovalOutcome, DecisionScope, NestedRunApprova
 NestedRunOutcome	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
 NestedRunRef	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
 PARAMETERIZED_QUERY_GUIDANCE	export declare const PARAMETERIZED_QUERY_GUIDANCE = "Bind every user-supplied value (session ids, idempotency keys, tenant ids, timestamps, JSON payloads) as a query parameter. Quote/validate schema and table identifiers only
-PERSISTENCE_SCHEMA_VERSION	export declare const PERSISTENCE_SCHEMA_VERSION = 8
+PERSISTENCE_SCHEMA_VERSION	export declare const PERSISTENCE_SCHEMA_VERSION = 9
 PendingDecision	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
 PendingDecisionKind	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
 PendingToolCall	export type { PendingToolCall, StoredAgentRunState } from "./agent-run-state.js"
@@ -350,6 +357,7 @@ RunLimitName	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, Ne
 RunLimitTracker	export declare class RunLimitTracker
 RunLimitTrackerOptions	export type { RunLimitTrackerOptions } from "./run-limits.js"
 RuntimeAgentSession	export declare class RuntimeAgentSession implements AgentSession
+SEARCH_TOOLS_TOOL_NAME	export declare const SEARCH_TOOLS_TOOL_NAME = "search_tools"
 SESSION_APPEND_CONFLICT_CODE	export declare const SESSION_APPEND_CONFLICT_CODE: "session_append_conflict"
 SESSION_ENTRY_KINDS	export declare const SESSION_ENTRY_KINDS: readonly SessionEntryKind[]
 SESSION_ENTRY_SCHEMA_VERSION	export declare const SESSION_ENTRY_SCHEMA_VERSION = 1
@@ -380,6 +388,7 @@ StickyDecision	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, 
 StoredAgentRunState	export type { PendingToolCall, StoredAgentRunState } from "./agent-run-state.js"
 StructuredOutputError	export declare class StructuredOutputError extends Error
 THINKING_LEVELS	export declare const THINKING_LEVELS: readonly ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+TOOL_DISCLOSURE_ERROR_CODE	export declare const TOOL_DISCLOSURE_ERROR_CODE: "tool_disclosure_exceeded"
 TOOL_RESULT_FOLD_TURN_METADATA_KEY	export declare const TOOL_RESULT_FOLD_TURN_METADATA_KEY: "prismToolResultTurn"
 TenantQuota	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 ThinkingCompatFamily	export type { ThinkingCompatFamily, ThinkingLevel } from "./thinking.js"
@@ -388,6 +397,7 @@ ToolArgumentValidationError	export type { DispatchToolCallOptions, ToolArgumentV
 ToolArgumentValidationResult	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
 ToolArgumentValidator	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
 ToolCallAuthority	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
+ToolDisclosureError	export declare class ToolDisclosureError extends Error
 ToolEffectClassifier	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
 ToolEffectDeclaration	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
 ToolEffectError	export declare class ToolEffectError extends Error
@@ -406,7 +416,12 @@ ToolParameterValidatorOptions	export type { DispatchToolCallOptions, ToolArgumen
 ToolRegistryOptions	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
 ToolResultFoldInput	export type { FoldToolResultsContext, ResolvedToolResultFoldOptions, ToolResultFoldInput, ToolResultFoldOptions, } from "./tool-result-fold.js"
 ToolResultFoldOptions	export type { FoldToolResultsContext, ResolvedToolResultFoldOptions, ToolResultFoldInput, ToolResultFoldOptions, } from "./tool-result-fold.js"
+ToolSearchIndex	export type { ActiveToolSet, ToolSearchIndex, ToolSearchMatch, ToolSearchState, ToolsDisclosure, ToolsSearchOptions, } from "./tool-search.js"
+ToolSearchMatch	export type { ActiveToolSet, ToolSearchIndex, ToolSearchMatch, ToolSearchState, ToolsDisclosure, ToolsSearchOptions, } from "./tool-search.js"
+ToolSearchState	export type { ActiveToolSet, ToolSearchIndex, ToolSearchMatch, ToolSearchState, ToolsDisclosure, ToolsSearchOptions, } from "./tool-search.js"
 ToolValidator	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
+ToolsDisclosure	export type { ActiveToolSet, ToolSearchIndex, ToolSearchMatch, ToolSearchState, ToolsDisclosure, ToolsSearchOptions, } from "./tool-search.js"
+ToolsSearchOptions	export type { ActiveToolSet, ToolSearchIndex, ToolSearchMatch, ToolSearchState, ToolsDisclosure, ToolsSearchOptions, } from "./tool-search.js"
 TrustDecision	export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js"
 TrustDeniedError	export declare class TrustDeniedError extends Error
 TrustPolicy	export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js"
@@ -473,6 +488,7 @@ assertStructuredOutputRequestSupported	export declare function assertStructuredO
 assertTenantScopedQueryIsolation	export declare function assertTenantScopedQueryIsolation(queryByTenant: (tenantId: string) => Promise<readonly
 assertToolBlocked	export declare function assertToolBlocked(probe: ToolDispatchProbeOptions, expectedReason: string): Promise<void>
 assertToolCallDeltasReconstruct	export declare function assertToolCallDeltasReconstruct(events: readonly ProviderEvent[], expected: readonly ToolCallDeltaExpectation[]): readonly ToolCallContent[]
+assertToolDisclosureConforms	export declare function assertToolDisclosureConforms(options: ToolDisclosureConformanceOptions): void
 assertToolDispatchConforms	export declare function assertToolDispatchConforms(registry: ToolRegistry, options: ToolConformanceOptions): Promise<void>
 assertToolEffectStoreConforms	export declare function assertToolEffectStoreConforms(factory: () => ToolEffectStore | Promise<ToolEffectStore>, options?: ToolEffectStoreConformanceOptions): Promise<void>
 assertTrusted	export declare function assertTrusted(policy: TrustPolicy | undefined, request: TrustRequest): Promise<void>
@@ -498,6 +514,7 @@ composeSystemPrompt	export declare function composeSystemPrompt(contributions?: 
 contentBlockInputModality	export declare function contentBlockInputModality(block: ContentBlock): ModelInputCapability | undefined
 conversationMarkerMetadata	export declare function conversationMarkerMetadata(marker:
 conversationThreadFromRecord	export declare function conversationThreadFromRecord(record: SessionRecord): ConversationThread | undefined
+createActiveToolSet	export declare function createActiveToolSet(): ActiveToolSet
 createAgent	export declare function createAgent(config: AgentConfig): Agent
 createAgentRunLifecycle	export declare function createAgentRunLifecycle(options: AgentRunLifecycleOptions): AgentRunLifecycle
 createAgentSession	export declare function createAgentSession(config: AgentSessionConfig &
@@ -546,6 +563,7 @@ createProviderRequestPolicyChain	export declare function createProviderRequestPo
 createProviderResolver	export declare function createProviderResolver(source: ProviderRegistry | readonly AIProvider[]): ProviderResolver
 createProviderTurnMetadata	export declare function createProviderTurnMetadata(request: ProviderRequest, providerId: string, fields?: Omit<ProviderTurnMetadata, "providerId" | "model">): ProviderTurnMetadata
 createRunLimitTracker	export declare function createRunLimitTracker(limits: RunLimits | undefined, options?: RunLimitTrackerOptions): RunLimitTracker
+createSearchToolsTool	export declare function createSearchToolsTool(state: ToolSearchState, queryByteCap?: number): ToolDefinition
 createSecretRedactor	export declare function createSecretRedactor(secrets: readonly (string | undefined)[]): SecretRedactor
 createSecureAgent	export declare function createSecureAgent(options: SecureAgentOptions): Agent
 createSessionCachePolicy	export declare function createSessionCachePolicy(options?: SessionCachePolicyOptions): ProviderRequestPolicy
@@ -556,10 +574,14 @@ createStaticSettingsProvider	export declare function createStaticSettingsProvide
 createStaticTrustPolicy	export declare function createStaticTrustPolicy(decision: boolean | TrustDecision): TrustPolicy
 createToolParameterValidator	export declare function createToolParameterValidator(validator: ToolArgumentValidator, options?: ToolParameterValidatorOptions): ToolValidator
 createToolRegistry	export declare function createToolRegistry(tools?: readonly ToolDefinition[], options?: ToolRegistryOptions): ToolRegistry
+createToolSearchIndex	export declare function createToolSearchIndex(tools: readonly ToolDefinition[], skip?: (tool: ToolDefinition) => boolean): ToolSearchIndex
+createToolSearchState	export declare function createToolSearchState(options:
 createUsageAccumulator	export declare function createUsageAccumulator():
 decisionIdentityRef	export declare function decisionIdentityRef(identity: AgentIdentity | undefined): string | undefined
 decisionScopesEqual	export declare function decisionScopesEqual(a: DecisionScope, b: DecisionScope): boolean
 decodeConversationReplayCursor	export declare function decodeConversationReplayCursor(encoded: string, expectedThreadId: string, maxBytes?: number): ConversationReplayCursor
+defaultGalleryRoot	export declare function defaultGalleryRoot(): string
+defaultLoadDevCli	export declare const defaultLoadDevCli: PrismDevLoader
 defaultProviderFilename	export declare function defaultProviderFilename(block: MediaContentBlock, fallback: string): string
 defaultProviderTemplatesRoot	export declare function defaultProviderTemplatesRoot(): string
 defaultResolver	export declare function defaultResolver(hostname: string): Promise<readonly MediaHostAddress[]>
@@ -593,7 +615,7 @@ foldedToolResultHeader	export declare function foldedToolResultHeader(toolName: 
 formatFoldedToolResult	export declare function formatFoldedToolResult(summary: string): string
 generateValidateReviseLoop	export declare function generateValidateReviseLoop(opts:
 getContextBudgetReport	export declare function getContextBudgetReport(request: ProviderRequest): ContextBudgetReport | undefined
-getInitUsage	export declare function getInitUsage(templatesRoot?: string): string
+getInitUsage	export declare function getInitUsage(templatesRoot?: string, galleryRoot?: string): string
 getPersistencePaginationCursors	export declare function getPersistencePaginationCursors(): readonly PersistencePaginationCursor[]
 getProviderAddUsage	export declare function getProviderAddUsage(): string
 getSessionBranchEntries	export declare function getSessionBranchEntries(reader: BranchReader, query: SessionBranchRead): Promise<readonly SessionEntry[]>
@@ -609,6 +631,7 @@ isContextBudgetError	export declare function isContextBudgetError(error: unknown
 isDurableLoop	export declare function isDurableLoop(loop: import("../contracts.js").AgentLoopStrategy | import("../contracts.js").AgentLoopOptions): boolean
 isFlushableRunLedger	export declare function isFlushableRunLedger(ledger: RunLedger): ledger is FlushableRunLedger
 isInitProvider	export declare function isInitProvider(value: string, templatesRoot?: string): value is InitProvider
+isInitTemplate	export declare function isInitTemplate(value: string, galleryRoot?: string): boolean
 isJsonObject	export declare function isJsonObject(value: unknown): value is JsonObject
 isLoopbackAddress	export declare function isLoopbackAddress(value: string): boolean
 isLoopbackHostname	export declare function isLoopbackHostname(value: string): boolean
@@ -625,10 +648,12 @@ isSkillDisclosureError	export declare function isSkillDisclosureError(error: unk
 isSkillLoadError	export declare function isSkillLoadError(error: unknown): error is SkillLoadError
 isSteerSoftInterrupt	export declare function isSteerSoftInterrupt(error: unknown): boolean
 isThinkingLevel	export declare function isThinkingLevel(value: unknown): value is ThinkingLevel
+isToolDisclosureError	export declare function isToolDisclosureError(error: unknown): error is ToolDisclosureError
 isTransientErrorInfo	export declare function isTransientErrorInfo(error: ErrorInfo, transientCodes?: ReadonlySet<string | number>): boolean
 isTrusted	export declare function isTrusted(policy: TrustPolicy | undefined, request: TrustRequest): Promise<boolean>
 jsonBytes	export declare function jsonBytes(value: unknown): number
 listInitProviders	export declare function listInitProviders(templatesRoot?: string): readonly string[]
+listInitTemplates	export declare function listInitTemplates(galleryRoot?: string): readonly TemplateInfo[]
 listSessionBranches	export declare function listSessionBranches(entries: readonly SessionEntry[]): readonly SessionBranch[]
 loadAgentRunState	export declare function loadAgentRunState(checkpoints: CheckpointStore, ref: AgentRunRef, ownership?: OwnershipScope): Promise<
 loadBinaryResource	export declare function loadBinaryResource(loader: ResourceLoader, uri: string, context?: ResourceLoadContext, options?: LoadBinaryResourceOptions): Promise<Uint8Array>
@@ -667,7 +692,7 @@ parseAgentFile	export declare function parseAgentFile(text: string, path: string
 parseAgentRunState	export declare function parseAgentRunState(value: unknown, version?: number): StoredAgentRunState
 parseCliArgs	export declare function parseCliArgs(argv: readonly string[]): CliOptions
 parseContextFile	export declare function parseContextFile(text: string, path: string): ContextProvider
-parseInitArgs	export declare function parseInitArgs(argv: readonly string[], templatesRoot?: string): InitOptions
+parseInitArgs	export declare function parseInitArgs(argv: readonly string[], templatesRoot?: string, galleryRoot?: string): InitOptions
 parseJsonObjectArguments	export declare function parseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): JsonObject
 parsePrismManifest	export declare function parsePrismManifest(value: unknown): PrismManifest
 parseProviderAddArgs	export declare function parseProviderAddArgs(argv: readonly string[]): ProviderAddOptions
@@ -751,6 +776,7 @@ resolveSkillsDisclosure	export declare function resolveSkillsDisclosure(run?: Sk
 resolveToolConcurrency	export declare function resolveToolConcurrency(options:
 resolveToolEffectDeclaration	export declare function resolveToolEffectDeclaration(tool: ToolDefinition, args: JsonObject, context: ToolExecutionContext): ToolEffectDeclaration | undefined
 resolveToolResultFold	export declare function resolveToolResultFold(run?: ToolResultFoldOptions, agent?: ToolResultFoldOptions): ResolvedToolResultFoldOptions | undefined
+resolveToolsDisclosure	export declare function resolveToolsDisclosure(run?: ToolsDisclosure, agent?: ToolsDisclosure): ToolsDisclosure
 resolveUseCaseModel	export declare function resolveUseCaseModel(input: ResolveUseCaseModelInput): ResolvedUseCaseModel | undefined
 resolveUseCaseModelBinding	export declare function resolveUseCaseModelBinding(binding: UseCaseModelBinding | undefined, sessionModel?: ModelConfig): ResolvedUseCaseModel | undefined
 resumeAgentRun	export declare function resumeAgentRun(agent: Agent, ref: AgentRunRef, resume: AgentRunResume, options: AgentRunResumeOptions): Promise<AgentRunResult>
@@ -763,6 +789,7 @@ runFeedbackPageLimit	export declare function runFeedbackPageLimit(limit: number 
 runGuardrails	export declare function runGuardrails<S extends GuardrailStage>(options: RunGuardrailsOptions<S>): Promise<GuardrailRunResult>
 runInitCommand	export declare function runInitCommand(argv: readonly string[], runtime: InitRuntime): Promise<number>
 runInstructionInjectors	export declare function runInstructionInjectors(injectors: readonly InstructionInjector[], ctx: InstructionContext):
+runPrismDevSubcommand	export declare function runPrismDevSubcommand(argv: readonly string[], runtime: PrismDevSubcommandRuntime): Promise<number>
 runPromptMode	export declare function runPromptMode(session: AgentSession, options: CliOptions, stdout: Writable, mode: "print" | "json"): Promise<void>
 runProviderAddCommand	export declare function runProviderAddCommand(argv: readonly string[], runtime: ProviderAddRuntime): Promise<number>
 runRpcServer	export declare function runRpcServer(options: RpcServerOptions): Promise<void>
@@ -771,6 +798,8 @@ runSessionStoreConformance	export declare function runSessionStoreConformance(fa
 runToolEffectStoreConformance	export declare function runToolEffectStoreConformance(factory: () => ToolEffectStore | Promise<ToolEffectStore>, options?: ToolEffectStoreConformanceOptions): Promise<void>
 sanitizeCacheKey	export declare function sanitizeCacheKey(value: string | undefined, maxLength: number): string | undefined
 saveAgentRunState	export declare function saveAgentRunState(input:
+scoreTools	export declare function scoreTools(index: ToolSearchIndex, query: string, k: number, queryByteCap?: number): readonly ToolSearchMatch[]
+selectDisclosedTools	export declare function selectDisclosedTools(options:
 selectSkillsForPrompt	export declare function selectSkillsForPrompt(skills: readonly Skill[], context?: SkillRenderContext): readonly Skill[]
 serializeOpenAIChatMessage	export declare function serializeOpenAIChatMessage(message: Message, capabilities?: ModelCapabilities): JsonObject
 serializeOpenAIChatStructuredOutput	export declare function serializeOpenAIChatStructuredOutput(options: StructuredOutputOptions): JsonObject
@@ -803,14 +832,14 @@ tryParseJsonObjectArguments	export declare function tryParseJsonObjectArguments(
 type OAuthTokenSuccessPayload	export { abortableSleep, type OAuthTokenSuccessPayload, type PollDeviceCodeTokenOptions, pollDeviceCodeToken, redactOAuthError, throwIfAborted, } from "./oauth-device-code.js"
 type PinnedFetchOptions	export { boundResponse, defaultResolver, isLoopbackAddress, isLoopbackHostname, normalizeHostname, type PinnedFetchOptions, pinnedFetch, raceAbort, requestPinned, resolvePinnedAddress, } from "./pinned-fetch.js"
 type PollDeviceCodeTokenOptions	export { abortableSleep, type OAuthTokenSuccessPayload, type PollDeviceCodeTokenOptions, pollDeviceCodeToken, redactOAuthError, throwIfAborted, } from "./oauth-device-code.js"
-usage	export declare const usage = "Usage: prism [--mode print|json|rpc] [-p prompt] [options]\n prism init <dir> [--provider <name>] [--with-workflows] [--with-evals] [--force]\n prism providers add <name> [--base-url <url>] [--env-key <name>] [--model <id>] [--force]\n\nOptions:\n -p, --prompt <text> Prompt to run in print/json mode\n --provider <name> Explicit provider id (mock is built in for smoke tests)\n --model <name> Explicit model name\n --session <id> Session id\n --system <text> System ins
+usage	export declare const usage = "Usage: prism [--mode print|json|rpc] [-p prompt] [options]\n prism init <dir> [--template <name>] [--list-templates] [--provider <name>] [--with-workflows] [--with-evals] [--force]\n prism providers add <name> [--base-url <url>] [--env-key <name>] [--model <id>] [--force]\n prism dev [--port <n>] [--host <addr>] (loopback inspector
 useCaseCredentialProviderId	export declare function useCaseCredentialProviderId(resolved: ResolvedUseCaseModel | undefined, binding?: Pick<UseCaseModelBinding, "provider">): string | undefined
 validateElicitationPayload	export declare function validateElicitationPayload(agent: Agent, state: StoredAgentRunState, target: PendingDecision, payload: JsonObject, signal?: AbortSignal): Promise<void>
 validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(value: unknown): asserts value is readonly LoadedSkillBodiesEntry[]
 validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.3.2"
+version	export declare const version = "0.4.0"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]

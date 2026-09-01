@@ -67,11 +67,16 @@ export interface MemoryVectorRecord {
   readonly generation?: bigint | number;
   readonly metadata?: JsonObject;
   readonly consent?: MemoryConsent;
+  /** Host-trusted recall weight in [0,1]; absent on legacy rows → neutral 1.0 at scoring time. */
+  readonly importance?: number;
   readonly createdAt: string;
 }
 
 export interface MemoryVectorHit extends MemoryVectorRecord {
   readonly score: number;
+  /** Composite-score components, present only when `RecallOptions.scoring` is enabled. */
+  readonly similarity?: number;
+  readonly recency?: number;
 }
 
 export interface VectorQuery extends MemoryScope {
@@ -158,6 +163,10 @@ export interface MemoryEntryInput {
   readonly consent?: MemoryConsentInput;
   readonly sequence?: number;
   readonly createdAt?: string;
+  /** Host-supplied importance in [0,1]; wins over importanceFrom derivation; clamped at write. */
+  readonly importance?: number;
+  /** Redacted reflection record fed to `importanceFrom` (write time only; not persisted). */
+  readonly reflection?: JsonObject;
 }
 
 export interface RememberInput {
@@ -176,11 +185,23 @@ export interface RememberResult {
   readonly done: Promise<void>;
 }
 
+/** Composite recall scoring inputs; `score` becomes the weighted blend and hits expose components. */
+export interface RecallScoringOptions {
+  /** Weight for timestamp half-life decay; requires `halfLifeMs`. */
+  readonly recencyWeight?: number;
+  /** Weight for the clamped stored `importance` (neutral 1.0 when absent). */
+  readonly importanceWeight?: number;
+  /** Recency half-life in milliseconds. */
+  readonly halfLifeMs?: number;
+}
+
 export interface RecallOptions {
   readonly topK?: number;
   readonly messageRange?: number;
   /** When true, entries without explicit consent are excluded (strict mode). */
   readonly requireConsent?: boolean;
+  /** Optional composite blend; absent = pure similarity scoring, ordering unchanged. */
+  readonly scoring?: RecallScoringOptions;
   readonly signal?: AbortSignal;
 }
 
@@ -231,6 +252,8 @@ export interface CreateMemoryOptions extends MemoryScope {
   readonly secrets?: readonly (string | undefined)[];
   /** Strict mode: recall/injection excludes entries lacking explicit consent. */
   readonly requireConsent?: boolean;
+  /** Host-owned importance derivation from redacted reflection payloads; runs at write time only (see ImportanceFromReflection). */
+  readonly importanceFrom?: import("./scoring.js").ImportanceFromReflection;
 }
 
 export interface MemoryContextProviderOptions {

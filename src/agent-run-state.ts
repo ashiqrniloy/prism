@@ -20,7 +20,7 @@ import type {
 } from "./contracts.js";
 import { AgentLoopStateError, AgentRunStateError } from "./contracts.js";
 import type { SecretRedactor } from "./redaction.js";
-import { validateLoadedSkillBodies, type LoadedSkillBodiesEntry } from "./skill-load.js";
+import { type LoadedSkillBodiesEntry, validateLoadedSkillBodies } from "./skill-load.js";
 
 export const AGENT_RUN_STATE_NAMESPACE = "prism.agent-run";
 export const AGENT_RUN_STATE_SCHEMA_VERSION = 1 as const;
@@ -61,12 +61,16 @@ export interface StoredAgentRunState extends AgentRunState {
   readonly sessionState?: {
     readonly loadedSkillNames?: readonly string[];
     readonly loadedSkillBodies?: readonly LoadedSkillBodiesEntry[];
+    /** Plan 041: tools activated via `search_tools` (names only; inert for absent tools on restore). */
+    readonly activatedToolNames?: readonly string[];
   };
 }
 
 /** Session-state caps (plan 015 Task 4): bounded names charged against the run-state byte budget. */
 export const MAX_PERSISTED_SKILL_NAMES = 64;
 export const MAX_PERSISTED_SKILL_NAME_CHARS = 256;
+/** Plan 041: activated-tool names ride the same budget discipline (cap 128; multiple searches accumulate). */
+export const MAX_PERSISTED_ACTIVATED_TOOL_NAMES = 128;
 
 /** Revision stamps of the built-in loops; custom strategies declare their own `revision`. */
 export const BUILT_IN_LOOP_REVISIONS: Readonly<Record<string, string>> = {
@@ -368,13 +372,24 @@ function validateSessionState(sessionState: StoredAgentRunState["sessionState"])
     }
   }
   const names = sessionState.loadedSkillNames;
-  if (names === undefined) return;
-  if (!Array.isArray(names) || names.length > MAX_PERSISTED_SKILL_NAMES) {
-    throw new AgentRunStateError(`Loaded-skill names exceed ${MAX_PERSISTED_SKILL_NAMES} entries`);
+  if (names !== undefined) {
+    if (!Array.isArray(names) || names.length > MAX_PERSISTED_SKILL_NAMES) {
+      throw new AgentRunStateError(`Loaded-skill names exceed ${MAX_PERSISTED_SKILL_NAMES} entries`);
+    }
+    for (const name of names) {
+      if (typeof name !== "string" || name.length > MAX_PERSISTED_SKILL_NAME_CHARS) {
+        throw new AgentRunStateError(`Loaded-skill name exceeds ${MAX_PERSISTED_SKILL_NAME_CHARS} chars`);
+      }
+    }
   }
-  for (const name of names) {
+  const activated = sessionState.activatedToolNames;
+  if (activated === undefined) return;
+  if (!Array.isArray(activated) || activated.length > MAX_PERSISTED_ACTIVATED_TOOL_NAMES) {
+    throw new AgentRunStateError(`Activated-tool names exceed ${MAX_PERSISTED_ACTIVATED_TOOL_NAMES} entries`);
+  }
+  for (const name of activated) {
     if (typeof name !== "string" || name.length > MAX_PERSISTED_SKILL_NAME_CHARS) {
-      throw new AgentRunStateError(`Loaded-skill name exceeds ${MAX_PERSISTED_SKILL_NAME_CHARS} chars`);
+      throw new AgentRunStateError(`Activated-tool name exceeds ${MAX_PERSISTED_SKILL_NAME_CHARS} chars`);
     }
   }
 }

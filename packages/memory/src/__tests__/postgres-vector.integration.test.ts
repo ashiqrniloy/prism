@@ -5,6 +5,7 @@ import { Pool } from "pg";
 import {
   buildMemoryDdl,
   buildVectorSearchDdl,
+  createMemory,
   createPostgresMemoryStores,
   createPostgresVectorStore,
   MemoryValidationError,
@@ -68,6 +69,7 @@ describe("postgres vector ddl and identifiers", () => {
     assert.match(all, /ADD COLUMN IF NOT EXISTS embedder_id TEXT/);
     assert.match(all, /ADD COLUMN IF NOT EXISTS content_hash TEXT/);
     assert.match(all, /ADD COLUMN IF NOT EXISTS generation INTEGER/);
+    assert.match(all, /ADD COLUMN IF NOT EXISTS importance REAL/);
     assert.match(all, /CREATE TABLE IF NOT EXISTS "s1"\."t1_rag_scope_generations"/);
     assert.match(core, /CREATE TABLE IF NOT EXISTS "s1"\."t1"/);
   });
@@ -346,6 +348,67 @@ describeIntegration("createPostgresVectorStore integration", () => {
       );
       assert.equal(typeof bundle.vectorStore.getBySource, "function");
       await bundle.close();
+    } finally {
+      await store.close();
+      await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+    }
+  });
+
+  it("persists and clamps importance on durable rows", async () => {
+    const created = await createStore(2);
+    if (!created) return;
+    const { store, schema, pool } = created;
+    const scope = { tenantId: "t1", resourceId: "r1", threadId: "th1" };
+    try {
+      await store.upsert([
+        baseRecord({ id: "imp-hi", embedding: [1, 0], importance: 0.25 }),
+        baseRecord({ id: "imp-clamp", embedding: [1, 0], importance: 9 }),
+        baseRecord({ id: "imp-absent", embedding: [1, 0] }),
+      ]);
+      const rows = await store.getByThread(scope);
+      assert.equal(rows.find((row) => row.id === "imp-hi")?.importance, 0.25);
+      assert.equal(rows.find((row) => row.id === "imp-clamp")?.importance, 1);
+      assert.ok(!("importance" in rows.find((row) => row.id === "imp-absent")!));
+      await assert.rejects(store.upsert([baseRecord({ id: "imp-bad", embedding: [1, 0], importance: Number.NaN })]), MemoryValidationError);
+    } finally {
+      await store.close();
+      await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+    }
+  });
+
+  it("composite recall order matches the memory adapter through pgvector", async () => {
+    const created = await createStore(2);
+    if (!created) return;
+    const { store, schema, pool } = created;
+    try {
+      const embedder = {
+        id: "stub",
+        dimensions: 2,
+        async embed(texts: readonly string[]) {
+          return texts.map(() => [1, 0]);
+        },
+      } as const;
+      const memory = createMemory({ tenantId: "t1", resourceId: "r1", threadId: "th1", embedder, vectorStore: store });
+      const now = Date.now();
+      await memory.remember(
+        {
+          entries: [
+            { id: "stale", text: "stale fact", sequence: 1, createdAt: new Date(now - 10_000_000).toISOString() },
+            { id: "fresh", text: "fresh fact", sequence: 2, createdAt: new Date(now).toISOString() },
+          ],
+        },
+        { wait: true },
+      );
+      const plain = await memory.recall("fact", { topK: 5 });
+      assert.deepEqual(
+        plain.hits.map((hit) => hit.id),
+        ["stale", "fresh"],
+      ); // same as the in-memory adapter
+      const blended = await memory.recall("fact", { topK: 5, scoring: { recencyWeight: 0.4, halfLifeMs: 1_000 } });
+      assert.deepEqual(
+        blended.hits.map((hit) => hit.id),
+        ["fresh", "stale"],
+      ); // same flip as the in-memory adapter
     } finally {
       await store.close();
       await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);

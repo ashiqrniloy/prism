@@ -21,7 +21,7 @@ test("sweep driver always exits 0 and writes the combined report", () => {
   assert.ok(report.includes("## tsconfig.json"), "report covers the core tsconfig");
   assert.ok(report.includes("dead-export candidate"), "report includes the dead-export scan section");
   const json = JSON.parse(readFileSync(join(root, "scripts", "unused-report.json"), "utf8"));
-  assert.ok(Array.isArray(json.configs) && json.configs.length >= 40, "--json must write the machine-readable per-tsconfig report");
+  assert.ok(Array.isArray(json.configs) && json.configs.length >= 10, "--json must write the machine-readable per-tsconfig report");
 });
 
 test("tsc noUnused flags catch a seeded unused local, and the driver stays non-blocking", () => {

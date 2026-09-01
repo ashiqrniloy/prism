@@ -22,7 +22,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -73,6 +73,21 @@ function format(name, run, note) {
 }
 
 // Proxy for the coverage denominator: .js files under dist/ (tests excluded).
+function findTestFiles(packageDir) {
+  const dist = join(packageDir, "dist");
+  if (!existsSync(dist)) return [];
+  const tests = [];
+  const walk = (d) => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const p = join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (e.isFile() && e.name.endsWith(".test.js")) tests.push(relative(packageDir, p));
+    }
+  };
+  walk(dist);
+  return tests;
+}
+
 function countDenominatorFiles(packageDir) {
   const dist = join(packageDir, "dist");
   if (!existsSync(dist)) return 0;
@@ -121,10 +136,13 @@ const workspaceNames = readdirSync(packagesDir)
 for (const name of workspaceNames) {
   const pkg = JSON.parse(readFileSync(join(packagesDir, name, "package.json"), "utf8"));
   const pkgName = pkg.name ?? name;
-  const run = runCoverage(
-    ["--test-coverage-include=dist/**", ...SHARED_EXCLUDES.map((e) => `--test-coverage-exclude=${e}`), "dist/__tests__/*.test.js"],
-    join(packagesDir, name),
-  );
+  const testFiles = findTestFiles(join(packagesDir, name));
+  const run = testFiles.length
+    ? runCoverage(
+        ["--test-coverage-include=dist/**", ...SHARED_EXCLUDES.map((e) => `--test-coverage-exclude=${e}`), ...testFiles],
+        join(packagesDir, name),
+      )
+    : { ok: true, lines: undefined, branches: undefined, functions: undefined };
   const thresholdEntry = thresholds.packages?.[pkgName];
   const denominatorFiles = countDenominatorFiles(join(packagesDir, name));
   if (!thresholdEntry) {

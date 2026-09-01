@@ -1,0 +1,4 @@
+company;address;revenue;note
+"Acme, Corp";"123 Main St, New York";1000000.00;ok
+"Widgets, Inc";"456 Oak Ave, Boston";250.50;fine
+Globex;789 Pine Rd;19.99;note

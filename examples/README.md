@@ -42,6 +42,8 @@ node examples/coding-browser-evaluation.ts
 node examples/web-research.ts
 node examples/run-feedback.ts
 node examples/supervisor-a2a.ts
+node examples/handoff-swarm.ts
+node examples/crew-hierarchy.ts
 node examples/ai-sdk-provider.ts
 node examples/working-semantic-memory.ts
 node examples/rag.ts
@@ -96,6 +98,8 @@ Each demo prints a single JSON line with its result.
 - `web-research.ts` — network-free host-selected Brave search → Firecrawl Markdown route with fake fetch, stable citation, untrusted marker, and fixed host extraction schema.
 - `run-feedback.ts` — immutable owned run feedback linked to an evaluation, bounded query, and safe low-cardinality OpenTelemetry projection.
 - `supervisor-a2a.ts` — bounded allow-listed local child delegation plus an offline A2A 1.0 handler/client round trip.
+- `handoff-swarm.ts` — **demo**: in-session handoff — triage transfers to a specialist via a generated `handoff` tool (host allow-list), definition swap over the same session transcript, narrowed permissions on transfer (network-free).
+- `crew-hierarchy.ts` — **demo**: hierarchical crew pattern — manager structured task plan, parallel role specialists (fan-out), host reduce aggregation, and conditional validation/revision (network-free).
 - `ai-sdk-provider.ts` — optional AI SDK `LanguageModelV4` adapter demo with a fake in-memory model.
 - `working-semantic-memory.ts` — optional working memory + semantic recall with hash embedder, context injection, and processor update.
 - `rag.ts` — optional bounded Markdown chunk/index/retrieve/citation flow using Phase 7 in-memory vector primitives.

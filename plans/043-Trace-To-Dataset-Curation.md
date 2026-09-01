@@ -19,7 +19,7 @@ Target: extend `@arnilo/prism-evals` with a curation helper that turns live run/
 
 ## Tasks
 
-- [ ] Task 1 — Curation Helper Over Existing Seams
+- [x] Task 1 — Curation Helper Over Existing Seams
   - Acceptance Criteria:
     - Functional: `datasetFromRuns` accepts run ids and/or session ids; resolves inputs/outputs via `createPersistenceTraceResolver` (exact session/run/ownership, existing page/byte bounds); maps each run to one item via a host-supplied `toItem` (default: input + output as expected); appends as a **new dataset version** (existing immutability honored — old version untouched); returns `{ dataset, version, added, skipped }` with skip reasons (missing run, ownership mismatch, empty output).
     - Performance: bounded by existing trace-resolver page/byte caps; concurrency capped by existing limits; 50-run curation within the evals performance envelope.
@@ -59,7 +59,7 @@ Target: extend `@arnilo/prism-evals` with a curation helper that turns live run/
     - `docs/index.md` update: yes — Evaluations entry description extended with trace→dataset curation.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 2 — Feedback-to-Expected Mapping and Docs
+- [x] Task 2 — Feedback-to-Expected Mapping and Docs
   - Acceptance Criteria:
     - Functional: default `toItem` uses recorded `RunFeedbackRecord` fields as `expected` when present (feedback store linkage already id-only — honor that); document that human-graded expected values come from the feedback seam, never re-derived from untrusted outputs.
     - Performance: one bounded feedback query per run batch (existing feedback store caps).
@@ -84,8 +84,13 @@ Target: extend `@arnilo/prism-evals` with a curation helper that turns live run/
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass.
+- Default `toItem` mapping (post-Task 2): `input` = first user message from the trace, `expected` = `metadata.expected` of the latest human-graded `RunFeedbackRecord` when present, recorded output preserved as `metadata.output`. `RunFeedbackRecord` has no dedicated `expected` column, so the human-graded gold value rides feedback `metadata` (bounded and store-redacted by the feedback seam itself); outputs are never re-derived into `expected` (feedback-absent → item omits `expected`).
+- Feedback costs one owner-scoped, store-bounded `query({ order: "desc" })` per curation batch; the newest record wins per run. ponytail: single feedback page — feedback beyond the first page is ignored, which only omits `expected` (`ERR_PRISM_RUN_FEEDBACK_BOUNDS` caps pages at 500); hosts needing more should curate via `sessionIds`/feedback-scoped `toItem`.
+- A failed feedback query (e.g. tenant-only curation scope vs. the feedback store's tenant+account/user contract) omits `expected` rather than aborting the batch — feedback is optional enrichment and its absence never fabricates data.
+- Bare `runIds` (no session) are located by one ownership-bounded scan of the run ledger (`queryRuns` paginated under the resolver's page/byte caps) because `RunQuery` has no run-id filter; a run not found within the page cap skips as `missing run`.
+- `pages`/`limit` helpers in `trace.ts` were exported for reuse instead of duplicated; item redaction runs a second pass after host `toItem` so host-supplied `expected` values also pass the redaction boundary (fail-closed skip on redactor throw).
+- Dataset versioning is numeric-increment (`undefined` → `"2"`, `"3"` → `"4"`); non-numeric versions append `"-2"`. No persistent dataset store was added — curation returns the new in-memory immutable snapshot, matching `defineDataset`'s existing seams.
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- Consider a first-party persistence adapter for feedback-with-expected curation at scale (cursor continuation beyond one feedback page) if production curation batches routinely exceed 500 feedback records.

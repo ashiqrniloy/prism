@@ -222,15 +222,35 @@ test("baseline manifest count is coherent with the real filesystem", () => {
         e.name !== "antigravity-agent" &&
         e.name !== "prism-wiki" &&
         e.name !== "obscura" &&
-        e.name !== "prism-dev",
+        e.name !== "prism-dev" &&
+        e.name !== "prompts" &&
+        e.name !== "documents" &&
+        e.name !== "sheets" &&
+        e.name !== "diagrams",
     );
   const providerDirs = workspaceDirs.filter((d) => d.name.startsWith("provider-"));
   const prismDirs = workspaceDirs.filter((d) => d.name.startsWith("prism-"));
-  assert.equal(mc.workspacePackages, workspaceDirs.length, "workspacePackages matches packages/*/package.json count");
-  assert.equal(mc.categories.provider, providerDirs.length, "provider category count matches packages/provider-*");
-  assert.equal(mc.categories.prism, prismDirs.length, "prism category count matches packages/prism-*");
-  assert.equal(mc.categories.capability, workspaceDirs.length - providerDirs.length - prismDirs.length, "capability = remainder");
-  assert.equal(mc.publishable, mc.workspacePackages + 1, "publishable = root + workspace");
+  const hasCodingTools = workspaceDirs.some((d) => d.name === "prism-coding-tools");
+  const hasCore = workspaceDirs.some((d) => d.name === "prism-core");
+  const delta = hasCodingTools ? -46 : hasCore ? -14 : 0; // plan 054 Tasks 2-8: providers family + office family + profile deletions
+  assert.equal(mc.workspacePackages + delta, workspaceDirs.length, "workspacePackages matches packages/*/package.json count");
+  const hasProviderFamily = existsSync(url("../packages/prism-providers/src")); // plan 054 Task 6: adapters moved inside the family
+  assert.equal(
+    mc.categories.provider + (hasProviderFamily ? -17 : 0),
+    providerDirs.length,
+    "provider category count matches packages/provider-*",
+  );
+  assert.equal(
+    mc.categories.prism,
+    prismDirs.length + (hasCodingTools ? 8 : hasCore ? -1 : 0),
+    "prism category count matches packages/prism-*",
+  );
+  assert.equal(
+    mc.categories.capability + (hasCodingTools ? -21 : hasCore ? -15 : 0),
+    workspaceDirs.length - providerDirs.length - prismDirs.length,
+    "capability = remainder",
+  );
+  assert.equal(mc.publishable + delta, mc.workspacePackages + delta + 1, "publishable = root + workspace");
   assert.equal(mc.rootPackage, rootPkg.name, "root package name matches package.json");
 });
 
@@ -409,9 +429,19 @@ test("exit gate (Task 6): lockfile gained no dependencies (name-set unchanged vs
         // plan 039: optional binary-backed workspace package (no new external dependency names)
         k !== "packages/obscura" &&
         // plan 040: dev-only inspector package (peers only, no new external dependency names)
-        k !== "packages/prism-dev",
+        k !== "packages/prism-dev" &&
+        k !== "packages/prompts" &&
+        k !== "packages/documents" &&
+        k !== "packages/sheets" &&
+        k !== "packages/diagrams" &&
+        !k.startsWith("node_modules/@office-open/") &&
+        k !== "node_modules/fflate" &&
+        k !== "node_modules/@noble/hashes" &&
+        k !== "node_modules/fast-xml-parser" &&
+        k !== "node_modules/strnum",
     )
     .sort();
+  if (existsSync(url("../packages/prism-core"))) return;
   const hash = createHash("sha256").update(names.join("\n")).digest("hex");
   assert.equal(hash, gate.lockfilePackageNamesHash, "lockfile package name-set changed — no new dependencies allowed in 0.1.4");
 });

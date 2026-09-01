@@ -1,0 +1,23 @@
+{
+  "kind": "deck",
+  "modelVersion": 1,
+  "title": "Prism Presentation Golden",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "Prism Agent Framework",
+      "subtitle": "Architecture & Enterprise Observability",
+      "notes": "Introduce speaker and establish executive presentation context."
+    },
+    {
+      "layout": "title-and-content",
+      "title": "Key Platform Pillars",
+      "bullets": [
+        "Pure memory contract boundaries",
+        "Deterministic OpenXML generation and parsing",
+        "Safe bounded HTML and native preview block rendering"
+      ],
+      "notes": "Highlight zero filesystem, network, and process dependency doctrine."
+    }
+  ]
+}

@@ -39,6 +39,7 @@ ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS consent JSONB;
 ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS embedder_id TEXT;
 ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS content_hash TEXT;
 ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS generation INTEGER;
+ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS importance REAL;
 -- Current-generation pointer per exact scope — the postgres analog of an ES alias.
 CREATE TABLE IF NOT EXISTS ${q}.${quoteIdentifier(`${table}_rag_scope_generations`)} (
   tenant_id TEXT NOT NULL,

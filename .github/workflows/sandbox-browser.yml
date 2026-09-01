@@ -35,12 +35,12 @@ jobs:
           npm run build -w @arnilo/prism-workflows
           npm run build -w @arnilo/prism-coding-agent
           npm run build -w @arnilo/prism-coding-security
-          npm run build -w @arnilo/prism-browser
-          npm run build -w @arnilo/prism-obscura
+          npm run build -w @arnilo/prism-web-tools
+          npm run build -w @arnilo/prism-diagrams
       - name: network-free adversarial eval fixtures
         run: |
           npm test -w @arnilo/prism-coding-agent -- --test-name-pattern "adversarial"
-          npm test -w @arnilo/prism-browser -- --test-name-pattern "adversarial"
+          npm test -w @arnilo/prism-web-tools -- --test-name-pattern "adversarial"
       - name: protected Docker sandbox matrix
         if: ${{ vars.PRISM_TEST_DOCKER_IMAGE != '' }}
         timeout-minutes: 5
@@ -84,7 +84,7 @@ jobs:
         timeout-minutes: 5
         env:
           PRISM_LIVE_PLAYWRIGHT: "1"
-        run: npm run test:live -w @arnilo/prism-browser
+        run: npm run test:live -w @arnilo/prism-web-tools
       - name: protected Obscura binary leg (plan 039)
         if: ${{ vars.PRISM_ENABLE_OBSCURA_GATE == '1' }}
         timeout-minutes: 5
@@ -92,8 +92,14 @@ jobs:
           PRISM_LIVE_OBSCURA: "1"
           PRISM_OBSCURA_BIN: ${{ vars.PRISM_OBSCURA_BIN }}
         run: |
-          npm test -w @arnilo/prism-obscura -- --test-name-pattern "hostile|oversize|garbage|loopback|insecure"
-          npm run test:live -w @arnilo/prism-obscura
+          npm test -w @arnilo/prism-web-tools -- --test-name-pattern "hostile|oversize|garbage|loopback|insecure"
+          npm run test:live -w @arnilo/prism-web-tools
+      - name: protected self-hosted draw.io leg (plan 053 Task 4)
+        if: ${{ vars.PRISM_ENABLE_DRAWIO_GATE == '1' }}
+        timeout-minutes: 5
+        env:
+          PRISM_TEST_DRAWIO_URL: ${{ vars.PRISM_TEST_DRAWIO_URL || 'http://localhost:8080' }}
+        run: npm run test:drawio -w @arnilo/prism-diagrams
       - name: benchmark schema (network-free)
         env:
           PRISM_BENCH_ITERATIONS: "10"

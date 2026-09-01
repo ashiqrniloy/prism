@@ -1,0 +1,81 @@
+import {
+  type Agent,
+  createAgent,
+  createMockProvider,
+  providerDone,
+  providerTextDelta,
+} from "@arnilo/prism";
+import { createResearchSearchAdapter, createResearchWebTools } from "./tools.js";
+
+/**
+ * Creates the planning agent responsible for breaking down topics into search queries.
+ */
+export function createPlannerAgent(options?: {
+  readonly model?: { provider: string; model: string };
+  readonly provider?: import("@arnilo/prism").AIProvider;
+}): Agent {
+  const provider =
+    options?.provider ??
+    createMockProvider([
+      providerTextDelta(
+        JSON.stringify({
+          topic: "Prism Architecture",
+          queries: [
+            { query: "Prism workflows orchestration", rationale: "Understand DAG execution", aspect: "workflows" },
+            { query: "Prism web tools citations", rationale: "Check search and citation seam", aspect: "web-tools" },
+          ],
+        }),
+      ),
+      providerDone(),
+    ]);
+
+  return createAgent({
+    model: options?.model ?? { provider: "mock", model: "demo" },
+    provider,
+    instructions:
+      "You are a research planning agent. Given a research topic, produce a structured research plan breaking down the topic into targeted search queries.",
+  });
+}
+
+/**
+ * Creates the synthesis agent responsible for compiling findings into a cited report.
+ */
+export function createSynthesizerAgent(options?: {
+  readonly model?: { provider: string; model: string };
+  readonly provider?: import("@arnilo/prism").AIProvider;
+}): Agent {
+  const provider =
+    options?.provider ??
+    createMockProvider([
+      providerTextDelta(
+        "### Executive Summary\nPrism provides modular agent runtimes with durable workflows and verifiable web-tool citations.\n\n### Findings\n- Workflows execute deterministic DAG pipelines.\n- Web tools generate verifiable cryptographic citations.",
+      ),
+      providerDone(),
+    ]);
+
+  return createAgent({
+    model: options?.model ?? { provider: "mock", model: "demo" },
+    provider,
+    instructions:
+      "You are a research synthesis agent. Review the gathered research findings and compose a detailed, factual summary referencing the attributable citations.",
+  });
+}
+
+/**
+ * Default app agent export for `prism dev` and CLI inspector.
+ */
+export function createAppAgent(): Agent {
+  const adapter = createResearchSearchAdapter();
+  const tools = createResearchWebTools(adapter);
+
+  return createAgent({
+    model: { provider: "mock", model: "demo" },
+    provider: createMockProvider([
+      providerTextDelta("Deep Research Agent ready. Ask me to research any topic."),
+      providerDone(),
+    ]),
+    tools,
+    instructions:
+      "You are a Deep Research Assistant. You break down topics, search the web, refine evidence, and produce cited reports.",
+  });
+}

@@ -11,7 +11,7 @@ import {
   createReadTool,
   createRepoSearchTool,
   createWriteTool,
-} from "@arnilo/prism-coding-agent";
+} from "@arnilo/prism-coding-tools/agent";
 
 function textOf(result: { content?: ReadonlyArray<{ type: string; text?: string }> }): string {
   const block = result.content?.[0];

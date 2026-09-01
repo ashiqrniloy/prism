@@ -156,4 +156,4 @@ await router.recordOutcome({ identity, provider, model, success: true, latencyMs
 - [Policy and audit](policy-and-audit.md)
 - [Agent identity](agent-identity.md)
 - [Enterprise PostgreSQL state](enterprise-postgres-state.md): durable router state, migration, cleanup, and ownership requirements.
-- Package README: [`@arnilo/prism-model-router`](../packages/model-router/README.md)
+- Package README: [`@arnilo/prism-core`](../packages/prism-core/README.md)

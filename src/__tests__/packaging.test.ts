@@ -1,67 +1,32 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, posix } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
 // ponytail: data-driven guard; one entry per published package, drive every assertion from this list
-const packages = [
+const packages: Array<{
+  dir: string;
+  name: string;
+  isCore?: boolean;
+  isSubpaths?: boolean;
+  isMeta?: boolean;
+}> = [
   { dir: ".", name: "@arnilo/prism", isCore: true },
-  { dir: "packages/provider-openai", name: "@arnilo/prism-provider-openai" },
-  { dir: "packages/provider-anthropic", name: "@arnilo/prism-provider-anthropic" },
-  { dir: "packages/provider-google", name: "@arnilo/prism-provider-google" },
-  { dir: "packages/provider-opencode-go", name: "@arnilo/prism-provider-opencode-go" },
-  { dir: "packages/provider-openrouter", name: "@arnilo/prism-provider-openrouter" },
-  { dir: "packages/provider-zai", name: "@arnilo/prism-provider-zai" },
-  { dir: "packages/provider-kimi", name: "@arnilo/prism-provider-kimi" },
-  { dir: "packages/provider-neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
-  { dir: "packages/provider-ai-sdk", name: "@arnilo/prism-provider-ai-sdk" },
-  { dir: "packages/provider-alibaba", name: "@arnilo/prism-provider-alibaba" },
-  { dir: "packages/provider-ollama", name: "@arnilo/prism-provider-ollama" },
-  { dir: "packages/provider-azure", name: "@arnilo/prism-provider-azure" },
-  { dir: "packages/provider-bedrock", name: "@arnilo/prism-provider-bedrock" },
-  { dir: "packages/provider-vertex", name: "@arnilo/prism-provider-vertex" },
-  { dir: "packages/provider-deepseek", name: "@arnilo/prism-provider-deepseek" },
-  { dir: "packages/provider-xai", name: "@arnilo/prism-provider-xai" },
-  { dir: "packages/provider-clinepass", name: "@arnilo/prism-provider-clinepass" },
-  { dir: "packages/policy", name: "@arnilo/prism-policy" },
-  { dir: "packages/model-router", name: "@arnilo/prism-model-router" },
-  { dir: "packages/work-tools", name: "@arnilo/prism-work-tools" },
-  { dir: "packages/coding-agent", name: "@arnilo/prism-coding-agent" },
-  { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
-  { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
-  { dir: "packages/prism-caveman", name: "@arnilo/prism-caveman" },
-  { dir: "packages/prism-ponytail", name: "@arnilo/prism-ponytail" },
-  { dir: "packages/prism-impeccable", name: "@arnilo/prism-impeccable" },
-  { dir: "packages/observability-opentelemetry", name: "@arnilo/prism-observability-opentelemetry" },
-  { dir: "packages/tool-validator-json-schema", name: "@arnilo/prism-tool-validator-json-schema" },
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
-  { dir: "packages/session-store-codecs", name: "@arnilo/prism-session-store-codecs" },
-  { dir: "packages/session-store-sqlite", name: "@arnilo/prism-session-store-sqlite" },
-  { dir: "packages/session-store-postgres", name: "@arnilo/prism-session-store-postgres" },
-  { dir: "packages/enterprise-postgres", name: "@arnilo/prism-enterprise-postgres" },
-  { dir: "packages/credentials-node", name: "@arnilo/prism-credentials-node" },
-  { dir: "packages/coding-security", name: "@arnilo/prism-coding-security" },
-  { dir: "packages/workflows", name: "@arnilo/prism-workflows" },
-  { dir: "packages/evals", name: "@arnilo/prism-evals" },
   { dir: "packages/memory", name: "@arnilo/prism-memory" },
-  { dir: "packages/rag", name: "@arnilo/prism-rag" },
-  { dir: "packages/server", name: "@arnilo/prism-server" },
-  { dir: "packages/supervisor", name: "@arnilo/prism-supervisor" },
   { dir: "packages/web-tools", name: "@arnilo/prism-web-tools" },
-  { dir: "packages/browser", name: "@arnilo/prism-browser" },
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
-  { dir: "packages/computer-use-linux", name: "@arnilo/prism-computer-use-linux" },
+  { dir: "packages/acp-agent", name: "@arnilo/prism-acp-agent" },
+  { dir: "packages/antigravity-agent", name: "@arnilo/prism-antigravity-agent" },
+  { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools" },
+  { dir: "packages/prism-core", name: "@arnilo/prism-core" },
   // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
-  { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isMeta: true },
-  { dir: "packages/prism-compaction", name: "@arnilo/prism-compaction", isMeta: true },
-  { dir: "packages/prism-base", name: "@arnilo/prism-base", isMeta: true },
-  { dir: "packages/prism-code", name: "@arnilo/prism-code", isMeta: true },
-  { dir: "packages/prism-sdk", name: "@arnilo/prism-sdk", isMeta: true },
-  { dir: "packages/prism-all", name: "@arnilo/prism-all", isMeta: true },
+  { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isSubpaths: true },
+  { dir: "packages/office", name: "@arnilo/prism-office", isSubpaths: true },
 ];
 
 const deniedPatterns: ReadonlyArray<{ pattern: RegExp; label: string }> = [
@@ -148,6 +113,9 @@ describe("packaging guard", () => {
           assert.ok(files.includes("templates/init/package.json.tmpl"), `${pkg.name} missing init templates`);
           assert.ok(files.includes("templates/init/src/agent.ts.tmpl"), `${pkg.name} missing agent template`);
           assert.ok(files.includes("templates/init/providers.json"), `${pkg.name} missing init provider catalog`);
+          assert.ok(files.includes("templates/README.md"), `${pkg.name} missing templates gallery README`);
+          assert.ok(files.includes("templates/deep-research/manifest.json"), `${pkg.name} missing deep-research manifest`);
+          assert.ok(files.includes("templates/deep-research/package.json.tmpl"), `${pkg.name} missing deep-research template`);
         });
       }
 
@@ -175,11 +143,10 @@ describe("packaging guard", () => {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
-          // Decision B window: ^0.3.0 everywhere; packages republishing in the
-          // plan 039 cut track the root patch (^0.3.1), plan 050 cut (^0.3.2).
-          assert.ok(
-            peers?.["@arnilo/prism"] === "^0.3.0" || peers?.["@arnilo/prism"] === "^0.3.1" || peers?.["@arnilo/prism"] === "^0.3.2",
-            `${pkg.name} @arnilo/prism peer must be inside the Decision B window, got ${peers?.["@arnilo/prism"]}`,
+          assert.equal(
+            peers?.["@arnilo/prism"],
+            "^0.4.0",
+            `${pkg.name} @arnilo/prism peer must be ^0.4.0, got ${peers?.["@arnilo/prism"]}`,
           );
           const meta = manifest.peerDependenciesMeta as Readonly<Record<string, { readonly optional?: boolean }>> | undefined;
           assert.ok(!meta?.["@arnilo/prism"]?.optional, `${pkg.name} must not mark the @arnilo/prism peer optional`);
@@ -193,59 +160,18 @@ describe("packaging guard", () => {
           assert.ok(deps, `${pkg.name} missing dependencies`);
           const depNames = Object.keys(deps);
           const expected: Record<string, string[]> = {
-            "@arnilo/prism-providers": [
-              "@arnilo/prism-provider-ai-sdk",
-              "@arnilo/prism-provider-alibaba",
-              "@arnilo/prism-provider-anthropic",
-              "@arnilo/prism-provider-clinepass",
-              "@arnilo/prism-provider-deepseek",
-              "@arnilo/prism-provider-google",
-              "@arnilo/prism-provider-kimi",
-              "@arnilo/prism-provider-neuralwatt",
-              "@arnilo/prism-provider-ollama",
-              "@arnilo/prism-provider-openai",
-              "@arnilo/prism-provider-opencode-go",
-              "@arnilo/prism-provider-openrouter",
-              "@arnilo/prism-provider-xai",
-              "@arnilo/prism-provider-zai",
-            ],
-            "@arnilo/prism-compaction": ["@arnilo/prism-compaction-llm", "@arnilo/prism-compaction-observational-memory"],
-            "@arnilo/prism-base": ["@arnilo/prism", "@arnilo/prism-compaction", "@arnilo/prism-tool-validator-json-schema"],
-            "@arnilo/prism-code": [
-              "@arnilo/prism-base",
-              "@arnilo/prism-coding-agent",
-              "@arnilo/prism-coding-security",
-              "@arnilo/prism-mcp",
-            ],
-            "@arnilo/prism-sdk": [
-              "@arnilo/prism-base",
-              "@arnilo/prism-credentials-node",
-              "@arnilo/prism-mcp",
-              "@arnilo/prism-observability-opentelemetry",
-              "@arnilo/prism-workflows",
-            ],
+            "@arnilo/prism-base": ["@arnilo/prism", "@arnilo/prism-core", "@arnilo/prism-memory"],
+            "@arnilo/prism-code": ["@arnilo/prism-base", "@arnilo/prism-coding-tools", "@arnilo/prism-mcp"],
+            "@arnilo/prism-sdk": ["@arnilo/prism-base", "@arnilo/prism-core", "@arnilo/prism-mcp"],
             "@arnilo/prism-all": [
-              "@arnilo/prism-code",
-              "@arnilo/prism-sdk",
-              "@arnilo/prism-providers",
-              "@arnilo/prism-session-store-sqlite",
-              "@arnilo/prism-session-store-postgres",
-              "@arnilo/prism-enterprise-postgres",
-              "@arnilo/prism-evals",
-              "@arnilo/prism-memory",
-              "@arnilo/prism-rag",
-              "@arnilo/prism-server",
-              "@arnilo/prism-supervisor",
-              "@arnilo/prism-web-tools",
-              "@arnilo/prism-browser",
-              "@arnilo/prism-ag-ui",
               "@arnilo/prism-acp-agent",
-              "@arnilo/prism-policy",
-              "@arnilo/prism-model-router",
-              "@arnilo/prism-provider-azure",
-              "@arnilo/prism-provider-bedrock",
-              "@arnilo/prism-provider-vertex",
-              "@arnilo/prism-work-tools",
+              "@arnilo/prism-ag-ui",
+              "@arnilo/prism-code",
+              "@arnilo/prism-core",
+              "@arnilo/prism-memory",
+              "@arnilo/prism-providers",
+              "@arnilo/prism-sdk",
+              "@arnilo/prism-web-tools",
             ],
           };
           const want = expected[pkg.name];
@@ -266,67 +192,152 @@ describe("packaging guard", () => {
     });
   }
 
-  it("computer-use-linux package ships its local skill", () => {
-    const desktop = packages.find((pkg) => pkg.name === "@arnilo/prism-computer-use-linux");
-    assert.ok(desktop, "computer-use-linux missing from packaging package list");
+  it("prism-coding-tools package ships its local computer-use skill", () => {
+    const desktop = packages.find((pkg) => pkg.name === "@arnilo/prism-coding-tools");
+    assert.ok(desktop, "prism-coding-tools missing from packaging package list");
     const files = getPackList(desktop.dir, desktop.name);
     assert.ok(files.includes("skills/computer-use-linux/SKILL.md"), "desktop package missing bundled skill");
     const manifest = readPkg(desktop.dir);
     assert.ok((manifest.files as string[] | undefined)?.includes("skills"), "desktop package manifest must include skills");
   });
 
-  it("phase48 neuralwatt package exports types and umbrella membership are release-gated", () => {
-    const neuralWatt = packages.find((pkg) => pkg.name === "@arnilo/prism-provider-neuralwatt");
-    assert.ok(neuralWatt, "@arnilo/prism-provider-neuralwatt missing from packaging package list");
-    const files = getPackList(neuralWatt.dir, neuralWatt.name);
-    assert.ok(files.includes("dist/index.js"), "NeuralWatt pack missing dist/index.js");
-    assert.ok(files.includes("dist/index.d.ts"), "NeuralWatt pack missing dist/index.d.ts");
-
-    const neuralWattManifest = readPkg(neuralWatt.dir);
-    assert.deepEqual(
-      neuralWattManifest.exports,
-      { ".": { types: "./dist/index.d.ts", default: "./dist/index.js" } },
-      "NeuralWatt manifest exports must keep JS + type declaration targets",
-    );
-
-    const providers = readPkg("packages/prism-providers").dependencies as Record<string, string> | undefined;
-    assert.equal(providers?.["@arnilo/prism-provider-neuralwatt"], "^0.3.0", "@arnilo/prism-providers must hard-depend on NeuralWatt");
-    const all = readPkg("packages/prism-all").dependencies as Record<string, string> | undefined;
-    assert.equal(all?.["@arnilo/prism-providers"], "^0.3.0", "@arnilo/prism-all must hard-depend on provider umbrella");
-    assert.equal(all?.["@arnilo/prism-ag-ui"], "^0.3.0", "@arnilo/prism-all must hard-depend on AG-UI only");
-    assert.equal(all?.["@arnilo/prism-work-tools"], "^0.3.0", "@arnilo/prism-all must hard-depend on work-tools");
-    assert.equal(all?.["@arnilo/prism-policy"], "^0.3.0", "@arnilo/prism-all must hard-depend on policy");
-    assert.equal(all?.["@arnilo/prism-enterprise-postgres"], "^0.3.0", "@arnilo/prism-all must hard-depend on enterprise PostgreSQL state");
-    for (const profile of ["packages/prism-code", "packages/prism-sdk"]) {
-      const deps = readPkg(profile).dependencies as Record<string, string>;
-      assert.equal(deps["@arnilo/prism-ag-ui"], undefined, `${profile} must not include AG-UI`);
-      assert.equal(deps["@arnilo/prism-work-tools"], undefined, `${profile} must not include work-tools`);
-      assert.equal(deps["@arnilo/prism-policy"], undefined, `${profile} must not include policy`);
+  it("web-tools family keeps browser/Obscura subpaths peer-gated and out of the root import", () => {
+    const webTools = readPkg("packages/web-tools");
+    const exportsMap = webTools.exports as Record<string, { types: string; default: string }>;
+    assert.deepEqual(Object.keys(exportsMap).sort(), [".", "./brave", "./browser", "./exa", "./firecrawl", "./obscura"]);
+    const peers = webTools.peerDependencies as Record<string, string>;
+    const meta = webTools.peerDependenciesMeta as Record<string, { optional?: boolean }>;
+    assert.equal(peers["playwright-core"], "1.61.0", "browser subpath must pin the playwright-core peer");
+    assert.equal(meta["playwright-core"]?.optional, true, "playwright-core must stay an optional peer");
+    assert.equal(peers["@arnilo/prism-mcp"], "^0.4.0", "obscura subpath must keep the MCP bridge peer");
+    assert.equal(meta["@arnilo/prism-mcp"]?.optional, undefined, "@arnilo/prism-mcp must stay a required peer where Obscura needs it");
+    const files = getPackList("packages/web-tools", "@arnilo/prism-web-tools");
+    for (const required of [
+      "dist/index.js",
+      "dist/browser/index.js",
+      "dist/obscura/index.js",
+      "dist/browser/policy.js",
+      "dist/obscura/process.js",
+    ]) {
+      assert.ok(files.includes(required), `web-tools pack missing ${required}`);
     }
   });
 
-  it("prism-all transitively includes every published first-party package", () => {
-    const byName = new Map(packages.map((pkg) => [pkg.name, pkg]));
-    const included = new Set<string>();
-    const visit = (name: string) => {
-      if (included.has(name)) return;
-      included.add(name);
-      const pkg = byName.get(name);
-      if (!pkg) return;
-      const dependencies = readPkg(pkg.dir).dependencies as Record<string, string> | undefined;
-      for (const dependency of Object.keys(dependencies ?? {})) {
-        if (byName.has(dependency)) visit(dependency);
-      }
-    };
-    visit("@arnilo/prism-all");
-    const optOutOfAll = new Set([
-      "@arnilo/prism-caveman",
-      "@arnilo/prism-ponytail",
-      "@arnilo/prism-impeccable",
-      "@arnilo/prism-computer-use-linux",
+  it("memory family keeps rag/compaction/graft/wiki subpaths and the wiki bin in one tarball", () => {
+    const memory = readPkg("packages/memory");
+    const exportsMap = memory.exports as Record<string, { types: string; default: string }>;
+    assert.deepEqual(Object.keys(exportsMap).sort(), [
+      ".",
+      "./compaction/llm",
+      "./compaction/observational-memory",
+      "./graft",
+      "./rag",
+      "./rag/loaders",
+      "./rag/parsers",
+      "./wiki",
     ]);
-    const expected = packages.map((pkg) => pkg.name).filter((name) => !optOutOfAll.has(name));
-    assert.deepEqual([...included].sort(), expected.sort());
+    const peers = memory.peerDependencies as Record<string, string>;
+    const meta = memory.peerDependenciesMeta as Record<string, { optional?: boolean }>;
+    assert.equal(peers["@nanonets/graft"], "^0.13.0", "graft subpath must peer @nanonets/graft");
+    assert.equal(meta["@nanonets/graft"]?.optional, true, "@nanonets/graft must stay an optional peer");
+    assert.equal(
+      (memory.bin as Record<string, string>)["prism-wiki"],
+      "./dist/wiki/cli.js",
+      "prism-wiki bin must ship from the wiki subpath",
+    );
+    const files = getPackList("packages/memory", "@arnilo/prism-memory");
+    for (const required of [
+      "dist/index.js",
+      "dist/rag/index.js",
+      "dist/compaction/llm/index.js",
+      "dist/compaction/observational-memory/index.js",
+      "dist/graft/index.js",
+      "dist/wiki/cli.js",
+      "skills/wiki-maintainer/SKILL.md",
+      "skills/wiki-searcher/SKILL.md",
+    ]) {
+      assert.ok(files.includes(required), `memory pack missing ${required}`);
+    }
+  });
+
+  it("phase48 neuralwatt adapter ships in the provider family and umbrella membership is release-gated", () => {
+    const providers = packages.find((pkg) => pkg.name === "@arnilo/prism-providers");
+    assert.ok(providers, "@arnilo/prism-providers missing from packaging package list");
+    const files = getPackList(providers.dir, providers.name);
+    assert.ok(files.includes("dist/neuralwatt/index.js"), "provider family pack missing dist/neuralwatt/index.js");
+    assert.ok(files.includes("dist/neuralwatt/index.d.ts"), "provider family pack missing dist/neuralwatt/index.d.ts");
+
+    const providersManifest = readPkg(providers.dir);
+    const exports = providersManifest.exports as Record<string, Record<string, string>>;
+    assert.deepEqual(
+      exports["./neuralwatt"],
+      { types: "./dist/neuralwatt/index.d.ts", default: "./dist/neuralwatt/index.js" },
+      "@arnilo/prism-providers/neuralwatt subpath exports must keep JS + type declaration targets",
+    );
+
+    // Plan 054 Task 8: prism-all is retired; the provider family is the only remaining umbrella.
+    assert.match(
+      (providersManifest.peerDependencies as Record<string, string>)["@arnilo/prism"] ?? "",
+      /^\^0\.4\.0$/,
+      "provider family must peer @arnilo/prism@^0.4.0",
+    );
+  });
+
+  it("provider family exports exactly the 17 adapter subpaths with no activating root barrel", () => {
+    const manifest = readPkg("packages/prism-providers");
+    const exports = manifest.exports as Record<string, Record<string, string>>;
+    const adapters = [
+      "ai-sdk",
+      "alibaba",
+      "anthropic",
+      "azure",
+      "bedrock",
+      "clinepass",
+      "deepseek",
+      "google",
+      "kimi",
+      "neuralwatt",
+      "ollama",
+      "openai",
+      "opencode-go",
+      "openrouter",
+      "vertex",
+      "xai",
+      "zai",
+    ];
+    assert.deepEqual(
+      Object.keys(exports).sort(),
+      adapters.map((a) => `./${a}`).sort(),
+      "provider family exports must be exactly the 17 adapter subpaths",
+    );
+    assert.equal(exports["."], undefined, "provider family must have no root barrel: no adapter may activate at family-root import");
+    // Adapter isolation: compiled adapter code only imports its own directory and
+    // the @arnilo/prism peer — never another adapter's dist output.
+    for (const adapter of adapters) {
+      const dir = join(repoRoot, "packages/prism-providers/dist", adapter);
+      const walk = (d: string): string[] =>
+        readdirSync(d, { withFileTypes: true }).flatMap((e) =>
+          e.isDirectory() ? walk(join(d, e.name)) : e.name.endsWith(".js") ? [join(d, e.name)] : [],
+        );
+      for (const file of walk(dir)) {
+        const text = readFileSync(file, "utf8");
+        const foreign = [...text.matchAll(/from "(\.[^"]+)"/g)]
+          .map((m) => posix.normalize(posix.join(adapter, posix.dirname(file.slice(dir.length + 1)), m[1])))
+          .filter((resolved) => resolved !== adapter && !resolved.startsWith(`${adapter}/`));
+        assert.deepEqual(foreign, [], `${adapter} compiled output imports outside its own adapter: ${foreign.join(", ")}`);
+      }
+    }
+  });
+
+  it("office family exports exactly documents/sheets/diagrams with no activating root barrel", () => {
+    const manifest = readPkg("packages/office");
+    const exports = manifest.exports as Record<string, Record<string, string>>;
+    assert.deepEqual(Object.keys(exports).sort(), ["./diagrams", "./documents", "./sheets"]);
+    assert.equal(exports["."], undefined, "office family must have no root barrel");
+    const files = getPackList("packages/office", "@arnilo/prism-office");
+    for (const required of ["dist/documents/index.js", "dist/sheets/index.js", "dist/diagrams/index.js"]) {
+      assert.ok(files.includes(required), `office pack missing ${required}`);
+    }
   });
 
   it("workspace dependency tree is clean (npm ls --all --depth=0 exits 0)", () => {
@@ -335,5 +346,85 @@ describe("packaging guard", () => {
       encoding: "utf8",
     });
     assert.equal(result.status, 0, `npm ls failed:\n${result.stdout}\n${result.stderr}`);
+  });
+
+  it("plan 054 Task 7: every retired name has legacy-registry metadata and a successor/recipe anchor", () => {
+    const evidence = readFileSync(join(repoRoot, "docs/_evidence/phase54-package-map.md"), "utf8");
+    const guide = readFileSync(join(repoRoot, "docs/migrate-to-0.4.md"), "utf8");
+    const section = evidence.split("## 8. Legacy Registry Plan & Deprecation Commands (54 Packages)")[1];
+    assert.ok(section, "evidence carries the legacy registry command block");
+    // GitHub heading slugs of the migration guide (code fences ignored).
+    const anchors = new Set<string>();
+    let inFence = false;
+    for (const line of guide.split("\n")) {
+      if (line.startsWith("```")) inFence = !inFence;
+      if (inFence) continue;
+      const h = /^#{1,6}\s+(.+?)\s*$/.exec(line);
+      if (h)
+        anchors.add(
+          h[1]
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}\s-]/gu, "")
+            .trim()
+            .replace(/\s+/g, "-"),
+        );
+    }
+    assert.ok(anchors.size > 0, "guide headings parsed");
+    const tagCommands = [...section.matchAll(/^npm dist-tag add (@arnilo\/prism-[a-z0-9-]+)@([0-9.]+) legacy$/gm)];
+    const deprecateCommands = [...section.matchAll(/^npm deprecate (@arnilo\/prism-[a-z0-9-]+)@"<0\.4\.0" "(.*)"$/gm)];
+    assert.equal(tagCommands.length, 54, "54 legacy dist-tag commands (one per retired name)");
+    assert.equal(deprecateCommands.length, 54, "54 <0.4.0 deprecation commands");
+    const tagNames = new Set(tagCommands.map((m) => m[1]));
+    const deprecateNames = new Set(deprecateCommands.map((m) => m[1]));
+    assert.equal(tagNames.size, 54, "retired names are distinct in tag commands");
+    assert.deepEqual(deprecateNames, tagNames, "tag and deprecate cover the same names");
+    for (const [, name, version] of tagCommands) {
+      assert.match(version, /^\d+\.\d+\.\d+$/, `final version is exact: ${name}`);
+    }
+    for (const [, name, message] of deprecateCommands) {
+      assert.ok(message.startsWith("Legacy 0.3 "), `legacy status: ${name}`);
+      assert.ok(message.includes("Prism 0.4+:"), `successor/recipe clause: ${name}`);
+      const url = message.match(/https:\/\/github\.com\/ashiqrniloy\/prism\/blob\/main\/docs\/migrate-to-0\.4\.md#([\w-]+)$/);
+      assert.ok(url, `guide URL with anchor: ${name}`);
+      assert.ok(anchors.has(url[1]), `anchor exists in guide: ${name} -> #${url[1]}`);
+    }
+  });
+
+  it("plan 054 Task 8: office family exports and migration guide cover documents/sheets/diagrams", () => {
+    const office = readPkg("packages/office");
+    const exports = Object.keys(office.exports as Record<string, unknown>).sort();
+    assert.deepEqual(exports, ["./diagrams", "./documents", "./sheets"]);
+    const guide = readFileSync(join(repoRoot, "docs/migrate-to-0.4.md"), "utf8");
+    assert.ok(guide.includes("### Office suite"), "migration guide missing Office suite heading");
+    for (const spec of ["@arnilo/prism-office/documents", "@arnilo/prism-office/sheets", "@arnilo/prism-office/diagrams"]) {
+      assert.ok(guide.includes(spec), `migration guide missing ${spec}`);
+    }
+    const truth = JSON.parse(readFileSync(join(repoRoot, "scripts/package-truth.json"), "utf8")) as { counts: { publishable: number } };
+    assert.equal(truth.counts.publishable, 11, "package truth must report 11 active packages");
+  });
+
+  it("plan 054 Task 9: 0.4 lockstep — 11 manifests, no shims, family roots stay inert", () => {
+    const root = readPkg(".");
+    assert.equal(root.version, "0.4.0");
+    const names = packages.map((pkg) => pkg.name).sort();
+    assert.equal(names.length, 11, "11 active packages including root");
+    for (const pkg of packages) {
+      assert.equal(readPkg(pkg.dir).version, "0.4.0", `${pkg.name} at 0.4.0`);
+    }
+    const retired = [
+      "@arnilo/prism-base",
+      "@arnilo/prism-code",
+      "@arnilo/prism-sdk",
+      "@arnilo/prism-all",
+      "@arnilo/prism-browser",
+      "@arnilo/prism-provider-openai",
+    ];
+    for (const name of retired) {
+      assert.ok(!names.includes(name), `retired ${name} must not be a workspace package`);
+    }
+    for (const dir of ["packages/prism-providers", "packages/office"]) {
+      const exports = Object.keys((readPkg(dir).exports as Record<string, unknown>) ?? {});
+      assert.ok(!exports.includes("."), `${dir} must not activate a root barrel`);
+    }
   });
 });

@@ -1,0 +1,129 @@
+{
+  "name": "@arnilo/prism-coding-tools",
+  "version": "0.4.0",
+  "description": "Unified coding agent tools, security sandboxing, document parsing, OpenAPI tools, Linux desktop integration, Dev inspector, and persona extensions for Prism.",
+  "type": "module",
+  "main": "./dist/agent/index.js",
+  "types": "./dist/agent/index.d.ts",
+  "bin": {
+    "prism-dev": "dist/dev/cli.js"
+  },
+  "exports": {
+    "./agent": {
+      "types": "./dist/agent/index.d.ts",
+      "default": "./dist/agent/index.js"
+    },
+    "./security": {
+      "types": "./dist/security/index.d.ts",
+      "default": "./dist/security/index.js"
+    },
+    "./document-reader": {
+      "types": "./dist/document-reader/index.d.ts",
+      "default": "./dist/document-reader/index.js"
+    },
+    "./openapi": {
+      "types": "./dist/openapi/index.d.ts",
+      "default": "./dist/openapi/index.js"
+    },
+    "./computer-use-linux": {
+      "types": "./dist/computer-use-linux/index.d.ts",
+      "default": "./dist/computer-use-linux/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev/index.d.ts",
+      "default": "./dist/dev/index.js"
+    },
+    "./dev/cli": {
+      "types": "./dist/dev/cli.d.ts",
+      "default": "./dist/dev/cli.js"
+    },
+    "./caveman": {
+      "types": "./dist/caveman/index.d.ts",
+      "default": "./dist/caveman/index.js"
+    },
+    "./ponytail": {
+      "types": "./dist/ponytail/index.d.ts",
+      "default": "./dist/ponytail/index.js"
+    },
+    "./impeccable": {
+      "types": "./dist/impeccable/index.d.ts",
+      "default": "./dist/impeccable/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/__tests__",
+    "!dist/**/*.map",
+    "skills",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/**/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "diff": "^9.0.0"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "^0.4.0",
+    "@dietrichgebert/ponytail": "^4.9.0",
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^1.1.1"
+  },
+  "peerDependenciesMeta": {
+    "@dietrichgebert/ponytail": {
+      "optional": true
+    },
+    "mammoth": {
+      "optional": true
+    },
+    "pdf-parse": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../..",
+    "@arnilo/prism-core": "file:../prism-core",
+    "@arnilo/prism-ag-ui": "file:../ag-ui",
+    "@arnilo/prism-mcp": "file:../mcp",
+    "@types/diff": "^7.0.2",
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/prism-coding-tools"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-coding-tools#readme",
+  "keywords": [
+    "prism",
+    "coding",
+    "tools",
+    "agent",
+    "security",
+    "sandbox",
+    "document-reader",
+    "openapi",
+    "computer-use",
+    "dev",
+    "caveman",
+    "ponytail",
+    "impeccable"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

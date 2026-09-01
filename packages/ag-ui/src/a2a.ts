@@ -1,6 +1,6 @@
 import { type AGUIEvent, EventSchemas, EventType } from "@ag-ui/core";
 import type { SecretRedactor } from "@arnilo/prism";
-import type { A2AClient, A2AMessage, A2APart, A2AStreamEvent, A2ATask } from "@arnilo/prism-supervisor";
+import type { A2AClient, A2AMessage, A2APart, A2AStreamEvent, A2ATask } from "@arnilo/prism-core/runtime/supervisor";
 import { AgUiError } from "./errors.js";
 import type { ParsedAgUiInput } from "./input.js";
 import type { AgUiAuthorization } from "./types.js";

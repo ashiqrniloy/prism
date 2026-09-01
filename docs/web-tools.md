@@ -8,7 +8,7 @@
 
 Use when agent needs explicit public-web discovery or host-approved document retrieval/extraction. Keep search separate from fetch/extract so model cannot select provider, credential, API origin, extraction schema, or cost path.
 
-**Obscura-backed alternative**: the optional [`@arnilo/prism-obscura`](obscura.md) package provides `web_search`/`web_fetch` behavior backed by a host-installed Obscura headless browser through its CLI (one replaceable HTML search profile instead of an API key), plus explicit native `obscura_fetch`/`obscura_scrape` batch tools. It reuses this package's normalized citation/untrusted shapes (`provider: "obscura"`) but does not require credentials; the API-backed Brave/Exa/Firecrawl adapters here remain the preferred path when an API key is available.
+**Obscura-backed alternative**: the optional `@arnilo/prism-web-tools/obscura` subpath ([Obscura](obscura.md)) provides `web_search`/`web_fetch` behavior backed by a host-installed Obscura headless browser through its CLI (one replaceable HTML search profile instead of an API key), plus explicit native `obscura_fetch`/`obscura_scrape` batch tools. It reuses this package's normalized citation/untrusted shapes (`provider: "obscura"`) but does not require credentials; the API-backed Brave/Exa/Firecrawl adapters here remain the preferred path when an API key is available.
 
 ## Inputs / request
 
@@ -69,7 +69,7 @@ Default/hard limits: query 4/16 KiB; results 10/20; URLs 5/20; request 256 KiB/1
 
 Provider credentials never enter tool schemas/results, prompts, telemetry, URLs, or errors. Error text excludes remote bodies. Search snippets, Markdown, and extracted JSON are prompt-injection-capable data: never concatenate them into system instructions or use them to modify tools, permissions, credentials, trust, routing, or schemas. Firecrawl fetches target URLs remotely; Prism cannot claim target DNS pinning after handoff. Use controlled host fetch when that guarantee is required.
 
-Default tests use injected fake fetch and make no public request. Restricted smoke: `PRISM_LIVE_WEB=1 npm run test:live -w @arnilo/prism-web-tools` plus least-privilege provider environment credential. Prefer these tools over `@arnilo/prism-browser` for ordinary public retrieval; use browser automation only for interactive/authenticated/JavaScript-heavy work behind a host egress proxy. Arbitrary HTML execution, model-selected providers, automatic OAuth forwarding, and generic web/MCP passthrough are unsupported.
+Default tests use injected fake fetch and make no public request. Restricted smoke: `PRISM_LIVE_WEB=1 npm run test:live -w @arnilo/prism-web-tools` plus least-privilege provider environment credential. Prefer the [`browser`](browser-automation.md) subpath over ordinary public retrieval; use browser automation only for interactive/authenticated/JavaScript-heavy work behind a host egress proxy. Arbitrary HTML execution, model-selected providers, automatic OAuth forwarding, and generic web/MCP passthrough are unsupported.
 
 ## Related APIs
 

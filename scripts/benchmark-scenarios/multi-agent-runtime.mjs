@@ -19,8 +19,8 @@ import {
   providerToolCall,
   toolCallContent,
 } from "../../dist/index.js";
-import { createSupervisor, SupervisorLimitError } from "../../packages/supervisor/dist/index.js";
-import { agentNode, defineWorkflow, fanOutNode, runWorkflow } from "../../packages/workflows/dist/index.js";
+import { createSupervisor, SupervisorLimitError } from "../../packages/prism-core/dist/runtime/supervisor/index.js";
+import { agentNode, defineWorkflow, fanOutNode, runWorkflow } from "../../packages/prism-core/dist/runtime/workflows/index.js";
 import { loadBudgets } from "../budget-gates.mjs";
 
 export const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 5);

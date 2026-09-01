@@ -1,0 +1,84 @@
+{
+  "name": "@arnilo/prism-office",
+  "version": "0.4.0",
+  "description": "Prism office capabilities: documents (docx/xlsx/pptx generate/parse/patch/preview), sheets (CSV/XLSX inference), and diagrams (draw.io embed) as gated subpaths.",
+  "type": "module",
+  "exports": {
+    "./documents": {
+      "types": "./dist/documents/index.d.ts",
+      "default": "./dist/documents/index.js"
+    },
+    "./sheets": {
+      "types": "./dist/sheets/index.d.ts",
+      "default": "./dist/sheets/index.js"
+    },
+    "./diagrams": {
+      "types": "./dist/diagrams/index.d.ts",
+      "default": "./dist/diagrams/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/documents/__tests__/*.test.js dist/sheets/__tests__/*.test.js dist/diagrams/__tests__/*.test.js",
+    "test:office": "PRISM_TEST_LIBREOFFICE=1 node ../../scripts/with-build-lock.mjs node --test dist/documents/__tests__/golden.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@office-open/docx": "0.12.3",
+    "@office-open/pptx": "0.12.3",
+    "@office-open/xlsx": "0.12.3",
+    "@office-open/xml": "0.12.3",
+    "ajv": "^8.17.1",
+    "fast-xml-parser": "4.5.0"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "^0.4.0",
+    "playwright-core": "1.61.0"
+  },
+  "peerDependenciesMeta": {
+    "playwright-core": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../.."
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/office"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/office#readme",
+  "keywords": [
+    "prism",
+    "office",
+    "documents",
+    "sheets",
+    "diagrams",
+    "docx",
+    "xlsx",
+    "pptx",
+    "drawio",
+    "preview"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

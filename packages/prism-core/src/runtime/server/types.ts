@@ -1,0 +1,116 @@
+import type {
+  Agent,
+  AgentEventSource,
+  AgentIdentity,
+  AgentRunLifecycle,
+  AgentRunRef,
+  AgentSession,
+  OwnershipScope,
+  RunOptions,
+  SecretRedactor,
+} from "@arnilo/prism";
+import type { RunWorkflowOptions, WorkflowCheckpointAdapter, WorkflowDefinition, WorkflowSchedules } from "../workflows/index.js";
+import type { PrismDrainController } from "./drain.js";
+import type { PrismServerLimits } from "./limits.js";
+import type { PrismServerRateLimiter } from "./rate-limit.js";
+
+export type PrismServerOperation =
+  | "agent.run"
+  | "agent.stream"
+  | "agent.status"
+  | "agent.resume"
+  | "agent.events"
+  | "workflow.run"
+  | "workflow.stream"
+  | "workflow.status"
+  | "workflow.cancel"
+  | "workflow.resume"
+  | "workflow.enqueue"
+  | "workflow.replay"
+  | "schedule.create"
+  | "schedule.list"
+  | "schedule.pause"
+  | "schedule.resume"
+  | "schedule.trigger"
+  | "schedule.delete";
+
+export interface PrismServerAuthorization {
+  readonly ownership: OwnershipScope;
+  /** Host-verified identity; when set must project onto `ownership` without widening. */
+  readonly identity?: AgentIdentity;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface PrismServerAuthorizationInput {
+  readonly request: Request;
+  readonly operation: PrismServerOperation;
+  readonly capabilityId: string;
+  readonly signal: AbortSignal;
+}
+
+export type PrismServerAuthorizer = (
+  input: PrismServerAuthorizationInput,
+) => false | PrismServerAuthorization | Promise<false | PrismServerAuthorization>;
+
+export interface PrismAgentEventResolutionInput {
+  readonly runId: string;
+  readonly authorization: PrismServerAuthorization;
+  readonly signal: AbortSignal;
+}
+
+export interface PrismAgentExposure {
+  readonly sessionFactory: (authorization: PrismServerAuthorization) => AgentSession | Promise<AgentSession>;
+  readonly runOptions?: Omit<RunOptions, "ownership" | "signal" | "redactor">;
+  /** Optional durable cross-replica event source. Requires resolveRun. */
+  readonly events?: AgentEventSource;
+  /** Resolves an authorized public run selector to exact internal session/run IDs. */
+  readonly resolveRun?: (input: PrismAgentEventResolutionInput) => AgentRunRef | undefined | Promise<AgentRunRef | undefined>;
+}
+
+/** Explicit durable status/resume capability. Omit it to expose no agent lifecycle routes. */
+export interface PrismAgentRunExposure {
+  readonly lifecycle: AgentRunLifecycle;
+}
+
+export interface PrismWorkflowExposure {
+  readonly definition: WorkflowDefinition;
+  readonly checkpoints: WorkflowCheckpointAdapter;
+  readonly runOptions?: Omit<RunWorkflowOptions, "checkpoints" | "ownership" | "signal" | "redactor" | "eventBus" | "runId">;
+}
+
+export type PrismScheduleExposure =
+  | WorkflowSchedules
+  | ((authorization: PrismServerAuthorization, signal: AbortSignal) => WorkflowSchedules | Promise<WorkflowSchedules>);
+
+export interface CreatePrismHandlerOptions {
+  readonly agents?: Readonly<Record<string, Agent | PrismAgentExposure>>;
+  /** Durable agent lifecycle capabilities, separate from direct agent run exposure. */
+  readonly agentRuns?: Readonly<Record<string, PrismAgentRunExposure>>;
+  readonly workflows?: Readonly<Record<string, PrismWorkflowExposure>>;
+  readonly schedules?: PrismScheduleExposure;
+  readonly authorize: PrismServerAuthorizer;
+  readonly basePath?: string;
+  readonly allowedHosts?: readonly string[];
+  readonly allowedOrigins?: readonly string[];
+  readonly redactor?: SecretRedactor;
+  readonly limits?: PrismServerLimits;
+  readonly disconnectAborts?: boolean;
+  /** Optional graceful drain; blocks admit operations with 503 while draining. */
+  readonly drain?: PrismDrainController;
+  /** Optional host rate-limit adapter; runs after authorize, before admit/session create. */
+  readonly rateLimit?: PrismServerRateLimiter;
+}
+
+export type PrismRequestHandler = (request: Request) => Promise<Response>;
+
+export class PrismServerError extends Error {
+  constructor(
+    message: string,
+    readonly status = 500,
+    readonly code = "ERR_PRISM_SERVER",
+    readonly headers?: Readonly<Record<string, string>>,
+  ) {
+    super(message);
+    this.name = "PrismServerError";
+  }
+}

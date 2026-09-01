@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import { Pool } from "pg";
-import { createPostgresEnterpriseState } from "../../packages/enterprise-postgres/dist/index.js";
+import { createPostgresEnterpriseState } from "../../packages/prism-core/dist/enterprise/postgres/index.js";
 
 const url = process.env.PRISM_TEST_POSTGRES_URL;
 if (!url?.trim()) throw new Error("PRISM_TEST_POSTGRES_URL is required for the protected enterprise PostgreSQL benchmark");

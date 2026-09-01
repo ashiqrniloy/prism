@@ -29,7 +29,7 @@ import {
   providerTextDelta,
   toolCallContent,
 } from "@arnilo/prism";
-import { createPrismDevInspector } from "@arnilo/prism-dev";
+import { createPrismDevInspector } from "../packages/prism-coding-tools/dist/dev/index.js";
 
 const DEV_LEGS = ["bind", "replay-redaction", "ownership-replay", "decision-resume"];
 const devLegs = new Set();

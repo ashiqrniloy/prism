@@ -59,16 +59,16 @@ Core maps only shapes shared by ≥2 packages (or an explicit no-op). Unique kno
 
 | Package | Recommended family | Notes |
 | --- | --- | --- |
-| `@arnilo/prism-provider-openai` | `openai_reasoning` | First-class body `reasoning` from model + per-turn compat merge; `summary`/`mode`/`context` via compat |
-| `@arnilo/prism-provider-openrouter` | `openai_reasoning` | First-class `resolveOpenRouterReasoning` merge; prefer `reasoning` object over legacy `reasoning_effort` shorthand; `preserveThinking` replays as body `reasoning` |
-| `@arnilo/prism-provider-zai` | `reasoning_effort` (+ optional `thinking_type`) | Official `thinking` / `reasoning_effort` / `tool_stream` / `clear_thinking`; Preserved Thinking via `reasoning_content` |
-| `@arnilo/prism-provider-neuralwatt` | `reasoning_effort` | Budgets / `preserve_thinking` / `clear_thinking` / `chat_template_kwargs` stay package-local on `compat` |
-| `@arnilo/prism-provider-kimi` | K3: `reasoning_effort`; K2.x: `thinking_type` | K2.7-code thinking is always on; do not send conflicting `thinking` + `reasoning_effort` |
-| `@arnilo/prism-provider-opencode-go` | Anthropic route: thinking blocks (`thinking_type` family); OpenAI route: `reasoning_content` preserve + optional `thinking`/`reasoning_effort`/`reasoning` passthrough | Official dual endpoints; MiniMax/Qwen → Anthropic, others → OpenAI |
-| `@arnilo/prism-provider-ai-sdk` | `noop` | Host `LanguageModelV4` owns reasoning settings |
-| `@arnilo/prism-provider-deepseek` | `thinking_type` + `reasoning_effort` | Thinking on by default (`high`). `cacheRetention: "none"` or `thinking: false` disables. Tool turns must replay `reasoning_content` or the API returns 400. |
-| `@arnilo/prism-provider-xai` | replay only | Featured Completions do not send `reasoning_effort`. Reasoning models must replay `reasoning_content` or the prefix cache breaks. Do not flatten thinking into text. |
-| `@arnilo/prism-provider-clinepass` | `reasoning_effort` | Per-model `compat.thinkingLevelMap`. GLM `xhigh` passthrough (never send `max`). K3 `high` → `max`. Unsupported slots omit the field. |
+| `@arnilo/prism-providers/openai` | `openai_reasoning` | First-class body `reasoning` from model + per-turn compat merge; `summary`/`mode`/`context` via compat |
+| `@arnilo/prism-providers/openrouter` | `openai_reasoning` | First-class `resolveOpenRouterReasoning` merge; prefer `reasoning` object over legacy `reasoning_effort` shorthand; `preserveThinking` replays as body `reasoning` |
+| `@arnilo/prism-providers/zai` | `reasoning_effort` (+ optional `thinking_type`) | Official `thinking` / `reasoning_effort` / `tool_stream` / `clear_thinking`; Preserved Thinking via `reasoning_content` |
+| `@arnilo/prism-providers/neuralwatt` | `reasoning_effort` | Budgets / `preserve_thinking` / `clear_thinking` / `chat_template_kwargs` stay package-local on `compat` |
+| `@arnilo/prism-providers/kimi` | K3: `reasoning_effort`; K2.x: `thinking_type` | K2.7-code thinking is always on; do not send conflicting `thinking` + `reasoning_effort` |
+| `@arnilo/prism-providers/opencode-go` | Anthropic route: thinking blocks (`thinking_type` family); OpenAI route: `reasoning_content` preserve + optional `thinking`/`reasoning_effort`/`reasoning` passthrough | Official dual endpoints; MiniMax/Qwen → Anthropic, others → OpenAI |
+| `@arnilo/prism-providers/ai-sdk` | `noop` | Host `LanguageModelV4` owns reasoning settings |
+| `@arnilo/prism-providers/deepseek` | `thinking_type` + `reasoning_effort` | Thinking on by default (`high`). `cacheRetention: "none"` or `thinking: false` disables. Tool turns must replay `reasoning_content` or the API returns 400. |
+| `@arnilo/prism-providers/xai` | replay only | Featured Completions do not send `reasoning_effort`. Reasoning models must replay `reasoning_content` or the prefix cache breaks. Do not flatten thinking into text. |
+| `@arnilo/prism-providers/clinepass` | `reasoning_effort` | Per-model `compat.thinkingLevelMap`. GLM `xhigh` passthrough (never send `max`). K3 `high` → `max`. Unsupported slots omit the field. |
 
 `thinkingFamilyForModel` infers family from existing `compat` shape, then safe provider heuristics (`openai*` → `openai_reasoning`, `neuralwatt` → `reasoning_effort`), then `capabilities.reasoning` → `reasoning_effort`, else `noop`. Docs and packages may map other provider ids explicitly; core avoids provider-specific literals beyond those heuristics.
 

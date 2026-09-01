@@ -3,7 +3,7 @@
  * Network-free: reads package manifests + evidence markdown only.
  */
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -12,14 +12,13 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const evidencePath = join(root, "docs/_evidence/phase37-provider-matrix.md");
 const packagesDir = join(root, "packages");
 
-function providerPackages() {
-  return readdirSync(packagesDir)
-    .filter((name) => name.startsWith("provider-"))
+function providerAdapters() {
+  // Plan 054 Task 6: adapters live as subpaths of the providers family manifest.
+  const manifest = JSON.parse(readFileSync(join(packagesDir, "prism-providers", "package.json"), "utf8"));
+  return Object.keys(manifest.exports ?? {})
+    .filter((key) => key !== ".")
     .sort()
-    .map((dir) => {
-      const manifest = JSON.parse(readFileSync(join(packagesDir, dir, "package.json"), "utf8"));
-      return { dir, name: manifest.name };
-    });
+    .map((key) => ({ dir: `prism-providers${key.slice(1)}`, name: `@arnilo/prism-providers${key.slice(1)}` }));
 }
 
 function parseCacheClaims(evidence) {
@@ -28,7 +27,7 @@ function parseCacheClaims(evidence) {
   const rest = evidence.slice(start);
   const rows = [];
   for (const line of rest.split("\n")) {
-    if (!line.startsWith("| `@arnilo/prism-provider-")) continue;
+    if (!line.startsWith("| `@arnilo/prism-provider-") && !line.startsWith("| `@arnilo/prism-providers/")) continue;
     const cols = line
       .split("|")
       .map((cell) => cell.trim())
@@ -39,10 +38,10 @@ function parseCacheClaims(evidence) {
   return rows;
 }
 
-test("phase37 matrix lists every packages/provider-* manifest", () => {
+test("phase37 matrix lists every provider family adapter subpath", () => {
   const evidence = readFileSync(evidencePath, "utf8");
-  const pkgs = providerPackages();
-  assert.equal(pkgs.length, 17, `expected 17 provider packages, got ${pkgs.length}`);
+  const pkgs = providerAdapters();
+  assert.equal(pkgs.length, 17, `expected 17 provider adapters, got ${pkgs.length}`);
   for (const pkg of pkgs) {
     assert.ok(evidence.includes(pkg.name), `docs/_evidence/phase37-provider-matrix.md missing row for ${pkg.name}`);
   }
@@ -66,7 +65,7 @@ test("phase37 explicit cache field claims match sources and official URLs", () =
   const evidence = readFileSync(evidencePath, "utf8");
   const rows = parseCacheClaims(evidence);
   assert.ok(rows.length >= 17, `expected cache claims for the matrix, got ${rows.length}`);
-  const pkgNames = new Set(providerPackages().map((pkg) => pkg.name));
+  const pkgNames = new Set(providerAdapters().map((pkg) => pkg.name));
   const claimed = new Set();
   for (const row of rows) {
     assert.ok(pkgNames.has(row.package), `cache claim for unknown package ${row.package}`);

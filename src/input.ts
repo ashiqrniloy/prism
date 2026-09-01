@@ -30,6 +30,7 @@ import { loadTextResource } from "./resources.js";
 import { skillMessages as buildSkillMessages, type LoadedSkillSet, type SkillsDisclosure } from "./skill-disclosure.js";
 import { composeSystemPrompt } from "./system-prompts.js";
 import { foldToolResultHistory, foldToolResults, type ResolvedToolResultFoldOptions } from "./tool-result-fold.js";
+import { selectDisclosedTools, type ToolsDisclosure, type ToolsSearchOptions } from "./tool-search.js";
 
 export type AgentInput = string | Message | readonly Message[];
 
@@ -95,6 +96,11 @@ export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
   readonly skillsDisclosure?: SkillsDisclosure;
   readonly loadedSkills?: LoadedSkillSet;
   readonly tools?: readonly ToolDefinition[];
+  /** Tools disclosure: "search" narrows the disclosed tool list (activated ∪ top-k); default "all" is unchanged. */
+  readonly toolsDisclosure?: ToolsDisclosure;
+  readonly toolsSearch?: ToolsSearchOptions;
+  /** Per-run activated names from `search_tools`; intersected at disclosure only — dispatch re-checks. */
+  readonly activatedTools?: { has(name: string): boolean };
   readonly providerOptions?: ProviderRequestOptions;
   /** Assembler-time eviction; does not delete session store history. */
   readonly contextBudget?: ContextBudget;
@@ -223,6 +229,9 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
   let context: readonly ContextBlock[];
   let skills = options.skills;
   let tools = options.tools;
+  if (options.toolsDisclosure === "search" && tools?.length) {
+    tools = selectDisclosedTools({ tools, input: options.input, search: options.toolsSearch, activated: options.activatedTools });
+  }
   let demotedSkillBodies: readonly string[] | undefined;
   let budgetReport: ContextBudgetReport | undefined;
 

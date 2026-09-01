@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-memory` is an optional package for schema/template-backed working memory and embedding-based semantic recall. It owns narrow `Embedder` and `VectorStore` contracts reused by `@arnilo/prism-rag`, plus an in-memory reference path and one PostgreSQL/pgvector production adapter.
+`@arnilo/prism-memory` is an optional package for schema/template-backed working memory and embedding-based semantic recall. It owns narrow `Embedder` and `VectorStore` contracts reused by the `@arnilo/prism-memory/rag` subpath, plus an in-memory reference path and one PostgreSQL/pgvector production adapter.
 
 ## When to use it
 
@@ -26,6 +26,7 @@ Ordinary Prism sessions do not require this package or any vector backend.
 | `limits` | no | top-K, adjacent range, batch, payload, injected-token, export, and rebuild caps |
 | `redactor` / `secrets` | no | Redact text/metadata before persist/inject |
 | `requireConsent` | no | Strict mode: recall/injection excludes entries lacking explicit consent |
+| `importanceFrom` | no | Host-owned hook deriving importance from a redacted reflection payload (write time only; no default, no LLM) |
 
 Semantic indexing (entries carry `MemoryConsent` source/visibility; unset defaults to `{ source: "user", scope: "thread", visible: true }`):
 
@@ -37,13 +38,60 @@ Semantic indexing (entries carry `MemoryConsent` source/visibility; unset defaul
 | `grantedAt` / `revokedAt` | Optional host/audit timestamps; a revocation excludes the record. |
 
 ```ts
-await memory.remember({ entries: [{ id, text, metadata?, consent?, sequence? }] }, { wait?: boolean })
+await memory.remember({ entries: [{ id, text, metadata?, consent?, sequence?, importance?, reflection? }] }, { wait?: boolean })
 ```
 
 Semantic recall (honors consent/visibility at assembly time):
 
 ```ts
-await memory.recall(query, { topK?, messageRange?, requireConsent?, signal? })
+await memory.recall(query, { topK?, messageRange?, requireConsent?, scoring?, signal? })
+```
+
+#### Composite recall scoring (opt-in)
+
+Default recall is pure similarity + lexical scoring and stays unchanged. Hosts opt into blending recency and importance at recall time via `scoring`:
+
+| `RecallScoringOptions` field | Meaning |
+| --- | --- |
+| `recencyWeight` | Weight in `[0,1]` for timestamp half-life decay; requires `halfLifeMs` |
+| `importanceWeight` | Weight in `[0,1]` for the stored record `importance` (neutral `1.0` when absent) |
+| `halfLifeMs` | Positive finite recency half-life in milliseconds |
+
+The resolver validates weights (finite, in `[0,1]`, no extra dependencies) and sum-normalizes: similarity keeps the remainder of `1`; weights overshooting `1` normalize down (similarity → `0`). Hit order becomes the blended score with the same deterministic tie-break (`score` desc, `sequence` asc, `id` asc), and hits expose the `similarity`, `recency`, `importance`, and `score` components. Both adapters converge on one shared pure re-rank — candidates are fetched at `topK × 4`, blended, then cut to `topK` — so pgvector ordering matches the in-memory adapter by construction.
+
+```ts
+const recalled = await memory.recall("preferred response format", {
+  topK: 8,
+  scoring: { recencyWeight: 0.3, importanceWeight: 0.2, halfLifeMs: 7 * 24 * 3600 * 1000 },
+});
+// hits[0]: { text, score, similarity, recency, importance, ... }
+```
+
+Security/performance: importance is host-trusted data clamped to `[0,1]` at write and scoring time; scoring is per-hit arithmetic with no extra queries or LLM calls; recall without `scoring` returns today's ordering and hit shape unchanged.
+
+#### Importance at write (derivation from existing signals)
+
+Stored `importance` never comes from an LLM analysis pass over writes — it derives from existing signals only:
+
+- Direct: pass `importance` on a `remember()` entry (clamped to `[0,1]` at write; wins over derivation).
+- Derived: set `importanceFrom` on `createMemory()` and pass a `reflection` object on the entry. The hook runs once at write time over the reflection **after secret redaction**, and its output is clamped to `[0,1]`; a non-finite output fails the write. Entries without `importance`/`reflection` (or without a hook) score at the neutral `1.0`. The hook is never invoked at recall, and the reflection payload itself is not persisted.
+
+For observational-memory reflections (`@arnilo/prism-memory/compaction/observational-memory`, `MemoryReflection`), spread the record into the entry. The recipe below is an example heuristic — hosts own the real heuristic, and none ships as a default:
+
+```ts
+const memory = createMemory({
+  // ...scope + embedder + stores
+  importanceFrom: (reflection) => {
+    // frequency/prominence recipe example: normalized mention count, no LLM call
+    const mentions = Number(reflection.mentions ?? reflection.supportingObservationIds?.length ?? 1);
+    return Number.isFinite(mentions) ? mentions / 10 : 1;
+  },
+});
+
+await memory.remember(
+  { entries: [{ id: reflection.id, text: reflection.content, reflection: { ...reflection } }] },
+  { wait: true },
+);
 ```
 
 Consent + lifecycle (real grant/correct/delete/retention on stored entries):
@@ -171,14 +219,14 @@ const store = await createPostgresVectorStore({
 // getCurrentGeneration/setCurrentGeneration. close() ends adapter-owned pools.
 ```
 
-`createPostgresVectorStore()` is the production counterpart to `createMemoryVectorStore()` used by `@arnilo/prism-rag`; `createPostgresMemoryStores()` reuses the same vector implementation internally.
+`createPostgresVectorStore()` is the production counterpart to `createMemoryVectorStore()` used by the `rag` subpath; `createPostgresMemoryStores()` reuses the same vector implementation internally.
 
 ## Extension and configuration notes
 
 - Hosts wire the context provider into `AgentConfig.context` or `resolveContextProviders()`.
 - The working-memory processor is opt-in and host-invoked; middleware is not required.
 - `createHashEmbedder()` is for tests/demos only; production hosts supply a real `Embedder`.
-- Observational memory (`@arnilo/prism-compaction-observational-memory`) remains unchanged and composable.
+- Observational memory (`/compaction/observational-memory`) remains unchanged and composable.
 - Consent is enforced at the single `recall()` gate, so both direct recall and `createContextProvider()` injection honor it; `visible: false` (or a revoked grant) keeps an entry out of prompts, events, exports, and telemetry. `setConsent`/`correct` re-upsert in place (consent change does not re-embed); `forget`/`applyRetention` are real deletes, not tombstones. Retention uses indexed oldest-first pages plus a scoped count, deleting one default-500/hard-5000 batch without reading a corpus into memory. The PostgreSQL adapter persists consent in a `consent JSONB` column added by `buildMemoryDdl`.
 - The PostgreSQL vector path owns its DDL in Prism (`buildMemoryDdl`/`buildVectorSearchDdl` exported): the `<table>_rag_scope_generations` per-scope generation pointer table, `text_tsv` tsvector column + GIN index for the lexical RAG leg, and an HNSW index when the embedding dimension is pinned. DDL runs against the host's **knowledge database** — the host names `schema`/`table` (defaults `prism_memory`/`semantic_memory`), owns backup/retention of that database, and can run migrations manually with `skipMigrations: true`. Identifiers are validated/quoted; values stay parameterized.
 - `createPostgresVectorStore({ dimension })` pins the embedding column width before building indexes: pgvector can only build HNSW over `vector(N)` columns, and dimension mismatch fails closed instead of drifting.

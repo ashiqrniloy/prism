@@ -7,8 +7,8 @@ import {
   providerTextDelta,
   providerUsage,
 } from "@arnilo/prism";
-import { createConversationService } from "@arnilo/prism-server";
-import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
+import { createConversationService } from "@arnilo/prism-core/runtime/server";
+import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
 
 // Durable personal/work-agent conversation: create a thread, continue it through
 // a mock agent run, then replay redacted events from a cursor. Network-free —

@@ -1,7 +1,7 @@
 # LLM compaction package
 
 ## What it does
-`@arnilo/prism-compaction-llm` is an optional provider-backed compaction package. It prepares branch history, calls an explicit summary provider/model, and returns a standard Prism `CompactionStrategy`. The core default compaction remains local and conservative.
+`@arnilo/prism-memory/compaction/llm` is an optional provider-backed compaction subpath. It prepares branch history, calls an explicit summary provider/model, and returns a standard Prism `CompactionStrategy`. The core default compaction remains local and conservative.
 
 ## When to use it
 Use it when a host wants model-generated summaries while preserving raw append-only session history. Do not use it as a core default, provider SDK loader, hidden credential discovery layer, vector memory, or store rewrite.
@@ -59,7 +59,7 @@ Provider `error` events, empty summaries, or abort signals throw before returnin
 
 ## Implementation example
 ```ts
-import { createLlmCompactionStrategy } from "@arnilo/prism-compaction-llm";
+import { createLlmCompactionStrategy } from "@arnilo/prism-memory/compaction/llm";
 
 const strategy = createLlmCompactionStrategy({
   provider: summaryProvider,
@@ -80,7 +80,7 @@ await session.compact({ strategy, secrets: [apiKey] });
 Coding-session example:
 
 ```ts
-import { createCodingCompactionStrategy } from "@arnilo/prism-compaction-llm";
+import { createCodingCompactionStrategy } from "@arnilo/prism-memory/compaction/llm";
 
 const strategy = createCodingCompactionStrategy({
   provider: summaryProvider,
@@ -110,7 +110,7 @@ This package is inert until imported. Direct strategy use works with `session.co
 
 ```ts
 import { createAgent, createExtensionKernel } from "@arnilo/prism";
-import { createLlmCompactionExtension } from "@arnilo/prism-compaction-llm";
+import { createLlmCompactionExtension } from "@arnilo/prism-memory/compaction/llm";
 
 const kernel = createExtensionKernel();
 await kernel.load([createLlmCompactionExtension({ provider: summaryProvider, model: summaryModel })]);

@@ -1,6 +1,6 @@
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory";
-import { chunkMarkdown, createRagContextProvider, indexChunks, retrieveContext } from "@arnilo/prism-rag";
+import { chunkMarkdown, createRagContextProvider, indexChunks, retrieveContext } from "@arnilo/prism-memory/rag";
 
 const embedder = createHashEmbedder();
 const store = createMemoryVectorStore();

@@ -19,9 +19,9 @@ Target: a small `WebhookNotifier` in `@arnilo/prism-server` — host-registered 
 
 ## Tasks
 
-- [ ] Task 1 — Primitive Review and Notifier Contract
+- [x] Task 1 — Primitive Review and Notifier Contract
   - Acceptance Criteria:
-    - Functional: inventory `src/pinned-fetch.ts` (`pinnedFetch` — DNS-pinned, redirect re-validated), `packages/policy` audit signing (HMAC manifest precedent), `packages/server/src/` handler/event seams (where run/workflow lifecycle events are observable), `packages/coding-security/src/egress` (deny-by-default policy shapes). Contract: `createWebhookNotifier({ targets, signer, redactor, limits })` with `notify(event)` and a host-facing subscription wiring (server handler adapter + workflow event-bus adapter documented).
+    - Functional: inventory `src/pinned-fetch.ts` (`pinnedFetch` — DNS-pinned, redirects rejected), `packages/policy` audit signing (canonical signed-manifest precedent), `packages/server/src/` handler/event seams (where run/workflow lifecycle events are observable), `packages/coding-security/src/egress` (deny-by-default policy shapes). Contract: `createWebhookNotifier({ targets, signer, redactor, limits })` with `notify(event)` and a host-facing subscription wiring (server handler adapter + workflow event-bus adapter documented).
     - Performance: delivery off the critical path (fire-and-forget with bounded queue); event queue bounded (frozen cap, drop-oldest rejected → drop-newest with visible counter — decide and freeze).
     - Code Quality: pure envelope builder (testable); no `fetch` outside `pinnedFetch`.
     - Security: URLs host-registered only; private/metadata IP targets rejected (reuse egress policy logic); payloads redacted through host `redactor` before signature; HMAC key host-supplied, never logged.
@@ -44,18 +44,22 @@ Target: a small `WebhookNotifier` in `@arnilo/prism-server` — host-registered 
       serverHandler.onLifecycleEvent(notifier.notify); // or workflow bus wiring
       ```
     - Files to Create/Edit:
-      - `packages/server/src/webhooks.ts` (new), `packages/server/src/index.ts` (export).
+      - `packages/server/src/webhooks.ts` (new notifier, envelope/signature helpers, event adapters, bounded single-attempt queue), `packages/server/src/index.ts` (export).
+      - `packages/server/src/__tests__/webhooks.test.ts` (redaction/signature, registration SSRF, queue-overflow coverage).
+      - `docs/server.md`, `docs/index.md` (API contract, wiring, trust boundary, navigation).
   - Test Cases to Write:
-    - Envelope: redaction before signing; signature verifies with the key; tampered body fails verification.
-    - Egress: private-IP/metadata target rejected at registration; redirect to private target rejected (pinnedFetch reuse).
-    - Bounded queue: overflow behavior frozen and visible (counter in diagnostics), no unbounded growth.
+    - Completed: envelope redaction precedes HMAC signing; the host verifier accepts the body and rejects a tampered body.
+    - Completed: private-IP and metadata targets fail at registration; the shared `pinnedFetch` suite covers redirect rejection and runtime DNS pinning.
+    - Completed: a full queue drops newest delivery and exposes `diagnostics().dropped`.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — new server-package export.
     - Docs pages to create/edit: `docs/server.md` — "Outbound webhooks" section (full API-page structure sections).
     - `docs/index.md` update: yes — Server/API entry description extended.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion:
+    - Reviewed `pinnedFetch` (public-address DNS pinning and all-redirect rejection), server direct/session and workflow `onEvent` seams, workflow event bus, and egress deny defaults. Added the server-local HMAC notifier with required redaction, host-registered HTTPS targets, bounded drop-newest queue/diagnostics, and documented session-factory/workflow-event wiring. Retries and durable failure records remain Task 2.
 
-- [ ] Task 2 — Retries, Failure Records, and Diagnostics
+- [x] Task 2 — Retries, Failure Records, and Diagnostics
   - Acceptance Criteria:
     - Functional: at-least-once delivery with bounded exponential retries (frozen caps); terminal failure recorded as bounded diagnostics (`prism.webhook.failed` counters, last error redacted); no retry storm (cap + jitter documented).
     - Performance: retry queue bounded; notifier adds zero latency to the emitting path (enqueue + background flush).
@@ -66,17 +70,20 @@ Target: a small `WebhookNotifier` in `@arnilo/prism-server` — host-registered 
     - Options Considered: durable delivery queue (outbox): rejected for v1 — at-least-once with in-memory bounded queue + visible failure counters; durable outbox documented as the upgrade path if hosts need cross-restart delivery (`ponytail:` comment).
     - Chosen Approach: bounded in-memory queue, documented ceiling.
     - API Notes and Examples: response classification per RFC-idiomatic retry semantics.
-    - Files to Create/Edit: `packages/server/src/webhooks.ts` (retry state machine), `docs/server.md`.
+    - Files to Create/Edit: `packages/server/src/webhooks.ts` (typed retry state machine, abort-aware queue removal, bounded redacted failure records), `packages/server/src/__tests__/webhooks.test.ts` (network-free retry-state coverage), `packages/server/src/index.ts` (new public diagnostic/delivery option types), `docs/server.md`.
   - Test Cases to Write:
-    - 500-then-200 → delivered once visible success, retry count 1; 400 → no retry, failure recorded; abort mid-retry → pending cancelled.
-    - Jitter/caps deterministic under fake timers.
+    - Completed: network-free typed state-machine test: 500-then-200 yields one success after one retry; 400 is terminal with no retry; error text is redacted.
+    - Completed: abort during a deterministic zero-jitter backoff cancels the pending delivery; retry cap remains bounded.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — retry/diagnostics behavior.
     - Docs pages to create/edit: `docs/server.md` webhooks section (limits/failure table).
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion:
+    - Reused core `createDefaultRetryPolicy`/`waitForRetry`: three retries after the initial attempt by default (hard cap 10), exponential 100 ms–5 s waits (30 s hard), and ±25% jitter. `pinnedFetch` remains inside every attempt. Added terminal-only `failed`/`prism.webhook.failed` diagnostics, a 32-record (256 hard) redacted failure ring, optional delivery abort signal, and the documented in-memory-outbox ceiling.
+    - Passed `npm --workspace @arnilo/prism-server run typecheck`, package build/tests (89), Biome, and docs tests (146).
 
-- [ ] Task 3 — Conformance, Threat-Suite Leg, and Release
+- [x] Task 3 — Conformance, Threat-Suite Leg, and Release
   - Acceptance Criteria:
     - Functional: server package tests cover registration validation, signature verification, egress denial, retry matrix; `security:threat-suites` gains a webhooks leg (SSRF shapes: private targets, redirects, DNS rebinding via the pinned-fetch fixtures).
     - Performance: no measurable overhead on agent routes when no notifier registered.
@@ -87,17 +94,24 @@ Target: a small `WebhookNotifier` in `@arnilo/prism-server` — host-registered 
     - Options Considered / Chosen Approach: reuse existing egress fixtures; independent bump.
     - API Notes and Examples: n/a.
     - Files to Create/Edit: `packages/server/src/__tests__/webhooks.test.ts`, `security/` threat-suite registration, `docs/host-security.md` entry.
-  - Test Cases to Write: SSRF matrix green; secret-scan clean on fixtures.
+  - Test Cases to Write:
+    - Completed: SSRF matrix green (registration rejects public HTTP, private, and metadata targets; loopback HTTP needs explicit `allowLoopbackHttp`); secret-scan clean on fixtures.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — security surface.
     - Docs pages to create/edit: `docs/host-security.md`, `docs/server.md`.
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion:
+    - Added `scripts/phase46-webhooks-security.test.mjs` (built-public-entrypoint blockers: registration SSRF, pinned-resolution rebinding rejection, redirect rejection, gate accounting) and registered the leg plus the existing package (`packages/server/dist/__tests__/webhooks.test.js`) and core pinned-fetch (`dist/__tests__/pinned-fetch.test.js`) fixtures in `security:threat-suites` — no fixture rewrite. Added `allowLoopbackHttp` (opt-in loopback HTTP for local dev receivers; HTTPS/public/SSRF registration unchanged) with tests for public-HTTP/private/metadata rejection and the 32-byte key floor. Documented the boundary in `docs/server.md` and `docs/host-security.md`.
+    - Release checks only (no publish per instruction): server bumped 0.3.1 → 0.3.2 (Decision B independent line) + changelog; `security:threat-suites`, server typecheck/tests (89), docs tests (146), Biome, examples typecheck, format check, `npm audit --audit-level=moderate` (0 vulnerabilities), and secret scan (0 findings tracked + package) all pass. Durable-outbox ceiling intentionally unchanged.
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass. (Known ceiling: in-memory delivery queue, not a durable outbox — `ponytail: in-memory queue, durable outbox via ToolEffectStore pattern if cross-restart delivery is needed`.)
+- Delivery queue remains in-memory (`ponytail: in-memory queue, durable outbox via ToolEffectStore pattern if cross-restart delivery is needed`) — visible in diagnostics; durable outbox deferred until a measured need.
+- Threat leg reuses existing built fixtures (phase46 blockers + package suite + pinned-fetch suite) instead of duplicating SSRF shapes.
+- No npm publish: this task ran release checks (gates + audit + secret scan) without a release as instructed.
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- Publish `@arnilo/prism-server@0.3.2` during the next release window (changelog prepared).
+- If cross-restart at-least-once delivery becomes a real adoption requirement, add a durable outbox behind the existing notifier options without changing the notify contract.

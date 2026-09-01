@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-ponytail` is an optional package that wires [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) into Prism contribution contracts.
+`@arnilo/prism-coding-tools/ponytail` is an optional package that wires [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) into Prism contribution contracts.
 
 It registers upstream skills and commands, injects active mode instructions via upstream `getPonytailInstructions` / `filterSkillBodyForMode`, and persists mode as session custom `ponytail-mode` entries. Import is inert; missing upstream fails closed at `setup` with a bounded redacted error.
 
@@ -66,7 +66,7 @@ Deactivation: exact phrases `stop ponytail` and `normal mode`.
 ## Implementation example
 
 ```ts
-import { createPonytailExtension } from "@arnilo/prism-ponytail";
+import { createPonytailExtension } from "@arnilo/prism-coding-tools/ponytail";
 import {
   createExtensionKernel,
   createLoadSkillTool,

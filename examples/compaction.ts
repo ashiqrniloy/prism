@@ -1,5 +1,5 @@
 import { createMemorySessionStore, createMockProvider, createSessionEntry, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createLlmCompactionStrategy } from "@arnilo/prism-compaction-llm";
+import { createLlmCompactionStrategy } from "@arnilo/prism-memory/compaction/llm";
 
 // LLM compaction with a mock summarization provider: the strategy calls the
 // provider to summarize older history, then appends a `compaction` entry. Raw

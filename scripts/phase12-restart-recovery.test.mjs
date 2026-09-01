@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { after, describe, it } from "node:test";
 import { Pool } from "pg";
-import { createPostgresPersistence } from "../packages/session-store-postgres/dist/index.js";
+import { createPostgresPersistence } from "../packages/prism-core/dist/sessions/postgres/index.js";
 
 /**
  * Phase 12 protected restart-recovery evidence (plan 012 Task 4).

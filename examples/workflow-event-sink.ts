@@ -15,7 +15,7 @@ import {
   functionNode,
   runWorkflow,
   type WorkflowEvent,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-core/runtime/workflows";
 
 // Observability / event sink: a workflow with a conditional path produces
 // events that the host collects and inspects. Demonstrates:

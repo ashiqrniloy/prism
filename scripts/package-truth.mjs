@@ -11,21 +11,11 @@ import { fileURLToPath } from "node:url";
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-// `prism-*` family/profile packages. Taxonomy constant: these names have
-// no name-pattern separation from capability packages (e.g. prism-mcp), so the
-// set is explicit here; the docs tests assert it against the generated artifact.
-export const PRISM_FAMILY = [
-  "@arnilo/prism-all",
-  "@arnilo/prism-base",
-  "@arnilo/prism-caveman",
-  "@arnilo/prism-code",
-  "@arnilo/prism-compaction",
-  "@arnilo/prism-impeccable",
-  "@arnilo/prism-openapi-tools",
-  "@arnilo/prism-ponytail",
-  "@arnilo/prism-providers",
-  "@arnilo/prism-sdk",
-];
+// `prism-*` family packages. Taxonomy constant: these names have no
+// name-pattern separation from capability packages (e.g. prism-mcp), so the set
+// is explicit here; the docs tests assert it against the generated artifact.
+// Plan 054 Task 8: npm profile manifests are deleted; families only.
+export const PRISM_FAMILY = ["@arnilo/prism-coding-tools", "@arnilo/prism-core", "@arnilo/prism-providers"];
 
 export function expandWorkspaceDirs(root, globs) {
   const dirs = [];
@@ -94,30 +84,20 @@ export function computePackageTruth(rootDir = DEFAULT_ROOT) {
   const byName = new Map(pkgs.map((p) => [p.name, p]));
   const names = pkgs.map((p) => p.name).sort();
 
-  const providers = names.filter((n) => n.startsWith("@arnilo/prism-provider-"));
+  const providerManifests = names.filter((n) => n.startsWith("@arnilo/prism-provider-"));
+  // Plan 054 Task 6: provider adapters may live as subpaths of the family
+  // package instead of standalone manifests; the taxonomy counts both.
+  const providerSubpaths = Object.keys(byName.get("@arnilo/prism-providers")?.exports ?? {})
+    .filter((k) => k !== ".")
+    .map((k) => `@arnilo/prism-providers${k.slice(1)}`)
+    .sort();
+  const providers = [...providerManifests, ...providerSubpaths].sort();
   const family = names.filter((n) => PRISM_FAMILY.includes(n));
-  const capability = names.filter((n) => !providers.includes(n) && !family.includes(n));
+  const capability = names.filter((n) => !providerManifests.includes(n) && !family.includes(n));
   const codeWithPeer = names.filter((n) => byName.get(n).peerDependencies?.["@arnilo/prism"] !== undefined);
   const pureManifest = names.filter((n) => !codeWithPeer.includes(n));
 
-  // Transitive closure over workspace `dependencies` (peers/devDependencies
-  // excluded: peers are consumer-resolved, devDeps are workspace-only).
-  const closure = (start) => {
-    const seen = new Set();
-    const queue = Object.keys(byName.get(start)?.dependencies ?? {});
-    for (let i = 0; i < queue.length; i++) {
-      const name = queue[i];
-      if (!byName.has(name) || seen.has(name)) continue;
-      seen.add(name);
-      queue.push(...Object.keys(byName.get(name).dependencies ?? {}));
-    }
-    return [...seen].sort();
-  };
-
   const providersDeps = Object.keys(byName.get("@arnilo/prism-providers")?.dependencies ?? {}).sort();
-  const allDeps = Object.keys(byName.get("@arnilo/prism-all")?.dependencies ?? {}).sort();
-  const allClosure = closure("@arnilo/prism-all");
-  const omits = names.filter((n) => n !== "@arnilo/prism-all" && !allClosure.includes(n));
   const internalRanges = [];
   for (const pkg of pkgs) {
     for (const field of ["dependencies", "optionalDependencies", "peerDependencies"]) {
@@ -146,17 +126,11 @@ export function computePackageTruth(rootDir = DEFAULT_ROOT) {
     umbrella: {
       "prism-providers": {
         deps: providersDeps,
-        omitsProviders: providers.filter((n) => !providersDeps.includes(n)),
+        subpaths: providerSubpaths,
+        omitsProviders: providerManifests.filter((n) => !providersDeps.includes(n)),
       },
-      "prism-all": { deps: allDeps, closure: allClosure.length, omits },
     },
-    profiles: {
-      "prism-base": closure("@arnilo/prism-base"),
-      "prism-code": closure("@arnilo/prism-code"),
-      "prism-sdk": closure("@arnilo/prism-sdk"),
-      "prism-providers": closure("@arnilo/prism-providers"),
-      "prism-all": allClosure,
-    },
+    profiles: {},
     peerPolicy: {
       decision: independent ? "B" : "A",
       spec: independent ? `^${root.version}` : root.version,

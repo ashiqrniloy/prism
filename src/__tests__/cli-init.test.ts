@@ -6,11 +6,20 @@ import { dirname, join, resolve } from "node:path";
 import { Readable, Writable } from "node:stream";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { createInitProject, defaultTemplatesRoot, listInitProviders, parseInitArgs, runInitCommand } from "../cli-init.js";
+import {
+  createInitProject,
+  defaultGalleryRoot,
+  defaultTemplatesRoot,
+  listInitProviders,
+  listInitTemplates,
+  parseInitArgs,
+  runInitCommand,
+} from "../cli-init.js";
 import { runCli } from "../cli-runner.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const templatesRoot = defaultTemplatesRoot();
+const galleryRoot = defaultGalleryRoot();
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];
@@ -107,14 +116,16 @@ describe("prism init", () => {
       }
     >;
     const expected: Record<string, { envKey: string; pkg: string; provider: string }> = {
-      alibaba: { envKey: "DASHSCOPE_API_KEY", pkg: "@arnilo/prism-provider-alibaba", provider: "createAlibabaProvider" },
-      ollama: { envKey: "OLLAMA_API_KEY", pkg: "@arnilo/prism-provider-ollama", provider: "createOllamaProvider" },
+      alibaba: { envKey: "DASHSCOPE_API_KEY", pkg: "@arnilo/prism-providers/alibaba", provider: "createAlibabaProvider" },
+      ollama: { envKey: "OLLAMA_API_KEY", pkg: "@arnilo/prism-providers/ollama", provider: "createOllamaProvider" },
     };
     for (const [id, want] of Object.entries(expected)) {
       const entry = catalog[id];
       assert.ok(entry, `providers.json missing ${id}`);
       assert.equal(entry.envKey, want.envKey);
-      assert.equal(entry.packageName, want.pkg);
+      // Plan 054 Task 6: the generated project installs the provider family;
+      // the scaffolded import comes from the adapter subpath.
+      assert.equal(entry.packageName, "@arnilo/prism-providers");
       assert.ok(entry.imports.includes(want.pkg), `${id} imports missing package`);
       assert.ok(entry.providerExpression.includes(want.provider), `${id} providerExpression missing ${want.provider}`);
       assert.ok(entry.providerExpression.includes(`process.env.${want.envKey}`), `${id} must read token from ${want.envKey}`);
@@ -237,11 +248,11 @@ describe("prism init", () => {
         assert.match(agent, /createAgent/);
         assert.ok(pkg.dependencies["@arnilo/prism"]);
         if (provider === "mock") {
-          assert.equal(pkg.dependencies["@arnilo/prism-provider-openai"], undefined);
+          assert.equal(pkg.dependencies["@arnilo/prism-providers"], undefined);
           assert.match(env, /No API key required|mock provider/i);
         } else {
           assert.ok(
-            Object.keys(pkg.dependencies).some((name) => name.startsWith("@arnilo/prism-provider-")),
+            Object.keys(pkg.dependencies).some((name) => name.startsWith("@arnilo/prism-providers")),
             `${provider} missing provider dependency`,
           );
           assert.match(env, /Placeholder only|API_KEY/);
@@ -270,7 +281,7 @@ describe("prism init", () => {
       const extrasPkg = JSON.parse(readFileSync(join(withExtras, "package.json"), "utf8")) as {
         dependencies: Record<string, string>;
       };
-      assert.ok(extrasPkg.dependencies["@arnilo/prism-provider-openrouter"]);
+      assert.ok(extrasPkg.dependencies["@arnilo/prism-providers"]);
       assert.ok(extrasPkg.dependencies["@arnilo/prism-workflows"]);
       assert.ok(extrasPkg.dependencies["@arnilo/prism-evals"]);
       assert.equal(extrasPkg.dependencies["@arnilo/prism-session-store-sqlite"], undefined);
@@ -381,6 +392,103 @@ describe("prism init", () => {
       assert.equal(result.totalBytes, bytes);
       // Generated sources only (no node_modules). Mastra scaffold baseline is 439 MB install.
       assert.ok(bytes < 32_768, `default scaffold sources too large: ${bytes} bytes`);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("lists available templates and parses --template and --list-templates flags", () => {
+    const templates = listInitTemplates(galleryRoot);
+    const names = templates.map((t) => t.name);
+    assert.ok(names.includes("init"), "gallery missing init");
+    assert.ok(names.includes("deep-research"), "gallery missing deep-research");
+
+    const deepResearch = templates.find((t) => t.name === "deep-research")!;
+    assert.match(deepResearch.description, /research agent/i);
+
+    const parsedTemplate = parseInitArgs(["my-research", "--template", "deep-research"], templatesRoot, galleryRoot);
+    assert.equal(parsedTemplate.directory, "my-research");
+    assert.equal(parsedTemplate.template, "deep-research");
+
+    const parsedList = parseInitArgs(["--list-templates"], templatesRoot, galleryRoot);
+    assert.equal(parsedList.listTemplates, true);
+
+    assert.throws(
+      () => parseInitArgs(["my-app", "--template", "nonexistent"], templatesRoot, galleryRoot),
+      /Unknown template: nonexistent/,
+    );
+  });
+
+  it("runInitCommand outputs available templates with --list-templates", async () => {
+    const io = streams();
+    const code = await runInitCommand(["--list-templates"], {
+      ...io,
+      templatesRoot,
+      galleryRoot,
+      packageVersion: "0.0.13",
+    });
+    assert.equal(code, 0);
+    const text = io.stdout.text();
+    assert.match(text, /Available templates:/);
+    assert.match(text, /deep-research/);
+    assert.match(text, /init/);
+  });
+
+  it("scaffolds deep-research template with full agent pipeline and offline tests", async () => {
+    const root = mkdtempSync(join(tmpdir(), "prism-init-research-"));
+    try {
+      const target = join(root, "my-research");
+      const result = await createInitProject(
+        {
+          directory: target,
+          template: "deep-research",
+          provider: "mock",
+          withWorkflows: false,
+          withEvals: false,
+          force: false,
+          help: false,
+        },
+        {
+          stdout: new MemoryWritable(),
+          stderr: new MemoryWritable(),
+          templatesRoot,
+          galleryRoot,
+          packageVersion: "0.0.13",
+          cwd: root,
+        },
+      );
+
+      assert.equal(result.template, "deep-research");
+      assert.ok(result.writtenFiles.includes("package.json"));
+      assert.ok(result.writtenFiles.includes("tsconfig.json"));
+      assert.ok(result.writtenFiles.includes("README.md"));
+      assert.ok(result.writtenFiles.includes("src/types.ts"));
+      assert.ok(result.writtenFiles.includes("src/tools.ts"));
+      assert.ok(result.writtenFiles.includes("src/agent.ts"));
+      assert.ok(result.writtenFiles.includes("src/workflow.ts"));
+      assert.ok(result.writtenFiles.includes("src/index.ts"));
+      assert.ok(result.writtenFiles.includes("src/__tests__/research.test.ts"));
+
+      const readme = readFileSync(join(target, "README.md"), "utf8");
+      assert.match(readme, /docs\/web-tools\.md/);
+      assert.match(readme, /docs\/rag\.md/);
+      assert.match(readme, /docs\/workflows\.md/);
+      assert.match(readme, /docs\/coding-agent-tools\.md/);
+      assert.match(readme, /docs\/host-security\.md/);
+
+      const pkg = JSON.parse(readFileSync(join(target, "package.json"), "utf8")) as {
+        name: string;
+        dependencies: Record<string, string>;
+        devDependencies: Record<string, string>;
+      };
+      assert.equal(pkg.name, "my-research");
+      assert.ok(pkg.dependencies["@arnilo/prism"]);
+      assert.ok(pkg.dependencies["@arnilo/prism-web-tools"]);
+      assert.ok(pkg.dependencies["@arnilo/prism-memory"]);
+      assert.ok(pkg.dependencies["@arnilo/prism-workflows"]);
+
+      const hits = secretScan(target);
+      assert.deepEqual(hits, []);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -1,5 +1,10 @@
 import { type AgentIdentity } from "@arnilo/prism";
-import { createMemoryPolicyDecisionStore, createPolicyEvaluator, evaluateAndAppend, exportPolicyDecisions } from "@arnilo/prism-policy";
+import {
+  createMemoryPolicyDecisionStore,
+  createPolicyEvaluator,
+  evaluateAndAppend,
+  exportPolicyDecisions,
+} from "@arnilo/prism-core/governance/policy";
 
 const identity: AgentIdentity = {
   tenantId: "tenant-a",

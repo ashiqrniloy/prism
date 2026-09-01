@@ -7,7 +7,7 @@ import {
   functionNode,
   replayWorkflow,
   workflowNode,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-core/runtime/workflows";
 
 const ownership = { tenantId: "demo", userId: "operator" } as const;
 const store = createMemoryCheckpointStore();

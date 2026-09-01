@@ -7,8 +7,8 @@ import {
   type CodingCheckSummary,
   type CodingHandoffSummary,
   runCodingGoalVerify,
-} from "@arnilo/prism-coding-agent";
-import { createWorkflowCheckpoints } from "@arnilo/prism-workflows";
+} from "@arnilo/prism-coding-tools/agent";
+import { createWorkflowCheckpoints } from "@arnilo/prism-core/runtime/workflows";
 
 /**
  * Network-free goal→verify composition.

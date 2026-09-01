@@ -1,0 +1,25 @@
+{
+  "kind": "sheet",
+  "modelVersion": 1,
+  "title": "Prism Financial Model Golden",
+  "sheets": [
+    {
+      "name": "Financial Overview",
+      "columnWidths": [
+        { "column": 0, "width": 25 },
+        { "column": 1, "width": 18 },
+        { "column": 2, "width": 18 }
+      ],
+      "frozenPanes": {
+        "rows": 1,
+        "columns": 0
+      },
+      "cells": [
+        ["Department", "Operating Budget", "Actual Expense"],
+        ["Engineering", { "type": "decimal", "value": "1500000.00" }, { "type": "decimal", "value": "1420000.50" }],
+        ["Operations", { "type": "decimal", "value": "450000.00" }, { "type": "decimal", "value": "435000.00" }],
+        ["Total", { "formula": "=SUM(B2:B3)", "cachedValue": 1950000 }, { "formula": "=SUM(C2:C3)", "cachedValue": 1855000.5 }]
+      ]
+    }
+  ]
+}

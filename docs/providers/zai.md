@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-zai` provides explicit, side-effect-free setup for the Z.AI
+`@arnilo/prism-providers/zai` provides explicit, side-effect-free setup for the Z.AI
 GLM Chat Completions API (`POST /chat/completions`) with official deep-thinking,
 reasoning-effort, and tool-stream request fields.
 
@@ -25,7 +25,7 @@ import {
   createZaiProviderPackage,
   defineZaiModel,
   listZaiModels,
-} from "@arnilo/prism-provider-zai";
+} from "@arnilo/prism-providers/zai";
 
 createZaiProviderPackage(options: ZaiProviderPackageOptions): ProviderPackage
 defineZaiModel(config: ZaiModelConfig): ModelConfig
@@ -87,7 +87,7 @@ Example request body (official Chat Completions shape):
 
 ```ts
 import { createExtensionKernel } from "@arnilo/prism";
-import { createZaiProviderPackage, listZaiModels } from "@arnilo/prism-provider-zai";
+import { createZaiProviderPackage, listZaiModels } from "@arnilo/prism-providers/zai";
 
 const kernel = createExtensionKernel();
 await kernel.load([createZaiProviderPackage({ apiKey: "fake-zai-key" })]);

@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-xai` provides explicit, side-effect-free setup for the
+`@arnilo/prism-providers/xai` provides explicit, side-effect-free setup for the
 xAI Grok Chat Completions API (`POST https://api.x.ai/v1/chat/completions`)
 with implicit prefix caching via a sanitized `x-grok-conv-id` header, reasoning
 replay, and host-invoked SuperGrok / X Premium OAuth.
@@ -25,7 +25,7 @@ import {
   createXaiOAuthProvider,
   createXaiProviderPackage,
   listXaiModels,
-} from "@arnilo/prism-provider-xai";
+} from "@arnilo/prism-providers/xai";
 
 createXaiProviderPackage(options: XaiProviderPackageOptions): ProviderPackage
 createXaiOAuthProvider(options?: XaiOAuthOptions): OAuthProvider
@@ -84,7 +84,7 @@ Header: `x-grok-conv-id: sess-1`.
 
 ```ts
 import { createExtensionKernel, refreshOAuthCredential } from "@arnilo/prism";
-import { createXaiOAuthProvider, createXaiProviderPackage } from "@arnilo/prism-provider-xai";
+import { createXaiOAuthProvider, createXaiProviderPackage } from "@arnilo/prism-providers/xai";
 
 const kernel = createExtensionKernel();
 await kernel.load([createXaiProviderPackage({ apiKey: "fake-xai-key" })]);

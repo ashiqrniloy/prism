@@ -10,6 +10,8 @@ Plan 056 Task 1 adds dialect-neutral shared primitives under `@arnilo/prism/test
 
 Release 0.0.23 additionally ships [`@arnilo/prism-enterprise-postgres`](enterprise-postgres-state.md), a separate PostgreSQL composition for policy decisions, evaluations, work-mutation claims, and model-router state. It is not a `ProductionPersistenceStore` replacement and does not store sessions/runs. Its fixed `prism_enterprise_migrations` history is independent of `prism_migrations`; hosts may use both compositions against the same validated schema.
 
+The optional [`@arnilo/prism-prompts`](prompt-registry.md) package is another independent persistence surface: its SQLite/PostgreSQL adapters own `prism_prompts`, `prism_prompt_labels`, and `prism_prompt_migrations`, apply a checked `001_init` history, and filter every read/write by exact prompt ownership. It does not extend the shared session schema or place prompt bodies in run/session metadata.
+
 ## When to use it
 
 Use these contracts when you write a database-backed `SessionStore` or a separate persistence adapter that needs:
@@ -79,6 +81,8 @@ Optional session-record write seam (0.0.14): `appendSession?(record: SessionReco
 Metadata CAS (0.2.2): the write seam accepts an additive `expectedVersion` guard and returns the new `{ version }`. `expectedVersion: 0` means create-only (a duplicate insert is rejected with `SessionMetadataConflictError`, code `metadata_conflict`), a positive number means the stored `version` must match exactly (update-only — a deleted row is never re-created), and omitting it keeps legacy last-write-wins. Both adapters implement the guard inside the single upsert statement (PostgreSQL `INSERT … SELECT … WHERE … ON CONFLICT … DO UPDATE … WHERE version = $n`; SQLite the same shape with null-safe ownership `IS` comparisons); conflicts carry the id and versions only, never metadata content. The `version` column ships as migration `008_session_version` (`INTEGER NOT NULL DEFAULT 0` plus a one-time backfill to 1) — additive and forward-only, so pre-0.2.2 databases upgrade in place and non-CAS callers behave byte-identically.
 
 Artifact co-work review (0.0.14) reuses the generic `CheckpointStore` rather than adding a dedicated table: the [artifact service](work-artifacts-and-review.md) stores each artifact as a versioned checkpoint value (namespace `prism.artifact`, key `threadId:artifactId`, category `artifact`). The checkpoint `version` is the compare-and-swap counter that resolves concurrent reviewers; revision numbers, approvals, and `lastValidatedVersion` live inside the JSON value. SQLite/Postgres already persist checkpoints durably, so there is no separate artifact schema or migration, and records carry metadata/hashes/refs only — never file bodies.
+
+Run prompt provenance (plan 042): `RunRecord` gains an optional typed `promptVersion` ref (`{ name, version, hash }`) that the first-party adapters persist as a nullable `prompt_version` JSON column on run rows (schema migration `009_run_prompt_version`, shared schema version 9). Rows written before the migration stay `NULL` and read back without the field; a host that never sets `RunOptions.promptVersion` sees byte-identical rows. The ref is an opaque identity (`sha256:` body hash), never prompt content, and flows through the same ledger redaction as every other run field. Prompt bodies themselves live only in the separate [prompt registry tables](prompt-registry.md) — never in run rows or run metadata.
 
 ## Outputs / response / events
 

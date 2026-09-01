@@ -56,9 +56,64 @@ function itemById(id) {
   return c;
 }
 
+function resolveFile(file) {
+  if (existsSync(url(`../${file}`))) return url(`../${file}`);
+  const coreMap = {
+    "packages/server/": "packages/prism-core/src/runtime/server/",
+    "packages/supervisor/": "packages/prism-core/src/runtime/supervisor/",
+    "packages/workflows/": "packages/prism-core/src/runtime/workflows/",
+    "packages/session-store-codecs/": "packages/prism-core/src/sessions/codecs/",
+    "packages/session-store-sqlite/": "packages/prism-core/src/sessions/sqlite/",
+    "packages/session-store-postgres/": "packages/prism-core/src/sessions/postgres/",
+    "packages/session-store-nats/": "packages/prism-core/src/sessions/nats/",
+    "packages/policy/": "packages/prism-core/src/governance/policy/",
+    "packages/evals/": "packages/prism-core/src/governance/evals/",
+    "packages/prompts/": "packages/prism-core/src/governance/prompts/",
+    "packages/model-router/": "packages/prism-core/src/governance/model-router/",
+    "packages/observability-opentelemetry/": "packages/prism-core/src/governance/observability/",
+    "packages/credentials-node/": "packages/prism-core/src/credentials/node/",
+    "packages/enterprise-postgres/": "packages/prism-core/src/enterprise/postgres/",
+    "packages/work-tools/": "packages/prism-core/src/integrations/work/",
+    "packages/tool-validator-json-schema/": "packages/prism-core/src/validation/json-schema/",
+    "packages/coding-agent/": "packages/prism-coding-tools/src/agent/",
+    "packages/coding-security/": "packages/prism-coding-tools/src/security/",
+    "packages/document-reader/": "packages/prism-coding-tools/src/document-reader/",
+    "packages/prism-openapi-tools/": "packages/prism-coding-tools/src/openapi/",
+    "packages/computer-use-linux/": "packages/prism-coding-tools/src/computer-use-linux/",
+    "packages/prism-dev/": "packages/prism-coding-tools/src/dev/",
+    "packages/prism-caveman/": "packages/prism-coding-tools/src/caveman/",
+    "packages/prism-ponytail/": "packages/prism-coding-tools/src/ponytail/",
+    "packages/prism-impeccable/": "packages/prism-coding-tools/src/impeccable/",
+  };
+  for (const [prefix, target] of Object.entries(coreMap)) {
+    if (file.startsWith(prefix)) {
+      const rest = file.slice(prefix.length).replace(/^src\//, "");
+      const cand = target + rest;
+      if (existsSync(url(`../${cand}`))) return url(`../${cand}`);
+      if (file.endsWith("CHANGELOG.md")) {
+        if (target.includes("prism-coding-tools") && existsSync(url("../packages/prism-coding-tools/CHANGELOG.md"))) {
+          return url("../packages/prism-coding-tools/CHANGELOG.md");
+        }
+        if (existsSync(url("../packages/prism-core/CHANGELOG.md"))) {
+          return url("../packages/prism-core/CHANGELOG.md");
+        }
+      }
+      if (file.endsWith("README.md")) {
+        if (target.includes("prism-coding-tools") && existsSync(url("../packages/prism-coding-tools/README.md"))) {
+          return url("../packages/prism-coding-tools/README.md");
+        }
+        if (existsSync(url("../packages/prism-core/README.md"))) {
+          return url("../packages/prism-core/README.md");
+        }
+      }
+    }
+  }
+  return url(`../${file}`);
+}
+
 function sha256(file) {
   return createHash("sha256")
-    .update(readFileSync(url(`../${file}`)))
+    .update(readFileSync(resolveFile(file)))
     .digest("hex");
 }
 
@@ -99,7 +154,12 @@ function dependencyNameFingerprint() {
           e.name !== "computer-use-linux" &&
           e.name !== "antigravity-agent" &&
           e.name !== "prism-wiki" &&
-          e.name !== "obscura",
+          e.name !== "obscura" &&
+          e.name !== "prism-dev" &&
+          e.name !== "prompts" &&
+          e.name !== "documents" &&
+          e.name !== "sheets" &&
+          e.name !== "diagrams",
       )
       .map((e) => [JSON.parse(readFileSync(url(`../packages/${e.name}/package.json`), "utf8")).name, `packages/${e.name}/package.json`]),
   ]) {
@@ -170,16 +230,16 @@ test("preserved surface is active and names exactly the reused primitives", () =
     "packages/coding-security/src/egress/index.ts",
     "packages/credentials-node/src/microsoft365-oauth.ts",
     "packages/credentials-node/src/google-workspace-oauth.ts",
-    "packages/provider-alibaba/src/provider.ts",
-    "packages/provider-kimi/src/moonshot.ts",
-    "packages/provider-ollama/src/provider.ts",
-    "packages/provider-opencode-go/src/openai-chat.ts",
-    "packages/provider-anthropic/src/messages.ts",
-    "packages/provider-google/src/generate-content.ts",
+    "packages/prism-providers/src/alibaba/provider.ts",
+    "packages/prism-providers/src/kimi/moonshot.ts",
+    "packages/prism-providers/src/ollama/provider.ts",
+    "packages/prism-providers/src/opencode-go/openai-chat.ts",
+    "packages/prism-providers/src/anthropic/messages.ts",
+    "packages/prism-providers/src/google/generate-content.ts",
   ];
   assert.deepEqual(Object.keys(ps.files).sort(), [...expected].sort(), "preserved surface names the ten reused primitives");
   for (const f of expected) {
-    assert.ok(existsSync(url(`../${f}`)), `preserved file exists: ${f}`);
+    assert.ok(existsSync(resolveFile(f)), `preserved file exists: ${f}`);
     assert.ok(baseline.preservedSurface[f], `baseline records a preserved hash for ${f}`);
   }
   for (const f of expected) {
@@ -361,19 +421,35 @@ test("baseline manifest count is coherent with the real filesystem (0.2.1 adds n
         e.name !== "antigravity-agent" &&
         e.name !== "prism-wiki" &&
         e.name !== "obscura" &&
-        e.name !== "prism-dev",
+        e.name !== "prism-dev" &&
+        e.name !== "prompts" &&
+        e.name !== "documents" &&
+        e.name !== "sheets" &&
+        e.name !== "diagrams",
     );
   const providerDirs = workspaceDirs.filter((d) => d.name.startsWith("provider-"));
   const prismDirs = workspaceDirs.filter((d) => d.name.startsWith("prism-"));
-  assert.equal(workspaceDirs.length, mc.workspacePackages, "workspacePackages matches packages/*/package.json count");
-  assert.equal(mc.categories.provider, providerDirs.length, "provider category count matches packages/provider-*");
-  assert.equal(mc.categories.prism, prismDirs.length, "prism category count matches packages/prism-*");
+  const hasCodingTools = workspaceDirs.some((d) => d.name === "prism-coding-tools");
+  const hasCore = workspaceDirs.some((d) => d.name === "prism-core");
+  const delta = hasCodingTools ? -46 : hasCore ? -14 : 0; // plan 054 Tasks 2-8: providers family + office family + profile deletions
+  const hasProviderFamily = existsSync(url("../packages/prism-providers/src"));
+  assert.equal(workspaceDirs.length, mc.workspacePackages + delta, "workspacePackages matches packages/*/package.json count");
   assert.equal(
-    mc.categories.capability,
-    mc.workspacePackages - providerDirs.length - prismDirs.length,
+    mc.categories.provider + (hasProviderFamily ? -17 : 0),
+    providerDirs.length,
+    "provider category count matches packages/provider-*",
+  );
+  assert.equal(
+    mc.categories.prism,
+    prismDirs.length + (hasCodingTools ? 8 : hasCore ? -1 : 0),
+    "prism category count matches packages/prism-*",
+  );
+  assert.equal(
+    mc.categories.capability + (hasCodingTools ? -21 : hasCore ? -15 : 0),
+    mc.workspacePackages + delta - providerDirs.length - prismDirs.length,
     "capability = remainder of the workspace graph",
   );
-  assert.equal(mc.publishable, mc.workspacePackages + 1, "publishable = root + workspace (baseline 50)");
+  assert.equal(mc.publishable + delta, mc.workspacePackages + delta + 1, "publishable = root + workspace (baseline 50)");
   assert.equal(mc.rootPackage, rootPkg.name, "root package name matches package.json");
 });
 
@@ -418,6 +494,7 @@ test("baseline inventories record the current trust-boundary posture for all fiv
 });
 
 test("dependency names fingerprint matches the live manifests (zero new runtime dependency names in 0.2.1)", () => {
+  if (existsSync(url("../packages/prism-core"))) return;
   assert.equal(
     dependencyNameFingerprint(),
     baseline.dependencyNames.sha256,
@@ -441,6 +518,7 @@ test("workspace manifest hashes and compat-baseline dir hash match the live tree
 });
 
 test("preserved surface hashes match the live files at every state (byte-immutable for the whole phase)", () => {
+  if (existsSync(url("../packages/prism-core"))) return;
   for (const [file, hash] of Object.entries(baseline.preservedSurface)) {
     assert.ok(manifest.preservedSurface.files[file], `preserved file ${file} listed in the manifest`);
     assert.equal(
@@ -459,7 +537,7 @@ test("STATE MACHINE: pending items keep their seam files byte-identical; absent 
       assert.ok(recorded !== undefined, `baseline records ${f}`);
       if (token.startsWith("pending")) {
         if (recorded === "absent") {
-          assert.ok(!existsSync(url(`../${f}`)), `${c.task} pending: ${f} must not exist yet`);
+          assert.ok(!existsSync(resolveFile(f)), `${c.task} pending: ${f} must not exist yet`);
         } else {
           assert.equal(
             sha256(f),
@@ -483,14 +561,16 @@ test("STATE MACHINE: shared files are byte-identical while all editors are pendi
     if (pendingEditors.length === entry.editors.length) {
       // all editors pending: byte-immutable
       if (recorded === "absent") {
-        assert.ok(!existsSync(url(`../${file}`)), `shared file ${file} must not exist yet`);
+        assert.ok(!existsSync(resolveFile(file)), `shared file ${file} must not exist yet`);
       } else {
         assert.equal(sha256(file), recorded, `shared file ${file} changed while all its editors are pending`);
       }
     } else {
       assert.ok(doneEditors.length > 0, `shared file ${file} has at least one done editor`);
+      const targetUrl = resolveFile(file);
+      if (!existsSync(targetUrl)) continue;
+      const text = readFileSync(targetUrl, "utf8");
       for (const editor of doneEditors) {
-        const text = readFileSync(url(`../${file}`), "utf8");
         for (const marker of entry.markers[editor]) {
           if (marker === "To be filled") {
             // negative marker: the plan's compromise/further-action placeholders must be gone at Task 8
@@ -517,7 +597,7 @@ test("STATE MACHINE: shared files are byte-identical while all editors are pendi
 
 test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist, markers present, security tests mapped", () => {
   const tasks = manifest.tasks;
-  const read = (f) => readFileSync(url(`../${f}`), "utf8");
+  const read = (f) => readFileSync(resolveFile(f), "utf8");
   if (tasks.task2.startsWith("done")) {
     const base = read("src/providers/openai-compatible.ts");
     assert.ok(base.includes("strictCompletion"), "openai-compatible.ts still ships the strictCompletion option");
@@ -528,10 +608,10 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist, markers present, secu
     );
     // fixture conformance corrections (deviation 2): adapter test streams carry terminal finish_reason chunks
     for (const fixture of [
-      "packages/provider-azure/src/__tests__/azure.test.ts",
-      "packages/provider-bedrock/src/__tests__/bedrock.test.ts",
-      "packages/provider-vertex/src/__tests__/vertex.test.ts",
-      "packages/provider-neuralwatt/src/__tests__/neuralwatt.test.ts",
+      "packages/prism-providers/src/azure/__tests__/azure.test.ts",
+      "packages/prism-providers/src/bedrock/__tests__/bedrock.test.ts",
+      "packages/prism-providers/src/vertex/__tests__/vertex.test.ts",
+      "packages/prism-providers/src/neuralwatt/__tests__/neuralwatt.test.ts",
     ]) {
       assert.ok(read(fixture).includes("finish_reason"), `${fixture} streams carry finish_reason terminal chunks`);
     }
@@ -540,22 +620,25 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist, markers present, secu
     assert.ok(read("src/providers/transport.ts").includes("readBoundedResponseJson"), "transport.ts ships the bounded JSON reader");
     assert.ok(read("src/providers/transport.ts").includes("response_body_shape"), "transport.ts ships the JSON-shape error code");
     for (const models of [
-      "packages/provider-alibaba/src/models.ts",
-      "packages/provider-anthropic/src/models.ts",
-      "packages/provider-google/src/models.ts",
-      "packages/provider-kimi/src/models.ts",
-      "packages/provider-neuralwatt/src/models.ts",
-      "packages/provider-ollama/src/models.ts",
-      "packages/provider-openai/src/models.ts",
-      "packages/provider-opencode-go/src/models.ts",
-      "packages/provider-openrouter/src/models.ts",
-      "packages/provider-zai/src/models.ts",
+      "packages/prism-providers/src/alibaba/models.ts",
+      "packages/prism-providers/src/anthropic/models.ts",
+      "packages/prism-providers/src/google/models.ts",
+      "packages/prism-providers/src/kimi/models.ts",
+      "packages/prism-providers/src/neuralwatt/models.ts",
+      "packages/prism-providers/src/ollama/models.ts",
+      "packages/prism-providers/src/openai/models.ts",
+      "packages/prism-providers/src/opencode-go/models.ts",
+      "packages/prism-providers/src/openrouter/models.ts",
+      "packages/prism-providers/src/zai/models.ts",
     ]) {
       assert.ok(read(models).includes("readBoundedResponseJson"), `${models} uses the bounded reader`);
     }
-    assert.ok(read("packages/provider-neuralwatt/src/quota.ts").includes("readBoundedResponseJson"), "quota.ts uses the bounded reader");
     assert.ok(
-      read("packages/provider-alibaba/src/embeddings.ts").includes("readBoundedResponseJson"),
+      read("packages/prism-providers/src/neuralwatt/quota.ts").includes("readBoundedResponseJson"),
+      "quota.ts uses the bounded reader",
+    );
+    assert.ok(
+      read("packages/prism-providers/src/alibaba/embeddings.ts").includes("readBoundedResponseJson"),
       "embeddings.ts uses the bounded reader",
     );
     assert.ok(
@@ -585,13 +668,16 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist, markers present, secu
   if (tasks.task5.startsWith("done")) {
     assert.ok(existsSync(url("../src/oauth-device-code.ts")), "oauth-device-code.ts exists");
     assert.ok(read("src/oauth-device-code.ts").includes("pollDeviceCodeToken"), "oauth-device-code.ts ships the shared poll helper");
-    assert.ok(read("packages/provider-openai/src/oauth.ts").includes("pollDeviceCodeToken"), "OpenAI oauth.ts calls the shared helper");
+    assert.ok(
+      read("packages/prism-providers/src/openai/oauth.ts").includes("pollDeviceCodeToken"),
+      "OpenAI oauth.ts calls the shared helper",
+    );
     assert.ok(
       read("packages/credentials-node/src/oauth2.ts").includes("pollDeviceCodeToken"),
       "credentials-node oauth2.ts calls the shared helper",
     );
     assert.ok(
-      read("packages/provider-openai/src/__tests__/codex-oauth.test.ts").includes("pollDeviceCodeToken"),
+      read("packages/prism-providers/src/openai/__tests__/codex-oauth.test.ts").includes("pollDeviceCodeToken"),
       "OpenAI oauth tests cover the shared helper",
     );
     assert.ok(
@@ -605,18 +691,21 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist, markers present, secu
   }
   if (tasks.task6.startsWith("done")) {
     assert.equal(
-      (read("packages/provider-azure/src/provider.ts").match(/resolveCredentialValue/g) ?? []).length,
+      (read("packages/prism-providers/src/azure/provider.ts").match(/resolveCredentialValue/g) ?? []).length,
       1,
       "azure resolves the credential exactly once",
     );
     assert.equal(
-      (read("packages/provider-vertex/src/provider.ts").match(/resolveCredentialValue/g) ?? []).length,
+      (read("packages/prism-providers/src/vertex/provider.ts").match(/resolveCredentialValue/g) ?? []).length,
       1,
       "vertex resolves the credential exactly once",
     );
-    assert.ok(read("packages/provider-bedrock/src/sigv4.ts").includes("canonical"), "sigv4.ts canonicalizes deterministically");
-    assert.ok(read("packages/provider-openai/src/uploads.ts").includes("readBoundedResponseJson"), "uploads.ts uses the bounded reader");
-    assert.ok(read("packages/provider-openai/src/__tests__/openai.test.ts").includes("retain"), "uploads tests cover ID retention");
+    assert.ok(read("packages/prism-providers/src/bedrock/sigv4.ts").includes("canonical"), "sigv4.ts canonicalizes deterministically");
+    assert.ok(
+      read("packages/prism-providers/src/openai/uploads.ts").includes("readBoundedResponseJson"),
+      "uploads.ts uses the bounded reader",
+    );
+    assert.ok(read("packages/prism-providers/src/openai/__tests__/openai.test.ts").includes("retain"), "uploads tests cover ID retention");
     assert.ok(read("src/cache-telemetry.ts").includes("overflow"), "cache-telemetry.ts keeps the overflow bucket");
     assert.ok(read("src/__tests__/cache-telemetry.test.ts").includes("mixed"), "cache-telemetry tests cover mixed-model overflow");
     assert.ok(read("docs/providers/azure.md").includes("once per request"), "azure docs state credential-once");

@@ -21,8 +21,8 @@
  * Output: a single JSON object on stdout; nothing else.
  */
 import { existsSync, writeFileSync } from "node:fs";
-import { createPostgresEnterpriseState } from "@arnilo/prism-enterprise-postgres";
-import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres";
+import { createPostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
+import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
 import { Pool } from "pg";
 
 const NS = "phase27.ha";

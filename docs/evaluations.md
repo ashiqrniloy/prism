@@ -19,6 +19,7 @@ Use this package when a host needs offline quality checks or sampled live scorin
 | `createMemoryEvaluationStore` | optional seed records |
 | `appendEvaluationFeedback` | `RunFeedbackStore`, `EvaluationStore`, feedback fields, and 1–64 known evaluation IDs |
 | `createPersistenceTraceResolver` | explicit `ProductionPersistenceStore`, exact session/run/ownership, page/byte bounds |
+| `datasetFromRuns` | `runIds` and/or `sessionIds`, existing dataset, `ProductionPersistenceStore`, ownership, redactor/secrets, optional `toItem` |
 | `createModelJudge` | host judge callback, stable rubric/version, timeout/attempt/output bounds |
 | `runComparison` | immutable dataset, 2–8 named candidates by default, pairwise scorers |
 | `assertEvaluationThreshold` / `serializeEvaluationReport` | mean/failure/per-scorer gates and bounded redacted JSON |
@@ -32,6 +33,7 @@ Use this package when a host needs offline quality checks or sampled live scorin
 | `runExperiment` | `ExperimentReport` with stable item order, evaluations, and aggregates |
 | `EvaluationStore.query` | cursor-paginated, ownership-filtered page |
 | `appendEvaluationFeedback` | immutable `RunFeedbackRecord` containing only evaluation/scorer IDs |
+| `datasetFromRuns` | `{ dataset, version, added, skipped }` — new immutable dataset version with one item per added run; skips carry reasons (missing run, ownership mismatch, empty output) |
 
 ## Request/response example
 
@@ -121,6 +123,7 @@ console.log(report.aggregate.meanScore, linked.evaluationIds);
 - Model judges are host callbacks, not providers: Prism passes rubric/version plus bounded target only—never credential resolvers, tools, or workspace. Defaults are one attempt, 30 seconds, and 16 KiB output; failures become redacted evaluation records.
 - Pairwise candidates are sorted by name, executed once per item, compared in stable item/pair/scorer order, and record ties/failures without choosing a winner. Candidate and scorer outputs have byte caps.
 - `assertEvaluationThreshold()` throws `ERR_PRISM_EVAL_THRESHOLD`; an uncaught error gives CI a non-zero exit. Keep model-judge/live gates credential-gated and outside the network-free default suite. `serializeEvaluationReport()` bounds/redacts checked-in artifacts.
+- `datasetFromRuns` redacts before item construction and never stores an unredactable item; curated items are byte-capped (`ERR_PRISM_EVAL_CURATE`), ownership is verified exactly per run, and a failed append leaves the prior dataset version untouched.
 
 ## Trace, judge, comparison, and CI example
 
@@ -137,12 +140,43 @@ assertEvaluationThreshold(report, { minimumMean: 0.9, maximumFailures: 0 });
 
 `traceResolver` is explicit; no arbitrary run search occurs. `baseline`/`candidate` are host functions returning `AgentRunResult`. See `examples/evaluation-gate.ts` for a network-free gate and `examples/coding-browser-evaluation.ts` for coding/browser adversarial fixtures.
 
+## Curating datasets from production runs
+
+Plan 043 adds `datasetFromRuns`: it turns recorded runs (production incident transcripts included) into dataset items in one call — resolve through `createPersistenceTraceResolver`, redact, map through an optional host `toItem`, and append as a **new immutable dataset version**. The prior version object is never mutated.
+
+```ts
+import { datasetFromRuns, defineDataset } from "@arnilo/prism-evals";
+
+const result = await datasetFromRuns({
+  runIds: ["run_9f2", "run_a71"],
+  dataset: defineDataset({ id: "support-regressions", items: [] }),
+  store: persistence,
+  ownership: { tenantId: "t1", userId: "u1" },
+  redactor,
+  toItem: (run) => ({
+    input: run.input,
+    expected: run.feedback?.metadata?.expected, // human-graded gold from the feedback seam
+    metadata: { graded: run.feedback?.rating },
+  }),
+});
+// result.added === 2, result.dataset.version === "2"
+```
+
+Omit `toItem` and the default mapping is used: `input` = first user message, `expected` = the recorded feedback's `metadata.expected` when present, `output` = final assistant text under `metadata.output`.
+
+- Session ids (`sessionIds`) expand to every run recorded under the session; bare `runIds` are located by one ownership-bounded scan of the run ledger (page/byte caps apply).
+- Each resolved run maps to one item keyed by the run id. The default `toItem` carries the first user message as `input`; `expected` comes **only from the feedback seam** (`metadata.expected` of the latest human-graded `RunFeedbackRecord`) — never re-derived from untrusted outputs, and omitted entirely (not fabricated) when a run has no feedback. The recorded output rides `metadata.output` for provenance. A host `toItem` always wins and may return `undefined` to drop a run (`host filter` skip).
+- Feedback costs one bounded, owner-scoped query per curation batch (`store.feedback`); records are read id-only per the feedback linkage contract — scorer payloads are never copied. A feedback query failure (e.g. scope contract mismatch) omits `expected` instead of aborting the batch.
+- Every item field passes the host `redactor` after host mapping — fail closed: a redactor failure or an item over the frozen 4 MiB cap (`ERR_PRISM_EVAL_CURATE`) skips the run or aborts the append before anything is persisted. Cross-tenant runs are never readable (resolver ownership check → `ownership mismatch` skip).
+
+Prompt versions can ride the same primitives: [`assertPromptPromotion`](prompt-registry.md#eval-gated-promotion) in `@arnilo/prism-prompts` resolves two prompt versions, runs them through `runComparison`, and returns a `promote`/`hold` verdict with per-scorer aggregates and a bounded report — never applying the change itself.
+
 ## Coding and browser adversarial evaluations (0.0.9)
 
 Release 0.0.9 ships curated network-free adversarial fixtures in package tests:
 
 - `@arnilo/prism-coding-agent` `eval-fixtures.test.ts`: safe native list vs shell, Git path/ref injection, dirty-tree rollback, unknown named-check failure, PR-handoff artifact completeness, and prompt-injection file content under read-only tools.
-- `@arnilo/prism-browser` `eval-fixtures.test.ts`: stale snapshot refs, side-effect approval, private/loopback/file deny, upload/download/screenshot policy, CSS/evaluate target rejection, and hostile accessible-name text.
+- `browser` `eval-fixtures.test.ts`: stale snapshot refs, side-effect approval, private/loopback/file deny, upload/download/screenshot policy, CSS/evaluate target rejection, and hostile accessible-name text.
 
 Fixtures reuse `@arnilo/prism-evals` (`defineDataset` / `defineScorer` / `scoreRun` / `assertEvaluationThreshold` / `serializeEvaluationReport`). Optional SWE-bench-compatible or live-browser harnesses remain host adapters — they are not default dependencies or quality claims. Protected real Docker/Playwright gates stay env-gated (`PRISM_TEST_DOCKER_SANDBOX`, `PRISM_LIVE_PLAYWRIGHT`) and never enter `sdk:ready`.
 

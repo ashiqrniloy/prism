@@ -17,13 +17,8 @@ const CEILING_MS = freeze.capacity.e2eJourneyFixtureMsCeiling;
 
 const packages = [
   { dir: ".", name: "@arnilo/prism" },
-  { dir: "packages/credentials-node", name: "@arnilo/prism-credentials-node" },
-  { dir: "packages/policy", name: "@arnilo/prism-policy" },
-  { dir: "packages/prism-openapi-tools", name: "@arnilo/prism-openapi-tools" },
-  { dir: "packages/server", name: "@arnilo/prism-server" },
-  { dir: "packages/workflows", name: "@arnilo/prism-workflows" },
-  { dir: "packages/session-store-codecs", name: "@arnilo/prism-session-store-codecs" },
-  { dir: "packages/session-store-postgres", name: "@arnilo/prism-session-store-postgres" },
+  { dir: "packages/prism-core", name: "@arnilo/prism-core" },
+  { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools" },
 ];
 
 let consumer, run;

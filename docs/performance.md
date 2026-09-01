@@ -65,6 +65,26 @@ serialized provider event at the exact response-byte cap succeeds; one byte belo
 fails closed, including multibyte Unicode deltas. Context-budget omission order and
 newest-history preservation remain covered by the root context-budget tests.
 
+## Tool progressive disclosure (plan 041)
+
+`node scripts/benchmark.mjs --scenario tool-search` is network-free (mock assembly, in-memory, no credentials). It builds a 128-tool fixture registry and assembles the provider input once per mode through `assembleProviderInput`: `toolsDisclosure "all"` (default, full tool set) vs `"search"` (top-k 16 plus the generated `search_tools` tool), then asserts provider-request tool-definition bytes shrink ≥ 60% and the index+score pass stays well under a turn. Frozen caps live in `scripts/budgets.json#toolSearch` (reduction floor 0.6, index+score ceiling 50 ms, disclosed-count ceiling 33 — sanity bounds, machine-dependent). Schema/caps/network-free gating in `npm test`: `scripts/benchmark-tool-search.test.mjs`.
+
+```bash
+node scripts/benchmark.mjs --scenario tool-search --out /tmp/prism-tool-search.json
+```
+
+Recorded 2026-08-30, Node v24.19.0 / Linux x64: tool bytes 31,923 → 4,329 (**86.4% reduction**, floor 60%), index+score 1.9–2.5 ms across three runs, disclosed 17 tools (top-k 16 + `search_tools`). Tool-accuracy fixtures (mock provider picking by name among 64/128 distractors, scripted scanner reading only the disclosed list) show search mode at full-exposure pick accuracy in both sizes — the conformance floor `search ≥ all` holds (`src/__tests__/tool-search.test.ts`).
+
+## Workflow loop refinement (plan 045)
+
+`node scripts/benchmark.mjs --scenario workflow-loop` is network-free: five serial `loopNode` iterations each run one refinement through a mock provider and an in-memory checkpoint adapter. The frozen budget in `scripts/budgets.json#workflowLoop` allows 50 ms p95 per node execution, or 250 ms across all five iterations. The scenario also checks five provider calls, five finished iteration records, peak provider concurrency of one, and zero active work after completion.
+
+Recorded 2026-08-31 on Node v24.19.0 / Linux x64: 5 warmups + 20 measured runs, p50 **2.356 ms**, p95 **6.443 ms** (**1.289 ms/iteration**), 352.88 runs/s. `maxNodes` remains the declared-node count; `maxIterations` is the independent runtime budget and stays hard-capped at 64. These timings are local evidence, not portable SLOs.
+
+```bash
+node scripts/benchmark.mjs --scenario workflow-loop --out /tmp/prism-workflow-loop.json
+```
+
 ## Current-line root artifact diet
 
 `npm pack --dry-run --json` on `@arnilo/prism` is gated by `scripts/budget-gate.test.mjs` against `scripts/budgets.json#root` (±5%). Repository-only history stays out of the tarball: `docs/_evidence/**`, `docs/release-*-evidence.md`, `docs/api-page-template.md`, `dist/__tests__`, and `*.map`. Every page linked from shipped `docs/index.md` must be in the pack. Recorded 2026-08-27: **923,045 packed / 3,149,665 unpacked / 375 files** (226 `dist` js+d.ts, 124 index-linked docs, 25 other). 0.1.0 freeze 713,454 / 293 stays historical.
@@ -365,7 +385,7 @@ Structured Git/check/handoff defaults/hard caps: paths 1,000/10,000; refs 1 KiB/
 
 Durable coding plan/checkpoint defaults/hard caps: plan Markdown 256 KiB/1 MiB; todos 1,000/10,000 with 512 B/4 KiB text; checkpoint metadata 64 KiB/512 KiB; artifact references 16/64 at 256 MiB/2 GiB each; check summaries 1 KiB/8 KiB. Checkpoints store URI/hash/summaries/fingerprints only; resume revalidates workspace root, base branch, plan hash, and tool/policy/image fingerprints before import.
 
-Browser automation defaults/hard caps from `@arnilo/prism-browser`: pages 4/16; actions 100/256; queued actions 16/64; snapshot refs 2,000/10,000; depth 30/100; snapshot bytes 256 KiB/2 MiB; navigation 30 s/120 s; action 10 s/60 s; wait 30 s/120 s; run wall 20 min/30 min; popups 4/16; dialogs 16/64; listeners 64/256; action input 64 KiB/256 KiB; close grace 5 s/30 s; network requests 1,000/10,000 with 10/32 redirects per request and 8/32 WebSockets; screenshots 16/64 with 16/64 megapixels and 10 MiB/32 MiB encoded; uploads 8/32 files, 16 MiB/64 MiB each, 64 MiB/256 MiB aggregate; downloads 8/32 files, 32 MiB/256 MiB each, 64 MiB/512 MiB aggregate. Caps charge before context/page/action/queue/snapshot/network/artifact retention. Host supplies Playwright and egress proxy attestation; package import launches nothing.
+Browser automation defaults/hard caps from the `browser` subpath: pages 4/16; actions 100/256; queued actions 16/64; snapshot refs 2,000/10,000; depth 30/100; snapshot bytes 256 KiB/2 MiB; navigation 30 s/120 s; action 10 s/60 s; wait 30 s/120 s; run wall 20 min/30 min; popups 4/16; dialogs 16/64; listeners 64/256; action input 64 KiB/256 KiB; close grace 5 s/30 s; network requests 1,000/10,000 with 10/32 redirects per request and 8/32 WebSockets; screenshots 16/64 with 16/64 megapixels and 10 MiB/32 MiB encoded; uploads 8/32 files, 16 MiB/64 MiB each, 64 MiB/256 MiB aggregate; downloads 8/32 files, 32 MiB/256 MiB each, 64 MiB/512 MiB aggregate. Caps charge before context/page/action/queue/snapshot/network/artifact retention. Host supplies Playwright and egress proxy attestation; package import launches nothing.
 
 0.0.14 co-work defaults/hard caps (frozen in [Phase 9 evidence](_evidence/review-coverage-2026-07-25-phase-9.md)): conversation thread list pages 50/200, active branches per thread 16/64, replay/export page 100/500 events; artifact revisions per artifact 32/128, artifacts per thread 64/256, metadata record 8/64 KiB, preview 16/64 KiB, citations 32/128 (2/8 KiB each), delivery-link TTL 5 min/24 h, delivery token 4/16 KiB, compare exactly 2 revisions; memory retention batch 500/5000; proactive capability TTL 24 h/31 d, capability token record 16 KiB; browser checkpoint URL 8 KiB/16 KiB, domain-state hash 256 B/1 KiB, host-data ref 2 KiB/8 KiB, 16/64 checkpoints per run; device stream chunk 1 MiB/8 MiB, concurrent device sessions per identity 1/4 (device wall/turns/tool calls consume shared `RunLimits`). All caps charge before persist/emit and fail closed on overflow. Benchmark placeholder: `node scripts/benchmark-0.0.14.mjs` (release Task 12) reports conversation replay, memory injection/consent, artifact revision/delivery, AG-UI co-work mapping, and connector refresh overhead against these budgets.
 
@@ -595,7 +615,7 @@ Experiment concurrency is capped at 32 workers and defaults to 1. Scorers operat
 
 ### 0.0.5 Phase 6 verification (2026-07-15)
 
-Optional `@arnilo/prism-provider-ai-sdk` adapts AI SDK `LanguageModelV4` streams to Prism without adding an AI SDK dependency to core.
+Optional `@arnilo/prism-providers/ai-sdk` adapts AI SDK `LanguageModelV4` streams to Prism without adding an AI SDK dependency to core.
 
 | Surface | Result |
 | --- | --- |
@@ -751,7 +771,7 @@ Offline behavior tests (identity propagation, policy export, router deny paths, 
 
 ### 0.3.x Phase 39 Obscura browser-engine envelopes (2026-08-29)
 
-`@arnilo/prism-obscura` binary-backed legs, network-free, driven by a deterministic fake CLI: `node scripts/benchmark-obscura.mjs` (3 runs, medians vs reviewed ceilings; artifact `scripts/benchmark-obscura.json`). Startup leg probes SIG-0 liveness after spawn — a real host waits on its readiness endpoint inside the same bound.
+`obscura` binary-backed legs, network-free, driven by a deterministic fake CLI: `node scripts/benchmark-obscura.mjs` (3 runs, medians vs reviewed ceilings; artifact `scripts/benchmark-obscura.json`). Startup leg probes SIG-0 liveness after spawn — a real host waits on its readiness endpoint inside the same bound.
 
 | Leg | Median (3 runs) | Ceiling | Notes |
 | --- | --- | --- | --- |

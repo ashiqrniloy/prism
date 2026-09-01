@@ -1,5 +1,5 @@
 import { createExtensionKernel, createMockProvider, createModelRegistry, createProviderRegistry, providerDone } from "@arnilo/prism";
-import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
+import { createOpenAIProviderPackage } from "@arnilo/prism-providers/openai";
 
 // Register a provider package through the extension kernel and resolve
 // providers/models from host-owned registries. Uses a fake API key.

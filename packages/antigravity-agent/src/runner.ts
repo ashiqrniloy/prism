@@ -1,4 +1,4 @@
-import { createProcessSessions, type ProcessSessions } from "@arnilo/prism-coding-agent";
+import { createProcessSessions, type ProcessSessions } from "@arnilo/prism-coding-tools/agent";
 import { diagnoseCliError, redactDiagnosticText } from "./auth-errors.js";
 import { validateConversationId } from "./conversation.js";
 import { formatDurationForAgy, resolveRunnerLimits } from "./limits.js";
@@ -193,11 +193,11 @@ export async function runAntigravityCli(options: AntigravityRunnerOptions): Prom
         signal: options.signal,
       })
       .then(
-        (res) => {
+        (res: { exitCode: number | null; state: string }) => {
           exited = true;
           exitResult = res;
         },
-        (err) => {
+        (err: unknown) => {
           exited = true;
           waitError = err;
         },
@@ -246,9 +246,9 @@ export async function runAntigravityCli(options: AntigravityRunnerOptions): Prom
     const redactedStderr = redactDiagnosticText(combinedStderr, options.redactor);
 
     // If CLI process exited with non-zero code, diagnose error immediately
-    if (exitResult.exitCode !== 0) {
+    if (exitResult?.exitCode !== 0) {
       throw diagnoseCliError({
-        exitCode: exitResult.exitCode,
+        exitCode: exitResult?.exitCode ?? 1,
         stderr: redactedStderr,
         redactor: options.redactor,
       });
@@ -258,7 +258,7 @@ export async function runAntigravityCli(options: AntigravityRunnerOptions): Prom
 
     if (completed.result.status !== "SUCCESS") {
       throw diagnoseCliError({
-        exitCode: exitResult.exitCode,
+        exitCode: exitResult?.exitCode ?? 1,
         stderr: redactedStderr,
         stdout: completed.result.response,
         resultError: completed.result.error,

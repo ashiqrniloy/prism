@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-neuralwatt` provides explicit, side-effect-free setup for the
+`@arnilo/prism-providers/neuralwatt` provides explicit, side-effect-free setup for the
 NeuralWatt OpenAI-compatible Chat Completions provider using Prism's OpenAI-compatible
 route with NeuralWatt-specific reasoning/template escape hatches, SSE comment tolerance,
 and implicit prefix caching.
@@ -34,7 +34,7 @@ import {
   neuralWattEventsWithTelemetry,
   neuralWattModels,
   parseNeuralWattComment,
-} from "@arnilo/prism-provider-neuralwatt";
+} from "@arnilo/prism-providers/neuralwatt";
 
 createNeuralWattProviderPackage(options: NeuralWattProviderPackageOptions): ProviderPackage
 defineNeuralWattModel(config: NeuralWattModelConfig): ModelConfig
@@ -123,7 +123,7 @@ Example request body (OpenAI-compatible Chat Completions shape):
 
 ```ts
 import { createExtensionKernel } from "@arnilo/prism";
-import { createNeuralWattProviderPackage } from "@arnilo/prism-provider-neuralwatt";
+import { createNeuralWattProviderPackage } from "@arnilo/prism-providers/neuralwatt";
 
 const kernel = createExtensionKernel();
 await kernel.load([createNeuralWattProviderPackage({ apiKey: "fake-neuralwatt-key" })]);
@@ -132,7 +132,7 @@ await kernel.load([createNeuralWattProviderPackage({ apiKey: "fake-neuralwatt-ke
 Override the provider id and models:
 
 ```ts
-import { createNeuralWattProviderPackage, defineNeuralWattModel, neuralWattModels } from "@arnilo/prism-provider-neuralwatt";
+import { createNeuralWattProviderPackage, defineNeuralWattModel, neuralWattModels } from "@arnilo/prism-providers/neuralwatt";
 
 await kernel.load([
   createNeuralWattProviderPackage({ id: "neuralwatt", apiKey: "fake", models: neuralWattModels }),
@@ -142,7 +142,7 @@ await kernel.load([
 Explicit catalog discovery:
 
 ```ts
-import { listNeuralWattModels } from "@arnilo/prism-provider-neuralwatt";
+import { listNeuralWattModels } from "@arnilo/prism-providers/neuralwatt";
 
 const models = await listNeuralWattModels({ apiKey: "fake-neuralwatt-key", fetch });
 await kernel.load([createNeuralWattProviderPackage({ apiKey: "fake", models })]);
@@ -154,7 +154,7 @@ setup and `generate()` never call model discovery implicitly.
 Account quota:
 
 ```ts
-import { getNeuralWattQuota } from "@arnilo/prism-provider-neuralwatt";
+import { getNeuralWattQuota } from "@arnilo/prism-providers/neuralwatt";
 
 const quota = await getNeuralWattQuota({ apiKey: "fake-neuralwatt-key", fetch });
 console.log(quota.usage?.current_month?.energy_kwh, quota.balance?.balance_usd);
@@ -322,7 +322,7 @@ optional and tolerated when absent; malformed comments yield no telemetry event
 and never crash the stream.
 
 ```ts
-import { neuralWattEventsWithTelemetry } from "@arnilo/prism-provider-neuralwatt";
+import { neuralWattEventsWithTelemetry } from "@arnilo/prism-providers/neuralwatt";
 
 for await (const event of neuralWattEventsWithTelemetry(response.body)) {
   if (event.type === "neuralwatt:telemetry") {
@@ -354,7 +354,7 @@ provider. Classification is O(1) over status/headers/body and makes no extra
 provider calls.
 
 ```ts
-import { classifyNeuralWattError } from "@arnilo/prism-provider-neuralwatt";
+import { classifyNeuralWattError } from "@arnilo/prism-providers/neuralwatt";
 
 const decision = classifyNeuralWattError({ status: 429, headers: { "retry-after": "1" }, body: { error: { code: "concurrent_budget_exceeded", retry_after: 1 } } });
 // { retryable: true, code: 429, retryAfterMs: 1000, errorCode: "concurrent_budget_exceeded", strategy: undefined }

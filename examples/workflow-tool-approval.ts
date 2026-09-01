@@ -9,7 +9,6 @@ import {
   providerTextDelta,
   providerUsage,
 } from "@arnilo/prism";
-import { mapMcpToolsToDefinitions } from "@arnilo/prism-mcp";
 import {
   agentNode,
   createMemoryWorkflowCheckpoints,
@@ -18,7 +17,8 @@ import {
   runWorkflow,
   toolNode,
   type WorkflowEvent,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-core/runtime/workflows";
+import { mapMcpToolsToDefinitions } from "@arnilo/prism-mcp";
 
 // Agent → MCP-backed tool-node chain with ExecutionPolicy approval. Public
 // mapMcpToolsToDefinitions() maps an offline fake remote tool to ToolDefinition;

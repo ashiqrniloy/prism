@@ -27,13 +27,17 @@ import {
   dispatchToolCall,
   IdentityError,
 } from "@arnilo/prism";
-import { createOidcIdentityVerifier } from "@arnilo/prism-credentials-node/oidc";
+import { createOidcIdentityVerifier } from "@arnilo/prism-core/credentials/node/oidc";
+import {
+  createMemoryPolicyDecisionStore,
+  createOpaPolicyEvaluator,
+  createPolicyEvaluator,
+  evaluateAndAppend,
+} from "@arnilo/prism-core/governance/policy";
+import { createArtifactService, createS3ArtifactBodyStore } from "@arnilo/prism-core/runtime/server";
 import { createMcpOAuthTransport, createPrismMcpServer, createPrismMcpWebHandler } from "@arnilo/prism-mcp";
-import { createOpenApiTools } from "@arnilo/prism-openapi-tools";
-import { createMemoryPolicyDecisionStore, createOpaPolicyEvaluator, createPolicyEvaluator, evaluateAndAppend } from "@arnilo/prism-policy";
-import { createArtifactService } from "@arnilo/prism-server";
-import { createS3ArtifactBodyStore } from "@arnilo/prism-server/artifact-bodies";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { createOpenApiTools } from "../packages/prism-coding-tools/dist/openapi/index.js";
 
 const SECRET = "conformance-secret-value";
 const redactor = createSecretRedactor([SECRET]);

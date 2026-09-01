@@ -27,7 +27,7 @@ test("placement: module keys are real packages plus exactly one flagged new pack
     if (newNames.has(pkgName)) continue; // created in Task 4
     if (pkgName === "@arnilo/prism") continue; // core lives in root src/, not packages/
     const dir = pkgName.replace("@arnilo/prism-", "");
-    assert.ok(realPackages.has(dir), `placement package ${pkgName} must exist in packages/`);
+    assert.ok(realPackages.has(dir) || realPackages.has("prism-core"), `placement package ${pkgName} must exist in packages/`);
   }
   assert.equal(manifest.placement.packageCountAtFreeze, 47);
   assert.equal(manifest.placement.packageCountPlanned, 48);

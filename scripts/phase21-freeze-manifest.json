@@ -672,12 +672,12 @@
       "packages/coding-security/src/egress/index.ts": "egress module entry re-exporting dns-pin; never edited",
       "packages/credentials-node/src/microsoft365-oauth.ts": "consumer of the shared oauth2.ts device flow; the shared pollDeviceCodeToken helper signature must stay compatible; never edited",
       "packages/credentials-node/src/google-workspace-oauth.ts": "consumer of the shared oauth2.ts device flow; never edited",
-      "packages/provider-alibaba/src/provider.ts": "strictCompletion: true opt-in stays in place when the shared default flips (behavior identical); never edited in 0.2.1",
-      "packages/provider-kimi/src/moonshot.ts": "strictCompletion: true opt-in stays in place; never edited in 0.2.1",
-      "packages/provider-ollama/src/provider.ts": "strictCompletion: true opt-in stays in place; never edited in 0.2.1",
-      "packages/provider-opencode-go/src/openai-chat.ts": "strictCompletion: true opt-in stays in place; never edited in 0.2.1",
-      "packages/provider-anthropic/src/messages.ts": "native streaming completion semantics (not OpenAI-compatible); out of 0.2.1 scope; never edited",
-      "packages/provider-google/src/generate-content.ts": "native streaming completion semantics; out of 0.2.1 scope; never edited"
+      "packages/prism-providers/src/alibaba/provider.ts": "strictCompletion: true opt-in stays in place when the shared default flips (behavior identical); never edited in 0.2.1",
+      "packages/prism-providers/src/kimi/moonshot.ts": "strictCompletion: true opt-in stays in place; never edited in 0.2.1",
+      "packages/prism-providers/src/ollama/provider.ts": "strictCompletion: true opt-in stays in place; never edited in 0.2.1",
+      "packages/prism-providers/src/opencode-go/openai-chat.ts": "strictCompletion: true opt-in stays in place; never edited in 0.2.1",
+      "packages/prism-providers/src/anthropic/messages.ts": "native streaming completion semantics (not OpenAI-compatible); out of 0.2.1 scope; never edited",
+      "packages/prism-providers/src/google/generate-content.ts": "native streaming completion semantics; out of 0.2.1 scope; never edited"
     }
   },
   "allowedChanges": [

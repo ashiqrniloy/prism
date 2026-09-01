@@ -203,4 +203,4 @@ await evaluateAndAppend(request, { store: state.policy, evaluator, id: crypto.ra
 - [Workflows](workflows.md): proactive schedule capability enable/revoke events bridge here via `onCapability`.
 - [Host security](host-security.md)
 - [Enterprise PostgreSQL state](enterprise-postgres-state.md): durable policy/evaluation/work/router composition.
-- Package README: [`@arnilo/prism-policy`](../packages/policy/README.md)
+- Package README: [`@arnilo/prism-core`](../packages/prism-core/README.md)

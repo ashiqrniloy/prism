@@ -4,6 +4,7 @@ import { MemoryConflictError, MemoryValidationError } from "./errors.js";
 import { decodeMemoryCursor, encodeMemoryCursor } from "./pagination.js";
 import { buildMemoryDdl, buildVectorSearchDdl, DEFAULT_MEMORY_SCHEMA, DEFAULT_VECTOR_TABLE } from "./postgres-ddl.js";
 import { qualifyTable, quoteIdentifier, validateIdentifier } from "./postgres-identifiers.js";
+import { normalizeImportance } from "./scoring.js";
 import type {
   MemoryConsent,
   MemoryVectorHit,
@@ -51,9 +52,9 @@ export interface PostgresMemoryStores {
 type Queryable = Pick<Pool | PoolClient, "query">;
 
 const VECTOR_COLUMNS =
-  "tenant_id, resource_id, thread_id, id, text, embedding::text AS embedding, sequence, metadata, consent, created_at, embedder_id, generation";
+  "tenant_id, resource_id, thread_id, id, text, embedding::text AS embedding, sequence, metadata, consent, created_at, embedder_id, generation, importance";
 const VECTOR_INSERT_COLUMNS =
-  "tenant_id, resource_id, thread_id, id, text, embedding, sequence, metadata, consent, created_at, embedder_id, generation";
+  "tenant_id, resource_id, thread_id, id, text, embedding, sequence, metadata, consent, created_at, embedder_id, generation, importance";
 
 /** Non-transactional surface; every method issues plain statements against whatever Queryable it is bound to. */
 export interface PostgresVectorSourceStore extends VectorStore {
@@ -267,6 +268,7 @@ function mapVectorRow(row: Record<string, unknown>, score?: number): MemoryVecto
     createdAt: new Date(String(row.created_at)).toISOString(),
     ...(row.embedder_id ? { embedderId: String(row.embedder_id) } : {}),
     ...(row.generation !== null && row.generation !== undefined ? { generation: Number(row.generation) } : {}),
+    ...(row.importance !== null && row.importance !== undefined ? { importance: Number(row.importance) } : {}),
     ...(metadata ? { metadata } : {}),
     ...(consent ? { consent } : {}),
   };
@@ -325,14 +327,15 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
         ) {
           throw new MemoryValidationError("generation must be a non-negative integer");
         }
+        const importance = normalizeImportance(record.importance);
         await q.query(
           `INSERT INTO ${table}
             (${VECTOR_INSERT_COLUMNS})
-           VALUES ($1, $2, $3, $4, $5, $6::vector, $7, $8::jsonb, $9::jsonb, $10::timestamptz, $11::text, $12)
+           VALUES ($1, $2, $3, $4, $5, $6::vector, $7, $8::jsonb, $9::jsonb, $10::timestamptz, $11::text, $12, $13::real)
            ON CONFLICT (tenant_id, resource_id, thread_id, id)
            DO UPDATE SET text = EXCLUDED.text, embedding = EXCLUDED.embedding, sequence = EXCLUDED.sequence,
                          metadata = EXCLUDED.metadata, consent = EXCLUDED.consent, created_at = EXCLUDED.created_at,
-                         embedder_id = EXCLUDED.embedder_id, generation = EXCLUDED.generation`,
+                         embedder_id = EXCLUDED.embedder_id, generation = EXCLUDED.generation, importance = EXCLUDED.importance`,
           [
             record.tenantId,
             record.resourceId,
@@ -346,6 +349,7 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
             record.createdAt,
             record.embedderId ?? null,
             record.generation === undefined ? null : String(record.generation),
+            importance ?? null,
           ],
         );
       }

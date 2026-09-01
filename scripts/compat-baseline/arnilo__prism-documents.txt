@@ -1,0 +1,54 @@
+DEFAULT_MAX_BLOCKS	export declare const DEFAULT_MAX_BLOCKS = 10000
+DEFAULT_MAX_CELLS	export declare const DEFAULT_MAX_CELLS = 500000
+DEFAULT_MAX_DOCUMENT_BYTES	export declare const DEFAULT_MAX_DOCUMENT_BYTES: number
+DEFAULT_MAX_IMAGES	export declare const DEFAULT_MAX_IMAGES = 100
+DEFAULT_MAX_SHEETS	export declare const DEFAULT_MAX_SHEETS = 100
+DEFAULT_MAX_SLIDES	export declare const DEFAULT_MAX_SLIDES = 500
+DocumentsCapError	export declare class DocumentsCapError extends DocumentsError
+DocumentsError	export declare class DocumentsError extends Error
+DocumentsFormatError	export declare class DocumentsFormatError extends DocumentsError
+DocumentsParseError	export declare class DocumentsParseError extends DocumentsError
+DocumentsValidationError	export declare class DocumentsValidationError extends DocumentsError
+HARD_MAX_BLOCKS	export declare const HARD_MAX_BLOCKS = 50000
+HARD_MAX_CELLS	export declare const HARD_MAX_CELLS = 2000000
+HARD_MAX_DOCUMENT_BYTES	export declare const HARD_MAX_DOCUMENT_BYTES: number
+HARD_MAX_IMAGES	export declare const HARD_MAX_IMAGES = 1000
+HARD_MAX_SHEETS	export declare const HARD_MAX_SHEETS = 1000
+HARD_MAX_SLIDES	export declare const HARD_MAX_SLIDES = 2000
+assertDeckModelEqual	export declare function assertDeckModelEqual(actual: DeckModel, expected: DeckModel): void
+assertDocBlockEqual	export declare function assertDocBlockEqual(actual: DocBlock, expected: DocBlock): void
+assertDocModelEqual	export declare function assertDocModelEqual(actual: DocModel, expected: DocModel): void
+assertDocRunEqual	export declare function assertDocRunEqual(actual: DocRun, expected: DocRun): void
+assertDocumentModelEqual	export declare function assertDocumentModelEqual(actual: DocumentModel, expected: DocumentModel): void
+assertSheetModelEqual	export declare function assertSheetModelEqual(actual: SheetModel, expected: SheetModel): void
+assertSlideEqual	export declare function assertSlideEqual(actual: SlideData, expected: SlideData, slideIndex: number): void
+createPatchHistory	export declare function createPatchHistory(initialModel: DocumentModel): PatchHistory
+deckModelSchema	export declare const deckModelSchema: JsonSchema
+deckModelToPptxOptions	export declare function deckModelToPptxOptions(model: DeckModel): PresentationOptions
+docModelSchema	export declare const docModelSchema: JsonSchema
+docModelToDocxOptions	export declare function docModelToDocxOptions(model: DocModel): DocumentOptions
+documentModelSchema	export declare function documentModelSchema(kind: DocumentKind, slice?: string | readonly string[]): JsonSchema
+escapeHtml	export declare function escapeHtml(input: string): string
+generateDocument	export declare function generateDocument(model: DocumentModel, options: GenerateDocumentOptions): Promise<GenerateDocumentResult>
+generateDocxBytes	export declare function generateDocxBytes(model: DocModel): Uint8Array
+generatePptxBytes	export declare function generatePptxBytes(model: DeckModel): Uint8Array
+generateXlsxBytes	export declare function generateXlsxBytes(model: SheetModel): Uint8Array
+isZipContainer	export declare function isZipContainer(bytes: Uint8Array): boolean
+noopDocumentsSpan	export declare const noopDocumentsSpan: DocumentsTelemetrySpan
+noopDocumentsTelemetry	export declare const noopDocumentsTelemetry: DocumentsTelemetry
+normalizeCellValue	export declare function normalizeCellValue(value: CellValue): unknown
+parseDocument	export declare function parseDocument(bytes: Uint8Array, options: ParseDocumentOptions): Promise<DocumentModel>
+parseDocxBytes	export declare function parseDocxBytes(bytes: Uint8Array): DocModel
+parsePptxBytes	export declare function parsePptxBytes(bytes: Uint8Array): DeckModel
+parseXlsxBytes	export declare function parseXlsxBytes(bytes: Uint8Array): SheetModel
+patchDocument	export declare function patchDocument(model: DocumentModel, patches: readonly DocumentPatch[], options?: PatchDocumentOptions): DocumentModel
+regenerateGoldens	export declare function regenerateGoldens(): Promise<void>
+renderPreviewBlocks	export declare function renderPreviewBlocks(model: DocumentModel, options?: PreviewBlocksOptions): PreviewBlock[]
+renderPreviewHtml	export declare function renderPreviewHtml(model: DocumentModel, options?: PreviewHtmlOptions): string
+resolveDocumentCaps	export declare function resolveDocumentCaps(caps?: DocumentCaps): ResolvedDocumentCaps
+sha256Hex	export declare function sha256Hex(bytes: Uint8Array): string
+sheetModelSchema	export declare const sheetModelSchema: JsonSchema
+sheetModelToXlsxOptions	export declare function sheetModelToXlsxOptions(model: SheetModel): WorkbookOptions
+validateByteCap	export declare function validateByteCap(byteLength: number, caps: ResolvedDocumentCaps): void
+validateDocumentModel	export declare function validateDocumentModel(model: unknown): asserts model is DocumentModel
+validateModelCaps	export declare function validateModelCaps(model: DocumentModel, caps: ResolvedDocumentCaps): void

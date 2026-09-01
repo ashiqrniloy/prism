@@ -128,6 +128,95 @@ Default/hard ceilings:
 | drain admit cutoff | 30 s | 5 min |
 | replay page / cursor | 100 / 4 KiB | 500 / 16 KiB |
 
+## Outbound webhooks
+
+### What it does
+
+`createWebhookNotifier()` posts selected terminal agent/workflow events to host-registered HTTPS endpoints. Every JSON envelope is redacted before HMAC-SHA-256 signing; `X-Prism-Signature` is `sha256=<hex>` and `X-Prism-Timestamp` carries the signed envelope timestamp.
+
+### When to use it
+
+Use it for host-owned PagerDuty, Slack, or application hooks after a run completes, fails, or suspends. Omit targets when no outbound notification is wanted: no target means no queued delivery or network activity.
+
+### Inputs / request
+
+| Field | Meaning |
+| --- | --- |
+| `targets` | Host-configured `{ url, events }` entries. URLs must be public HTTPS, without credentials/fragments; private and metadata literals fail during registration. |
+| `allowLoopbackHttp` | Explicit opt-in permitting `http:` for loopback hostnames (development receivers only); never combined with private or metadata targets. Default false. |
+| `signer.key` | Host-held `Uint8Array` HMAC key, at least 32 bytes. |
+| `redactor` | Required `SecretRedactor`; its result is placed in `redactedPayload` before signing. |
+| `limits.maxQueuedEvents` | Global outbound queue cap; default 128, hard cap 4,096. Overflow drops newest and increments `diagnostics().dropped`. |
+| `limits.timeoutMs` / `maxEventBytes` | Per-attempt timeout (5 s default, 30 s hard) and JSON envelope byte cap (64 KiB default, 1 MiB hard). |
+| `limits.retries` / `retryBaseDelayMs` / `retryMaxDelayMs` / `retryJitter` | Retries after the first attempt (3 default, 10 hard); exponential 100 ms→5 s delays (30 s hard), with ±25% jitter by default. Set jitter to `0` only for deterministic tests. |
+| `limits.maxFailureRecords` | Redacted terminal failure-record ring buffer; 32 default, 256 hard. |
+
+`notify()` accepts `run.completed`, `run.failed`, `run.suspended`, `workflow.completed`, `workflow.failed`, or `workflow.suspended`. `onAgentEvent()` and `onWorkflowEvent()` translate Prism lifecycle events into those names.
+
+### Outputs / response / events
+
+`notify()` returns immediately after bounded enqueue. Pass `{ signal }` as its second argument to cancel queued or retrying delivery for that run. `diagnostics()` returns `{ queued, delivered, failed, dropped, retries, cancelled, failures, lastError? }`: `failed` is the `prism.webhook.failed` terminal-failure counter, `failures` is bounded and redacted, and `lastError` is its latest redacted error.
+
+A `2xx` delivery succeeds. `4xx` is terminal except `429`; `429`, `5xx`, and transport failures retry within the configured cap. `Retry-After` is honored within `retryMaxDelayMs`. Delivery is at-least-once: receiver timeouts after processing can yield duplicates.
+
+```json
+{
+  "id": "01d2...",
+  "event": "run.failed",
+  "runId": "run-42",
+  "status": "failed",
+  "redactedPayload": { "error": "[REDACTED]" },
+  "timestamp": "2026-01-01T00:00:00.000Z"
+}
+```
+
+### Request/response example
+
+Receivers verify the raw request body, not a parsed/re-serialized object:
+
+```ts
+const expected = createHmac("sha256", hostHmacKey).update(rawBody).digest("hex");
+const valid = request.headers.get("x-prism-signature") === `sha256=${expected}`;
+```
+
+### Implementation example
+
+```ts
+import { createSecretRedactor, type AgentSession } from "@arnilo/prism";
+import { createWebhookNotifier } from "@arnilo/prism-server";
+
+const notifier = createWebhookNotifier({
+  targets: [{ url: "https://ops.example.test/prism", events: ["run.failed", "workflow.suspended"] }],
+  signer: { key: Buffer.from(process.env.PRISM_WEBHOOK_HMAC!, "hex") },
+  redactor: createSecretRedactor([process.env.PRISM_WEBHOOK_HMAC]),
+});
+
+export function wireWebhookAgentSession(session: AgentSession): AgentSession {
+  void (async () => {
+    for await (const event of session.subscribe()) notifier.onAgentEvent(event);
+  })();
+  return session;
+}
+
+export const webhookWorkflowRunOptions = { onEvent: notifier.onWorkflowEvent };
+```
+
+The agent `sessionFactory` is the server-handler adapter. Workflow `onEvent` receives the same events emitted through its event bus, including `workflow_finished` and `workflow_suspended`.
+
+### Extension and configuration notes
+
+Targets are static host configuration, never request JSON, tool output, or extension discovery. Event filters are exact. The notifier is a server-package export; it neither starts a listener nor owns a durable queue, auth provider, or webhook receiver.
+
+### Security and performance notes
+
+Delivery uses core `pinnedFetch` only: every attempt DNS-pins a public address and rejects all redirects, including redirects toward private targets. The HMAC key, signature, and delivery errors are never logged by the notifier; bounded failure records redact error text before retention. HTTPS is mandatory; plaintext HTTP is allowed only with explicit `allowLoopbackHttp: true` and a loopback hostname, and still pins/validates DNS. Queue overflow deliberately drops newest deliveries so earlier accepted lifecycle events retain order; use `diagnostics()` to observe loss. The in-memory queue does not survive restart; a durable outbox is required when cross-restart delivery matters. The outbound-webhook threat leg lives in `npm run security:threat-suites` (`scripts/phase46-webhooks-security.test.mjs` plus the package and pinned-fetch fixtures).
+
+### Related APIs
+
+- [Multimodal content](multimodal-content.md): shared DNS-pinned outbound fetch primitive.
+- [Workflows](workflows.md): workflow event-bus and `onEvent` lifecycle seam.
+- [Host security guide](host-security.md): remote-boundary controls.
+
 ## Deployment seams (optional)
 
 Compose beside `createPrismHandler` — Prism starts no listener, container orchestrator, or queue worker.
@@ -158,7 +247,7 @@ Network-free demo: [`examples/server-deployment-seams.ts`](../examples/server-de
 - Health endpoints reveal process/liveness only by default; detail flags require host authorize and must omit secrets/tenant dumps.
 - Drain and event replay require the same ownership/authorize boundary as other routes; replay never invokes providers or tools. Durable event routes exist only on object `PrismAgentExposure` entries with both `events` and `resolveRun`; every reconnect authorizes again, resolves public run ID to exact internal session/run IDs, and opens the shared source without `sessionFactory`.
 - SSE uses bounded upstream subscriber queues. Consumer cancellation aborts owned work by default and releases concurrency; set `disconnectAborts: false` only when the host deliberately owns background completion.
-- Source inputs/resource URLs remain host responsibilities and use existing resource/media SSRF policies. Server package does not fetch URLs.
+- Source inputs/resource URLs remain host responsibilities and use existing resource/media SSRF policies. Apart from explicitly configured `WebhookNotifier` targets, server package features do not fetch URLs.
 - Schedule routes never accept ownership from JSON. Services carry mandatory ownership and explicit workflow/calculator registries; route authorization cannot broaden either. Replay applies workflow ownership/hash/approval checks.
 - Agent status/resume routes exist only for keys in `agentRuns`. Supply one core `createAgentRunLifecycle({ checkpoints, resolveAgent })` capability per selected agent; its resolver returns current `{ agent, definitionRevision }`. It reuses core checkpoint parsing/CAS/fingerprint checks, returns only public state/version, and needs a durable `SessionStore` as well as checkpoints for restart-safe resume. Empty/default configuration adds no agent lifecycle route, polling, or server cache.
 

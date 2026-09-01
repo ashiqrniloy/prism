@@ -1,0 +1,114 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { citation, createWebTools } from "@arnilo/prism-web-tools";
+import { createAppAgent, createPlannerAgent } from "../agent.js";
+import { createClarifyTool, createResearchSearchAdapter, formatResearchFindings } from "../tools.js";
+import { createResearchWorkflow, executeResearch } from "../workflow.js";
+
+describe("deep-research template", () => {
+  it("generates research plans with structured query breakdowns", async () => {
+    const planner = createPlannerAgent();
+    const session = planner.createSession({ id: "test-plan" });
+    const result = await session.run("Prism architecture");
+
+    assert.equal(result.status, "succeeded");
+    assert.ok(result.text.length > 0);
+    const plan = JSON.parse(result.text);
+    assert.ok(Array.isArray(plan.queries));
+    assert.ok(plan.queries.length >= 2);
+    assert.ok(plan.queries[0].query);
+    assert.ok(plan.queries[0].aspect);
+  });
+
+  it("produces attributable citations for search findings", async () => {
+    const customUrl = "https://docs.prism.ai/workflows";
+    const customCitation = citation("brave", customUrl);
+
+    const adapter = createResearchSearchAdapter({
+      searchFn: async (query) => [
+        {
+          ...customCitation,
+          title: `Custom result for ${query}`,
+          snippet: "Deterministic snippet for verification",
+          retrievedAt: "2026-08-31T00:00:00.000Z",
+        },
+      ],
+    });
+
+    const response = await adapter.search("workflows", { count: 1 });
+    assert.equal(response.results.length, 1);
+    const finding = formatResearchFindings("workflows", response.results)[0]!;
+
+    assert.equal(finding.url, customUrl);
+    assert.equal(finding.citationId, customCitation.citationId);
+    assert.ok(finding.citationId.startsWith("web:brave:"));
+    assert.equal(finding.title, "Custom result for workflows");
+  });
+
+  it("clarify tool executes human-in-the-loop decision resolution", async () => {
+    let receivedQuestion = "";
+    let receivedChoices: readonly string[] = [];
+
+    const tool = createClarifyTool({
+      onClarify: async (question, choices) => {
+        receivedQuestion = question;
+        receivedChoices = choices;
+        return choices[1]!; // select second choice
+      },
+    });
+
+    const context = {
+      toolCallId: "call-clarify-1",
+      sessionId: "session-1",
+    };
+
+    const result = await tool.execute(
+      {
+        question: "Which aspect of Prism should we focus on?",
+        choices: ["Orchestration DAGs", "Web Tools & Search", "RAG & Citations"],
+      },
+      context,
+    );
+
+    assert.equal(result.name, "clarify_research_scope");
+    assert.equal(receivedQuestion, "Which aspect of Prism should we focus on?");
+    assert.equal(receivedChoices.length, 3);
+    const val = result.value as { question: string; selectedOption: string };
+    assert.equal(val.selectedOption, "Web Tools & Search");
+  });
+
+  it("executes the full research workflow DAG offline within bounded limits", async () => {
+    const events: string[] = [];
+    const report = await executeResearch("Autonomous Agents", {
+      maxIterations: 2,
+      onEvent: (e) => events.push(e.type),
+    });
+
+    assert.ok(report);
+    assert.equal(report.topic, "Autonomous Agents");
+    assert.ok(report.findings.length >= 2);
+    assert.ok(report.citations.length >= 1);
+    assert.ok(report.summary.includes("Autonomous Agents"));
+
+    // Verify all findings carry valid, attributable citation IDs matching citations list
+    const citationIds = new Set(report.citations.map((c) => c.citationId));
+    for (const finding of report.findings) {
+      assert.ok(finding.citationId, "Finding must have a citation ID");
+      assert.ok(citationIds.has(finding.citationId), `Finding citationId ${finding.citationId} must be in report citations`);
+      assert.ok(finding.url.startsWith("https://"), "Finding must have a valid URL");
+    }
+
+    // Verify workflow lifecycle events
+    assert.ok(events.includes("node_started"));
+    assert.ok(events.includes("node_finished"));
+  });
+
+  it("default createAppAgent boots and exposes search tools", async () => {
+    const appAgent = createAppAgent();
+    const session = appAgent.createSession({ id: "app-test" });
+    const result = await session.run("Hello");
+
+    assert.equal(result.status, "succeeded");
+    assert.match(result.text, /Deep Research Agent ready/);
+  });
+});

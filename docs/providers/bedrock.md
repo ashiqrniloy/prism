@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-bedrock` registers an Amazon Bedrock Runtime OpenAI-compatible Chat Completions provider. Hosts supply IAM/IRSA/assumed-role credentials; the package signs requests with SigV4 (no AWS SDK). Region and optional PrivateLink endpoint URLs are preserved.
+`@arnilo/prism-providers/bedrock` registers an Amazon Bedrock Runtime OpenAI-compatible Chat Completions provider. Hosts supply IAM/IRSA/assumed-role credentials; the package signs requests with SigV4 (no AWS SDK). Region and optional PrivateLink endpoint URLs are preserved.
 
 ## When to use it
 
@@ -11,7 +11,7 @@ Use it for enterprise Bedrock access under workload identity. Do not embed long-
 ## Inputs / request
 
 ```ts
-import { createBedrockProviderPackage } from "@arnilo/prism-provider-bedrock";
+import { createBedrockProviderPackage } from "@arnilo/prism-providers/bedrock";
 
 createBedrockProviderPackage({
   region: "eu-west-1",
@@ -71,4 +71,4 @@ Uses Bedrock’s OpenAI-compatible runtime route (not Converse eventstream). Hos
 - [OpenAI-compatible provider](openai-compatible.md)
 - [Model routing](../model-routing.md)
 - [Provider packages](../provider-packages.md)
-- Package README: [`@arnilo/prism-provider-bedrock`](../../packages/provider-bedrock/README.md)
+- Package README: [`@arnilo/prism-providers` family README](../../packages/prism-providers/README.md)

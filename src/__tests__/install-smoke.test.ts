@@ -13,71 +13,33 @@ import { fileURLToPath } from "node:url";
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
 // ponytail: one config entry per published package; adding a package is one line
-const packages = [
+const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?: boolean; isMeta?: boolean }> = [
   { dir: ".", name: "@arnilo/prism", isCore: true },
-  { dir: "packages/provider-openai", name: "@arnilo/prism-provider-openai" },
-  { dir: "packages/provider-anthropic", name: "@arnilo/prism-provider-anthropic" },
-  { dir: "packages/provider-google", name: "@arnilo/prism-provider-google" },
-  { dir: "packages/provider-opencode-go", name: "@arnilo/prism-provider-opencode-go" },
-  { dir: "packages/provider-openrouter", name: "@arnilo/prism-provider-openrouter" },
-  { dir: "packages/provider-zai", name: "@arnilo/prism-provider-zai" },
-  { dir: "packages/provider-kimi", name: "@arnilo/prism-provider-kimi" },
-  { dir: "packages/provider-neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
-  { dir: "packages/provider-ai-sdk", name: "@arnilo/prism-provider-ai-sdk" },
-  { dir: "packages/provider-alibaba", name: "@arnilo/prism-provider-alibaba" },
-  { dir: "packages/provider-ollama", name: "@arnilo/prism-provider-ollama" },
-  { dir: "packages/provider-azure", name: "@arnilo/prism-provider-azure" },
-  { dir: "packages/provider-bedrock", name: "@arnilo/prism-provider-bedrock" },
-  { dir: "packages/provider-vertex", name: "@arnilo/prism-provider-vertex" },
-  { dir: "packages/provider-deepseek", name: "@arnilo/prism-provider-deepseek" },
-  { dir: "packages/provider-xai", name: "@arnilo/prism-provider-xai" },
-  { dir: "packages/provider-clinepass", name: "@arnilo/prism-provider-clinepass" },
-  { dir: "packages/policy", name: "@arnilo/prism-policy" },
-  { dir: "packages/model-router", name: "@arnilo/prism-model-router" },
-  { dir: "packages/work-tools", name: "@arnilo/prism-work-tools" },
-  { dir: "packages/coding-agent", name: "@arnilo/prism-coding-agent" },
-  { dir: "packages/compaction-llm", name: "@arnilo/prism-compaction-llm" },
-  { dir: "packages/compaction-observational-memory", name: "@arnilo/prism-compaction-observational-memory" },
-  { dir: "packages/prism-caveman", name: "@arnilo/prism-caveman" },
-  { dir: "packages/prism-ponytail", name: "@arnilo/prism-ponytail" },
-  { dir: "packages/prism-impeccable", name: "@arnilo/prism-impeccable" },
-  { dir: "packages/observability-opentelemetry", name: "@arnilo/prism-observability-opentelemetry" },
-  { dir: "packages/tool-validator-json-schema", name: "@arnilo/prism-tool-validator-json-schema" },
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
-  { dir: "packages/session-store-codecs", name: "@arnilo/prism-session-store-codecs" },
-  { dir: "packages/session-store-sqlite", name: "@arnilo/prism-session-store-sqlite" },
-  { dir: "packages/session-store-nats", name: "@arnilo/prism-session-store-nats" },
-  { dir: "packages/session-store-postgres", name: "@arnilo/prism-session-store-postgres" },
-  { dir: "packages/enterprise-postgres", name: "@arnilo/prism-enterprise-postgres" },
-  { dir: "packages/credentials-node", name: "@arnilo/prism-credentials-node" },
-  { dir: "packages/coding-security", name: "@arnilo/prism-coding-security" },
-  { dir: "packages/workflows", name: "@arnilo/prism-workflows" },
-  { dir: "packages/evals", name: "@arnilo/prism-evals" },
-  { dir: "packages/memory", name: "@arnilo/prism-memory" },
-  { dir: "packages/rag", name: "@arnilo/prism-rag" },
-  { dir: "packages/server", name: "@arnilo/prism-server" },
-  { dir: "packages/supervisor", name: "@arnilo/prism-supervisor" },
-  { dir: "packages/web-tools", name: "@arnilo/prism-web-tools" },
-  { dir: "packages/browser", name: "@arnilo/prism-browser" },
+  { dir: "packages/memory", name: "@arnilo/prism-memory", isSubpaths: true },
+  { dir: "packages/web-tools", name: "@arnilo/prism-web-tools", isSubpaths: true },
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
   { dir: "packages/acp-agent", name: "@arnilo/prism-acp-agent" },
+  { dir: "packages/antigravity-agent", name: "@arnilo/prism-antigravity-agent" },
+  { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools", isSubpaths: true },
+  { dir: "packages/prism-core", name: "@arnilo/prism-core", isSubpaths: true },
   // Pure-manifest family/profile packages (no dist/exports): pack + install, but skip dynamic-import.
-  { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isMeta: true },
-  { dir: "packages/prism-compaction", name: "@arnilo/prism-compaction", isMeta: true },
-  { dir: "packages/prism-base", name: "@arnilo/prism-base", isMeta: true },
-  { dir: "packages/prism-code", name: "@arnilo/prism-code", isMeta: true },
-  { dir: "packages/prism-sdk", name: "@arnilo/prism-sdk", isMeta: true },
-  { dir: "packages/prism-all", name: "@arnilo/prism-all", isMeta: true },
+  { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isSubpaths: true },
+  { dir: "packages/office", name: "@arnilo/prism-office", isSubpaths: true },
 ];
 
-// Derive every documented core import specifier from the root `exports` map so
-// the smoke test cannot drift from the public contract.
+// Derive every documented core import specifier from the root `exports` map and
+// prism-core subpaths map so the smoke test cannot drift from the public contract.
 function coreSpecifiers(): string[] {
   const pkg = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"));
   const specs = ["@arnilo/prism"];
   for (const key of Object.keys(pkg.exports)) {
     if (key === ".") continue;
     specs.push(`@arnilo/prism${key.slice(1)}`); // "./node/config" -> "@arnilo/prism/node/config"
+  }
+  const corePkg = JSON.parse(readFileSync(join(repoRoot, "packages/prism-core/package.json"), "utf8"));
+  for (const key of Object.keys(corePkg.exports)) {
+    specs.push(`@arnilo/prism-core${key.slice(1)}`);
   }
   return specs;
 }
@@ -136,12 +98,16 @@ before(() => {
   // 2. Fresh consumer project; install all tarballs together so the required
   //    `prism` peer is satisfied locally with no registry traffic.
   writeFileSync(join(consumer, "package.json"), JSON.stringify({ name: "@arnilo-prism-install-smoke", type: "module" }, null, 2));
-  const installArgs = ["install", ...tarballs, "--offline", "--no-audit", "--no-fund", "--no-update-notifier"];
+  // @ai-sdk/provider is the optional peer of the provider family's /ai-sdk
+  // adapter; the composition leg exercises that adapter, so the host supplies it
+  // (exactly like playwright-core for /browser). It is in the root devDeps, so
+  // the offline install resolves it from the local cache with no registry hit.
+  const installArgs = ["install", ...tarballs, "@ai-sdk/provider@4.0.4", "--offline", "--no-audit", "--no-fund", "--no-update-notifier"];
   let install = run("npm", installArgs, consumer);
   if (install.status !== 0) {
     // Fallback: cold cache or offline-unfriendly environment; no runtime deps
     // means this still makes zero registry fetches.
-    install = run("npm", ["install", ...tarballs, "--no-audit", "--no-fund", "--no-update-notifier"], consumer);
+    install = run("npm", ["install", ...tarballs, "@ai-sdk/provider@4.0.4", "--no-audit", "--no-fund", "--no-update-notifier"], consumer);
   }
   result.installStatus = install.status;
   if (install.status !== 0) {
@@ -152,9 +118,36 @@ before(() => {
   // 3. Dynamic-import every documented specifier from the fresh install.
   const specs = [
     ...coreSpecifiers(),
-    ...packages.filter((p) => !p.isCore && !p.isMeta).map((p) => p.name),
+    ...packages.filter((p) => !p.isCore && !p.isMeta && !p.isSubpaths).map((p) => p.name),
     "@arnilo/prism-ag-ui/acp",
     "@arnilo/prism-ag-ui/renderer",
+    "@arnilo/prism-memory/rag",
+    "@arnilo/prism-memory/compaction/llm",
+    "@arnilo/prism-memory/compaction/observational-memory",
+    "@arnilo/prism-memory/graft",
+    "@arnilo/prism-memory/wiki",
+    "@arnilo/prism-web-tools/browser",
+    "@arnilo/prism-web-tools/obscura",
+    "@arnilo/prism-providers/ai-sdk",
+    "@arnilo/prism-providers/alibaba",
+    "@arnilo/prism-providers/anthropic",
+    "@arnilo/prism-providers/azure",
+    "@arnilo/prism-providers/bedrock",
+    "@arnilo/prism-providers/clinepass",
+    "@arnilo/prism-providers/deepseek",
+    "@arnilo/prism-providers/google",
+    "@arnilo/prism-providers/kimi",
+    "@arnilo/prism-providers/neuralwatt",
+    "@arnilo/prism-providers/ollama",
+    "@arnilo/prism-providers/openai",
+    "@arnilo/prism-providers/opencode-go",
+    "@arnilo/prism-providers/openrouter",
+    "@arnilo/prism-providers/vertex",
+    "@arnilo/prism-providers/xai",
+    "@arnilo/prism-providers/zai",
+    "@arnilo/prism-office/documents",
+    "@arnilo/prism-office/sheets",
+    "@arnilo/prism-office/diagrams",
   ];
   writeFileSync(
     join(consumer, "smoke.mjs"),
@@ -164,7 +157,7 @@ before(() => {
       "  catch (e) { console.error('IMPORT FAILED:', s, e.message); process.exit(1); }\n" +
       "}\n" +
       "const prism = await import('@arnilo/prism');\n" +
-      "const compaction = await import('@arnilo/prism-compaction-llm');\n" +
+      "const compaction = await import('@arnilo/prism-memory/compaction/llm');\n" +
       "if (typeof prism.resumeAgentRunStream !== 'function' || typeof compaction.createCodingCompactionStrategy !== 'function') process.exit(1);\n" +
       "console.log('ALL IMPORTS OK');\n",
   );
@@ -181,10 +174,10 @@ import {
   createAgent, createSecretRedactor, createToolRegistry, dispatchToolCall,
   providerDone, providerTextDelta,
 } from "@arnilo/prism";
-import { createShellTool, createWriteTool } from "@arnilo/prism-coding-agent";
-import { createCodingApprovalPolicy } from "@arnilo/prism-coding-security";
+import { createShellTool, createWriteTool } from "@arnilo/prism-coding-tools/agent";
+import { createCodingApprovalPolicy } from "@arnilo/prism-coding-tools/security";
 import { mapMcpToolsToDefinitions } from "@arnilo/prism-mcp";
-import { createJsonSchemaToolArgumentValidator } from "@arnilo/prism-tool-validator-json-schema";
+import { createJsonSchemaToolArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let active = 0;
@@ -276,17 +269,17 @@ import {
   createAgent, createMemoryCheckpointStore, createMemoryLeaseStore, createMemoryRunFeedbackStore,
   createMockProvider, providerDone, providerTextDelta,
 } from "@arnilo/prism";
-import { createAiSdkProvider } from "@arnilo/prism-provider-ai-sdk";
-import { appendEvaluationFeedback, createMemoryEvaluationStore, defineScorer, scoreRun } from "@arnilo/prism-evals";
+import { createAiSdkProvider } from "@arnilo/prism-providers/ai-sdk";
+import { appendEvaluationFeedback, createMemoryEvaluationStore, defineScorer, scoreRun } from "@arnilo/prism-core/governance/evals";
 import { createHashEmbedder, createMemory, createMemoryVectorStore } from "@arnilo/prism-memory";
-import { chunkMarkdown, indexChunks, retrieveContext } from "@arnilo/prism-rag";
+import { chunkMarkdown, indexChunks, retrieveContext } from "@arnilo/prism-memory/rag";
 import {
   createMemoryWorkflowCheckpoints, createWorkflowCheckpoints, createWorkflowCoordinator, createWorkflowSchedules,
   defineWorkflow, functionNode, replayWorkflow, resumeWorkflow, runWorkflow, suspend,
-} from "@arnilo/prism-workflows";
-import { createPrismHandler } from "@arnilo/prism-server";
+} from "@arnilo/prism-core/runtime/workflows";
+import { createPrismHandler } from "@arnilo/prism-core/runtime/server";
 import { createPrismMcpServer } from "@arnilo/prism-mcp";
-import { createA2AClient, createA2AHandler, createSupervisor } from "@arnilo/prism-supervisor";
+import { createA2AClient, createA2AHandler, createSupervisor } from "@arnilo/prism-core/runtime/supervisor";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 
@@ -378,7 +371,7 @@ const a2a = createA2AClient({ endpoint, allowedOrigins: ["https://packed-agent.t
 assert.equal((await a2a.send("hello")).text, "served");
 
 // FR-6: durable AgentEventSource resolves from the packed package root (no dist/... subpath).
-const { createPostgresAgentEventSource } = await import("@arnilo/prism-session-store-postgres");
+const { createPostgresAgentEventSource } = await import("@arnilo/prism-core/sessions/postgres");
 assert.equal(typeof createPostgresAgentEventSource, "function");
 const postgresSource = createPostgresAgentEventSource({ pool: {}, schema: "prism" });
 assert.equal(typeof postgresSource.append, "function");
@@ -406,8 +399,8 @@ import {
   AgentDecisionError, createAgent, createMemoryCheckpointStore, createMemorySessionStore,
   providerDone, providerTextDelta, resumeAgentRun, toolCallContent,
 } from "@arnilo/prism";
-import { createCodingApprovalPolicy, createSandboxCodingComposition, resolveSandboxCapabilities } from "@arnilo/prism-coding-security";
-import { createCliRunner } from "@arnilo/prism-work-tools";
+import { createCodingApprovalPolicy, createSandboxCodingComposition, resolveSandboxCapabilities } from "@arnilo/prism-coding-tools/security";
+import { createCliRunner } from "@arnilo/prism-core/integrations/work";
 
 // --- phase20 blocker 1: unknown durable-resume decision fails closed, no tool call ---
 const executed = [];
@@ -563,9 +556,9 @@ console.log("PACKED PHASE21 SECURITY OK");
     `
 import assert from "node:assert/strict";
 import { EventMultiplexerError, SessionMetadataConflictError, createEventMultiplexer } from "@arnilo/prism";
-import { createMemoryModelRouterStateStore } from "@arnilo/prism-model-router";
-import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
-import { createNatsAgentEventSource } from "@arnilo/prism-session-store-nats";
+import { createMemoryModelRouterStateStore } from "@arnilo/prism-core/governance/model-router";
+import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createNatsAgentEventSource } from "@arnilo/prism-core/sessions/nats";
 
 // --- phase22 blocker 1 (matrix item 9): parallel admissions cannot exceed the reserved budget ---
 const store = createMemoryModelRouterStateStore();
@@ -585,31 +578,40 @@ await assert.rejects(
 );
 
 // --- phase22 blocker 2 (matrix item 8): conversation metadata CAS admits one writer per version ---
-const persistence = createSqlitePersistence({ filename: ":memory:" });
 const ownership = { tenantId: "packed22", userId: "u1" };
-const record = (id, metadata, updatedAt, expectedVersion) => ({ id, ...ownership, createdAt: "2026-08-13T00:00:00.000Z", updatedAt, metadata, ...(expectedVersion === undefined ? {} : { expectedVersion }) });
-const sessionId = "packed22-conversation";
-const created = await persistence.appendSession(record(sessionId, { state: "active", writer: "create-0" }, "2026-08-13T00:00:00.000Z", 0));
-assert.equal(created.version, 1);
-const duplicates = await Promise.allSettled(Array.from({ length: 4 }, (_, i) => persistence.appendSession(record(sessionId, { state: "active", writer: "dup-" + i }, "2026-08-13T00:00:01.000Z", 0))));
-assert.equal(duplicates.filter((o) => o.status === "fulfilled").length, 0, "duplicate create-only never overwrites");
-assert.equal(duplicates.filter((o) => o.status === "rejected" && o.reason instanceof SessionMetadataConflictError).length, 4);
-const updates = await Promise.allSettled(Array.from({ length: 4 }, (_, i) => persistence.appendSession(record(sessionId, { state: "active", branch: "b" + i }, "2026-08-13T00:01:00.000Z", 1))));
-assert.equal(updates.filter((o) => o.status === "fulfilled").length, 1, "exactly one CAS update wins");
-assert.equal(updates.filter((o) => o.status === "rejected").length, 3, "the rest conflict");
-const conflict = updates.find((o) => o.status === "rejected").reason;
-assert.equal(conflict.code, "metadata_conflict");
-assert.equal(JSON.stringify(conflict.conflict).includes("branch"), false, "conflict carries versions only, never metadata content");
-await persistence.appendSession(record(sessionId, { state: "archived" }, "2026-08-13T00:02:00.000Z", 2));
-await assert.rejects(
-  () => persistence.appendSession(record(sessionId, { state: "active", zombie: true }, "2026-08-13T00:00:00.000Z", 1)),
-  (error) => error instanceof SessionMetadataConflictError,
-  "stale pre-archive writer cannot revive the archive",
-);
-const archived = await persistence.querySessions({ id: sessionId, limit: 1 });
-assert.equal(archived.items[0].metadata.state, "archived", "archived state survives the stale write");
-const foreign = await persistence.appendSession(record(sessionId, { state: "active", foreign: true }, "2026-08-13T00:03:00.000Z", 2)).then(() => null, (error) => error);
-assert.equal(foreign.code, "metadata_conflict", "cross-ownership CAS write fails closed");
+let sqliteAvailable = false;
+let persistence;
+try {
+  persistence = createSqlitePersistence({ filename: ":memory:" });
+  sqliteAvailable = true;
+} catch (error) {
+  assert.ok(error.message.includes("better-sqlite3"), "must fail closed when better-sqlite3 is absent");
+}
+if (sqliteAvailable && persistence) {
+  const record = (id, metadata, updatedAt, expectedVersion) => ({ id, ...ownership, createdAt: "2026-08-13T00:00:00.000Z", updatedAt, metadata, ...(expectedVersion === undefined ? {} : { expectedVersion }) });
+  const sessionId = "packed22-conversation";
+  const created = await persistence.appendSession(record(sessionId, { state: "active", writer: "create-0" }, "2026-08-13T00:00:00.000Z", 0));
+  assert.equal(created.version, 1);
+  const duplicates = await Promise.allSettled(Array.from({ length: 4 }, (_, i) => persistence.appendSession(record(sessionId, { state: "active", writer: "dup-" + i }, "2026-08-13T00:00:01.000Z", 0))));
+  assert.equal(duplicates.filter((o) => o.status === "fulfilled").length, 0, "duplicate create-only never overwrites");
+  assert.equal(duplicates.filter((o) => o.status === "rejected" && o.reason instanceof SessionMetadataConflictError).length, 4);
+  const updates = await Promise.allSettled(Array.from({ length: 4 }, (_, i) => persistence.appendSession(record(sessionId, { state: "active", branch: "b" + i }, "2026-08-13T00:01:00.000Z", 1))));
+  assert.equal(updates.filter((o) => o.status === "fulfilled").length, 1, "exactly one CAS update wins");
+  assert.equal(updates.filter((o) => o.status === "rejected").length, 3, "the rest conflict");
+  const conflict = updates.find((o) => o.status === "rejected").reason;
+  assert.equal(conflict.code, "metadata_conflict");
+  assert.equal(JSON.stringify(conflict.conflict).includes("branch"), false, "conflict carries versions only, never metadata content");
+  await persistence.appendSession(record(sessionId, { state: "archived" }, "2026-08-13T00:02:00.000Z", 2));
+  await assert.rejects(
+    () => persistence.appendSession(record(sessionId, { state: "active", zombie: true }, "2026-08-13T00:00:00.000Z", 1)),
+    (error) => error instanceof SessionMetadataConflictError,
+    "stale pre-archive writer cannot revive the archive",
+  );
+  const archived = await persistence.querySessions({ id: sessionId, limit: 1 });
+  assert.equal(archived.items[0].metadata.state, "archived", "archived state survives the stale write");
+  const foreign = await persistence.appendSession(record(sessionId, { state: "active", foreign: true }, "2026-08-13T00:03:00.000Z", 2)).then(() => null, (error) => error);
+  assert.equal(foreign.code, "metadata_conflict", "cross-ownership CAS write fails closed");
+}
 
 // --- phase22 blocker 3: a second EventMultiplexer subscriber is rejected ---
 const multiplexer = createEventMultiplexer({ maxQueuedEvents: 1024 });
@@ -820,9 +822,9 @@ describe("install smoke (fresh offline tarball install)", () => {
       `expected 'arnilo-prism-${ROOT_VERSION}.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
-    // The 3 umbrella metas must be present too.
-    for (const meta of ["arnilo-prism-providers-0.3.0.tgz", "arnilo-prism-compaction-0.3.0.tgz", "arnilo-prism-all-0.3.0.tgz"]) {
-      assert.ok(result.tarballNames.includes(meta), `missing umbrella tarball ${meta}`);
+    // The umbrella tarballs must be present too.
+    for (const meta of [`arnilo-prism-providers-${ROOT_VERSION}.tgz`, `arnilo-prism-office-${ROOT_VERSION}.tgz`]) {
+      assert.ok(result.tarballNames.includes(meta), `missing family tarball ${meta}`);
     }
   });
 });
@@ -834,17 +836,16 @@ describe("peer-version policy (plan 030 Task 9, Decision B: caret ranges)", () =
   const stage = mkdtempSync(join(tmpdir(), "prism-peer-mix-"));
   after(() => rmSync(stage, { recursive: true, force: true }));
 
-  it("a peer range outside the 0.3.x window fails clearly with npm ERESOLVE", () => {
-    // Fake next-major adapter: real coding-agent source with version + core
-    // peer bumped outside the current caret window — the only difference from
-    // the real tarball.
-    const fakeVersion = "0.4.0";
+  it("a peer range outside the 0.4.x window fails clearly with npm ERESOLVE", () => {
+    // Fake next-minor adapter: coding-tools with version + core peer outside
+    // the current caret window — the only difference from the real tarball.
+    const fakeVersion = "0.5.0";
     const fakeDir = join(stage, "fake");
-    cpSync(join(repoRoot, "packages", "coding-agent"), fakeDir, { recursive: true });
+    cpSync(join(repoRoot, "packages", "prism-coding-tools"), fakeDir, { recursive: true });
     const manifestPath = join(fakeDir, "package.json");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     manifest.version = fakeVersion;
-    manifest.peerDependencies["@arnilo/prism"] = "^0.4.0";
+    manifest.peerDependencies["@arnilo/prism"] = "^0.5.0";
     writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     for (const [cwd, dest] of [
       [fakeDir, stage],
@@ -870,7 +871,7 @@ describe("peer-version policy (plan 030 Task 9, Decision B: caret ranges)", () =
       "npm",
       [
         "install",
-        join(stage, `arnilo-prism-coding-agent-${fakeVersion}.tgz`),
+        join(stage, `arnilo-prism-coding-tools-${fakeVersion}.tgz`),
         "--offline",
         "--no-audit",
         "--no-fund",
@@ -881,8 +882,8 @@ describe("peer-version policy (plan 030 Task 9, Decision B: caret ranges)", () =
     assert.notEqual(mix.status, 0, "an unsupported peer mixture must fail the install");
     assert.ok(mix.stderr.includes("ERESOLVE"), `expected npm ERESOLVE, got:\n${mix.stdout}${mix.stderr}`);
     assert.ok(
-      mix.stderr.includes('@arnilo/prism@"^0.4.0"'),
-      `expected the conflicting ^0.4.0 peer named, got:\n${mix.stdout}${mix.stderr}`,
+      mix.stderr.includes('@arnilo/prism@"^0.5.0"'),
+      `expected the conflicting ^0.5.0 peer named, got:\n${mix.stdout}${mix.stderr}`,
     );
   });
 });
@@ -896,7 +897,6 @@ describe("packed truth conformance (plan 024 Task 5)", () => {
   const truth = JSON.parse(readFileSync(join(repoRoot, "scripts", "package-truth.json"), "utf8")) as {
     umbrella: {
       "prism-providers": { deps: string[] };
-      "prism-all": { deps: string[]; closure: number };
     };
     profiles: Record<string, string[]>;
   };
@@ -913,28 +913,21 @@ describe("packed truth conformance (plan 024 Task 5)", () => {
     skipIfInstallFailed(t);
     const installed = installedManifest("prism-providers");
     const expected = [...truth.umbrella["prism-providers"].deps].sort();
-    const actual = Object.keys(installed.dependencies).sort();
+    const actual = Object.keys(installed.dependencies ?? {}).sort();
     assert.deepEqual(actual, expected, "prism-providers tarball must depend on exactly the generated provider family");
     assert.equal(actual.length, expected.length, "family size must match generated prism-providers deps");
   });
 
-  it("the installed prism-all tarball deps and closure match the generated artifact", (t) => {
+  it("the installed office tarball exports documents/sheets/diagrams subpaths", (t) => {
     skipIfInstallFailed(t);
-    const installed = installedManifest("prism-all");
-    assert.deepEqual(
-      Object.keys(installed.dependencies).sort(),
-      [...truth.umbrella["prism-all"].deps].sort(),
-      "prism-all tarball must depend on exactly the generated 20 packages",
-    );
-    assert.ok(existsSync(join(consumer, "node_modules", "@arnilo", "prism-provider-azure")), "Azure must be installed via prism-all");
-    const closure = truth.profiles["prism-all"];
-    assert.equal(closure.length, truth.umbrella["prism-all"].closure, "generated closure must match the artifact");
-    for (const name of closure) {
-      assert.ok(
-        existsSync(join(consumer, "node_modules", "@arnilo", name.replace("@arnilo/", ""))),
-        `closure member ${name} must be installed`,
-      );
+    const officeRoot = join(consumer, "node_modules", "@arnilo", "prism-office");
+    for (const sub of ["documents", "sheets", "diagrams"]) {
+      assert.ok(existsSync(join(officeRoot, "dist", sub, "index.js")), `office tarball missing ${sub} subpath`);
     }
+    assert.ok(
+      existsSync(join(consumer, "node_modules", "@arnilo", "prism-providers", "dist", "azure", "index.js")),
+      "Azure adapter must ship inside the prism-providers family",
+    );
   });
 
   it("packed current-line: the installed root version equals the docs current-line version", (t) => {

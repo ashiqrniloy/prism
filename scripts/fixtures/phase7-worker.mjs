@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Pool } from "pg";
-import { createPostgresEnterpriseState } from "../../packages/enterprise-postgres/dist/index.js";
-import { createPostgresPersistence } from "../../packages/session-store-postgres/dist/index.js";
+import { createPostgresEnterpriseState } from "../../packages/prism-core/dist/enterprise/postgres/index.js";
+import { createPostgresPersistence } from "../../packages/prism-core/dist/sessions/postgres/index.js";
 
 const command = process.argv[2];
 const encoded = process.env.PRISM_PHASE7_WORKER_INPUT;

@@ -3,7 +3,7 @@
 // reports). Runs in the npm test gate segment after sweep-unused.test.mjs.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
@@ -37,9 +37,19 @@ test("timing quarantine: the racy elapsed assert is gone; kept guards carry name
   assert.ok(!bridge.includes("Date.now() - started"), "the bridge timeout test must not measure wall-clock deltas");
   assert.ok(!bridge.includes("hung MCP call exceeded timeout bound"), "the old 150ms elapsed bound is replaced by a test-level timeout");
   for (const [file, needle] of [
-    ["packages/coding-agent/src/__tests__/repository.test.ts", "ponytail: wall-clock anti-block guard"],
-    ["packages/coding-security/src/__tests__/native-sandbox.test.ts", "ponytail: wall-clock promptness guard"],
-    ["packages/credentials-node/src/__tests__/credentials-node.test.ts", "ponytail: anti-hang guard"],
+    [
+      existsSync(join(ROOT, "packages/coding-agent/src/__tests__/repository.test.ts"))
+        ? "packages/coding-agent/src/__tests__/repository.test.ts"
+        : "packages/prism-coding-tools/src/agent/__tests__/repository.test.ts",
+      "ponytail: wall-clock anti-block guard",
+    ],
+    [
+      existsSync(join(ROOT, "packages/coding-security/src/__tests__/native-sandbox.test.ts"))
+        ? "packages/coding-security/src/__tests__/native-sandbox.test.ts"
+        : "packages/prism-coding-tools/src/security/__tests__/native-sandbox.test.ts",
+      "ponytail: wall-clock promptness guard",
+    ],
+    ["packages/prism-core/src/credentials/node/__tests__/credentials-node.test.ts", "ponytail: anti-hang guard"],
   ]) {
     const src = readFileSync(join(ROOT, file), "utf8");
     assert.ok(src.includes(needle), `${file} must document its kept timing ceiling`);
@@ -67,7 +77,7 @@ test("machine-readable reports: unused-report.json is well-formed and both repor
   const result = run(process.execPath, ["scripts/sweep-unused.mjs", "--json"]);
   assert.equal(result.status, 0);
   const json = JSON.parse(readFileSync(join(ROOT, "scripts", "unused-report.json"), "utf8"));
-  assert.ok(Array.isArray(json.configs) && json.configs.length >= 40, "per-tsconfig rows must cover the core plus every workspace");
+  assert.ok(Array.isArray(json.configs) && json.configs.length >= 10, "per-tsconfig rows must cover the core plus every workspace");
   assert.equal(typeof json.totalErrors, "number");
   const workflow = readFileSync(join(ROOT, ".github", "workflows", "release.yml"), "utf8");
   assert.ok(workflow.includes("lint-report.sarif") && workflow.includes("unused-report.json"), "release CI must retain both reports");

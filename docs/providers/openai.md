@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-openai` provides explicit, side-effect-free setup for the OpenAI
+`@arnilo/prism-providers/openai` provides explicit, side-effect-free setup for the OpenAI
 Responses API (`createOpenAIResponsesProvider`) and OpenAI Codex
 subscription Responses (`createOpenAICodexProvider`), plus a Codex OAuth provider
 implementing RFC 7636 PKCE browser/device-code login.
@@ -24,7 +24,7 @@ credential discovery, or real-network tests.
 ## Inputs / request
 
 ```ts
-import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
+import { createOpenAIProviderPackage } from "@arnilo/prism-providers/openai";
 
 createOpenAIProviderPackage(options: OpenAIProviderPackageOptions): ProviderPackage
 ```
@@ -81,7 +81,7 @@ Responses request body (Codex subscription shape, abbreviated):
 Realtime session (OpenAI session creation, abbreviated):
 
 ```ts
-import { createOpenAIRealtimeSession } from "@arnilo/prism-provider-openai";
+import { createOpenAIRealtimeSession } from "@arnilo/prism-providers/openai";
 
 const session = createOpenAIRealtimeSession({
   model: { provider: "openai", model: "gpt-realtime-2.1" },
@@ -103,7 +103,7 @@ https://auth.openai.com/authorize?response_type=code&client_id=...&code_challeng
 
 ```ts
 import { createExtensionKernel, createEnvCredentialResolver } from "@arnilo/prism";
-import { createOpenAIProviderPackage, listOpenAIModels } from "@arnilo/prism-provider-openai";
+import { createOpenAIProviderPackage, listOpenAIModels } from "@arnilo/prism-providers/openai";
 
 const apiKey = createEnvCredentialResolver({ OPENAI_API_KEY: "fake" }, { openai: "OPENAI_API_KEY" });
 const models = await listOpenAIModels({ apiKey }); // caller-gated; never runs during setup
@@ -116,7 +116,7 @@ await kernel.load([
 OAuth login (caller-supplied callbacks, mocked in tests):
 
 ```ts
-import { createOpenAICodexOAuthProvider, createPkceVerifier, computeS256Challenge } from "@arnilo/prism-provider-openai";
+import { createOpenAICodexOAuthProvider, createPkceVerifier, computeS256Challenge } from "@arnilo/prism-providers/openai";
 
 const oauth = createOpenAICodexOAuthProvider({
   redirectUri: "http://localhost:1455/auth/callback",

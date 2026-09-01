@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-opencode-go` provides explicit, side-effect-free setup for
+`@arnilo/prism-providers/opencode-go` provides explicit, side-effect-free setup for
 [OpenCode Go](https://opencode.ai/docs/go/) — a low-cost subscription gateway for
 open coding models. The package dual-routes by `ModelConfig.compat.route`:
 
@@ -36,7 +36,7 @@ real-network tests.
 import {
   createOpenCodeGoProviderPackage,
   listOpenCodeGoModels,
-} from "@arnilo/prism-provider-opencode-go";
+} from "@arnilo/prism-providers/opencode-go";
 
 createOpenCodeGoProviderPackage(options: OpenCodeGoProviderPackageOptions): ProviderPackage
 ```
@@ -106,7 +106,7 @@ import {
   createOpenCodeGoProviderPackage,
   listOpenCodeGoModels,
   openCodeGoModels,
-} from "@arnilo/prism-provider-opencode-go";
+} from "@arnilo/prism-providers/opencode-go";
 
 const kernel = createExtensionKernel();
 await kernel.load([createOpenCodeGoProviderPackage({ apiKey: process.env.OPENCODE_API_KEY })]);
@@ -154,7 +154,7 @@ credential-gated probe:
 
 ```sh
 PRISM_LIVE_PROVIDER_TESTS=1 OPENCODE_API_KEY=... \
-  npm run test --workspace=@arnilo/prism-provider-opencode-go
+  npm run test --workspace=@arnilo/prism-providers/opencode-go
 ```
 
 `live_json_schema_structured_output_succeeds_<model>` must pass for a model

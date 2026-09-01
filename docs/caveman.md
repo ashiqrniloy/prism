@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-caveman` is an optional package that wires [juliusbrussee/caveman](https://github.com/juliusbrussee/caveman) into Prism contribution contracts.
+`@arnilo/prism-coding-tools/caveman` is an optional package that wires [juliusbrussee/caveman](https://github.com/juliusbrussee/caveman) into Prism contribution contracts.
 
 It registers upstream skills and commands, injects active level prompt slices via `InstructionInjector`, and persists level as session custom `caveman-level` entries. Import and extension `setup` without a resolvable upstream path fail closed with a bounded redacted error and register zero contributions.
 
@@ -66,7 +66,7 @@ Deactivation phrases `stop caveman` and `normal mode` clear active injection wit
 ## Implementation example
 
 ```ts
-import { createCavemanExtension } from "@arnilo/prism-caveman";
+import { createCavemanExtension } from "@arnilo/prism-coding-tools/caveman";
 import {
   createExtensionKernel,
   createLoadSkillTool,

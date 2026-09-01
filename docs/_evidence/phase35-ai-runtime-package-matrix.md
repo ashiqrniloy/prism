@@ -1,6 +1,6 @@
 # Phase 35 — AI runtime package coverage and multi-agent baselines
 
-Network-free audit of every first-party manifest (root + 60 workspaces = 61). Mock providers and in-process stores only; no credentials, live endpoints, prompt bodies, or secrets.
+Network-free audit of every first-party manifest (root + 63 workspaces = 64). Mock providers and in-process stores only; no credentials, live endpoints, prompt bodies, or secrets.
 
 **Class:** `hot-path` (on every model call) · `optional-in-run` (selected into a run) · `persistence-coordination` (durable/state seams) · `setup-only` (umbrellas / DX, not on the call path).
 
@@ -8,7 +8,7 @@ Network-free audit of every first-party manifest (root + 60 workspaces = 61). Mo
 
 **Effects** (latency / concurrency / memory / I/O / artifact): `none` · `low` · `medium` · `high`.
 
-## Manifest inventory (61)
+## Manifest inventory (64)
 
 | Manifest | Workspace | Class | Path | Latency | Concurrency | Memory | I/O | Artifact |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -25,6 +25,9 @@ Network-free audit of every first-party manifest (root + 60 workspaces = 61). Mo
 | @arnilo/prism-computer-use-linux | `packages/computer-use-linux` | optional-in-run | tool-execution | medium | low | medium | medium | low |
 | @arnilo/prism-credentials-node | `packages/credentials-node` | persistence-coordination | storage | low | low | low | medium | low |
 | @arnilo/prism-document-reader | `packages/document-reader` | optional-in-run | tool-execution | medium | low | high | medium | low |
+| @arnilo/prism-documents | `packages/documents` | optional-in-run | tool-execution | medium | low | medium | low | medium |
+| @arnilo/prism-sheets | `packages/sheets` | optional-in-run | tool-execution | medium | low | medium | low | medium |
+| @arnilo/prism-diagrams | `packages/diagrams` | optional-in-run | tool-execution | medium | low | medium | low | medium |
 | @arnilo/prism-enterprise-postgres | `packages/enterprise-postgres` | persistence-coordination | storage | medium | high | medium | high | low |
 | @arnilo/prism-evals | `packages/evals` | optional-in-run | model-call | high | medium | medium | low | low |
 | @arnilo/prism-mcp | `packages/mcp` | optional-in-run | tool-execution | medium | medium | medium | medium | low |
@@ -32,6 +35,7 @@ Network-free audit of every first-party manifest (root + 60 workspaces = 61). Mo
 | @arnilo/prism-model-router | `packages/model-router` | optional-in-run | model-call | medium | high | low | low | low |
 | @arnilo/prism-observability-opentelemetry | `packages/observability-opentelemetry` | optional-in-run | telemetry | low | low | low | medium | low |
 | @arnilo/prism-policy | `packages/policy` | persistence-coordination | coordination | low | medium | medium | medium | low |
+| @arnilo/prism-prompts | `packages/prompts` | persistence-coordination | storage | medium | medium | medium | high | low |
 | @arnilo/prism-all | `packages/prism-all` | setup-only | setup-only | none | none | none | none | medium |
 | @arnilo/prism-base | `packages/prism-base` | setup-only | setup-only | none | none | none | none | medium |
 | @arnilo/prism-caveman | `packages/prism-caveman` | setup-only | setup-only | none | none | none | none | medium |
@@ -74,7 +78,7 @@ Network-free audit of every first-party manifest (root + 60 workspaces = 61). Mo
 | @arnilo/prism-work-tools | `packages/work-tools` | optional-in-run | tool-execution | high | low | low | high | low |
 | @arnilo/prism-workflows | `packages/workflows` | optional-in-run | coordination | medium | high | medium | low | low |
 
-Counts: 1 hot-path, 40 optional-in-run, 7 persistence-coordination, 11 setup-only.
+Counts: 1 hot-path, 43 optional-in-run, 8 persistence-coordination, 12 setup-only.
 
 ## Multi-agent baseline
 

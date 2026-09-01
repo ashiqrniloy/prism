@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-deepseek` provides explicit, side-effect-free setup for the
+`@arnilo/prism-providers/deepseek` provides explicit, side-effect-free setup for the
 DeepSeek Chat Completions API (`POST /chat/completions`) with official thinking
 mode, reasoning-effort mapping, tool-turn `reasoning_content` replay, and
 implicit prefix caching.
@@ -26,7 +26,7 @@ import {
   createDeepSeekProviderPackage,
   defineDeepSeekModel,
   listDeepSeekModels,
-} from "@arnilo/prism-provider-deepseek";
+} from "@arnilo/prism-providers/deepseek";
 
 createDeepSeekProviderPackage(options: DeepSeekProviderPackageOptions): ProviderPackage
 defineDeepSeekModel(config: DeepSeekModelConfig): ModelConfig
@@ -84,7 +84,7 @@ Unsupported media blocks fail before fetch. Text-only input.
 
 ```ts
 import { createExtensionKernel } from "@arnilo/prism";
-import { createDeepSeekProviderPackage, listDeepSeekModels } from "@arnilo/prism-provider-deepseek";
+import { createDeepSeekProviderPackage, listDeepSeekModels } from "@arnilo/prism-providers/deepseek";
 
 const kernel = createExtensionKernel();
 await kernel.load([createDeepSeekProviderPackage({ apiKey: "fake-deepseek-key" })]);

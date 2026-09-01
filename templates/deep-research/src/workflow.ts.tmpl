@@ -1,0 +1,156 @@
+import { createSecretRedactor } from "@arnilo/prism";
+import {
+  createMemoryWorkflowCheckpoints,
+  defineWorkflow,
+  functionNode,
+  runWorkflow,
+  type WorkflowDefinition,
+  type WorkflowEvent,
+} from "@arnilo/prism-workflows";
+import { createPlannerAgent, createSynthesizerAgent } from "./agent.js";
+import { createResearchSearchAdapter, formatResearchFindings } from "./tools.js";
+import type { ResearchCitation, ResearchFinding, ResearchPlan, ResearchReport } from "./types.js";
+
+export interface ResearchWorkflowOptions {
+  readonly maxIterations?: number;
+  readonly searchAdapter?: import("@arnilo/prism-web-tools").WebSearchAdapter;
+  readonly onEvent?: (event: WorkflowEvent) => void;
+  readonly onClarify?: (question: string, choices: readonly string[]) => Promise<string>;
+}
+
+/**
+ * Builds the deep research workflow DAG.
+ */
+export function createResearchWorkflow(options?: ResearchWorkflowOptions): WorkflowDefinition {
+  const maxIterations = options?.maxIterations ?? 2;
+  const searchAdapter = options?.searchAdapter ?? createResearchSearchAdapter();
+
+  const plan = functionNode({
+    execute: async (ctx) => {
+      const input = (ctx.workflowInput as { topic: string }) ?? { topic: "General Research" };
+      // Planning step: create initial structured plan
+      const planResult: ResearchPlan = {
+        topic: input.topic,
+        queries: [
+          { query: `${input.topic} overview and core architecture`, rationale: "Foundational concepts", aspect: "architecture" },
+          { query: `${input.topic} performance and security considerations`, rationale: "Production considerations", aspect: "security" },
+        ],
+      };
+      return planResult;
+    },
+  });
+
+  const search = functionNode({
+    execute: async (ctx) => {
+      const currentPlan = ctx.upstream.plan as ResearchPlan;
+      const findings: ResearchFinding[] = [];
+
+      for (const query of currentPlan.queries) {
+        const response = await searchAdapter.search(query.query, { count: 2, signal: ctx.signal });
+        const normalized = formatResearchFindings(query.query, response.results);
+        findings.push(...normalized);
+      }
+
+      return { findings };
+    },
+  });
+
+  const refine = functionNode({
+    execute: async (ctx) => {
+      const searchOutput = ctx.upstream.search as { findings: readonly ResearchFinding[] };
+      const currentFindings = [...searchOutput.findings];
+      let iterations = 1;
+
+      // Bounded refine loop: verify aspect coverage and execute additional queries if bounded budget allows
+      if (iterations < maxIterations && currentFindings.length < 4) {
+        iterations += 1;
+        const refineQuery = `${(ctx.upstream.plan as ResearchPlan).topic} best practices`;
+        const extra = await searchAdapter.search(refineQuery, { count: 1, signal: ctx.signal });
+        currentFindings.push(...formatResearchFindings(refineQuery, extra.results));
+      }
+
+      return { findings: currentFindings, iterations };
+    },
+  });
+
+  const synthesize = functionNode({
+    execute: async (ctx) => {
+      const planOutput = ctx.upstream.plan as ResearchPlan;
+      const refineOutput = ctx.upstream.refine as { findings: readonly ResearchFinding[]; iterations: number };
+      const findings = refineOutput.findings;
+
+      // Collect attributable citations
+      const citationsMap = new Map<string, ResearchCitation>();
+      for (const f of findings) {
+        if (!citationsMap.has(f.citationId)) {
+          citationsMap.set(f.citationId, {
+            citationId: f.citationId,
+            url: f.url,
+            title: f.title,
+          });
+        }
+      }
+
+      const citations = Array.from(citationsMap.values());
+      const summary = `Research completed on topic "${planOutput.topic}". Synthesized ${findings.length} findings across ${citations.length} verified sources.`;
+
+      const report: ResearchReport = {
+        topic: planOutput.topic,
+        summary,
+        findings,
+        citations,
+        iterations: refineOutput.iterations,
+        completedAt: new Date().toISOString(),
+      };
+
+      return report;
+    },
+  });
+
+  return defineWorkflow({
+    id: "deep-research-workflow",
+    revision: "1",
+    nodes: { plan, search, refine, synthesize },
+    edges: [
+      ["plan", "search"],
+      ["search", "refine"],
+      ["refine", "synthesize"],
+    ],
+    limits: {
+      maxConcurrency: 2,
+      maxFanOut: 4,
+      maxNodes: 16,
+      maxStateBytes: 65_536,
+    },
+  });
+}
+
+/**
+ * Execute the deep research workflow on a specified topic.
+ */
+export async function executeResearch(
+  topic: string,
+  options?: ResearchWorkflowOptions,
+): Promise<ResearchReport> {
+  const workflow = createResearchWorkflow(options);
+  const redactor = createSecretRedactor([]);
+  const checkpoints = createMemoryWorkflowCheckpoints({ redactor });
+
+  const result = await runWorkflow(
+    workflow,
+    { topic },
+    {
+      checkpoints,
+      redactor,
+      ownership: { tenantId: "research-session" },
+      signal: AbortSignal.timeout(60_000),
+      onEvent: options?.onEvent,
+    },
+  );
+
+  if (result.status !== "completed") {
+    throw new Error(`Research workflow did not complete successfully. Status: ${result.status}`);
+  }
+
+  return result.outputs.synthesize as ResearchReport;
+}

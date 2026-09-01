@@ -16,7 +16,7 @@
  * it.
  */
 import { type AgentContext, type CreateTerminalRequest, methods } from "@agentclientprotocol/sdk";
-import { DEFAULT_MAX_PROCESS_OUTPUT_CHUNK_BYTES, HARD_MAX_PROCESS_OUTPUT_CHUNK_BYTES } from "@arnilo/prism-coding-agent";
+import { DEFAULT_MAX_PROCESS_OUTPUT_CHUNK_BYTES, HARD_MAX_PROCESS_OUTPUT_CHUNK_BYTES } from "@arnilo/prism-coding-tools/agent";
 import { AcpError } from "./errors.js";
 
 export interface AcpClientTerminal {

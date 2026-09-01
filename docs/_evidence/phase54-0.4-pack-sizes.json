@@ -1,0 +1,90 @@
+[
+  {
+    "name": "@arnilo/prism",
+    "version": "0.4.0",
+    "filename": "arnilo-prism-0.4.0.tgz",
+    "packedBytes": 1015437,
+    "unpackedBytes": 3430339,
+    "fileCount": 407
+  },
+  {
+    "name": "@arnilo/prism-acp-agent",
+    "version": "0.4.0",
+    "filename": "arnilo-prism-acp-agent-0.4.0.tgz",
+    "packedBytes": 7845,
+    "unpackedBytes": 24314,
+    "fileCount": 10
+  },
+  {
+    "name": "@arnilo/prism-ag-ui",
+    "version": "0.4.0",
+    "filename": "arnilo-prism-ag-ui-0.4.0.tgz",
+    "packedBytes": 100483,
+    "unpackedBytes": 421256,
+    "fileCount": 86
+  },
+  {
+    "name": "@arnilo/prism-antigravity-agent",
+    "version": "0.4.0",
+    "filename": "arnilo-prism-antigravity-agent-0.4.0.tgz",
+    "packedBytes": 26996,
+    "unpackedBytes": 124819,
+    "fileCount": 38
+  },
+  {
+    "name": "@arnilo/prism-mcp",
+    "version": "0.4.0",
+    "filename": "arnilo-prism-mcp-0.4.0.tgz",
+    "packedBytes": 36611,
+    "unpackedBytes": 153487,
+    "fileCount": 30
+  },
+  {
+    "name": "@arnilo/prism-memory",
+    "version": "0.4.0",
+    "filename": "arnilo-prism-memory-0.4.0.tgz",
+    "packedBytes": 145697,
+    "unpackedBytes": 586889,
+    "fileCount": 214
+  },
+  {
+    "name": "@arnilo/prism-office",
+    "version": "0.4.0",
+    "filename": "arnilo-prism-office-0.4.0.tgz",
+    "packedBytes": 50096,
+    "unpackedBytes": 222017,
+    "fileCount": 72
+  },
+  {
+    "name": "@arnilo/prism-coding-tools",
+    "version": "0.4.0",
+    "filename": "arnilo-prism-coding-tools-0.4.0.tgz",
+    "packedBytes": 269387,
+    "unpackedBytes": 1170008,
+    "fileCount": 245
+  },
+  {
+    "name": "@arnilo/prism-core",
+    "version": "0.4.0",
+    "filename": "arnilo-prism-core-0.4.0.tgz",
+    "packedBytes": 351155,
+    "unpackedBytes": 1718582,
+    "fileCount": 388
+  },
+  {
+    "name": "@arnilo/prism-providers",
+    "version": "0.4.0",
+    "filename": "arnilo-prism-providers-0.4.0.tgz",
+    "packedBytes": 93637,
+    "unpackedBytes": 464259,
+    "fileCount": 174
+  },
+  {
+    "name": "@arnilo/prism-web-tools",
+    "version": "0.4.0",
+    "filename": "arnilo-prism-web-tools-0.4.0.tgz",
+    "packedBytes": 66437,
+    "unpackedBytes": 284706,
+    "fileCount": 80
+  }
+]

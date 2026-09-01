@@ -55,5 +55,9 @@ Active numbered execution plans for Prism roadmap phases.
 | [048-Hierarchical-Crew-Recipe.md](048-Hierarchical-Crew-Recipe.md) | 0.3.x — recipe: hierarchical "crew" with manager agent | planned |
 | [049-Template-Gallery-Deep-Research.md](049-Template-Gallery-Deep-Research.md) | 0.3.x — template gallery: `prism init --template` (Deep Research first) | planned |
 | [050-Release-0-3-2-Clay-Integration-Findings-And-OKF-Wiki.md](050-Release-0-3-2-Clay-Integration-Findings-And-OKF-Wiki.md) | 0.3.x — release 0.3.2: Clay integration findings intake + OKF v0.2 wiki format + changed-package npm publish | in progress |
+| [051-Prism-Documents-Package.md](051-Prism-Documents-Package.md) | 0.3.x — `@arnilo/prism-office` `/documents`: Prism Document Model, generate/parse/patch, preview (request P1–P6) | planned |
+| [052-Prism-Sheets-Package.md](052-Prism-Sheets-Package.md) | 0.3.x — `@arnilo/prism-office` `/sheets`: XLSX/CSV parse with decimal-safe typed schema inference (request P7–P9) | planned |
+| [053-Prism-Diagrams-Package.md](053-Prism-Diagrams-Package.md) | 0.3.x — `@arnilo/prism-office` `/diagrams`: draw.io embed client + mxGraph XML validation (request P10–P12) | planned |
+| [054-Package-Consolidation-Proposal.md](054-Package-Consolidation-Proposal.md) | 0.4.0 — decided package reorganization: 62 current + office → 11 active families (subpaths; profiles removed) | planned |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

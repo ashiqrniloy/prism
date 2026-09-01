@@ -115,7 +115,7 @@ test("security workflows pin actions, isolate live secrets, and gate publication
   const release = workflows[0]!;
   const security = workflows[1]!;
   const live = workflows[2]!;
-  assert.match(release, /needs: \[verify, node20-compat, postgres-integration, codeql-release, supply-chain\]/);
+  assert.match(release, /needs: \[verify, node20-compat, postgres-integration, office-validation, codeql-release, supply-chain\]/);
   assert.match(release, /attestations:\s*write/);
   assert.match(release, /subject-path: release-artifacts\/\*\.tgz/);
   assert.match(release, /134217728/);

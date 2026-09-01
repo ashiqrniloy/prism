@@ -78,7 +78,7 @@
     {
       "task": "task2",
       "owner": "ObservationalMemorySettingsInput",
-      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "file": "packages/memory/src/compaction/observational-memory/settings.ts",
       "line": 99,
       "symbol": "observeAfterTokens",
       "replacement": "observation.messageTokens"
@@ -86,7 +86,7 @@
     {
       "task": "task2",
       "owner": "ObservationalMemorySettingsInput",
-      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "file": "packages/memory/src/compaction/observational-memory/settings.ts",
       "line": 100,
       "symbol": "reflectAfterTokens",
       "replacement": "reflection.observationTokens"
@@ -94,7 +94,7 @@
     {
       "task": "task2",
       "owner": "ObservationalMemorySettingsInput",
-      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "file": "packages/memory/src/compaction/observational-memory/settings.ts",
       "line": 101,
       "symbol": "compactAfterTokens",
       "replacement": "context.compactAfterTokens"
@@ -102,7 +102,7 @@
     {
       "task": "task2",
       "owner": "ObservationalMemorySettingsInput",
-      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "file": "packages/memory/src/compaction/observational-memory/settings.ts",
       "line": 102,
       "symbol": "keepRecentEntries",
       "replacement": "context.recentMessages"
@@ -110,7 +110,7 @@
     {
       "task": "task2",
       "owner": "ObservationalMemorySettingsInput",
-      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "file": "packages/memory/src/compaction/observational-memory/settings.ts",
       "line": 103,
       "symbol": "recentMessageMaxTokens",
       "replacement": "context.recentMessageMaxTokens"
@@ -118,7 +118,7 @@
     {
       "task": "task2",
       "owner": "ObservationalMemorySettingsInput",
-      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "file": "packages/memory/src/compaction/observational-memory/settings.ts",
       "line": 104,
       "symbol": "observationsPoolMaxTokens",
       "replacement": "context.observationsPoolMaxTokens"
@@ -126,7 +126,7 @@
     {
       "task": "task2",
       "owner": "ObservationalMemorySettingsInput",
-      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "file": "packages/memory/src/compaction/observational-memory/settings.ts",
       "line": 105,
       "symbol": "observationsPoolTargetTokens",
       "replacement": "context.observationsPoolTargetTokens"
@@ -134,7 +134,7 @@
     {
       "task": "task2",
       "owner": "ObservationalMemorySettingsInput",
-      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "file": "packages/memory/src/compaction/observational-memory/settings.ts",
       "line": 106,
       "symbol": "workerModel",
       "replacement": "observation.model / reflection.model / dropper.model"
@@ -142,7 +142,7 @@
     {
       "task": "task2",
       "owner": "ObservationalMemorySettingsInput",
-      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "file": "packages/memory/src/compaction/observational-memory/settings.ts",
       "line": 107,
       "symbol": "thinkingLevel",
       "replacement": "observation.thinkingLevel / reflection.thinkingLevel / dropper.thinkingLevel"
@@ -150,7 +150,7 @@
     {
       "task": "task2",
       "owner": "ObservationalMemorySettingsInput",
-      "file": "packages/compaction-observational-memory/src/settings.ts",
+      "file": "packages/memory/src/compaction/observational-memory/settings.ts",
       "line": 108,
       "symbol": "requireExplicitModel",
       "replacement": "observation.requireExplicitModel / reflection.requireExplicitModel / dropper.requireExplicitModel"
@@ -158,7 +158,7 @@
     {
       "task": "task2",
       "owner": "CreateObservationalMemoryOptions",
-      "file": "packages/compaction-observational-memory/src/compose.ts",
+      "file": "packages/memory/src/compaction/observational-memory/compose.ts",
       "line": 67,
       "symbol": "workerProvider",
       "replacement": "observation.provider / reflection.provider / dropper.provider"
@@ -166,7 +166,7 @@
     {
       "task": "task2",
       "owner": "CreateObservationalMemoryOptions",
-      "file": "packages/compaction-observational-memory/src/compose.ts",
+      "file": "packages/memory/src/compaction/observational-memory/compose.ts",
       "line": 69,
       "symbol": "workerModel",
       "replacement": "observation.model / reflection.model / dropper.model"
@@ -174,7 +174,7 @@
     {
       "task": "task2",
       "owner": "ObservationalMemoryRuntimeOptions",
-      "file": "packages/compaction-observational-memory/src/runtime.ts",
+      "file": "packages/memory/src/compaction/observational-memory/runtime.ts",
       "line": 45,
       "symbol": "workerProvider",
       "replacement": "observation / reflection / dropper worker configs"
@@ -182,7 +182,7 @@
     {
       "task": "task2",
       "owner": "ObservationalMemoryRuntimeOptions",
-      "file": "packages/compaction-observational-memory/src/runtime.ts",
+      "file": "packages/memory/src/compaction/observational-memory/runtime.ts",
       "line": 47,
       "symbol": "workerModel",
       "replacement": "observation / reflection / dropper worker configs"
@@ -331,9 +331,9 @@
     "src/contracts-protocol.ts": "521a1ad4ebbd94b4c49b4aff6e4c2f5b4bcfbe8b2749b77bd46ae41f2bcfb9e7",
     "src/cli-init.ts": "d537a493a6bc2fefe9e917a17e7e97c2ec1bbd3449e500b8df4c862c7477f552",
     "packages/coding-agent/src/read.ts": "d8e6916c2a1f73393e1e175549cad36dd79590169be1688af6f95cd4df43d988",
-    "packages/compaction-observational-memory/src/settings.ts": "004ab4caaa840305e14f596c1dfc93b77d1f891c3564409b417e339754664703",
-    "packages/compaction-observational-memory/src/compose.ts": "37538c04f4b410eea315e0923deba9664949a9c61d515e046477826bab8bdd46",
-    "packages/compaction-observational-memory/src/runtime.ts": "8f217985d4dc13e8f68a140002985a4fdf140b270af41c2989458a835b16590c",
+    "packages/memory/src/compaction/observational-memory/settings.ts": "004ab4caaa840305e14f596c1dfc93b77d1f891c3564409b417e339754664703",
+    "packages/memory/src/compaction/observational-memory/compose.ts": "37538c04f4b410eea315e0923deba9664949a9c61d515e046477826bab8bdd46",
+    "packages/memory/src/compaction/observational-memory/runtime.ts": "8f217985d4dc13e8f68a140002985a4fdf140b270af41c2989458a835b16590c",
     "scripts/compat-baseline/arnilo__prism.txt": "fb40d202c51378ebdb182c10cb6b5b02ab8826dbbcdc235a2c1e0d9f35daa24d",
     "scripts/compat-baseline/arnilo__prism-coding-agent.txt": "692b361cd53ca3a539691ea8d3212c71b0566c3be090a9345104989ad07f89a9",
     "scripts/compat-baseline/arnilo__prism-compaction-observational-memory.txt": "7924151bb330ad9bccefd5420abb7028d072052c23ef4b6980b752a9e7a6aa09"
@@ -379,9 +379,9 @@
     "src/contracts-protocol.ts": "a645529ca235b136cb6f82ab2eec27341b0231f429cd7009c1c3b23246b529d6",
     "src/cli-init.ts": "736e2821e14a527a26296c1e8f75c4d5c2ede1ae719a1c73707338015fc2d765",
     "packages/coding-agent/src/read.ts": "a252f036a4482de337cd17fbfaf4d1ef4b5967dac273b6c2aa6a01a44dfa9046",
-    "packages/compaction-observational-memory/src/settings.ts": "5cd5415393c5a3081033645edcbf7621df568caad808728a0a75b123f4f6273d",
-    "packages/compaction-observational-memory/src/compose.ts": "d62f0096684e135d234ebb1b6641d9eb4707b3bc1de8747809f323c3460ef664",
-    "packages/compaction-observational-memory/src/runtime.ts": "01e6adfa85bfda6d0be6a978d19ac56a5db78aeea9cac352fac65b5b07cabd5e",
+    "packages/memory/src/compaction/observational-memory/settings.ts": "5cd5415393c5a3081033645edcbf7621df568caad808728a0a75b123f4f6273d",
+    "packages/memory/src/compaction/observational-memory/compose.ts": "d62f0096684e135d234ebb1b6641d9eb4707b3bc1de8747809f323c3460ef664",
+    "packages/memory/src/compaction/observational-memory/runtime.ts": "01e6adfa85bfda6d0be6a978d19ac56a5db78aeea9cac352fac65b5b07cabd5e",
     "scripts/compat-baseline/arnilo__prism.txt": "caea0f801f0621cfca4fbb77a666aa083519ad576c741c8c5a53c346ee6a3383",
     "scripts/compat-baseline/arnilo__prism-coding-agent.txt": "692b361cd53ca3a539691ea8d3212c71b0566c3be090a9345104989ad07f89a9",
     "scripts/compat-baseline/arnilo__prism-compaction-observational-memory.txt": "3a1378168140003666bd576377d976c332d7e936fccb172de351f7907145c063"

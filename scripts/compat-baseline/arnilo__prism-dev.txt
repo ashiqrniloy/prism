@@ -1,0 +1,18 @@
+AGENT_CAPABILITY_ID	export declare const AGENT_CAPABILITY_ID = "default"
+DevDecisionOutcome	export type { DevDecisionOutcome, DevDecisionRequest } from "./server.js"
+DevDecisionRequest	export type { DevDecisionOutcome, DevDecisionRequest } from "./server.js"
+DevInspectorError	export declare class DevInspectorError extends Error
+MAX_RENDERED_WINDOW	export declare const MAX_RENDERED_WINDOW = 400
+UI_CSP	export declare const UI_CSP: string
+applyAgentEvent	export declare function applyAgentEvent(view: RunView, event: AgentEvent): void
+createDevRouter	export declare function createDevRouter(ctx: DevRouteContext): PrismRequestHandler
+createPrismDevInspector	export declare function createPrismDevInspector(options: CreatePrismDevInspectorOptions): PrismDevInspector
+createRunView	export declare function createRunView(): RunView
+getInspectorScript	export declare function getInspectorScript(): string
+inspectorConfigResponse	export declare function inspectorConfigResponse(basePath: string, agentId: string): Response
+inspectorPageResponse	export declare function inspectorPageResponse(): Response
+inspectorScriptResponse	export declare function inspectorScriptResponse(): Response
+mountInspector	export declare function mountInspector(root: HTMLElement): Promise<MountHandles>
+replayRunPage	export declare function replayRunPage(seams: DevReplaySeams, request: Request, runId: string, cursor: string | undefined): Promise<Response>
+runDevCli	export declare function runDevCli(argv: ReadonlyArray<string>, runtime?: Partial<DevCliRuntime>): Promise<number>
+visibleItems	export declare function visibleItems(items: readonly TimelineItem[]):

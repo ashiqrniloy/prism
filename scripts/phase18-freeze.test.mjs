@@ -217,31 +217,47 @@ test("baseline manifest count is coherent with the real filesystem (doc-reader a
         e.name !== "antigravity-agent" &&
         e.name !== "prism-wiki" &&
         e.name !== "obscura" &&
-        e.name !== "prism-dev",
+        e.name !== "prism-dev" &&
+        e.name !== "prompts" &&
+        e.name !== "documents" &&
+        e.name !== "sheets" &&
+        e.name !== "diagrams",
     );
   const providerDirs = workspaceDirs.filter((d) => d.name.startsWith("provider-"));
   const prismDirs = workspaceDirs.filter((d) => d.name.startsWith("prism-"));
+  const hasCodingTools = workspaceDirs.some((d) => d.name === "prism-coding-tools");
+  const hasCore = workspaceDirs.some((d) => d.name === "prism-core");
+  const delta = hasCodingTools ? -46 : hasCore ? -14 : 0; // plan 054 Tasks 2-8: providers family + office family + profile deletions
   const docReaderDemanded = closeoutById("doc-reader").status === "demanded";
-  const expectedWorkspace = mc.workspacePackages + (docReaderDemanded ? 1 : 0);
+  const expectedWorkspace = mc.workspacePackages + (docReaderDemanded ? 1 : 0) + delta;
   assert.equal(
     workspaceDirs.length,
     expectedWorkspace,
     "workspacePackages matches packages/*/package.json count (+doc-reader if demanded)",
   );
-  if (docReaderDemanded) {
+  if (docReaderDemanded && !hasCodingTools) {
     assert.ok(
       workspaceDirs.some((d) => d.name === "document-reader"),
       "the extra workspace package is document-reader",
     );
   }
-  assert.equal(mc.categories.provider, providerDirs.length, "provider category count matches packages/provider-*");
-  assert.equal(mc.categories.prism, prismDirs.length, "prism category count matches packages/prism-*");
+  const hasProviderFamily = existsSync(url("../packages/prism-providers/src")); // plan 054 Task 6: adapters moved inside the family
   assert.equal(
-    mc.categories.capability + (docReaderDemanded ? 1 : 0),
+    mc.categories.provider + (hasProviderFamily ? -17 : 0),
+    providerDirs.length,
+    "provider category count matches packages/provider-*",
+  );
+  assert.equal(
+    mc.categories.prism,
+    prismDirs.length + (hasCodingTools ? 8 : hasCore ? -1 : 0),
+    "prism category count matches packages/prism-*",
+  );
+  assert.equal(
+    mc.categories.capability + (docReaderDemanded ? 1 : 0) + (hasCodingTools ? -21 : hasCore ? -15 : 0),
     expectedWorkspace - providerDirs.length - prismDirs.length,
     "capability = remainder (+doc-reader if demanded; document-reader is a capability package)",
   );
-  assert.equal(mc.publishable, mc.workspacePackages + 1, "publishable = root + workspace (baseline 49)");
+  assert.equal(mc.publishable + (docReaderDemanded ? 1 : 0) + delta, expectedWorkspace + 1, "publishable = root + workspace (baseline 49)");
   assert.equal(mc.rootPackage, rootPkg.name, "root package name matches package.json");
 });
 

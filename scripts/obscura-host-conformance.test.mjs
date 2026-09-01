@@ -17,11 +17,11 @@ import { createPrismAcpAgent } from "../packages/ag-ui/dist/acp/index.js";
 import { createAgUiHandler, createAgUiMcpAdapter } from "../packages/ag-ui/dist/index.js";
 import { createAntigravityMcpExposure } from "../packages/antigravity-agent/dist/index.js";
 import { createPrismMcpServer } from "../packages/mcp/dist/index.js";
-import { fakeObscuraCliPath } from "../packages/obscura/dist/__tests__/fake-cli.js";
-import { createObscuraWebTools } from "../packages/obscura/dist/index.js";
-import { createPrismHandler } from "../packages/server/dist/index.js";
-import { createSupervisor } from "../packages/supervisor/dist/index.js";
-import { agentNode, defineWorkflow, runWorkflow, toolNode } from "../packages/workflows/dist/index.js";
+import { createPrismHandler } from "../packages/prism-core/dist/runtime/server/index.js";
+import { createSupervisor } from "../packages/prism-core/dist/runtime/supervisor/index.js";
+import { agentNode, defineWorkflow, runWorkflow, toolNode } from "../packages/prism-core/dist/runtime/workflows/index.js";
+import { fakeObscuraCliPath } from "../packages/web-tools/dist/obscura/__tests__/fake-cli.js";
+import { createObscuraWebTools } from "../packages/web-tools/dist/obscura/index.js";
 
 const AUTHORIZATION = { ownership: { tenantId: "tenant-1", userId: "user-1" } };
 const FAKE = fakeObscuraCliPath();

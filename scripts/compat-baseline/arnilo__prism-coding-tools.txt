@@ -1,0 +1,865 @@
+AGENT_CAPABILITY_ID	export declare const AGENT_CAPABILITY_ID = "default"
+ASK_USER_DECISION_RATIONALE_COUNT	export declare const ASK_USER_DECISION_RATIONALE_COUNT: 3
+ASK_USER_DECISION_SUSPEND_REASON	export declare const ASK_USER_DECISION_SUSPEND_REASON: "ask_user_decision"
+ASK_USER_DECISION_TOOL_NAME	export declare const ASK_USER_DECISION_TOOL_NAME: "ask_user_decision"
+AddressResolver	export type { AddressResolver } from "./dns-pin.js"
+ApprovalCacheScope	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
+ArtifactReference	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+ArtifactWriter	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+AskUserDecisionAnswer	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+AskUserDecisionHandler	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+AskUserDecisionOption	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+AskUserDecisionRequest	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+AskUserDecisionSelectionMode	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+AskUserDecisionSuspendData	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+AskUserDecisionToolOptions	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+AssertCodingPatchAcceptedInput	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+AssertCodingPatchAcceptedResult	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+BashExecOptions	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
+BashOperations	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
+BashSpawnContext	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
+BashSpawnHook	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
+BoundGitRunner	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
+CAVEMAN_LEVELS	export declare const CAVEMAN_LEVELS: readonly ["off", "lite", "full", "ultra", "wenyan-lite", "wenyan", "wenyan-ultra", "micro"]
+CAVEMAN_LEVEL_TYPE	export declare const CAVEMAN_LEVEL_TYPE: "caveman-level"
+CAVEMAN_SKILL_NAMES	export declare const CAVEMAN_SKILL_NAMES: readonly ["caveman", "caveman-commit", "caveman-review", "caveman-stats", "caveman-compress", "caveman-help", "cavecrew"]
+CAVEMAN_UPSTREAM_PACKAGE	export declare const CAVEMAN_UPSTREAM_PACKAGE = "juliusbrussee/caveman"
+CODING_CHECKPOINT_SCHEMA_VERSION	export declare const CODING_CHECKPOINT_SCHEMA_VERSION: 1
+CODING_GOAL_VERIFY_REVISION	export declare const CODING_GOAL_VERIFY_REVISION: "1"
+CODING_GOAL_VERIFY_SUSPEND_REASON	export declare const CODING_GOAL_VERIFY_SUSPEND_REASON: "approve-coding-goal-verify"
+CODING_GOAL_VERIFY_WORKFLOW_ID	export declare const CODING_GOAL_VERIFY_WORKFLOW_ID: "coding-goal-verify"
+CODING_LOCAL_EFFECT	export declare const CODING_LOCAL_EFFECT:
+CODING_OBSERVATION_EFFECT	export declare const CODING_OBSERVATION_EFFECT:
+CODING_STATE_KEY	export declare const CODING_STATE_KEY = "coding"
+CODING_UNSUPPORTED_EFFECT	export declare const CODING_UNSUPPORTED_EFFECT:
+COMPUTER_USE_LINUX_MUTATING_TOOLS	export declare const COMPUTER_USE_LINUX_MUTATING_TOOLS: readonly ["activate_window", "move_window", "resize_window", "scroll", "click", "drag", "press_key", "type_text", "perform_action", "set_value", "setup_accessibility", "setup_window_targeting"]
+COMPUTER_USE_LINUX_READ_TOOLS	export declare const COMPUTER_USE_LINUX_READ_TOOLS: readonly ["doctor", "list_apps", "list_windows", "focused_window", "get_app_state", "screenshot"]
+COMPUTER_USE_LINUX_SETUP_TOOLS	export declare const COMPUTER_USE_LINUX_SETUP_TOOLS: readonly ["setup_accessibility", "setup_window_targeting"]
+COMPUTER_USE_LINUX_SKILL_NAME	export declare const COMPUTER_USE_LINUX_SKILL_NAME = "computer-use-linux"
+COMPUTER_USE_LINUX_TOOL_NAMES	export declare const COMPUTER_USE_LINUX_TOOL_NAMES: readonly ["doctor", "list_apps", "list_windows", "focused_window", "get_app_state", "screenshot", ...("activate_window" | "click" | "drag" | "move_window" | "perform_action" | "press_key" | "resize_window" | "scroll" | "set_value" | "setup_accessibility" | "setup_window_targeting" | "type_text")[]]
+CavemanAppendOptions	export type { CavemanAppendOptions, CavemanExtensionOptions, CavemanExtensionState, CavemanLevel, } from "./types.js"
+CavemanExtensionOptions	export type { CavemanAppendOptions, CavemanExtensionOptions, CavemanExtensionState, CavemanLevel, } from "./types.js"
+CavemanExtensionState	export type { CavemanAppendOptions, CavemanExtensionOptions, CavemanExtensionState, CavemanLevel, } from "./types.js"
+CavemanLevel	export type { CavemanAppendOptions, CavemanExtensionOptions, CavemanExtensionState, CavemanLevel, } from "./types.js"
+CodingApprovalFn	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
+CodingApprovalPolicyOptions	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
+CodingApprovalRequest	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
+CodingArtifactKind	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingArtifactRef	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingCheckSummary	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingCheckToolOptions	export type { CodingCheckToolOptions, NamedCheckDefinition } from "./checks.js"
+CodingCheckpointError	export declare class CodingCheckpointError extends Error
+CodingCheckpointLimitOptions	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingCheckpointMetadata	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingEffectReconciliation	export type { CodingEffectReconciliation, CodingEffectReconciliationInput } from "./effects.js"
+CodingEffectReconciliationInput	export type { CodingEffectReconciliation, CodingEffectReconciliationInput } from "./effects.js"
+CodingFingerprints	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingGoalVerifyApproval	export type { CodingGoalVerifyApproval, RunCodingGoalVerifyOptions, } from "./goal-verify.js"
+CodingGoalVerifyError	export declare class CodingGoalVerifyError extends Error
+CodingHandoffSummary	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingLifecycleEmitter	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+CodingLifecycleError	export declare class CodingLifecycleError extends Error
+CodingLifecycleEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+CodingLifecycleLimits	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+CodingPatchReview	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+CodingPatchReviewCheckSummary	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+CodingPatchReviewDiagnosticSummary	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+CodingPatchReviewDiffstatEntry	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+CodingPatchReviewError	export declare class CodingPatchReviewError extends Error
+CodingPatchReviewErrorCode	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+CodingPatchReviewIdentity	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+CodingPatchReviewState	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+CodingProcessEvent	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+CodingReviewArtifactInput	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+CodingReviewLimits	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+CodingTaskStatus	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingTodoItem	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+CodingWorkspaceLifecycle	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
+CodingWorkspaceRecord	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
+CommandRule	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
+CommandRuleAction	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
+CommandRuleEvaluation	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
+ConfigurationChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+CreateAllowListEgressProxyOptions	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
+CreateCodingLifecycleEmitterOptions	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+CreateCodingPatchReviewInput	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+CreateCodingWorkspaceLifecycleOptions	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
+CreateDockerSandboxOptions	export type { CreateDockerSandboxOptions, DockerNetworkConfig, } from "./docker-sandbox.js"
+CreateEgressPolicyOptions	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
+CreateGitHubForgeOptions	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
+CreateGitOperationsOptions	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+CreateGitRunnerOptions	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
+CreateLanguageIntelligenceOptions	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./language/index.js"
+CreateNativeSandboxOptions	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
+CreateProcessSessionsOptions	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+DEFAULT_BINARY_SNIFF_BYTES	export declare const DEFAULT_BINARY_SNIFF_BYTES = 8192
+DEFAULT_CAVEMAN_CONFIG	export declare const DEFAULT_CAVEMAN_CONFIG: CavemanConfig
+DEFAULT_CHECK_TIMEOUT_MS	export declare const DEFAULT_CHECK_TIMEOUT_MS: number
+DEFAULT_CLEANUP_DEADLINE_MS	export declare const DEFAULT_CLEANUP_DEADLINE_MS = 30000
+DEFAULT_CPUS	export declare const DEFAULT_CPUS = 2
+DEFAULT_DOWNLOAD_BYTES	export declare const DEFAULT_DOWNLOAD_BYTES: number
+DEFAULT_GIT_TIMEOUT_MS	export declare const DEFAULT_GIT_TIMEOUT_MS = 120000
+DEFAULT_IDLE_TIMEOUT_MS	export declare const DEFAULT_IDLE_TIMEOUT_MS: number
+DEFAULT_LIFECYCLE_MAX_CONFIG_KEYS	export declare const DEFAULT_LIFECYCLE_MAX_CONFIG_KEYS = 64
+DEFAULT_LIFECYCLE_MAX_EVENT_BYTES	export declare const DEFAULT_LIFECYCLE_MAX_EVENT_BYTES = 16384
+DEFAULT_LIFECYCLE_MAX_PATH_BYTES	export declare const DEFAULT_LIFECYCLE_MAX_PATH_BYTES = 4096
+DEFAULT_LIFECYCLE_MAX_REASON_BYTES	export declare const DEFAULT_LIFECYCLE_MAX_REASON_BYTES = 1024
+DEFAULT_LIFECYCLE_MAX_TOOL_NAME_BYTES	export declare const DEFAULT_LIFECYCLE_MAX_TOOL_NAME_BYTES = 256
+DEFAULT_MAX_ASK_USER_DECISION_BULLET_BYTES	export declare const DEFAULT_MAX_ASK_USER_DECISION_BULLET_BYTES = 512
+DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES	export declare const DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES = 2048
+DEFAULT_MAX_ASK_USER_DECISION_LABEL_BYTES	export declare const DEFAULT_MAX_ASK_USER_DECISION_LABEL_BYTES = 512
+DEFAULT_MAX_ASK_USER_DECISION_OPTIONS	export declare const DEFAULT_MAX_ASK_USER_DECISION_OPTIONS = 6
+DEFAULT_MAX_ASK_USER_DECISION_QUESTION_BYTES	export declare const DEFAULT_MAX_ASK_USER_DECISION_QUESTION_BYTES = 2048
+DEFAULT_MAX_BYTES	export declare const DEFAULT_MAX_BYTES: number
+DEFAULT_MAX_CHECK_CONCURRENCY	export declare const DEFAULT_MAX_CHECK_CONCURRENCY = 1
+DEFAULT_MAX_CHECK_DIAGNOSTIC_LINES	export declare const DEFAULT_MAX_CHECK_DIAGNOSTIC_LINES = 2000
+DEFAULT_MAX_CHECK_NAMES	export declare const DEFAULT_MAX_CHECK_NAMES = 8
+DEFAULT_MAX_CHECK_OUTPUT_BYTES	export declare const DEFAULT_MAX_CHECK_OUTPUT_BYTES: number
+DEFAULT_MAX_CHECK_SUMMARY_BYTES	export declare const DEFAULT_MAX_CHECK_SUMMARY_BYTES = 1024
+DEFAULT_MAX_CODING_ARTIFACTS	export declare const DEFAULT_MAX_CODING_ARTIFACTS = 16
+DEFAULT_MAX_CODING_ARTIFACT_BYTES	export declare const DEFAULT_MAX_CODING_ARTIFACT_BYTES: number
+DEFAULT_MAX_CODING_CHECKPOINT_BYTES	export declare const DEFAULT_MAX_CODING_CHECKPOINT_BYTES: number
+DEFAULT_MAX_COMMANDS	export declare const DEFAULT_MAX_COMMANDS = 100
+DEFAULT_MAX_CONCURRENT_EXECS	export declare const DEFAULT_MAX_CONCURRENT_EXECS = 1
+DEFAULT_MAX_DIAGNOSTIC_MESSAGE_BYTES	export declare const DEFAULT_MAX_DIAGNOSTIC_MESSAGE_BYTES: number
+DEFAULT_MAX_DOCUMENT_BYTES	export declare const DEFAULT_MAX_DOCUMENT_BYTES: number
+DEFAULT_MAX_DOCUMENT_PAGES	export declare const DEFAULT_MAX_DOCUMENT_PAGES = 1000
+DEFAULT_MAX_DOCUMENT_TEXT_BYTES	export declare const DEFAULT_MAX_DOCUMENT_TEXT_BYTES: number
+DEFAULT_MAX_EDITS	export declare const DEFAULT_MAX_EDITS = 100
+DEFAULT_MAX_EDIT_FILE_BYTES	export declare const DEFAULT_MAX_EDIT_FILE_BYTES: number
+DEFAULT_MAX_EDIT_INPUT_BYTES	export declare const DEFAULT_MAX_EDIT_INPUT_BYTES: number
+DEFAULT_MAX_EGRESS_CONCURRENT_CONNECTIONS	export declare const DEFAULT_MAX_EGRESS_CONCURRENT_CONNECTIONS = 32
+DEFAULT_MAX_EGRESS_REDIRECT_HOPS	export declare const DEFAULT_MAX_EGRESS_REDIRECT_HOPS = 5
+DEFAULT_MAX_EGRESS_REQUEST_BYTES	export declare const DEFAULT_MAX_EGRESS_REQUEST_BYTES: number
+DEFAULT_MAX_EGRESS_RESPONSE_BYTES	export declare const DEFAULT_MAX_EGRESS_RESPONSE_BYTES: number
+DEFAULT_MAX_EGRESS_RULES	export declare const DEFAULT_MAX_EGRESS_RULES = 128
+DEFAULT_MAX_EGRESS_TRANSFER_TIME_MS	export declare const DEFAULT_MAX_EGRESS_TRANSFER_TIME_MS = 600000
+DEFAULT_MAX_ENV_BYTES	export declare const DEFAULT_MAX_ENV_BYTES: number
+DEFAULT_MAX_ENV_NAMES	export declare const DEFAULT_MAX_ENV_NAMES = 64
+DEFAULT_MAX_EXPORT_BYTES	export declare const DEFAULT_MAX_EXPORT_BYTES: number
+DEFAULT_MAX_EXPORT_ENTRIES	export declare const DEFAULT_MAX_EXPORT_ENTRIES = 50000
+DEFAULT_MAX_FDS	export declare const DEFAULT_MAX_FDS = 1024
+DEFAULT_MAX_FORGE_COMMENTS_PER_REVIEW	export declare const DEFAULT_MAX_FORGE_COMMENTS_PER_REVIEW = 100
+DEFAULT_MAX_FORGE_PAGES_PER_OPERATION	export declare const DEFAULT_MAX_FORGE_PAGES_PER_OPERATION = 10
+DEFAULT_MAX_FORGE_PAYLOAD_BYTES	export declare const DEFAULT_MAX_FORGE_PAYLOAD_BYTES: number
+DEFAULT_MAX_FORGE_REQUEST_CONCURRENCY	export declare const DEFAULT_MAX_FORGE_REQUEST_CONCURRENCY = 4
+DEFAULT_MAX_FORGE_REQUEST_TIMEOUT_MS	export declare const DEFAULT_MAX_FORGE_REQUEST_TIMEOUT_MS = 30000
+DEFAULT_MAX_GIT_CHANGED_FILES	export declare const DEFAULT_MAX_GIT_CHANGED_FILES = 1000
+DEFAULT_MAX_GIT_DIFF_LINES	export declare const DEFAULT_MAX_GIT_DIFF_LINES = 10000
+DEFAULT_MAX_GIT_MESSAGE_BYTES	export declare const DEFAULT_MAX_GIT_MESSAGE_BYTES: number
+DEFAULT_MAX_GIT_OUTPUT_BYTES	export declare const DEFAULT_MAX_GIT_OUTPUT_BYTES: number
+DEFAULT_MAX_GIT_PATCH_BYTES	export declare const DEFAULT_MAX_GIT_PATCH_BYTES: number
+DEFAULT_MAX_GIT_PATHS	export declare const DEFAULT_MAX_GIT_PATHS = 1000
+DEFAULT_MAX_GIT_REF_BYTES	export declare const DEFAULT_MAX_GIT_REF_BYTES = 1024
+DEFAULT_MAX_GIT_WORKTREES	export declare const DEFAULT_MAX_GIT_WORKTREES = 4
+DEFAULT_MAX_IMAGE_BYTES	export declare const DEFAULT_MAX_IMAGE_BYTES = 10000000
+DEFAULT_MAX_INDEX_QUERY_TIMEOUT_MS	export declare const DEFAULT_MAX_INDEX_QUERY_TIMEOUT_MS = 30000
+DEFAULT_MAX_INDEX_SNIPPET_BYTES	export declare const DEFAULT_MAX_INDEX_SNIPPET_BYTES: number
+DEFAULT_MAX_INDEX_STALE_MAX_AGE_MS	export declare const DEFAULT_MAX_INDEX_STALE_MAX_AGE_MS = 60000
+DEFAULT_MAX_INDEX_UPDATE_BYTES	export declare const DEFAULT_MAX_INDEX_UPDATE_BYTES: number
+DEFAULT_MAX_INDEX_UPDATE_FILES	export declare const DEFAULT_MAX_INDEX_UPDATE_FILES = 1000
+DEFAULT_MAX_LINES	export declare const DEFAULT_MAX_LINES = 2000
+DEFAULT_MAX_LSP_DIAGNOSTICS_PER_FILE	export declare const DEFAULT_MAX_LSP_DIAGNOSTICS_PER_FILE = 200
+DEFAULT_MAX_LSP_MESSAGE_BYTES	export declare const DEFAULT_MAX_LSP_MESSAGE_BYTES: number
+DEFAULT_MAX_LSP_PENDING_REQUESTS	export declare const DEFAULT_MAX_LSP_PENDING_REQUESTS = 32
+DEFAULT_MAX_LSP_RESULTS_PER_QUERY	export declare const DEFAULT_MAX_LSP_RESULTS_PER_QUERY = 500
+DEFAULT_MAX_LSP_SERVERS	export declare const DEFAULT_MAX_LSP_SERVERS = 4
+DEFAULT_MAX_LSP_TIMEOUT_MS	export declare const DEFAULT_MAX_LSP_TIMEOUT_MS = 30000
+DEFAULT_MAX_LS_FILES_OUTPUT_BYTES	export declare const DEFAULT_MAX_LS_FILES_OUTPUT_BYTES: number
+DEFAULT_MAX_OUTPUT_BYTES	export declare const DEFAULT_MAX_OUTPUT_BYTES: number
+DEFAULT_MAX_PERSISTED_READ_PATHS	export declare const DEFAULT_MAX_PERSISTED_READ_PATHS = 1024
+DEFAULT_MAX_PERSISTED_READ_PATH_CHARS	export declare const DEFAULT_MAX_PERSISTED_READ_PATH_CHARS = 1024
+DEFAULT_MAX_PIDS	export declare const DEFAULT_MAX_PIDS = 256
+DEFAULT_MAX_PLAN_BYTES	export declare const DEFAULT_MAX_PLAN_BYTES: number
+DEFAULT_MAX_PROCESS_INPUT_BYTES	export declare const DEFAULT_MAX_PROCESS_INPUT_BYTES: number
+DEFAULT_MAX_PROCESS_LIFETIME_MS	export declare const DEFAULT_MAX_PROCESS_LIFETIME_MS: number
+DEFAULT_MAX_PROCESS_OUTPUT_CHUNK_BYTES	export declare const DEFAULT_MAX_PROCESS_OUTPUT_CHUNK_BYTES: number
+DEFAULT_MAX_PROCESS_SESSIONS	export declare const DEFAULT_MAX_PROCESS_SESSIONS = 8
+DEFAULT_MAX_PROCESS_TOTAL_OUTPUT_BYTES	export declare const DEFAULT_MAX_PROCESS_TOTAL_OUTPUT_BYTES: number
+DEFAULT_MAX_PR_COMMITS	export declare const DEFAULT_MAX_PR_COMMITS = 100
+DEFAULT_MAX_PR_HANDOFF_BYTES	export declare const DEFAULT_MAX_PR_HANDOFF_BYTES: number
+DEFAULT_MAX_PTY_ATTACH_TIMEOUT_MS	export declare const DEFAULT_MAX_PTY_ATTACH_TIMEOUT_MS = 30000
+DEFAULT_MAX_PTY_BACKEND_METADATA_BYTES	export declare const DEFAULT_MAX_PTY_BACKEND_METADATA_BYTES: number
+DEFAULT_MAX_RECOVERY_ATTACH_TIMEOUT_MS	export declare const DEFAULT_MAX_RECOVERY_ATTACH_TIMEOUT_MS = 30000
+DEFAULT_MAX_RECOVERY_BACKEND_REF_BYTES	export declare const DEFAULT_MAX_RECOVERY_BACKEND_REF_BYTES = 1024
+DEFAULT_MAX_RECOVERY_LEASE_TTL_MS	export declare const DEFAULT_MAX_RECOVERY_LEASE_TTL_MS = 30000
+DEFAULT_MAX_RECOVERY_RECORDS	export declare const DEFAULT_MAX_RECOVERY_RECORDS = 32
+DEFAULT_MAX_RECOVERY_RECORD_BYTES	export declare const DEFAULT_MAX_RECOVERY_RECORD_BYTES: number
+DEFAULT_MAX_REPO_CONCURRENCY	export declare const DEFAULT_MAX_REPO_CONCURRENCY = 8
+DEFAULT_MAX_REPO_DEPTH	export declare const DEFAULT_MAX_REPO_DEPTH = 32
+DEFAULT_MAX_REPO_ENTRIES	export declare const DEFAULT_MAX_REPO_ENTRIES = 10000
+DEFAULT_MAX_REPO_FILES	export declare const DEFAULT_MAX_REPO_FILES = 10000
+DEFAULT_MAX_REPO_RESULTS	export declare const DEFAULT_MAX_REPO_RESULTS = 1000
+DEFAULT_MAX_RETAINED_ARTIFACTS	export declare const DEFAULT_MAX_RETAINED_ARTIFACTS = 16
+DEFAULT_MAX_REVIEW_DELTA_ENTRIES	export declare const DEFAULT_MAX_REVIEW_DELTA_ENTRIES = 2000
+DEFAULT_MAX_REVIEW_DIAGNOSTICS	export declare const DEFAULT_MAX_REVIEW_DIAGNOSTICS = 500
+DEFAULT_MAX_REVIEW_MANIFEST_BYTES	export declare const DEFAULT_MAX_REVIEW_MANIFEST_BYTES: number
+DEFAULT_MAX_REVIEW_REVISIONS	export declare const DEFAULT_MAX_REVIEW_REVISIONS = 8
+DEFAULT_MAX_SEARCH_CONTEXT_LINES	export declare const DEFAULT_MAX_SEARCH_CONTEXT_LINES = 5
+DEFAULT_MAX_SEARCH_FILE_BYTES	export declare const DEFAULT_MAX_SEARCH_FILE_BYTES: number
+DEFAULT_MAX_SEARCH_LINE_BYTES	export declare const DEFAULT_MAX_SEARCH_LINE_BYTES: number
+DEFAULT_MAX_SEARCH_MATCHES	export declare const DEFAULT_MAX_SEARCH_MATCHES = 1000
+DEFAULT_MAX_SEARCH_PATTERN_BYTES	export declare const DEFAULT_MAX_SEARCH_PATTERN_BYTES = 512
+DEFAULT_MAX_SEARCH_SCAN_BYTES	export declare const DEFAULT_MAX_SEARCH_SCAN_BYTES: number
+DEFAULT_MAX_SEARCH_TIME_MS	export declare const DEFAULT_MAX_SEARCH_TIME_MS = 30000
+DEFAULT_MAX_TERMINAL_COLUMNS	export declare const DEFAULT_MAX_TERMINAL_COLUMNS = 120
+DEFAULT_MAX_TERMINAL_RESIZES_PER_MINUTE	export declare const DEFAULT_MAX_TERMINAL_RESIZES_PER_MINUTE = 60
+DEFAULT_MAX_TERMINAL_ROWS	export declare const DEFAULT_MAX_TERMINAL_ROWS = 40
+DEFAULT_MAX_TERMINAL_TERM_BYTES	export declare const DEFAULT_MAX_TERMINAL_TERM_BYTES = 64
+DEFAULT_MAX_TEXT_SCAN_BYTES	export declare const DEFAULT_MAX_TEXT_SCAN_BYTES: number
+DEFAULT_MAX_TODOS	export declare const DEFAULT_MAX_TODOS = 1000
+DEFAULT_MAX_TODO_TEXT_BYTES	export declare const DEFAULT_MAX_TODO_TEXT_BYTES = 512
+DEFAULT_MAX_TOTAL_OUTPUT_BYTES	export declare const DEFAULT_MAX_TOTAL_OUTPUT_BYTES: number
+DEFAULT_MAX_WORKSPACE_CLEANUP_OPERATIONS	export declare const DEFAULT_MAX_WORKSPACE_CLEANUP_OPERATIONS = 100
+DEFAULT_MAX_WORKSPACE_LEASE_TTL_MS	export declare const DEFAULT_MAX_WORKSPACE_LEASE_TTL_MS = 30000
+DEFAULT_MAX_WORKSPACE_RECORD_BYTES	export declare const DEFAULT_MAX_WORKSPACE_RECORD_BYTES: number
+DEFAULT_MAX_WORKSPACE_REPOSITORIES	export declare const DEFAULT_MAX_WORKSPACE_REPOSITORIES = 4
+DEFAULT_MAX_WORKSPACE_WORKTREES	export declare const DEFAULT_MAX_WORKSPACE_WORKTREES = 4
+DEFAULT_MAX_WRITE_BYTES	export declare const DEFAULT_MAX_WRITE_BYTES: number
+DEFAULT_MEMORY_BYTES	export declare const DEFAULT_MEMORY_BYTES: number
+DEFAULT_OPENAPI_LIMITS	export declare const DEFAULT_OPENAPI_LIMITS: ResolvedOpenApiLimits
+DEFAULT_PONYTAIL_CONFIG	export declare const DEFAULT_PONYTAIL_CONFIG: PonytailConfig
+DEFAULT_REPO_EXCLUDE	export declare const DEFAULT_REPO_EXCLUDE: readonly string[]
+DEFAULT_SHELL_TIMEOUT_SECONDS	export declare const DEFAULT_SHELL_TIMEOUT_SECONDS = 600
+DEFAULT_STARTUP_TIMEOUT_MS	export declare const DEFAULT_STARTUP_TIMEOUT_MS = 30000
+DEFAULT_STOP_GRACE_MS	export declare const DEFAULT_STOP_GRACE_MS = 5000
+DEFAULT_TMP_BYTES	export declare const DEFAULT_TMP_BYTES: number
+DEFAULT_WALL_TIME_MS	export declare const DEFAULT_WALL_TIME_MS: number
+DEFAULT_WORKSPACE_BYTES	export declare const DEFAULT_WORKSPACE_BYTES: number
+DeleteOperations	export type { DeleteOperations, DeleteToolOptions, MutationStat } from "./delete.js"
+DeleteToolOptions	export type { DeleteOperations, DeleteToolOptions, MutationStat } from "./delete.js"
+DevDecisionOutcome	export type { DevDecisionOutcome, DevDecisionRequest } from "./server.js"
+DevDecisionRequest	export type { DevDecisionOutcome, DevDecisionRequest } from "./server.js"
+DevInspectorError	export declare class DevInspectorError extends Error
+DiagnosticDelta	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
+DiagnosticDeltaRequest	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
+DiagnosticSeverity	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
+DisposableSandbox	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+DockerCliError	export declare class DockerCliError extends Error
+DockerCliRequest	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
+DockerCliResult	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
+DockerNetworkConfig	export type { CreateDockerSandboxOptions, DockerNetworkConfig, } from "./docker-sandbox.js"
+DockerRunner	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
+DockerSandboxError	export declare class DockerSandboxError extends Error
+DockerSandboxLimitOptions	export type { DockerSandboxLimitOptions, ResolvedDockerSandboxLimits, } from "./sandbox-limits.js"
+DocumentReader	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+DocumentReaderError	export declare class DocumentReaderError extends Error
+DocumentReaderResult	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+EGRESS_PRESETS	export declare const EGRESS_PRESETS: Record<EgressPreset, readonly EgressRule[]>
+Edit	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
+EditOperations	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
+EditToolDetails	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
+EditToolOptions	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
+EgressAttestation	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
+EgressAuditRecord	export type { EgressAuditRecord, EgressErrorCode } from "./types.js"
+EgressError	export declare class EgressError extends Error
+EgressErrorCode	export type { EgressAuditRecord, EgressErrorCode } from "./types.js"
+EgressLimitOptions	export type { EgressLimitOptions, ResolvedEgressLimits } from "./limits.js"
+EgressPolicy	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
+EgressPreset	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
+EgressProtocol	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
+EgressProxy	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
+EgressProxyEndpoint	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
+EgressProxyStats	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
+EgressRule	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
+FileChangeOp	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+FileChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+ForgeCheck	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
+ForgeCredential	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
+ForgeCredentialResolver	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
+ForgeCredentialResolverSource	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
+ForgeError	export declare class ForgeError extends Error
+ForgeErrorCode	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
+ForgeHandoffReport	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
+ForgeIssueContext	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
+ForgeLimits	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
+ForgeOperations	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
+ForgePullRequest	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
+GitAwareRepositoryOptions	export type { GitAwareRepositoryOptions } from "./git-aware-repository.js"
+GitError	export declare class GitError extends Error
+GitExecRequest	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
+GitExecResult	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
+GitLimitOptions	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+GitOperations	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+GitRunner	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
+GitStatusBranch	export type { GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult } from "./git-status.js"
+GitStatusEntry	export type { GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult } from "./git-status.js"
+GitStatusEntryKind	export type { GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult } from "./git-status.js"
+GitStatusResult	export type { GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult } from "./git-status.js"
+GitToolsOptions	export type { GitToolsOptions } from "./git-tools.js"
+GlobToolOptions	export type { GlobToolOptions } from "./glob.js"
+HARD_CHECK_TIMEOUT_MS	export declare const HARD_CHECK_TIMEOUT_MS: number
+HARD_CLEANUP_DEADLINE_MS	export declare const HARD_CLEANUP_DEADLINE_MS = 120000
+HARD_CPUS	export declare const HARD_CPUS = 8
+HARD_DOWNLOAD_BYTES	export declare const HARD_DOWNLOAD_BYTES: number
+HARD_GIT_TIMEOUT_MS	export declare const HARD_GIT_TIMEOUT_MS = 600000
+HARD_IDLE_TIMEOUT_MS	export declare const HARD_IDLE_TIMEOUT_MS: number
+HARD_LIFECYCLE_MAX_CONFIG_KEYS	export declare const HARD_LIFECYCLE_MAX_CONFIG_KEYS = 256
+HARD_LIFECYCLE_MAX_EVENT_BYTES	export declare const HARD_LIFECYCLE_MAX_EVENT_BYTES = 65536
+HARD_LIFECYCLE_MAX_PATH_BYTES	export declare const HARD_LIFECYCLE_MAX_PATH_BYTES = 16384
+HARD_LIFECYCLE_MAX_REASON_BYTES	export declare const HARD_LIFECYCLE_MAX_REASON_BYTES = 16384
+HARD_LIFECYCLE_MAX_TOOL_NAME_BYTES	export declare const HARD_LIFECYCLE_MAX_TOOL_NAME_BYTES = 4096
+HARD_MAX_ASK_USER_DECISION_BULLET_BYTES	export declare const HARD_MAX_ASK_USER_DECISION_BULLET_BYTES = 2048
+HARD_MAX_ASK_USER_DECISION_CUSTOM_BYTES	export declare const HARD_MAX_ASK_USER_DECISION_CUSTOM_BYTES = 8192
+HARD_MAX_ASK_USER_DECISION_LABEL_BYTES	export declare const HARD_MAX_ASK_USER_DECISION_LABEL_BYTES = 2048
+HARD_MAX_ASK_USER_DECISION_OPTIONS	export declare const HARD_MAX_ASK_USER_DECISION_OPTIONS = 16
+HARD_MAX_ASK_USER_DECISION_QUESTION_BYTES	export declare const HARD_MAX_ASK_USER_DECISION_QUESTION_BYTES = 8192
+HARD_MAX_BYTES	export declare const HARD_MAX_BYTES: number
+HARD_MAX_CHECK_CONCURRENCY	export declare const HARD_MAX_CHECK_CONCURRENCY = 4
+HARD_MAX_CHECK_DIAGNOSTIC_LINES	export declare const HARD_MAX_CHECK_DIAGNOSTIC_LINES = 100000
+HARD_MAX_CHECK_NAMES	export declare const HARD_MAX_CHECK_NAMES = 32
+HARD_MAX_CHECK_OUTPUT_BYTES	export declare const HARD_MAX_CHECK_OUTPUT_BYTES: number
+HARD_MAX_CHECK_SUMMARY_BYTES	export declare const HARD_MAX_CHECK_SUMMARY_BYTES = 8192
+HARD_MAX_CODING_ARTIFACTS	export declare const HARD_MAX_CODING_ARTIFACTS = 64
+HARD_MAX_CODING_ARTIFACT_BYTES	export declare const HARD_MAX_CODING_ARTIFACT_BYTES: number
+HARD_MAX_CODING_CHECKPOINT_BYTES	export declare const HARD_MAX_CODING_CHECKPOINT_BYTES: number
+HARD_MAX_COMMANDS	export declare const HARD_MAX_COMMANDS = 256
+HARD_MAX_CONCURRENT_EXECS	export declare const HARD_MAX_CONCURRENT_EXECS = 8
+HARD_MAX_DIAGNOSTIC_MESSAGE_BYTES	export declare const HARD_MAX_DIAGNOSTIC_MESSAGE_BYTES: number
+HARD_MAX_DOCUMENT_BYTES	export declare const HARD_MAX_DOCUMENT_BYTES: number
+HARD_MAX_DOCUMENT_PAGES	export declare const HARD_MAX_DOCUMENT_PAGES = 10000
+HARD_MAX_DOCUMENT_TEXT_BYTES	export declare const HARD_MAX_DOCUMENT_TEXT_BYTES: number
+HARD_MAX_EDITS	export declare const HARD_MAX_EDITS = 1000
+HARD_MAX_EDIT_FILE_BYTES	export declare const HARD_MAX_EDIT_FILE_BYTES: number
+HARD_MAX_EDIT_INPUT_BYTES	export declare const HARD_MAX_EDIT_INPUT_BYTES: number
+HARD_MAX_EGRESS_CONCURRENT_CONNECTIONS	export declare const HARD_MAX_EGRESS_CONCURRENT_CONNECTIONS = 256
+HARD_MAX_EGRESS_REDIRECT_HOPS	export declare const HARD_MAX_EGRESS_REDIRECT_HOPS = 10
+HARD_MAX_EGRESS_REQUEST_BYTES	export declare const HARD_MAX_EGRESS_REQUEST_BYTES: number
+HARD_MAX_EGRESS_RESPONSE_BYTES	export declare const HARD_MAX_EGRESS_RESPONSE_BYTES: number
+HARD_MAX_EGRESS_RULES	export declare const HARD_MAX_EGRESS_RULES = 1024
+HARD_MAX_EGRESS_TRANSFER_TIME_MS	export declare const HARD_MAX_EGRESS_TRANSFER_TIME_MS = 3600000
+HARD_MAX_ENV_BYTES	export declare const HARD_MAX_ENV_BYTES: number
+HARD_MAX_ENV_NAMES	export declare const HARD_MAX_ENV_NAMES = 256
+HARD_MAX_EXPORT_BYTES	export declare const HARD_MAX_EXPORT_BYTES: number
+HARD_MAX_EXPORT_ENTRIES	export declare const HARD_MAX_EXPORT_ENTRIES = 250000
+HARD_MAX_FDS	export declare const HARD_MAX_FDS = 8192
+HARD_MAX_FORGE_COMMENTS_PER_REVIEW	export declare const HARD_MAX_FORGE_COMMENTS_PER_REVIEW = 1000
+HARD_MAX_FORGE_PAGES_PER_OPERATION	export declare const HARD_MAX_FORGE_PAGES_PER_OPERATION = 100
+HARD_MAX_FORGE_PAYLOAD_BYTES	export declare const HARD_MAX_FORGE_PAYLOAD_BYTES: number
+HARD_MAX_FORGE_REQUEST_CONCURRENCY	export declare const HARD_MAX_FORGE_REQUEST_CONCURRENCY = 8
+HARD_MAX_FORGE_REQUEST_TIMEOUT_MS	export declare const HARD_MAX_FORGE_REQUEST_TIMEOUT_MS = 120000
+HARD_MAX_GIT_CHANGED_FILES	export declare const HARD_MAX_GIT_CHANGED_FILES = 10000
+HARD_MAX_GIT_DIFF_LINES	export declare const HARD_MAX_GIT_DIFF_LINES = 100000
+HARD_MAX_GIT_MESSAGE_BYTES	export declare const HARD_MAX_GIT_MESSAGE_BYTES: number
+HARD_MAX_GIT_OUTPUT_BYTES	export declare const HARD_MAX_GIT_OUTPUT_BYTES: number
+HARD_MAX_GIT_PATCH_BYTES	export declare const HARD_MAX_GIT_PATCH_BYTES: number
+HARD_MAX_GIT_PATHS	export declare const HARD_MAX_GIT_PATHS = 10000
+HARD_MAX_GIT_REF_BYTES	export declare const HARD_MAX_GIT_REF_BYTES = 4096
+HARD_MAX_GIT_WORKTREES	export declare const HARD_MAX_GIT_WORKTREES = 16
+HARD_MAX_IMAGE_BYTES	export declare const HARD_MAX_IMAGE_BYTES: number
+HARD_MAX_INDEX_QUERY_TIMEOUT_MS	export declare const HARD_MAX_INDEX_QUERY_TIMEOUT_MS = 120000
+HARD_MAX_INDEX_SNIPPET_BYTES	export declare const HARD_MAX_INDEX_SNIPPET_BYTES: number
+HARD_MAX_INDEX_STALE_MAX_AGE_MS	export declare const HARD_MAX_INDEX_STALE_MAX_AGE_MS = 300000
+HARD_MAX_INDEX_UPDATE_BYTES	export declare const HARD_MAX_INDEX_UPDATE_BYTES: number
+HARD_MAX_INDEX_UPDATE_FILES	export declare const HARD_MAX_INDEX_UPDATE_FILES = 10000
+HARD_MAX_LINES	export declare const HARD_MAX_LINES = 100000
+HARD_MAX_LSP_DIAGNOSTICS_PER_FILE	export declare const HARD_MAX_LSP_DIAGNOSTICS_PER_FILE = 1000
+HARD_MAX_LSP_MESSAGE_BYTES	export declare const HARD_MAX_LSP_MESSAGE_BYTES: number
+HARD_MAX_LSP_PENDING_REQUESTS	export declare const HARD_MAX_LSP_PENDING_REQUESTS = 128
+HARD_MAX_LSP_RESULTS_PER_QUERY	export declare const HARD_MAX_LSP_RESULTS_PER_QUERY = 5000
+HARD_MAX_LSP_SERVERS	export declare const HARD_MAX_LSP_SERVERS = 8
+HARD_MAX_LSP_TIMEOUT_MS	export declare const HARD_MAX_LSP_TIMEOUT_MS = 120000
+HARD_MAX_LS_FILES_OUTPUT_BYTES	export declare const HARD_MAX_LS_FILES_OUTPUT_BYTES: number
+HARD_MAX_OUTPUT_BYTES	export declare const HARD_MAX_OUTPUT_BYTES: number
+HARD_MAX_PIDS	export declare const HARD_MAX_PIDS = 1024
+HARD_MAX_PLAN_BYTES	export declare const HARD_MAX_PLAN_BYTES: number
+HARD_MAX_PROCESS_INPUT_BYTES	export declare const HARD_MAX_PROCESS_INPUT_BYTES: number
+HARD_MAX_PROCESS_LIFETIME_MS	export declare const HARD_MAX_PROCESS_LIFETIME_MS: number
+HARD_MAX_PROCESS_OUTPUT_CHUNK_BYTES	export declare const HARD_MAX_PROCESS_OUTPUT_CHUNK_BYTES: number
+HARD_MAX_PROCESS_SESSIONS	export declare const HARD_MAX_PROCESS_SESSIONS = 32
+HARD_MAX_PROCESS_TOTAL_OUTPUT_BYTES	export declare const HARD_MAX_PROCESS_TOTAL_OUTPUT_BYTES: number
+HARD_MAX_PR_COMMITS	export declare const HARD_MAX_PR_COMMITS = 1000
+HARD_MAX_PR_HANDOFF_BYTES	export declare const HARD_MAX_PR_HANDOFF_BYTES: number
+HARD_MAX_PTY_ATTACH_TIMEOUT_MS	export declare const HARD_MAX_PTY_ATTACH_TIMEOUT_MS = 120000
+HARD_MAX_PTY_BACKEND_METADATA_BYTES	export declare const HARD_MAX_PTY_BACKEND_METADATA_BYTES: number
+HARD_MAX_RECOVERY_ATTACH_TIMEOUT_MS	export declare const HARD_MAX_RECOVERY_ATTACH_TIMEOUT_MS = 120000
+HARD_MAX_RECOVERY_BACKEND_REF_BYTES	export declare const HARD_MAX_RECOVERY_BACKEND_REF_BYTES: number
+HARD_MAX_RECOVERY_LEASE_TTL_MS	export declare const HARD_MAX_RECOVERY_LEASE_TTL_MS = 300000
+HARD_MAX_RECOVERY_RECORDS	export declare const HARD_MAX_RECOVERY_RECORDS = 128
+HARD_MAX_RECOVERY_RECORD_BYTES	export declare const HARD_MAX_RECOVERY_RECORD_BYTES: number
+HARD_MAX_REPO_CONCURRENCY	export declare const HARD_MAX_REPO_CONCURRENCY = 32
+HARD_MAX_REPO_DEPTH	export declare const HARD_MAX_REPO_DEPTH = 128
+HARD_MAX_REPO_ENTRIES	export declare const HARD_MAX_REPO_ENTRIES = 100000
+HARD_MAX_REPO_FILES	export declare const HARD_MAX_REPO_FILES = 100000
+HARD_MAX_REPO_RESULTS	export declare const HARD_MAX_REPO_RESULTS = 10000
+HARD_MAX_RETAINED_ARTIFACTS	export declare const HARD_MAX_RETAINED_ARTIFACTS = 64
+HARD_MAX_REVIEW_DELTA_ENTRIES	export declare const HARD_MAX_REVIEW_DELTA_ENTRIES = 10000
+HARD_MAX_REVIEW_DIAGNOSTICS	export declare const HARD_MAX_REVIEW_DIAGNOSTICS = 5000
+HARD_MAX_REVIEW_MANIFEST_BYTES	export declare const HARD_MAX_REVIEW_MANIFEST_BYTES: number
+HARD_MAX_REVIEW_REVISIONS	export declare const HARD_MAX_REVIEW_REVISIONS = 32
+HARD_MAX_SEARCH_CONTEXT_LINES	export declare const HARD_MAX_SEARCH_CONTEXT_LINES = 20
+HARD_MAX_SEARCH_FILE_BYTES	export declare const HARD_MAX_SEARCH_FILE_BYTES: number
+HARD_MAX_SEARCH_LINE_BYTES	export declare const HARD_MAX_SEARCH_LINE_BYTES: number
+HARD_MAX_SEARCH_MATCHES	export declare const HARD_MAX_SEARCH_MATCHES = 10000
+HARD_MAX_SEARCH_PATTERN_BYTES	export declare const HARD_MAX_SEARCH_PATTERN_BYTES = 4096
+HARD_MAX_SEARCH_SCAN_BYTES	export declare const HARD_MAX_SEARCH_SCAN_BYTES: number
+HARD_MAX_SEARCH_TIME_MS	export declare const HARD_MAX_SEARCH_TIME_MS = 300000
+HARD_MAX_TERMINAL_COLUMNS	export declare const HARD_MAX_TERMINAL_COLUMNS = 500
+HARD_MAX_TERMINAL_RESIZES_PER_MINUTE	export declare const HARD_MAX_TERMINAL_RESIZES_PER_MINUTE = 600
+HARD_MAX_TERMINAL_ROWS	export declare const HARD_MAX_TERMINAL_ROWS = 200
+HARD_MAX_TERMINAL_TERM_BYTES	export declare const HARD_MAX_TERMINAL_TERM_BYTES = 256
+HARD_MAX_TEXT_SCAN_BYTES	export declare const HARD_MAX_TEXT_SCAN_BYTES: number
+HARD_MAX_TODOS	export declare const HARD_MAX_TODOS = 10000
+HARD_MAX_TODO_TEXT_BYTES	export declare const HARD_MAX_TODO_TEXT_BYTES = 4096
+HARD_MAX_TOTAL_OUTPUT_BYTES	export declare const HARD_MAX_TOTAL_OUTPUT_BYTES: number
+HARD_MAX_WORKSPACE_CLEANUP_OPERATIONS	export declare const HARD_MAX_WORKSPACE_CLEANUP_OPERATIONS = 1000
+HARD_MAX_WORKSPACE_LEASE_TTL_MS	export declare const HARD_MAX_WORKSPACE_LEASE_TTL_MS = 300000
+HARD_MAX_WORKSPACE_RECORD_BYTES	export declare const HARD_MAX_WORKSPACE_RECORD_BYTES: number
+HARD_MAX_WORKSPACE_REPOSITORIES	export declare const HARD_MAX_WORKSPACE_REPOSITORIES = 16
+HARD_MAX_WORKSPACE_WORKTREES	export declare const HARD_MAX_WORKSPACE_WORKTREES = 16
+HARD_MAX_WRITE_BYTES	export declare const HARD_MAX_WRITE_BYTES: number
+HARD_MEMORY_BYTES	export declare const HARD_MEMORY_BYTES: number
+HARD_OPENAPI_LIMITS	export declare const HARD_OPENAPI_LIMITS: ResolvedOpenApiLimits
+HARD_SHELL_TIMEOUT_SECONDS	export declare const HARD_SHELL_TIMEOUT_SECONDS = 3600
+HARD_STARTUP_TIMEOUT_MS	export declare const HARD_STARTUP_TIMEOUT_MS = 120000
+HARD_STOP_GRACE_MS	export declare const HARD_STOP_GRACE_MS = 30000
+HARD_TMP_BYTES	export declare const HARD_TMP_BYTES: number
+HARD_WALL_TIME_MS	export declare const HARD_WALL_TIME_MS: number
+HARD_WORKSPACE_BYTES	export declare const HARD_WORKSPACE_BYTES: number
+IMPECCABLE_SKILL_NAME	export declare const IMPECCABLE_SKILL_NAME = "impeccable"
+INDEX_STATES	export declare const INDEX_STATES: readonly IndexState[]
+ImpeccableExtensionOptions	export type { ImpeccableExtensionOptions } from "./types.js"
+IndexError	export declare class IndexError extends Error
+IndexFacade	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+IndexFileChange	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+IndexLimitOptions	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+IndexResourceDiagnostics	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+IndexSearchHit	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+IndexState	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+IndexedRepositoryOptions	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+LSP_RESTARTS_PER_SERVER	export declare const LSP_RESTARTS_PER_SERVER = 3
+LanguageDiagnostic	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./language/index.js"
+LanguageDiagnosticDeltaRequest	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageDiagnosticDeltaRequest, LanguageDiagnosticDeltaResult, LanguageFileDiagnostics, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./types.js"
+LanguageDiagnosticDeltaResult	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageDiagnosticDeltaRequest, LanguageDiagnosticDeltaResult, LanguageFileDiagnostics, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./types.js"
+LanguageFileDiagnostics	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageDiagnosticDeltaRequest, LanguageDiagnosticDeltaResult, LanguageFileDiagnostics, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./types.js"
+LanguageIntelligence	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./language/index.js"
+LanguageIntelligenceError	export declare class LanguageIntelligenceError extends Error
+LanguageIntelligenceLimits	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./language/index.js"
+LanguageLocation	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./language/index.js"
+LanguageServerSpec	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./language/index.js"
+LanguageSymbol	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./language/index.js"
+LanguageTextEdit	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./language/index.js"
+LanguageWorkspaceEdit	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./language/index.js"
+ListToolOptions	export type { ListToolOptions } from "./list.js"
+LspClient	export declare class LspClient
+LspFrameError	export declare class LspFrameError extends Error
+LspFrameReader	export declare class LspFrameReader
+MAX_CONFIG_FILE_BYTES	export declare const MAX_CONFIG_FILE_BYTES = 16384
+MAX_INJECTED_INSTRUCTION_BYTES	export declare const MAX_INJECTED_INSTRUCTION_BYTES = 32768
+MAX_RENDERED_WINDOW	export declare const MAX_RENDERED_WINDOW = 400
+MAX_SKILL_FILE_BYTES	export declare const MAX_SKILL_FILE_BYTES = 262144
+MoveOperations	export type { MoveOperations, MoveToolOptions } from "./move.js"
+MoveToolOptions	export type { MoveOperations, MoveToolOptions } from "./move.js"
+MutationStat	export type { DeleteOperations, DeleteToolOptions, MutationStat } from "./delete.js"
+NamedCheckDefinition	export type { CodingCheckToolOptions, NamedCheckDefinition } from "./checks.js"
+NativeSandboxError	export declare class NativeSandboxError extends Error
+NativeSandboxLimitOptions	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
+NativeSpawnCommand	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
+NativeUnshareMode	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
+NormalizeDiagnosticsOptions	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
+NormalizedDiagnostic	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
+OpenApiCredentialInput	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
+OpenApiCredentialResolver	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
+OpenApiLimits	export type { OpenApiLimits, ResolvedOpenApiLimits } from "./limits.js"
+OpenApiPagination	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
+OpenApiPolicyCheck	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
+OpenApiToolError	export declare class OpenApiToolError extends Error
+OpenApiToolsOptions	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
+OutputAccumulator	export declare class OutputAccumulator
+PONYTAIL_MODES	export declare const PONYTAIL_MODES: readonly ["off", "lite", "full", "ultra"]
+PONYTAIL_MODE_TYPE	export declare const PONYTAIL_MODE_TYPE: "ponytail-mode"
+PONYTAIL_PEER_PACKAGE	export declare const PONYTAIL_PEER_PACKAGE = "@dietrichgebert/ponytail"
+PONYTAIL_PEER_RANGE	export declare const PONYTAIL_PEER_RANGE = "^4.9.0"
+PONYTAIL_SKILL_NAMES	export declare const PONYTAIL_SKILL_NAMES: readonly ["ponytail", "ponytail-audit", "ponytail-debt", "ponytail-gain", "ponytail-help", "ponytail-review"]
+PROCESS_RECOVERY_CATEGORY	export declare const PROCESS_RECOVERY_CATEGORY = "coding-process"
+PROCESS_RECOVERY_LEASE_NAMESPACE	export declare const PROCESS_RECOVERY_LEASE_NAMESPACE = "prism.coding-agent.process.lease.v1"
+PROCESS_RECOVERY_NAMESPACE	export declare const PROCESS_RECOVERY_NAMESPACE = "prism.coding-agent.process.v1"
+PROCESS_RECOVERY_SCHEMA_VERSION	export declare const PROCESS_RECOVERY_SCHEMA_VERSION = 1
+PermissionDeniedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+PonytailAppendOptions	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
+PonytailExtensionOptions	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
+PonytailExtensionState	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
+PonytailMode	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
+PrHandoff	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+ProcessExitResult	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessOutputChunk	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessPtyBackend	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessPtyHandle	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessPtyStartRequest	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessRecoveryBackend	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessRecoveryError	export declare class ProcessRecoveryError extends Error
+ProcessRecoveryErrorCode	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessRecoveryLimits	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessRecoveryOutcome	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessRecoveryRecord	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessRecoveryRecordReport	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessRecoveryReport	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessSandboxBackend	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessSandboxHandle	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessSandboxStartRequest	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessSession	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessSessionError	export declare class ProcessSessionError extends Error
+ProcessSessionLimits	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessSessionMetadata	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessSessionState	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessSessions	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessStartRequest	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessTerminalRequest	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ProcessTerminalResize	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+READ_PATH_SET_NAMESPACE	export declare const READ_PATH_SET_NAMESPACE: "prism.coding-agent.read-path-set"
+RawDiagnostic	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
+ReadOperations	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+ReadPathSet	export type { ReadPathSet } from "./read-path-set.js"
+ReadTextOptions	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+ReadTextResult	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+ReadToolOptions	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+RecoveryRecordPage	export type { ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, RecoveryRecordPage, ResolvedProcessRecoveryLimits, } from "./recovery.js"
+RepoEntryKind	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepoListEntry	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepoSearchMode	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepoSearchOutputMode	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryError	export declare class RepositoryError extends Error
+RepositoryGlobRequest	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryGlobResult	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryIndexBackend	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryIndexQueryRequest	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryIndexQueryResult	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryIndexRemoveRequest	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryIndexStatus	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryIndexUpdateRequest	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryLimitOptions	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryListRequest	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryListResult	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryOperations	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositorySearchMatch	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositorySearchRequest	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositorySearchResult	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryWalk	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryWalkEvent	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+RepositoryWalkLimits	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+ResolvedAskUserDecisionAnswer	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+ResolvedAskUserDecisionLimits	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+ResolvedCodingCheckpointLimits	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
+ResolvedCodingLifecycleLimits	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+ResolvedCodingReviewLimits	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+ResolvedDiagnosticsLimits	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
+ResolvedDockerSandboxLimits	export type { DockerSandboxLimitOptions, ResolvedDockerSandboxLimits, } from "./sandbox-limits.js"
+ResolvedEgressLimits	export type { EgressLimitOptions, ResolvedEgressLimits } from "./limits.js"
+ResolvedForgeLimits	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
+ResolvedGitLimits	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
+ResolvedIndexLimits	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+ResolvedNativeSandboxLimits	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
+ResolvedOpenApiLimits	export type { OpenApiLimits, ResolvedOpenApiLimits } from "./limits.js"
+ResolvedProcessRecoveryLimits	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ResolvedProcessSessionLimits	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
+ResolvedRepositoryLimits	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+ResolvedWorkspaceLimits	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
+ReviewDiagnosticSeverity	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
+RunCodingGoalVerifyOptions	export type { CodingGoalVerifyApproval, RunCodingGoalVerifyOptions, } from "./goal-verify.js"
+SAFE_GIT_CONFIG_ARGS	export declare const SAFE_GIT_CONFIG_ARGS: readonly ["-c", "core.hooksPath=/dev/null", "-c", "core.pager=cat", "-c", "sequence.editor=true", "-c", "credential.helper=", "-c", "advice.detachedHead=false"]
+SAFE_GIT_ENV	export declare const SAFE_GIT_ENV: Readonly<Record<string, string>>
+SANDBOX_FS_SCRIPTS	export declare const SANDBOX_FS_SCRIPTS: Readonly<
+SKILLS_DIR_NAME	export declare const SKILLS_DIR_NAME = "skills"
+SKILL_FILE_CANDIDATES	export declare const SKILL_FILE_CANDIDATES: readonly ["skills/impeccable/SKILL.md", "SKILL.md"]
+SandboxAdapter	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxCapabilities	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxCloseOptions	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxCodingComposition	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
+SandboxCodingCompositionError	export declare class SandboxCodingCompositionError extends Error
+SandboxCodingCompositionResult	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
+SandboxCodingToolsOptions	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
+SandboxExecFileRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxExecRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxExecutionError	export declare class SandboxExecutionError extends Error
+SandboxExportMetadata	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxFsError	export declare class SandboxFsError extends Error
+SandboxFsOperationsOptions	export type { SandboxFsOperationsOptions, SandboxRepositoryOperationsOptions, } from "./sandbox-fs-operations.js"
+SandboxProcessHandle	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxRepositoryOperationsOptions	export type { SandboxFsOperationsOptions, SandboxRepositoryOperationsOptions, } from "./sandbox-fs-operations.js"
+SandboxStatus	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxStatusState	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxTarError	export declare class SandboxTarError extends Error
+SearchToolOptions	export type { SearchToolOptions } from "./search.js"
+ShellConfig	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
+ShellToolOptions	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
+SuspendAskUserDecisionOptions	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+TextFileClient	export type { TextFileClient } from "./acp-operations.js"
+TransformImage	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+TransformImageInput	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+UI_CSP	export declare const UI_CSP: string
+UpstreamResolveError	export declare class UpstreamResolveError extends Error
+WORKSPACE_LOCK_REASON_PREFIX	export declare const WORKSPACE_LOCK_REASON_PREFIX: "prism-workspace:"
+WORKSPACE_NAMESPACE	export declare const WORKSPACE_NAMESPACE: "prism.coding-agent.workspace.v1"
+WORKSPACE_SCHEMA_VERSION	export declare const WORKSPACE_SCHEMA_VERSION: 1
+WORKSPACE_STATES	export declare const WORKSPACE_STATES: readonly WorkspaceState[]
+WorkspaceCleanupPolicy	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
+WorkspaceCreateRequest	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
+WorkspaceError	export declare class WorkspaceError extends Error
+WorkspaceErrorCode	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
+WorkspaceLimitOptions	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
+WorkspaceMode	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
+WorkspaceRepositoryRecord	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
+WorkspaceRepositoryRegistration	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
+WorkspaceRepositoryState	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
+WorkspaceState	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
+WorktreeChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+WriteOperations	export type { WriteOperations, WriteToolOptions } from "./write.js"
+WriteToolOptions	export type { WriteOperations, WriteToolOptions } from "./write.js"
+acquireRecordLease	export declare function acquireRecordLease(input:
+applyAgentEvent	export declare function applyAgentEvent(view: RunView, event: AgentEvent): void
+applyEditsToNormalizedContent	export declare function applyEditsToNormalizedContent(normalizedContent: string, edits: Edit[], path: string): AppliedEditsResult
+applyReplacementsPreservingUnchangedLines	export declare function applyReplacementsPreservingUnchangedLines(originalContent: string, baseContent: string, replacements: TextReplacement[]): string
+applyTextEdits	export declare function applyTextEdits(content: string, edits: readonly LanguageTextEdit[]): string
+askUserDecisionResumeSchema	export declare function askUserDecisionResumeSchema(request: Pick<AskUserDecisionSuspendData, "selectionMode" | "allowCustom" | "options">): JsonObject
+assertAbsoluteExecutable	export declare function assertAbsoluteExecutable(path: string, label: string): Promise<string>
+assertAbsoluteGit	export declare function assertAbsoluteGit(path: string): Promise<string>
+assertBrowserSandboxNetwork	export declare function assertBrowserSandboxNetwork(network: DockerNetworkConfig | undefined): void
+assertCodingPatchAccepted	export declare function assertCodingPatchAccepted(input: AssertCodingPatchAcceptedInput): AssertCodingPatchAcceptedResult
+assertCodingResumeAllowed	export declare function assertCodingResumeAllowed(input:
+assertDeadline	export declare function assertDeadline(deadlineAt: number | undefined): void
+assertEgressAttestation	export declare function assertEgressAttestation(attestation: EgressAttestation): EgressAttestation
+assertNotAborted	export declare function assertNotAborted(signal: AbortSignal | undefined): void
+assertPathInsideRoots	export declare function assertPathInsideRoots(roots: readonly string[], target: string): Promise<boolean>
+assertPinned	export declare function assertPinned(host: string, remoteAddress: string | undefined, pinned: readonly string[]): void
+assertSandboxPath	export declare function assertSandboxPath(workspaceRoot: string, absolutePath: string): string
+atomicWriteUtf8File	export declare function atomicWriteUtf8File(targetPath: string, content: string, options?:
+attachWithTimeout	export declare function attachWithTimeout(backend: ProcessRecoveryBackend, ref: string, timeoutMs: number): Promise<ProcessPtyHandle | ProcessSandboxHandle | null>
+buildCavemanInstructions	export declare function buildCavemanInstructions(upstreamRoot: string, level: CavemanLevel): string | undefined
+buildCodingCheckpointMetadata	export declare function buildCodingCheckpointMetadata(input:
+buildDockerCreateArgsForTest	export declare function buildDockerCreateArgsForTest(options: Omit<CreateDockerSandboxOptions, "docker" | "runner" | "skipImport">): string[]
+buildNativeSpawnCommand	export declare function buildNativeSpawnCommand(request: SandboxExecRequest | SandboxExecFileRequest, options:
+buildPonytailInstructions	export declare function buildPonytailInstructions(api: UpstreamPonytailInstructions, mode: PonytailMode): string | undefined
+buildProcessRecoveryRecord	export declare function buildProcessRecoveryRecord(input:
+classifyComputerUseLinuxTool	export declare function classifyComputerUseLinuxTool(name: string): ComputerUseLinuxToolClass | undefined
+classifyGitApplyEffect	export declare function classifyGitApplyEffect(args: JsonObject): ToolEffectDeclaration
+classifyGitBranchEffect	export declare function classifyGitBranchEffect(args: JsonObject): ToolEffectDeclaration
+classifyGitWorktreeEffect	export declare function classifyGitWorktreeEffect(args: JsonObject): ToolEffectDeclaration
+codingCheckpointStatePatch	export declare function codingCheckpointStatePatch(metadata: CodingCheckpointMetadata): JsonObject
+codingPlanPathForTask	export declare function codingPlanPathForTask(taskId: string): string
+codingSha256Hex	export declare function codingSha256Hex(data: Buffer | string): string
+compileOpenApiDocument	export declare function compileOpenApiDocument(input:
+compileSearchPattern	export declare function compileSearchPattern(query: string, caseSensitive: boolean, maxPatternBytes: number):
+composeEgressSandboxNetwork	export declare function composeEgressSandboxNetwork(attestation: EgressAttestation, name: string): DockerNetworkConfig
+createAcpFilesystemOperations	export declare function createAcpFilesystemOperations(client: TextFileClient):
+createAllTools	export declare function createAllTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
+createAllowListEgressProxy	export declare function createAllowListEgressProxy(options: CreateAllowListEgressProxyOptions): EgressProxy
+createAskUserDecisionResumeValidator	export declare function createAskUserDecisionResumeValidator(limits?: Pick<ResolvedAskUserDecisionLimits, "maxCustomTextBytes">): WorkflowResumeValidator
+createAskUserDecisionTool	export declare function createAskUserDecisionTool(options: AskUserDecisionToolOptions): ToolDefinition
+createBoundGitRunner	export declare function createBoundGitRunner(options?: CreateGitRunnerOptions): Promise<BoundGitRunner>
+createCavemanCommands	export declare function createCavemanCommands(ctx: CavemanCommandContext): readonly CommandDefinition[]
+createCavemanExtension	export declare function createCavemanExtension(options: CavemanExtensionOptions): Extension
+createCodingApprovalPolicy	export declare function createCodingApprovalPolicy(options: CodingApprovalPolicyOptions): ExecutionPolicy
+createCodingArtifactRef	export declare function createCodingArtifactRef(input:
+createCodingCheckTool	export declare function createCodingCheckTool(cwd: string, options: CodingCheckToolOptions): ToolDefinition
+createCodingGoalVerifyWorkflow	export declare function createCodingGoalVerifyWorkflow(options:
+createCodingLifecycleEmitter	export declare function createCodingLifecycleEmitter(options?: CreateCodingLifecycleEmitterOptions): CodingLifecycleEmitter
+createCodingPatchReviewManifest	export declare function createCodingPatchReviewManifest(input: CreateCodingPatchReviewInput):
+createCodingPlanMarkdown	export declare function createCodingPlanMarkdown(input:
+createCodingTools	export declare function createCodingTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
+createCodingWorkspaceLifecycle	export declare function createCodingWorkspaceLifecycle(options: CreateCodingWorkspaceLifecycleOptions): CodingWorkspaceLifecycle
+createComputerUseLinuxTools	export declare function createComputerUseLinuxTools(options: ComputerUseLinuxToolsOptions): Promise<ComputerUseLinuxTools>
+createDeleteTool	export declare function createDeleteTool(cwd: string, options?: DeleteToolOptions): ToolDefinition
+createDevRouter	export declare function createDevRouter(ctx: DevRouteContext): PrismRequestHandler
+createDirectoryArtifactWriter	export declare function createDirectoryArtifactWriter(rootDir: string): ArtifactWriter
+createDockerSandbox	export declare function createDockerSandbox(options: CreateDockerSandboxOptions): Promise<DisposableSandbox>
+createDocumentReader	export declare function createDocumentReader(options?: CreateDocumentReaderOptions): Promise<DocumentReader>
+createDocxParser	export declare function createDocxParser(): Promise<DocumentParser>
+createEditTool	export declare function createEditTool(cwd: string, options?: EditToolOptions): ToolDefinition
+createEgressPolicy	export declare function createEgressPolicy(options?: CreateEgressPolicyOptions): EgressPolicy
+createGitApplyTool	export declare function createGitApplyTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGitAwareRepositoryOperations	export declare function createGitAwareRepositoryOperations(cwd: string, options?: GitAwareRepositoryOptions): RepositoryOperations
+createGitBranchTool	export declare function createGitBranchTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGitCommitTool	export declare function createGitCommitTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGitDiffTool	export declare function createGitDiffTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGitHubForge	export declare function createGitHubForge(options: CreateGitHubForgeOptions): ForgeOperations
+createGitOperations	export declare function createGitOperations(options: CreateGitOperationsOptions): Promise<GitOperations>
+createGitPrHandoffTool	export declare function createGitPrHandoffTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGitStatusTool	export declare function createGitStatusTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGitTools	export declare function createGitTools(cwd: string, options?: GitToolsOptions): readonly ToolDefinition[]
+createGitWorktreeTool	export declare function createGitWorktreeTool(cwd: string, options?: GitToolsOptions): ToolDefinition
+createGlobTool	export declare function createGlobTool(cwd: string, options?: GlobToolOptions): ToolDefinition
+createImpeccableCommand	export declare function createImpeccableCommand(): CommandDefinition
+createImpeccableExtension	export declare function createImpeccableExtension(options: ImpeccableExtensionOptions): Extension
+createImportTarStream	export declare function createImportTarStream(sourceRoot: string, bounds: TarBounds): Readable
+createIndexedRepositoryOperations	export declare function createIndexedRepositoryOperations(cwd: string, options: IndexedRepositoryOptions): RepositoryOperations &
+createLanguageIntelligence	export declare function createLanguageIntelligence(options: CreateLanguageIntelligenceOptions): LanguageIntelligence
+createLocalBashOperations	export declare function createLocalBashOperations(options?:
+createLocalRepositoryOperations	export declare function createLocalRepositoryOperations(limits?: RepositoryLimitOptions, walk?: RepositoryWalk): RepositoryOperations
+createMoveTool	export declare function createMoveTool(cwd: string, options?: MoveToolOptions): ToolDefinition
+createNativeSandbox	export declare function createNativeSandbox(options: CreateNativeSandboxOptions): Promise<DisposableSandbox>
+createOpenApiTools	export declare function createOpenApiTools(options: OpenApiToolsOptions): readonly ToolDefinition[]
+createPdfParser	export declare function createPdfParser(): Promise<DocumentParser>
+createPonytailCommands	export declare function createPonytailCommands(ctx: PonytailCommandContext): readonly CommandDefinition[]
+createPonytailExtension	export declare function createPonytailExtension(options: PonytailExtensionOptions): Extension
+createPrismDevInspector	export declare function createPrismDevInspector(options: CreatePrismDevInspectorOptions): PrismDevInspector
+createProcessSessions	export declare function createProcessSessions(options: CreateProcessSessionsOptions): ProcessSessions
+createReadOnlyTools	export declare function createReadOnlyTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
+createReadPathSet	export declare function createReadPathSet(): ReadPathSet
+createReadPathSetPersistence	export declare function createReadPathSetPersistence(options: CreateReadPathSetPersistenceOptions): ReadPathSetPersistence
+createReadTool	export declare function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefinition
+createRepoListTool	export declare function createRepoListTool(cwd: string, options?: ListToolOptions): ToolDefinition
+createRepoSearchTool	export declare function createRepoSearchTool(cwd: string, options?: SearchToolOptions): ToolDefinition
+createRunView	export declare function createRunView(): RunView
+createSandboxBashOperations	export declare function createSandboxBashOperations(adapter: SandboxAdapter): BashOperations
+createSandboxCodingComposition	export declare function createSandboxCodingComposition(cwd: string, options: SandboxCodingToolsOptions): SandboxCodingCompositionResult
+createSandboxCodingTools	export declare function createSandboxCodingTools(cwd: string, options: SandboxCodingToolsOptions): readonly ToolDefinition[]
+createSandboxFilesystemOperations	export declare function createSandboxFilesystemOperations(sandbox: DisposableSandbox, options?: SandboxFsOperationsOptions):
+createSandboxReadOnlyComposition	export declare function createSandboxReadOnlyComposition(cwd: string, options: SandboxCodingToolsOptions): SandboxCodingCompositionResult
+createSandboxReadOnlyTools	export declare function createSandboxReadOnlyTools(cwd: string, options: SandboxCodingToolsOptions): readonly ToolDefinition[]
+createSandboxRepositoryOperations	export declare function createSandboxRepositoryOperations(sandbox: DisposableSandbox, options?: SandboxRepositoryOperationsOptions): RepositoryOperations
+createSecretRedactor	export declare function createSecretRedactor(secrets?: readonly string[]): (text: string) => string
+createShellTool	export declare function createShellTool(cwd: string, options?: ShellToolOptions): ToolDefinition
+createTempArtifactWriter	export declare function createTempArtifactWriter(prefix?: string): ArtifactWriter
+createWriteTool	export declare function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDefinition
+deleteProcessRecoveryRecord	export declare function deleteProcessRecoveryRecord(input:
+detectLineEnding	export declare function detectLineEnding(content: string): "\r\n" | "\n"
+detectSupportedImageMimeType	export declare function detectSupportedImageMimeType(buffer: Buffer): string | null
+detectSupportedImageMimeTypeFromFile	export declare function detectSupportedImageMimeTypeFromFile(filePath: string): Promise<string | null>
+diagnosticDelta	export declare function diagnosticDelta(request: DiagnosticDeltaRequest): DiagnosticDelta
+diagnosticIdentity	export declare function diagnosticIdentity(diagnostic: NormalizedDiagnostic): string
+dockerOutputText	export declare function dockerOutputText(runner: DockerRunner, request: Omit<DockerCliRequest, "collectStdout">): Promise<string>
+encodeLspFrame	export declare function encodeLspFrame(message: unknown): Buffer
+enforceExecutionPolicy	export declare function enforceExecutionPolicy(policy: ExecutionPolicy | undefined, action: ExecutionAction, toolCallId: string, toolName: string, /** Called once on policy denial so one site emits lifecycle permission_denied for every tool. */ onDenied?: (input:
+evaluateCommandRules	export declare function evaluateCommandRules(command: string, rules: readonly CommandRule[] | undefined, options?:
+executeOpenApiOperation	export declare function executeOpenApiOperation(options: ExecuteOpenApiOperationOptions): Promise<ToolResult>
+expandGlobBraces	export declare function expandGlobBraces(pattern: string, options?: BraceExpansionOptions): string[]
+expandPath	export declare function expandPath(filePath: string): string
+extractUserText	export declare function extractUserText(messages: readonly
+filterSkillBodyForLevel	export declare function filterSkillBodyForLevel(body: string, level: CavemanLevel): string
+fingerprintJson	export declare function fingerprintJson(value: unknown): string
+formatSize	export declare function formatSize(bytes: number): string
+fuzzyFindText	export declare function fuzzyFindText(content: string, oldText: string): FuzzyMatchResult
+generateDiffString	export declare function generateDiffString(oldContent: string, newContent: string, contextLines?: number): EditDiffResult
+generateUnifiedPatch	export declare function generateUnifiedPatch(path: string, oldContent: string, newContent: string, contextLines?: number): string
+getInspectorScript	export declare function getInspectorScript(): string
+getShellConfig	export declare function getShellConfig(customShellPath?: string): ShellConfig
+gitRequireOk	export declare function gitRequireOk(runner: BoundGitRunner, request: GitExecRequest, label: string): Promise<GitExecResult>
+gitText	export declare function gitText(result: GitExecResult, stream?: "stdout" | "stderr"): string
+globLocal	export declare function globLocal(request: RepositoryGlobRequest, defaults: ResolvedRepositoryLimits, walk: RepositoryWalk): Promise<RepositoryGlobResult>
+hasShellMetacharacters	export declare function hasShellMetacharacters(command: string): boolean
+indexErrorCode	export declare function indexErrorCode(error: unknown): string | undefined
+inspectorConfigResponse	export declare function inspectorConfigResponse(basePath: string, agentId: string): Response
+inspectorPageResponse	export declare function inspectorPageResponse(): Response
+inspectorScriptResponse	export declare function inspectorScriptResponse(): Response
+isBinaryBuffer	export declare function isBinaryBuffer(buffer: Buffer): boolean
+isCavemanLevel	export declare function isCavemanLevel(value: string): value is CavemanLevel
+isComputerUseLinuxTool	export declare function isComputerUseLinuxTool(name: string, includeSetupTools?: boolean): boolean
+isDeactivationCommand	export declare function isDeactivationCommand(text: string): boolean
+isMetadataAddress	export declare function isMetadataAddress(address: string): boolean
+isOwnershipConflict	export declare function isOwnershipConflict(error: unknown): boolean
+isPathInside	export declare function isPathInside(root: string, target: string): boolean
+isPathInsideReal	export declare function isPathInsideReal(root: string, target: string): Promise<boolean>
+isPathInsideRoot	export declare function isPathInsideRoot(root: string, target: string): boolean
+isPonytailMode	export declare function isPonytailMode(value: string): value is PonytailMode
+isPrivateAddress	export declare function isPrivateAddress(address: string): boolean
+killProcessTree	export declare function killProcessTree(pid: number): void
+kindFromDirent	export declare function kindFromDirent(dirent: Dirent): RepoEntryKind
+listLocal	export declare function listLocal(request: RepositoryListRequest, defaults: ResolvedRepositoryLimits, walk: RepositoryWalk): Promise<RepositoryListResult>
+loadComputerUseLinuxSkill	export declare function loadComputerUseLinuxSkill(): Skill
+loadImpeccableSkill	export declare function loadImpeccableSkill(root: string, skillRelativePath: string): Skill
+loadProcessRecoveryRecord	export declare function loadProcessRecoveryRecord(input:
+loadProcessRecoveryRecords	export declare function loadProcessRecoveryRecords(input:
+loadUpstreamHooks	export declare function loadUpstreamHooks(upstreamRoot: string): UpstreamPonytailHooks
+loadUpstreamSkills	export declare function loadUpstreamSkills(upstreamRoot: string): Skill[]
+matchGlobPattern	export declare function matchGlobPattern(pattern: string, path: string): boolean
+mountInspector	export declare function mountInspector(root: HTMLElement): Promise<MountHandles>
+normalizeAddress	export declare function normalizeAddress(address: string): string
+normalizeDiagnostics	export declare function normalizeDiagnostics(raw: readonly RawDiagnostic[], options: NormalizeDiagnosticsOptions): readonly NormalizedDiagnostic[]
+normalizeForFuzzyMatch	export declare function normalizeForFuzzyMatch(text: string): string
+normalizeLevelArg	export declare function normalizeLevelArg(arg: string): CavemanLevel | null
+normalizeToLF	export declare function normalizeToLF(text: string): string
+packageName	export declare const packageName = "@arnilo/prism-coding-tools/openapi"
+parseAskUserDecisionArgs	export declare function parseAskUserDecisionArgs(args: Record<string, unknown>, limits: ResolvedAskUserDecisionLimits):
+parseCodingPlanTodos	export declare function parseCodingPlanTodos(markdown: string, limits?: CodingCheckpointLimitOptions): CodingTodoItem[]
+parseGitLsFilesZ	export declare function parseGitLsFilesZ(buffer: Buffer): string[]
+parsePorcelainV2	export declare function parsePorcelainV2(stdout: Buffer, options?:
+pathExists	export declare function pathExists(filePath: string): Promise<boolean>
+persistLevel	export declare function persistLevel(options: PersistLevelOptions): Promise<void>
+persistMode	export declare function persistMode(options: PersistModeOptions): Promise<void>
+readBoundedFile	export declare function readBoundedFile(root: string, relativePath: string, maxBytes: number): string
+readCavemanConfig	export declare function readCavemanConfig(configPath?: string): CavemanConfig
+readCodingCheckpointFromState	export declare function readCodingCheckpointFromState(state: Readonly<Record<string, unknown>>, limits?: CodingCheckpointLimitOptions): CodingCheckpointMetadata | undefined
+readCodingPlanFile	export declare function readCodingPlanFile(input:
+readFileBounded	export declare function readFileBounded(path: string, maxBytes: number, signal?: AbortSignal): Promise<Buffer>
+readInitialConfig	export declare function readInitialConfig(configPath: string | undefined, defaultMode?: PonytailMode, quietStartup?: boolean): PonytailConfig
+readPonytailConfig	export declare function readPonytailConfig(configPath?: string): PonytailConfig
+reconcileCodingToolEffect	export declare function reconcileCodingToolEffect(input: CodingEffectReconciliationInput): Promise<CodingEffectReconciliation>
+redactPaths	export declare function redactPaths(text: string, paths?: readonly string[]): string
+redactRemoteUrl	export declare function redactRemoteUrl(url: string): string
+refuseReadBeforeWrite	export declare function refuseReadBeforeWrite(operation: "write" | "edit", displayPath: string, absolutePath: string, options: ReadBeforeWriteOptions | undefined, force: boolean): string | null
+releaseRecordLease	export declare function releaseRecordLease(input:
+replayRunPage	export declare function replayRunPage(seams: DevReplaySeams, request: Request, runId: string, cursor: string | undefined): Promise<Response>
+requireCavemanSkills	export declare function requireCavemanSkills(skills: readonly Skill[]): Map<string, Skill>
+requirePonytailSkills	export declare function requirePonytailSkills(skills: readonly Skill[]): Map<PonytailSkillName, Skill>
+resolveAskUserDecisionAnswer	export declare function resolveAskUserDecisionAnswer(answer: AskUserDecisionAnswer | null | undefined, selectionMode: AskUserDecisionSelectionMode, options: readonly AskUserDecisionOption[], gates:
+resolveAskUserDecisionLimits	export declare function resolveAskUserDecisionLimits(options?: Pick<AskUserDecisionToolOptions, "maxOptions" | "maxQuestionBytes" | "maxLabelBytes" | "maxBulletBytes" | "maxCustomTextBytes">): ResolvedAskUserDecisionLimits
+resolveCodingCheckpointLimits	export declare function resolveCodingCheckpointLimits(options?: CodingCheckpointLimitOptions): ResolvedCodingCheckpointLimits
+resolveCodingLifecycleLimits	export declare function resolveCodingLifecycleLimits(limits?: CodingLifecycleLimits): ResolvedCodingLifecycleLimits
+resolveCodingReviewLimits	export declare function resolveCodingReviewLimits(options?: CodingReviewLimits): ResolvedCodingReviewLimits
+resolveContainedMutationPath	export declare function resolveContainedMutationPath(root: string, inputPath: string, options?:
+resolveDiagnosticsLimits	export declare function resolveDiagnosticsLimits(options?:
+resolveDockerCapabilities	export declare function resolveDockerCapabilities(network: DockerNetworkConfig): SandboxCapabilities
+resolveDockerSandboxLimits	export declare function resolveDockerSandboxLimits(input?: DockerSandboxLimitOptions): ResolvedDockerSandboxLimits
+resolveEgressLimits	export declare function resolveEgressLimits(input?: EgressLimitOptions): ResolvedEgressLimits
+resolveForgeLimits	export declare function resolveForgeLimits(options?: ForgeLimits): ResolvedForgeLimits
+resolveGitLimits	export declare function resolveGitLimits(options?: GitLimitOptions): ResolvedGitLimits
+resolveIndexLimits	export declare function resolveIndexLimits(options?: IndexLimitOptions): ResolvedIndexLimits
+resolveLanguageIntelligenceLimits	export declare function resolveLanguageIntelligenceLimits(options?: LanguageIntelligenceLimits): ResolvedLanguageIntelligenceLimits
+resolveLevelFromEntries	export declare function resolveLevelFromEntries(entries: readonly SessionEntry[]): CavemanLevel | undefined
+resolveModeFromEntries	export declare function resolveModeFromEntries(entries: readonly SessionEntry[]): PonytailMode | undefined
+resolveNativeSandboxLimits	export declare function resolveNativeSandboxLimits(input?: NativeSandboxLimitOptions): ResolvedNativeSandboxLimits
+resolveOpenApiLimits	export declare function resolveOpenApiLimits(input?: OpenApiLimits): ResolvedOpenApiLimits
+resolvePinned	export declare function resolvePinned(host: string, resolve?: AddressResolver): Promise<readonly string[]>
+resolveProcessRecoveryLimits	export declare function resolveProcessRecoveryLimits(limits?: ProcessRecoveryLimits): ResolvedProcessRecoveryLimits
+resolveProcessSessionLimits	export declare function resolveProcessSessionLimits(limits?: ProcessSessionLimits): ResolvedProcessSessionLimits
+resolveReadPath	export declare function resolveReadPath(filePath: string, cwd: string): string
+resolveReadPathAsync	export declare function resolveReadPathAsync(filePath: string, cwd: string): Promise<string>
+resolveRepoPath	export declare function resolveRepoPath(root: string, inputPath: string | undefined): Promise<
+resolveRepositoryLimits	export declare function resolveRepositoryLimits(options?: RepositoryLimitOptions): ResolvedRepositoryLimits
+resolveSandboxCapabilities	export declare function resolveSandboxCapabilities(sandbox: SandboxAdapter | undefined): SandboxCapabilities
+resolveToCwd	export declare function resolveToCwd(filePath: string, cwd: string): string
+resolveUnderRoot	export declare function resolveUnderRoot(root: string, candidate: string): string
+resolveUpstreamRoot	export declare function resolveUpstreamRoot(options?: ResolveUpstreamRootOptions): string
+resolveWorkspaceLimits	export declare function resolveWorkspaceLimits(options?: WorkspaceLimitOptions): ResolvedWorkspaceLimits
+restoreLineEndings	export declare function restoreLineEndings(text: string, ending: "\r\n" | "\n"): string
+runCodingGoalVerify	export declare function runCodingGoalVerify(options: RunCodingGoalVerifyOptions): Promise<WorkflowRunResult>
+runDevCli	export declare function runDevCli(argv: ReadonlyArray<string>, runtime?: Partial<DevCliRuntime>): Promise<number>
+runDockerCli	export declare function runDockerCli(request: DockerCliRequest): Promise<DockerCliResult>
+runGitCli	export declare function runGitCli(request: GitExecRequest &
+saveProcessRecoveryRecord	export declare function saveProcessRecoveryRecord(input:
+searchLocal	export declare function searchLocal(request: RepositorySearchRequest, defaults: ResolvedRepositoryLimits, walk: RepositoryWalk): Promise<RepositorySearchResult>
+sha256Hex	export declare function sha256Hex(data: Buffer | string): string
+shouldSkipName	export declare function shouldSkipName(name: string, includeHidden: boolean, exclude: ReadonlySet<string>): boolean
+stripBom	export declare function stripBom(content: string):
+summarizeTarStream	export declare function summarizeTarStream(stream: AsyncIterable<Buffer>, bounds: TarBounds): Promise<TarExportSummary>
+suspendAskUserDecision	export declare function suspendAskUserDecision(request: AskUserDecisionSuspendData | (Pick<AskUserDecisionRequest, "question" | "options" | "selectionMode" | "sessionId" | "runId"> &
+toAskUserDecisionSuspendData	export declare function toAskUserDecisionSuspendData(request:
+toRepoRelative	export declare function toRepoRelative(root: string, absolutePath: string): string
+truncateHead	export declare function truncateHead(content: string, options?: TruncationOptions): TruncationResult
+truncateLine	export declare function truncateLine(line: string, maxChars?: number):
+truncateTail	export declare function truncateTail(content: string, options?: TruncationOptions): TruncationResult
+type ComputerUseLinuxConnect	export { type ComputerUseLinuxConnect, type ComputerUseLinuxTools, type ComputerUseLinuxToolsOptions, createComputerUseLinuxTools, } from "./create.js"
+type ComputerUseLinuxTools	export { type ComputerUseLinuxConnect, type ComputerUseLinuxTools, type ComputerUseLinuxToolsOptions, createComputerUseLinuxTools, } from "./create.js"
+type ComputerUseLinuxToolsOptions	export { type ComputerUseLinuxConnect, type ComputerUseLinuxTools, type ComputerUseLinuxToolsOptions, createComputerUseLinuxTools, } from "./create.js"
+type OpenApiToolErrorCode	export { OpenApiToolError, type OpenApiToolErrorCode } from "./errors.js"
+type ResolveUpstreamRootOptions	export { MAX_SKILL_FILE_BYTES, type ResolvedImpeccableUpstream, type ResolveUpstreamRootOptions, readBoundedFile, redactPaths, resolveUpstreamRoot, SKILL_FILE_CANDIDATES, UpstreamResolveError, } from "./upstream.js"
+type ResolvedImpeccableUpstream	export { MAX_SKILL_FILE_BYTES, type ResolvedImpeccableUpstream, type ResolveUpstreamRootOptions, readBoundedFile, redactPaths, resolveUpstreamRoot, SKILL_FILE_CANDIDATES, UpstreamResolveError, } from "./upstream.js"
+validateAskUserDecisionAgentResume	export declare function validateAskUserDecisionAgentResume(input:
+validateAskUserDecisionResume	export declare function validateAskUserDecisionResume(request: AskUserDecisionSuspendData, value: unknown, limits?: Pick<ResolvedAskUserDecisionLimits, "maxCustomTextBytes">): ResolvedAskUserDecisionAnswer
+validateBackendRef	export declare function validateBackendRef(ref: unknown, limits: ResolvedProcessRecoveryLimits): string
+validateCodingCheckpointMetadata	export declare function validateCodingCheckpointMetadata(value: unknown, limits?: CodingCheckpointLimitOptions): CodingCheckpointMetadata
+validateCodingLimit	export declare function validateCodingLimit(name: string, value: number, hardCap: number): number
+validateCodingLimitAllowZero	export declare function validateCodingLimitAllowZero(name: string, value: number, hardCap: number): number
+validateCwdAndEnv	export declare function validateCwdAndEnv(request: NativeRunRequest, root: string, limits: ResolvedNativeSandboxLimits): Promise<
+validateGlobPattern	export declare function validateGlobPattern(pattern: string, maxPatternBytes: number, options?:
+validateProcessRecoveryRecord	export declare function validateProcessRecoveryRecord(record: unknown, limits: ResolvedProcessRecoveryLimits): ProcessRecoveryRecord
+validateRunArgs	export declare function validateRunArgs(request: NativeRunRequest): void
+validateSandboxLimit	export declare function validateSandboxLimit(name: string, value: number, hardCap: number): number
+verifyCodingArtifactBytes	export declare function verifyCodingArtifactBytes(ref: CodingArtifactRef, bytes: Buffer, limits?: CodingCheckpointLimitOptions): void
+visibleItems	export declare function visibleItems(items: readonly TimelineItem[]):
+waitForChildProcess	export declare function waitForChildProcess(child: ChildProcess): Promise<number | null>
+walkRepository	export declare function walkRepository(rootReal: string, startAbsolute: string, limits: RepositoryWalkLimits): AsyncGenerator<RepositoryWalkEvent>
+withFileMutationQueue	export declare function withFileMutationQueue<T>(filePath: string, fn: () => Promise<T>): Promise<T>
+writeCavemanConfig	export declare function writeCavemanConfig(configPath: string, config: CavemanConfig): void
+writeCodingPlanFile	export declare function writeCodingPlanFile(input:
+writePonytailDefaultMode	export declare function writePonytailDefaultMode(configPath: string, mode: PonytailMode): void

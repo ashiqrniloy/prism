@@ -70,7 +70,7 @@ Static review of `src/contracts.ts`, `src/session-stores.ts`, `src/credentials.t
 | `refreshOAuthCredential` | `src/credentials.ts` | Calls `OAuthProvider.refresh`; optional `OAuthCredentialStore.set` |
 | `OAuthCredentialStore` | `src/contracts.ts` | `set(provider, credentials)` only — no `get`/`delete` in core contract |
 | `OAuthProvider` / `OAuthCredentials` | `src/contracts.ts` | `login`, optional `refresh`, optional `getCredential` |
-| Device-code OAuth | `packages/provider-openai` | Bounded polling; abort via `OAuthLoginCallbacks.signal` |
+| Device-code OAuth | `packages/prism-providers/src/openai` | Bounded polling; abort via `OAuthLoginCallbacks.signal` |
 | Redaction | `src/redaction.ts` | Exact known-secret replacement; not secret detection |
 
 **Gaps (C-011):** No encrypted file store, no system keychain adapter, no versioned credential envelope, no `OAuthCredentialStore` `get`/`delete`/`list` in core (Task 4 package may extend store interface locally while integrating `refreshOAuthCredential`).

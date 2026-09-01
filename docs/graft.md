@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-graft` is an optional package that wires [nanonets/graft](https://github.com/nanonets/graft) — a repository context-graph CLI (`graft/` directory, INDEX.md orientation, symbol-level wiring graph) — into Prism contribution contracts.
+`@arnilo/prism-memory/graft` is an optional subpath that wires [nanonets/graft](https://github.com/nanonets/graft) — a repository context-graph CLI (`graft/` directory, INDEX.md orientation, symbol-level wiring graph) — into Prism contribution contracts.
 
 It registers six pull tools backed by the graft CLI (`--json`, argv-safe), a push-mode retrieval-pack context provider plus first-turn orientation injector carried on the `graft` skill, commands (`graft`, `graft-build`, `graft-check`, `graft-viz`), and an edit-watch middleware that computes blast radius after mutating tool calls. Import is inert; a missing graft CLI fails closed at `setup` with a bounded redacted error.
 
@@ -74,7 +74,7 @@ Tool call (pull):
 Status event:
 
 ```json
-{ "type": "graft:status", "extension": "@arnilo/prism-graft", "metadata": { "fresh": true, "missing": 0, "stale": 2 } }
+{ "type": "graft:status", "extension": "@arnilo/prism-memory/graft", "metadata": { "fresh": true, "missing": 0, "stale": 2 } }
 ```
 
 ## Implementation example
@@ -83,7 +83,7 @@ See [`examples/graft-extension.ts`](../examples/graft-extension.ts) — network-
 
 ```ts
 import { createExtensionKernel, createMemorySessionStore } from "@arnilo/prism";
-import { createGraftExtension } from "@arnilo/prism-graft";
+import { createGraftExtension } from "@arnilo/prism-memory/graft";
 
 const store = createMemorySessionStore();
 const kernel = createExtensionKernel({ errorPolicy: "throw" });

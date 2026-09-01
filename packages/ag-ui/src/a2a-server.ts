@@ -15,7 +15,7 @@ import type {
   A2ATaskLifecycle,
   A2ATextPart,
   ResolvedA2ALimits,
-} from "@arnilo/prism-supervisor";
+} from "@arnilo/prism-core/runtime/supervisor";
 import type { AgUiA2UiOptions } from "./a2ui.js";
 import { createAgUiEventMapper, truncateUtf8 } from "./ag-ui-mapper.js";
 import { AgUiError } from "./errors.js";
@@ -24,7 +24,7 @@ import { assertBoundedJson, defaultAgUiInput, type ParsedAgUiInput, parseAgUiInp
 import { type AgUiLimitOptions, type ResolvedAgUiLimits, resolveAgUiLimits } from "./limits.js";
 import type { AgUiProjection } from "./projection.js";
 
-type SupervisorA2AError = typeof import("@arnilo/prism-supervisor").A2AError;
+type SupervisorA2AError = typeof import("@arnilo/prism-core/runtime/supervisor").A2AError;
 
 /**
  * A2A server-side exposure: fronts one host-selected local AG-UI agent as an A2A 1.0
@@ -112,7 +112,7 @@ interface LiveTask {
  * imports keep working without it.
  */
 export async function createAgUiA2AServer(options: CreateAgUiA2AServerOptions): Promise<AgUiA2AServer> {
-  const supervisor = await import("@arnilo/prism-supervisor").catch(() => {
+  const supervisor = await import("@arnilo/prism-core/runtime/supervisor").catch(() => {
     throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "createAgUiA2AServer requires the optional @arnilo/prism-supervisor peer");
   });
   const agUiLimits = resolveAgUiLimits(options.limits);

@@ -17,7 +17,7 @@ Baseline: `@arnilo/prism` **0.3.0**+.
 
 ## Tasks
 
-- [ ] Task 1 — Example: Manager/Task/Validate Workflow on Existing Primitives
+- [x] Task 1 — Example: Manager/Task/Validate Workflow on Existing Primitives
   - Acceptance Criteria:
     - Functional: example runs offline on the mock provider: manager emits `{ tasks: [{ role, instruction }] }` via structured output (`docs/structured-output.md`), `fan_out` executes specialists (one per task, bounded `maxFanOut`), `join` with host `reduce` aggregates, conditional validation node routes to revision or completion; whole flow a single `defineWorkflow` with a fixed revision id.
     - Performance: example completes within workflow benchmark envelope on mock provider (no network).
@@ -51,7 +51,7 @@ Baseline: `@arnilo/prism` **0.3.0**+.
     - `docs/index.md` update: yes — Multi-agent and interoperability entry for the pattern page.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 2 — Mapping Table and Comparative Notes
+- [x] Task 2 — Mapping Table and Comparative Notes
   - Acceptance Criteria:
     - Functional: mapping table CrewAI→Prism (crew/task/process/manager/agent→workflow/fan_out item/DAG/agent node/definition) with links; "where Prism is stronger" notes (durable HITL suspend/resume, budget caps, approval gates, audit) each linked to its doc page.
     - Performance: n/a.
@@ -71,8 +71,9 @@ Baseline: `@arnilo/prism` **0.3.0**+.
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass.
+- **DAG Revision Branching**: Used conditional branching (`complete` vs `revise`) in the workflow DAG rather than cyclic edges, keeping full compatibility with Prism's DAG execution engine and checkpoint lineage.
+- **Zero New Helpers**: Intentionally did not introduce a `createCrew()` runtime wrapper; standard `defineWorkflow`, `agentNode`, `fanOutNode`, `joinNode`, `conditionalNode`, and `ArtifactValidator` primitives demonstrate full parity without maintenance overhead.
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- **Bounded Loop Integration**: When Plan 045's in-graph `loopNode` refinement is standard in workflows, document an optional loop node recipe variant that loops back to the manager on validation failure within the same workflow execution. (Priority: Low / Enhancement).

@@ -1,4 +1,13 @@
+## [0.4.0] - 2026-09-01
+
+- Plan 054: family ships as part of the 11-package 0.4 lockstep; peer `@arnilo/prism@^0.4.0`.
+
 # Changelog
+
+## [0.3.1] - 2026-09-01 (plan 054 Task 6)
+
+### Changed
+- **Provider family conversion**: all 17 first-party adapters (`@arnilo/prism-provider-{ai-sdk,alibaba,anthropic,azure,bedrock,clinepass,deepseek,google,kimi,neuralwatt,ollama,openai,opencode-go,openrouter,vertex,xai,zai}`) fold into this package as `./<adapter>` subpaths. Azure, Bedrock, and Vertex stop being special all-only manifests; the required `@arnilo/prism` peer is the only dependency (`@ai-sdk/provider` stays an optional peer on `/ai-sdk`); importing one adapter never evaluates another; public symbols, model catalogs, credential handling, and auth registration semantics are unchanged except import specifiers. Adapter manifest identifiers become the subpath names.
 
 ## [0.2.4] - 2026-08-14
 

@@ -190,8 +190,19 @@ function buildSurfaces({ baseline, artifact, thresholds, packages }) {
 
   // Protected: provider live legs (offline conformance suites cover the same
   // mapping code, so the measured offline baseline is the regression signal).
-  for (const { dir, name } of packages) {
-    if (envsInTree(join(ROOT, "packages", dir, "src")).has("PRISM_LIVE_PROVIDER_TESTS")) {
+  // Plan 054 Task 6: adapters live as subpaths of the providers family, so the
+  // scan enumerates each adapter subtree to keep every live class visible.
+  const providerScanDirs = packages.flatMap(({ dir, name }) => {
+    const familySrc = join(ROOT, "packages", dir, "src");
+    if (name === "@arnilo/prism-providers" && existsSync(familySrc)) {
+      return readdirSync(familySrc, { withFileTypes: true })
+        .filter((e) => e.isDirectory())
+        .map((e) => ({ dir: join(dir, "src", e.name), name: `${name}/${e.name}` }));
+    }
+    return [{ dir, name }];
+  });
+  for (const { dir, name } of providerScanDirs) {
+    if (envsInTree(join(ROOT, "packages", dir)).has("PRISM_LIVE_PROVIDER_TESTS")) {
       surfaces.push({
         name: `${name} live provider legs`,
         state: "protected",

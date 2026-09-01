@@ -199,7 +199,7 @@ import {
   createKeychainCredentialStore,
   createStoredCredentialResolver,
 } from "@arnilo/prism-credentials-node";
-import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
+import { createOpenAIProviderPackage } from "@arnilo/prism-providers/openai";
 
 const keychain = createKeychainCredentialStore({
   service: "com.example.my-app",

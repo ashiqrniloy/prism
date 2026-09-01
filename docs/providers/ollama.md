@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-provider-ollama` is a side-effect-free adapter for Ollama — both
+`@arnilo/prism-providers/ollama` is a side-effect-free adapter for Ollama — both
 **Ollama Cloud** (`https://ollama.com`) and a **local** `ollama serve`
 (`http://localhost:11434`) — over the OpenAI-compatible
 `POST {base}/chat/completions` endpoint.
@@ -38,7 +38,7 @@ import {
   listOllamaModels,
   defineOllamaModel,
   ollamaBaseUrl,
-} from "@arnilo/prism-provider-ollama";
+} from "@arnilo/prism-providers/ollama";
 
 createOllamaProviderPackage(options: OllamaProviderPackageOptions): ProviderPackage
 createOllamaProvider(options?: OllamaProviderOptions): AIProvider
@@ -106,7 +106,7 @@ import { createExtensionKernel } from "@arnilo/prism";
 import {
   createOllamaProviderPackage,
   listOllamaModels,
-} from "@arnilo/prism-provider-ollama";
+} from "@arnilo/prism-providers/ollama";
 
 const kernel = createExtensionKernel();
 

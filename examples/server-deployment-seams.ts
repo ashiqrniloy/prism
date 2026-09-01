@@ -5,7 +5,7 @@ import {
   createPrismDrainController,
   createPrismHandler,
   createPrismHealthHandler,
-} from "@arnilo/prism-server";
+} from "@arnilo/prism-core/runtime/server";
 
 /** Network-free deployment seam demo: health + drain + rate-limit + coordinator lease. */
 export async function demo(): Promise<Record<string, unknown>> {

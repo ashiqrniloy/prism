@@ -1,5 +1,5 @@
 import { createExtensionKernel } from "@arnilo/prism";
-import { createOpenRouterProviderPackage, defineOpenRouterModel } from "@arnilo/prism-provider-openrouter";
+import { createOpenRouterProviderPackage, defineOpenRouterModel } from "@arnilo/prism-providers/openrouter";
 
 // OpenRouter: app-controlled catalog with per-model routing/cache overrides.
 // No catalog is fetched during setup; the host supplies the models.

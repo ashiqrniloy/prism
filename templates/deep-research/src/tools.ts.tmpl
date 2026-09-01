@@ -1,0 +1,86 @@
+import { type ToolDefinition, type ToolExecutionContext, type ToolResult } from "@arnilo/prism";
+import { citation, createWebTools, type WebSearchAdapter, type WebSearchResult } from "@arnilo/prism-web-tools";
+import type { ResearchFinding } from "./types.js";
+
+/**
+ * Creates search tools backed by web-tools with attributable citation IDs.
+ */
+export function createResearchSearchAdapter(options?: {
+  readonly searchFn?: (query: string) => Promise<readonly WebSearchResult[]>;
+}): WebSearchAdapter {
+  return {
+    provider: "brave",
+    search: async (query: string) => {
+      if (options?.searchFn) {
+        const results = await options.searchFn(query);
+        return { provider: "brave", query, results, untrusted: true };
+      }
+      // Offline fallback mock results with attributable citations
+      const url = `https://docs.prism.ai/research/${encodeURIComponent(query.toLowerCase().replace(/\s+/g, "-"))}`;
+      const baseCitation = citation("brave", url);
+      const mockResult: WebSearchResult = {
+        ...baseCitation,
+        title: `Research findings for ${query}`,
+        snippet: `Verified architectural overview and technical analysis regarding ${query}.`,
+        retrievedAt: new Date().toISOString(),
+      };
+      return { provider: "brave", query, results: [mockResult], untrusted: true };
+    },
+  };
+}
+
+
+/**
+ * Create web tools for the research agent.
+ */
+export function createResearchWebTools(adapter: WebSearchAdapter): readonly ToolDefinition[] {
+  return createWebTools({ search: adapter });
+}
+
+/**
+ * Normalizes raw search results into domain ResearchFindings with citations.
+ */
+export function formatResearchFindings(query: string, results: readonly WebSearchResult[]): readonly ResearchFinding[] {
+  return results.map((r) => ({
+    query,
+    title: r.title ?? "Untitled Resource",
+    snippet: r.snippet ?? "",
+    url: r.url,
+    citationId: r.citationId,
+    retrievedAt: r.retrievedAt ?? new Date().toISOString(),
+  }));
+}
+
+/**
+ * Simple Human-in-the-Loop clarify tool for resolving broad research topics.
+ */
+export function createClarifyTool(options: {
+  readonly onClarify?: (question: string, choices: readonly string[]) => Promise<string>;
+}): ToolDefinition {
+  return {
+    name: "clarify_research_scope",
+    description: "Propose clarification questions to the user when a research topic is broad or ambiguous.",
+    parameters: {
+      type: "object",
+      properties: {
+        question: { type: "string" },
+        choices: { type: "array", items: { type: "string" }, minItems: 2 },
+      },
+      required: ["question", "choices"],
+      additionalProperties: false,
+    },
+    execute: async (args: Record<string, unknown>, context: ToolExecutionContext): Promise<ToolResult> => {
+      const question = String(args.question ?? "");
+      const choices = Array.isArray(args.choices) ? (args.choices as string[]) : [];
+      let selected = choices[0] ?? "default";
+      if (options.onClarify) {
+        selected = await options.onClarify(question, choices);
+      }
+      return {
+        toolCallId: context.toolCallId,
+        name: "clarify_research_scope",
+        value: { question, selectedOption: selected },
+      };
+    },
+  };
+}

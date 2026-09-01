@@ -30,11 +30,15 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "@arnilo/prism";
-import { createOidcIdentityVerifier } from "@arnilo/prism-credentials-node/oidc";
-import { createOpenApiTools } from "@arnilo/prism-openapi-tools";
-import { createMemoryPolicyDecisionStore, createOpaPolicyEvaluator, createPolicyEvaluator, evaluateAndAppend } from "@arnilo/prism-policy";
-import { createArtifactService } from "@arnilo/prism-server";
-import { createS3ArtifactBodyStore } from "@arnilo/prism-server/artifact-bodies";
+import { createOpenApiTools } from "@arnilo/prism-coding-tools/openapi";
+import { createOidcIdentityVerifier } from "@arnilo/prism-core/credentials/node/oidc";
+import {
+  createMemoryPolicyDecisionStore,
+  createOpaPolicyEvaluator,
+  createPolicyEvaluator,
+  evaluateAndAppend,
+} from "@arnilo/prism-core/governance/policy";
+import { createArtifactService, createS3ArtifactBodyStore } from "@arnilo/prism-core/runtime/server";
 
 const SECRET = "packed-journey-secret";
 const redactor = createSecretRedactor([SECRET]);
@@ -297,7 +301,7 @@ const eventSource = await (async () => {
     // createPostgresPersistence applies the migration contract then exposes
     // the durable event source; the protected leg runs against real pg16.
     const { Pool } = await import("pg");
-    const { createPostgresPersistence } = await import("@arnilo/prism-session-store-postgres");
+    const { createPostgresPersistence } = await import("@arnilo/prism-core/sessions/postgres");
     const pool = new Pool({
       connectionString: process.env.PRISM_TEST_POSTGRES_URL,
     });

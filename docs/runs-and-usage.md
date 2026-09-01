@@ -125,6 +125,19 @@ The adapter receives these record shapes:
 | `usage` | `Usage` shape: input/output/total/cache tokens, cost, currency. |
 | `recordedAt` | ISO timestamp. |
 
+## Prompt provenance
+
+Hosts that resolve prompts from the [versioned prompt registry](prompt-registry.md) can stamp each run with the resolved version's identity. `RunOptions.promptVersion` takes `{ name, version, hash }` — an opaque [ref](#related-apis): `name` is the prompt name (1–256 UTF-8 bytes), `version` the immutable version number (integer in `[1, 2147483647]`), and `hash` the prompt store's SHA-256 body hash (`sha256:` plus 64 lowercase hex). The ref is copied verbatim onto the run's start and finish ledger records; when it is omitted nothing is added and behavior is byte-identical. Malformed refs fail closed with a `TypeError` before the run starts.
+
+```ts
+const resolved = await promptStore.resolve({ tenantId, name: "support-agent" });
+await session.run(input, {
+  promptVersion: { name: resolved.name, version: resolved.version, hash: resolved.hash },
+});
+```
+
+Provenance is identity, not content: never put prompt bodies in the ref or in `metadata` — the body is recoverable from the store via `hash`, and ledger records/exports run through the existing secret redaction and field-policy boundaries. OTel spans deliberately carry no prompt attribute; the durable ledger record is the provenance of record.
+
 ## Run/trace feedback
 
 `RunFeedbackStore.append()` accepts an immutable record only when `resolveRun` finds the same `runId` under the exact `{ tenantId, accountId?, userId? }` scope. A tenant plus account or user is mandatory. Records contain `sessionId`, optional `traceId`, finite `rating` in `[-1, 1]`, comment, tags, scorer IDs, evaluation IDs, timestamp, creator, and metadata. Correction appends a new ID; records are never updated in place. `delete()` is the explicit privacy/retention operation.
@@ -272,7 +285,7 @@ console.log(cacheUsageReport(aggregate?.usage));
 - Billing queries must filter `scope = "provider_turn"`; presentation queries normally read the single `run_total`. `UsageQuery.scope`, `turn`, and `attempt` are explicit filters.
 - Adapters that need upsert semantics can use `RunRecord.id` (== `runId`) as the stable key.
 - Use `cacheUsageReport(record.usage, model)` for cache diagnostics from normalized usage. It works when a provider reports `cacheReadTokens` without `cacheWriteTokens`; missing write tokens are reported as `0`, and unavailable hit rate/savings stay `undefined`.
-- **Provider-specific telemetry is package-owned.** Core `Usage` carries token counts and `cost`/`currency`; it has no energy or detailed cost-breakdown fields. Providers that surface extra telemetry (e.g. `@arnilo/prism-provider-neuralwatt` exposes `neuralWattEventsWithTelemetry()`, `parseNeuralWattComment()`, and `mapNeuralWattTelemetry()` for `: energy`/`: cost` SSE comments and non-streaming top-level fields) keep that data in package-specific helpers/types. Telemetry never enters `RunLedger` usage rows unless the host explicitly copies it in; it carries usage/cost numbers only — never prompts, API keys, or headers. Account-level quota is likewise package-owned: `@arnilo/prism-provider-neuralwatt` exports an explicit `getNeuralWattQuota()` helper that the host calls on demand (never during generation); NeuralWatt rate-limits that endpoint to 1 request per second per customer, so the caller owns throttling.
+- **Provider-specific telemetry is package-owned.** Core `Usage` carries token counts and `cost`/`currency`; it has no energy or detailed cost-breakdown fields. Providers that surface extra telemetry (e.g. `@arnilo/prism-providers/neuralwatt` exposes `neuralWattEventsWithTelemetry()`, `parseNeuralWattComment()`, and `mapNeuralWattTelemetry()` for `: energy`/`: cost` SSE comments and non-streaming top-level fields) keep that data in package-specific helpers/types. Telemetry never enters `RunLedger` usage rows unless the host explicitly copies it in; it carries usage/cost numbers only — never prompts, API keys, or headers. Account-level quota is likewise package-owned: `@arnilo/prism-providers/neuralwatt` exports an explicit `getNeuralWattQuota()` helper that the host calls on demand (never during generation); NeuralWatt rate-limits that endpoint to 1 request per second per customer, so the caller owns throttling.
 - **Live timing metadata.** `provider_turn_*` events and `ToolExecutionMetadata` on terminal `tool_execution_*` events expose latency, retry `attempt`, and tool `durationMs` for subscribers and ledger replay — see [Observability](observability.md).
 
 ## Security and performance notes

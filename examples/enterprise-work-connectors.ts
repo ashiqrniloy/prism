@@ -5,7 +5,7 @@ import {
   createMicrosoft365CliAdapter,
   createWorkTools,
   normalizeMailPage,
-} from "@arnilo/prism-work-tools";
+} from "@arnilo/prism-core/integrations/work";
 
 const identity: AgentIdentity = {
   tenantId: "tenant-a",

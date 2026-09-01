@@ -1,0 +1,47 @@
+# __PROJECT_NAME__ — Deep Research Agent
+
+A production-grade, modular deep research agent built on **Prism**.
+
+The agent executes an end-to-end research pipeline:
+1. **Plan:** Generates a structured research plan with targeted queries.
+2. **Search & Extract:** Fetches search results and content via `@arnilo/prism-web-tools`.
+3. **Refine (Bounded Loop):** Evaluates coverage and refines queries across bounded iterations.
+4. **Cite & Synthesize:** Synthesizes findings with verifiable, traceable source citations.
+5. **HITL Clarification:** Proposes structured clarification choices when research topics are ambiguous.
+
+## Quick Start
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Run offline tests (100% offline with mock provider)
+npm test
+
+# 3. Start the research agent
+npm start
+
+# 4. Launch local dev inspector
+npm run dev
+```
+
+## Architecture & Component Mapping
+
+| Stage / Seam | Component | Documentation |
+| --- | --- | --- |
+| **Orchestration** | `@arnilo/prism-workflows` DAG with bounded refine loop & checkpoints | [`docs/workflows.md`](https://github.com/arniloy/prism/blob/main/docs/workflows.md) |
+| **Search & Fetch** | `@arnilo/prism-web-tools` Brave/Exa search & Firecrawl fetch | [`docs/web-tools.md`](https://github.com/arniloy/prism/blob/main/docs/web-tools.md) |
+| **Citations & RAG** | Attribution via `@arnilo/prism-web-tools` & `@arnilo/prism-memory` | [`docs/rag.md`](https://github.com/arniloy/prism/blob/main/docs/rag.md) |
+| **HITL Clarification** | Structured decision tool with durable suspend/resume | [`docs/coding-agent-tools.md`](https://github.com/arniloy/prism/blob/main/docs/coding-agent-tools.md) |
+| **Security & Trust** | Untrusted content boundaries for search & web data | [`docs/host-security.md`](https://github.com/arniloy/prism/blob/main/docs/host-security.md) |
+| **Inspector** | Local loopback playground via `prism dev` | [`docs/cli-rpc.md`](https://github.com/arniloy/prism/blob/main/docs/cli-rpc.md) |
+
+## Live Configuration (Opt-in)
+
+To connect real LLM providers and live web search APIs:
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Set your provider key (e.g. `OPENAI_API_KEY`) and search key (e.g. `BRAVE_API_KEY`).
+3. Update `src/tools.ts` or `src/agent.ts` to instantiate live providers.

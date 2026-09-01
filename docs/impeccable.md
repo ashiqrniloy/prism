@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-impeccable` is an optional package that wires a host-supplied
+`@arnilo/prism-coding-tools/impeccable` is an optional package that wires a host-supplied
 [Impeccable](https://github.com/pbakaus/impeccable) `SKILL.md` into Prism skill
 and command registries.
 
@@ -56,7 +56,7 @@ No instruction injector. No session persistence. No 23 Prism-native craft/polish
 ## Implementation example
 
 ```ts
-import { createImpeccableExtension } from "@arnilo/prism-impeccable";
+import { createImpeccableExtension } from "@arnilo/prism-coding-tools/impeccable";
 import {
   createExtensionKernel,
   createLoadSkillTool,

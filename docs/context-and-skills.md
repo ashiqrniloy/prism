@@ -158,6 +158,8 @@ Skill selection grants no tool access and cannot bypass permissions — a skill'
 
 ### Progressive skill disclosure
 
+Skills apply the same progressive-disclosure discipline as plan 041's [tool disclosure](tools.md) (toolsDisclosure "search") — one mechanism applied to skills (prompt text) and tools (provider tool arrays).
+
 `skillsDisclosure` on `AgentConfig` / `RunOptions` (`"progressive"` default, `"eager"` opt-in; run wins) controls how active skills render in provider input:
 
 | Mode | Provider view per active skill |

@@ -147,10 +147,18 @@ test("phase29 freeze: package budget matches current graph until Task 10", () =>
       Number(hasWikiPackage) +
       Number(hasGraftPackage) +
       Number(hasObscuraPackage) +
-      Number(hasDevInspectorPackage);
-    assert.equal(packageTruth.counts.publishable, 55 + added);
-    assert.equal(packageTruth.counts.workspace, 54 + added);
+      Number(hasDevInspectorPackage) +
+      Number(packageTruth.capability.includes("@arnilo/prism-prompts")) + // plan 042 optional prompt registry (outside umbrellas)
+      Number(packageTruth.capability.includes("@arnilo/prism-documents")) + // plan 051 documents engine (outside umbrellas)
+      Number(packageTruth.capability.includes("@arnilo/prism-sheets")) + // plan 052 sheets engine (outside umbrellas)
+      Number(packageTruth.capability.includes("@arnilo/prism-diagrams")); // plan 053 diagrams engine (outside umbrellas)
+    const hasOffice = packageTruth.capability.includes("@arnilo/prism-office"); // plan 054 Task 8 office family
+    const hasCodingTools = packageTruth.family?.includes("@arnilo/prism-coding-tools");
+    const hasCore = packageTruth.family?.includes("@arnilo/prism-core");
+    const delta = hasOffice ? -46 : hasCodingTools ? -42 : hasCore ? -14 : 0;
+    assert.equal(packageTruth.counts.publishable, hasCodingTools && !hasOffice ? 17 : 55 + added + delta);
+    assert.equal(packageTruth.counts.workspace, hasCodingTools && !hasOffice ? 16 : 54 + added + delta);
     assert.equal(packageTruth.counts.provider, 17);
-    assert.equal(packageTruth.counts.prismFamily, 10);
+    assert.equal(packageTruth.counts.prismFamily, hasOffice ? 3 : hasCodingTools ? 7 : hasCore ? 11 : 10);
   }
 });

@@ -11,8 +11,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { encodeLspFrame, LspFrameReader } from "@arnilo/prism-coding-agent";
-import { createImportTarStream, SandboxTarError, summarizeTarStream } from "@arnilo/prism-coding-security";
+import { encodeLspFrame, LspFrameReader } from "../packages/prism-coding-tools/dist/agent/index.js";
+import { createImportTarStream, SandboxTarError, summarizeTarStream } from "../packages/prism-coding-tools/dist/security/index.js";
 
 // Synthetic 0.2.4 accumulator: `buf = Buffer.concat([buf, chunk])` in a loop. This is
 // the exact quadratic pattern Task 3 replaced; kept here as a self-validating reference
@@ -227,6 +227,6 @@ test("cli: collectOutput is already linear (plan 020 Task 3 audit-only — no ch
   // toString()) — the exact pattern Task 3 applied to framing/tar. It was linearized in
   // plan 020 Task 3 and has no residual quadratic site. The import below confirms the
   // module loads unchanged (no regression from Task 3's adjacent edits).
-  const mod = await import("@arnilo/prism-work-tools");
+  const mod = await import("@arnilo/prism-core/integrations/work");
   assert.ok(typeof mod.createCliRunner === "function", "work-tools cli module loads (collectOutput audit-clean)");
 });

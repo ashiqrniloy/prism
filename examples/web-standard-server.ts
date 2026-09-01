@@ -1,5 +1,5 @@
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createPrismHandler } from "@arnilo/prism-server";
+import { createPrismHandler } from "@arnilo/prism-core/runtime/server";
 
 const agent = createAgent({
   model: { provider: "mock", model: "offline" },

@@ -1,4 +1,15 @@
+## [0.4.0] - 2026-09-01
+
+- Plan 054: family ships as part of the 11-package 0.4 lockstep; peer `@arnilo/prism@^0.4.0`.
+
 # Changelog
+
+## [0.3.2] - 2026-09-01
+
+### Added
+- Consolidated web tools family package absorbing `@arnilo/prism-browser` and `@arnilo/prism-obscura` (plan 054 Task 4).
+- Dedicated subpath exports for `/browser` (Playwright-peer gated) and `/obscura` (host-binary + MCP gated); `@arnilo/prism-mcp` becomes a required family peer and `playwright-core@1.61.0` an optional peer, both probed lazily so the root import never loads them.
+- Preserved every public symbol, browser egress policy, download/upload quarantine, and Obscura SSRF/process/CDP/MCP behavior except the import specifier.
 
 ## [0.3.1] - 2026-08-29
 

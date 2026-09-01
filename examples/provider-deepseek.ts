@@ -1,5 +1,5 @@
 import { createExtensionKernel } from "@arnilo/prism";
-import { createDeepSeekProviderPackage } from "@arnilo/prism-provider-deepseek";
+import { createDeepSeekProviderPackage } from "@arnilo/prism-providers/deepseek";
 
 export async function demo() {
   const kernel = createExtensionKernel({ errorPolicy: "throw" });

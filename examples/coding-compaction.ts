@@ -1,5 +1,5 @@
 import { createMemorySessionStore, createMockProvider, createSessionEntry, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createCodingCompactionStrategy } from "@arnilo/prism-compaction-llm";
+import { createCodingCompactionStrategy } from "@arnilo/prism-memory/compaction/llm";
 
 // Coding-focused LLM compaction remains normal bounded compaction: raw history
 // stays in the store; a mock summarizer keeps this demo network-free.

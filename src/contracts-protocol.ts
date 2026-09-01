@@ -59,6 +59,18 @@ export type RealtimeEvent =
  *  (e.g. WebSocket); the host owns audio capture/playback and session lifecycle. */
 export type InputAssemblyLayout = "legacy" | "cache_aware";
 
+/** Opaque provenance ref for the resolved prompt version that produced a run
+ *  (plan 042). Identity only — never prompt content; the body is recoverable
+ *  from the prompt store via `hash`. */
+export interface PromptVersionRef {
+  /** Prompt name within the host's prompt store. */
+  readonly name: string;
+  /** Immutable version number assigned by the prompt store. */
+  readonly version: number;
+  /** Content hash of the exact UTF-8 body bytes: `sha256:<64 lowercase hex>`. */
+  readonly hash: string;
+}
+
 export interface RunOptions {
   readonly signal?: AbortSignal;
   readonly model?: ModelConfig;
@@ -86,6 +98,9 @@ export interface RunOptions {
   readonly activateAllSkills?: true;
   /** Progressive: catalog (name+description) unless loaded; eager: full instructions every turn. Default progressive. */
   readonly skillsDisclosure?: import("./skill-disclosure.js").SkillsDisclosure;
+  /** Tools disclosure: "all" (default) sends every active tool schema; "search" sends top-k + the generated `search_tools` tool. */
+  readonly toolsDisclosure?: import("./tool-search.js").ToolsDisclosure;
+  readonly toolsSearch?: import("./tool-search.js").ToolsSearchOptions;
   /** Opt-in projection-only fold for aged large tool results in provider view; store untouched. */
   readonly toolResultFold?: import("./tool-result-fold.js").ToolResultFoldOptions;
   readonly instructionInjectors?: readonly InstructionInjector[];
@@ -95,6 +110,8 @@ export interface RunOptions {
   readonly guardrails?: Guardrails;
   /** Opt-in durable interruption/checkpointing. */
   readonly runState?: AgentRunStateOptions;
+  /** Prompt provenance: copied verbatim onto this run's start and finish ledger records. */
+  readonly promptVersion?: PromptVersionRef;
 }
 
 export interface ProviderTurnMetadata {
@@ -471,6 +488,8 @@ export interface RunRecord extends OwnershipScope {
   readonly abortReason?: string;
   readonly error?: ErrorInfo;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  /** Provenance ref copied from `RunOptions.promptVersion` when the host supplied one. */
+  readonly promptVersion?: PromptVersionRef;
 }
 
 export type AgentEventType = AgentEvent["type"];

@@ -184,15 +184,35 @@ test("baseline manifest count is coherent with the real filesystem", () => {
         e.name !== "antigravity-agent" &&
         e.name !== "prism-wiki" &&
         e.name !== "obscura" &&
-        e.name !== "prism-dev",
+        e.name !== "prism-dev" &&
+        e.name !== "prompts" &&
+        e.name !== "documents" &&
+        e.name !== "sheets" &&
+        e.name !== "diagrams",
     );
   const providerDirs = workspaceDirs.filter((d) => d.name.startsWith("provider-"));
   const prismDirs = workspaceDirs.filter((d) => d.name.startsWith("prism-"));
-  assert.equal(mc.workspacePackages, workspaceDirs.length, "workspacePackages matches packages/*/package.json count");
-  assert.equal(mc.categories.provider, providerDirs.length, "provider category count matches packages/provider-*");
-  assert.equal(mc.categories.prism, prismDirs.length, "prism category count matches packages/prism-*");
-  assert.equal(mc.categories.capability, workspaceDirs.length - providerDirs.length - prismDirs.length, "capability = remainder");
-  assert.equal(mc.publishable, mc.workspacePackages + 1, "publishable = root + workspace");
+  const hasCodingTools = workspaceDirs.some((d) => d.name === "prism-coding-tools");
+  const hasCore = workspaceDirs.some((d) => d.name === "prism-core");
+  const delta = hasCodingTools ? -46 : hasCore ? -14 : 0; // plan 054 Tasks 2-8: providers family + office family + profile deletions
+  assert.equal(mc.workspacePackages + delta, workspaceDirs.length, "workspacePackages matches packages/*/package.json count");
+  const hasProviderFamily = existsSync(url("../packages/prism-providers/src")); // plan 054 Task 6: adapters moved inside the family
+  assert.equal(
+    mc.categories.provider + (hasProviderFamily ? -17 : 0),
+    providerDirs.length,
+    "provider category count matches packages/provider-*",
+  );
+  assert.equal(
+    mc.categories.prism,
+    prismDirs.length + (hasCodingTools ? 8 : hasCore ? -1 : 0),
+    "prism category count matches packages/prism-*",
+  );
+  assert.equal(
+    mc.categories.capability + (hasCodingTools ? -21 : hasCore ? -15 : 0),
+    workspaceDirs.length - providerDirs.length - prismDirs.length,
+    "capability = remainder",
+  );
+  assert.equal(mc.publishable + delta, mc.workspacePackages + delta + 1, "publishable = root + workspace");
   assert.equal(mc.rootPackage, rootPkg.name, "root package name matches package.json");
 });
 
@@ -317,8 +337,18 @@ test("opt-in checkpoint persistence (Task 4): seams present, opt-in default off,
   // 0.1.4 agents split: the session runtime moved to agent-session.ts.
   const agents = readModule("../src/agent-session.ts");
   const lifecycle = readFileSync(url("../src/agent-run-lifecycle.ts"), "utf8");
-  const rps = readFileSync(url("../packages/coding-agent/src/read-path-set.ts"), "utf8");
-  const rpsIndex = readFileSync(url("../packages/coding-agent/src/index.ts"), "utf8");
+  const rps = readFileSync(
+    existsSync(url("../packages/coding-agent/src/read-path-set.ts"))
+      ? url("../packages/coding-agent/src/read-path-set.ts")
+      : url("../packages/prism-coding-tools/src/agent/read-path-set.ts"),
+    "utf8",
+  );
+  const rpsIndex = readFileSync(
+    existsSync(url("../packages/coding-agent/src/index.ts"))
+      ? url("../packages/coding-agent/src/index.ts")
+      : url("../packages/prism-coding-tools/src/agent/index.ts"),
+    "utf8",
+  );
   // Core: opt-in flag on run/resume/lifecycle options, optional stored field, bounds.
   assert.ok(contracts.includes("persistSessionState?: boolean"), "persistSessionState option on core run options");
   // 0.1.3 token; the optional block gained the additive loadedSkillBodies field at 0.1.6 (plan 018 closeout

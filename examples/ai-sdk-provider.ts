@@ -1,6 +1,6 @@
 import type { LanguageModelV4, LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { createAgent } from "@arnilo/prism";
-import { createAiSdkProvider } from "@arnilo/prism-provider-ai-sdk";
+import { createAiSdkProvider } from "@arnilo/prism-providers/ai-sdk";
 
 function createFakeLanguageModel(parts: readonly LanguageModelV4StreamPart[]): LanguageModelV4 {
   return {

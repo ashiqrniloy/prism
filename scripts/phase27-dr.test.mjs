@@ -34,15 +34,15 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { createPostgresApprovalStore, createPostgresEnterpriseState } from "@arnilo/prism-enterprise-postgres";
-import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres";
+import { createPostgresApprovalStore, createPostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
+import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
 import { Pool } from "pg";
 import {
   buildEnterpriseMigration001Ddl,
   buildEnterpriseMigration002Ddl,
   buildEnterpriseMigration003Ddl,
-} from "../packages/enterprise-postgres/dist/ddl.js";
-import { applyEnterpriseMigrations } from "../packages/enterprise-postgres/dist/migrations.js";
+} from "../packages/prism-core/dist/enterprise/postgres/ddl.js";
+import { applyEnterpriseMigrations } from "../packages/prism-core/dist/enterprise/postgres/migrations.js";
 
 /* ------------------------------------------------------------------------- *
  * Argument parsing, guards, docker helpers
