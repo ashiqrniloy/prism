@@ -11,7 +11,6 @@ const baseline = JSON.parse(readFileSync(url("./phase29-baseline.json"), "utf8")
 const packageTruth = JSON.parse(readFileSync(url("./package-truth.json"), "utf8"));
 const phase30 = JSON.parse(readFileSync(url("./phase30-freeze-manifest.json"), "utf8"));
 const hasDesktopPackage = phase30.tasks.task7 === "done";
-const hasAntigravityPackage = phase30.amendments?.antigravity?.tasks?.task6 === "done";
 const hasWikiPackage = existsSync(url("../packages/prism-wiki/package.json"));
 const hasGraftPackage = existsSync(url("../packages/prism-graft/package.json")); // plan 033 optional context-graph package
 
@@ -143,7 +142,6 @@ test("phase29 freeze: package budget matches current graph until Task 10", () =>
     const hasDevInspectorPackage = packageTruth.capability.includes("@arnilo/prism-dev");
     const added =
       Number(hasDesktopPackage) +
-      Number(hasAntigravityPackage) +
       Number(hasWikiPackage) +
       Number(hasGraftPackage) +
       Number(hasObscuraPackage) +

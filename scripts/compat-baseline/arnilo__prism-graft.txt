@@ -5,7 +5,7 @@ DEFAULT_RETRIEVAL_BUDGET_MS	export declare const DEFAULT_RETRIEVAL_BUDGET_MS = 8
 DEFAULT_STDERR_TAIL_CHARS	export declare const DEFAULT_STDERR_TAIL_CHARS = 2000
 GRAFT_EXTENSION_NAME	export declare const GRAFT_EXTENSION_NAME = "@arnilo/prism-graft"
 GRAFT_PEER_PACKAGE	export declare const GRAFT_PEER_PACKAGE = "@nanonets/graft"
-GRAFT_PEER_RANGE	export declare const GRAFT_PEER_RANGE = "^0.13.0"
+GRAFT_PEER_RANGE	export declare const GRAFT_PEER_RANGE = "^0.16.0"
 GRAFT_RESOLVE_ERROR_CODE	export declare const GRAFT_RESOLVE_ERROR_CODE = "graft_resolve_failed"
 GRAFT_SKILL_BODY	export declare const GRAFT_SKILL_BODY: string
 GRAFT_STATE_TYPE	export declare const GRAFT_STATE_TYPE = "graft-state"

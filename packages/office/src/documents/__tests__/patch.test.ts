@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { type DeckModel, type DocModel, DocumentsValidationError, type ParagraphBlock, patchDocument, type SheetModel } from "../index.js";
+import {
+  type DeckModel,
+  type DocModel,
+  DocumentsPatchError,
+  DocumentsValidationError,
+  type ParagraphBlock,
+  patchDocument,
+  type SheetModel,
+} from "../index.js";
 
 describe("patchDocument", () => {
   const baseDoc: DocModel = {
@@ -176,5 +184,59 @@ describe("patchDocument", () => {
         return true;
       },
     );
+  });
+
+  it("rejects metadata set with __proto__ key before mutation", () => {
+    const before = structuredClone(baseDoc);
+    assert.throws(
+      () =>
+        patchDocument(baseDoc, [
+          { op: "set", target: { metadata: "__proto__" } as never, value: { polluted: true } },
+        ]),
+      (err: unknown) => {
+        assert.ok(err instanceof DocumentsPatchError);
+        assert.equal((err as DocumentsPatchError).code, "ERR_PRISM_DOCUMENTS_UNSAFE_PATH");
+        assert.match((err as DocumentsPatchError).message, /__proto__/);
+        return true;
+      },
+    );
+    assert.deepEqual(baseDoc, before, "model unchanged on rejected polluting patch");
+    assert.equal((Object.prototype as Record<string, unknown>).polluted, undefined, "Object.prototype must not be polluted");
+    // cleanup
+    Reflect.deleteProperty(Object.prototype as Record<string, unknown>, "polluted");
+  });
+
+  it("rejects metadata set with constructor and prototype keys", () => {
+    for (const key of ["constructor", "prototype"]) {
+      assert.throws(
+        () => patchDocument(baseDoc, [{ op: "set", target: { metadata: key } as never, value: "x" }]),
+        (err: unknown) => {
+          assert.ok(err instanceof DocumentsPatchError);
+          assert.equal((err as DocumentsPatchError).code, "ERR_PRISM_DOCUMENTS_UNSAFE_PATH");
+          return true;
+        },
+      );
+    }
+  });
+
+  it("rejects set patch whose patch object contains prototype-polluting key", () => {
+    assert.throws(
+      () =>
+        patchDocument(baseDoc, [
+          {
+            op: "set",
+            target: { block: 1 },
+            patch: { ["__proto__"]: { polluted: true } } as Record<string, unknown>,
+          },
+        ]),
+      (err: unknown) => {
+        assert.ok(err instanceof DocumentsPatchError);
+        assert.equal((err as DocumentsPatchError).code, "ERR_PRISM_DOCUMENTS_UNSAFE_PATH");
+        return true;
+      },
+    );
+    assert.equal((Object.prototype as Record<string, unknown>).polluted, undefined);
+    // cleanup
+    Reflect.deleteProperty(Object.prototype as Record<string, unknown>, "polluted");
   });
 });

@@ -6,7 +6,7 @@
 
 ## What changes
 
-Prism 0.4 replaces 62 separate 0.3 package manifests with 11 active packages and explicit
+Prism 0.4 replaces 62 separate 0.3 package manifests with 10 active packages and explicit
 subpaths. The code and behavior move; this is not a database/data migration. It is a **package
 name and import-specifier migration**.
 
@@ -50,7 +50,8 @@ name and import-specifier migration**.
 | `@arnilo/prism-mcp` | MCP interop. |
 | `@arnilo/prism-acp-agent` | ACP interop. |
 | `@arnilo/prism-ag-ui` | AG-UI/A2A/A2UI interop. |
-| `@arnilo/prism-antigravity-agent` | Antigravity interop. |
+
+`@arnilo/prism-antigravity-agent` has no 0.4 successor. Remove it and keep delegated CLI execution in the host, composed through generic process, tool, MCP, or A2A contracts as needed.
 
 ## Package and import mapping
 
@@ -204,7 +205,6 @@ subpaths, but do not rename the dependency merely because of 0.4.
 | `@arnilo/prism-mcp` | Unchanged interop package. |
 | `@arnilo/prism-acp-agent` | Unchanged interop package. |
 | `@arnilo/prism-ag-ui` | Unchanged interop package. |
-| `@arnilo/prism-antigravity-agent` | Unchanged interop package. |
 
 ## Optional peers, host binaries, and trust boundaries
 

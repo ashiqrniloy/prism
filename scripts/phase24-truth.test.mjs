@@ -14,7 +14,6 @@ const run = (args, cwd = ROOT) => spawnSync(process.execPath, args, { cwd, encod
 const stripStamp = ({ generatedAt, ...rest }) => rest;
 const phase30Manifest = JSON.parse(readFileSync(join(ROOT, "scripts", "phase30-freeze-manifest.json"), "utf8"));
 const hasDesktopPackage = phase30Manifest.tasks.task7 === "done";
-const hasAntigravityPackage = phase30Manifest.amendments?.antigravity?.tasks?.task6 === "done";
 const hasWikiPackage = existsSync(join(ROOT, "packages", "prism-wiki", "package.json"));
 const hasGraftPackage = existsSync(join(ROOT, "packages", "prism-graft")); // plan 033 optional context-graph package
 const hasObscuraPackage = existsSync(join(ROOT, "packages", "obscura", "package.json")); // plan 039 optional Obscura browser package
@@ -45,7 +44,6 @@ test("counts match manifests at the truth graph", () => {
   const t = computePackageTruth();
   const added =
     Number(hasDesktopPackage) +
-    Number(hasAntigravityPackage) +
     Number(hasWikiPackage) +
     Number(hasGraftPackage) +
     Number(hasObscuraPackage) +
@@ -55,14 +53,13 @@ test("counts match manifests at the truth graph", () => {
     Number(hasSheetsPackage) +
     Number(hasDiagramsPackage);
   if (hasOfficePackage) {
-    // Plan 054 Task 8: 11 active packages — profiles deleted, office family landed.
-    // Plan 055 Task 6: family grows to 19 adapter subpaths (hyper, commandcode).
-    assert.equal(t.counts.publishable, 11);
-    assert.equal(t.counts.workspace, 10);
+    // Current package set: delegated CLI adapter removed; provider family has 19 subpaths.
+    assert.equal(t.counts.publishable, 10);
+    assert.equal(t.counts.workspace, 9);
     assert.equal(t.counts.provider, 19);
     assert.equal(t.counts.prismFamily, 3);
-    assert.equal(t.counts.capability, 7);
-    assert.equal(t.counts.codeWithPeer, 10);
+    assert.equal(t.counts.capability, 6);
+    assert.equal(t.counts.codeWithPeer, 9);
     assert.equal(t.counts.pureManifest, 0);
   } else if (hasCodingToolsPackage) {
     assert.equal(t.counts.publishable, 17);
@@ -186,7 +183,6 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
     assert.deepEqual(secondPeers, {
       "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui"],
       "@arnilo/prism-ag-ui": ["@arnilo/prism-core", "@arnilo/prism-mcp"],
-      ...(hasAntigravityPackage ? { "@arnilo/prism-antigravity-agent": ["@arnilo/prism-coding-tools", "@arnilo/prism-mcp"] } : {}),
       "@arnilo/prism-core": ["@arnilo/prism-memory"], // type-only optional peer: rag telemetry seam
       "@arnilo/prism-web-tools": ["@arnilo/prism-mcp"],
     });
@@ -194,7 +190,6 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
     assert.deepEqual(secondPeers, {
       "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui"],
       "@arnilo/prism-ag-ui": ["@arnilo/prism-core", "@arnilo/prism-mcp"],
-      ...(hasAntigravityPackage ? { "@arnilo/prism-antigravity-agent": ["@arnilo/prism-coding-agent", "@arnilo/prism-mcp"] } : {}),
       "@arnilo/prism-coding-agent": ["@arnilo/prism-core"],
       "@arnilo/prism-coding-security": ["@arnilo/prism-coding-agent"],
       ...(hasDesktopPackage ? { "@arnilo/prism-computer-use-linux": ["@arnilo/prism-mcp"] } : {}),
@@ -212,7 +207,6 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
       ...(hasDesktopPackage ? { "@arnilo/prism-computer-use-linux": ["@arnilo/prism-mcp"] } : {}),
       ...(hasObscuraPackage ? { "@arnilo/prism-obscura": ["@arnilo/prism-mcp", "@arnilo/prism-browser", "@arnilo/prism-web-tools"] } : {}),
       ...(hasDevInspectorPackage ? { "@arnilo/prism-dev": ["@arnilo/prism-ag-ui", "@arnilo/prism-server"] } : {}),
-      ...(hasAntigravityPackage ? { "@arnilo/prism-antigravity-agent": ["@arnilo/prism-coding-agent", "@arnilo/prism-mcp"] } : {}),
       "@arnilo/prism-document-reader": ["@arnilo/prism-coding-agent"],
       "@arnilo/prism-rag": ["@arnilo/prism-memory"],
       "@arnilo/prism-server": ["@arnilo/prism-workflows"],

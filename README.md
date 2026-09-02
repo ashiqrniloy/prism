@@ -4,9 +4,8 @@
 bring their tools, providers, credentials, storage, and UI; Prism supplies the
 common contracts, registries, agent/session runtime, replaceable input/prompt
 and compaction strategies, CLI/RPC adapters, and first-party provider/compaction
-packages. The current 0.3.3 line contains 11 publishable manifests, including
-optional Linux desktop control, a versioned prompt registry, and independent
-package versioning after the final lockstep cut. Prism defines contracts, not apps.
+packages. The current 0.4 line contains 10 publishable manifests with explicit
+family subpaths and independent package versioning. Prism defines contracts, not apps.
 
 ## Current scope
 
@@ -169,7 +168,6 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-mcp` | MCP client/server/OAuth interop |
 | `@arnilo/prism-acp-agent` | ACP adapter |
 | `@arnilo/prism-ag-ui` | AG-UI/A2A/A2UI adapter |
-| `@arnilo/prism-antigravity-agent` | Antigravity CLI adapter |
 | `@arnilo/prism-office` | `/documents`, `/sheets`, `/diagrams` |
 
 ## Scripts

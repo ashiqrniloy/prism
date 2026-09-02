@@ -14,7 +14,7 @@ Use it when a host wants agents to locate code by architecture, callers, and cou
 - `"push"` — per-turn retrieval pack (pointers only) + first-turn orientation, injected automatically.
 - `"both"` — everything.
 
-Install optional peer `@nanonets/graft@^0.13.0` **or** pass `packageRoot`/`cliPath` explicitly. Pair with progressive disclosure: the `graft` skill body stays small; tool schemas carry the details. Graft complements indexed code search (`repository_search`): graph/semantic locators vs literal search — neither replaces the other.
+Install optional peer `@nanonets/graft@^0.16.0` **or** pass `packageRoot`/`cliPath` explicitly. Pair with progressive disclosure: the `graft` skill body stays small; tool schemas carry the details. Graft complements indexed code search (`repository_search`): graph/semantic locators vs literal search — neither replaces the other.
 
 Zero-code alternative (L0): hosts can skip this package entirely and let agents call `graft <command> --json` through their shell tool, optionally seeding context with graft's own generated instruction files. This package exists for native-tool ergonomics, budgeted subprocesses, session persistence, and push mode.
 

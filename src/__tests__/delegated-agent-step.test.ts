@@ -15,7 +15,7 @@ describe("delegated agent step", () => {
     const event = createDelegatedAgentStep({
       sessionId: "session-1",
       runId: "run-1",
-      adapterId: "antigravity-cli",
+      adapterId: "delegated-cli",
       externalConversationId: "conversation-1",
       stepIndex: 4,
       state: "done",
@@ -81,7 +81,7 @@ describe("delegated agent step", () => {
     const raw = createDelegatedAgentStep({
       sessionId: "session-1",
       runId: "run-1",
-      adapterId: "antigravity-cli",
+      adapterId: "delegated-cli",
       externalConversationId: "conversation-1",
       stepIndex: 0,
       state: "done",

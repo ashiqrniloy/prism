@@ -22,7 +22,6 @@ const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?
   { dir: "packages/web-tools", name: "@arnilo/prism-web-tools", isSubpaths: true },
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
   { dir: "packages/acp-agent", name: "@arnilo/prism-acp-agent" },
-  { dir: "packages/antigravity-agent", name: "@arnilo/prism-antigravity-agent" },
   { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools", isSubpaths: true },
   { dir: "packages/prism-core", name: "@arnilo/prism-core", isSubpaths: true },
   // Pure-manifest family/profile packages (no dist/exports): pack + install, but skip dynamic-import.
@@ -104,12 +103,12 @@ before(() => {
   // adapter; the composition leg exercises that adapter, so the host supplies it
   // (exactly like playwright-core for /browser). It is in the root devDeps, so
   // the offline install resolves it from the local cache with no registry hit.
-  const installArgs = ["install", ...tarballs, "@ai-sdk/provider@4.0.4", "--offline", "--no-audit", "--no-fund", "--no-update-notifier"];
+  const installArgs = ["install", ...tarballs, "@ai-sdk/provider@4.0.10", "--offline", "--no-audit", "--no-fund", "--no-update-notifier"];
   let install = run("npm", installArgs, consumer);
   if (install.status !== 0) {
     // Fallback: cold cache or offline-unfriendly environment; no runtime deps
     // means this still makes zero registry fetches.
-    install = run("npm", ["install", ...tarballs, "@ai-sdk/provider@4.0.4", "--no-audit", "--no-fund", "--no-update-notifier"], consumer);
+    install = run("npm", ["install", ...tarballs, "@ai-sdk/provider@4.0.10", "--no-audit", "--no-fund", "--no-update-notifier"], consumer);
   }
   result.installStatus = install.status;
   if (install.status !== 0) {

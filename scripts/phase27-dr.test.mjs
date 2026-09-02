@@ -33,7 +33,8 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, mkdirSync, openSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { createPostgresApprovalStore, createPostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
 import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
 import { Pool } from "pg";
@@ -112,8 +113,14 @@ check("guard: confirm-target token present", () => hasFlag("confirm-target") && 
 check("guard: target host is loopback", () => ["localhost", "127.0.0.1", "::1"].includes(target.host));
 check("guard: target looks like a disposable restore db", () => !/prod(uction)?|live/i.test(target.database));
 
-mkdirSync(ARTIFACT_DIR, { recursive: true });
-writeFileSync(`${ARTIFACT_DIR}/.dr-probe`, "ok");
+mkdirSync(ARTIFACT_DIR, { recursive: true, mode: 0o700 });
+// Exclusive-create probe: no predictable shared temp path (CodeQL js/insecure-temporary-file, alert 83).
+const probeFd = openSync(join(ARTIFACT_DIR, ".dr-probe"), "wx");
+try {
+  writeFileSync(probeFd, "ok");
+} finally {
+  closeSync(probeFd);
+}
 const diskFreeKb = Number(execFileSync("df", ["-Pk", ARTIFACT_DIR], { encoding: "utf8" }).split("\n")[1].trim().split(/\s+/)[3]);
 check("guard: sufficient free space on the artifact dir", () => diskFreeKb >= 512 * 1024);
 
@@ -832,9 +839,10 @@ const drill = async () => {
   }
 };
 
-await drill().catch((error) => {
-  // Fixed message + bounded diagnostic: the drill path handles password checks, so raw
-  // error.message/stack is never printed (CodeQL js/clear-text-logging, alert 56).
-  console.error(`DR DRILL FAILED (error class: ${error?.name ?? "unknown"}). Inspect drill output above for the failing step.`);
+await drill().catch(() => {
+  // Fully static message: no error field is logged, so no password/URL taint can
+  // reach the console (CodeQL js/clear-text-logging, alert 67). The drill's own
+  // redaction checks are the only secret-tainted surface.
+  console.error("DR DRILL FAILED: inspect the drill output above for the failing step.");
   process.exit(1);
 });

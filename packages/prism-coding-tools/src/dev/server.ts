@@ -118,8 +118,8 @@ export function createDevRouter(ctx: DevRouteContext): PrismRequestHandler {
       if (!match) continue;
       try {
         return await route.handle(match, request, url);
-      } catch (error) {
-        return devError(500, "ERR_PRISM_DEV_INSPECTOR", error instanceof Error ? error.message : String(error));
+      } catch {
+        return devError(500, "ERR_PRISM_DEV_INSPECTOR", "Internal inspector error");
       }
     }
     return ctx.handler(request);

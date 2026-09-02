@@ -155,7 +155,6 @@ function defaultLoopbackAuthorize(): { ownership: { tenantId: string; userId: st
  */
 export function createPrismDevInspector(options: CreatePrismDevInspectorOptions): PrismDevInspector {
   const host = options.host ?? DEFAULT_HOST;
-  const _requestedPort = options.port ?? DEFAULT_PORT;
   if (!options.agent) throw new DevInspectorError("agent is required");
   if (options.eventSource && !options.resolveRun) {
     throw new DevInspectorError("eventSource requires resolveRun (public run id → internal session/run ids)");
@@ -313,9 +312,9 @@ async function nodeToWebRequest(
   let webResponse: Response;
   try {
     webResponse = await handler(webRequest);
-  } catch (error) {
+  } catch {
     response.writeHead(500, { "content-type": "application/json" });
-    response.end(JSON.stringify({ error: { code: "ERR_PRISM_DEV_INSPECTOR", message: String(error) } }));
+    response.end(JSON.stringify({ error: { code: "ERR_PRISM_DEV_INSPECTOR", message: "Internal inspector error" } }));
     return;
   }
   response.writeHead(webResponse.status, webResponse.statusText, Object.fromEntries(webResponse.headers));

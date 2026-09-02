@@ -33,7 +33,7 @@ export async function demo() {
   const mcp = await createObscuraMcpTools({ transport: { type: "stdio", command: OBSCURA, args: ["mcp"] } });
 
   // The same ToolDefinition[] works in every Prism host (sessions, MCP server,
-  // server handler, AG-UI/ACP, workflows, supervisors, Antigravity exposure).
+  // server handler, AG-UI/ACP, workflows, and supervisors).
   const agent = createAgent({
     model: { provider: "openai", model: "gpt-5.2" },
     provider: createMockProvider([providerTextDelta("demo"), providerDone()]), // replace with a real provider

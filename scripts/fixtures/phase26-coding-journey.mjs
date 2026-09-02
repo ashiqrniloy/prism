@@ -29,7 +29,7 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -67,7 +67,8 @@ import { createBrowserManager, createBrowserTools } from "@arnilo/prism-web-tool
 
 const env = process.env;
 const suffix = env.PRISM_JOURNEY_SUFFIX ?? `j${Date.now().toString(36)}${randomBytes(4).toString("hex")}`; // random suffix (CodeQL js/insecure-randomness, alerts 52-55)
-const ws = env.PRISM_JOURNEY_WORKSPACE ?? join(tmpdir(), `prism-journey-${suffix}`);
+// mkdtemp: exclusive-created, mode 0700 workspace (CodeQL js/insecure-temporary-file, alerts 81-82).
+const ws = env.PRISM_JOURNEY_WORKSPACE ?? mkdtempSync(join(tmpdir(), "prism-journey-"));
 const reportPath = env.PRISM_PHASE26_JOURNEY_REPORT ?? join(ws, "report.json");
 const startedAt = Date.now();
 

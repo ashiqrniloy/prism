@@ -219,7 +219,6 @@ test("baseline manifest count is coherent with the real filesystem", () => {
     .filter(
       (e) =>
         e.name !== "computer-use-linux" &&
-        e.name !== "antigravity-agent" &&
         e.name !== "prism-wiki" &&
         e.name !== "obscura" &&
         e.name !== "prism-dev" &&
@@ -422,7 +421,6 @@ test("exit gate (Task 6): lockfile gained no dependencies (name-set unchanged vs
     .filter(
       (k) =>
         k !== "packages/computer-use-linux" &&
-        k !== "packages/antigravity-agent" &&
         k !== "packages/prism-wiki" &&
         // plan 033: optional peer-dependency-only workspace package (no new external deps)
         k !== "packages/prism-graft" &&

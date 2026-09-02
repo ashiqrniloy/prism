@@ -35,9 +35,7 @@ import { commandCodeModels, createCommandCodeProvider } from "../index.js";
 const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
 const API_KEY = process.env.COMMAND_CODE_API_KEY;
 const skip: string | false =
-  !LIVE || !API_KEY
-    ? "set PRISM_LIVE_PROVIDER_TESTS=1 and COMMAND_CODE_API_KEY to run live Command Code smoke probes"
-    : false;
+  !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and COMMAND_CODE_API_KEY to run live Command Code smoke probes" : false;
 
 // Cheap probe models (per plan Task 5 cost budget):
 // chat route → Qwen/Qwen3.8-Flash ($0.16/$0.47); messages route →
@@ -78,7 +76,10 @@ describe("@arnilo/prism-providers/commandcode live probes", () => {
   it("live_messages_route_text_generation_streams_and_leaks_no_secret", { skip }, async () => {
     const events = await assertProviderStreamConforms({
       provider: provider(),
-      request: { model: messagesModel, messages: [{ role: "user", content: [{ type: "text", text: "Reply with exactly the word: pong" }] }] },
+      request: {
+        model: messagesModel,
+        messages: [{ role: "user", content: [{ type: "text", text: "Reply with exactly the word: pong" }] }],
+      },
     });
     const text = events.map((e) => (e.type === "content_delta" && e.content.type === "text" ? e.content.text : "")).join("");
     assert.ok(text.length > 0, "live messages-route text response was empty");
@@ -221,7 +222,11 @@ describe("@arnilo/prism-providers/commandcode live probes", () => {
     const first = await turn("one");
     const second = await turn("two");
     const firstTerminal = first.at(-1);
-    assert.equal(firstTerminal?.type, "done", `prompt_cache_key rejected (terminal=${firstTerminal?.type}) — keep GPT-5.6 implicit and record the negative`);
+    assert.equal(
+      firstTerminal?.type,
+      "done",
+      `prompt_cache_key rejected (terminal=${firstTerminal?.type}) — keep GPT-5.6 implicit and record the negative`,
+    );
     assert.ok(lastBody?.includes('"prompt_cache_key"'), `wire body missing prompt_cache_key: ${lastBody}`);
     const warmUsage = usageOf(second);
     // eslint-disable-next-line no-console
@@ -279,7 +284,11 @@ describe("@arnilo/prism-providers/commandcode live probes", () => {
     console.info(`[commandcode live] ZDR probe terminal: ${terminal?.type}`);
     if (terminal?.type === "error") {
       const err = (terminal as { error?: { code?: number; message?: string } }).error;
-      assert.equal(err?.code, 422, `ZDR request failed with ${err?.code} (${err?.message}) — record finding; expected done or 422 cmd_zdr_no_providers`);
+      assert.equal(
+        err?.code,
+        422,
+        `ZDR request failed with ${err?.code} (${err?.message}) — record finding; expected done or 422 cmd_zdr_no_providers`,
+      );
       assert.match(String(err?.message), /cmd_zdr_no_providers/);
       // eslint-disable-next-line no-console
       console.info("[commandcode live] ZDR probe finding: no ZDR-capable upstream for Qwen/Qwen3.8-Flash (422)");

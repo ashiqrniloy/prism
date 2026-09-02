@@ -199,7 +199,7 @@ describe("@arnilo/prism-ag-ui", () => {
     const event = createDelegatedAgentStep({
       sessionId: "session-1",
       runId: "run-1",
-      adapterId: "antigravity-cli",
+      adapterId: "delegated-cli",
       externalConversationId: "conversation-1",
       stepIndex: 4,
       state: "done",

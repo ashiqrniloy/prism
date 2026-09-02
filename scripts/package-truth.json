@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-09-02T17:28:10.167Z",
+  "generatedAt": "2026-09-02T19:15:51.659Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.4.0"
   },
   "counts": {
-    "publishable": 11,
-    "workspace": 10,
+    "publishable": 10,
+    "workspace": 9,
     "provider": 19,
     "prismFamily": 3,
-    "capability": 7,
-    "codeWithPeer": 10,
+    "capability": 6,
+    "codeWithPeer": 9,
     "pureManifest": 0
   },
   "providers": [
@@ -42,7 +42,6 @@
   "capability": [
     "@arnilo/prism-acp-agent",
     "@arnilo/prism-ag-ui",
-    "@arnilo/prism-antigravity-agent",
     "@arnilo/prism-mcp",
     "@arnilo/prism-memory",
     "@arnilo/prism-office",

@@ -13,9 +13,7 @@ export interface DeployOptions {
 
 export function resolvePackageSkillsDir(): string {
   // If running from src/<family> or dist/<family>, skills directory is at package root
-  const candidate1 = resolve(__dirname, "../../skills");
-  const _candidate2 = resolve(__dirname, "../../skills");
-  return candidate1;
+  return resolve(__dirname, "../../skills");
 }
 
 export function parseSkillMarkdown(content: string): { name: string; description: string; instructions: string } {

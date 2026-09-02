@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { after, describe, it } from "node:test";
 import { Pool } from "pg";
 import { createPostgresPersistence } from "../packages/prism-core/dist/sessions/postgres/index.js";
@@ -254,7 +254,14 @@ describe("Phase 12 protected restart recovery", () => {
     );
     if (recordEvidence) {
       const evidencePath = new URL("../scripts/phase12-restart-recovery.json", import.meta.url);
-      const evidence = existsSync(evidencePath) ? JSON.parse(readFileSync(evidencePath, "utf8")) : {};
+      // Read-or-empty without an existence check: readFileSync is the single access,
+      // no check-then-use race (CodeQL js/file-system-race, alert 72).
+      let evidence = {};
+      try {
+        evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
+      } catch {
+        // not recorded yet — start fresh
+      }
       writeFileSync(
         evidencePath,
         JSON.stringify(

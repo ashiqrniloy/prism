@@ -9,7 +9,7 @@
 // ever spawns another wrapped leaf, the grandchild skips acquisition (already inside the
 // critical section).
 import { spawnSync } from "node:child_process";
-import { openSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -65,23 +65,37 @@ async function acquire() {
       }
       const pid = readHolderPid();
       if (pid === null) {
-        // Empty/unparseable: either mid-write or abandoned. Grace, then reclaim.
-        try {
-          readFileSync(LOCK, "utf8"); // probe: does it still exist?
-        } catch {
-          unparseableSince = null; // vanished — retry acquire immediately
-          continue;
-        }
+        // Empty/unparseable: either mid-write or abandoned. Grace, then reclaim
+        // with an atomic rename to a unique tombstone — no read-then-unlink pair
+        // on the shared lock path (CodeQL js/file-system-race, alert 74).
         if (unparseableSince === null) unparseableSince = Date.now();
         else if (Date.now() - unparseableSince >= UNPARSEABLE_GRACE_MS) {
-          unlinkSync(LOCK);
+          const tombstone = `${LOCK}.reclaim-${process.pid}-${Date.now()}`;
+          try {
+            renameSync(LOCK, tombstone); // atomic steal; loser re-acquires via EEXIST
+            unlinkSync(tombstone);
+          } catch {
+            // vanished or concurrently reclaimed — retry acquisition
+          }
           continue;
         }
         await sleep(RETRY_MS);
         continue;
       }
       if (!isAlive(pid)) {
-        unlinkSync(LOCK); // holder dead — reclaim
+        // Reclaim via atomic rename to a unique tombstone, then confirm the
+        // stolen content still names the dead pid before deleting it. If a new
+        // holder replaced the lock mid-flight, restore it (unique path per
+        // attempt: no check-then-use on the shared lock path).
+        const tombstone = `${LOCK}.reclaim-${process.pid}-${Date.now()}`;
+        try {
+          renameSync(LOCK, tombstone);
+          const holder = Number(String(readFileSync(tombstone, "utf8")).trim().split(/\s+/)[0]);
+          if (holder === pid) unlinkSync(tombstone);
+          else renameSync(tombstone, LOCK);
+        } catch {
+          // vanished, restored, or concurrently reclaimed — retry acquisition
+        }
         continue;
       }
       await sleep(RETRY_MS);

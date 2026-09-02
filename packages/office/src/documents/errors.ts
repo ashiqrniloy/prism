@@ -35,3 +35,10 @@ export class DocumentsParseError extends DocumentsError {
     this.name = "DocumentsParseError";
   }
 }
+
+export class DocumentsPatchError extends DocumentsError {
+  constructor(message: string) {
+    super(message, "ERR_PRISM_DOCUMENTS_UNSAFE_PATH");
+    this.name = "DocumentsPatchError";
+  }
+}

@@ -4,6 +4,7 @@
  */
 
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import { buildChildEnv, DEFAULT_CHILD_ENV_INHERIT } from "../env.js";
 import { encodeLspFrame, LspFrameError, LspFrameReader } from "./framing.js";
 import { LanguageIntelligenceError, type ResolvedLanguageIntelligenceLimits } from "./types.js";
 
@@ -233,7 +234,7 @@ export class LspClient {
     this.reader = new LspFrameReader(this.limits.maxMessageBytes);
     const child = spawn(this.spec.command, [...this.spec.args], {
       cwd: this.spec.cwd,
-      env: { ...process.env, ...this.spec.env },
+      env: buildChildEnv({ inherit: DEFAULT_CHILD_ENV_INHERIT, set: this.spec.env }), // allow-list; never pass process.env through
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
     });

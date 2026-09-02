@@ -158,8 +158,8 @@ agent.tools = [...agent.tools, ...web.tools];
 the same `ToolDefinition[]` with one read tool (`web_fetch`) and one mutating tool
 (`obscura_scrape`) — through every Prism host's public API: core agent/session
 execution, the Prism MCP server, the `createPrismHandler` server lifecycle, AG-UI
-MCP-tool injection, ACP fronting, workflow `toolNode`/`agentNode`s, supervisor
-children, and Antigravity delegated MCP exposure. It verifies host authorization
+MCP-tool injection, ACP fronting, workflow `toolNode`/`agentNode`s, and supervisor
+children. It verifies host authorization
 and selection deny before execution, that no host needs an Obscura-specific branch,
 and that an aborted in-flight call settles and kills the owned child. Composition
 walkthrough: [`examples/obscura.ts`](../examples/obscura.ts).

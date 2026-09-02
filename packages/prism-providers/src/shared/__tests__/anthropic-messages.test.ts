@@ -19,9 +19,8 @@ const hooks: AnthropicMessagesRouteHooks = {
     if (last && last.role !== "tool") {
       messages[messages.length - 1] = {
         ...last,
-        content: last.content.map(
-          (block, blockIndex) =>
-            blockIndex === last.content.length - 1 ? { ...block, cache_control: { type: "ephemeral" } } : block,
+        content: last.content.map((block, blockIndex) =>
+          blockIndex === last.content.length - 1 ? { ...block, cache_control: { type: "ephemeral" } } : block,
         ),
       };
     }
@@ -45,9 +44,21 @@ const request: ProviderRequest = {
   messages: [
     { role: "system", content: [{ type: "text", text: "be brief" }] },
     { role: "user", content: [{ type: "text", text: "hi" }] },
-    { role: "assistant", content: [{ type: "thinking", text: "hidden", signature: "sig" }, { type: "text", text: "ok" }] },
+    {
+      role: "assistant",
+      content: [
+        { type: "thinking", text: "hidden", signature: "sig" },
+        { type: "text", text: "ok" },
+      ],
+    },
   ],
-  tools: [{ name: "lookup", parameters: { type: "object", properties: { b: {}, a: {} } }, execute: () => ({ toolCallId: "c", name: "lookup", content: [] }) }],
+  tools: [
+    {
+      name: "lookup",
+      parameters: { type: "object", properties: { b: {}, a: {} } },
+      execute: () => ({ toolCallId: "c", name: "lookup", content: [] }),
+    },
+  ],
   options: { compat: { route: "anthropic", preserveThinking: true, ownedTwist: "must-not-leak" } },
 };
 
@@ -104,7 +115,11 @@ describe("@arnilo/prism-providers/shared/anthropic-messages", () => {
         { type: "content_block_start", index: 2, content_block: { type: "tool_use", id: "call_1", name: "lookup" } },
         { type: "content_block_delta", index: 2, delta: { type: "input_json_delta", partial_json: '{"q":"x"}' } },
         { type: "content_block_stop", index: 2 },
-        { type: "message_delta", delta: { stop_reason: "tool_use" }, usage: { input_tokens: 10, output_tokens: 5, cache_read_input_tokens: 4, cache_creation_input_tokens: 2 } },
+        {
+          type: "message_delta",
+          delta: { stop_reason: "tool_use" },
+          usage: { input_tokens: 10, output_tokens: 5, cache_read_input_tokens: 4, cache_creation_input_tokens: 2 },
+        },
         { type: "message_stop" },
       ]),
     );
@@ -119,9 +134,10 @@ describe("@arnilo/prism-providers/shared/anthropic-messages", () => {
     assert.equal(usage.usage.outputTokens, 5);
     assert.equal(usage.usage.cacheReadTokens, 4);
     assert.equal(usage.usage.cacheWriteTokens, 2);
-    assert.deepEqual(events.filter((e) => e.type === "tool_call").map((e: any) => e.call), [
-      { type: "tool_call", id: "call_1", name: "lookup", arguments: { q: "x" } },
-    ]);
+    assert.deepEqual(
+      events.filter((e) => e.type === "tool_call").map((e: any) => e.call),
+      [{ type: "tool_call", id: "call_1", name: "lookup", arguments: { q: "x" } }],
+    );
     assert.equal(events.at(-1)?.type, "done");
   });
 

@@ -83,7 +83,7 @@ test("web_fetch returns bounded Markdown with citation metadata", async () => {
   assert.equal(value.provider, "obscura");
   assert.equal(value.untrusted, true);
   assert.match(value.markdown, /# Example/);
-  assert.match(value.markdown, /example\.com\/doc/);
+  assert.match(value.markdown, /example\.com\/doc$/);
 });
 
 test("obscura_fetch supports bounded dump modes and selectors; rejects unknown modes", async () => {

@@ -2,7 +2,7 @@
 
 ## What it does
 
-This page records Prism's compatibility review against official AG-UI `@ag-ui/core` **0.0.57** and the official repository at commit [`a40b5c0`](https://github.com/ag-ui-protocol/ag-ui/commit/a40b5c0824564eb2f9ab9edf2be43f355f42a3b8). It separates shipped transport/replay support from remaining work needed to claim full AG-UI support, including AG-UI fronting MCP and A2A agents.
+This page records Prism's compatibility review against official AG-UI `@ag-ui/core` **0.0.59** and the official repository at commit [`a40b5c0`](https://github.com/ag-ui-protocol/ag-ui/commit/a40b5c0824564eb2f9ab9edf2be43f355f42a3b8). It separates shipped transport/replay support from remaining work needed to claim full AG-UI support, including AG-UI fronting MCP and A2A agents.
 
 Official material reviewed:
 

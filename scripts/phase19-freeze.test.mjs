@@ -256,7 +256,6 @@ test("baseline manifest count is coherent with the real filesystem (0.1.7 adds n
     .filter(
       (e) =>
         e.name !== "computer-use-linux" &&
-        e.name !== "antigravity-agent" &&
         e.name !== "prism-wiki" &&
         e.name !== "obscura" &&
         e.name !== "prism-dev" &&

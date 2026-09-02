@@ -41,7 +41,8 @@ export function createCommandCodeProvider(options: CommandCodeProviderOptions = 
       const secrets: (string | undefined)[] = [];
       try {
         const route = routeFor(request);
-        const body = route === "anthropic" ? await anthropicMessagesBody(request, COMMAND_CODE_ANTHROPIC_HOOKS) : commandCodeChatBody(request);
+        const body =
+          route === "anthropic" ? await anthropicMessagesBody(request, COMMAND_CODE_ANTHROPIC_HOOKS) : commandCodeChatBody(request);
         token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
         secrets.push(token);
         const response = await (options.fetch ?? fetch)(`${baseUrl}${route === "anthropic" ? "/messages" : "/chat/completions"}`, {
@@ -66,7 +67,9 @@ export function createCommandCodeProvider(options: CommandCodeProviderOptions = 
           );
         }
         if (!response.body) return yield providerError(new Error("Command Code response had no body"), secrets);
-        yield* route === "anthropic" ? anthropicMessagesEvents(response.body, request.signal) : commandCodeChatEvents(response.body, request.signal);
+        yield* route === "anthropic"
+          ? anthropicMessagesEvents(response.body, request.signal)
+          : commandCodeChatEvents(response.body, request.signal);
       } catch (error) {
         yield providerError(error, secrets);
       }

@@ -24,6 +24,37 @@ test("no timers or processes on createProcessSessions construction", () => {
   void sessions;
 });
 
+test("child env is an allow-list: unlisted host vars never leak (P1)", async () => {
+  process.env.PRISM_ENV_LEAK_CANARY = "top-secret-2";
+  const sessions = createProcessSessions({
+    cwd: root,
+    onEvent: () => {},
+    limits: { maxLifetimeMs: 60_000 },
+  });
+  try {
+    const p = await sessions.start({
+      command: process.execPath,
+      args: ["-e", "console.log(process.env.PRISM_ENV_LEAK_CANARY ?? '<absent>'); process.exit(0)"],
+      lifetimeMs: 30_000,
+    });
+    const result = await p.wait({ timeoutMs: 5_000 });
+    let cursor = 0;
+    let saw = "";
+    for (let i = 0; i < 50; i++) {
+      const chunk = await p.output({ cursor, maxBytes: 64 });
+      saw += chunk.data;
+      cursor = chunk.cursor;
+      if (saw.includes("absent") || saw.includes("top-secret")) break;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    assert.equal(result.state, "exited");
+    assert.match(saw, /<absent>/, "unlisted env var must not reach process child");
+  } finally {
+    delete process.env.PRISM_ENV_LEAK_CANARY;
+    await sessions.dispose();
+  }
+});
+
 test("start → output paging → input → wait exit", async () => {
   const events: CodingProcessEvent[] = [];
   const sessions = createProcessSessions({

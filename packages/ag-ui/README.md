@@ -6,7 +6,7 @@ Optional, framework-free frontend interoperability for Prism. Import is inert: n
 
 ## AG-UI
 
-Root exports use `@ag-ui/core@0.0.57` to map redacted Prism `AgentEvent` values and provide:
+Root exports use `@ag-ui/core@0.0.59` to map redacted Prism `AgentEvent` values and provide:
 
 - `createAgUiEventMapper()` — ordered current AG-UI lifecycle/step/text/tool/state/activity/reasoning/raw/custom mapper through safe host projection.
 - `createReasoningEncryptedValue()` — bounded `REASONING_ENCRYPTED_VALUE` fragment from a host-owned `encrypt` function; fails closed, never infers from reasoning signatures.

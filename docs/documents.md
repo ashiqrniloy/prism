@@ -66,6 +66,7 @@ All package operations throw typed exceptions derived from `DocumentsError`:
 | `DocumentsCapExceededError` | `ERR_PRISM_DOCUMENTS_CAP_EXCEEDED` | Document exceeds byte size, block count, cell count, or slide count caps. |
 | `DocumentsParseError` | `ERR_PRISM_DOCUMENTS_PARSE_FAILED` | Input buffer lacks PK zip signature, is corrupted, or fails OOXML part parsing. |
 | `DocumentsFormatError` | `ERR_PRISM_DOCUMENTS_UNSUPPORTED_FORMAT` | Format mismatch (e.g. attempting to generate PPTX from a `DocModel`). |
+| `DocumentsPatchError` | `ERR_PRISM_DOCUMENTS_UNSAFE_PATH` | `__proto__`, `prototype`, or `constructor` appears as a `metadata` target or inside a block/slide/sheet `patch` segment (rejected before mutation to prevent `Object.prototype` pollution). |
 | `DocumentsPatchError` | `ERR_PRISM_DOCUMENTS_PATCH_FAILED` | Out-of-bounds index target, unknown patch operation, or invalid patch structure. |
 
 ## Request/response example

@@ -106,22 +106,39 @@ export async function approveUploadPaths(
     }
 
     const real = await assertInsideRoots(options.roots, abs);
-    const stat = await lstat(real);
-    if (!stat.isFile()) {
-      throw new BrowserError("ERR_PRISM_BROWSER_ARTIFACT", "upload path must resolve to a regular file");
-    }
-    if (stat.size > perFileCap) {
-      throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `upload exceeds maxUploadBytes ${perFileCap}`);
-    }
-    if (budget.aggregateBytes + stat.size > limits.maxUploadAggregateBytes) {
-      throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `upload exceeds maxUploadAggregateBytes ${limits.maxUploadAggregateBytes}`);
+    // Open first, then decide from descriptor (CodeQL js/file-system-race: open→fstat before use).
+    const handle = await open(real, "r");
+    let st: Awaited<ReturnType<typeof handle.stat>>;
+    try {
+      st = await handle.stat();
+      // Verify we opened a regular file of the approved inode (detects TOCTOU/symlink swap).
+      if (!st.isFile()) {
+        throw new BrowserError("ERR_PRISM_BROWSER_ARTIFACT", "upload path must resolve to a regular file");
+      }
+      try {
+        const curStat = await lstat(real);
+        if (curStat.isSymbolicLink() || curStat.ino !== st.ino || curStat.dev !== st.dev) {
+          throw new BrowserError("ERR_PRISM_BROWSER_ARTIFACT", "upload path was replaced between check and open");
+        }
+      } catch (e) {
+        if (e instanceof BrowserError) throw e;
+        throw new BrowserError("ERR_PRISM_BROWSER_ARTIFACT", "upload path was replaced between check and open");
+      }
+      if (st.size > perFileCap) {
+        throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `upload exceeds maxUploadBytes ${perFileCap}`);
+      }
+      if (budget.aggregateBytes + st.size > limits.maxUploadAggregateBytes) {
+        throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `upload exceeds maxUploadAggregateBytes ${limits.maxUploadAggregateBytes}`);
+      }
+    } catch (e) {
+      await handle.close();
+      throw e;
     }
 
     const hash = createHash("sha256");
-    const handle = await open(real, "r");
     try {
       const buf = Buffer.alloc(64 * 1024);
-      let remaining = stat.size;
+      let remaining = st.size;
       while (remaining > 0) {
         const { bytesRead } = await handle.read(buf, 0, Math.min(buf.length, remaining), null);
         if (bytesRead <= 0) break;
@@ -135,11 +152,11 @@ export async function approveUploadPaths(
     approved.push({
       path: real,
       name: basename(real),
-      bytes: stat.size,
+      bytes: st.size,
       sha256: hash.digest("hex"),
     });
     budget.count += 1;
-    budget.aggregateBytes += stat.size;
+    budget.aggregateBytes += st.size;
   }
 
   return approved;

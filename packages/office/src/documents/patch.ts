@@ -1,6 +1,26 @@
-import { DocumentsValidationError } from "./errors.js";
+import { DocumentsPatchError, DocumentsValidationError } from "./errors.js";
 import { validateDocumentModel } from "./model-schema.js";
 import type { DocumentsTelemetry } from "./telemetry.js";
+
+/** Rejected dynamic property access paths. Single definition, reusable at every site. */
+const UNSAFE_SEGMENTS = new Set(["__proto__", "prototype", "constructor"]);
+
+function assertSafeTarget(target: PatchTarget): void {
+  if ("metadata" in target && typeof target.metadata === "string" && UNSAFE_SEGMENTS.has(target.metadata)) {
+    throw new DocumentsPatchError(
+      `patch metadata target must not be prototype-polluting key "${target.metadata}"`,
+    );
+  }
+}
+
+function assertSafePatchSegments(patch: SetPatch): void {
+  if (!patch.patch || typeof patch.patch !== "object") return;
+  for (const key of Object.keys(patch.patch)) {
+    if (UNSAFE_SEGMENTS.has(key)) {
+      throw new DocumentsPatchError(`patch segment must not be prototype-polluting key "${key}"`);
+    }
+  }
+}
 import type { CellValue, DeckModel, DocBlock, DocModel, DocumentModel, SheetData, SheetModel, SlideData } from "./types.js";
 
 export interface BlockTarget {
@@ -102,6 +122,8 @@ export interface PatchDocumentOptions {
 
 function applySetPatch(model: DocumentModel, patch: SetPatch): void {
   const target = patch.target;
+  assertSafeTarget(target);
+  assertSafePatchSegments(patch);
 
   if ("title" in target && target.title === true) {
     const val = patch.value ?? (patch.patch as { title?: string } | undefined)?.title;
@@ -113,6 +135,7 @@ function applySetPatch(model: DocumentModel, patch: SetPatch): void {
   }
 
   if ("metadata" in target && typeof target.metadata === "string") {
+    assertSafeTarget(target);
     const val = patch.value;
     if (!model.metadata) {
       (model as { metadata?: Record<string, unknown> }).metadata = {};

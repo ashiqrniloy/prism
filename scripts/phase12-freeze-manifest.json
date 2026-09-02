@@ -88,7 +88,7 @@
       "$comment": "Exact pins verified against package manifests by scripts/phase12-freeze.test.mjs.",
       "@modelcontextprotocol/sdk": "1.30.0",
       "@agentclientprotocol/sdk": "1.3.0",
-      "@ag-ui/core": "0.0.57",
+      "@ag-ui/core": "0.0.59",
       "@nats-io/jetstream": "^3.4.0",
       "@nats-io/transport-node": "^3.4.0"
     },

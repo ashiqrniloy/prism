@@ -214,7 +214,6 @@ test("baseline manifest count is coherent with the real filesystem (doc-reader a
     .filter(
       (e) =>
         e.name !== "computer-use-linux" &&
-        e.name !== "antigravity-agent" &&
         e.name !== "prism-wiki" &&
         e.name !== "obscura" &&
         e.name !== "prism-dev" &&

@@ -185,7 +185,13 @@ describe("@arnilo/prism-providers/commandcode", () => {
         ...baseRequest,
         messages: [
           { role: "user", content: [{ type: "text", text: "q" }] },
-          { role: "assistant", content: [{ type: "thinking", text: "plan" }, { type: "text", text: "ok" }] },
+          {
+            role: "assistant",
+            content: [
+              { type: "thinking", text: "plan" },
+              { type: "text", text: "ok" },
+            ],
+          },
         ],
       },
     });
@@ -216,7 +222,13 @@ describe("@arnilo/prism-providers/commandcode", () => {
         messages: [
           { role: "system", content: [{ type: "text", text: "rules" }] },
           { role: "user", content: [{ type: "text", text: "q" }] },
-          { role: "assistant", content: [{ type: "thinking", text: "plan" }, { type: "text", text: "ok" }] },
+          {
+            role: "assistant",
+            content: [
+              { type: "thinking", text: "plan" },
+              { type: "text", text: "ok" },
+            ],
+          },
         ],
       },
     });
@@ -299,7 +311,10 @@ describe("@arnilo/prism-providers/commandcode", () => {
       provider,
       request: {
         ...baseRequest,
-        options: { ...baseRequest.options, headers: { authorization: "Bearer attacker", "content-type": "text/plain", "x-caller": "kept" } },
+        options: {
+          ...baseRequest.options,
+          headers: { authorization: "Bearer attacker", "content-type": "text/plain", "x-caller": "kept" },
+        },
       },
     });
     assertProviderOwnedHeadersWin(headers, {
@@ -313,7 +328,10 @@ describe("@arnilo/prism-providers/commandcode", () => {
       apiKey: "sk-cmd-secret",
       fetch: (async (input) => {
         const status = String(input).includes("/messages") ? 422 : 403;
-        const error = status === 403 ? { error: { message: "upgrade required to GOAT sk-cmd-secret", code: "upgrade_required" } } : { error: { message: "no ZDR upstream", code: "cmd_zdr_no_providers" } };
+        const error =
+          status === 403
+            ? { error: { message: "upgrade required to GOAT sk-cmd-secret", code: "upgrade_required" } }
+            : { error: { message: "no ZDR upstream", code: "cmd_zdr_no_providers" } };
         return new Response(JSON.stringify(error), { status, headers: { "content-type": "application/json" } });
       }) as typeof fetch,
     });
@@ -488,6 +506,10 @@ describe("@arnilo/prism-providers/commandcode", () => {
       request: baseRequest,
       expect: { text: "hi", usage: { inputTokens: 3, outputTokens: 1, totalTokens: 4 } },
     });
-    assert.equal(body.stream_options?.include_usage, true, "shared builder asks for usage; docs guarantee the final usage chunk without it");
+    assert.equal(
+      body.stream_options?.include_usage,
+      true,
+      "shared builder asks for usage; docs guarantee the final usage chunk without it",
+    );
   });
 });

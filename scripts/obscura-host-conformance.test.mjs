@@ -4,8 +4,8 @@
  * built API. Proves hosts need no Obscura-specific branch: the same array (one read
  * tool `web_fetch`, one mutating tool `obscura_scrape`) flows through core agent
  * sessions, the Prism MCP server, server-hosted lifecycle, AG-UI, ACP, workflow
- * agent/tool nodes, supervisor children, and Antigravity delegated MCP exposure —
- * with host authorization, selection, effects, and abort ownership intact.
+ * agent/tool nodes and supervisor children — with host authorization, selection,
+ * effects, and abort ownership intact.
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -15,7 +15,6 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createPrismAcpAgent } from "../packages/ag-ui/dist/acp/index.js";
 import { createAgUiHandler, createAgUiMcpAdapter } from "../packages/ag-ui/dist/index.js";
-import { createAntigravityMcpExposure } from "../packages/antigravity-agent/dist/index.js";
 import { createPrismMcpServer } from "../packages/mcp/dist/index.js";
 import { createPrismHandler } from "../packages/prism-core/dist/runtime/server/index.js";
 import { createSupervisor } from "../packages/prism-core/dist/runtime/supervisor/index.js";
@@ -272,25 +271,6 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
     await assert.rejects(denied.delegate({ childId: "research", input: "x" }), /parent denied/);
     assert.deepEqual(calls, ["obscura_scrape"], "denied delegation must not reach Obscura tools");
     assert.equal(denied.activeChildren, 0);
-  });
-
-  it("Antigravity delegated exposure serves only selected Obscura tools through the generic MCP surface", async () => {
-    const { tools, calls } = obscuraTools();
-    const exposure = createAntigravityMcpExposure({
-      tools,
-      toolSelection: ["web_fetch"],
-      runContext: { sessionId: "s1", runId: "r1", ...AUTHORIZATION },
-    });
-    assert.deepEqual(
-      exposure.exposedTools.map((tool) => tool.name),
-      ["web_fetch"],
-    );
-    const session = await withMcpClient(exposure.server);
-    const result = await session.client.callTool({ name: "web_fetch", arguments: { url: "https://example.com/page" } });
-    assert.match(JSON.stringify(result.content), /UNTRUSTED EXTERNAL CONTENT/);
-    assert.deepEqual(calls, ["web_fetch"]);
-    await session.close();
-    await exposure.close();
   });
 
   it("abort during an in-flight Obscura call settles the run and kills the child (no leaked processes)", async () => {

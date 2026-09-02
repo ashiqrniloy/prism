@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
@@ -179,15 +179,16 @@ describe("provider transport primitives", () => {
     const offenders: string[] = [];
 
     const walk = (dir: string): void => {
-      for (const entry of readdirSync(dir)) {
-        const path = join(dir, entry);
-        const info = statSync(path);
-        if (info.isDirectory()) {
-          if (entry === "__tests__" || entry === "dist") continue;
+      // withFileTypes: directory info comes from the readdir entry, no statSync
+      // then readFileSync pair (CodeQL js/file-system-race, alert 75).
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === "__tests__" || entry.name === "dist") continue;
           walk(path);
           continue;
         }
-        if (!entry.endsWith(".ts")) continue;
+        if (!entry.isFile() || !entry.name.endsWith(".ts")) continue;
         const source = readFileSync(path, "utf8");
         for (const pattern of forbidden) {
           if (pattern.test(source)) offenders.push(`${path} matches ${pattern}`);

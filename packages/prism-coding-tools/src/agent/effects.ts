@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { readFile, stat } from "node:fs/promises";
+import { lstat, open } from "node:fs/promises";
 import type { JsonObject, ToolEffectDeclaration, ToolEffectRecord, ToolResult } from "@arnilo/prism";
 import { HARD_MAX_WRITE_BYTES } from "./limits.js";
 import { resolveContainedMutationPath } from "./mutation-path.js";
@@ -53,8 +53,22 @@ export async function reconcileCodingToolEffect(input: CodingEffectReconciliatio
         return { status: "unknown" };
       const target = await resolveContainedMutationPath(input.cwd, path);
       const expected = Buffer.from(content, "utf8");
-      if ((await stat(target)).size !== expected.length) return { status: "unknown" };
-      return (await readFile(target)).equals(expected) ? completed() : { status: "unknown" };
+      const handle = await open(target, "r");
+      try {
+        const st = await handle.stat();
+        if (!st.isFile() || st.size !== expected.length) return { status: "unknown" };
+        // Verify descriptor still refers to the same inode we resolved (detect swap/symlink).
+        try {
+          const cur = await lstat(target);
+          if (cur.isSymbolicLink() || cur.ino !== st.ino || cur.dev !== st.dev) return { status: "unknown" };
+        } catch {
+          return { status: "unknown" };
+        }
+        const data = await handle.readFile();
+        return data.equals(expected) ? completed() : { status: "unknown" };
+      } finally {
+        await handle.close();
+      }
     }
     if (input.record.toolName === "delete") {
       const path = stringArg(input.args, "path");

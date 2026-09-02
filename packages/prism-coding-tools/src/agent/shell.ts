@@ -18,13 +18,16 @@
  *    not that the command returned non-zero.
  *  - Drops detached-child PID tracking (`killTrackedDetachedChildren`): the host owns process
  *    lifecycle; the tool kills the tree only on timeout/abort. Drops the stdin command transport
- *    (argv `-c` only). Default spawn env is `process.env` (no pi CLI binDir PATH injection).
+ *  - Shell resolution honors `process.env.SHELL` → `/bin/bash` → `sh` (pi forces `/bin/bash`);
+ *    (argv `-c` only). Default spawn env is the allow-list from `env.ts` (PATH,
+ *    locale, HOME, TERM) — never the full `process.env` (P1 hardening).
  */
 import { type ChildProcess, spawn } from "node:child_process";
 import { constants, existsSync } from "node:fs";
 import { access as fsAccess } from "node:fs/promises";
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolResult } from "@arnilo/prism";
 import { CODING_UNSUPPORTED_EFFECT } from "./effects.js";
+import { buildChildEnv, DEFAULT_CHILD_ENV_INHERIT } from "./env.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import {
   DEFAULT_MAX_BYTES,
@@ -79,7 +82,8 @@ export interface ShellToolOptions {
   /** Hook to adjust command, cwd, or env before execution. */
   spawnHook?: BashSpawnHook;
   /** Restrict the process environment cloned for the spawn hook / child process to these
-   *  names (e.g. scrub secrets). Unset keeps the full `process.env` clone. */
+   *  names (e.g. scrub secrets). Unset uses the default allow-list (PATH, locale, HOME,
+   *  TERM) — never the full `process.env`. */
   envAllowlist?: readonly string[];
   /** Max lines kept in the tail snapshot (default 2000). */
   maxLines?: number;
@@ -95,9 +99,9 @@ export interface ShellToolOptions {
 
 // --- spawn internals (re-ported from pi utils/shell.js + utils/child-process.js) ---
 
-/** Clone the process environment, optionally restricted to an allowlist of names. */
+/** Default allow-list env for the spawn hook / child process (never the full process.env). */
 function pickSpawnEnv(allowlist?: readonly string[]): NodeJS.ProcessEnv {
-  if (!allowlist) return { ...process.env };
+  if (!allowlist) return buildChildEnv({ inherit: DEFAULT_CHILD_ENV_INHERIT });
   const env: NodeJS.ProcessEnv = {};
   for (const name of allowlist) {
     const value = process.env[name];
@@ -241,7 +245,7 @@ export function createLocalBashOperations(options?: { shellPath?: string }): Bas
       const child = spawn(shellConfig.shell, [...shellConfig.args, command], {
         cwd,
         detached: process.platform !== "win32",
-        env: env ?? { ...process.env },
+        env: env ?? buildChildEnv({ inherit: DEFAULT_CHILD_ENV_INHERIT }), // allow-list; never pass process.env through
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
       });

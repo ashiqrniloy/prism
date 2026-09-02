@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { lstat, readdir, readFile } from "node:fs/promises";
+import { lstat, open, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -32,12 +32,19 @@ export async function scanSecrets(paths) {
   for (const root of paths)
     for await (const path of files(root)) {
       if (++scanned > MAX_FILES) throw new Error("Secret scan file count exceeds policy");
-      const stat = await lstat(path);
-      if (stat.size > MAX_FILE_BYTES) throw new Error(`Secret scan file exceeds 16 MiB: ${path}`);
-      const bytes = await readFile(path);
-      if (bytes.includes(0)) continue;
-      const text = bytes.toString("utf8");
-      for (const [name, pattern] of patterns) if (pattern.test(text)) findings.push(`${path}: ${name}`);
+      // Open-then-stat to avoid TOCTOU between size check and read (CodeQL js/file-system-race).
+      const handle = await open(path, "r");
+      try {
+        const stat = await handle.stat();
+        if (!stat.isFile()) continue;
+        if (stat.size > MAX_FILE_BYTES) throw new Error(`Secret scan file exceeds 16 MiB: ${path}`);
+        const bytes = await handle.readFile();
+        if (bytes.includes(0)) continue;
+        const text = bytes.toString("utf8");
+        for (const [name, pattern] of patterns) if (pattern.test(text)) findings.push(`${path}: ${name}`);
+      } finally {
+        await handle.close();
+      }
     }
   if (findings.length) throw new Error(`Secret scan rejected ${findings.slice(0, 50).join(", ")}`);
   return { files: scanned, findings: 0 };

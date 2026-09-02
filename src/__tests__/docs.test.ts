@@ -93,7 +93,6 @@ const apiPages = [
   "docs/cli-rpc.md",
   "docs/workflows.md",
   "docs/work-artifacts-and-review.md",
-  "docs/antigravity-agent.md",
   "docs/wiki.md",
   "docs/release-and-install.md",
   "docs/performance.md",
@@ -1632,7 +1631,7 @@ describe("docs", () => {
     const packageReadme = readFileSync("packages/ag-ui/README.md", "utf8");
     for (const token of [
       "@arnilo/prism-ag-ui/acp",
-      "@ag-ui/core` **0.0.57**",
+      "@ag-ui/core` **0.0.59**",
       "@agentclientprotocol/sdk` **1.3.0**",
       "createAgUiHandler()",
       "createPersistenceAgUiReplay()",
@@ -1741,7 +1740,7 @@ describe("docs", () => {
     assert.equal(
       dirs.length,
       existsSync("packages/office/src")
-        ? 11
+        ? 10
         : existsSync("packages/prism-providers/src")
           ? 17
           : existsSync("packages/prism-coding-tools")
@@ -3904,7 +3903,7 @@ describe("docs", () => {
     assert.equal(
       manifests.filter((manifest) => !manifest.private).length,
       existsSync("packages/office/src")
-        ? 11
+        ? 10
         : existsSync("packages/prism-providers/src")
           ? 17
           : existsSync("packages/prism-coding-tools")

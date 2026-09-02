@@ -64,9 +64,7 @@ export function routeForCommandCodeModel(modelId: string): CommandCodeRoute {
 }
 
 function cacheKindForCommandCodeModel(route: CommandCodeRoute): ModelConfig["cache"] {
-  return route === "anthropic"
-    ? { kind: "cache_control" as const, maxBreakpoints: 4 }
-    : { kind: "implicit" as const };
+  return route === "anthropic" ? { kind: "cache_control" as const, maxBreakpoints: 4 } : { kind: "implicit" as const };
 }
 
 export function defineCommandCodeModel(config: CommandCodeModelConfig): ModelConfig {
@@ -164,53 +162,251 @@ type FeaturedMeta = Omit<CommandCodeModelConfig, "provider" | "model"> & { reado
  */
 const FEATURED: readonly FeaturedMeta[] = [
   // Claude tiers (Anthropic route; cache_control with write pricing)
-  { model: "claude-opus-5", displayName: "Claude Opus 5", limits: { contextWindow: 1_000_000 }, cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25, currency: "USD", unit: "per_million_tokens" } },
-  { model: "claude-opus-4-8", displayName: "Claude Opus 4.8", limits: { contextWindow: 1_000_000 }, cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25, currency: "USD", unit: "per_million_tokens" } },
-  { model: "claude-opus-4-7", displayName: "Claude Opus 4.7", limits: { contextWindow: 1_000_000 }, cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25, currency: "USD", unit: "per_million_tokens" } },
-  { model: "claude-sonnet-5", displayName: "Claude Sonnet 5", limits: { contextWindow: 1_000_000 }, cost: { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5, currency: "USD", unit: "per_million_tokens" } },
-  { model: "claude-sonnet-4-6", displayName: "Claude Sonnet 4.6", limits: { contextWindow: 1_000_000 }, cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75, currency: "USD", unit: "per_million_tokens" } },
-  { model: "claude-fable-5-1", displayName: "Claude Fable 5.1", limits: { contextWindow: 1_000_000 }, cost: { input: 10, output: 50, cacheRead: 0.25, cacheWrite: 12.5, currency: "USD", unit: "per_million_tokens" } },
-  { model: "claude-fable-5", displayName: "Claude Fable 5", limits: { contextWindow: 1_000_000 }, cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5, currency: "USD", unit: "per_million_tokens" } },
-  { model: "claude-haiku-4-5-20251001", displayName: "Claude Haiku 4.5", limits: { contextWindow: 200_000 }, cost: { input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25, currency: "USD", unit: "per_million_tokens" } },
+  {
+    model: "claude-opus-5",
+    displayName: "Claude Opus 5",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "claude-opus-4-8",
+    displayName: "Claude Opus 4.8",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "claude-opus-4-7",
+    displayName: "Claude Opus 4.7",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "claude-sonnet-5",
+    displayName: "Claude Sonnet 5",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "claude-sonnet-4-6",
+    displayName: "Claude Sonnet 4.6",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "claude-fable-5-1",
+    displayName: "Claude Fable 5.1",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 10, output: 50, cacheRead: 0.25, cacheWrite: 12.5, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "claude-fable-5",
+    displayName: "Claude Fable 5",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "claude-haiku-4-5-20251001",
+    displayName: "Claude Haiku 4.5",
+    limits: { contextWindow: 200_000 },
+    cost: { input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25, currency: "USD", unit: "per_million_tokens" },
+  },
   // GPT-5.6 explicit-cache candidates (chat route; implicit until probe — Task 5/9)
-  { model: "gpt-5.6-sol", displayName: "GPT-5.6 Sol", limits: { contextWindow: 1_050_000 }, cost: { input: 5, output: 30, cacheRead: 0.5, cacheWrite: 6.25, currency: "USD", unit: "per_million_tokens" } },
-  { model: "gpt-5.6-terra", displayName: "GPT-5.6 Terra", limits: { contextWindow: 1_050_000 }, cost: { input: 2, output: 12, cacheRead: 0.2, cacheWrite: 2.5, currency: "USD", unit: "per_million_tokens" } },
-  { model: "gpt-5.6-luna", displayName: "GPT-5.6 Luna", limits: { contextWindow: 1_050_000 }, cost: { input: 0.2, output: 1.2, cacheRead: 0.02, cacheWrite: 0.25, currency: "USD", unit: "per_million_tokens" } },
+  {
+    model: "gpt-5.6-sol",
+    displayName: "GPT-5.6 Sol",
+    limits: { contextWindow: 1_050_000 },
+    cost: { input: 5, output: 30, cacheRead: 0.5, cacheWrite: 6.25, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "gpt-5.6-terra",
+    displayName: "GPT-5.6 Terra",
+    limits: { contextWindow: 1_050_000 },
+    cost: { input: 2, output: 12, cacheRead: 0.2, cacheWrite: 2.5, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "gpt-5.6-luna",
+    displayName: "GPT-5.6 Luna",
+    limits: { contextWindow: 1_050_000 },
+    cost: { input: 0.2, output: 1.2, cacheRead: 0.02, cacheWrite: 0.25, currency: "USD", unit: "per_million_tokens" },
+  },
   // DeepSeek v4 (chat route; off-peak rates, peak = 2×)
-  { model: "deepseek/deepseek-v4-pro", displayName: "DeepSeek V4 Pro (latest)", limits: { contextWindow: 1_000_000 }, cost: { input: 0.66, output: 1.98, cacheRead: 0.022, currency: "USD", unit: "per_million_tokens" }, compat: { pricing_source: "docs:pricing-limits (off-peak 17h/day; peak 2× 01–04 & 06–10 UTC)" } },
-  { model: "deepseek/deepseek-v4-flash", displayName: "DeepSeek V4 Flash (latest)", limits: { contextWindow: 1_000_000 }, cost: { input: 0.22, output: 0.66, cacheRead: 0.007, currency: "USD", unit: "per_million_tokens" }, compat: { pricing_source: "docs:pricing-limits (off-peak 17h/day; peak 2×)" } },
-  { model: "deepseek/deepseek-v4-flash-vision-exp", displayName: "DeepSeek V4 Flash Vision (exp)", limits: { contextWindow: 1_000_000 }, cost: { input: 0.22, output: 0.66, cacheRead: 0.007, currency: "USD", unit: "per_million_tokens" }, compat: { pricing_source: "docs:pricing-limits (off-peak 17h/day; peak 2×)" }, capabilities: { input: ["text", "image"], output: ["text"], reasoning: true, tools: true, streaming: true } },
-  { model: "deepseek/deepseek-v4-flash-fast", displayName: "DeepSeek V4 Flash Fast", limits: { contextWindow: 1_000_000 }, cost: { input: 0.28, output: 0.56, cacheRead: 0.07, currency: "USD", unit: "per_million_tokens" }, compat: { pricing_source: "docs:pricing-limits (off-peak 17h/day; peak 2×)" } },
+  {
+    model: "deepseek/deepseek-v4-pro",
+    displayName: "DeepSeek V4 Pro (latest)",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 0.66, output: 1.98, cacheRead: 0.022, currency: "USD", unit: "per_million_tokens" },
+    compat: { pricing_source: "docs:pricing-limits (off-peak 17h/day; peak 2× 01–04 & 06–10 UTC)" },
+  },
+  {
+    model: "deepseek/deepseek-v4-flash",
+    displayName: "DeepSeek V4 Flash (latest)",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 0.22, output: 0.66, cacheRead: 0.007, currency: "USD", unit: "per_million_tokens" },
+    compat: { pricing_source: "docs:pricing-limits (off-peak 17h/day; peak 2×)" },
+  },
+  {
+    model: "deepseek/deepseek-v4-flash-vision-exp",
+    displayName: "DeepSeek V4 Flash Vision (exp)",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 0.22, output: 0.66, cacheRead: 0.007, currency: "USD", unit: "per_million_tokens" },
+    compat: { pricing_source: "docs:pricing-limits (off-peak 17h/day; peak 2×)" },
+    capabilities: { input: ["text", "image"], output: ["text"], reasoning: true, tools: true, streaming: true },
+  },
+  {
+    model: "deepseek/deepseek-v4-flash-fast",
+    displayName: "DeepSeek V4 Flash Fast",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 0.28, output: 0.56, cacheRead: 0.07, currency: "USD", unit: "per_million_tokens" },
+    compat: { pricing_source: "docs:pricing-limits (off-peak 17h/day; peak 2×)" },
+  },
   // Kimi
-  { model: "moonshotai/Kimi-K3", displayName: "Kimi K3", limits: { contextWindow: 1_000_000 }, cost: { input: 3, output: 15, cacheRead: 0.3, currency: "USD", unit: "per_million_tokens" } },
-  { model: "moonshotai/Kimi-K2.7-Code", displayName: "Kimi K2.7 Code", limits: { contextWindow: 256_000 }, cost: { input: 0.95, output: 4, cacheRead: 0.19, currency: "USD", unit: "per_million_tokens" } },
-  { model: "moonshotai/Kimi-K2.7-Code-Highspeed", displayName: "Kimi K2.7 Code HighSpeed", limits: { contextWindow: 262_000 }, cost: { input: 1.9, output: 8, cacheRead: 0.38, currency: "USD", unit: "per_million_tokens" } },
-  { model: "moonshotai/Kimi-K2.6", displayName: "Kimi K2.6", limits: { contextWindow: 256_000 }, cost: { input: 0.95, output: 4, cacheRead: 0.16, currency: "USD", unit: "per_million_tokens" } },
-  { model: "moonshotai/Kimi-K2.5", displayName: "Kimi K2.5", limits: { contextWindow: 256_000 }, cost: { input: 0.6, output: 3, cacheRead: 0.1, currency: "USD", unit: "per_million_tokens" } },
+  {
+    model: "moonshotai/Kimi-K3",
+    displayName: "Kimi K3",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 3, output: 15, cacheRead: 0.3, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "moonshotai/Kimi-K2.7-Code",
+    displayName: "Kimi K2.7 Code",
+    limits: { contextWindow: 256_000 },
+    cost: { input: 0.95, output: 4, cacheRead: 0.19, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "moonshotai/Kimi-K2.7-Code-Highspeed",
+    displayName: "Kimi K2.7 Code HighSpeed",
+    limits: { contextWindow: 262_000 },
+    cost: { input: 1.9, output: 8, cacheRead: 0.38, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "moonshotai/Kimi-K2.6",
+    displayName: "Kimi K2.6",
+    limits: { contextWindow: 256_000 },
+    cost: { input: 0.95, output: 4, cacheRead: 0.16, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "moonshotai/Kimi-K2.5",
+    displayName: "Kimi K2.5",
+    limits: { contextWindow: 256_000 },
+    cost: { input: 0.6, output: 3, cacheRead: 0.1, currency: "USD", unit: "per_million_tokens" },
+  },
   // GLM
-  { model: "z-ai/glm-5.3-flash", displayName: "GLM-5.3 Flash", limits: { contextWindow: 1_048_576 }, cost: { input: 0.15, output: 0.5, cacheRead: 0.03, currency: "USD", unit: "per_million_tokens" } },
-  { model: "zai-org/GLM-5.3", displayName: "GLM-5.3", limits: { contextWindow: 1_000_000 }, cost: { input: 1.4, output: 4.4, cacheRead: 0.26, currency: "USD", unit: "per_million_tokens" } },
+  {
+    model: "z-ai/glm-5.3-flash",
+    displayName: "GLM-5.3 Flash",
+    limits: { contextWindow: 1_048_576 },
+    cost: { input: 0.15, output: 0.5, cacheRead: 0.03, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "zai-org/GLM-5.3",
+    displayName: "GLM-5.3",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 1.4, output: 4.4, cacheRead: 0.26, currency: "USD", unit: "per_million_tokens" },
+  },
   // MiniMax M3 family (50% deal applied to M3)
-  { model: "MiniMaxAI/MiniMax-M3", displayName: "MiniMax M3", limits: { contextWindow: 1_000_000 }, cost: { input: 0.3, output: 1.2, cacheRead: 0.06, currency: "USD", unit: "per_million_tokens" }, compat: { pricing_source: "docs:pricing-limits (deal −50% auto-applied)" } },
-  { model: "MiniMaxAI/MiniMax-M2.7", displayName: "MiniMax M2.7", limits: { contextWindow: 200_000 }, cost: { input: 0.3, output: 1.2, cacheRead: 0.06, currency: "USD", unit: "per_million_tokens" } },
-  { model: "MiniMaxAI/MiniMax-M2.5", displayName: "MiniMax M2.5", limits: { contextWindow: 200_000 }, cost: { input: 0.3, output: 1.2, cacheRead: 0.03, currency: "USD", unit: "per_million_tokens" } },
+  {
+    model: "MiniMaxAI/MiniMax-M3",
+    displayName: "MiniMax M3",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 0.3, output: 1.2, cacheRead: 0.06, currency: "USD", unit: "per_million_tokens" },
+    compat: { pricing_source: "docs:pricing-limits (deal −50% auto-applied)" },
+  },
+  {
+    model: "MiniMaxAI/MiniMax-M2.7",
+    displayName: "MiniMax M2.7",
+    limits: { contextWindow: 200_000 },
+    cost: { input: 0.3, output: 1.2, cacheRead: 0.06, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "MiniMaxAI/MiniMax-M2.5",
+    displayName: "MiniMax M2.5",
+    limits: { contextWindow: 200_000 },
+    cost: { input: 0.3, output: 1.2, cacheRead: 0.03, currency: "USD", unit: "per_million_tokens" },
+  },
   // Qwen 3.8 family
-  { model: "Qwen/Qwen3.8-Max-0902", displayName: "Qwen 3.8 Max 0902", limits: { contextWindow: 1_000_000 }, cost: { input: 2, output: 6, cacheRead: 0.25, currency: "USD", unit: "per_million_tokens" } },
-  { model: "Qwen/Qwen3.8-Max", displayName: "Qwen 3.8 Max", limits: { contextWindow: 1_000_000 }, cost: { input: 2, output: 6, cacheRead: 0.25, cacheWrite: 2.5, currency: "USD", unit: "per_million_tokens" } },
-  { model: "Qwen/Qwen3.8-27B", displayName: "Qwen 3.8 27B", limits: { contextWindow: 262_144 }, cost: { input: 0.4, output: 3, cacheRead: 0.04, currency: "USD", unit: "per_million_tokens" } },
-  { model: "Qwen/Qwen3.8-Flash", displayName: "Qwen 3.8 Flash", limits: { contextWindow: 1_000_000 }, cost: { input: 0.16, output: 0.47, cacheRead: 0.016, currency: "USD", unit: "per_million_tokens" } },
+  {
+    model: "Qwen/Qwen3.8-Max-0902",
+    displayName: "Qwen 3.8 Max 0902",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 2, output: 6, cacheRead: 0.25, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "Qwen/Qwen3.8-Max",
+    displayName: "Qwen 3.8 Max",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 2, output: 6, cacheRead: 0.25, cacheWrite: 2.5, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "Qwen/Qwen3.8-27B",
+    displayName: "Qwen 3.8 27B",
+    limits: { contextWindow: 262_144 },
+    cost: { input: 0.4, output: 3, cacheRead: 0.04, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "Qwen/Qwen3.8-Flash",
+    displayName: "Qwen 3.8 Flash",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 0.16, output: 0.47, cacheRead: 0.016, currency: "USD", unit: "per_million_tokens" },
+  },
   // MiMo (deals applied)
-  { model: "xiaomi/mimo-v2.5-pro", displayName: "MiMo V2.5 Pro", limits: { contextWindow: 1_000_000 }, cost: { input: 0.435, output: 0.87, cacheRead: 0.0036, currency: "USD", unit: "per_million_tokens" }, compat: { pricing_source: "docs:pricing-limits (deal −99% auto-applied)" } },
-  { model: "xiaomi/mimo-v2.5", displayName: "MiMo V2.5", limits: { contextWindow: 1_000_000 }, cost: { input: 0.14, output: 0.28, cacheRead: 0.0028, currency: "USD", unit: "per_million_tokens" }, compat: { pricing_source: "docs:pricing-limits (deal −98% auto-applied)" } },
+  {
+    model: "xiaomi/mimo-v2.5-pro",
+    displayName: "MiMo V2.5 Pro",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 0.435, output: 0.87, cacheRead: 0.0036, currency: "USD", unit: "per_million_tokens" },
+    compat: { pricing_source: "docs:pricing-limits (deal −99% auto-applied)" },
+  },
+  {
+    model: "xiaomi/mimo-v2.5",
+    displayName: "MiMo V2.5",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 0.14, output: 0.28, cacheRead: 0.0028, currency: "USD", unit: "per_million_tokens" },
+    compat: { pricing_source: "docs:pricing-limits (deal −98% auto-applied)" },
+  },
   // Gemini flash
-  { model: "google/gemini-3.7-flash", displayName: "Gemini 3.7 Flash", limits: { contextWindow: 1_048_576 }, cost: { input: 1.5, output: 7.5, cacheRead: 0.15, cacheWrite: 0.08334, currency: "USD", unit: "per_million_tokens" } },
-  { model: "google/gemini-3.6-flash", displayName: "Gemini 3.6 Flash", limits: { contextWindow: 1_000_000 }, cost: { input: 1.5, output: 7.5, cacheRead: 0.15, currency: "USD", unit: "per_million_tokens" } },
-  { model: "google/gemini-3.5-flash", displayName: "Gemini 3.5 Flash", limits: { contextWindow: 1_000_000 }, cost: { input: 1.5, output: 9, cacheRead: 0.15, currency: "USD", unit: "per_million_tokens" } },
-  { model: "google/gemini-3.5-flash-lite", displayName: "Gemini 3.5 Flash Lite", limits: { contextWindow: 1_000_000 }, cost: { input: 0.3, output: 2.5, cacheRead: 0.03, currency: "USD", unit: "per_million_tokens" } },
-  { model: "google/gemini-3.1-flash-lite", displayName: "Gemini 3.1 Flash Lite", limits: { contextWindow: 1_000_000 }, cost: { input: 0.25, output: 1.5, cacheRead: 0.03, currency: "USD", unit: "per_million_tokens" } },
+  {
+    model: "google/gemini-3.7-flash",
+    displayName: "Gemini 3.7 Flash",
+    limits: { contextWindow: 1_048_576 },
+    cost: { input: 1.5, output: 7.5, cacheRead: 0.15, cacheWrite: 0.08334, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "google/gemini-3.6-flash",
+    displayName: "Gemini 3.6 Flash",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 1.5, output: 7.5, cacheRead: 0.15, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "google/gemini-3.5-flash",
+    displayName: "Gemini 3.5 Flash",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 1.5, output: 9, cacheRead: 0.15, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "google/gemini-3.5-flash-lite",
+    displayName: "Gemini 3.5 Flash Lite",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 0.3, output: 2.5, cacheRead: 0.03, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "google/gemini-3.1-flash-lite",
+    displayName: "Gemini 3.1 Flash Lite",
+    limits: { contextWindow: 1_000_000 },
+    cost: { input: 0.25, output: 1.5, cacheRead: 0.03, currency: "USD", unit: "per_million_tokens" },
+  },
   // Grok
-  { model: "xai/grok-4.6", displayName: "Grok 4.6", limits: { contextWindow: 500_000 }, cost: { input: 2, output: 6, cacheRead: 0.5, currency: "USD", unit: "per_million_tokens" } },
-  { model: "xai/grok-4.5", displayName: "Grok 4.5", limits: { contextWindow: 500_000 }, cost: { input: 2, output: 6, cacheRead: 0.5, currency: "USD", unit: "per_million_tokens" } },
+  {
+    model: "xai/grok-4.6",
+    displayName: "Grok 4.6",
+    limits: { contextWindow: 500_000 },
+    cost: { input: 2, output: 6, cacheRead: 0.5, currency: "USD", unit: "per_million_tokens" },
+  },
+  {
+    model: "xai/grok-4.5",
+    displayName: "Grok 4.5",
+    limits: { contextWindow: 500_000 },
+    cost: { input: 2, output: 6, cacheRead: 0.5, currency: "USD", unit: "per_million_tokens" },
+  },
 ];
 
 const FEATURED_META = new Map(FEATURED.map((meta) => [meta.model, meta]));

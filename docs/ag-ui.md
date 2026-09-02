@@ -4,7 +4,7 @@
 
 `@arnilo/prism-ag-ui` is an optional, framework-free protocol adapter over Prism's existing redacted `AgentEvent`, session, durable-run, and persistence seams.
 
-- Root export maps Prism events to AG-UI `@ag-ui/core` **0.0.57** events and offers `createAgUiHandler()` (`Request` → SSE `Response`), compatible `createPersistenceAgUiReplay()` pages, distributed `createAgentEventSourceAgUiReplay()` follow, and explicit `createAgUiMcpAdapter()` / `createAgUiMcpAppHandler()` / `createAgUiA2AAdapter()` protocol handshakes.
+- Root export maps Prism events to AG-UI `@ag-ui/core` **0.0.59** events and offers `createAgUiHandler()` (`Request` → SSE `Response`), compatible `createPersistenceAgUiReplay()` pages, distributed `createAgentEventSourceAgUiReplay()` follow, and explicit `createAgUiMcpAdapter()` / `createAgUiMcpAppHandler()` / `createAgUiA2AAdapter()` protocol handshakes.
 - `@arnilo/prism-ag-ui/acp` is the stable ACP **v1** sibling: `createAcpEventMapper()` and `createPrismAcpAgent()` over `@agentclientprotocol/sdk` **1.3.0** root exports. ACP is a protocol adapter — sessions, modes, MCP, fs/terminal, lifecycle mapping, and caps live on the host seams. See [ACP coding-host interop](acp.md) for the full reference; this page covers AG-UI only.
 - Core remains protocol-free. `resumeAgentRunStream()` / `AgentRunLifecycle.resumeStream()` are generic durable-resume streams shared by adapters.
 
@@ -225,5 +225,4 @@ Defaults / hard caps: request 64 KiB / 1 MiB; input 128 / 1024 messages, 32 / 25
 - [MCP bridge/server](mcp-tools.md): `mcpApps` negotiation, bounded resources, and remote tool trust.
 - [A2A interoperability](a2a.md): verified rich task client and remote task lifecycle.
 - [Host security guide](host-security.md): authorization, ownership, redaction, and credential boundaries.
-- [Antigravity delegated agent](antigravity-agent.md): delegated Antigravity CLI execution with timeline step projection.
 - [Work artifacts and review](work-artifacts-and-review.md): durable artifact service that produces the co-work approval/progress/download-link events projected here.

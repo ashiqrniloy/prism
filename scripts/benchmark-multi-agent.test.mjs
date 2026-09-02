@@ -57,13 +57,13 @@ function workspaceManifests() {
 }
 
 describe("multi-agent runtime coverage and baselines", () => {
-  it("inventories all 65 manifests in the evidence matrix", () => {
+  it("inventories all current manifests in the evidence matrix", () => {
     const names = workspaceManifests();
     const hasCodingTools = names.includes("@arnilo/prism-coding-tools");
     const hasCore = names.includes("@arnilo/prism-core");
     const hasOfficeFamily = existsSync(join(here, "../packages/office/src"));
     const hasProvidersFamily = existsSync(join(here, "../packages/prism-providers/src"));
-    const expectedCount = hasOfficeFamily ? 11 : hasProvidersFamily ? 17 : hasCodingTools ? 34 : hasCore ? 50 : 65;
+    const expectedCount = hasOfficeFamily ? 10 : hasProvidersFamily ? 17 : hasCodingTools ? 34 : hasCore ? 50 : 65;
     assert.equal(names.length, expectedCount, `expected ${expectedCount} manifests, found ${names.length}`);
     const evidence = readFileSync(evidencePath, "utf8");
     for (const name of names) {

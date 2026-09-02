@@ -144,14 +144,14 @@ const flag = (name) => {
   return at === -1 ? undefined : process.argv[at + 1];
 };
 
-try {
-  const root = flag("--root") ?? DEFAULT_ROOT;
-  const out = flag("--out") ?? join(DEFAULT_ROOT, "scripts", "package-truth.json");
-  writeFileSync(out, `${JSON.stringify(computePackageTruth(root), null, 2)}\n`);
-  process.stderr.write(`package-truth: wrote ${out}
-`);
-} catch (error) {
-  process.stderr.write(`package-truth: ${error.message}
-`);
-  process.exitCode = 1;
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  try {
+    const root = flag("--root") ?? DEFAULT_ROOT;
+    const out = flag("--out") ?? join(DEFAULT_ROOT, "scripts", "package-truth.json");
+    writeFileSync(out, `${JSON.stringify(computePackageTruth(root), null, 2)}\n`);
+    process.stderr.write(`package-truth: wrote ${out}\n`);
+  } catch (error) {
+    process.stderr.write(`package-truth: ${error.message}\n`);
+    process.exitCode = 1;
+  }
 }

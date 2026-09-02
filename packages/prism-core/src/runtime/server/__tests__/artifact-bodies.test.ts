@@ -43,7 +43,7 @@ async function startFakeS3(options: FakeS3Options = {}): Promise<FakeS3> {
     const accessKeyId = credential?.split("/")[0] ?? ACCESS_KEY;
     const region = credential?.split("/")[2] ?? "us-east-1";
     const service = credential?.split("/")[3] ?? "s3";
-    const query: Record<string, string> = {};
+    const query: Record<string, string> = Object.create(null) as Record<string, string>;
     for (const [key, value] of url.searchParams) {
       if (key !== "X-Amz-Signature") query[key] = value;
     }
@@ -53,7 +53,8 @@ async function startFakeS3(options: FakeS3Options = {}): Promise<FakeS3> {
       const match = /SignedHeaders=([^,]+)/.exec(authorization);
       if (match) signedHeaders.splice(0, signedHeaders.length, ...match[1].split(";"));
     }
-    const headers: Record<string, string> = { host: req.headers.host ?? "" };
+    const headers: Record<string, string> = Object.create(null) as Record<string, string>;
+    headers.host = req.headers.host ?? "";
     for (const name of signedHeaders) {
       if (name === "host") continue;
       const value = req.headers[name];

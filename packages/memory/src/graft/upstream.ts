@@ -9,7 +9,7 @@ export const MAX_ERROR_CHARS = 512;
 export const MAX_GRAPH_FILE_BYTES = 262_144;
 
 export const GRAFT_PEER_PACKAGE = "@nanonets/graft";
-export const GRAFT_PEER_RANGE = "^0.13.0";
+export const GRAFT_PEER_RANGE = "^0.16.0";
 export const GRAFT_RESOLVE_ERROR_CODE = "graft_resolve_failed";
 
 const require = createRequire(import.meta.url);

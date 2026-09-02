@@ -13,17 +13,17 @@ const rootDir = join(fileURLToPath(import.meta.url), "../..");
 test("phase54 package map: exact manifest counts and topology invariants", () => {
   const map = buildPackageMap(rootDir);
 
-  // Total current manifests in repo (65 initially, 50 after core, 42 after coding-tools, 40 after web-tools, 34 after memory family, 17 after providers family, 11 after the office family + profile deletions)
+  // Total current manifests in repo after consolidation and delegated CLI adapter removal.
   assert.ok(
-    [11, 17, 34, 40, 42, 50, 65].includes(map.counts.totalCurrentManifests),
-    "Total repository manifests must be 11, 17, 34, 40, 42, 50 or 65",
+    [10, 17, 34, 40, 42, 50, 65].includes(map.counts.totalCurrentManifests),
+    "Total repository manifests must be 10, 17, 34, 40, 42, 50 or 65",
   );
   assert.equal(map.counts.baselineManifests, 62, "Baseline 0.3.3 manifests count must be 62");
   assert.equal(map.counts.officeDraftManifests, 3, "Office drafts count must be 3");
-  assert.equal(map.counts.retiredPackages, 54, "Retired packages count must be exactly 54");
-  assert.equal(map.counts.retainedPackages, 8, "Retained packages count must be exactly 8");
+  assert.equal(map.counts.retiredPackages, 55, "Retired packages count must be exactly 55");
+  assert.equal(map.counts.retainedPackages, 7, "Retained packages count must be exactly 7");
   assert.equal(map.counts.newPackages, 3, "New packages count must be exactly 3");
-  assert.equal(map.counts.targetActivePackages, 11, "Target active packages count must be exactly 11");
+  assert.equal(map.counts.targetActivePackages, 10, "Target active packages count must be exactly 10");
 });
 
 test("phase54 package map: partitioning - every current manifest is accounted for without duplication", () => {
@@ -40,7 +40,7 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
     assert.ok(!retiredNames.has(name), `Retained package ${name} must not be in retired list`);
   }
 
-  // Union of retained (8) + retired (54) + office drafts (3) must account for all 65 baseline manifests
+  // Union of retained (7) + retired (55) + office drafts (3) accounts for all 65 baseline manifests
   const baselineUnion = new Set([...retainedNames, ...retiredNames, ...officeDraftNames]);
   assert.equal(baselineUnion.size, 65, "Union of retained, retired, and office drafts must equal 65");
 
@@ -137,6 +137,6 @@ test("phase54 package map: generated markdown evidence file matches output", () 
   assert.ok(onDisk.includes("## 5. Retained CLI / Binaries"));
   assert.ok(onDisk.includes("## 6. Optional Peers and Host Binary Requirements"));
   assert.ok(onDisk.includes("## 7. Security Trust Boundaries"));
-  assert.ok(onDisk.includes("## 8. Legacy Registry Plan & Deprecation Commands (54 Packages)"));
+  assert.ok(onDisk.includes("## 8. Legacy Registry Plan & Deprecation Commands (55 Packages)"));
   assert.ok(onDisk.includes("## 9. Baseline Export Symbol Snapshot Summary"));
 });

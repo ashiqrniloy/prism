@@ -246,7 +246,7 @@ async function preflightUnshare(unshare: string): Promise<NativeUnshareMode> {
     const args = mode === "plain" ? ["--net", "true"] : ["--net", "--map-root-user", "true"];
     try {
       const exitCode = await new Promise<number | null>((resolve) => {
-        const child = spawn(unshare, args, { stdio: "ignore" });
+        const child = spawn(unshare, args, { stdio: "ignore", env: { PATH: "/usr/bin:/bin", LANG: "C" } });
         child.on("error", () => resolve(null));
         child.on("close", (code) => resolve(code));
       });

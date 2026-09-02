@@ -21,7 +21,6 @@ const packages: Array<{
   { dir: "packages/web-tools", name: "@arnilo/prism-web-tools" },
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
   { dir: "packages/acp-agent", name: "@arnilo/prism-acp-agent" },
-  { dir: "packages/antigravity-agent", name: "@arnilo/prism-antigravity-agent" },
   { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools" },
   { dir: "packages/prism-core", name: "@arnilo/prism-core" },
   // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
@@ -238,7 +237,7 @@ describe("packaging guard", () => {
     ]);
     const peers = memory.peerDependencies as Record<string, string>;
     const meta = memory.peerDependenciesMeta as Record<string, { optional?: boolean }>;
-    assert.equal(peers["@nanonets/graft"], "^0.13.0", "graft subpath must peer @nanonets/graft");
+    assert.equal(peers["@nanonets/graft"], "^0.16.0", "graft subpath must peer @nanonets/graft");
     assert.equal(meta["@nanonets/graft"]?.optional, true, "@nanonets/graft must stay an optional peer");
     assert.equal(
       (memory.bin as Record<string, string>)["prism-wiki"],
@@ -359,7 +358,7 @@ describe("packaging guard", () => {
   it("plan 054 Task 7: every retired name has legacy-registry metadata and a successor/recipe anchor", () => {
     const evidence = readFileSync(join(repoRoot, "docs/_evidence/phase54-package-map.md"), "utf8");
     const guide = readFileSync(join(repoRoot, "docs/migrate-to-0.4.md"), "utf8");
-    const section = evidence.split("## 8. Legacy Registry Plan & Deprecation Commands (54 Packages)")[1];
+    const section = evidence.split("## 8. Legacy Registry Plan & Deprecation Commands (55 Packages)")[1];
     assert.ok(section, "evidence carries the legacy registry command block");
     // GitHub heading slugs of the migration guide (code fences ignored).
     const anchors = new Set<string>();
@@ -380,11 +379,11 @@ describe("packaging guard", () => {
     assert.ok(anchors.size > 0, "guide headings parsed");
     const tagCommands = [...section.matchAll(/^npm dist-tag add (@arnilo\/prism-[a-z0-9-]+)@([0-9.]+) legacy$/gm)];
     const deprecateCommands = [...section.matchAll(/^npm deprecate (@arnilo\/prism-[a-z0-9-]+)@"<0\.4\.0" "(.*)"$/gm)];
-    assert.equal(tagCommands.length, 54, "54 legacy dist-tag commands (one per retired name)");
-    assert.equal(deprecateCommands.length, 54, "54 <0.4.0 deprecation commands");
+    assert.equal(tagCommands.length, 55, "55 legacy dist-tag commands (one per retired name)");
+    assert.equal(deprecateCommands.length, 55, "55 <0.4.0 deprecation commands");
     const tagNames = new Set(tagCommands.map((m) => m[1]));
     const deprecateNames = new Set(deprecateCommands.map((m) => m[1]));
-    assert.equal(tagNames.size, 54, "retired names are distinct in tag commands");
+    assert.equal(tagNames.size, 55, "retired names are distinct in tag commands");
     assert.deepEqual(deprecateNames, tagNames, "tag and deprecate cover the same names");
     for (const [, name, version] of tagCommands) {
       assert.match(version, /^\d+\.\d+\.\d+$/, `final version is exact: ${name}`);
@@ -408,14 +407,14 @@ describe("packaging guard", () => {
       assert.ok(guide.includes(spec), `migration guide missing ${spec}`);
     }
     const truth = JSON.parse(readFileSync(join(repoRoot, "scripts/package-truth.json"), "utf8")) as { counts: { publishable: number } };
-    assert.equal(truth.counts.publishable, 11, "package truth must report 11 active packages");
+    assert.equal(truth.counts.publishable, 10, "package truth must report 10 active packages");
   });
 
-  it("plan 054 Task 9: 0.4 lockstep — 11 manifests, no shims, family roots stay inert", () => {
+  it("0.4 package set — 10 manifests, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     assert.equal(root.version, "0.4.0");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 11, "11 active packages including root");
+    assert.equal(names.length, 10, "10 active packages including root");
     for (const pkg of packages) {
       // Plan 055 Task 6 (Decision B changed-package cut): the provider family
       // moved 0.4.0 → 0.4.1 for the two new adapters; every other manifest stays 0.4.0.

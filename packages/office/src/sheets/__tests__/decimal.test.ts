@@ -82,6 +82,34 @@ describe("@arnilo/prism-office/sheets — Decimal Safety & Normalization", () =>
     assert.equal(normalizeDecimal("$$100"), null);
   });
 
+  it("pathological inputs complete fast (linear scan, no ReDoS)", () => {
+    const bigDigits = "9".repeat(8000);
+    const bigCurrency = `$${"1,234,".repeat(1000)}567.89`;
+    const t0 = performance.now();
+    const r1 = normalizeDecimal(bigDigits);
+    const r2 = normalizeDecimal(bigCurrency);
+    const r3 = isCanonicalDecimal(bigDigits);
+    const r4 = isScientificNotation(`${"9".repeat(4000)}e+${"9".repeat(4000)}`);
+    const elapsed = performance.now() - t0;
+    assert.equal(r1?.value, bigDigits);
+    // currency with many groups is rejected (too long / ambiguous) but must not hang
+    assert.ok(r2 === null || typeof r2.value === "string");
+    assert.ok(typeof r3 === "boolean");
+    assert.ok(typeof r4 === "boolean");
+    assert.ok(elapsed < 50, `pathological parse took ${elapsed.toFixed(1)}ms, expected <50ms`);
+  });
+
+  it("enforces input length cap before parse", () => {
+    const over = "9".repeat(9000);
+    assert.equal(normalizeDecimal(over), null);
+    assert.equal(isCanonicalDecimal(over), false);
+    assert.equal(isScientificNotation(over), false);
+    assert.equal(isCurrencyString(over), false);
+    // one byte over boundary
+    const justOver = "9".repeat(8193);
+    assert.equal(normalizeDecimal(justOver), null);
+  });
+
   it("ANTI-CORRUPTION INVARIANT: verifies zero floating-point conversions on decimal value paths in source code", () => {
     const srcDir = fs.existsSync(path.resolve(__dirname, "../../../src/sheets"))
       ? path.resolve(__dirname, "../../../src/sheets")

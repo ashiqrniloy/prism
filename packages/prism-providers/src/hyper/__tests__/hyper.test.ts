@@ -99,9 +99,7 @@ describe("@arnilo/prism-providers/hyper", () => {
     assertNoFetches(fetchCalls);
     assert(registered.some((item: any) => item.id === "hyper"));
     assert(registered.some((item: any) => item.provider === "hyper" && item.kind === "api_key"));
-    const models = registered.filter(
-      (item: any): item is ModelConfig => typeof item?.model === "string" && item.provider === "hyper",
-    );
+    const models = registered.filter((item: any): item is ModelConfig => typeof item?.model === "string" && item.provider === "hyper");
     assert.ok(models.length >= 31, `expected full live-stable catalog, got ${models.length}`);
     const byId = new Map(models.map((m) => [m.model, m]));
     const deepseek = byId.get("deepseek-v4-pro");
@@ -184,7 +182,13 @@ describe("@arnilo/prism-providers/hyper", () => {
         ...baseRequest,
         messages: [
           { role: "user", content: [{ type: "text", text: "q" }] },
-          { role: "assistant", content: [{ type: "thinking", text: "plan" }, { type: "text", text: "ok" }] },
+          {
+            role: "assistant",
+            content: [
+              { type: "thinking", text: "plan" },
+              { type: "text", text: "ok" },
+            ],
+          },
         ],
       },
     });
@@ -563,10 +567,10 @@ describe("@arnilo/prism-providers/hyper", () => {
             first = false;
             return ok(sse([]));
           }
-          return new Response(
-            JSON.stringify({ error: { message: "bad key sk-hyper-secret-key", code: "authentication_error" } }),
-            { status: 401, headers: { "content-type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ error: { message: "bad key sk-hyper-secret-key", code: "authentication_error" } }), {
+            status: 401,
+            headers: { "content-type": "application/json" },
+          });
         }) as typeof fetch,
       });
       await assertProviderStreamConforms({
@@ -601,14 +605,11 @@ describe("@arnilo/prism-providers/hyper", () => {
       });
       const controller = new AbortController();
       controller.abort(new Error("stop"));
-      await assert.rejects(
-        async () => {
-          for await (const _ of provider.generate({ ...baseRequest, model: responsesModel, signal: controller.signal })) {
-            /* drain */
-          }
-        },
-        /stop/,
-      );
+      await assert.rejects(async () => {
+        for await (const _ of provider.generate({ ...baseRequest, model: responsesModel, signal: controller.signal })) {
+          /* drain */
+        }
+      }, /stop/);
       assert.equal(fetched, false);
     });
 

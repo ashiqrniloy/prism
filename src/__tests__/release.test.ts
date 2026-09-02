@@ -41,8 +41,8 @@ const missing = async () => new Response("not found", { status: 404 });
 
 test("0.3.0 release graph is independent, publishable, and documented", () => {
   const release = loadRelease(process.cwd());
-  // 11 = root + 10 workspace packages after plan 054 Task 8 (office family + profile deletions).
-  assert.equal(release.packages.length, 11);
+  // 10 = root + 9 workspace packages after removing the delegated CLI adapter.
+  assert.equal(release.packages.length, 10);
   assert.doesNotThrow(() =>
     validateReleaseIndependent(release, {
       baseline: "HEAD",

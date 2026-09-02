@@ -118,8 +118,8 @@ function readState(statePath) {
 
 test("phase54 legacy registry: message contract names legacy status, exact successor/recipe, and a valid guide anchor", () => {
   const entries = buildPlanEntries(Object.fromEntries(NAMES.map((n) => [n, "0.3.1"])));
-  assert.equal(entries.length, 54, "exactly 54 retired names");
-  assert.equal(new Set(entries.map((e) => e.name)).size, 54, "retired names are distinct");
+  assert.equal(entries.length, 55, "exactly 55 retired names");
+  assert.equal(new Set(entries.map((e) => e.name)).size, 55, "retired names are distinct");
   const anchors = guideAnchors(guide);
   assert.ok(anchors.size > 0, "guide headings parsed");
   for (const entry of entries.filter((e) => !UNPUBLISHED.includes(e.name))) {
@@ -134,7 +134,7 @@ test("phase54 legacy registry: message contract names legacy status, exact succe
     assert.ok(entry.deprecateCommand.includes('@"<0.4.0"'), `deprecate range: ${entry.name}`);
     assert.ok(entry.deprecateCommand.includes(JSON.stringify(entry.message).slice(1, -1)), `deprecate message: ${entry.name}`);
   }
-  assert.equal(new Set(entries.map((e) => e.message)).size, 54, "every warning names its own successor");
+  assert.equal(new Set(entries.map((e) => e.message)).size, 55, "every warning names its own successor");
   const partial = buildPlanEntries(Object.fromEntries(PUBLISHED.map((n) => [n, "0.3.1"])));
   for (const name of UNPUBLISHED) {
     const entry = partial.find((e) => e.name === name);
@@ -156,19 +156,19 @@ test("phase54 legacy registry: guide anchors are stable GitHub slugs of real hea
   assert.ok(guideAnchors(guide).has("removed-profile-packages"), "profile section anchor present");
 });
 
-test("phase54 legacy registry: fixture dry-run plans exactly 54 tags and <0.4.0 deprecations without mutating state", () => {
+test("phase54 legacy registry: fixture dry-run plans exactly 55 tags and <0.4.0 deprecations without mutating state", () => {
   const dir = mkdtemp();
   const statePath = makeFixture(dir);
   const before = readFileSync(statePath, "utf8");
   const res = run(["--dry-run"], dir, statePath);
   assert.equal(res.status, 0, `dry-run exit 0\nstderr: ${res.stderr}`);
   const plan = JSON.parse(readFileSync(join(dir, "legacy-registry-plan.json"), "utf8"));
-  assert.equal(plan.entries.length, 54, "plan covers every retired name");
+  assert.equal(plan.entries.length, 55, "plan covers every retired name");
   assert.equal(plan.summary.unpublished, 2, "never-published names are recorded");
   const publishedEntries = plan.entries.filter((e) => e.status !== "unpublished");
-  assert.equal(publishedEntries.length, 52, "52 published retired names");
-  assert.equal(new Set(publishedEntries.map((e) => e.distTagCommand)).size, 52, "52 distinct tag commands");
-  assert.equal(new Set(publishedEntries.map((e) => e.deprecateCommand)).size, 52, "52 distinct deprecations");
+  assert.equal(publishedEntries.length, 53, "53 published retired names");
+  assert.equal(new Set(publishedEntries.map((e) => e.distTagCommand)).size, 53, "53 distinct tag commands");
+  assert.equal(new Set(publishedEntries.map((e) => e.deprecateCommand)).size, 53, "53 distinct deprecations");
   for (const entry of publishedEntries) {
     assert.equal(entry.status, "pending", "dry-run never marks applied");
   }
@@ -195,14 +195,14 @@ test("phase54 legacy registry: apply is idempotent and a second apply only skips
   }
   const afterFirst = readFileSync(statePath, "utf8");
   const plan1 = JSON.parse(readFileSync(join(dir, "legacy-registry-plan.json"), "utf8"));
-  assert.equal(plan1.summary.applied, 52, "52 published entries applied on first run");
+  assert.equal(plan1.summary.applied, 53, "53 published entries applied on first run");
   assert.equal(plan1.summary.unpublished, 2, "never-published entries stay recorded");
 
   const second = run(["--apply", "--confirm"], dir, statePath);
   assert.equal(second.status, 0, `second apply exit 0\nstderr: ${second.stderr}`);
   assert.equal(readFileSync(statePath, "utf8"), afterFirst, "second apply is a registry no-op");
   const plan2 = JSON.parse(readFileSync(join(dir, "legacy-registry-plan.json"), "utf8"));
-  assert.equal(plan2.summary.skipped, 52, "already-correct entries are skipped");
+  assert.equal(plan2.summary.skipped, 53, "already-correct entries are skipped");
   assert.equal(plan2.summary.applied, 0, "no re-application");
 });
 
@@ -217,7 +217,7 @@ test("phase54 legacy registry: mismatched tag/warning fails closed with zero mut
   assert.ok(res.stderr.includes("unmodified names safe for resume"), "resume report present");
   assert.equal(readFileSync(statePath, "utf8"), before, "zero registry mutations on mismatch");
 
-  // Repair the fixture, then resume: remaining 52 apply, and a later run skips all.
+  // Repair the fixture, then resume: remaining 53 apply, and a later run skips all.
   const state = readState(statePath);
   delete state.packages["@arnilo/prism-browser"].tags.legacy;
   delete state.packages["@arnilo/prism-rag"].deprecated["0.3.1"];
@@ -225,7 +225,7 @@ test("phase54 legacy registry: mismatched tag/warning fails closed with zero mut
   const resumed = run(["--apply", "--confirm"], dir, statePath);
   assert.equal(resumed.status, 0, `resume exit 0\nstderr: ${resumed.stderr}`);
   const plan = JSON.parse(readFileSync(join(dir, "legacy-registry-plan.json"), "utf8"));
-  assert.equal(plan.summary.applied, 52, "resume completes all published entries");
+  assert.equal(plan.summary.applied, 53, "resume completes all published entries");
 });
 
 test("phase54 legacy registry: apply without --confirm refuses and never mutates", () => {

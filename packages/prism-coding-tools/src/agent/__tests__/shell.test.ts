@@ -23,6 +23,21 @@ function textOf(r: ToolResult): string {
   return block && block.type === "text" ? block.text : "";
 }
 
+test("child env is an allow-list: unlisted host vars never leak (P1)", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "shell-"));
+  process.env.PRISM_ENV_LEAK_CANARY = "top-secret-1";
+  try {
+    const tool = createShellTool(cwd);
+    const r = await tool.execute({ command: "printf '%s' \"$PRISM_ENV_LEAK_CANARY\"" }, ctx());
+    assert.ok(!textOf(r).includes("top-secret-1"), "unlisted env var must not reach shell child");
+    const p = await tool.execute({ command: "printf '%s' \"$PATH\"" }, ctx());
+    assert.ok(textOf(p).length > 0, "PATH is inherited via the allow-list");
+  } finally {
+    delete process.env.PRISM_ENV_LEAK_CANARY;
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 test("`echo hello` → output contains hello, exitCode 0, no error", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "shell-"));
   try {

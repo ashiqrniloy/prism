@@ -6,6 +6,7 @@ import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { isAbsolute, relative, resolve } from "node:path";
 import { assertExecutionAllowed, ExecutionDeniedError } from "@arnilo/prism";
+import { buildChildEnv, DEFAULT_CHILD_ENV_INHERIT } from "../env.js";
 import { DEFAULT_MAX_TERMINAL_COLUMNS, DEFAULT_MAX_TERMINAL_ROWS } from "../limits.js";
 import { OutputAccumulator } from "../output-accumulator.js";
 import { resolveToCwd } from "../path-utils.js";
@@ -960,7 +961,7 @@ export function createProcessSessions(options: CreateProcessSessionsOptions): Pr
               terminateRecord(record, "unknown", null);
             });
         } else {
-          const env = { ...process.env, ...(request.env ?? {}) };
+          const env = buildChildEnv({ inherit: DEFAULT_CHILD_ENV_INHERIT, set: request.env }); // allow-list; never pass process.env through
           const child = spawn(request.command, [...args], {
             cwd,
             env,

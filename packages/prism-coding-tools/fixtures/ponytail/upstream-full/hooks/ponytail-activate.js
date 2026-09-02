@@ -39,25 +39,34 @@ let output = getPonytailInstructions(mode);
 if (!isCodex && !isCopilot)
   try {
     let hasStatusline = false;
-    if (fs.existsSync(settingsPath)) {
+    // Single read access — no existsSync + readFileSync pair, so a settings.json
+    // swap between check and read cannot be observed (CodeQL js/file-system-race).
+    try {
       // Strip UTF-8 BOM some editors prepend on Windows (breaks JSON.parse)
       const raw = fs.readFileSync(settingsPath, "utf8").replace(/^\uFEFF/, "");
       const settings = JSON.parse(raw);
       if (settings.statusLine) {
         hasStatusline = true;
       }
+    } catch (_e) {
+      // missing, unreadable, or malformed settings.json — treated as "no statusline"
     }
 
     // Nudge at most once — the flag file marks that the user has already seen
     // (and implicitly declined) the statusline setup offer. Repeating it every
     // session start turns a helpful hint into a nag.
     const nudgeFlagPath = path.join(claudeDir, ".ponytail-statusline-nudged");
-    if (!hasStatusline && !fs.existsSync(nudgeFlagPath)) {
-      try {
-        fs.writeFileSync(nudgeFlagPath, "");
-      } catch (_e) {
-        /* best-effort */
-      }
+    // Exclusive-create nudge flag: writeFileSync with "wx" atomically fails with
+    // EEXIST when the flag already exists — no existsSync check needed
+    // (CodeQL js/file-system-race).
+    let firstNudge = false;
+    try {
+      fs.writeFileSync(nudgeFlagPath, "", { flag: "wx" });
+      firstNudge = true;
+    } catch (_e) {
+      /* best-effort — already nudged or unwritable */
+    }
+    if (!hasStatusline && firstNudge) {
       const isWindows = process.platform === "win32";
       const scriptName = isWindows ? "ponytail-statusline.ps1" : "ponytail-statusline.sh";
       const scriptPath = path.join(__dirname, scriptName);

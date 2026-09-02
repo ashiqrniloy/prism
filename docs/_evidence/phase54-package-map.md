@@ -1,15 +1,15 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-09-02T17:14:05.966Z`  
+Generated: `2026-09-02T22:58:07.996Z`  
 Repository root version: `0.4.0`  
 
 ## 1. Executive Summary & Counts
 
-- **Current repository manifests:** 11 (50 packages during consolidation transition)
-- **Retired 0.3.x package names:** 54 (hard-frozen at final 0.3.x releases, deprecated with legacy tag)
-- **Retained package names:** 8 (`@arnilo/prism`, `@arnilo/prism-providers`, `@arnilo/prism-web-tools`, `@arnilo/prism-memory`, `@arnilo/prism-mcp`, `@arnilo/prism-acp-agent`, `@arnilo/prism-ag-ui`, `@arnilo/prism-antigravity-agent`)
+- **Current repository manifests:** 10 (50 packages during consolidation transition)
+- **Retired 0.3.x package names:** 55 (hard-frozen at final 0.3.x releases, deprecated with legacy tag)
+- **Retained package names:** 7 (`@arnilo/prism`, `@arnilo/prism-providers`, `@arnilo/prism-web-tools`, `@arnilo/prism-memory`, `@arnilo/prism-mcp`, `@arnilo/prism-acp-agent`, `@arnilo/prism-ag-ui`)
 - **New family packages:** 3 (`@arnilo/prism-core`, `@arnilo/prism-coding-tools`, `@arnilo/prism-office`)
-- **Target active 0.4 packages:** **11** (Consolidation ratio: 62 → 11, −51 manifests net)
+- **Target active 0.4 packages:** **10** (Consolidation ratio: 62 → 10, −52 manifests net)
 
 ---
 
@@ -26,8 +26,7 @@ Repository root version: `0.4.0`
 | 7 | `@arnilo/prism-mcp` | interop | retained | . | none | none |
 | 8 | `@arnilo/prism-acp-agent` | interop | retained | . | `prism-acp-agent` | none |
 | 9 | `@arnilo/prism-ag-ui` | interop | retained | . | none | `@arnilo/prism-mcp`, `@arnilo/prism-supervisor` |
-| 10 | `@arnilo/prism-antigravity-agent` | interop | retained | . | none | none |
-| 11 | `@arnilo/prism-office` | family | new | /documents, /sheets, /diagrams | none | `playwright-core` |
+| 10 | `@arnilo/prism-office` | family | new | /documents, /sheets, /diagrams | none | `playwright-core` |
 
 ### Subpath Breakdown for Active Packages
 
@@ -192,13 +191,6 @@ Repository root version: `0.4.0`
 - **Security & Trust Boundaries:**
   - Streaming sanitization: UI event payload bounds, sensitive state masking, loopback connection restriction.
 
-#### `@arnilo/prism-antigravity-agent` (interop)
-- **Description:** Google Antigravity CLI and agent adapter.
-- **Declared Subpaths:**
-  - `@arnilo/prism-antigravity-agent`
-- **Security & Trust Boundaries:**
-  - CLI integration: Sandboxed session execution, environment variable redaction, tool permission prompts.
-
 #### `@arnilo/prism-office` (family)
 - **Description:** Unified office documents suite: Word/PowerPoint documents, Excel spreadsheets, and Mermaid/SVG diagram generation.
 - **Declared Subpaths:**
@@ -271,6 +263,7 @@ Repository root version: `0.4.0`
 | `@arnilo/prism-compaction-observational-memory` | memory | `0.3.3` | `@arnilo/prism-memory/compaction/observational-memory` | 145 symbols | none |
 | `@arnilo/prism-graft` | memory | `0.3.3` | `@arnilo/prism-memory/graft` | 55 symbols | none |
 | `@arnilo/prism-wiki` | memory | `0.3.3` | `@arnilo/prism-memory/wiki` | 60 symbols | none |
+| `@arnilo/prism-antigravity-agent` | interop | `0.3.3` | `@arnilo/prism-coding-tools/agent` | 0 symbols | none |
 
 ---
 
@@ -329,7 +322,7 @@ The three draft office manifests created in plans 051–053 consolidate into `@a
 
 ---
 
-## 8. Legacy Registry Plan & Deprecation Commands (54 Packages)
+## 8. Legacy Registry Plan & Deprecation Commands (55 Packages)
 
 ```bash
 # @arnilo/prism-base (profile)
@@ -548,6 +541,10 @@ npm deprecate @arnilo/prism-graft@"<0.4.0" "Legacy 0.3 package. Prism 0.4+: @arn
 npm dist-tag add @arnilo/prism-wiki@0.3.3 legacy
 npm deprecate @arnilo/prism-wiki@"<0.4.0" "Legacy 0.3 package. Prism 0.4+: @arnilo/prism-memory/wiki. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.4.md#memory-rag-compaction-and-context"
 
+# @arnilo/prism-antigravity-agent (interop)
+npm dist-tag add @arnilo/prism-antigravity-agent@0.3.3 legacy
+npm deprecate @arnilo/prism-antigravity-agent@"<0.4.0" "Legacy 0.3 package. Prism 0.4+: @arnilo/prism-coding-tools/agent. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.4.md#removed-profile-packages"
+
 ```
 
 ---
@@ -561,11 +558,10 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 | `@arnilo/prism` | 845 | `scripts/compat-baseline/arnilo__prism.txt` |
 | `@arnilo/prism-acp-agent` | 7 | `scripts/compat-baseline/arnilo__prism-acp-agent.txt` |
 | `@arnilo/prism-ag-ui` | 297 | `scripts/compat-baseline/arnilo__prism-ag-ui.txt` |
-| `@arnilo/prism-antigravity-agent` | 120 | `scripts/compat-baseline/arnilo__prism-antigravity-agent.txt` |
 | `@arnilo/prism-mcp` | 116 | `scripts/compat-baseline/arnilo__prism-mcp.txt` |
 | `@arnilo/prism-memory` | 536 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
-| `@arnilo/prism-office` | 168 | `scripts/compat-baseline/arnilo__prism-office.txt` |
-| `@arnilo/prism-coding-tools` | 865 | `scripts/compat-baseline/arnilo__prism-coding-tools.txt` |
+| `@arnilo/prism-office` | 169 | `scripts/compat-baseline/arnilo__prism-office.txt` |
+| `@arnilo/prism-coding-tools` | 867 | `scripts/compat-baseline/arnilo__prism-coding-tools.txt` |
 | `@arnilo/prism-core` | 1128 | `scripts/compat-baseline/arnilo__prism-core.txt` |
 | `@arnilo/prism-providers` | 391 | `scripts/compat-baseline/arnilo__prism-providers.txt` |
 | `@arnilo/prism-web-tools` | 270 | `scripts/compat-baseline/arnilo__prism-web-tools.txt` |

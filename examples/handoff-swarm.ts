@@ -32,7 +32,7 @@ import {
 //      blocked with the standard "unknown_tool" fail-closed reason.
 //
 // Deliberately NOT used here: `createDelegatedAgentStep` — that event factory
-// serves adapter-driven delegation timelines (ag-ui / antigravity mappers); a
+// serves adapter-driven delegation timelines; a
 // host doing an in-process definition swap has no session seam to emit it.
 // Supervisor delegation (bounded child sessions) is the other recipe in
 // docs/multi-agent-patterns.md.

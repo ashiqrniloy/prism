@@ -96,7 +96,7 @@ Every package remains explicit, setup-zero-fetch, and late-credential-bound. `Mo
 | Package | Protocol / model source | Content mapping | Stream, tools, and reasoning | Cache / canary |
 | --- | --- | --- | --- | --- |
 | OpenAI | Responses; featured or caller-gated `listOpenAIModels` | text, image, audio, file, document | Host and provider-hosted tools; 8-hop continuation; Realtime seam; Responses reasoning | `openai_key`; checked-in standard smoke + protected hosted/Realtime probe |
-| AI SDK | Host `LanguageModelV4`; no Prism catalog | declared text/image/audio/file/document prompt parts (role-limited) | v4 mapping; provider-executed tool authority; host-owned reasoning | host-owned; exact 4.0.4 matrix (`4.0.3` also listed); protected host integration |
+| AI SDK | Host `LanguageModelV4`; no Prism catalog | declared text/image/audio/file/document prompt parts (role-limited) | v4 mapping; provider-executed tool authority; host-owned reasoning | host-owned; exact 4.0.10 matrix (`4.0.3` and `4.0.4` also listed); protected host integration |
 | Anthropic | Messages; caller-gated list | text, image, PDF document/file | tool deltas, thinking | `cache_control`; protected API-key smoke |
 | Google | Gemini `generateContent`; caller-gated list | text, image, audio, document/file | complete tool calls, thinking | no Prism cache marker; protected API-key smoke |
 | Kimi | Coding Messages or opt-in Moonshot; caller-gated list | text, image, PDF document/file by route/model | tool deltas, route-native thinking replay | implicit / optional Anthropic markers; protected API-key smoke |

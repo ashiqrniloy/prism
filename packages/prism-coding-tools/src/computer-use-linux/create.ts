@@ -15,6 +15,7 @@ import {
 } from "@arnilo/prism";
 import type { ConnectMcpToolsOptions, McpStdioTransport, McpToolBridge } from "@arnilo/prism-mcp";
 import { connectMcpTools } from "@arnilo/prism-mcp";
+import { buildChildEnv, DEFAULT_CHILD_ENV_INHERIT } from "../agent/env.js";
 import { classifyComputerUseLinuxTool, isComputerUseLinuxTool } from "./classify.js";
 
 const DEFAULT_COMMAND = "computer-use-linux";
@@ -69,7 +70,8 @@ export async function createComputerUseLinuxTools(options: ComputerUseLinuxTools
     command: options.command ?? DEFAULT_COMMAND,
     args: options.args ?? ["mcp"],
     ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
-    ...(options.env === undefined ? {} : { env: options.env }),
+    // Allow-list default env; never let the SDK inherit the full process.env (P1 hardening).
+    env: options.env ?? buildChildEnv({ inherit: DEFAULT_CHILD_ENV_INHERIT }),
     ...(options.stderr === undefined ? {} : { stderr: options.stderr }),
   };
   const bridge = await (options.connect ?? connectMcpTools)({

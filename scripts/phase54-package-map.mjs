@@ -1,6 +1,6 @@
 // scripts/phase54-package-map.mjs
 // Plan 054 Task 1: Freeze the 0.3.3 package/export baseline and record the 0.4 import map.
-// Single source of truth for 0.4 package consolidation: 62 current manifests -> 11 active packages.
+// Single source of truth for 0.4 package consolidation: 62 current manifests -> 10 active packages.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -229,19 +229,6 @@ export const CONSOLIDATION_SPEC = {
       securityBoundaries: ["Streaming sanitization: UI event payload bounds, sensitive state masking, loopback connection restriction."],
     },
     {
-      name: "@arnilo/prism-antigravity-agent",
-      role: "interop",
-      type: "retained",
-      description: "Google Antigravity CLI and agent adapter.",
-      subpaths: ["."],
-      bins: [],
-      peers: {
-        "@arnilo/prism": "^0.4.0",
-      },
-      optionalPeers: [],
-      securityBoundaries: ["CLI integration: Sandboxed session execution, environment variable redaction, tool permission prompts."],
-    },
-    {
       name: "@arnilo/prism-office",
       role: "family",
       type: "new",
@@ -260,7 +247,7 @@ export const CONSOLIDATION_SPEC = {
     },
   ],
 
-  // 54 retired 0.3.x package manifests
+  // 55 retired 0.3.x package manifests
   retiredPackages: [
     // 5 Profiles
     {
@@ -656,6 +643,14 @@ export const CONSOLIDATION_SPEC = {
       targetSubpath: "/wiki",
       migrationAnchor: "#memory-rag-compaction-and-context",
     },
+    {
+      name: "@arnilo/prism-antigravity-agent",
+      category: "interop",
+      targetPackage: "@arnilo/prism-coding-tools",
+      targetSubpath: "/agent",
+      notes: "Removed. Delegated CLI execution belongs to the host; use generic process and tool contracts.",
+      migrationAnchor: "#removed-profile-packages",
+    },
   ],
 
   // 3 Draft packages from plans 051-053 consolidating into @arnilo/prism-office
@@ -811,13 +806,13 @@ export function generateMarkdown(map) {
     `- **Retired 0.3.x package names:** ${map.counts.retiredPackages} (hard-frozen at final 0.3.x releases, deprecated with legacy tag)`,
   );
   lines.push(
-    `- **Retained package names:** ${map.counts.retainedPackages} (\`@arnilo/prism\`, \`@arnilo/prism-providers\`, \`@arnilo/prism-web-tools\`, \`@arnilo/prism-memory\`, \`@arnilo/prism-mcp\`, \`@arnilo/prism-acp-agent\`, \`@arnilo/prism-ag-ui\`, \`@arnilo/prism-antigravity-agent\`)`,
+    `- **Retained package names:** ${map.counts.retainedPackages} (\`@arnilo/prism\`, \`@arnilo/prism-providers\`, \`@arnilo/prism-web-tools\`, \`@arnilo/prism-memory\`, \`@arnilo/prism-mcp\`, \`@arnilo/prism-acp-agent\`, \`@arnilo/prism-ag-ui\`)`,
   );
   lines.push(
     `- **New family packages:** ${map.counts.newPackages} (\`@arnilo/prism-core\`, \`@arnilo/prism-coding-tools\`, \`@arnilo/prism-office\`)`,
   );
   lines.push(
-    `- **Target active 0.4 packages:** **${map.counts.targetActivePackages}** (Consolidation ratio: ${map.counts.baselineManifests} → ${map.counts.targetActivePackages}, −51 manifests net)`,
+    `- **Target active 0.4 packages:** **${map.counts.targetActivePackages}** (Consolidation ratio: ${map.counts.baselineManifests} → ${map.counts.targetActivePackages}, −${map.counts.baselineManifests - map.counts.targetActivePackages} manifests net)`,
   );
   lines.push("");
   lines.push("---");
@@ -960,7 +955,7 @@ export function generateMarkdown(map) {
   lines.push("");
   lines.push("---");
   lines.push("");
-  lines.push("## 8. Legacy Registry Plan & Deprecation Commands (54 Packages)");
+  lines.push("## 8. Legacy Registry Plan & Deprecation Commands (55 Packages)");
   lines.push("");
   lines.push("```bash");
   for (const ret of map.retiredPackages) {

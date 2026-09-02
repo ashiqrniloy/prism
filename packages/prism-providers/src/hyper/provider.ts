@@ -67,10 +67,15 @@ export function createHyperProvider(options: HyperProviderOptions = {}): AIProvi
         });
         if (!response.ok) {
           const bodyText = await readBoundedResponseText(response, { secrets });
-          return yield providerError(hyperHttpError(classifyHyperError({ status: response.status, headers: response.headers }), bodyText, secrets), secrets);
+          return yield providerError(
+            hyperHttpError(classifyHyperError({ status: response.status, headers: response.headers }), bodyText, secrets),
+            secrets,
+          );
         }
         if (!response.body) return yield providerError(new Error("Hyper response had no body"), secrets);
-        yield* route === "anthropic" ? anthropicMessagesEvents(response.body, request.signal) : hyperChatEvents(response.body, request.signal);
+        yield* route === "anthropic"
+          ? anthropicMessagesEvents(response.body, request.signal)
+          : hyperChatEvents(response.body, request.signal);
       } catch (error) {
         yield providerError(error, secrets);
       }

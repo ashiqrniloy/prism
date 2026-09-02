@@ -12,6 +12,7 @@ Core `@arnilo/prism` does not depend on the AI SDK.
 | --- | --- | --- |
 | `4.0.3` | `LanguageModelV4`, `specificationVersion: "v4"` | Supported and offline-tested |
 | `4.0.4` | `LanguageModelV4`, `specificationVersion: "v4"` | Supported and offline-tested |
+| `4.0.10` | `LanguageModelV4`, `specificationVersion: "v4"` | Current peer; supported and offline-tested |
 
 The peer dependency is intentionally exact. `createAiSdkProvider()` reads its resolved `@ai-sdk/provider/package.json` version during setup and throws typed `AiSdkProviderError { code: "unsupported_version" }` for an unlisted version; it does not infer compatibility from a matching `"v4"` string.
 
@@ -144,7 +145,7 @@ Official evidence: [Custom providers / LanguageModelV4](https://ai-sdk.dev/provi
 
 ## Extension and configuration notes
 
-- Peer dependency: `@ai-sdk/provider@4.0.4` (matrix also lists `4.0.3`). Upgrade policy adds a matrix row and offline conformance fixture before accepting any new version.
+- Peer dependency: `@ai-sdk/provider@4.0.10` (matrix also lists `4.0.3` and `4.0.4`). Upgrade policy adds a matrix row and offline conformance fixture before accepting any new version.
 - First-party HTTP providers remain independent; this adapter is available directly, through `@arnilo/prism-providers`, or through `@arnilo/prism-all`. Installation does not select a model or invoke AI SDK.
 - `options.compat` / `options.extra` pass through as AI SDK `providerOptions.prism`.
 - Export helpers `toAiSdkCallOptions`, `toAiSdkPrompt`, and `mapAiSdkStream` for tests and custom hosts.

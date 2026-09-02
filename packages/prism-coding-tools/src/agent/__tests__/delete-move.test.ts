@@ -93,8 +93,7 @@ test("delete missing path fails", async () => {
 test("delete rejects path escape", async () => {
   const cwd = await tmp();
   try {
-    const outside = join(tmpdir(), `delmv-out-${Date.now()}`);
-    await mkdir(outside, { recursive: true });
+    const outside = await tmp(); // mkdtemp: exclusive-created, mode 0700 (CodeQL js/insecure-temporary-file, alerts 100–101)
     await writeFile(join(outside, "secret.txt"), "secret\n");
     try {
       const result = await createDeleteTool(cwd).execute({ path: join(outside, "secret.txt") }, ctx());
@@ -149,11 +148,10 @@ test("delete recursive removes a nested tree (opt-in flag)", async () => {
 
 test("delete recursive unlinks symlink children without following them (escape refused)", async () => {
   const cwd = await tmp();
-  const outside = join(tmpdir(), `delmv-sym-${Date.now()}`);
+  const outside = await tmp(); // mkdtemp: exclusive-created, mode 0700 (CodeQL js/insecure-temporary-file, alerts 100–101)
   try {
     await mkdir(join(cwd, "tree"), { recursive: true });
     await writeFile(join(cwd, "tree", "inside.txt"), "in\n");
-    await mkdir(outside, { recursive: true });
     await writeFile(join(outside, "secret.txt"), "secret\n");
     await symlink(join(outside, "secret.txt"), join(cwd, "tree", "link.txt"));
     await symlink(outside, join(cwd, "tree", "linkdir"));
@@ -257,8 +255,7 @@ test("move missing source fails", async () => {
 test("move rejects path escape", async () => {
   const cwd = await tmp();
   try {
-    const outside = join(tmpdir(), `delmv-out-${Date.now()}`);
-    await mkdir(outside, { recursive: true });
+    const outside = await tmp(); // mkdtemp: exclusive-created, mode 0700 (CodeQL js/insecure-temporary-file)
     await writeFile(join(cwd, "src.txt"), "inside\n");
     try {
       const result = await createMoveTool(cwd).execute({ from: "src.txt", to: join(outside, "dst.txt") }, ctx());
