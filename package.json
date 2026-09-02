@@ -122,13 +122,15 @@
     "CHANGELOG.md"
   ],
   "workspaces": [
-    "packages/acp-agent",
-    "packages/ag-ui",
     "packages/mcp",
+    "packages/prism-providers",
     "packages/memory",
+    "packages/prism-core",
+    "packages/prism-coding-tools",
     "packages/office",
-    "packages/prism-*",
-    "packages/web-tools"
+    "packages/ag-ui",
+    "packages/web-tools",
+    "packages/acp-agent"
   ],
   "scripts": {
     "build:core": "node scripts/with-build-lock.mjs tsc",

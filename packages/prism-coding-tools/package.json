@@ -66,6 +66,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
+    "@arnilo/prism-core": "^0.4.0",
     "diff": "^9.0.0"
   },
   "peerDependencies": {

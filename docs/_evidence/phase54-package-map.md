@@ -1,6 +1,6 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-09-02T22:58:07.996Z`  
+Generated: `2026-09-02T23:14:04.035Z`  
 Repository root version: `0.4.0`  
 
 ## 1. Executive Summary & Counts
@@ -556,12 +556,12 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 | Package Name | Declared Public Exports | Snapshot Baseline File |
 |---|---|---|
 | `@arnilo/prism` | 845 | `scripts/compat-baseline/arnilo__prism.txt` |
-| `@arnilo/prism-acp-agent` | 7 | `scripts/compat-baseline/arnilo__prism-acp-agent.txt` |
-| `@arnilo/prism-ag-ui` | 297 | `scripts/compat-baseline/arnilo__prism-ag-ui.txt` |
 | `@arnilo/prism-mcp` | 116 | `scripts/compat-baseline/arnilo__prism-mcp.txt` |
-| `@arnilo/prism-memory` | 536 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
-| `@arnilo/prism-office` | 169 | `scripts/compat-baseline/arnilo__prism-office.txt` |
-| `@arnilo/prism-coding-tools` | 867 | `scripts/compat-baseline/arnilo__prism-coding-tools.txt` |
-| `@arnilo/prism-core` | 1128 | `scripts/compat-baseline/arnilo__prism-core.txt` |
 | `@arnilo/prism-providers` | 391 | `scripts/compat-baseline/arnilo__prism-providers.txt` |
+| `@arnilo/prism-memory` | 536 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
+| `@arnilo/prism-core` | 1128 | `scripts/compat-baseline/arnilo__prism-core.txt` |
+| `@arnilo/prism-coding-tools` | 867 | `scripts/compat-baseline/arnilo__prism-coding-tools.txt` |
+| `@arnilo/prism-office` | 169 | `scripts/compat-baseline/arnilo__prism-office.txt` |
+| `@arnilo/prism-ag-ui` | 297 | `scripts/compat-baseline/arnilo__prism-ag-ui.txt` |
 | `@arnilo/prism-web-tools` | 270 | `scripts/compat-baseline/arnilo__prism-web-tools.txt` |
+| `@arnilo/prism-acp-agent` | 7 | `scripts/compat-baseline/arnilo__prism-acp-agent.txt` |
