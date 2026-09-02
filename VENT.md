@@ -23,3 +23,18 @@ Two release-pipeline landmines cost ~30min during the plan-039 npm publish: (1) 
 ## 26-08-30 15:00 — bash cwd resets between calls, ~10 retries per subtask
 
 Shell cwd resets to the project root between many bash invocations in this harness (inconsistently), which repeatedly caused "No such file or directory" and stale-cwd mistakes when working inside packages/prism-dev. Workaround used repeatedly: prefix every command with `(cd <dir> && …)`. Would prevent backtracking if cwd persisted per-session or if commands always executed in an explicit, stable directory.
+## 26-08-31 06:08 — graft grep CLI
+
+Graft grep CLI rejected scoped/multi-pattern invocations with misleading `no graph` or `too many arguments`; repeated workaround was rerun as one bare literal search, then use raw rg only after graph context. Improve grep argument parsing/help to accept `--in` and multiple patterns consistently.
+## 26-08-31 13:40 — missing plan references
+
+Create-plan skill references `references/default.md` and `references/prism.md`, but both files are absent; repeated workaround was record ENOENT and apply the available `prism-wiki.md` rules. Add the missing defaults/project reference or make the skill loader declare them optional.
+## 26-09-01 17:17 — stale dist test binaries + 10-file count-delta duplication during package consolidation
+
+Repeated friction while executing plan-054 package moves: (1) editing src/__tests__/*.ts then running `node --test dist/__tests__/*.test.js` uses the stale compiled binary unless `npm run build:core` runs first — caused three rounds of confusing failures that looked like logic errors; a `test:dist` script that rebuilds-then-tests, or documenting the rebuild step in the plan approach notes, would prevent this. (2) The freeze-test count-delta pattern (`hasCodingTools ? -N`) is duplicated across 10 files (phase13-21, 24, 27, 29, 30, 34, benchmark-multi-agent, docs.test, release.test); every absorbed package requires touching all of them — a single shared expected-counts helper in package-truth.mjs would reduce each future consolidation task (5, 6) to one edit.
+## 26-09-01 20:55 — repeated count-delta/config-floor fallout across plan 054 package moves
+
+Plan 054 consolidation tasks keep tripping on the same three hidden coupling points, now confirmed across Tasks 2-5: (1) freeze-test count deltas duplicated across ~10 scripts each need recomputation per absorbed package — Task 5 required the same three-line sed across phase13-21 plus phase24/27/29/30/34/benchmark-multi-agent; (2) sweep-unused config-count floors (>=30) and docs canonical-count asserts embed historical package counts that silently break on every package removal; (3) phase17-baseline.json embeds absolute file paths of moved sources. A pre-task checklist in the plan ("counts to recompute: phase13-21 deltas, phase24 secondPeers+pureManifest list, phase23/sweep config floors, coverage thresholds, phase17 baseline paths, phase54 evidence regen") would make each remaining consolidation task mechanical.
+## 26-09-01 21:54 — release-skip-manifest protected-class derivation broke on providers family merge
+
+Task 6 fallout pattern (consistent with Tasks 2-5, third occurrence): release-skip-manifest.mjs derives live-provider-protected surfaces from per-package src scans — any family conversion that merges N packages into 1 silently drops N-1 protected classes and only the >=8 floor assertion catches it. Same class of bug as the coverage-thresholds and sweep-unused config floors. The pre-task checklist should now include: "update scripts/release-skip-manifest.mjs derivation when package count changes shape".
