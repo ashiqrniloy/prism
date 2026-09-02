@@ -20,7 +20,7 @@ package versioning after the final lockstep cut. Prism defines contracts, not ap
   OpenAI/OpenRouter use best-effort explicit cache hints, NeuralWatt uses
   best-effort implicit prefix caching, and other providers have route/model-specific
   or no cache-control support; see [docs/provider-caching.md](docs/provider-caching.md).
-- **First-party packages**: seventeen provider adapter subpaths, two compaction strategies,
+- **First-party packages**: nineteen provider adapter subpaths, two compaction strategies,
   coding tools/security, JSON Schema validation, MCP, workflows, OpenTelemetry,
   encrypted credentials, SQLite/PostgreSQL persistence, Linux desktop control,
   and manifest-only install profiles.
@@ -55,7 +55,7 @@ a non-optional peer. Install atomic packages directly or choose a manifest-only
 family/profile; profiles install packages but expose no alias exports and activate nothing:
 
 ```bash
-npm install @arnilo/prism @arnilo/prism-providers            # core + all 17 provider adapters
+npm install @arnilo/prism @arnilo/prism-providers            # core + all 19 provider adapters
 npm install @arnilo/prism @arnilo/prism-core @arnilo/prism-memory   # replaces prism-base
 npm install @arnilo/prism @arnilo/prism-coding-tools @arnilo/prism-mcp @arnilo/prism-providers  # replaces prism-code
 npm install @arnilo/prism @arnilo/prism-core @arnilo/prism-mcp @arnilo/prism-providers          # replaces prism-sdk
@@ -162,7 +162,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 |---------|---------|
 | `@arnilo/prism` | core contracts, runtime, registries, CLI/RPC |
 | `@arnilo/prism-core` | runtime/sessions/governance/credentials/enterprise/work/validation family |
-| `@arnilo/prism-providers` | all 17 first-party adapters as `/<adapter>` subpaths (openai, anthropic, google, azure, bedrock, vertex, deepseek, xai, zai, alibaba, kimi, clinepass, neuralwatt, ollama, opencode-go, openrouter, ai-sdk) |
+| `@arnilo/prism-providers` | all 19 first-party adapters as `/<adapter>` subpaths (openai, anthropic, google, azure, bedrock, vertex, deepseek, xai, zai, alibaba, kimi, clinepass, neuralwatt, ollama, opencode-go, openrouter, ai-sdk, hyper, commandcode) |
 | `@arnilo/prism-coding-tools` | `/agent`, `/security`, `/document-reader`, `/openapi`, `/computer-use-linux`, `/dev`, `/caveman`, `/ponytail`, `/impeccable` |
 | `@arnilo/prism-web-tools` | Brave/Exa/Firecrawl plus peer-gated `/browser` and `/obscura` |
 | `@arnilo/prism-memory` | memory plus `/rag`, `/compaction/{llm,observational-memory}`, `/graft`, `/wiki` |

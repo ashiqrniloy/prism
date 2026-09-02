@@ -54,6 +54,8 @@ export interface OpenAIResponsesProviderOptions {
   readonly apiKey?: CredentialValueSource;
   readonly fetch?: typeof fetch;
   readonly uploadManager?: OpenAIFileUploadManager;
+  /** Provider label used in error messages (default `"OpenAI"`). */
+  readonly label?: string;
 }
 
 interface ToolAccumulator {
@@ -75,6 +77,7 @@ interface ResponsesMediaContext {
 
 export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOptions = {}): AIProvider {
   const id = options.id ?? "openai";
+  const label = options.label ?? "OpenAI";
   return {
     id,
     async *generate(request) {
@@ -134,11 +137,11 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
           );
           if (!response.ok) {
             return yield providerError(
-              httpStatusError("OpenAI request failed", response, await readBoundedResponseText(response, { secrets })),
+              httpStatusError(`${label} request failed`, response, await readBoundedResponseText(response, { secrets })),
               secrets,
             );
           }
-          if (!response.body) return yield providerError(new Error("OpenAI response had no body"), secrets);
+          if (!response.body) return yield providerError(new Error(`${label} response had no body`), secrets);
 
           let responseId: string | undefined;
           let incomplete = false;
@@ -227,13 +230,13 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
           }
           if (incomplete) {
             if (!responseId) {
-              yield providerError(new Error("OpenAI incomplete response had no continuation cursor"), secrets);
+              yield providerError(new Error(`${label} incomplete response had no continuation cursor`), secrets);
               completed = true;
               break;
             }
             const nextCursor = continuationCursor(responseId)!;
             if (seenCursors.has(nextCursor)) {
-              yield providerError(new Error("OpenAI returned a duplicate continuation cursor"), secrets);
+              yield providerError(new Error(`${label} returned a duplicate continuation cursor`), secrets);
               completed = true;
               break;
             }
@@ -248,7 +251,7 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
           completed = true;
           break;
         }
-        if (!completed) yield providerError(new Error("OpenAI continuation hop cap exceeded"), secrets);
+        if (!completed) yield providerError(new Error(`${label} continuation hop cap exceeded`), secrets);
       } catch (error) {
         yield providerError(error, secrets);
       } finally {

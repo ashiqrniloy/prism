@@ -283,7 +283,7 @@ describe("packaging guard", () => {
     );
   });
 
-  it("provider family exports exactly the 17 adapter subpaths with no activating root barrel", () => {
+  it("provider family exports exactly the 19 adapter subpaths with no activating root barrel", () => {
     const manifest = readPkg("packages/prism-providers");
     const exports = manifest.exports as Record<string, Record<string, string>>;
     const adapters = [
@@ -293,8 +293,10 @@ describe("packaging guard", () => {
       "azure",
       "bedrock",
       "clinepass",
+      "commandcode",
       "deepseek",
       "google",
+      "hyper",
       "kimi",
       "neuralwatt",
       "ollama",
@@ -308,7 +310,7 @@ describe("packaging guard", () => {
     assert.deepEqual(
       Object.keys(exports).sort(),
       adapters.map((a) => `./${a}`).sort(),
-      "provider family exports must be exactly the 17 adapter subpaths",
+      "provider family exports must be exactly the 19 adapter subpaths",
     );
     assert.equal(exports["."], undefined, "provider family must have no root barrel: no adapter may activate at family-root import");
     // Adapter isolation: compiled adapter code only imports its own directory and
@@ -324,7 +326,13 @@ describe("packaging guard", () => {
         const foreign = [...text.matchAll(/from "(\.[^"]+)"/g)]
           .map((m) => posix.normalize(posix.join(adapter, posix.dirname(file.slice(dir.length + 1)), m[1])))
           .filter((resolved) => resolved !== adapter && !resolved.startsWith(`${adapter}/`));
-        assert.deepEqual(foreign, [], `${adapter} compiled output imports outside its own adapter: ${foreign.join(", ")}`);
+        // Plan 055 deliberate family-internal reuse: `shared/` serializers (Task 1,
+        // every adapter) and the hyper → openai Responses-machinery import (Task 8,
+        // plan-approved reuse over copying). Everything else must stay adapter-local.
+        // (Foreign paths are repo-relative to dist/, e.g. "shared/anthropic-messages.js".)
+        const allowed: readonly string[] = ["shared/", ...(adapter === "hyper" ? ["openai/"] : [])];
+        const violations = foreign.filter((resolved) => !allowed.some((prefix) => resolved.startsWith(prefix)));
+        assert.deepEqual(violations, [], `${adapter} compiled output imports outside its own adapter: ${violations.join(", ")}`);
       }
     }
   });
@@ -409,7 +417,10 @@ describe("packaging guard", () => {
     const names = packages.map((pkg) => pkg.name).sort();
     assert.equal(names.length, 11, "11 active packages including root");
     for (const pkg of packages) {
-      assert.equal(readPkg(pkg.dir).version, "0.4.0", `${pkg.name} at 0.4.0`);
+      // Plan 055 Task 6 (Decision B changed-package cut): the provider family
+      // moved 0.4.0 → 0.4.1 for the two new adapters; every other manifest stays 0.4.0.
+      const expected = pkg.name === "@arnilo/prism-providers" ? "0.4.1" : "0.4.0";
+      assert.equal(readPkg(pkg.dir).version, expected, `${pkg.name} at ${expected}`);
     }
     const retired = [
       "@arnilo/prism-base",

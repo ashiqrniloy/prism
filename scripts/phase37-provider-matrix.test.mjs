@@ -1,5 +1,6 @@
 /**
- * Plan 037 Task 1: freeze the 17 first-party provider matrix.
+ * Plan 037 Task 1: freeze the 19 first-party provider matrix (plan 055 Task 11:
+ * hyper + commandcode added).
  * Network-free: reads package manifests + evidence markdown only.
  */
 import assert from "node:assert/strict";
@@ -41,7 +42,7 @@ function parseCacheClaims(evidence) {
 test("phase37 matrix lists every provider family adapter subpath", () => {
   const evidence = readFileSync(evidencePath, "utf8");
   const pkgs = providerAdapters();
-  assert.equal(pkgs.length, 17, `expected 17 provider adapters, got ${pkgs.length}`);
+  assert.equal(pkgs.length, 19, `expected 19 provider adapters, got ${pkgs.length}`);
   for (const pkg of pkgs) {
     assert.ok(evidence.includes(pkg.name), `docs/_evidence/phase37-provider-matrix.md missing row for ${pkg.name}`);
   }
@@ -64,7 +65,7 @@ test("phase37 evidence names shared primitives and no core primitive", () => {
 test("phase37 explicit cache field claims match sources and official URLs", () => {
   const evidence = readFileSync(evidencePath, "utf8");
   const rows = parseCacheClaims(evidence);
-  assert.ok(rows.length >= 17, `expected cache claims for the matrix, got ${rows.length}`);
+  assert.ok(rows.length >= 19, `expected cache claims for the matrix, got ${rows.length}`);
   const pkgNames = new Set(providerAdapters().map((pkg) => pkg.name));
   const claimed = new Set();
   for (const row of rows) {
@@ -79,5 +80,5 @@ test("phase37 explicit cache field claims match sources and official URLs", () =
       assert.ok(source.includes(row.field), `${row.source} missing supported field ${row.field}`);
     }
   }
-  assert.equal(claimed.size, 17, `cache claims must cover all 17 packages, got ${claimed.size}`);
+  assert.equal(claimed.size, 19, `cache claims must cover all 19 packages, got ${claimed.size}`);
 });

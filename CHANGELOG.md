@@ -1,3 +1,8 @@
+## [0.4.1] - 2026-09-02 (plan 055)
+
+### Changed
+- **Two new first-class provider adapters (plan 055):** `@arnilo/prism-providers` (0.4.0 → 0.4.1, Decision B changed-package cut) gains `./hyper` (Charm Hyper — dual-route `/v1/chat/completions` + `/v1/messages` adapter with cache_control on Anthropic-shaped models and Hypercredit cost telemetry) and `./commandcode` (Command Code Provider API — dual-route `/provider/v1/chat/completions` + `/provider/v1/messages` adapter with cache_control on Claude tiers and optional ZDR). Both keep zero network at setup, caller-gated model discovery, provider-owned header enforcement, secret redaction, and offline conformance suites; live probes are operator-gated behind `PRISM_LIVE_PROVIDER_TESTS=1` + provider key. Public symbols and trust boundaries unchanged except the two new subpaths; peer `@arnilo/prism@^0.4.0` unchanged; no root package change (docs only).
+
 ## [0.4.0] - 2026-09-01 (plan 054)
 
 ### Changed

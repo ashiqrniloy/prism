@@ -2882,7 +2882,7 @@ describe("docs", () => {
       "docs/provider-caching.md",
       "best-effort explicit cache hints",
       "best-effort implicit prefix caching",
-      "all 17 first-party adapters",
+      "all 19 first-party adapters",
     ]) {
       assert.ok(readme.includes(phrase), `README.md cache/provider summary missing ${phrase}`);
     }
@@ -3055,7 +3055,7 @@ describe("docs", () => {
     }
     for (const phrase of [
       "**49 publishable manifests**: the root `@arnilo/prism` core package plus **48 workspace packages**",
-      "all 17 adapters ship as `dist/<adapter>` subpaths in one tarball",
+      "all 19 adapters ship as `dist/<adapter>` subpaths in one tarball",
       "All 56 manifests (root + 55 workspace packages: 49 code packages + 6 pure-manifest family/profile packages",
       "eight provider packages' `src/__tests__/live.test.ts`",
       "Enterprise PostgreSQL package/docs/example gate",

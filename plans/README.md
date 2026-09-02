@@ -59,5 +59,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [052-Prism-Sheets-Package.md](052-Prism-Sheets-Package.md) | 0.3.x — `@arnilo/prism-office` `/sheets`: XLSX/CSV parse with decimal-safe typed schema inference (request P7–P9) | planned |
 | [053-Prism-Diagrams-Package.md](053-Prism-Diagrams-Package.md) | 0.3.x — `@arnilo/prism-office` `/diagrams`: draw.io embed client + mxGraph XML validation (request P10–P12) | planned |
 | [054-Package-Consolidation-Proposal.md](054-Package-Consolidation-Proposal.md) | 0.4.0 — decided package reorganization: 62 current + office → 11 active families (subpaths; profiles removed) | planned |
+| [055-First-Class-Hyper-And-Command-Code-Providers.md](055-First-Class-Hyper-And-Command-Code-Providers.md) | 0.4.x — first-class Charm Hyper + Command Code providers: dual-route adapters, cache mappings, gated live probes, Hyper `/v1/responses` route | in progress |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

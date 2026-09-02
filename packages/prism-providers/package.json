@@ -1,7 +1,7 @@
 {
   "name": "@arnilo/prism-providers",
-  "version": "0.4.0",
-  "description": "Unified provider family: all 17 first-party Prism provider adapters as explicit subpaths (openai, anthropic, google, azure, bedrock, vertex, deepseek, xai, zai, alibaba, kimi, clinepass, neuralwatt, ollama, opencode-go, openrouter, ai-sdk). Importing one adapter never evaluates another.",
+  "version": "0.4.1",
+  "description": "Unified provider family: all 19 first-party Prism provider adapters as explicit subpaths (openai, anthropic, google, azure, bedrock, vertex, deepseek, xai, zai, alibaba, kimi, clinepass, neuralwatt, ollama, opencode-go, openrouter, ai-sdk, hyper, commandcode). Importing one adapter never evaluates another.",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -29,6 +29,10 @@
       "types": "./dist/clinepass/index.d.ts",
       "default": "./dist/clinepass/index.js"
     },
+    "./commandcode": {
+      "types": "./dist/commandcode/index.d.ts",
+      "default": "./dist/commandcode/index.js"
+    },
     "./deepseek": {
       "types": "./dist/deepseek/index.d.ts",
       "default": "./dist/deepseek/index.js"
@@ -36,6 +40,10 @@
     "./google": {
       "types": "./dist/google/index.d.ts",
       "default": "./dist/google/index.js"
+    },
+    "./hyper": {
+      "types": "./dist/hyper/index.d.ts",
+      "default": "./dist/hyper/index.js"
     },
     "./kimi": {
       "types": "./dist/kimi/index.d.ts",

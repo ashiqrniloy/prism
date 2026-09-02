@@ -1,6 +1,6 @@
 # @arnilo/prism-providers
 
-Unified provider family for Prism agents: all 17 first-party provider adapters as explicit subpaths. Install once, import only the adapter you use — importing one adapter never evaluates another, and no adapter activates at package install or family import.
+Unified provider family for Prism agents: all 19 first-party provider adapters as explicit subpaths. Install once, import only the adapter you use — importing one adapter never evaluates another, and no adapter activates at package install or family import.
 
 ## Install
 

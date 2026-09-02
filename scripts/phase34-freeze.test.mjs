@@ -22,9 +22,12 @@ function loadManifests() {
   return pkgs;
 }
 
-test("phase34 freeze (plan 054 Task 9): every active manifest is 0.4.0", () => {
+test("phase34 freeze (plan 054 Task 9): every active manifest is 0.4.0 (plan 055 Task 6 cut: providers at 0.4.1)", () => {
   for (const pkg of loadManifests()) {
-    assert.equal(pkg.version, "0.4.0", `${pkg.name} expected 0.4.0, got ${pkg.version}`);
+    // Plan 055 Task 6 (Decision B changed-package cut): the provider family moved to
+    // 0.4.1 for the two new adapters; every other manifest stays 0.4.0.
+    const expected = pkg.name === "@arnilo/prism-providers" ? "0.4.1" : "0.4.0";
+    assert.equal(pkg.version, expected, `${pkg.name} expected ${expected}, got ${pkg.version}`);
   }
 });
 

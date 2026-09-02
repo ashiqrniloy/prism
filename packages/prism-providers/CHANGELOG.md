@@ -1,3 +1,7 @@
+## [0.4.1] - 2026-09-02
+
+- Plan 055: family gains two adapters — `./hyper` (Charm Hyper) and `./commandcode` (Command Code Provider API), both dual-route OpenAI/Anthropic passthrough adapters with caller-gated discovery; peer `@arnilo/prism@^0.4.0` unchanged.
+
 ## [0.4.0] - 2026-09-01
 
 - Plan 054: family ships as part of the 11-package 0.4 lockstep; peer `@arnilo/prism@^0.4.0`.

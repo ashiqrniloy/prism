@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-01T17:10:46.171Z",
+  "generatedAt": "2026-09-02T17:28:10.167Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.4.0"
@@ -7,7 +7,7 @@
   "counts": {
     "publishable": 11,
     "workspace": 10,
-    "provider": 17,
+    "provider": 19,
     "prismFamily": 3,
     "capability": 7,
     "codeWithPeer": 10,
@@ -20,8 +20,10 @@
     "@arnilo/prism-providers/azure",
     "@arnilo/prism-providers/bedrock",
     "@arnilo/prism-providers/clinepass",
+    "@arnilo/prism-providers/commandcode",
     "@arnilo/prism-providers/deepseek",
     "@arnilo/prism-providers/google",
+    "@arnilo/prism-providers/hyper",
     "@arnilo/prism-providers/kimi",
     "@arnilo/prism-providers/neuralwatt",
     "@arnilo/prism-providers/ollama",
@@ -56,8 +58,10 @@
         "@arnilo/prism-providers/azure",
         "@arnilo/prism-providers/bedrock",
         "@arnilo/prism-providers/clinepass",
+        "@arnilo/prism-providers/commandcode",
         "@arnilo/prism-providers/deepseek",
         "@arnilo/prism-providers/google",
+        "@arnilo/prism-providers/hyper",
         "@arnilo/prism-providers/kimi",
         "@arnilo/prism-providers/neuralwatt",
         "@arnilo/prism-providers/ollama",

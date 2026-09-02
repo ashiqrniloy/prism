@@ -38,6 +38,8 @@ Offline conformance is mandatory for every package; credentialed probes are not 
 | Z.AI | GLM thinking/tool-stream fixtures, implicit-cache usage, headers/redaction | Protected `ZAI_API_KEY` smoke |
 | OpenRouter | routing/reasoning/cache-control fixture, stream/tool reconstruction, headers/redaction | Protected `OPENROUTER_API_KEY` smoke |
 | OpenCode Go | OpenAI/Anthropic route fixture, completion proof, PDF/media boundary, headers/redaction | Protected `OPENCODE_API_KEY` smoke |
+| Hyper | dual-route OpenAI/Anthropic fixtures, thinking/effort replay, message-delta usage at end, cache-breakpoint fixture, auth/redaction | Protected `HYPER_API_KEY` smoke |
+| Command Code | dual-route OpenAI/Anthropic fixtures, thinking replay, no-`ttl` cache-breakpoint fixture, ZDR header ownership, 403/422 classification, auth/redaction | Protected `COMMAND_CODE_API_KEY` smoke |
 | Alibaba | DashScope presets, Qwen thinking, image rejection/mapping, cache/usage fixture | Protected account/region host probe; no generic key fixture |
 | Ollama | cloud/local preset, reasoning/image mapping, implicit-cache fixture | Protected cloud or host-local authenticated daemon probe; no daemon starts in tests |
 | NeuralWatt | stream/retry/quota/telemetry fixtures, implicit-cache usage, headers/redaction | Protected `NEURALWATT_API_KEY` smoke |

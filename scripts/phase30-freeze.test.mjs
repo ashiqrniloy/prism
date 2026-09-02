@@ -228,7 +228,7 @@ test("phase30 freeze: package budget 55→57; graph gains desktop then Antigravi
   assert.equal(budget.targetWorkspace, 56);
   assert.equal(budget.newPackages, 2);
   assert.equal(budget.newRuntimeDependencyNames, 0);
-  assert.equal(packageTruth.counts.provider, 17);
+  assert.equal(packageTruth.counts.provider, 19); // plan 055 Task 11: hyper + commandcode
   const hasGraft = packageTruth.capability.includes("@arnilo/prism-graft"); // plan 033 optional context-graph package
   const hasOffice = packageTruth.capability.includes("@arnilo/prism-office"); // plan 054 Task 8 office family
   assert.equal(

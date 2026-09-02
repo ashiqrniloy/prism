@@ -56,9 +56,10 @@ test("counts match manifests at the truth graph", () => {
     Number(hasDiagramsPackage);
   if (hasOfficePackage) {
     // Plan 054 Task 8: 11 active packages — profiles deleted, office family landed.
+    // Plan 055 Task 6: family grows to 19 adapter subpaths (hyper, commandcode).
     assert.equal(t.counts.publishable, 11);
     assert.equal(t.counts.workspace, 10);
-    assert.equal(t.counts.provider, 17);
+    assert.equal(t.counts.provider, 19);
     assert.equal(t.counts.prismFamily, 3);
     assert.equal(t.counts.capability, 7);
     assert.equal(t.counts.codeWithPeer, 10);
@@ -100,9 +101,9 @@ test("umbrella closures match manifests", () => {
   const t = computePackageTruth();
   const providers = t.umbrella["prism-providers"];
   if (hasCodingToolsPackage) {
-    // Plan 054 Task 6: the family ships the 17 adapters as subpaths, not deps.
+    // Plan 054 Task 6 + plan 055 Task 6: the family ships its 19 adapters as subpaths, not deps.
     assert.deepEqual(providers.deps, []);
-    assert.equal(providers.subpaths.length, 17);
+    assert.equal(providers.subpaths.length, 19);
     assert.deepEqual(providers.omitsProviders, []);
   } else {
     assert.equal(providers.deps.length, 14);

@@ -1,4 +1,4 @@
-# Phase 37 — First-party provider primitive review and 17-package matrix
+# Phase 37 — First-party provider primitive review and 19-package matrix
 
 Review-only freeze. **no core primitive** added. No production adapter, retry loop, or HTTP parser changed.
 
@@ -21,7 +21,7 @@ Cell legend: **supported** (code + offline proof) · **gap** (code exists, confo
 
 Rejected this freeze: provider-local SSE, extra retry loops, `VersionManager`, collapsed desktop-style APIs, Gemini `cachedContents` lifecycle, Bedrock Converse `cachePoint`, Vertex cache-resource CRUD, Changesets.
 
-## Frozen packages (17)
+## Frozen packages (19)
 
 Adapter identifiers are the family subpaths `@arnilo/prism-providers/<adapter>` (enforced by `scripts/phase37-provider-matrix.test.mjs`).
 
@@ -36,6 +36,8 @@ Adapter identifiers are the family subpaths `@arnilo/prism-providers/<adapter>` 
 | `@arnilo/prism-providers/deepseek` | `packages/prism-providers/src/deepseek` | OpenAI-compatible Chat Completions SSE | supported — zero-fetch test | `api_key` | caller-gated `listDeepSeekModels` |
 | `@arnilo/prism-providers/google` | `packages/prism-providers/src/google` | Gemini `generateContent?alt=sse` | supported — zero-fetch test | `x-goog-api-key` | caller-gated `listGoogleModels` |
 | `@arnilo/prism-providers/kimi` | `packages/prism-providers/src/kimi` | Default Anthropic `/messages`; opt-in Moonshot Chat Completions | supported — zero-fetch test | `authorization` + `x-api-key` on Coding route | caller-gated `listKimiModels` (Moonshot `GET /v1/models`) |
+| `@arnilo/prism-providers/commandcode` | `packages/prism-providers/src/commandcode` | Dual: OpenAI Chat or Anthropic Messages (`compat.route`, server-enforced claude-* routing) | supported — zero-fetch test | `authorization` + `x-api-key` on messages route | caller-gated `listCommandCodeModels` |
+| `@arnilo/prism-providers/hyper` | `packages/prism-providers/src/hyper` | Triple: OpenAI Chat (default), Anthropic Messages, Responses pass-through (`compat.route`) | supported — zero-fetch test | `authorization` (+ `x-api-key` on messages route) | caller-gated `listHyperModels`; operator-gated `getHyperCredits` |
 | `@arnilo/prism-providers/neuralwatt` | `packages/prism-providers/src/neuralwatt` | OpenAI-compatible SSE + comment telemetry | supported — zero-fetch test | `api_key` | caller-gated `listNeuralWattModels`; `getNeuralWattQuota` also caller-gated |
 | `@arnilo/prism-providers/ollama` | `packages/prism-providers/src/ollama` | OpenAI-compatible Chat Completions SSE | supported — setup does not call `listOllamaModels` | optional bearer | caller-gated `listOllamaModels`; setup-zero **test gap** |
 | `@arnilo/prism-providers/openai` | `packages/prism-providers/src/openai` | Responses SSE (`store: false`); Codex + Realtime seams | supported — zero-fetch test | `api_key`; Codex host-invoked OAuth | caller-gated `listOpenAIModels` |
@@ -188,6 +190,10 @@ Status **supported** means the Source file contains the Field token. **failing**
 | `@arnilo/prism-providers/ollama` | cache_control | host-owned | packages/prism-providers/src/ollama/provider.ts | https://github.com/ollama/ollama/blob/main/docs/api.md |
 | `@arnilo/prism-providers/clinepass` | cache_control | host-owned | packages/prism-providers/src/clinepass/provider.ts | https://docs.cline.bot |
 | `@arnilo/prism-providers/ai-sdk` | cache_control | host-owned | packages/prism-providers/src/ai-sdk/provider.ts | https://sdk.vercel.ai/docs |
+| `@arnilo/prism-providers/hyper` | cache_control | supported | packages/prism-providers/src/hyper/cache.ts | https://hyper.charm.land/docs/api/anthropic-messages.html |
+| `@arnilo/prism-providers/hyper` | cached_tokens | supported | packages/prism-providers/src/hyper/telemetry.ts | https://hyper.charm.land/docs/api/openai-chat-completions.html |
+| `@arnilo/prism-providers/commandcode` | cache_control | supported | packages/prism-providers/src/commandcode/cache.ts | https://platform.claude.com/docs/en/build-with-claude/prompt-caching |
+| `@arnilo/prism-providers/commandcode` | cached_tokens | supported | packages/prism-providers/src/commandcode/__tests__/commandcode.test.ts | https://commandcode.ai/docs/provider |
 
 Official OpenAI 2026-08-28: GPT-5.6+ uses `prompt_cache_options.mode` (`implicit`/`explicit`), `prompt_cache_options.ttl` (`30m`), content `prompt_cache_breakpoint`, and usage `input_tokens_details.cache_write_tokens` in addition to `cached_tokens`. Older models keep `prompt_cache_retention` (`24h` / `in_memory`). Implemented in Task 4: explicit mode + markers gated on `ModelConfig.cache.explicitBreakpoints`, write-token usage mapping, owned fields win over `extra`. `cache.key`/`cache.retention` structured hints remain unread (legacy `cacheKey`/`cacheRetention` only).
 
@@ -247,3 +253,7 @@ Phase 36 already showed identical assemblies are byte-stable and that dynamic co
 ```text
 node --test scripts/phase37-provider-matrix.test.mjs
 ```
+
+Plan 055 (2026-09): hyper + commandcode rows added (19 adapters); `shared/anthropic-messages.ts`
+is the 055 shared primitive (see `phase55-primitive-review.md`); hyper reuses the OpenAI
+Responses machinery for its pass-through route.

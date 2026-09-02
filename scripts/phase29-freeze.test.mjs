@@ -158,7 +158,7 @@ test("phase29 freeze: package budget matches current graph until Task 10", () =>
     const delta = hasOffice ? -46 : hasCodingTools ? -42 : hasCore ? -14 : 0;
     assert.equal(packageTruth.counts.publishable, hasCodingTools && !hasOffice ? 17 : 55 + added + delta);
     assert.equal(packageTruth.counts.workspace, hasCodingTools && !hasOffice ? 16 : 54 + added + delta);
-    assert.equal(packageTruth.counts.provider, 17);
+    assert.equal(packageTruth.counts.provider, 19); // plan 055 Task 11: hyper + commandcode
     assert.equal(packageTruth.counts.prismFamily, hasOffice ? 3 : hasCodingTools ? 7 : hasCore ? 11 : 10);
   }
 });
