@@ -111,7 +111,7 @@
     "@arnilo/prism": "^0.4.0",
     "@nats-io/jetstream": "^3.4.0",
     "@nats-io/transport-node": "^3.4.0",
-    "better-sqlite3": "^12.11.1",
+    "better-sqlite3": "^13.0.3",
     "pg": "^8.22.0",
     "@arnilo/prism-memory": "^0.4.0"
   },
@@ -140,7 +140,7 @@
     "@opentelemetry/api": "^1.9.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/pg": "^8.11.11",
-    "better-sqlite3": "^12.11.1",
+    "better-sqlite3": "^13.0.3",
     "pg": "^8.22.0"
   },
   "engines": {
