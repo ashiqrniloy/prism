@@ -258,7 +258,7 @@ review's recommended order.
     - `docs/index.md` update: no new page.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Verify: push, CodeQL re-analysis, ledger closure
+- [x] Verify: push, CodeQL re-analysis, ledger closure
   - Acceptance Criteria:
     - Functional: branch pushed; CodeQL re-run completes; every alert from the 2026-09-03 snapshot is closed or dismissed with recorded rationale; alert 68 (deleted antigravity file) auto-closes.
     - Performance: n/a.
@@ -269,7 +269,7 @@ review's recommended order.
     - Options Considered: n/a (verification task).
     - Chosen Approach: push → re-scan → reconcile ledger → update README status.
     - API Notes and Examples: `gh api /repos/ashiqrniloy/prism/code-scanning/alerts` for reconciliation.
-    - Files to Create/Edit: `docs/_evidence/codeql-current-2026-09-XX.md` (successor snapshot); this plan's checkboxes.
+    - Files to Create/Edit: `docs/_evidence/codeql-current-2026-09-03-verified.md` (successor snapshot); this plan's checkboxes.
     - References: `docs/release-and-install.md` security evidence gates.
   - Test Cases to Write: n/a (runs full suites from prior tasks + `npm audit`).
   - Documentation/Wiki Assessment:
@@ -280,8 +280,13 @@ review's recommended order.
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass.
+- Dismissed 4 alerts as false positives with recorded rationale (91/92 bounded table writes, 98/99 test-only null-proto sinks) instead of code changes — the writes are provably bounded by validation.
+- Alert 102 fixed via mkdtemp (one-line default change); `--artifact-dir` behavior preserved.
+- Workspace build-order defect (pre-existing CI blocker, not a CodeQL alert) fixed as a prerequisite: `npm run --workspaces` runs config order; workspaces array reordered leaves-first + `@arnilo/prism-core` dependency declared for `prism-coding-tools`. Clean-clone `npm run build` now exits 0.
+- Protected-infra drill (`phase27-dr`) still runs only with PostgreSQL env — by design; plan 060 opens protected CI jobs.
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- Dependency majors deferred to plan 062: `@napi-rs/keyring` 2.0, `pdf-parse` 2.x, `better-sqlite3` 13.
+- Plan 057: retire historical freeze tests now that security evidence is generated from live scans.
+- Add a budget-gate/test ensuring `npm run --workspaces` order never regresses (e.g. clean-build smoke in CI: `rm -rf dist && npm run build`).
