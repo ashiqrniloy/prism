@@ -33,7 +33,8 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { closeSync, mkdirSync, openSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createPostgresApprovalStore, createPostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
 import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
@@ -63,7 +64,8 @@ const TARGET = flag("target", "PRISM_DR_TARGET_URL");
 const CONFIRM = flag("confirm-target");
 const PITR = flag("pitr", "PRISM_PITR_URL");
 const SCHEMA = flag("schema") ?? "prism_dr_seed";
-const ARTIFACT_DIR = flag("artifact-dir") ?? "/tmp/prism-dr";
+const ARTIFACT_DIR =
+  flag("artifact-dir") ?? mkdtempSync(join(tmpdir(), "prism-dr-")); // no predictable shared path (alert 102)
 const TTL_MS = 3 * 60 * 1000;
 
 if (!SOURCE || !TARGET || !CONFIRM || !PITR) {
