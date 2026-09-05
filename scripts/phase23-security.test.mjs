@@ -105,12 +105,16 @@ describe("phase23 security conformance (plan 023 Task 5, built public entrypoint
       const mcp = artifact.packages["@arnilo/prism-mcp"];
       assert.ok(mcp && typeof mcp.lines === "number", "mcp row must exist in the artifact");
       assert.ok(mcp.lines >= 80, `mcp lines ${mcp.lines} prove the core-dist-free denominator (0.2.2 polluted value was 45.47)`);
-      const postgres = artifact.packages["@arnilo/prism-session-store-postgres"];
-      assert.ok(postgres?.protectedException, "durable-leg packages must be recorded protected, never gated green");
-      assert.ok(postgres.lines < 40, `protected durable legs stay visibly low (${postgres.lines}), not inflated by imported core`);
+      // Since the 0.4.0 consolidation the durable legs live in prism-core
+      // (packages/session-store-* moved to src/sessions/*); the protected
+      // class is recorded on the prism-core row, not a standalone package.
+      const core = artifact.packages["@arnilo/prism-core"];
+      assert.ok(core?.protectedException, "durable-leg packages must be recorded protected, never gated green");
+      assert.match(core.protectedException, /PRISM_TEST_(POSTGRES_URL|NATS_URL)/, "core durable legs must name their required env");
+      assert.equal(core.threshold, null, "protected rows are exempt from a line gate");
       assert.deepEqual(artifact.belowThreshold, [], "no non-protected package may sit below its threshold");
       const protectedRows = Object.entries(artifact.packages).filter(([, row]) => row.protectedException);
-      assert.ok(protectedRows.length >= 3, `protected skip classes must be named (found ${protectedRows.length})`);
+      assert.ok(protectedRows.length >= 1, `protected skip classes must be named (found ${protectedRows.length})`);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
