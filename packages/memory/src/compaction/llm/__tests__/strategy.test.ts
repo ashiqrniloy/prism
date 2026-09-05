@@ -4,6 +4,7 @@ import {
   type AIProvider,
   createMockProvider,
   createSessionEntry,
+  type ModelConfig,
   type ProviderRequest,
   providerError,
   providerTextDelta,
@@ -140,7 +141,8 @@ test("llm_compaction_strategy_applies_policy_thinking_and_max_summary_tokens", a
   });
 
   assert.equal(request?.options?.cacheRetention, "long");
-  assert.equal(request?.options?.compat?.reasoning_effort, "low");
+  // Mock model declares no reasoning capability — the level is omitted, not guessed.
+  assert.equal(request?.options?.compat?.reasoning_effort, undefined);
   assert.equal(request?.options?.extra?.thinkingLevel, undefined);
   assert.equal(request?.model.parameters?.maxTokens, 2);
   assert.equal(result.summary.length, 8);
@@ -289,4 +291,44 @@ test("llm_compaction_strategy_observes_abort_signal", async () => {
     async () => strategy.compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old")], signal: controller.signal }),
     /stop/,
   );
+});
+
+test("llm_compaction_strategy_thinking_level_reaches_model_family_field", async () => {
+  let request: ProviderRequest | undefined;
+  const googleModel = {
+    provider: "google",
+    model: "gemini-3.5-flash",
+    compat: { thinkingConfig: {} },
+    capabilities: { reasoning: true },
+  } as ModelConfig;
+  const strategy = createLlmCompactionStrategy({
+    provider: createMockProvider([providerTextDelta("summary text"), { type: "done" }], {
+      onRequest: (value) => {
+        request = value;
+      },
+    }),
+    model: googleModel,
+    keepRecentTokens: 1,
+    thinkingLevel: "low",
+  });
+  await strategy.compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old")] });
+  assert.equal(request?.options?.compat?.thinkingLevel, "low", "google family patch lands");
+  assert.equal(request?.options?.compat?.reasoning_effort, undefined);
+});
+
+test("llm_compaction_strategy_non_reasoning_model_gets_no_invented_field", async () => {
+  let request: ProviderRequest | undefined;
+  const plainModel = { provider: "mock", model: "plain" } as ModelConfig;
+  const strategy = createLlmCompactionStrategy({
+    provider: createMockProvider([providerTextDelta("summary text"), { type: "done" }], {
+      onRequest: (value) => {
+        request = value;
+      },
+    }),
+    model: plainModel,
+    keepRecentTokens: 1,
+    thinkingLevel: "low",
+  });
+  await strategy.compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old")] });
+  assert.deepEqual(request?.options?.compat ?? {}, {});
 });

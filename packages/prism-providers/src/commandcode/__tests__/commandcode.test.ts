@@ -15,6 +15,8 @@ import {
 import {
   COMMAND_CODE_DEFAULT_BASE_URL,
   classifyCommandCodeError,
+  commandCodeChatBody,
+  commandCodeModels,
   createCommandCodeProvider,
   createCommandCodeProviderPackage,
   listCommandCodeModels,
@@ -511,5 +513,76 @@ describe("@arnilo/prism-providers/commandcode", () => {
       true,
       "shared builder asks for usage; docs guarantee the final usage chunk without it",
     );
+  });
+});
+
+describe("commandcode_upstream_thinking_stamps_and_route_fields", () => {
+  const featured = (id: string) => commandCodeModels.find((model) => model.model === id)!;
+  const base: ProviderRequest = {
+    model: featured("claude-opus-4-8"),
+    messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+  };
+
+  it("catalog_stamps_levels_and_family_per_upstream", () => {
+    const opus = featured("claude-opus-4-8");
+    assert.deepEqual(opus.capabilities?.thinkingLevels, ["low", "medium", "high", "xhigh", "max"]);
+    assert.equal(opus.compat?.thinkingFamily, "output_config_effort");
+    const sonnet46 = featured("claude-sonnet-4-6");
+    assert.deepEqual(sonnet46.capabilities?.thinkingLevels, ["low", "medium", "high", "max"]);
+    const gpt = featured("gpt-5.6-sol");
+    assert.deepEqual(gpt.capabilities?.thinkingLevels, ["none", "minimal", "low", "medium", "high", "xhigh"]);
+    assert.equal(gpt.compat?.thinkingFamily, "openai_reasoning");
+    const k3 = featured("moonshotai/Kimi-K3");
+    assert.deepEqual(k3.capabilities?.thinkingLevels, ["low", "high", "max"]);
+    assert.equal(k3.compat?.thinkingFamily, "reasoning_effort");
+    const k2 = featured("moonshotai/Kimi-K2.6");
+    assert.equal(k2.capabilities?.thinkingLevels, undefined);
+    assert.equal(k2.compat?.thinkingFamily, "thinking_type");
+    const glm = featured("zai-org/GLM-5.3");
+    assert.deepEqual(glm.capabilities?.thinkingLevels, ["low", "high", "max"]);
+    const gemini = featured("google/gemini-3.6-flash");
+    // No level declaration: the gateway chat route has no thinking_level wire
+    // (family noop), so declared levels could never reach the model.
+    assert.equal(gemini.capabilities?.thinkingLevels, undefined);
+    assert.equal(gemini.compat?.thinkingFamily, "noop");
+    const mimo = featured("xiaomi/mimo-v2.5");
+    assert.equal(mimo.capabilities?.thinkingLevels, undefined);
+    assert.equal(mimo.compat?.thinkingFamily, undefined);
+  });
+
+  it("anthropic_route_emits_output_config_effort_snapped_and_no_raw_reasoning_effort", async () => {
+    let body: any;
+    const provider = createCommandCodeProvider({
+      apiKey: "fake-cc-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: { ...base, options: { compat: { reasoning_effort: "max", thinking: true } } },
+    });
+    assert.deepEqual(body.output_config, { effort: "max" });
+    assert.deepEqual(body.thinking, { type: "enabled" });
+    assert.equal(body.reasoning_effort, undefined, "raw reasoning_effort never reaches the Anthropic route");
+    assert.equal(body.pricing_source, undefined);
+  });
+
+  it("chat_route_emits_reasoning_effort_and_reasoning_snapped_to_declared_levels", () => {
+    const gpt = featured("gpt-5.6-sol");
+    const body = commandCodeChatBody({
+      ...base,
+      model: gpt,
+      options: { compat: { reasoning_effort: "max" } },
+    } as never);
+    // gpt-5.2 table has no max — snaps to xhigh.
+    assert.equal(body.reasoning_effort, "xhigh");
+    const reasoning = commandCodeChatBody({
+      ...base,
+      model: gpt,
+      options: { compat: { reasoning: { effort: "max", summary: "auto" } } },
+    } as never);
+    assert.deepEqual(reasoning.reasoning, { effort: "xhigh", summary: "auto" });
   });
 });

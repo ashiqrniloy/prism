@@ -191,6 +191,10 @@ cache-read pricing exists), and seeds `compat.reasoning.effort` from
   provider-specific env names; default tests are network-free.
 - Enterprise hosts that must gate `compat.openRouterRouting` should wrap selection with `@arnilo/prism-core/governance/model-router` (`allowOpenRouterRouting`); the OpenRouter adapter itself still passthroughs routing when present on the request.
 
+## Thinking and reasoning
+
+OpenRouter models route through the `openai_reasoning` family with **API-derived** levels: `mapOpenRouterModel` reads the models API `reasoning.supported_efforts` into `capabilities.thinkingLevels` (a `mandatory` model excludes `none`), and `resolveOpenRouterReasoning` snaps a merged effort to that set. Models without reasoning metadata pass effort through verbatim (OpenRouter accepts the full ladder globally). See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Model routing](../model-routing.md): optional allow-list/residency/budget/circuit facade and OpenRouter routing gate.

@@ -1,4 +1,5 @@
 import type { JsonObject, ProviderRequest } from "@arnilo/prism";
+import { isGlm52Model, isGlm53Model } from "./models.js";
 
 /**
  * Map Prism compat → official Z.AI `thinking` body object.
@@ -8,8 +9,10 @@ import type { JsonObject, ProviderRequest } from "@arnilo/prism";
 export function zaiThinking(request: ProviderRequest): JsonObject | undefined {
   const value = request.options?.compat?.thinking ?? request.model.compat?.thinking;
   const clearThinking = zaiClearThinking(request);
+  // GLM-5.3 / 5.3-FLASH force thinking: a `disabled` request must never reach the wire.
+  const forcedThinking = isGlm53Model(request.model.model);
 
-  if (value === false || request.options?.cacheRetention === "none") {
+  if (zaiThinkingOff(request) && !forcedThinking) {
     return cleanThinking({ type: "disabled", clear_thinking: clearThinking });
   }
   if (value && typeof value === "object") {
@@ -29,14 +32,71 @@ export function zaiThinking(request: ProviderRequest): JsonObject | undefined {
 }
 
 /**
- * Official `reasoning_effort` (GLM-5.2+). Request `options.compat` wins over model defaults.
- * Allowed: max | xhigh | high | medium | low | minimal | none.
+ * Host-supplied effort alias chain (request wins over model default), unvalidated.
+ */
+function zaiRequestedEffort(request: ProviderRequest): string | undefined {
+  const effort =
+    request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort ?? request.model.compat?.reasoning_effort;
+  return typeof effort === "string" && effort.trim() ? effort.trim().toLowerCase() : undefined;
+}
+
+/** GLM-5.2 upstream mapping: minimal/none stop thinking (no effort field), low/medium→high, xhigh→max. */
+const ZAI_52_EFFORT_MAP: Readonly<Record<string, string | undefined>> = {
+  none: undefined,
+  minimal: undefined,
+  low: "high",
+  medium: "high",
+  high: "high",
+  xhigh: "max",
+  max: "max",
+};
+
+/** GLM-5.3 accepts low | high | max only and cannot disable thinking — everything snaps into that set. */
+const ZAI_53_EFFORT_MAP: Readonly<Record<string, string>> = {
+  none: "low",
+  minimal: "low",
+  low: "low",
+  medium: "high",
+  high: "high",
+  xhigh: "max",
+  max: "max",
+};
+
+/**
+ * Official `reasoning_effort` — GLM-5.2+ only (upstream rejects it on GLM-4.x).
+ * GLM-5.2 snaps per the documented table; GLM-5.3 snaps into low/high/max; unknown
+ * strings pass through (forward compat). `none`/`minimal` on 5.2 return undefined —
+ * zaiThinking emits `thinking: { type: "disabled" }` for them instead.
  * @see https://docs.z.ai/guides/capabilities/thinking
  */
 export function zaiReasoningEffort(request: ProviderRequest): string | undefined {
-  const effort =
-    request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort ?? request.model.compat?.reasoning_effort;
-  return typeof effort === "string" ? effort : undefined;
+  const id = request.model.model.toLowerCase();
+  const requested = zaiRequestedEffort(request);
+  if (requested === undefined) return undefined;
+  if (isGlm53Model(id)) return ZAI_53_EFFORT_MAP[requested] ?? requested;
+  if (isGlm52Model(id)) return ZAI_52_EFFORT_MAP[requested];
+  return undefined;
+}
+
+/** True when thinking must render as disabled on the wire for this request. */
+function zaiThinkingOff(request: ProviderRequest): boolean {
+  const optionsThinking = request.options?.compat?.thinking;
+  // Request-level explicit disable / cacheRetention:none always win.
+  if (optionsThinking === false || request.options?.cacheRetention === "none") return true;
+  // Request-level explicit enable wins over the effort alias.
+  if (optionsThinking === true || (optionsThinking && typeof optionsThinking === "object")) return false;
+  // GLM-5.2: request-level `reasoning_effort` decides when no thinking switch was sent —
+  // none|minimal stop thinking (documented); any real effort implies thinking on.
+  if (isGlm52Model(request.model.model)) {
+    const requested = request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort;
+    if (typeof requested === "string" && requested.trim()) {
+      const normalized = requested.trim().toLowerCase();
+      return normalized === "none" || normalized === "minimal";
+    }
+  }
+  // Model defaults: explicit false disables.
+  const value = optionsThinking ?? request.model.compat?.thinking;
+  return value === false;
 }
 
 /**

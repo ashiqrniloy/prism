@@ -1,6 +1,7 @@
 import type { AIProvider, CredentialValueSource, ModelConfig, ProviderPackage } from "@arnilo/prism";
 import { defineProviderPackage, providerError, resolveCredentialValue as resolveOnce, trimTrailingSlashes } from "@arnilo/prism";
 import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
+import { openAICompatThinkingExtra } from "../shared/openai-compat.js";
 
 /** Default Azure OpenAI API version (hosts may override; package never rewrites endpoint host). */
 export const AZURE_OPENAI_DEFAULT_API_VERSION = "2024-10-21";
@@ -90,6 +91,7 @@ export function createAzureOpenAIProvider(options: AzureOpenAIProviderOptions): 
         authStyle,
         fetch: options.fetch,
         chatCompletionsUrl,
+        buildBodyExtra: openAICompatThinkingExtra,
       });
       yield* inner.generate(request);
     },

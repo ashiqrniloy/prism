@@ -97,6 +97,9 @@ function cacheKindForHyperModel(route: HyperRoute): ModelConfig["cache"] {
 
 export function defineHyperModel(config: HyperModelConfig): ModelConfig {
   const route = (config.compat?.route ?? routeForHyperModel(config.model)) as HyperRoute;
+  // Single source: the catalog effort set feeds both the compat mirror and the
+  // host-facing declared levels (live `/v1/models` `reasoning.effort_levels`).
+  const effortLevels = config.compat?.effortLevels;
   return {
     ...config,
     provider: "hyper",
@@ -106,14 +109,16 @@ export function defineHyperModel(config: HyperModelConfig): ModelConfig {
       reasoning: true,
       tools: true,
       streaming: true,
+      ...(effortLevels && effortLevels.length > 0 ? { thinkingLevels: effortLevels } : {}),
       ...config.capabilities,
     },
     cache: config.cache ?? cacheKindForHyperModel(route),
     compat: {
+      thinkingFamily: "reasoning_effort",
       preserveThinking: true,
       ...config.compat,
       route: config.compat?.route ?? route,
-    } as HyperModelConfig["compat"],
+    } as unknown as HyperModelConfig["compat"],
   };
 }
 

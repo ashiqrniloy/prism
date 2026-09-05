@@ -1,18 +1,18 @@
 import { randomUUID } from "node:crypto";
-import {
-  type OAuthClientProvider,
-  type OAuthDiscoveryState,
-  auth as sdkAuth,
-  IssuerMismatchError,
-  AuthorizationServerMismatchError,
-  selectClientAuthMethod,
-  validateClientMetadataUrl,
-} from "@modelcontextprotocol/client";
 import type {
   AuthorizationServerMetadata,
   OAuthClientMetadata,
   StoredOAuthClientInformation,
   StoredOAuthTokens,
+} from "@modelcontextprotocol/client";
+import {
+  AuthorizationServerMismatchError,
+  IssuerMismatchError,
+  type OAuthClientProvider,
+  type OAuthDiscoveryState,
+  auth as sdkAuth,
+  selectClientAuthMethod,
+  validateClientMetadataUrl,
 } from "@modelcontextprotocol/client";
 
 /**
@@ -300,7 +300,10 @@ class PrismOAuthClientProvider implements OAuthClientProvider {
   async saveClientInformation(info: StoredOAuthClientInformation, ctx?: { readonly issuer: string }): Promise<void> {
     if (this.#options.strategy.kind === "static") return;
     if (ctx?.issuer !== undefined && info.issuer !== undefined && info.issuer !== ctx.issuer) {
-      throw new McpOAuthError("ERR_PRISM_MCP_OAUTH_TOKEN_STORE", "client registration issuer does not match the active authorization server");
+      throw new McpOAuthError(
+        "ERR_PRISM_MCP_OAUTH_TOKEN_STORE",
+        "client registration issuer does not match the active authorization server",
+      );
     }
     this.#assertRecordBytes(info, "client registration record");
     await this.#options.state.saveClientInformation(info, ctx?.issuer);

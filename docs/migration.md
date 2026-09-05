@@ -1,8 +1,8 @@
 # Migration guide
 
-## 0.4.x → 0.5.0 dead-export removal (breaking)
+## 0.4.x → 0.5.0 lockstep cut (breaking)
 
-Prism 0.5 deletes the 27 unused public exports that were classified `deprecate`/`remove` in the plan 058 verification sweep and marked `@deprecated` earlier in the same cycle. It is a symbol-surface migration only — no package renames, no persisted-data change, no behavior change. See the complete removal table and per-symbol replacements in [migrate-to-0.5.md](migrate-to-0.5.md). All 10 publishable manifests bump to `0.5.0` lockstep; internal first-party ranges move `^0.4.0` → `^0.5.0`. Security keeper surface (ownership/checkpoint guards, `secureCompare`, `zeroBuffer`, sandbox path-escape guard, RAG scope guard, MCP content-bounds guard, secret-leak conformance assert) is unchanged.
+Prism 0.5 (plans 055–065) ships four breaking surfaces: the 27 removed unused exports from the plan 058 sweep (symbol-surface only), the MCP TypeScript SDK v2 module move (plan 063 — hosts importing `@modelcontextprotocol/sdk` directly must move to the modular `client`/`server` 2.0.0 packages), the thinking-effort wire moves (plan 065 — Anthropic `effort` → `output_config.effort`, xAI `reasoning_effort` now sent, snap-on-declared semantics), and the plan 056 hardening behavior changes (tenant-scoped store factories, child env allow-list). Dependency majors (plan 062: pdf-parse 2.4 with Node ≥ 20.16, better-sqlite3 13, keyring 2 with typed locked-store errors) and the CLI real-provider contract (plan 064: explicit `--provider` required, exit 2 when omitted) are behavior changes without import impact. See the complete guide with per-symbol replacements and upgrade steps in [migrate-to-0.5.md](migrate-to-0.5.md). All 10 publishable manifests bump to `0.5.0` lockstep; internal first-party ranges move `^0.4.0` → `^0.5.0`. Security keeper surface (ownership/checkpoint guards, `secureCompare`, `zeroBuffer`, sandbox path-escape guard, RAG scope guard, MCP content-bounds guard, secret-leak conformance assert) is unchanged.
 
 ## 0.3.3 → 0.4.0 package reorganization (breaking)
 

@@ -5,6 +5,7 @@ import {
   type ModelCost,
   redactSecrets,
   resolveCredentialValue,
+  type ThinkingCompatFamily,
   trimTrailingSlashes,
 } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
@@ -60,11 +61,40 @@ interface OpenCodeGoModelsResponse {
   readonly data?: readonly OpenCodeGoModelEntry[];
 }
 
+/**
+ * Upstream thinking rules per model family. Values duplicate the source packages
+ * per gateway catalog (provenance in comments): Kimi K3 from `kimi/models.ts`,
+ * deepseek-v4 from `deepseek/models.ts`, GLM from `zai/models.ts`, grok from
+ * `xai/models.ts`.
+ */
+export function openCodeGoThinkingLevels(modelId: string): readonly string[] | undefined {
+  const id = modelId.toLowerCase();
+  if (id.startsWith("kimi-k3")) return ["low", "high", "max"]; // KIMI_K3_THINKING_LEVELS
+  if (id.startsWith("deepseek-v4")) return ["low", "high", "max"]; // DEEPSEEK_THINKING_LEVELS
+  if (id.startsWith("glm-5.3")) return ["low", "high", "max"]; // ZAI_GLM_5_3_THINKING_LEVELS
+  if (id.startsWith("glm-5.2")) return ["low", "medium", "high", "xhigh", "max"]; // ZAI_GLM_5_2_THINKING_LEVELS
+  if (id.startsWith("grok-4.6")) return ["low", "medium", "high", "xhigh"]; // XAI_THINKING_LEVELS
+  if (id.startsWith("grok-4.5")) return ["low", "medium", "high"];
+  return undefined;
+}
+
+/** Per-upstream family stamp (`compat.thinkingFamily`); host compat override wins. */
+export function openCodeGoThinkingFamily(modelId: string): ThinkingCompatFamily | undefined {
+  const id = modelId.toLowerCase();
+  if (id.startsWith("kimi-k3") || id.startsWith("deepseek-v4") || id.startsWith("glm-5.") || id.startsWith("grok-4.")) {
+    return "reasoning_effort";
+  }
+  if (id.startsWith("kimi-k2")) return "thinking_type"; // K2.x thinking toggle
+  if (id.startsWith("minimax") || id.startsWith("qwen")) return "thinking_type"; // anthropic-route thinking (MiniMax M3/M2.x, Qwen3.x)
+  return undefined; // mimo and unknown ids: passthrough
+}
+
 export function defineOpenCodeGoModel(config: OpenCodeGoModelConfig): ModelConfig {
   const route = (config.compat?.route ?? routeForOpenCodeGoModel(config.model)) as OpenCodeGoRoute;
   const cache =
     config.cache ??
     (route === "anthropic" ? { kind: "cache_control" as const, longRetention: true, maxBreakpoints: 4 } : { kind: "implicit" as const });
+  const thinkingLevels = openCodeGoThinkingLevels(config.model);
   return {
     ...config,
     provider: "opencode-go",
@@ -75,10 +105,12 @@ export function defineOpenCodeGoModel(config: OpenCodeGoModelConfig): ModelConfi
       tools: true,
       streaming: true,
       structuredOutput: defaultStructuredOutput(config.model, route),
+      ...(thinkingLevels ? { thinkingLevels } : {}),
       ...config.capabilities,
     },
     cache,
     compat: {
+      ...(openCodeGoThinkingFamily(config.model) ? { thinkingFamily: openCodeGoThinkingFamily(config.model) } : {}),
       preserveThinking: true,
       ...config.compat,
       route: config.compat?.route ?? route,

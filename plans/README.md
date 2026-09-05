@@ -69,5 +69,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [062-Ecosystem-Gaps-And-Dependency-Majors.md](062-Ecosystem-Gaps-And-Dependency-Majors.md) | 0.4.x/0.5.x — reranker/model-discovery/capture/cost host adapters, edge-profile decision, dependency majors (keyring 2, better-sqlite3 13, pdf-parse 2), Impeccable ownership | planned |
 | [063-Synapta-MCP-2026-07-28-Adoption.md](063-Synapta-MCP-2026-07-28-Adoption.md) | Synapta MCP server adoption blueprint (2026-07-28 baseline): integration profile, capability mapping, phased rollout | planned |
 | [064-E2E-Live-Test-Coverage-Matrix.md](064-E2E-Live-Test-Coverage-Matrix.md) | E2E live test coverage matrix | planned |
+| [065-Provider-Thinking-Effort-Coverage.md](065-Provider-Thinking-Effort-Coverage.md) | Provider thinking/effort coverage | in progress |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { Client } from "@modelcontextprotocol/client";
-import { InMemoryTransport } from "@modelcontextprotocol/client";
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { attachMcpCapabilities, createMcpCapabilityClient } from "../capabilities.js";
 import { createPrismMcpServer } from "../server.js";
 import { McpUnsupportedCapabilityError } from "../types.js";

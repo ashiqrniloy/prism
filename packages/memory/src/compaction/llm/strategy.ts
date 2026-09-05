@@ -1,6 +1,6 @@
 import {
   type AIProvider,
-  applyThinkingLevel,
+  applyThinkingLevelForModel,
   type CompactionContext,
   type CompactionResult,
   type CompactionStrategy,
@@ -16,7 +16,6 @@ import {
   redactSecrets,
   resolveCredentialValue,
   resolveUseCaseModel,
-  thinkingFamilyForModel,
 } from "@arnilo/prism";
 import { formatFileOperations } from "./file-ops.js";
 import {
@@ -165,7 +164,6 @@ async function runSummaryProvider(
   let truncated = false;
   let eventCount = 0;
   const model = summaryRequestModel(options, reserveRatio, limits);
-  const thinkingFamily = thinkingFamilyForModel(model);
   const providerSignal = context.signal ? AbortSignal.any([context.signal, providerAbort.signal]) : providerAbort.signal;
   let request: ProviderRequest = {
     model,
@@ -173,14 +171,10 @@ async function runSummaryProvider(
       { role: "system", content: [{ type: "text", text: systemPrompt }] },
       { role: "user", content: [{ type: "text", text: prompt }] },
     ] satisfies readonly Message[],
+    // Model-aware adapter: stamped/heuristic family per model; non-reasoning
+    // models get no invented field (omitted, not guessed).
     options: options.thinkingLevel
-      ? applyThinkingLevel(
-          options.providerOptions,
-          options.thinkingLevel,
-          // Explicit host thinkingLevel must not become inert: unknown/non-reasoning
-          // models fall back to the portable reasoning_effort compat field.
-          thinkingFamily === "noop" ? "reasoning_effort" : thinkingFamily,
-        )
+      ? applyThinkingLevelForModel(options.providerOptions, options.thinkingLevel, model)
       : options.providerOptions,
     signal: providerSignal,
   };

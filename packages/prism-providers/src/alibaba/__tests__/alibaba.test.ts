@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { applyThinkingLevelForModel } from "@arnilo/prism";
 import {
   assertNoForeignCacheFields,
   assertProviderOwnedHeadersWin,
@@ -11,6 +12,7 @@ import {
 import {
   alibabaBaseUrl,
   alibabaBody,
+  alibabaIsThinkingOnly,
   createAlibabaProvider,
   createAlibabaProviderPackage,
   defineAlibabaModel,
@@ -475,3 +477,53 @@ function chatSse(events: readonly object[]): ReadableStream<Uint8Array> {
     },
   });
 }
+
+describe("alibaba_thinking_levels_and_enable_thinking_mapping", () => {
+  const user = [{ role: "user", content: [{ type: "text", text: "hi" }] }] as const;
+
+  it("hybrid_models_declare_on_off_levels_and_thinking_type_stamp", () => {
+    const hybrid = defineAlibabaModel({ model: "qwen3.7-max" });
+    assert.deepEqual(hybrid.capabilities?.thinkingLevels, ["none", "low", "medium", "high", "xhigh", "max"]);
+    assert.equal(hybrid.compat?.thinkingFamily, "thinking_type");
+    const thinkingOnly = defineAlibabaModel({ model: "qwen3-thinking" });
+    assert.equal(thinkingOnly.capabilities?.thinkingLevels, undefined);
+    assert.equal(thinkingOnly.compat?.thinkingFamily, undefined);
+    assert.ok(alibabaIsThinkingOnly("qwq-32b"));
+    assert.ok(alibabaIsThinkingOnly("qwen3-thinking-plus"));
+    assert.ok(!alibabaIsThinkingOnly("qwen3.7-max"));
+  });
+
+  it("adapter_path_maps_level_to_enable_thinking_on_hybrid_models", () => {
+    const hybrid = defineAlibabaModel({ model: "qwen3.7-max" });
+    const offOptions = applyThinkingLevelForModel(undefined, "none", hybrid);
+    const off = alibabaBody({ model: hybrid, messages: [...user], options: offOptions });
+    assert.equal(off.enable_thinking, false);
+    const onOptions = applyThinkingLevelForModel(undefined, "high", hybrid);
+    const on = alibabaBody({ model: hybrid, messages: [...user], options: onOptions });
+    assert.equal(on.enable_thinking, true);
+    assert.equal(on.reasoning_effort, undefined, "reasoning_effort dead-end never emitted");
+  });
+
+  it("thinking_only_models_never_receive_enable_thinking_false", () => {
+    const only = defineAlibabaModel({ model: "qwq-32b" });
+    const body = alibabaBody({
+      model: only,
+      messages: [...user],
+      options: { compat: { thinking: { type: "disabled" } } },
+    });
+    assert.equal(body.enable_thinking, undefined);
+  });
+
+  it("explicit_enable_thinking_wins_over_thinking_patch_and_budget_passes_through", () => {
+    const hybrid = defineAlibabaModel({ model: "qwen3.7-max" });
+    const body = alibabaBody({
+      model: hybrid,
+      messages: [...user],
+      options: { compat: { enable_thinking: true, thinking: { type: "disabled" }, thinking_budget: 8192 } },
+    });
+    assert.equal(body.enable_thinking, true);
+    assert.equal(body.thinking_budget, 8192);
+    assert.equal(body.thinking, undefined, "raw thinking patch stripped from the wire");
+    assert.equal(body.thinkingFamily, undefined);
+  });
+});

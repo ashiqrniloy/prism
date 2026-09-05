@@ -238,6 +238,10 @@ PRISM_LIVE_PROVIDER_TESTS=1 COMMAND_CODE_API_KEY=cmd_... \
 - Probe ledger above pending operator-gated live run; row 4 decides plan 055 Task 9
   (explicit GPT-5.6 caching upgrade) — see `plans/055-First-Class-Hyper-And-Command-Code-Providers.md`
 
+## Thinking and reasoning
+
+Command Code models carry provenance-commented level tables: `claude-*` → `output_config_effort` (Anthropic-route effort sets mirroring the native Anthropic package), `gpt-5.6*` → `openai_reasoning` (`none`–`xhigh`), `deepseek-v4`/`kimi-k3`/`glm-5.3` → `reasoning_effort` (`low/high/max`), `glm-5.2` → `reasoning_effort` (`low`–`max`), Kimi-K2.x/MiniMax/Qwen → `thinking_type`, gemini-3.x → `noop` (the gateway chat route has no `thinking_level` wire, so no levels are declared), mimo/unknown → passthrough. Effort snaps to declared sets on both routes. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider packages](../provider-packages.md): `defineProviderPackage`,

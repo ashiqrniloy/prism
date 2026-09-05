@@ -46,6 +46,8 @@ export interface AlibabaModelConfig extends Omit<ModelConfig, "provider" | "comp
     readonly route?: "openai";
     /** Qwen thinking toggle (`enable_thinking`); omitted on the wire unless set. */
     readonly enable_thinking?: boolean;
+    /** Core `thinking_type` family stamp on hybrid reasoning models (host override wins). */
+    readonly thinkingFamily?: string;
   };
 }
 
@@ -77,6 +79,7 @@ interface AlibabaModelsResponse {
 }
 
 export function defineAlibabaModel(config: AlibabaModelConfig): ModelConfig {
+  const thinkingLevels = alibabaThinkingLevels(config.model);
   return {
     ...config,
     provider: config.provider ?? "alibaba",
@@ -86,9 +89,43 @@ export function defineAlibabaModel(config: AlibabaModelConfig): ModelConfig {
       reasoning: looksLikeReasoningModel(config.model),
       tools: true,
       streaming: true,
+      ...(thinkingLevels ? { thinkingLevels } : {}),
       ...config.capabilities,
     },
+    compat: {
+      ...(alibabaThinkingFamily(config.model) ? { thinkingFamily: alibabaThinkingFamily(config.model) } : {}),
+      ...config.compat,
+    },
   };
+}
+
+/**
+ * Thinking-only Qwen models (QwQ, QvQ, `*-thinking`) always think —
+ * `enable_thinking: false` is never sent for them.
+ * @see https://help.aliyun.com/en/model-studio/deep-thinking
+ */
+export function alibabaIsThinkingOnly(modelId: string): boolean {
+  const id = modelId.toLowerCase();
+  return id.startsWith("qwq") || id.startsWith("qvq") || id.includes("qwen3-thinking") || id.endsWith("-thinking");
+}
+
+/**
+ * Hybrid reasoning models accept the `enable_thinking` toggle. Declared levels
+ * are on/off semantics (no upstream effort ladder): everything except `none`
+ * enables thinking. Thinking-only and non-reasoning models declare nothing.
+ */
+export function alibabaThinkingLevels(modelId: string): readonly string[] | undefined {
+  if (!looksLikeReasoningModel(modelId) || alibabaIsThinkingOnly(modelId)) return undefined;
+  return ["none", "low", "medium", "high", "xhigh", "max"];
+}
+
+/**
+ * Package-local family decision: the core `thinking_type` family patch
+ * (`{thinking:{type}}`) feeds `enable_thinking` — no new core family (single
+ * consumer; task 1 review).
+ */
+export function alibabaThinkingFamily(modelId: string): "thinking_type" | undefined {
+  return alibabaThinkingLevels(modelId) ? "thinking_type" : undefined;
 }
 
 /**

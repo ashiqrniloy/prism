@@ -112,6 +112,17 @@ async function installDesktop(hostSkills: { register(skill: Skill): void }, host
 - Imports are inert. The default setup surface is off, the skill file is capped at 64 KiB, and no full upstream skill tree is shipped.
 - The host must keep credentials, desktop session state, binary paths, sandbox identity, and approval state outside model-controlled arguments.
 
+## Live probe (plans/064 Task 7)
+
+A live leg drives the host's real `computer-use-linux` MCP binary over stdio — real tool inventory, one bounded read-only screenshot, clean close (≤30 s):
+
+```bash
+PRISM_TEST_COMPUTER_USE=1 PRISM_COMPUTER_USE_BIN="$(command -v computer-use-linux)" \
+  node --test packages/prism-coding-tools/dist/computer-use-linux/__tests__/live.test.js
+```
+
+Skips (never fails) when the flag, binary path, or a desktop session is unavailable. The suite performs no network I/O, so screenshot bytes cannot leave the process. Registered in `scripts/live-matrix.json` as `coding-tools/computer-use-live`.
+
 ## Related APIs
 
 - [Device adapters](device-adapters.md): generic admission, shared limits, chunk bounds, and telemetry redaction contract.

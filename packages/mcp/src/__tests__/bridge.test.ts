@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { createSecretRedactor, createToolRegistry, dispatchToolCall } from "@arnilo/prism";
-import { Client } from "@modelcontextprotocol/client";
-import { InMemoryTransport } from "@modelcontextprotocol/client";
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import { attachMcpToolBridge, connectMcpTools, listAllMcpTools, mapMcpToolsToDefinitions } from "../bridge.js";
@@ -442,14 +441,10 @@ describe("MCP Apps bridge", () => {
       setNotificationHandler: () => undefined,
     } as unknown as Client;
     await assert.rejects(
-      attachMcpToolBridge(
-        client,
-        { close: async () => undefined } as unknown as import("@modelcontextprotocol/client").Transport,
-        {
-          serverId: "weather",
-          mcpApps: true,
-        },
-      ),
+      attachMcpToolBridge(client, { close: async () => undefined } as unknown as import("@modelcontextprotocol/client").Transport, {
+        serverId: "weather",
+        mcpApps: true,
+      }),
       /not negotiated/,
     );
   });

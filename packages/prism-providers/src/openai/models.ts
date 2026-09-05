@@ -60,6 +60,7 @@ export function defineOpenAIModel(config: OpenAIModelConfig): ModelConfig {
     },
     compat: {
       api: "openai-responses",
+      ...(config.capabilities?.reasoning === false ? {} : { thinkingFamily: "openai_reasoning" as const }),
       ...config.compat,
     },
   };
@@ -100,6 +101,8 @@ export function mapOpenAIModel(entry: OpenAIModelEntry, options: { readonly prov
   const id = entry.id;
   const reasoning = looksLikeReasoningModel(id);
   const longRetention = supportsExtendedPromptCacheRetention(id);
+  const thinkingLevels = openAIThinkingLevels(id);
+  const defaultEffort = openAIDefaultEffort(id);
   return defineOpenAIModel({
     provider: options.provider ?? "openai",
     model: id,
@@ -108,6 +111,7 @@ export function mapOpenAIModel(entry: OpenAIModelEntry, options: { readonly prov
       input: ["text"],
       output: ["text"],
       reasoning,
+      thinkingLevels,
       tools: true,
       streaming: true,
       structuredOutput: "json_schema",
@@ -120,6 +124,8 @@ export function mapOpenAIModel(entry: OpenAIModelEntry, options: { readonly prov
     },
     compat: cleanJson({
       api: "openai-responses",
+      ...(reasoning ? { thinkingFamily: "openai_reasoning" } : {}),
+      ...(defaultEffort ? { reasoning: { effort: defaultEffort } } : {}),
       openai: cleanJson({
         owned_by: entry.owned_by,
         created: entry.created,
@@ -137,13 +143,14 @@ export const openAIModels = [
       input: ["text", "image", "audio", "file", "document"],
       output: ["text"],
       reasoning: true,
+      thinkingLevels: ["none", "low", "medium", "high"],
       tools: true,
       streaming: true,
       structuredOutput: "json_schema",
     },
     limits: { contextWindow: 400_000, maxOutputTokens: 128_000 },
     cache: { kind: "openai_key", longRetention: true, maxKeyLength: OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH },
-    compat: { api: "openai-responses" },
+    compat: { api: "openai-responses", reasoning: { effort: "none" }, thinkingFamily: "openai_reasoning" },
   }),
 ] as const satisfies readonly ModelConfig[];
 
@@ -157,14 +164,52 @@ export const openAICodexModels = [
       input: ["text"],
       output: ["text"],
       reasoning: true,
+      thinkingLevels: ["none", "low", "medium", "high"],
       tools: true,
       streaming: true,
       structuredOutput: "json_schema",
     },
     limits: { contextWindow: 400_000, maxOutputTokens: 128_000 },
-    compat: { api: "openai-codex-responses" },
+    compat: { api: "openai-codex-responses", reasoning: { effort: "none" }, thinkingFamily: "openai_reasoning" },
   },
 ] as const satisfies readonly ModelConfig[];
+
+/** GPT-5.1 family: none (default), low, medium, high. */
+function isGpt51Family(modelId: string): boolean {
+  return modelId.toLowerCase().startsWith("gpt-5.1");
+}
+
+/** GPT-5.2 family: none…xhigh (default medium). */
+function isGpt52Family(modelId: string): boolean {
+  return modelId.toLowerCase().startsWith("gpt-5.2");
+}
+
+/**
+ * Declared portable reasoning-effort levels per OpenAI model family
+ * (Research Matrix row openai, phase 65):
+ * gpt-5.1 none/low/medium/high (default none), gpt-5.2 +xhigh (default medium),
+ * gpt-5.x + o1/o3/o4 families minimal…high (default medium), codex aliases follow
+ * gpt-5.1. `undefined` for unknown ids → forward-compat passthrough.
+ * @see https://developers.openai.com/api/docs/models/gpt-5.1
+ */
+export function openAIThinkingLevels(modelId: string): readonly string[] | undefined {
+  const id = modelId.toLowerCase();
+  if (isGpt52Family(id)) return ["none", "minimal", "low", "medium", "high", "xhigh"];
+  if (isGpt51Family(id)) return ["none", "low", "medium", "high"];
+  if (id.includes("gpt-5") || id.startsWith("o1") || id.startsWith("o3") || id.startsWith("o4")) {
+    return ["minimal", "low", "medium", "high"];
+  }
+  return undefined;
+}
+
+/** Official default `reasoning.effort` for a model family; `undefined` when none is declared. */
+export function openAIDefaultEffort(modelId: string): string | undefined {
+  const id = modelId.toLowerCase();
+  if (isGpt52Family(id)) return "medium";
+  if (isGpt51Family(id)) return "none";
+  if (id.includes("gpt-5") || id.startsWith("o1") || id.startsWith("o3") || id.startsWith("o4")) return "medium";
+  return undefined;
+}
 
 /**
  * Models that accept `prompt_cache_retention: "24h"` (pre-GPT-5.6 families).

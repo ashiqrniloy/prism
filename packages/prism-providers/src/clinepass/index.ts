@@ -41,6 +41,7 @@ export {
   CLINEPASS_THINKING_MAPS,
   type ClinePassThinkingLevelMap,
   type ClinePassThinkingSlot,
+  clinePassDeclaredLevels,
   clinePassReasoningEffort,
   clinePassThinkingLevelMap,
   clinePassThinkingSlot,

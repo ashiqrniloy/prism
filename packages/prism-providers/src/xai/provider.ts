@@ -4,7 +4,7 @@ import { applyOpenAIChatStructuredOutput, serializeOpenAIChatMessage } from "@ar
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { xGrokConvId } from "./cache.js";
 import { XAI_DEFAULT_BASE_URL } from "./models.js";
-import { xaiReplayThinking } from "./thinking.js";
+import { xaiReasoningEffort, xaiReplayThinking } from "./thinking.js";
 
 export { XAI_DEFAULT_BASE_URL };
 
@@ -68,6 +68,8 @@ function xaiTransform(body: JsonObject, request: ProviderRequest): JsonObject {
     max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens,
     ...request.options?.extra,
   };
+  // Resolved official field wins over raw compat/extra escape hatches.
+  transformed.reasoning_effort = xaiReasoningEffort(request);
   applyOpenAIChatStructuredOutput(transformed, request.options?.structuredOutput);
   return clean(transformed);
 }

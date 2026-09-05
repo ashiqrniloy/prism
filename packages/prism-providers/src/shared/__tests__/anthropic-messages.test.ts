@@ -27,12 +27,15 @@ const hooks: AnthropicMessagesRouteHooks = {
     return messages;
   },
   preserveThinking: () => true,
+  thinking: () => undefined,
+  effort: () => undefined,
   stripOwnedCompat: (compat) => {
     const {
       route: _route,
       reasoning_effort: _effort,
       preserveThinking: _preserve,
       ownedTwist: _ownedTwist,
+      thinkingFamily: _family,
       ...rest
     } = (compat ?? {}) as Record<string, unknown>;
     return Object.keys(rest).length > 0 ? (rest as JsonObject) : undefined;
@@ -102,6 +105,26 @@ describe("@arnilo/prism-providers/shared/anthropic-messages", () => {
     assert.ok(serialized.includes('"properties":{"a":{},"b":{}}'));
   });
 
+  it("shared_anthropic_body_emits_resolved_thinking_and_output_config_effort", async () => {
+    const body = await anthropicMessagesBody(
+      { ...request, options: { compat: { thinking: { type: "adaptive" }, reasoning_effort: "medium" } } },
+      {
+        ...hooks,
+        thinking: (r) => r.options?.compat?.thinking as JsonObject | undefined,
+        effort: (r) => (r.options?.compat?.reasoning_effort as string | undefined) ?? undefined,
+      },
+    );
+    assert.deepEqual(body.thinking, { type: "adaptive" });
+    assert.deepEqual(body.output_config, { effort: "medium" });
+    assert.equal(body.effort, undefined, "no top-level effort field may reach the wire");
+    assert.ok(!JSON.stringify(body).includes("reasoning_effort"), "resolved effort must not leak as a raw compat key");
+  });
+
+  it("shared_anthropic_body_emits_no_thinking_fields_when_hooks_return_none", async () => {
+    const body = await anthropicMessagesBody(request, hooks);
+    assert.equal(body.thinking, undefined);
+    assert.equal(body.output_config, undefined);
+  });
   it("shared_anthropic_events_yields_deltas_tool_usage_and_done", async () => {
     const stream = ok(
       sse([

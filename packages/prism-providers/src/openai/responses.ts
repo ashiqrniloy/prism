@@ -26,6 +26,7 @@ import {
   providerToolCallDelta,
   providerUsage,
   resolveCredentialValue,
+  snapThinkingLevel,
   toolCallFromArgumentsText,
   trimTrailingSlashes,
 } from "@arnilo/prism";
@@ -386,12 +387,20 @@ async function toResponsesInput(messages: readonly OpenAIBreakpointMessage[], me
   return items;
 }
 
-/** Merge model-default + per-turn `compat.reasoning` into official Responses `reasoning` object. */
+/**
+ * Merge model-default + per-turn `compat.reasoning` into official Responses `reasoning` object.
+ * Per-turn compat wins key-by-key; a requested `effort` outside the model's declared set is
+ * snapped to the nearest declared level (core helper); undeclared models pass through untouched.
+ */
 export function resolveOpenAIReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined {
   const fromModel = asReasoningObject(model.compat?.reasoning);
   const fromOptions = asReasoningObject(options?.compat?.reasoning);
   if (!fromModel && !fromOptions) return undefined;
-  return clean({ ...fromModel, ...fromOptions });
+  const merged = clean({ ...fromModel, ...fromOptions });
+  if (model.capabilities?.thinkingLevels && typeof merged.effort === "string") {
+    return clean({ ...merged, effort: snapThinkingLevel(model, merged.effort) });
+  }
+  return merged;
 }
 
 function asReasoningObject(value: unknown): JsonObject | undefined {

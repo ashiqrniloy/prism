@@ -141,6 +141,17 @@ await runModelDiscoveryConformance(() => createFakeModelDiscovery());
 - Model-discovery listings are untrusted metadata: normalized entries carry no tool authority, cached results stay per discovery instance (no cross-provider cache bleed), and discovery requests reuse the bounded transport with credential redaction. Catalog overrides come from host-owned registries only — provider responses never write into the host's `ModelRegistry` without host code in between.
 - Provider-specific behavior belongs in provider packages, not Prism core.
 
+## Live probe (discovery adapters)
+
+The `@arnilo/prism-providers/model-discovery` adapters have an opt-in live leg that runs `runModelDiscoveryConformance` against a real listing endpoint:
+
+```bash
+PRISM_LIVE_PROVIDER_TESTS=1 OPENAI_API_KEY=...   # or GEMINI_API_KEY for the Google route
+node --test packages/prism-providers/dist/model-discovery/__tests__/live.test.js
+```
+
+Chooses the OpenAI-compatible or Google route based on which key is present; neither → skip.
+
 ## Related APIs
 
 - [Multimodal content](multimodal-content.md): `audio`/`file`/`document` blocks and `MODEL_INPUT_CAPABILITIES`.

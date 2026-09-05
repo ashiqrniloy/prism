@@ -183,6 +183,26 @@ const found = await retrieveContext("leave balance", {
 - Ingestion failure errors are redacted before status storage. Status reads reject foreign scope entries and page-limit violations; status itself creates no permission or tool authority.
 - Filtering scans at most `queryCandidates` hits; rendering stops at top-K, UTF-8 result bytes, or estimated context-token ceiling.
 
+## Live probe (plans/064 Task 6)
+
+Reranker adapters are probed against operator-deployed endpoints — each leg skips (never fails) when its endpoint env var is unset:
+
+```bash
+PRISM_TEST_TEI_RERANKER_URL=http://tei.svc:8080 \
+  node --test packages/memory/dist/rag/__tests__/live.test.js
+```
+
+| Env var | Purpose |
+| --- | --- |
+| `PRISM_TEST_TEI_RERANKER_URL` | TEI service base URL (`/rerank` is appended) |
+| `PRISM_TEST_TEI_RERANKER_KEY` | optional gateway key for a TEI behind auth (rides the trusted-transport seam) |
+| `PRISM_LIVE_TEI_RERANKER_MODEL` | optional TEI model name |
+| `PRISM_TEST_HOSTED_RERANK_URL` | OpenAI-compatible rerank base URL (`/rerank` appended, include `/v1`) |
+| `PRISM_TEST_HOSTED_RERANK_KEY` | Bearer credential for the hosted endpoint |
+| `PRISM_LIVE_HOSTED_RERANK_MODEL` | optional hosted model name |
+
+Probes send one non-sensitive rerank request per configured endpoint and assert the live response conforms (permutation-only reorder, scores non-increasing, credential never in error transcripts). Registered in `scripts/live-matrix.json` as `memory/rag-rerankers-live`.
+
 ## Related APIs
 
 - [Working and semantic memory](working-and-semantic-memory.md): shared `Embedder`/`VectorStore` contracts and adapters.

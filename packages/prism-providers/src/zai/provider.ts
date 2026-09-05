@@ -130,6 +130,7 @@ function stripZaiManagedCompat(compat: JsonObject | undefined): JsonObject {
     clearThinking: _clearThinkingCamel,
     preserveThinking: _preserveThinking,
     preserve_thinking: _preserveThinkingSnake,
+    thinkingFamily: _thinkingFamily,
     ...rest
   } = compat as Record<string, unknown>;
   return rest as JsonObject;

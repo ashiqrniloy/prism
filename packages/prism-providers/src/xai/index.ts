@@ -38,9 +38,11 @@ export {
   listXaiModels,
   mapXaiModel,
   XAI_DEFAULT_BASE_URL,
+  XAI_THINKING_LEVELS,
   type XaiModelConfig,
   type XaiModelEntry,
   xaiModels,
+  xaiThinkingLevels,
 } from "./models.js";
 export {
   createXaiOAuthProvider,
@@ -55,4 +57,4 @@ export {
   type XaiOAuthOptions,
 } from "./oauth.js";
 export { createXaiProvider, toXaiMessage, type XaiProviderOptions, xaiBody, xaiEvents } from "./provider.js";
-export { xaiReplayThinking } from "./thinking.js";
+export { xaiReasoningEffort, xaiReplayThinking } from "./thinking.js";

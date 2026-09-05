@@ -4,6 +4,7 @@ import {
   type ModelConfig,
   redactSecrets,
   resolveCredentialValue,
+  type ThinkingCompatFamily,
   trimTrailingSlashes,
 } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
@@ -22,6 +23,8 @@ export interface CommandCodeModelConfig extends Omit<ModelConfig, "provider" | "
     readonly preserveThinking?: boolean;
     /** Cost provenance caveat, e.g. `docs:pricing-limits (mean per-provider)`. Stripped before the wire. */
     readonly pricing_source?: string;
+    /** Upstream thinking family stamp (derived per model id; host override wins). Stripped before the wire. */
+    readonly thinkingFamily?: string;
   };
 }
 
@@ -67,8 +70,47 @@ function cacheKindForCommandCodeModel(route: CommandCodeRoute): ModelConfig["cac
   return route === "anthropic" ? { kind: "cache_control" as const, maxBreakpoints: 4 } : { kind: "implicit" as const };
 }
 
+/**
+ * Upstream thinking rules per model family. Values duplicate the source packages
+ * per gateway catalog (provenance in comments): claude sets from
+ * `anthropic/models.ts`, gpt-5.6 from the gpt-5.2 table in `openai/models.ts`,
+ * deepseek-v4 from `deepseek/models.ts`, Kimi K3 from `kimi/models.ts`,
+ * GLM-5.3 from `zai/models.ts`, grok from `xai/models.ts`, gemini-3.x from
+ * `google/models.ts`.
+ */
+export function commandCodeThinkingLevels(modelId: string): readonly string[] | undefined {
+  const id = modelId.toLowerCase();
+  if (id.startsWith("claude-")) {
+    if (id.startsWith("claude-haiku-4-5")) return ["none", "low", "medium", "high"]; // anthropic package (effort support undocumented upstream)
+    if (id.startsWith("claude-sonnet-4-6")) return ["low", "medium", "high", "max"]; // max, no xhigh
+    return ["low", "medium", "high", "xhigh", "max"]; // opus/fable/sonnet-5 generation
+  }
+  if (id.startsWith("gpt-5.6")) return ["none", "minimal", "low", "medium", "high", "xhigh"]; // gpt-5.2 table
+  if (id.includes("deepseek-v4")) return ["low", "high", "max"];
+  if (id.includes("kimi-k3")) return ["low", "high", "max"];
+  if (id.includes("glm-5.3")) return ["low", "high", "max"];
+  if (id.includes("grok-4.6")) return ["low", "medium", "high", "xhigh"];
+  if (id.includes("grok-4.5")) return ["low", "medium", "high"];
+  // gemini-3.x declares no levels: the gateway chat route has no thinking_level
+  // wire (family noop), so a declaration could never reach the model.
+  return undefined;
+}
+
+/** Per-upstream family stamp (`compat.thinkingFamily`); host compat override wins. */
+export function commandCodeThinkingFamily(modelId: string): ThinkingCompatFamily | undefined {
+  const id = modelId.toLowerCase();
+  if (id.startsWith("claude-")) return "output_config_effort";
+  if (id.startsWith("gpt-5.6")) return "openai_reasoning";
+  if (id.includes("deepseek-v4") || id.includes("kimi-k3") || id.includes("glm-5.3") || id.includes("grok-4.")) return "reasoning_effort";
+  if (id.includes("kimi-k2") || id.includes("minimax") || id.includes("qwen")) return "thinking_type"; // MiniMax M3/M2.x + Qwen3.x: anthropic-route thinking toggle
+  // Gateway chat route has no thinking_level wire for Gemini — no-op until the live probe verifies translation.
+  if (id.includes("gemini-3")) return "noop";
+  return undefined;
+}
+
 export function defineCommandCodeModel(config: CommandCodeModelConfig): ModelConfig {
   const route = (config.compat?.route ?? routeForCommandCodeModel(config.model)) as CommandCodeRoute;
+  const thinkingLevels = commandCodeThinkingLevels(config.model);
   return {
     ...config,
     provider: "commandcode",
@@ -78,10 +120,12 @@ export function defineCommandCodeModel(config: CommandCodeModelConfig): ModelCon
       reasoning: true,
       tools: true,
       streaming: true,
+      ...(thinkingLevels ? { thinkingLevels } : {}),
       ...config.capabilities,
     },
     cache: config.cache ?? cacheKindForCommandCodeModel(route),
     compat: {
+      thinkingFamily: commandCodeThinkingFamily(config.model),
       preserveThinking: true,
       ...config.compat,
       route: config.compat?.route ?? route,

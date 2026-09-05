@@ -7,7 +7,7 @@ import {
   assertProviderStreamConforms,
   collectProviderEvents,
 } from "@arnilo/prism/testing/provider-conformance";
-import { createZaiProvider, zaiModels } from "../index.js";
+import { createZaiProvider, ZAI_DEFAULT_BASE_URL, zaiModels } from "../index.js";
 
 // Env-gated live smoke tests for @arnilo/prism-providers/zai.
 //
@@ -26,7 +26,8 @@ const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
 const API_KEY = process.env.ZAI_API_KEY;
 const skip: string | false = !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and ZAI_API_KEY to run live ZAI smoke tests" : false;
 
-const model = zaiModels[0]!;
+const modelOverride = process.env.PRISM_LIVE_ZAI_MODEL;
+const model = modelOverride ? { ...zaiModels[0]!, model: modelOverride } : zaiModels[0]!;
 const apiKey = (): string | undefined => process.env.ZAI_API_KEY;
 
 function provider() {
@@ -78,5 +79,29 @@ describe("@arnilo/prism-providers/zai live tests", () => {
     const terminal = events.at(-1);
     assert.ok(terminal, "live error request produced no events");
     assertNoSecretLeak(events, [API_KEY!]);
+  });
+
+  // Gate pin (plan 065 task 16): GLM-5.3 rejects thinking.type:"disabled" upstream —
+  // this is why zaiThinking forces thinking on 5.3 and never emits disabled. Raw
+  // wire probe (bypasses the adapter's forced-thinking transform on purpose).
+  // A 2xx means the gate is wrong and must be revisited; a 4xx/5xx pins it.
+  it("live_glm53_rejects_thinking_disabled", { skip }, async () => {
+    const response = await fetch(`${ZAI_DEFAULT_BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: process.env.PRISM_LIVE_ZAI_GLM53_MODEL ?? "glm-5.3",
+        messages: [{ role: "user", content: "ping" }],
+        thinking: { type: "disabled" },
+      }),
+    });
+    assert.notEqual(response.status, 401, "z.ai credential rejected — check ZAI_API_KEY");
+    assert.ok(
+      response.status >= 400,
+      `GLM-5.3 accepted thinking.type=disabled (HTTP ${response.status}) — forced-thinking gate in zaiThinking is wrong`,
+    );
   });
 });

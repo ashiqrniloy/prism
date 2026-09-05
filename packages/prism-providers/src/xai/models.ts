@@ -53,7 +53,25 @@ const FEATURED: Record<string, Pick<ModelConfig, "displayName" | "limits" | "cos
   },
 };
 
+/**
+ * Per-model accepted `reasoning_effort` values (ascending), from
+ * https://docs.x.ai/developers/model-capabilities/text/reasoning.
+ * grok-4.5/4.6 cannot disable reasoning (no `none`); grok-4.3 defaults to `none`.
+ * Ids without an entry (e.g. grok-build) have no declared ladder — effort is omitted.
+ */
+export const XAI_THINKING_LEVELS: Readonly<Record<string, readonly string[]>> = {
+  "grok-4.6": ["low", "medium", "high", "xhigh"],
+  "grok-4.5": ["low", "medium", "high"],
+  "grok-4.3": ["none", "low", "medium", "high"],
+};
+
+/** Declared portable effort levels for an xAI model id; `undefined` = no documented ladder. */
+export function xaiThinkingLevels(modelId: string): readonly string[] | undefined {
+  return XAI_THINKING_LEVELS[modelId.toLowerCase()];
+}
+
 export function defineXaiModel(config: XaiModelConfig): ModelConfig {
+  const levels = xaiThinkingLevels(config.model);
   return {
     ...config,
     provider: "xai",
@@ -64,9 +82,11 @@ export function defineXaiModel(config: XaiModelConfig): ModelConfig {
       tools: true,
       streaming: true,
       structuredOutput: "json_schema",
+      ...(levels ? { thinkingLevels: levels } : {}),
       ...config.capabilities,
     },
     cache: config.cache ?? { kind: "implicit" },
+    compat: { ...(levels ? { thinkingFamily: "reasoning_effort" } : {}), ...config.compat },
   };
 }
 

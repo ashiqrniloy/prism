@@ -132,7 +132,7 @@ See [Provider caching](../provider-caching.md) for the cross-provider matrix.
 
 ## Thinking and reasoning
 
-Reasoning effort, budgets, and provider-specific thinking controls are **host-model-owned**. Prism does not map `ThinkingLevel` into AI SDK call options (`thinkingFamilyForModel` → `noop`). Hosts configure reasoning on the AI SDK model (for example OpenAI `reasoning.effort` via AI SDK `providerOptions`) and may pass per-turn overrides through `ProviderRequestOptions.compat` / `extra`, which the adapter forwards as `providerOptions.prism`.
+Reasoning effort, budgets, and provider-specific thinking controls are **host-model-owned**. Prism does not map `ThinkingLevel` into AI SDK call options: the deliberate `noop` compat family (stamped `compat.thinkingFamily: "noop"` on AI SDK models, and the `thinkingFamilyForModel` fallback) leaves the request options unchanged. Hosts configure reasoning on the AI SDK model (for example OpenAI `reasoning.effort` via AI SDK `providerOptions`) and may pass per-turn overrides through `ProviderRequestOptions.compat` / `extra`, which the adapter forwards as `providerOptions.prism`.
 
 Stream mapping:
 
@@ -157,6 +157,17 @@ Official evidence: [Custom providers / LanguageModelV4](https://ai-sdk.dev/provi
 - Stream parts are translated incrementally with no full-response buffering and no duplicate model call.
 - Unsupported content and stream parts fail closed before/at mapping; `structuredOutput.strict` is rejected because V4 cannot carry it.
 - Pass `redactor` for direct use; agent runs apply their active redactor. Provider metadata/warnings never become prompt, tool, event, or telemetry content.
+
+## Live probe
+
+Runs the adapter over the real `@ai-sdk/openai` provider package (dev dependency) to prove the `LanguageModelV4` mapping on a genuine AI SDK wire:
+
+```bash
+PRISM_LIVE_PROVIDER_TESTS=1 OPENAI_API_KEY=... \
+  node --test packages/prism-providers/dist/ai-sdk/__tests__/live.test.js
+```
+
+`PRISM_LIVE_AISDK_MODEL` overrides the probed model (default `gpt-5.1`). Without a key the suite skips.
 
 ## Related APIs
 

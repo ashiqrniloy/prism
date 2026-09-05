@@ -38,11 +38,23 @@ export {
   type CommandCodeModelEntry,
   type CommandCodeRoute,
   commandCodeModels,
+  commandCodeThinkingFamily,
+  commandCodeThinkingLevels,
   defineCommandCodeModel,
   listCommandCodeModels,
   mapCommandCodeModel,
   routeForCommandCodeModel,
 } from "./models.js";
 export { commandCodeChatBody, commandCodeChatEvents, serializeCommandCodeChatMessage } from "./openai-chat.js";
-export { type CommandCodeProviderOptions, createCommandCodeProvider } from "./provider.js";
-export { commandCodePreserveThinking, stripCommandCodeOwnedCompat } from "./thinking.js";
+export {
+  COMMAND_CODE_ANTHROPIC_HOOKS,
+  type CommandCodeProviderOptions,
+  createCommandCodeProvider,
+} from "./provider.js";
+export {
+  commandCodeEffort,
+  commandCodePreserveThinking,
+  commandCodeReasoning,
+  commandCodeThinking,
+  stripCommandCodeOwnedCompat,
+} from "./thinking.js";

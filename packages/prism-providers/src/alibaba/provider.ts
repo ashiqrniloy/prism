@@ -11,7 +11,7 @@ import type {
 import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { applyAlibabaCacheControl, withAlibabaCacheMarker } from "./cache.js";
-import { type AlibabaBasePreset, alibabaBaseUrl } from "./models.js";
+import { type AlibabaBasePreset, alibabaBaseUrl, alibabaIsThinkingOnly } from "./models.js";
 
 export interface AlibabaProviderOptions {
   readonly id?: string;
@@ -73,10 +73,18 @@ export function alibabaEvents(body: ReadableStream<Uint8Array>, signal?: AbortSi
 /**
  * Qwen `enable_thinking` top-level toggle. Request `options.compat.enable_thinking`
  * wins over the model default; omitted on the wire unless explicitly boolean.
+ * Adapter path: the core `thinking_type` family patch (`compat.thinking`,
+ * `{type:"enabled"|"disabled"}`) maps to the toggle — except on thinking-only
+ * models, which never receive `enable_thinking: false`.
  */
 export function alibabaEnableThinking(request: ProviderRequest): boolean | undefined {
   const value = request.options?.compat?.enable_thinking ?? request.model.compat?.enable_thinking;
-  return typeof value === "boolean" ? value : undefined;
+  if (typeof value === "boolean") return value;
+  const thinking = request.options?.compat?.thinking ?? request.model.compat?.thinking;
+  const type = thinking && typeof thinking === "object" ? (thinking as JsonObject).type : undefined;
+  if (typeof type !== "string") return undefined;
+  if (alibabaIsThinkingOnly(request.model.model)) return undefined;
+  return type !== "disabled";
 }
 
 /**
@@ -158,7 +166,14 @@ export function serializeAlibabaMessage(message: CacheControlledMessage, capabil
 /** Strip provider-owned compat keys so the opaque spread cannot leak routing directives. */
 function stripAlibabaCompat(compat: JsonObject | undefined): JsonObject {
   if (!compat) return {};
-  const { enable_thinking: _thinking, route: _route, alibaba: _meta, ...rest } = compat as Record<string, unknown>;
+  const {
+    enable_thinking: _thinking,
+    thinking: _thinkingObj,
+    thinkingFamily: _family,
+    route: _route,
+    alibaba: _meta,
+    ...rest
+  } = compat as Record<string, unknown>;
   return rest as JsonObject;
 }
 

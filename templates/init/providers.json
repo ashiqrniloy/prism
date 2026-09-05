@@ -16,7 +16,9 @@
     "modelName": "gpt-5.1",
     "imports": "import { createAgent } from \"@arnilo/prism\";\nimport { createOpenAIResponsesProvider } from \"@arnilo/prism-providers/openai\";",
     "providerExpression": "createOpenAIResponsesProvider({\n    apiKey: () => process.env.OPENAI_API_KEY,\n  })",
-    "modelExpression": "{ provider: \"openai\", model: \"gpt-5.1\" }"
+    "modelExpression": "{ provider: \"openai\", model: \"gpt-5.1\" }",
+    "factoryModule": "@arnilo/prism-providers/openai",
+    "factoryExport": "createOpenAIResponsesProvider"
   },
   "openrouter": {
     "id": "openrouter",
@@ -27,7 +29,9 @@
     "modelName": "anthropic/claude-sonnet-4",
     "imports": "import { createAgent } from \"@arnilo/prism\";\nimport {\n  createOpenRouterProvider,\n  defineOpenRouterModel,\n} from \"@arnilo/prism-providers/openrouter\";",
     "providerExpression": "createOpenRouterProvider({\n    apiKey: () => process.env.OPENROUTER_API_KEY,\n  })",
-    "modelExpression": "defineOpenRouterModel({ model: \"anthropic/claude-sonnet-4\" })"
+    "modelExpression": "defineOpenRouterModel({ model: \"anthropic/claude-sonnet-4\" })",
+    "factoryModule": "@arnilo/prism-providers/openrouter",
+    "factoryExport": "createOpenRouterProvider"
   },
   "kimi": {
     "id": "kimi",
@@ -38,7 +42,9 @@
     "modelName": "kimi-k2.7-code",
     "imports": "import { createAgent } from \"@arnilo/prism\";\nimport { createKimiCodingProvider } from \"@arnilo/prism-providers/kimi\";",
     "providerExpression": "createKimiCodingProvider({\n    apiKey: () => process.env.KIMI_API_KEY,\n  })",
-    "modelExpression": "{ provider: \"kimi-coding\", model: \"kimi-k2.7-code\" }"
+    "modelExpression": "{ provider: \"kimi-coding\", model: \"kimi-k2.7-code\" }",
+    "factoryModule": "@arnilo/prism-providers/kimi",
+    "factoryExport": "createKimiCodingProvider"
   },
   "zai": {
     "id": "zai",
@@ -49,7 +55,9 @@
     "modelName": "glm-4.7",
     "imports": "import { createAgent } from \"@arnilo/prism\";\nimport { createZaiProvider } from \"@arnilo/prism-providers/zai\";",
     "providerExpression": "createZaiProvider({\n    apiKey: () => process.env.ZAI_API_KEY,\n  })",
-    "modelExpression": "{ provider: \"zai\", model: \"glm-4.7\" }"
+    "modelExpression": "{ provider: \"zai\", model: \"glm-4.7\" }",
+    "factoryModule": "@arnilo/prism-providers/zai",
+    "factoryExport": "createZaiProvider"
   },
   "opencode-go": {
     "id": "opencode-go",
@@ -60,7 +68,9 @@
     "modelName": "gpt-5.1-go",
     "imports": "import { createAgent } from \"@arnilo/prism\";\nimport { createOpenCodeGoProvider } from \"@arnilo/prism-providers/opencode-go\";",
     "providerExpression": "createOpenCodeGoProvider({\n    apiKey: () => process.env.OPENCODE_API_KEY,\n  })",
-    "modelExpression": "{ provider: \"opencode-go\", model: \"gpt-5.1-go\", compat: { route: \"openai\" } }"
+    "modelExpression": "{ provider: \"opencode-go\", model: \"gpt-5.1-go\", compat: { route: \"openai\" } }",
+    "factoryModule": "@arnilo/prism-providers/opencode-go",
+    "factoryExport": "createOpenCodeGoProvider"
   },
   "neuralwatt": {
     "id": "neuralwatt",
@@ -71,7 +81,9 @@
     "modelName": "glm-5.2",
     "imports": "import { createAgent } from \"@arnilo/prism\";\nimport {\n  createNeuralWattProvider,\n  defineNeuralWattModel,\n} from \"@arnilo/prism-providers/neuralwatt\";",
     "providerExpression": "createNeuralWattProvider({\n    apiKey: () => process.env.NEURALWATT_API_KEY,\n  })",
-    "modelExpression": "defineNeuralWattModel({\n    model: \"glm-5.2\",\n    cache: { kind: \"implicit\" },\n  })"
+    "modelExpression": "defineNeuralWattModel({\n    model: \"glm-5.2\",\n    cache: { kind: \"implicit\" },\n  })",
+    "factoryModule": "@arnilo/prism-providers/neuralwatt",
+    "factoryExport": "createNeuralWattProvider"
   },
   "alibaba": {
     "id": "alibaba",
@@ -82,7 +94,9 @@
     "modelName": "qwen-plus",
     "imports": "import { createAgent } from \"@arnilo/prism\";\nimport {\n  createAlibabaProvider,\n  defineAlibabaModel,\n} from \"@arnilo/prism-providers/alibaba\";",
     "providerExpression": "createAlibabaProvider({\n    apiKey: () => process.env.DASHSCOPE_API_KEY,\n  })",
-    "modelExpression": "defineAlibabaModel({ model: \"qwen-plus\" })"
+    "modelExpression": "defineAlibabaModel({ model: \"qwen-plus\" })",
+    "factoryModule": "@arnilo/prism-providers/alibaba",
+    "factoryExport": "createAlibabaProvider"
   },
   "ollama": {
     "id": "ollama",
@@ -93,6 +107,8 @@
     "modelName": "gpt-oss:20b",
     "imports": "import { createAgent } from \"@arnilo/prism\";\nimport {\n  createOllamaProvider,\n  defineOllamaModel,\n} from \"@arnilo/prism-providers/ollama\";",
     "providerExpression": "createOllamaProvider({\n    apiKey: () => process.env.OLLAMA_API_KEY,\n  })",
-    "modelExpression": "defineOllamaModel({ model: \"gpt-oss:20b\" })"
+    "modelExpression": "defineOllamaModel({ model: \"gpt-oss:20b\" })",
+    "factoryModule": "@arnilo/prism-providers/ollama",
+    "factoryExport": "createOllamaProvider"
   }
 }

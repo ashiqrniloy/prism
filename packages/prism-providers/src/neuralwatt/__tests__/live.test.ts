@@ -27,7 +27,8 @@ const API_KEY = process.env.NEURALWATT_API_KEY;
 const skip: string | false =
   !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and NEURALWATT_API_KEY to run live NeuralWatt smoke tests" : false;
 
-const model = neuralWattModels[0]!;
+const modelOverride = process.env.PRISM_LIVE_NEURALWATT_MODEL;
+const model = modelOverride ? { ...neuralWattModels[0]!, model: modelOverride } : neuralWattModels[0]!;
 const apiKey = (): string | undefined => process.env.NEURALWATT_API_KEY;
 
 function provider() {

@@ -181,6 +181,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `npm run build` | Compile TypeScript to `dist/` (core + workspaces) |
 | `npm run typecheck` | Type-check without emitting |
 | `npm test` | Build + run network-free tests |
+| `npm run test:live` | Run live suites whose credentials are present (skip the rest) |
 | `prism --help` | CLI help |
 
 ## Non-goals (v1)

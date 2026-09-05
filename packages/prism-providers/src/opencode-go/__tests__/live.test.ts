@@ -37,7 +37,8 @@ const API_KEY = process.env.OPENCODE_API_KEY;
 const skip: string | false =
   !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and OPENCODE_API_KEY to run live OpenCode Go smoke tests" : false;
 
-const model = openCodeGoModels[0]!;
+const modelOverride = process.env.PRISM_LIVE_OPENCODE_MODEL;
+const model = modelOverride ? { ...openCodeGoModels[0]!, model: modelOverride } : openCodeGoModels[0]!;
 const apiKey = (): string | undefined => process.env.OPENCODE_API_KEY;
 
 function provider() {

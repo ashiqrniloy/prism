@@ -48,6 +48,16 @@ Register the returned tools with `createToolRegistry` (or pass them to the MCP b
 
 Defaults and hard caps (frozen in `scripts/phase11-freeze-manifest.json`): `maxDocumentBytes` 2 MiB/16 MiB, `maxOperations` 256/1024, `maxSchemaDepth` 32/128, `maxRefs` 1024/8192, `maxBodyBytes` 1 MiB/16 MiB, `maxResponseBytes` 1 MiB/16 MiB, `maxPages` 20/100, `maxPaginationItems` 1000/10000, `maxRetries` 0/3. Invalid limits throw `ERR_PRISM_OPENAPI_DOCUMENT_BOUNDS`.
 
+## Live probe (plans/064 Task 7)
+
+A live wire probe compiles the real public Warnely OpenAPI 3.1 spec (petstore serves 3.0 — the compiler requires 3.1) and drives real GET operations against it:
+
+```bash
+PRISM_LIVE_OPENAPI_TOOLS=1 node --test packages/prism-coding-tools/dist/openapi/__tests__/live.test.js
+```
+
+3 requests total against the allow-listed public host: spec compile, a real 200 tool call, and a real 404 mapped to a status-carrying untrusted result; a missing-argument case proves validation fails closed locally (zero wire calls). Skips (never fails) when `PRISM_LIVE_OPENAPI_TOOLS` is unset. Registered in `scripts/live-matrix.json` as `coding-tools/openapi-live`.
+
 ## Related
 
 - [Tools](tools.md): registry, dispatch, validation

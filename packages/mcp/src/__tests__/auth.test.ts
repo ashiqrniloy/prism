@@ -3,15 +3,12 @@ import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { afterEach, describe, it } from "node:test";
 import type { ToolDefinition } from "@arnilo/prism";
-import type { OAuthDiscoveryState } from "@modelcontextprotocol/client";
-import { Client } from "@modelcontextprotocol/client";
-import type { StoredOAuthClientInformation, StoredOAuthTokens } from "@modelcontextprotocol/client";
-import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/client";
+import type { OAuthDiscoveryState, StoredOAuthClientInformation, StoredOAuthTokens } from "@modelcontextprotocol/client";
+import { Client, InsufficientScopeError, LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/client";
 import { createMcpClientAuth, type McpClientAuthState, McpOAuthError } from "../auth.js";
 import { createPrismMcpServer, createPrismMcpWebHandler } from "../server.js";
 import { createMcpOAuthFetch, createMcpOAuthTransport } from "../transport.js";
 import type { McpStreamableHttpTransport } from "../types.js";
-import { InsufficientScopeError } from "@modelcontextprotocol/client";
 
 const servers: Server[] = [];
 // server.close(cb) pends forever while keep-alive sockets hold connections
@@ -75,8 +72,7 @@ function memoryState(): McpClientAuthState {
     },
     loadDiscovery: async () => data.get("discovery") as OAuthDiscoveryState | undefined,
     saveDiscovery: async (state) => void data.set("discovery", state),
-    loadClientInformation: async (issuer) =>
-      data.get(issuer ? `client@${issuer}` : "client") as StoredOAuthClientInformation | undefined,
+    loadClientInformation: async (issuer) => data.get(issuer ? `client@${issuer}` : "client") as StoredOAuthClientInformation | undefined,
     saveClientInformation: async (info, issuer) => {
       const key = issuer ?? info.issuer;
       data.set("client", info);
@@ -527,11 +523,7 @@ describe("@arnilo/prism-mcp OAuth client (RFC 9728 + PKCE + refresh)", () => {
     const { auth, connect } = await connectWithOAuth(oauthTransportConfig(mcp.origin, { auth: authOptions }));
     await assert.rejects(() => connect());
     assert.ok(authorizationUrl, "interactive re-authorization required");
-    assert.equal(
-      authorizationUrl.searchParams.get("scope"),
-      "extended",
-      "challenged scope carried into re-authorization",
-    );
+    assert.equal(authorizationUrl.searchParams.get("scope"), "extended", "challenged scope carried into re-authorization");
     as.setExpectedAuth(authorizationUrl);
     await auth.finishAuth("test-code");
     assert.equal(
@@ -806,12 +798,12 @@ describe("2026-07-28 OAuth conformance (plan 063 task 5)", () => {
   it("fails closed on a state mismatch before touching the token endpoint", async () => {
     const as = await startAuthServer();
     const mcp = await startPrismServer(as);
-    let authorizationUrl: URL | undefined;
+    let _authorizationUrl: URL | undefined;
     const state = memoryState();
     const { auth, connect } = await connectWithOAuth(
       oauthTransportConfig(mcp.origin, {
         auth: baseAuthOptions(state, (url) => {
-          authorizationUrl = url;
+          _authorizationUrl = url;
         }),
       }),
     );
@@ -914,10 +906,13 @@ describe("2026-07-28 OAuth conformance (plan 063 task 5)", () => {
         flatRecord = tokens;
       },
     };
-    const authFlat = createMcpClientAuth(baseAuthOptions(flatState, () => {}), {
-      serverUrl: `${mcp.origin}/mcp`,
-      fetch: createMcpOAuthFetch(oauthTransportConfig(mcp.origin)),
-    });
+    const authFlat = createMcpClientAuth(
+      baseAuthOptions(flatState, () => {}),
+      {
+        serverUrl: `${mcp.origin}/mcp`,
+        fetch: createMcpOAuthFetch(oauthTransportConfig(mcp.origin)),
+      },
+    );
     const refused = await authFlat.provider.tokens({ issuer: as.origin });
     assert.equal(refused, undefined, "un-stamped legacy record is refused on an issuer-keyed read");
     // ctx-less bearer reads still return the most-recent set (SDK contract).
@@ -992,7 +987,11 @@ describe("2026-07-28 OAuth conformance (plan 063 task 5)", () => {
     const mcp = await listen((request, response, body) => {
       const url = new URL(request.url ?? "/", `http://${request.headers.host}`);
       if (url.pathname === "/.well-known/oauth-protected-resource") {
-        sendJson(response, 200, { authorization_servers: [as.origin], resource: `${mcp.origin}/mcp`, scopes_supported: ["mcp", "extended"] });
+        sendJson(response, 200, {
+          authorization_servers: [as.origin],
+          resource: `${mcp.origin}/mcp`,
+          scopes_supported: ["mcp", "extended"],
+        });
         return;
       }
       if (request.method === "GET") {
@@ -1015,7 +1014,11 @@ describe("2026-07-28 OAuth conformance (plan 063 task 5)", () => {
         sendJson(response, 200, {
           jsonrpc: "2.0",
           id: JSON.parse(body).id,
-          result: { protocolVersion: "2025-06-18", capabilities: { tools: { listChanged: false } }, serverInfo: { name: "fixture", version: "1.0.0" } },
+          result: {
+            protocolVersion: "2025-06-18",
+            capabilities: { tools: { listChanged: false } },
+            serverInfo: { name: "fixture", version: "1.0.0" },
+          },
         });
         return;
       }

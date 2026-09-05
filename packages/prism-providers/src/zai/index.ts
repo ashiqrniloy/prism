@@ -26,12 +26,18 @@ export function createZaiProviderPackage(options: ZaiProviderPackageOptions = {}
 
 export {
   defineZaiModel,
+  isGlm52Model,
+  isGlm53Model,
   type ListZaiModelsOptions,
   listZaiModels,
   mapZaiModel,
+  ZAI_GLM_5_2_THINKING_LEVELS,
+  ZAI_GLM_5_3_THINKING_LEVELS,
   type ZaiModelConfig,
   type ZaiModelEntry,
   zaiModels,
+  zaiThinkingFamily,
+  zaiThinkingLevels,
 } from "./models.js";
 export {
   createZaiProvider,

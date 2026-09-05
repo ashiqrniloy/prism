@@ -23,7 +23,7 @@ export function createOpenCodeGoProviderPackage(options: OpenCodeGoProviderPacka
   });
 }
 
-export { anthropicMessagesBody, anthropicMessagesEvents } from "./anthropic-messages.js";
+export { anthropicMessagesBody, anthropicMessagesEvents } from "../shared/anthropic-messages.js";
 export {
   applyOpencodeAnthropicCacheControl,
   OPENCODE_SESSION_ID_MAX_LENGTH,
@@ -41,6 +41,8 @@ export {
   type OpenCodeGoModelEntry,
   type OpenCodeGoRoute,
   openCodeGoModels,
+  openCodeGoThinkingFamily,
+  openCodeGoThinkingLevels,
   routeForOpenCodeGoModel,
 } from "./models.js";
 export { openAIChatBody, openAIChatEvents, serializeOpenCodeGoChatMessage } from "./openai-chat.js";

@@ -80,6 +80,10 @@ api.registerProviderPackage(createGoogleProviderPackage({ apiKey: hostKey, model
 - Media bounds reuse shared provider media helpers; tool args arrive complete per chunk (no partial JSON reconstruction required).
 - Offline conformance: `@arnilo/prism/testing/provider-conformance`.
 
+## Thinking and reasoning
+
+Google models route through the `google` family: the adapter merges `compat.thinkingLevel` and the provider emits `generationConfig.thinkingConfig`. Gemini 3.x models use `thinkingLevel` with declared per-model sets: 3.6/3.5-flash and 3-flash-preview accept `minimal`–`high`; 3.1-pro accepts `low/medium/high` (default `high`); 3-pro accepts `low/high`. Gemini 2.5 models are budget-only (`compat.thinkingBudgetRange`): 2.5-pro `128–32768` (cannot disable), 2.5-flash/flash-lite `0–24576` (`0` disables). `none` on a budget-only model maps to the range minimum (`thinkingBudget: 0` where disabling is supported, `128` where not); non-none levels are dropped on budget-only models. Declared level sets snap via nearest-declared (ties up), so `none`/`minimal` on 3.1-pro snap up to `low`. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Google Vertex AI](vertex.md): enterprise ADC/workload-identity package (separate from this consumer API-key package).

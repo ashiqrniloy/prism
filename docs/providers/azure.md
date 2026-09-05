@@ -66,6 +66,22 @@ Register via `createExtensionKernel().load([createAzureOpenAIProviderPackage(...
 - No Azure SDK dependency.
 - Conformance-proven (Task 6): package `setup()` performs zero fetch and zero credential resolution; an already-aborted signal fails fast; a truncated SSE stream (no `data: [DONE]`) ends in an `error` event; Azure cache policy stays host-owned, so no cache wire fields (`cache_control`, `prompt_cache_*`) are emitted even when the request carries Prism cache hints — only upstream-reported `prompt_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`.
 
+## Live probe
+
+Opt-in smoke over your real Azure OpenAI resource:
+
+```bash
+PRISM_LIVE_PROVIDER_TESTS=1 AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com \
+  AZURE_OPENAI_API_KEY=... PRISM_LIVE_AZURE_MODEL=<deployment-name> \
+  node --test packages/prism-providers/dist/azure/__tests__/live.test.js
+```
+
+The deployment name is the model knob (`AZURE_OPENAI_DEPLOYMENT` also works). Without any of these variables the suite skips — it never fails.
+
+## Thinking and reasoning
+
+Azure OpenAI deployments use the OpenAI-compatible wire: the provider forwards sanitized thinking compat (`reasoning_effort` with `effort`/`reasoningEffort` aliases, or a `reasoning` object with `effort` + preserved `summary`) via its body builder, snapping effort to the model's declared levels (gpt-5.1 → `none/low/medium/high`, ties up). Unrecognized compat keys are dropped. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [OpenAI-compatible provider](openai-compatible.md)

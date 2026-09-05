@@ -104,6 +104,16 @@ export function mapOpenRouterModel(entry: OpenRouterModelEntry, options: { reado
   const output = mapModalities(entry.architecture?.output_modalities, ["text"]);
   const cache = inferOpenRouterCache(id, entry.pricing);
   const defaultEffort = reasoningMeta?.default_effort;
+  // API-derived per-model effort ladder; mandatory reasoning models never accept `none`.
+  const supportedEfforts = reasoningMeta?.supported_efforts?.filter(
+    (level): level is string => typeof level === "string" && level.length > 0,
+  );
+  const thinkingLevels =
+    supportedEfforts && supportedEfforts.length > 0
+      ? reasoningMeta?.mandatory === true
+        ? supportedEfforts.filter((level) => level !== "none")
+        : supportedEfforts
+      : undefined;
   const contextWindow =
     typeof entry.context_length === "number"
       ? entry.context_length
@@ -123,11 +133,13 @@ export function mapOpenRouterModel(entry: OpenRouterModelEntry, options: { reado
       tools: params.has("tools") || params.has("tool_choice"),
       streaming: true,
       structuredOutput: params.has("structured_outputs") || params.has("response_format") ? "json_schema" : undefined,
+      ...(thinkingLevels && thinkingLevels.length > 0 ? { thinkingLevels } : {}),
     },
     limits: cleanLimits({ contextWindow, maxOutputTokens }),
     cost: toModelCost(entry.pricing),
     cache,
     compat: cleanJson({
+      ...(reasoning ? { thinkingFamily: "openai_reasoning" } : {}),
       preserveThinking: reasoning || undefined,
       reasoning: defaultEffort && defaultEffort !== "none" ? { effort: defaultEffort } : undefined,
       openRouter: cleanJson({

@@ -1,4 +1,5 @@
 import type { JsonObject, ProviderRequest } from "@arnilo/prism";
+import { snapThinkingLevel } from "@arnilo/prism";
 
 /**
  * Read NeuralWatt reasoning/extra request fields from the standard
@@ -9,7 +10,8 @@ import type { JsonObject, ProviderRequest } from "@arnilo/prism";
 export function neuralWattReasoningEffort(request: ProviderRequest): string | undefined {
   const effort =
     request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort ?? request.model.compat?.reasoning_effort;
-  return typeof effort === "string" ? effort : undefined;
+  if (typeof effort !== "string" || !effort.trim()) return undefined;
+  return String(snapThinkingLevel(request.model, effort.trim().toLowerCase()));
 }
 
 export function neuralWattThinkingTokenBudget(request: ProviderRequest): number | undefined {
@@ -103,6 +105,7 @@ export function stripNeuralWattOwnedCompat(compat: JsonObject | undefined): Json
     preserveThinking: _preserveCamel,
     clear_thinking: _clear,
     clearThinking: _clearCamel,
+    thinkingFamily: _family,
     ...rest
   } = compat;
   return Object.keys(rest).length > 0 ? rest : undefined;

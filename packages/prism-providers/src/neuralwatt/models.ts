@@ -36,10 +36,18 @@ export interface NeuralWattModelConfig extends Omit<ModelConfig, "provider" | "c
     readonly json_mode?: boolean;
     /** Whether NeuralWatt pricing is documented elsewhere via `/v1/models`. */
     readonly pricing_source?: string;
+    /** Core `reasoning_effort` family stamp on reasoning-capable models. */
+    readonly thinkingFamily?: string;
   };
 }
 
+/** Documented NeuralWatt `reasoning_effort` set (featured default `max` included). */
+export const NEURALWATT_THINKING_LEVELS = ["low", "medium", "high", "max"] as const;
+
 export function defineNeuralWattModel(config: NeuralWattModelConfig): ModelConfig {
+  // Reasoning-capable models declare the documented effort set; non-reasoning
+  // (`-fast`/gemma variants) declare nothing.
+  const reasoning = (config.capabilities?.reasoning ?? config.compat?.reasoning ?? true) !== false;
   return {
     ...config,
     provider: "neuralwatt",
@@ -50,7 +58,12 @@ export function defineNeuralWattModel(config: NeuralWattModelConfig): ModelConfi
       tools: true,
       streaming: true,
       structuredOutput: "json_schema",
+      ...(reasoning ? { thinkingLevels: NEURALWATT_THINKING_LEVELS } : {}),
       ...config.capabilities,
+    },
+    compat: {
+      ...(reasoning ? { thinkingFamily: "reasoning_effort" as const } : {}),
+      ...config.compat,
     },
   };
 }

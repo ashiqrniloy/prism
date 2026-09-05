@@ -1,4 +1,5 @@
 import type { JsonObject, ProviderRequest } from "@arnilo/prism";
+import { kimiIsK3Model } from "./models.js";
 
 /**
  * Official K2.x Chat Completions / Anthropic-compat `thinking` object.
@@ -12,16 +13,32 @@ export function kimiThinking(request: ProviderRequest): JsonObject | undefined {
   return value === true ? { type: "enabled" } : undefined;
 }
 
+/** Documented K3 snapping: always-on, so `none` floors at `low`; the rest map to the declared ladder. */
+const KIMI_K3_EFFORT_MAP: Readonly<Record<string, string>> = {
+  none: "low",
+  minimal: "low",
+  low: "low",
+  medium: "high",
+  high: "high",
+  xhigh: "max",
+  max: "max",
+};
+
 /**
  * Official K3 top-level `reasoning_effort`: `"low"` / `"high"` / `"max"`.
- * Open Platform default is `"max"`; Kimi Code default is `"high"`.
- * Request wins over model default.
+ * Open Platform default is `"max"`; Kimi Code default is `"high"` (model default).
+ * K3 only — K2.x uses the `thinking` object family, so effort compat is dropped there.
+ * Host-supplied values snap to the documented K3 ladder; unknown strings pass through
+ * (forward compat). Request wins over model default.
  * @see https://platform.kimi.ai/docs/guide/use-thinking-effort
  */
 export function kimiReasoningEffort(request: ProviderRequest): string | undefined {
+  if (!kimiIsK3Model(request.model.model)) return undefined;
   const effort =
     request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort ?? request.model.compat?.reasoning_effort;
-  return typeof effort === "string" ? effort : undefined;
+  if (typeof effort !== "string" || !effort.trim()) return undefined;
+  const normalized = effort.trim().toLowerCase();
+  return KIMI_K3_EFFORT_MAP[normalized] ?? normalized;
 }
 
 /**
@@ -46,6 +63,7 @@ export function stripKimiThinkingCompat(compat: JsonObject | undefined): JsonObj
     reasoningEffort: _effortCamel,
     preserveThinking: _preserve,
     preserve_thinking: _preserveSnake,
+    thinkingFamily: _family,
     route: _route,
     ...rest
   } = compat as Record<string, unknown>;

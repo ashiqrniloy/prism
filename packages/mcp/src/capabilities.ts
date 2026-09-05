@@ -1,5 +1,5 @@
-import { Client } from "@modelcontextprotocol/client";
 import type { Transport } from "@modelcontextprotocol/client";
+import { Client } from "@modelcontextprotocol/client";
 import { attachMcpToolBridge } from "./bridge.js";
 import { measureBoundedJson } from "./json-bounds.js";
 import {
@@ -132,17 +132,20 @@ export function createMcpCapabilityClient(options: ConnectMcpCapabilitiesOptions
         ...(options.elicitation ? { elicitation: { form: {}, url: {} } } : {}),
       },
       versionNegotiation: {
-        mode: options.protocolVersion === undefined || options.protocolVersion === "auto"
-          ? "auto"
-          : options.protocolVersion === "legacy"
-            ? "legacy"
-            : { pin: options.protocolVersion.pin },
+        mode:
+          options.protocolVersion === undefined || options.protocolVersion === "auto"
+            ? "auto"
+            : options.protocolVersion === "legacy"
+              ? "legacy"
+              : { pin: options.protocolVersion.pin },
       },
       listChanged: {
         tools: {
           autoRefresh: false,
           onChanged: () => {
-            void toolsRefreshes.get(client)?.().catch(() => void 0);
+            void toolsRefreshes
+              .get(client)?.()
+              .catch(() => void 0);
           },
         },
       },
@@ -171,12 +174,14 @@ export function createMcpCapabilityClient(options: ConnectMcpCapabilitiesOptions
       return { roots: [...roots] };
     });
   if (options.sampling)
-    client.setRequestHandler("sampling/createMessage", async (request, ctx) =>
-      bounded(
-        await options.sampling!({ params: bounded(request.params, maxBytes, "MCP sampling request"), signal: ctx.mcpReq.signal }),
-        maxBytes,
-        "MCP sampling result",
-      ) as never,
+    client.setRequestHandler(
+      "sampling/createMessage",
+      async (request, ctx) =>
+        bounded(
+          await options.sampling!({ params: bounded(request.params, maxBytes, "MCP sampling request"), signal: ctx.mcpReq.signal }),
+          maxBytes,
+          "MCP sampling result",
+        ) as never,
     );
   if (options.elicitation)
     client.setRequestHandler("elicitation/create", async (request, ctx) => {

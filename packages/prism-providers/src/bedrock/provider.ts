@@ -1,6 +1,7 @@
 import type { AIProvider, ModelConfig, ProviderPackage } from "@arnilo/prism";
 import { defineProviderPackage, trimTrailingSlashes } from "@arnilo/prism";
 import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
+import { openAICompatThinkingExtra } from "../shared/openai-compat.js";
 import { type AwsCredentials, signAwsRequest } from "./sigv4.js";
 
 export type BedrockCredentialSource = AwsCredentials | (() => AwsCredentials | Promise<AwsCredentials>);
@@ -91,6 +92,7 @@ export function createBedrockProvider(options: BedrockProviderOptions): AIProvid
     baseUrl: `${endpoint}/openai/v1`,
     authStyle: "none",
     fetch: signedFetch,
+    buildBodyExtra: openAICompatThinkingExtra,
   });
 }
 

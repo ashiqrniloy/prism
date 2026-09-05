@@ -292,6 +292,16 @@ The handler serves `GET /.well-known/oauth-protected-resource` and returns `401 
 
 Official Exa/Firecrawl MCP servers may be tested only as explicit hardened prototypes: pin endpoint/origin/auth, inspect declared capabilities, allow-list individual tools/resources, retain all MCP bounds, and never expose generic remote passthrough. Production web research uses direct host-selected `@arnilo/prism-web-tools` adapters so provider choice, credentials, schema, and costs remain outside model control.
 
+## Real-client smoke (plans/064 Task 8)
+
+An operator-gated smoke drives `createPrismMcpServer` through the real `@modelcontextprotocol/client` SDK over a real stdio subprocess — the same shape a production MCP host uses:
+
+```bash
+PRISM_TEST_MCP_CLIENT=1 node scripts/mcp-client-smoke.mjs
+```
+
+The scenario stays sandboxed (read-only echo tool, authorize-gated denial, no policy bypass) and covers: modern auto + legacy handshakes, `tools/list` of registered capabilities, `tools/call` round-trip, the authorize gate enforced over the wire, and malformed-frame fail-closed (the transport tears the connection down instead of answering garbage). Server-initiated `elicitation/create` is a documented Prism boundary (`scripts/mcp-conformance-2026-baseline.yaml`); the bridge-side MRTR elicitation round-trip is covered over real HTTP by the package's modern-bridge tests. Registered in `scripts/live-matrix.json` as `mcp/client-smoke`.
+
 ## Related APIs
 
 - [Agent identity](agent-identity.md): optional verified identity on MCP authorize results

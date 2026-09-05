@@ -150,6 +150,10 @@ const provider = createOpenAICompatibleProvider({
 - Tests should use injected `fetch` and never make real network calls.
 - Tool-call arguments are accumulated as streamed text, parsed with `parseJsonObjectArguments` when the final tool call is emitted; empty argument text yields `{}`, malformed JSON yields an `error` event.
 
+## Thinking and reasoning
+
+The shared OpenAI-compatible base (`createOpenAICompatibleProvider`) does **not** spread `compat` onto request bodies — packages that want thinking forwarded wire a `buildBodyExtra`/`transformBody` hook (Azure, Vertex, and Bedrock use the shared sanitized forwarder: `reasoning_effort` + aliases or a `reasoning` object, effort snapped to declared levels). Host-owned adapters should do the same or accept the no-op. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider layer](../provider-layer.md): registries, provider events, tool-call helpers, and mock provider.

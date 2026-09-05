@@ -6,7 +6,7 @@ import { applyCommandCodeCacheControl } from "./cache.js";
 import { classifyCommandCodeError, commandCodeHttpError } from "./errors.js";
 import { COMMAND_CODE_DEFAULT_BASE_URL } from "./models.js";
 import { commandCodeChatBody, commandCodeChatEvents } from "./openai-chat.js";
-import { commandCodePreserveThinking, stripCommandCodeOwnedCompat } from "./thinking.js";
+import { commandCodeEffort, commandCodePreserveThinking, commandCodeThinking, stripCommandCodeOwnedCompat } from "./thinking.js";
 
 export interface CommandCodeProviderOptions {
   readonly id?: string;
@@ -24,10 +24,12 @@ export interface CommandCodeProviderOptions {
   readonly zdr?: boolean;
 }
 
-const COMMAND_CODE_ANTHROPIC_HOOKS: AnthropicMessagesRouteHooks = {
+export const COMMAND_CODE_ANTHROPIC_HOOKS: AnthropicMessagesRouteHooks = {
   applyCacheControl: applyCommandCodeCacheControl,
   preserveThinking: commandCodePreserveThinking,
   stripOwnedCompat: stripCommandCodeOwnedCompat,
+  thinking: commandCodeThinking,
+  effort: commandCodeEffort,
 };
 
 export function createCommandCodeProvider(options: CommandCodeProviderOptions = {}): AIProvider {

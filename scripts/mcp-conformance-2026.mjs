@@ -19,17 +19,13 @@ import { createServer } from "node:http";
 import { createPrismMcpServer, createPrismMcpWebHandler } from "../packages/mcp/dist/server.js";
 
 const suite = process.argv.includes("--suite") ? process.argv[process.argv.indexOf("--suite") + 1] : "all";
-const specVersion = process.argv.includes("--spec-version")
-  ? process.argv[process.argv.indexOf("--spec-version") + 1]
-  : "2025-11-25";
+const specVersion = process.argv.includes("--spec-version") ? process.argv[process.argv.indexOf("--spec-version") + 1] : "2025-11-25";
 const passthrough = ["-o", ".conformance-out", "--expected-failures", "scripts/mcp-conformance-2026-baseline.yaml"];
 
 // 1x1 red pixel PNG (67 bytes).
-const RED_PNG =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+const RED_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 // Minimal silent WAV header + one frame.
-const TINY_WAV =
-  "UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIrYAACABAAZAZ0AAAAAAA==";
+const TINY_WAV = "UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIrYAACABAAZAZ0AAAAAAA==";
 
 const tool = (name, description, result) => ({
   name,
@@ -186,9 +182,7 @@ const factory = () =>
           arg2: { description: "second", required: false },
         },
         get: async ({ arguments: args }) => ({
-          messages: [
-            { role: "user", content: { type: "text", text: `Argument one is ${args.arg1} and argument two is ${args.arg2}.` } },
-          ],
+          messages: [{ role: "user", content: { type: "text", text: `Argument one is ${args.arg1} and argument two is ${args.arg2}.` } }],
         }),
       },
       {
@@ -264,7 +258,18 @@ console.log(`[mcp-conformance-2026] fixture listening on ${origin}/mcp`);
 
 const child = spawn(
   "npx",
-  ["-y", "@modelcontextprotocol/conformance", "server", "--url", `${origin}/mcp`, "--suite", suite, "--spec-version", specVersion, ...passthrough],
+  [
+    "-y",
+    "@modelcontextprotocol/conformance",
+    "server",
+    "--url",
+    `${origin}/mcp`,
+    "--suite",
+    suite,
+    "--spec-version",
+    specVersion,
+    ...passthrough,
+  ],
   { stdio: "inherit" },
 );
 const code = await new Promise((resolve) => child.on("exit", resolve));

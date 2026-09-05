@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import type { JsonObject, ModelConfig } from "@arnilo/prism";
 import { assertAbortIsObserved, assertNoFetches, assertNoForeignCacheFields } from "@arnilo/prism/testing/provider-conformance";
 import { bedrockRuntimeEndpoint, createBedrockProvider, createBedrockProviderPackage, signAwsRequest } from "../index.js";
 
@@ -144,5 +145,44 @@ describe("@arnilo/prism-providers/bedrock", () => {
     assert.equal(pkg.name, "@arnilo/prism-providers/bedrock");
     const manifest = JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8"));
     assert.deepEqual(manifest.dependencies ?? {}, {});
+  });
+
+  it("forwards_sanitized_reasoning_compat_and_snaps_openai_family_levels", async () => {
+    let body: Record<string, unknown> | undefined;
+    const provider = createBedrockProvider({
+      region: "eu-west-1",
+      credential: { accessKeyId: "AKIATEST", secretAccessKey: "secret" },
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return new Response('data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', {
+          status: 200,
+          headers: { "content-type": "text/event-stream" },
+        });
+      }) as typeof fetch,
+    });
+    const generate = async (model: ModelConfig, compat?: JsonObject) => {
+      for await (const _event of provider.generate({
+        model,
+        messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+        options: { compat },
+      })) {
+        /* drain */
+      }
+    };
+    // Bedrock OpenAI-family model: xhigh snaps to high via the OpenAI table.
+    await generate({ provider: "bedrock", model: "openai.gpt-5.1" }, { reasoning_effort: "xhigh" });
+    assert.equal(body!.reasoning_effort, "high");
+    // Non-OpenAI Bedrock model: no declared levels → passthrough.
+    await generate({ provider: "bedrock", model: "anthropic.claude-3-haiku-20240307-v1:0" }, { reasoning_effort: "medium" });
+    assert.equal(body!.reasoning_effort, "medium");
+    await generate({ provider: "bedrock", model: "anthropic.claude-3-haiku-20240307-v1:0" });
+    assert.equal(body!.reasoning_effort, undefined);
+    // reasoning object sanitized; unknown keys dropped.
+    await generate(
+      { provider: "bedrock", model: "anthropic.claude-3-haiku-20240307-v1:0" },
+      { reasoning: { effort: "high", summary: "auto", bogus: 1 }, thinkingFamily: "google" },
+    );
+    assert.deepEqual(body!.reasoning, { effort: "high", summary: "auto" });
+    assert.equal(body!.thinkingFamily, undefined);
   });
 });

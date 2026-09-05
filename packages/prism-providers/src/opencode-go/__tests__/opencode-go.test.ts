@@ -14,6 +14,7 @@ import {
   listOpenCodeGoModels,
   mapOpenCodeGoModel,
   OPENCODE_GO_DEFAULT_BASE_URL,
+  openAIChatBody,
   openCodeGoModels,
   routeForOpenCodeGoModel,
 } from "../index.js";
@@ -913,6 +914,39 @@ describe("@arnilo/prism-providers/opencode-go", () => {
       registered.map((m) => m.model),
       ["custom-go"],
     );
+  });
+
+  it("catalog_stamps_levels_and_family_per_upstream", () => {
+    const k3 = openCodeGoModels.find((m) => m.model === "kimi-k3")!;
+    assert.deepEqual(k3.capabilities?.thinkingLevels, ["low", "high", "max"]);
+    assert.equal(k3.compat?.thinkingFamily, "reasoning_effort");
+    const glm52 = openCodeGoModels.find((m) => m.model === "glm-5.2")!;
+    assert.deepEqual(glm52.capabilities?.thinkingLevels, ["low", "medium", "high", "xhigh", "max"]);
+    const minimax = openCodeGoModels.find((m) => m.model === "minimax-m3")!;
+    assert.equal(minimax.capabilities?.thinkingLevels, undefined);
+    assert.equal(minimax.compat?.thinkingFamily, "thinking_type");
+    const mimo = openCodeGoModels.find((m) => m.model === "mimo-v2.5")!;
+    assert.equal(mimo.capabilities?.thinkingLevels, undefined);
+    assert.equal(mimo.compat?.thinkingFamily, undefined);
+  });
+
+  it("chat_route_snaps_reasoning_effort_to_declared_levels", () => {
+    const k3 = openCodeGoModels.find((m) => m.model === "kimi-k3")!;
+    // API notes: kimi-k3, host sets "medium" → snapped "high".
+    const body = openAIChatBody({
+      model: k3,
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { compat: { reasoning_effort: "medium" } },
+    } as never);
+    assert.equal(body.reasoning_effort, "high");
+    // Undeclared models (mimo) pass through verbatim.
+    const mimo = openCodeGoModels.find((m) => m.model === "mimo-v2.5")!;
+    const passthrough = openAIChatBody({
+      model: mimo,
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { compat: { reasoning_effort: "custom-level" } },
+    } as never);
+    assert.equal(passthrough.reasoning_effort, "custom-level");
   });
 });
 

@@ -1,7 +1,7 @@
 import type { ContentBlock, JsonObject, Message, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, openAIChatEvents as sharedOpenAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
-import { commandCodePreserveThinking, stripCommandCodeOwnedCompat } from "./thinking.js";
+import { commandCodeEffort, commandCodePreserveThinking, commandCodeReasoning, stripCommandCodeOwnedCompat } from "./thinking.js";
 
 export function commandCodeChatBody(request: ProviderRequest): JsonObject {
   return buildOpenAIChatBody(request, {
@@ -17,6 +17,9 @@ function commandCodeChatTransform(body: JsonObject, request: ProviderRequest): J
     ...rest,
     max_tokens: maxTokens,
     ...stripCommandCodeOwnedCompat(request.options?.compat),
+    // Resolved effort/reasoning (snapped to declared levels) win over raw compat.
+    reasoning_effort: commandCodeEffort(request),
+    reasoning: commandCodeReasoning(request),
   };
   applyOpenAIChatStructuredOutput(transformed, request.options?.structuredOutput);
   return clean(transformed);

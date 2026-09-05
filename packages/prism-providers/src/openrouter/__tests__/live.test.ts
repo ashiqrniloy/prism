@@ -7,7 +7,7 @@ import {
   assertProviderStreamConforms,
   collectProviderEvents,
 } from "@arnilo/prism/testing/provider-conformance";
-import { createOpenRouterProvider, defineOpenRouterModel } from "../index.js";
+import { createOpenRouterProvider, defineOpenRouterModel, listOpenRouterModels } from "../index.js";
 
 // Env-gated live smoke tests for @arnilo/prism-providers/openrouter.
 //
@@ -27,7 +27,7 @@ const API_KEY = process.env.OPENROUTER_API_KEY;
 const skip: string | false =
   !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and OPENROUTER_API_KEY to run live OpenRouter smoke tests" : false;
 
-const model = defineOpenRouterModel({ model: "anthropic/claude-sonnet-4" });
+const model = defineOpenRouterModel({ model: process.env.PRISM_LIVE_OPENROUTER_MODEL ?? "anthropic/claude-sonnet-4" });
 const apiKey = (): string | undefined => process.env.OPENROUTER_API_KEY;
 
 function provider() {
@@ -79,5 +79,21 @@ describe("@arnilo/prism-providers/openrouter live tests", () => {
     const terminal = events.at(-1);
     assert.ok(terminal, "live error request produced no events");
     assertNoSecretLeak(events, [API_KEY!]);
+  });
+
+  // Pins the live models API contract: reasoning metadata exposes supported_efforts /
+  // mandatory / default_effort, and mapping derives declared levels + family stamp.
+  it("live_models_list_reasoning_metadata_maps_to_declared_levels", { skip }, async () => {
+    const models = await listOpenRouterModels({ apiKey });
+    const withEfforts = models.filter((m) => m.capabilities?.thinkingLevels && m.capabilities.thinkingLevels.length > 0);
+    assert.ok(withEfforts.length > 0, "expected at least one model with derived thinkingLevels");
+    for (const m of withEfforts) {
+      const levels = m.capabilities?.thinkingLevels ?? [];
+      const meta = (m.compat?.openRouter as { reasoning?: { mandatory?: boolean } } | undefined)?.reasoning;
+      if (meta?.mandatory === true) {
+        assert.ok(!levels.includes("none"), `mandatory model ${m.model} must not declare none`);
+      }
+      assert.equal(m.compat?.thinkingFamily, "openai_reasoning");
+    }
   });
 });

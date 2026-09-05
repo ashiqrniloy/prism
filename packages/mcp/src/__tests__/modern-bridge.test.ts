@@ -1,12 +1,18 @@
 import assert from "node:assert/strict";
-import { createServer, type IncomingMessage, type ServerResponse, type Server as HttpServer } from "node:http";
+import { createServer, type Server as HttpServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { afterEach, describe, it } from "node:test";
-import { acceptedContent, createMcpHandler, inputRequired, McpServer, WebStandardStreamableHTTPServerTransport, fromJsonSchema } from "@modelcontextprotocol/server";
 import { Client, type Transport } from "@modelcontextprotocol/client";
+import {
+  acceptedContent,
+  createMcpHandler,
+  fromJsonSchema,
+  inputRequired,
+  McpServer,
+  WebStandardStreamableHTTPServerTransport,
+} from "@modelcontextprotocol/server";
 import { attachMcpToolBridge, connectMcpTools } from "../bridge.js";
 import { connectMcpCapabilities } from "../capabilities.js";
 import type { ConnectMcpToolsOptions } from "../types.js";
-import { McpBridgeError } from "../types.js";
 
 const executionContext = { sessionId: "s1", runId: "r1", toolCallId: "call_1" };
 
@@ -79,7 +85,10 @@ interface ModernTool {
   readonly outputSchema?: unknown;
   readonly ui?: { readonly resourceUri: string; readonly visibility?: readonly string[] };
   /** Overrides the echo callback (e.g. MRTR tools reading `ctx.mcpReq.inputResponses`). */
-  readonly handler?: (args: Record<string, unknown>, ctx: { readonly mcpReq?: { readonly inputResponses?: Record<string, unknown> } }) => unknown;
+  readonly handler?: (
+    args: Record<string, unknown>,
+    ctx: { readonly mcpReq?: { readonly inputResponses?: Record<string, unknown> } },
+  ) => unknown;
 }
 
 interface ModernFixture extends WireFixture {
@@ -92,29 +101,26 @@ async function modernServer(
   options?: { readonly cacheHints?: Record<string, { readonly ttlMs: number; readonly cacheScope?: "public" | "private" }> },
 ): Promise<ModernFixture> {
   const requests: RecordedRequest[] = [];
-  const handler = createMcpHandler(
-    () => {
-      const server = new McpServer(
-        { name: "modern-server", version: "1.0.0" },
-        {
-          capabilities: { tools: { listChanged: true } },
-          ...(options?.cacheHints ? { cacheHints: options.cacheHints } : {}),
+  const handler = createMcpHandler(() => {
+    const server = new McpServer(
+      { name: "modern-server", version: "1.0.0" },
+      {
+        capabilities: { tools: { listChanged: true } },
+        ...(options?.cacheHints ? { cacheHints: options.cacheHints } : {}),
+      },
+    );
+    for (const tool of tools) {
+      server.registerTool(
+        tool.name,
+        { description: tool.description, inputSchema: fromJsonSchema(tool.inputSchema ?? { type: "object" }) },
+        async (args: unknown, ctx) => {
+          if (tool.handler) return tool.handler((args ?? {}) as Record<string, unknown>, ctx) as never;
+          return { content: [{ type: "text" as const, text: JSON.stringify(args ?? {}) }] };
         },
       );
-      for (const tool of tools) {
-        server.registerTool(
-          tool.name,
-          { description: tool.description, inputSchema: fromJsonSchema(tool.inputSchema ?? { type: "object" }) },
-          async (args: unknown, ctx) => {
-            if (tool.handler) return tool.handler((args ?? {}) as Record<string, unknown>, ctx) as never;
-            return { content: [{ type: "text" as const, text: JSON.stringify(args ?? {}) }] };
-          },
-        );
-      }
-      return server;
-    },
-    {},
-  );
+    }
+    return server;
+  }, {});
   const http = await listen(async (request, response) => {
     const chunks: Buffer[] = [];
     for await (const chunk of request) chunks.push(chunk);
@@ -319,7 +325,10 @@ describe("modern client negotiation (plan 063 task 2)", () => {
     });
     assert.equal(bridge.protocolEra, "modern");
     assert.equal(bridge.protocolVersion, "2026-07-28");
-    assert.deepEqual(bridge.tools.map((tool) => tool.name), ["mcp:modern:echo"]);
+    assert.deepEqual(
+      bridge.tools.map((tool) => tool.name),
+      ["mcp:modern:echo"],
+    );
     const result = await bridge.tools[0]!.execute({ text: "hi" }, executionContext);
     assert.equal(result.error, undefined);
     await bridge.close();
@@ -332,8 +341,13 @@ describe("modern client negotiation (plan 063 task 2)", () => {
       transport: bridgeTransport(fixture.origin),
     });
     assert.equal(bridge.protocolEra, "legacy");
-    assert.ok(bridge.protocolVersion === "2025-11-25" || bridge.protocolVersion === "2025-06-18" || bridge.protocolVersion === "2025-03-26");
-    assert.deepEqual(bridge.tools.map((tool) => tool.name), ["mcp:legacy:echo"]);
+    assert.ok(
+      bridge.protocolVersion === "2025-11-25" || bridge.protocolVersion === "2025-06-18" || bridge.protocolVersion === "2025-03-26",
+    );
+    assert.deepEqual(
+      bridge.tools.map((tool) => tool.name),
+      ["mcp:legacy:echo"],
+    );
     const result = await bridge.tools[0]!.execute({ text: "hi" }, executionContext);
     assert.equal(result.error, undefined);
     await bridge.close();
@@ -453,7 +467,9 @@ describe("modern subscriptions and cache hints (plan 063 task 2)", () => {
     assert.equal(requestCount(zero, "tools/list"), 2, "zero ttlMs must never serve locally");
     await bridgeZero.close();
 
-    const privateScoped = await modernServer([{ name: "echo" }], { cacheHints: { "tools/list": { ttlMs: 60_000, cacheScope: "private" } } });
+    const privateScoped = await modernServer([{ name: "echo" }], {
+      cacheHints: { "tools/list": { ttlMs: 60_000, cacheScope: "private" } },
+    });
     const bridgePrivate = await connectMcpTools({ serverId: "private", transport: bridgeTransport(privateScoped.origin) });
     assert.equal(requestCount(privateScoped, "tools/list"), 1);
     await bridgePrivate.refresh();
@@ -492,7 +508,10 @@ describe("modern subscriptions and cache hints (plan 063 task 2)", () => {
       close: async () => undefined,
       listTools: async () => {
         cachedCalls += 1;
-        return { tools: [{ name: "weather", inputSchema: { type: "object" } }], _meta: { cacheHint: { ttlMs: 60_000, cacheScope: "private" } } };
+        return {
+          tools: [{ name: "weather", inputSchema: { type: "object" } }],
+          _meta: { cacheHint: { ttlMs: 60_000, cacheScope: "private" } },
+        };
       },
     } as unknown as Client;
     const cachedBridge = await attachMcpToolBridge(cached, { close: async () => undefined } as unknown as Transport, {
@@ -743,7 +762,9 @@ describe("modern MRTR auto-fulfilment (plan 063 task 3)", () => {
             if (view.action !== "accept") throw new Error("url declined");
             return { content: [{ type: "text" as const, text: "url accepted" }] };
           }
-          return inputRequired({ inputRequests: { confirm: inputRequired.elicitUrl({ url: "https://example.com/approve", message: "Approve via link?" }) } });
+          return inputRequired({
+            inputRequests: { confirm: inputRequired.elicitUrl({ url: "https://example.com/approve", message: "Approve via link?" }) },
+          });
         },
       },
     ]);
@@ -806,7 +827,10 @@ describe("MCP Apps revalidation and Tasks boundary (plan 063 task 6)", () => {
       bridge.apps.tools.map((tool) => [tool.name, tool.visibility]),
       [["card", ["app"]]],
     );
-    assert.deepEqual((await bridge.apps.listResources()).map((resource) => resource.uri), ["ui://app/card"]);
+    assert.deepEqual(
+      (await bridge.apps.listResources()).map((resource) => resource.uri),
+      ["ui://app/card"],
+    );
     const resource = await bridge.apps.readResource("ui://app/card");
     assert.equal(resource.html, appHtml);
     await bridge.close();
@@ -826,7 +850,9 @@ describe("MCP Apps revalidation and Tasks boundary (plan 063 task 6)", () => {
       mcpApps: true,
       protocolVersion: "legacy",
     });
-    const initialize = fixture.requests.find((request) => request.body.includes("initialize") && !request.body.includes("notifications/initialized"));
+    const initialize = fixture.requests.find(
+      (request) => request.body.includes("initialize") && !request.body.includes("notifications/initialized"),
+    );
     assert.ok(initialize);
     const clientCapabilities = JSON.parse(initialize.body).params.capabilities;
     assert.equal(clientCapabilities.extensions["io.modelcontextprotocol/ui"] !== undefined, true);

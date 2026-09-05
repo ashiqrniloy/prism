@@ -10,7 +10,9 @@ import {
 import {
   CLINEPASS_DEFAULT_BASE_URL,
   CLINEPASS_FEATURED_SLUGS,
+  CLINEPASS_THINKING_MAPS,
   clinePassBody,
+  clinePassDeclaredLevels,
   clinePassModels,
   createClinePassProvider,
   createClinePassProviderPackage,
@@ -178,3 +180,31 @@ function sse(events: readonly object[]): ReadableStream<Uint8Array> {
     },
   });
 }
+
+describe("clinepass_declared_levels_from_slot_maps", () => {
+  it("every_shipped_map_inverts_to_expected_declared_set", () => {
+    assert.deepEqual(clinePassDeclaredLevels(CLINEPASS_THINKING_MAPS.glm), ["none", "low", "medium", "high", "xhigh"]);
+    assert.deepEqual(clinePassDeclaredLevels(CLINEPASS_THINKING_MAPS.kimi), ["low", "medium", "high"]);
+    assert.deepEqual(clinePassDeclaredLevels(CLINEPASS_THINKING_MAPS.kimiK3), ["high"]);
+    assert.deepEqual(clinePassDeclaredLevels(CLINEPASS_THINKING_MAPS.deepseek), ["none", "high", "xhigh"]);
+    assert.deepEqual(clinePassDeclaredLevels(CLINEPASS_THINKING_MAPS.standard), ["none", "low", "medium", "high"]);
+  });
+
+  it("featured_models_carry_declared_levels_and_family_stamp", () => {
+    const glm = byId("cline-pass/glm-5.2");
+    assert.deepEqual(glm.capabilities?.thinkingLevels, ["none", "low", "medium", "high", "xhigh"]);
+    assert.equal(glm.compat?.thinkingFamily, "reasoning_effort");
+    const k3 = byId("cline-pass/kimi-k3");
+    assert.deepEqual(k3.capabilities?.thinkingLevels, ["high"]);
+  });
+
+  it("host_sees_max_as_unsupported_for_glm_via_declared_levels", async () => {
+    const { isSupportedThinkingLevel } = await import("@arnilo/prism");
+    const glm = byId("cline-pass/glm-5.2");
+    assert.equal(isSupportedThinkingLevel(glm, "max"), false);
+    assert.equal(isSupportedThinkingLevel(glm, "xhigh"), true);
+    // Wire behavior unchanged: max still omitted by the slot map (upstream 500).
+    const body = clinePassBody(requestFor("cline-pass/glm-5.2", { compat: { reasoning_effort: "max" } }));
+    assert.equal(body.reasoning_effort, "high");
+  });
+});

@@ -95,6 +95,17 @@ export const handler = createArtifactHandler({ service: artifacts, authorize: ho
 
 `@arnilo/prism-coding-tools/agent` composes over this service for the coding patch review workflow: `createCodingPatchReviewManifest` builds a bounded manifest (repository/worktree identity, base/head, patch digest, changed paths, diffstat, check and diagnostic summaries) and returns a structural `ArtifactAttachInput` whose `preview.review` embeds the manifest and whose `hash` is the patch SHA-256; `assertCodingPatchAccepted` derives `pending|accepted|rejected|superseded` from the returned `ArtifactRecord` by binding to the exact artifact revision, digest, and identity — any patch/repository/worktree/base/head change supersedes a prior acceptance (a newer revision attached after approval makes the old acceptance stale and refused). Decisions never apply/commit/push/merge; the manifest never embeds a raw patch body. Full contract: [Coding review and diagnostics](coding-review-and-diagnostics.md).
 
+## Live probe (plans/064 Task 9)
+
+The S3 artifact-body store has an operator-gated live probe against a real S3-compatible endpoint (use a throwaway bucket):
+
+```bash
+PRISM_TEST_S3_ENDPOINT=https://s3.us-east-1.amazonaws.com PRISM_TEST_S3_KEY=<key> \
+PRISM_TEST_S3_SECRET=<secret> PRISM_TEST_S3_BUCKET=prism-throwaway npm test -w @arnilo/prism-core -- artifact-bodies-live
+```
+
+Probes: put → get (hash + size verified), presigned delivery URL with `X-Amz-Signature`, and an idempotent double delete. Bounded to ≤ 3 real requests. Registered in `scripts/live-matrix.json` as `core/artifact-bodies-s3-live`.
+
 ## Related APIs
 
 - [Server](server.md): `createArtifactService` / `createArtifactHandler` mount alongside the Prism handler; ownership only from `authorize`.

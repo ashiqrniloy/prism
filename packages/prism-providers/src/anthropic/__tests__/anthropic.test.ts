@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, AuthMethod, JsonObject, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
   assertCanonicalToolParameters,
@@ -119,7 +119,89 @@ describe("@arnilo/prism-providers/anthropic", () => {
     assert.equal(body.maxTokens, undefined);
     assert.equal(body.temperature, 0.2);
     assert.deepEqual(body.thinking, { type: "adaptive" });
-    assert.equal(body.effort, "medium");
+    assert.deepEqual(body.output_config, { effort: "medium" });
+    assert.equal(body.effort, undefined, "no top-level effort field may reach the wire");
+  });
+
+  it("maps_adaptive_and_legacy_thinking_generations_no_bare_enabled", async () => {
+    const send = async (m: ModelConfig, compat: JsonObject) => {
+      let body: any;
+      const provider = createAnthropicMessagesProvider({
+        apiKey: "fake-anthropic-key",
+        fetch: (async (_input, init) => {
+          body = JSON.parse(String(init?.body));
+          return ok(sse([{ type: "message_stop" }]));
+        }) as typeof fetch,
+      });
+      await assertProviderStreamConforms({
+        provider,
+        request: { ...request, model: m, options: { compat } },
+      });
+      return body;
+    };
+
+    const adaptive = anthropicModels[0]!; // claude-opus-4-8
+    const legacy = anthropicModels[2]!; // claude-haiku-4-5
+
+    // Bare enable on an adaptive model → adaptive (bare enabled would 400 upstream).
+    let body = await send(adaptive, { thinking: true });
+    assert.deepEqual(body.thinking, { type: "adaptive" });
+    // Explicit enabled+budget on an adaptive model still maps to adaptive (rejected on 4.7+).
+    body = await send(adaptive, { thinking: { type: "enabled", budget_tokens: 20_000 } });
+    assert.deepEqual(body.thinking, { type: "adaptive" });
+    // Legacy model: bare enable gets the default budget injected — never bare `enabled`.
+    body = await send(legacy, { thinking: true });
+    assert.deepEqual(body.thinking, { type: "enabled", budget_tokens: 10_000 });
+    body = await send(legacy, { thinking: { type: "enabled" } });
+    assert.deepEqual(body.thinking, { type: "enabled", budget_tokens: 10_000 });
+    // Legacy model: explicit budget preserved.
+    body = await send(legacy, { thinking: { type: "enabled", budget_tokens: 5_000 } });
+    assert.deepEqual(body.thinking, { type: "enabled", budget_tokens: 5_000 });
+    // Disable explicit on both.
+    assert.deepEqual((await send(adaptive, { thinking: false })).thinking, { type: "disabled" });
+    assert.deepEqual((await send(legacy, { thinking: false })).thinking, { type: "disabled" });
+  });
+
+  it("declares_thinking_levels_and_family_stamp_per_model", () => {
+    assert.deepEqual(anthropicModels[0]!.capabilities?.thinkingLevels, ["low", "medium", "high", "xhigh", "max"]);
+    assert.deepEqual(anthropicModels[1]!.capabilities?.thinkingLevels, ["low", "medium", "high", "xhigh", "max"]);
+    assert.deepEqual(anthropicModels[2]!.capabilities?.thinkingLevels, ["none", "low", "medium", "high"]);
+    assert.deepEqual(anthropicModels[3]!.capabilities?.thinkingLevels, ["low", "medium", "high", "xhigh", "max"]);
+    for (const entry of anthropicModels) {
+      assert.equal(entry.compat?.thinkingFamily, "output_config_effort");
+      assert.equal(entry.capabilities?.reasoning, true);
+    }
+    // Discovery mapping carries levels for known ids, passthrough for unknown.
+    const discovered = mapAnthropicModel({ id: "claude-opus-4-6" });
+    assert.deepEqual(discovered.capabilities?.thinkingLevels, ["low", "medium", "high", "max"]);
+    const preview = mapAnthropicModel({ id: "claude-mythos-preview" });
+    assert.deepEqual(preview.capabilities?.thinkingLevels, ["low", "medium", "high", "max"]);
+    const unknown = mapAnthropicModel({ id: "claude-future-9" });
+    assert.equal(unknown.capabilities?.thinkingLevels, undefined);
+    assert.equal(unknown.compat?.thinkingFamily, "output_config_effort");
+    assert.equal(unknown.compat?.thinking, undefined, "unknown ids get no invented thinking default");
+  });
+
+  it("strips_output_config_and_stamp_from_raw_compat_spread", async () => {
+    let body: any;
+    const provider = createAnthropicMessagesProvider({
+      apiKey: "fake-anthropic-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([{ type: "message_stop" }]));
+      }) as typeof fetch,
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...request,
+        options: { compat: { thinking: true, reasoning_effort: "max", preserveThinking: true, thinkingFamily: "google" } },
+      },
+    });
+    assert.deepEqual(body.output_config, { effort: "max" });
+    assert.deepEqual(body.thinking, { type: "adaptive" });
+    assert.ok(!JSON.stringify(body).includes("thinkingFamily"), "family stamp must never reach the wire");
+    assert.ok(!JSON.stringify(body).includes("reasoning_effort"), "raw effort alias must not leak");
   });
 
   it("canonicalizes_tool_input_schema", async () => {

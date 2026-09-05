@@ -52,6 +52,10 @@ export interface TemplateInfo {
 interface ProviderSpec {
   readonly id: string;
   readonly packageName?: string;
+  /** Module specifier the CLI's real-provider mode dynamically imports (e.g. `@arnilo/prism-providers/openai`). */
+  readonly factoryModule?: string;
+  /** Named export on `factoryModule` that builds the provider. */
+  readonly factoryExport?: string;
   readonly envKey?: string;
   readonly envPlaceholder?: string;
   readonly modelProvider: string;
@@ -68,7 +72,8 @@ function providersCatalogPath(templatesRoot: string): string {
   return join(templatesRoot, "providers.json");
 }
 
-function loadProvidersCatalog(templatesRoot = defaultTemplatesRoot()): ReadonlyMap<string, ProviderSpec> {
+/** Provider catalog shared by `prism init` templates and the CLI's real-provider mode. */
+export function loadProvidersCatalog(templatesRoot = defaultTemplatesRoot()): ReadonlyMap<string, ProviderSpec> {
   if (cachedCatalog && templatesRoot === defaultTemplatesRoot()) return cachedCatalog;
   const raw = JSON.parse(readFileSync(providersCatalogPath(templatesRoot), "utf8")) as Record<string, ProviderSpec>;
   const map = new Map<string, ProviderSpec>();

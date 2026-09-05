@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-05T18:34:04.230Z",
+  "envFile": null,
+  "strict": false,
+  "dryRun": false,
+  "filter": "obscura",
+  "totals": {
+    "ran": 1,
+    "skipped": 0,
+    "failed": 0,
+    "planned": 0
+  },
+  "coverage": {
+    "ok": true,
+    "total": 98,
+    "covered": 98,
+    "pending": 0,
+    "mode": "baseline"
+  },
+  "results": [
+    {
+      "id": "web-tools/obscura-live",
+      "package": "@arnilo/prism-web-tools",
+      "status": "ran",
+      "reason": null,
+      "exitCode": 0,
+      "durationMs": 22928,
+      "command": "node --test dist/obscura/__tests__/live.test.js",
+      "cwd": "packages/web-tools",
+      "models": [],
+      "outputTail": ""
+    }
+  ]
+}

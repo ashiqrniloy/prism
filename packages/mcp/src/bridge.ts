@@ -1,6 +1,6 @@
 import type { JsonObject, ToolDefinition, ToolEffectDeclaration, ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import { Client } from "@modelcontextprotocol/client";
 import type { Transport } from "@modelcontextprotocol/client";
+import { Client } from "@modelcontextprotocol/client";
 import { DEFAULT_CALL_TIMEOUT_MS, DEFAULT_LIST_CACHE_TTL_MS, DEFAULT_MAX_RESULT_BYTES } from "./constants.js";
 import { boundedMcpErrorMessage, mapMcpContentToBlocks, mcpCallError, summarizeMcpContent } from "./content.js";
 import { measureBoundedJson } from "./json-bounds.js";
@@ -193,7 +193,7 @@ async function listAllMcpToolsWithHint(
  * Malformed or hostile hints are ignored (refetch-always fallback).
  */
 function parseCacheHint(meta: unknown, topLevel: unknown): McpCacheHint | undefined {
-  const hint = record(meta)?.["cacheHint"] ?? topLevel;
+  const hint = record(meta)?.cacheHint ?? topLevel;
   const parsed = record(hint);
   if (!parsed) return undefined;
   const ttlMs = parsed.ttlMs;
@@ -414,8 +414,7 @@ async function callRemoteTool(
     // (plan 063 task 6): the Tasks extension is unsupported in this release,
     // so draft-era `task` members fail closed (modern `resultType: "task"`
     // already fails decode inside the SDK).
-    if ((result as { readonly task?: unknown }).task !== undefined)
-      throw new McpBridgeError("MCP tool returned a deprecated task result");
+    if ((result as { readonly task?: unknown }).task !== undefined) throw new McpBridgeError("MCP tool returned a deprecated task result");
     const measured = measureBoundedJson(result, {
       maxBytes: state.limits.maxResultBytes,
       maxDepth: state.limits.maxJsonDepth,
@@ -530,10 +529,10 @@ async function listMcpAppResources(state: BridgeState): Promise<readonly Omit<Mc
   for (let page = 0; page < state.limits.maxListPages; page += 1) {
     // Page-0 empty cursor forces the SDK per-page path (the no-cursor form is
     // the uncapped aggregate/response-cache path — same as the tools/list walk).
-    const result = await state.client.listResources(
-      cursor === undefined ? { cursor: "" } : { cursor },
-      { timeout: state.limits.callTimeoutMs, maxTotalTimeout: state.limits.callTimeoutMs },
-    );
+    const result = await state.client.listResources(cursor === undefined ? { cursor: "" } : { cursor }, {
+      timeout: state.limits.callTimeoutMs,
+      maxTotalTimeout: state.limits.callTimeoutMs,
+    });
     // Envelope measureBoundedJson is not applicable to decoded v2 results
     // (undefined-valued optional members); per-descriptor bounds below plus
     // the item/cursor caps bound the page instead.

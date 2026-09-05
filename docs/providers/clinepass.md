@@ -106,6 +106,10 @@ await session.prompt("Plan the refactor", {
 - Provider-owned headers win. One POST per generate. Bounded error bodies.
 - Live tests: `PRISM_LIVE_PROVIDER_TESTS=1` plus `CLINE_API_KEY`.
 
+## Thinking and reasoning
+
+ClinePass routes through `reasoning_effort` with per-model slot maps (`compat.thinkingLevelMap`) as wire authority; declared `capabilities.thinkingLevels` mirror each map's portable slots (e.g. GLM: `none/low/medium/high/xhigh`). Portable `max` never reaches the wire (upstream 500s) — the map sends `high`; unsupported slots omit the field. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider packages](../provider-packages.md)

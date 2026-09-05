@@ -3,7 +3,7 @@ name: release
 on:
   push:
     branches: [main, master]
-    tags: ["v0.3.0", "v0.4.0", "@arnilo/*@*"]
+    tags: ["v0.3.0", "v0.4.0", "v0.5.0", "@arnilo/*@*"]
   pull_request:
   workflow_dispatch:
 
@@ -153,7 +153,7 @@ jobs:
 
   codeql-release:
     name: CodeQL release SAST
-    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || startsWith(github.ref, 'refs/tags/@arnilo/')
+    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || startsWith(github.ref, 'refs/tags/@arnilo/')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -267,7 +267,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          if [ "$GITHUB_REF_NAME" = "v0.3.0" ] || [ "$GITHUB_REF_NAME" = "v0.4.0" ]; then
+          if [ "$GITHUB_REF_NAME" = "v0.3.0" ] || [ "$GITHUB_REF_NAME" = "v0.4.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.0" ]; then
             npm run release:publish -- --lockstep --version "${GITHUB_REF_NAME#v}" --resume --report release-artifacts/publish-report.json
           else
             npm run release:publish -- --resume --report release-artifacts/publish-report.json

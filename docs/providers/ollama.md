@@ -155,6 +155,21 @@ await kernel.load([
 - Model discovery is caller-gated and never invoked in the provider hot path.
 - Live tests stay opt-in; default tests are network-free.
 
+## Live probe
+
+The only credential-free live suite: points at a real Ollama server (local `ollama serve` or Ollama Cloud):
+
+```bash
+PRISM_LIVE_PROVIDER_TESTS=1 OLLAMA_BASE_URL=http://localhost:11434 \
+  node --test packages/prism-providers/dist/ollama/__tests__/live.test.js
+```
+
+A health gate lists served models and probes the first (`PRISM_LIVE_OLLAMA_MODEL` to pin one). No server or no pulled models → skip.
+
+## Thinking and reasoning
+
+Ollama models stamp `reasoning_effort` and snap to declared levels: `gpt-oss*` declares `low/medium/high`; other ids declare nothing and pass effort through verbatim. The native `think` field has a disjoint value set and is never emitted alongside `reasoning_effort`. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider packages](../provider-packages.md): `defineProviderPackage`,

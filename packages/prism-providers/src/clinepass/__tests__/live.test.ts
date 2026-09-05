@@ -14,7 +14,10 @@ const API_KEY = process.env.CLINE_API_KEY;
 const skip: string | false =
   !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and CLINE_API_KEY to run live ClinePass smoke tests" : false;
 
-const model = clinePassModels.find((entry) => entry.model === "cline-pass/deepseek-v4-flash") ?? clinePassModels[0]!;
+const modelOverride = process.env.PRISM_LIVE_CLINEPASS_MODEL;
+const model = modelOverride
+  ? { ...(clinePassModels.find((entry) => entry.model === "cline-pass/deepseek-v4-flash") ?? clinePassModels[0]!), model: modelOverride }
+  : (clinePassModels.find((entry) => entry.model === "cline-pass/deepseek-v4-flash") ?? clinePassModels[0]!);
 const apiKey = (): string | undefined => process.env.CLINE_API_KEY;
 
 function provider() {

@@ -131,6 +131,8 @@ export interface ModelCapabilities {
   readonly structuredOutput?: boolean | "json_schema";
   /** Provider-neutral embeddings generation support (plan 061). */
   readonly embeddings?: boolean;
+  /** Portable thinking/reasoning effort levels this model declares, ascending ladder order (`none` < `minimal` < `low` < `medium` < `high` < `xhigh` < `max`). Advisory legality metadata for hosts; absent means forward-compat passthrough (phase 65). */
+  readonly thinkingLevels?: readonly string[];
   /** Provider-neutral speech synthesis support (plan 061). */
   readonly speech?: boolean;
   /** Provider-neutral speech transcription support (plan 061). */

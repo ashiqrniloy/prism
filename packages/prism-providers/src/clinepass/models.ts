@@ -1,5 +1,5 @@
 import type { JsonObject, ModelConfig } from "@arnilo/prism";
-import { CLINEPASS_THINKING_MAPS, type ClinePassThinkingLevelMap } from "./thinking.js";
+import { CLINEPASS_THINKING_MAPS, type ClinePassThinkingLevelMap, clinePassDeclaredLevels } from "./thinking.js";
 
 export const CLINEPASS_DEFAULT_BASE_URL = "https://api.cline.bot/api/v1";
 
@@ -21,12 +21,15 @@ export function defineClinePassModel(config: ClinePassModelConfig): ModelConfig 
       tools: true,
       streaming: true,
       structuredOutput: "json_schema",
+      // Declared levels mirror the slot map (host-facing); the map stays the wire authority.
+      thinkingLevels: clinePassDeclaredLevels(thinkingLevelMap),
       ...config.capabilities,
     },
     cache: config.cache ?? { kind: "implicit" },
     compat: {
       thinkingLevelMap,
       reasoning_effort: "high",
+      thinkingFamily: "reasoning_effort",
       ...config.compat,
     },
   };

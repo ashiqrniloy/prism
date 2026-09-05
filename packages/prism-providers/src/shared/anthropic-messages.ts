@@ -52,6 +52,10 @@ export interface AnthropicMessagesRouteHooks {
   readonly preserveThinking: (request: ProviderRequest) => boolean;
   /** Removes provider-owned compat options so they never reach the wire. */
   readonly stripOwnedCompat: (compat: JsonObject | undefined) => JsonObject | undefined;
+  /** Resolved Anthropic Messages `thinking` object (generation-aware). */
+  readonly thinking: (request: ProviderRequest) => JsonObject | undefined;
+  /** Resolved `output_config.effort` value (official field, not top-level `effort`). */
+  readonly effort: (request: ProviderRequest) => string | undefined;
 }
 
 interface PartialBlock {
@@ -68,6 +72,7 @@ export async function anthropicMessagesBody(request: ProviderRequest, hooks: Ant
   const messages = hooks.applyCacheControl(request);
   const resolvedMedia = await resolveProviderMediaMessages(messages, request.model, { signal: request.signal });
   const compatRest = hooks.stripOwnedCompat(request.options?.compat);
+  const resolvedEffort = hooks.effort(request);
   return clean({
     model: request.model.model,
     messages: await Promise.all(
@@ -80,6 +85,9 @@ export async function anthropicMessagesBody(request: ProviderRequest, hooks: Ant
     max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens ?? 4096,
     ...compatRest,
     ...(request.options?.extra ?? {}),
+    // Resolved official fields win over raw compat/extra escape hatches.
+    thinking: hooks.thinking(request),
+    output_config: resolvedEffort ? { effort: resolvedEffort } : undefined,
   });
 }
 

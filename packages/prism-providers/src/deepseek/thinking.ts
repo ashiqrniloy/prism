@@ -25,6 +25,14 @@ export function mapDeepseekEffort(value: unknown): "low" | "high" | "max" | unde
 export function deepseekThinking(request: ProviderRequest): JsonObject {
   const value = request.options?.compat?.thinking ?? request.model.compat?.thinking;
   if (value === false || request.options?.cacheRetention === "none") return { type: "disabled" };
+  // Request-level switch wins; without one, `reasoning_effort: none|off|disabled`
+  // stops thinking and a model-default `thinking: false` disables.
+  const optionsThinking = request.options?.compat?.thinking;
+  if (optionsThinking === undefined) {
+    const effort = request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort;
+    if (typeof effort === "string" && ["none", "off", "disabled"].includes(effort.trim().toLowerCase())) return { type: "disabled" };
+    if (request.model.compat?.thinking === false) return { type: "disabled" };
+  }
   if (value && typeof value === "object") {
     const type = (value as JsonObject).type;
     if (type === "disabled") return { type: "disabled" };

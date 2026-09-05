@@ -1,4 +1,5 @@
 import type { AIProvider, CredentialValueSource, JsonObject, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { snapThinkingLevel } from "@arnilo/prism";
 import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { type OllamaBasePreset, ollamaBaseUrl } from "./models.js";
@@ -59,18 +60,21 @@ export function ollamaEvents(body: ReadableStream<Uint8Array>, signal?: AbortSig
 
 /**
  * Ollama `reasoning_effort` top-level toggle (e.g. gpt-oss). Request
- * `options.compat.reasoning_effort` wins over the model default; omitted on the wire
- * unless explicitly a string.
+ * `options.compat.reasoning_effort` wins over the model default; snapped to the
+ * model's declared set when stamped, passthrough otherwise. The native `think`
+ * field (bool|low/medium/high/max) is a disjoint value set and is never emitted
+ * by this package — OpenAI-compat endpoint only.
  */
 export function ollamaReasoningEffort(request: ProviderRequest): string | undefined {
   const value = request.options?.compat?.reasoning_effort ?? request.model.compat?.reasoning_effort;
-  return typeof value === "string" && value.length > 0 ? value : undefined;
+  if (typeof value !== "string" || !value.trim()) return undefined;
+  return String(snapThinkingLevel(request.model, value.trim().toLowerCase()));
 }
 
 /** Strip provider-owned compat keys so the opaque spread cannot leak routing directives. */
 function stripOllamaCompat(compat: JsonObject | undefined): JsonObject {
   if (!compat) return {};
-  const { reasoning_effort: _effort, route: _route, ollama: _meta, ...rest } = compat as Record<string, unknown>;
+  const { reasoning_effort: _effort, thinkingFamily: _family, route: _route, ollama: _meta, ...rest } = compat as Record<string, unknown>;
   return rest as JsonObject;
 }
 

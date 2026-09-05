@@ -96,7 +96,9 @@ describe("impeccable extension", () => {
 
   it("setup_accepts_a_matching_snapshot_digest_pin", async () => {
     const kernel = createExtensionKernel({ errorPolicy: "throw" });
-    const expected = createHash("sha256").update(readFileSync(join(fixtureRoot, "skills/impeccable/SKILL.md"), "utf8"), "utf8").digest("hex");
+    const expected = createHash("sha256")
+      .update(readFileSync(join(fixtureRoot, "skills/impeccable/SKILL.md"), "utf8"), "utf8")
+      .digest("hex");
     await kernel.load([createImpeccableExtension({ upstreamPath: fixtureRoot, expectedSnapshotDigest: expected })]);
     assert.equal(kernel.registries.skills.list().length, 1);
     assert.equal(kernel.registries.skills.list()[0]?.name, IMPECCABLE_SKILL_NAME);

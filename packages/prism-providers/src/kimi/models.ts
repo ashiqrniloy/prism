@@ -17,6 +17,8 @@ export interface KimiModelConfig extends Omit<ModelConfig, "provider" | "compat"
     readonly thinking?: boolean | JsonObject;
     /** Official K3 `reasoning_effort` (`"low"`/`"high"`/`"max"`; Open Platform default `"max"`, Coding default `"high"`). */
     readonly reasoning_effort?: string;
+    /** Prism compat-family stamp (`reasoning_effort` for K3, `thinking_type` for K2.x) — stripped from wire bodies. */
+    readonly thinkingFamily?: string;
   };
 }
 
@@ -52,6 +54,8 @@ interface KimiModelsResponse {
 }
 
 export function defineKimiModel(config: KimiModelConfig): ModelConfig {
+  const levels = kimiThinkingLevels(config.model);
+  const family = kimiThinkingFamily(config.model);
   return {
     ...config,
     provider: config.provider ?? "kimi-coding",
@@ -61,9 +65,31 @@ export function defineKimiModel(config: KimiModelConfig): ModelConfig {
       reasoning: true,
       tools: true,
       streaming: true,
+      ...(levels ? { thinkingLevels: levels } : {}),
       ...config.capabilities,
     },
+    compat: { ...(family ? { thinkingFamily: family } : {}), ...config.compat },
   };
+}
+
+/** Official K3 accepted `reasoning_effort` values (ascending). */
+export const KIMI_K3_THINKING_LEVELS = ["low", "high", "max"] as const;
+
+/** K3 family: Open Platform `kimi-k3*` and Coding `k3`. */
+export function kimiIsK3Model(modelId: string): boolean {
+  const id = modelId.toLowerCase();
+  return id.includes("kimi-k3") || id === "k3" || id.startsWith("k3-");
+}
+
+/** Declared portable effort levels for a Kimi model id (K3 only; K2.x has no effort ladder). */
+export function kimiThinkingLevels(modelId: string): readonly string[] | undefined {
+  return kimiIsK3Model(modelId) ? KIMI_K3_THINKING_LEVELS : undefined;
+}
+
+/** Compat-family stamp: K3 → `reasoning_effort`; K2.x thinking-capable → `thinking_type`. */
+export function kimiThinkingFamily(modelId: string): "reasoning_effort" | "thinking_type" | undefined {
+  if (kimiIsK3Model(modelId)) return "reasoning_effort";
+  return looksLikeReasoningModel(modelId) ? "thinking_type" : undefined;
 }
 
 /**

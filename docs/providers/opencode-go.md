@@ -252,6 +252,10 @@ Owned compat keys (`route`, `thinking`, `reasoning`, `reasoning_effort`,
 - [OpenCode Go](https://opencode.ai/docs/go/) — model list, dual endpoints, pricing/usage, `GET /zen/go/v1/models`
 - Pi secondary (ids/limits only): `packages/ai/src/providers/opencode-go.ts`, `opencode-go.models.ts`
 
+## Thinking and reasoning
+
+OpenCode-Go models carry level tables: `kimi-k3`/`deepseek-v4`/`glm-5.3` → `reasoning_effort` (`low/high/max`), `glm-5.2` → `reasoning_effort` (`low`–`max`), `grok-4.6` → `low/medium/high/xhigh`, `grok-4.5` → `low/medium/high`, Kimi-K2.x/MiniMax/Qwen → `thinking_type`; mimo/unknown declare nothing and pass through. The Anthropic route uses the shared serializer with resolved thinking + `output_config.effort` hooks; the OpenAI route snaps effort to declared sets. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider packages](../provider-packages.md): `defineProviderPackage`,

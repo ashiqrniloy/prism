@@ -505,6 +505,37 @@ describe("@arnilo/prism-providers/openrouter", () => {
     assert.throws(() => mapOpenRouterModel({} as any), /missing id/);
     assert.throws(() => mapOpenRouterModel({ id: "" }), /missing id/);
   });
+
+  it("map_openrouter_model_derives_levels_from_supported_efforts_and_stamps_family", () => {
+    const mapped = mapOpenRouterModel({
+      id: "vendor/model-x",
+      reasoning: { mandatory: false, supported_efforts: ["low", "medium", "high"], default_effort: "medium" },
+    } as never);
+    assert.deepEqual(mapped.capabilities?.thinkingLevels, ["low", "medium", "high"]);
+    assert.equal(mapped.compat?.thinkingFamily, "openai_reasoning");
+    assert.deepEqual(mapped.compat?.reasoning, { effort: "medium" });
+    // Snap: xhigh → high against the declared set.
+    const snapped = resolveOpenRouterReasoning(mapped, { compat: { reasoning: { effort: "xhigh" } } } as never);
+    assert.deepEqual(snapped, { effort: "high" });
+  });
+
+  it("map_openrouter_model_mandatory_excludes_none_and_none_snaps_to_minimum", () => {
+    const mapped = mapOpenRouterModel({
+      id: "vendor/mandatory-model",
+      reasoning: { mandatory: true, supported_efforts: ["none", "low", "high"] },
+    } as never);
+    assert.deepEqual(mapped.capabilities?.thinkingLevels, ["low", "high"]);
+    const snapped = resolveOpenRouterReasoning(mapped, { compat: { reasoning: { effort: "none" } } } as never);
+    assert.deepEqual(snapped, { effort: "low" });
+  });
+
+  it("model_without_reasoning_metadata_has_no_levels_and_passthrough", () => {
+    const mapped = mapOpenRouterModel({ id: "vendor/plain" } as never);
+    assert.equal(mapped.capabilities?.thinkingLevels, undefined);
+    assert.equal(mapped.compat?.thinkingFamily, undefined);
+    const passed = resolveOpenRouterReasoning(mapped, { compat: { reasoning: { effort: "xhigh" } } } as never);
+    assert.deepEqual(passed, { effort: "xhigh" });
+  });
 });
 
 function mockFetch(body: ReadableStream<Uint8Array>): typeof fetch {

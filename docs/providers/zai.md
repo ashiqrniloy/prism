@@ -153,6 +153,10 @@ await session.prompt("Plan the refactor", {
 - Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus `ZAI_API_KEY`;
   default tests are network-free.
 
+## Thinking and reasoning
+
+Z.AI models are family-stamped by id. GLM-5.3/5.3-FLASH: `reasoning_effort` restricted to `low/high/max` (declared; other levels snap, e.g. `medium`→`high`), and thinking can never be disabled — `zaiThinking` forces thinking on and never emits `thinking.type: "disabled"` (upstream rejects it; live-pinned). GLM-5.2: declared `low`–`max`; `none`/`minimal` stop thinking (no effort field), `low`/`medium` snap up to `high`. GLM-4.x and older: `thinking_type` toggle only (`clear_thinking` package-local). See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider packages](../provider-packages.md): `defineProviderPackage`,

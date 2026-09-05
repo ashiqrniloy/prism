@@ -264,6 +264,10 @@ await kernel.load([
 - Model discovery is caller-gated and never invoked in the provider hot path.
 - Live tests stay opt-in; default tests are network-free.
 
+## Thinking and reasoning
+
+Qwen hybrid models route through the `thinking_type` family: `none` maps to `enable_thinking: false`, any other declared level to `true` — there are no effort levels upstream, so declared `capabilities.thinkingLevels` for hybrid models are the on/off set (`none`–`max` used as a toggle vocabulary). Thinking-only models (`qwq*`, `*-thinking`) always think and never receive `enable_thinking: false`; `thinking_budget` stays a package-local passthrough. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider packages](../provider-packages.md): `defineProviderPackage`,

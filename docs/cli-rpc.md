@@ -4,13 +4,24 @@
 
 The `prism` bin is a thin adapter over `AgentSession` plus a tiny project scaffold:
 
-- `prism -p "prompt"`: print assistant text deltas.
-- `prism --mode json -p "prompt"`: write one normalized event envelope per line.
-- `prism --mode rpc`: read LF-delimited JSON requests from stdin and write correlated JSON responses/events to stdout.
+- `prism --provider <id> -p "prompt"`: print assistant text deltas. Provider ids come from the init provider catalog (`templates/init/providers.json`); `mock` is built in, real providers are dynamically imported from their `@arnilo/prism-providers/*` package (must be installed) and read their credential from the catalog's env var. Without `--provider` the CLI fails with a usage error.
+- `prism --mode json --provider <id> -p "prompt"`: write one normalized event envelope per line.
+- `prism --mode rpc --provider <id>`: read LF-delimited JSON requests from stdin and write correlated JSON responses/events to stdout.
 - `prism init <dir>`: create a minimal TypeScript project with one selected provider, `.env.example`, and one offline mock test.
 - `prism dev`: boot the loopback dev inspector over the scaffolded agent (delegates into `@arnilo/prism-coding-tools/dev` when resolvable; plan 040 Task 4).
 
 It does not add a TUI, app tools, provider globals, extension discovery, resource discovery, or credential storage. `init` uses Node standard-library filesystem APIs and checked-in templates only — no interactive prompts or template-engine dependency.
+
+## Live CLI journey (plans/064 Task 5)
+
+An env-gated e2e journey drives the packed `prism` bin end to end — `init` scaffold (generated offline test passes), `providers add` scaffold, and print/json/rpc modes over a real provider wire with a full-transcript secret scan:
+
+```bash
+PRISM_LIVE_PROVIDER_TESTS=1 OPENAI_API_KEY=sk-... \
+  node --test scripts/e2e-cli-live.test.mjs
+```
+
+The provider is the first init-catalog entry whose credential env var is present; override with `PRISM_LIVE_CLI_PROVIDER=<id>`. Wire legs skip (never fail) when the provider rejects the credential (401/403) — refresh the key and rerun. Registered in `scripts/live-matrix.json` as `cli/journey`.
 
 ## When to use it
 

@@ -32,8 +32,12 @@ const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
 const API_KEY = process.env.HYPER_API_KEY;
 const skip: string | false = !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and HYPER_API_KEY to run live Hyper smoke probes" : false;
 
-const chatModel = hyperModels.find((m) => m.model === "deepseek-v4-pro")!;
-const messagesModel = hyperModels.find((m) => m.model === "qwen3.6-plus")!;
+const chatOverride = process.env.PRISM_LIVE_HYPER_CHAT_MODEL;
+const chatBase = hyperModels.find((m) => m.model === "deepseek-v4-pro")!;
+const chatModel = chatOverride ? { ...chatBase, model: chatOverride } : chatBase;
+const messagesOverride = process.env.PRISM_LIVE_HYPER_MESSAGES_MODEL;
+const messagesBase = hyperModels.find((m) => m.model === "qwen3.6-plus")!;
+const messagesModel = messagesOverride ? { ...messagesBase, model: messagesOverride } : messagesBase;
 
 const apiKey = (): string | undefined => process.env.HYPER_API_KEY;
 

@@ -223,6 +223,10 @@ Official: [Reasoning models](https://developers.openai.com/api/docs/guides/reaso
 - Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus fake-safe
   provider-specific env names; default `npm test` is network-free.
 
+## Thinking and reasoning
+
+OpenAI models route through the `openai_reasoning` family: the adapter merges `compat.reasoning.effort` and Responses bodies carry `reasoning.effort`. Declared levels (`capabilities.thinkingLevels`): gpt-5.1 family `none/low/medium/high` (default `none`); gpt-5.2 family `none`–`xhigh` (default `medium`); gpt-5.x/o1/o3/o4 families `minimal`–`high` (default `medium`). Unknown model ids declare nothing and pass through untouched. `resolveOpenAIReasoning` snaps a merged effort to the declared set (nearest by ladder distance, ties up; below-minimum snaps up); an existing `reasoning.summary` is preserved. There is no upstream API to enumerate effort values — the tables are doc-pinned in [the evidence matrix](../_evidence/thinking-coverage-2026-09-05.md). See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider packages](../provider-packages.md): `defineProviderPackage`, auth

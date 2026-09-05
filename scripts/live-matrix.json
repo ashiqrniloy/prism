@@ -1,0 +1,935 @@
+{
+  "schemaVersion": 1,
+  "defaults": {
+    "envFile": [
+      "$PRISM_LIVE_ENV_FILE",
+      "scripts/live.env"
+    ],
+    "skipContract": "A suite whose required env vars are absent is SKIPPED with a reason, never failed. Strict mode (PRISM_LIVE_STRICT=1, runner Task 2) fails the RUN on any skip, not the suite.",
+    "modelEnvConvention": "PRISM_LIVE_<PROVIDER>_MODEL; multi-probe suites suffix _CHAT_MODEL/_MESSAGES_MODEL etc. Wired=false means the live test does not read the env var yet (retrofit: plans/064 Task 4).",
+    "template": "scripts/live.env.example"
+  },
+  "suites": [
+    {
+      "id": "providers/openai",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/openai/__tests__/live.test.ts",
+      "command": "node --test dist/openai/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "OPENAI_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_OPENAI_MODEL",
+          "default": "gpt-5.1",
+          "wired": true
+        }
+      ],
+      "scope": "Project-scoped chat-completion key; least privilege: restrict to chat models.",
+      "cost": "2 requests (1 text, 1 tool-call) on the configured model."
+    },
+    {
+      "id": "providers/anthropic",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/anthropic/__tests__/live.test.ts",
+      "command": "node --test dist/anthropic/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "ANTHROPIC_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_ANTHROPIC_MODEL",
+          "default": "claude-haiku-4-5",
+          "wired": true
+        }
+      ],
+      "scope": "Chat-completion key.",
+      "cost": "2 requests.",
+      "thinkingProbe": "output_config.effort + legacy top-level effort outcome probes (plan 065)"
+    },
+    {
+      "id": "providers/google",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/google/__tests__/live.test.ts",
+      "command": "node --test dist/google/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS"
+      ],
+      "requiresAny": [
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_GOOGLE_MODEL",
+          "default": "gemini-2.5-flash-lite",
+          "wired": true
+        }
+      ],
+      "scope": "Gemini API key (either var).",
+      "cost": "2 requests.",
+      "thinkingProbe": "thinkingLevel acceptance probe (plan 065)"
+    },
+    {
+      "id": "providers/alibaba",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/alibaba/__tests__/live.test.ts",
+      "command": "node --test dist/alibaba/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "PRISM_LIVE_DASHSCOPE_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_DASHSCOPE_MODEL",
+          "default": "text-embedding-v4",
+          "wired": true
+        }
+      ],
+      "scope": "DashScope key.",
+      "cost": "2 requests (embedding/roundtrip class)."
+    },
+    {
+      "id": "providers/clinepass",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/clinepass/__tests__/live.test.ts",
+      "command": "node --test dist/clinepass/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "CLINE_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_CLINEPASS_MODEL",
+          "default": "cline-pass/deepseek-v4-flash",
+          "wired": true
+        }
+      ],
+      "scope": "Cline provider key.",
+      "cost": "2 requests."
+    },
+    {
+      "id": "providers/commandcode",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/commandcode/__tests__/live.test.ts",
+      "command": "node --test dist/commandcode/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "COMMAND_CODE_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_CHAT_MODEL",
+          "default": "Qwen/Qwen3.8-Flash",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_MESSAGES_MODEL",
+          "default": "claude-haiku-4-5-20251001",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_GPT_MODEL",
+          "default": "gpt-5.6-luna",
+          "wired": true
+        }
+      ],
+      "scope": "Command Code key; probes three cheap routed models.",
+      "cost": "3-4 requests on cheap models."
+    },
+    {
+      "id": "providers/deepseek",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/deepseek/__tests__/live.test.ts",
+      "command": "node --test dist/deepseek/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "DEEPSEEK_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_DEEPSEEK_MODEL",
+          "default": "deepseek-v4-flash",
+          "wired": true
+        }
+      ],
+      "scope": "DeepSeek key.",
+      "cost": "2 requests on flash-class model."
+    },
+    {
+      "id": "providers/hyper",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/hyper/__tests__/live.test.ts",
+      "command": "node --test dist/hyper/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "HYPER_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_HYPER_CHAT_MODEL",
+          "default": "deepseek-v4-pro",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_HYPER_MESSAGES_MODEL",
+          "default": "qwen3.6-plus",
+          "wired": true
+        }
+      ],
+      "scope": "Hyper key; second model probes the exact-prefix cache.",
+      "cost": "~4 requests incl. ~1 KiB prefix cache write; sub-cent."
+    },
+    {
+      "id": "providers/kimi",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/kimi/__tests__/live.test.ts",
+      "command": "node --test dist/kimi/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "KIMI_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_KIMI_MODEL",
+          "default": "kimi-for-coding",
+          "wired": true
+        }
+      ],
+      "scope": "Kimi coding-plan credential.",
+      "cost": "2 requests.",
+      "thinkingProbe": "K3 reasoning_effort snap probe (plan 065)"
+    },
+    {
+      "id": "providers/neuralwatt",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/neuralwatt/__tests__/live.test.ts",
+      "command": "node --test dist/neuralwatt/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "NEURALWATT_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_NEURALWATT_MODEL",
+          "default": "glm-5.2",
+          "wired": true
+        }
+      ],
+      "scope": "NeuralWatt key.",
+      "cost": "2 requests."
+    },
+    {
+      "id": "providers/opencode-go",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/opencode-go/__tests__/live.test.ts",
+      "command": "node --test dist/opencode-go/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "OPENCODE_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_OPENCODE_MODEL",
+          "default": "mimo-v2.5",
+          "wired": true
+        }
+      ],
+      "scope": "OpenCode Go key.",
+      "cost": "2 requests."
+    },
+    {
+      "id": "providers/openrouter",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/openrouter/__tests__/live.test.ts",
+      "command": "node --test dist/openrouter/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "OPENROUTER_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_OPENROUTER_MODEL",
+          "default": "anthropic/claude-sonnet-4",
+          "wired": true
+        }
+      ],
+      "scope": "OpenRouter key (any routed model id).",
+      "cost": "2 requests."
+    },
+    {
+      "id": "providers/xai",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/xai/__tests__/live.test.ts",
+      "command": "node --test dist/xai/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "XAI_API_KEY"
+      ],
+      "optional": [
+        "PRISM_LIVE_XAI_OAUTH"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_XAI_MODEL",
+          "default": "grok-4.6",
+          "wired": true
+        }
+      ],
+      "scope": "xAI key; OAuth leg additionally needs PRISM_LIVE_XAI_OAUTH=1.",
+      "cost": "2-3 requests.",
+      "thinkingProbe": "reasoning_effort acceptance probe (plan 065)"
+    },
+    {
+      "id": "providers/zai",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/zai/__tests__/live.test.ts",
+      "command": "node --test dist/zai/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "ZAI_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_ZAI_MODEL",
+          "default": "glm-5.2",
+          "wired": true
+        }
+      ],
+      "scope": "Z.ai key.",
+      "cost": "2 requests.",
+      "thinkingProbe": "GLM-5.3 reasoning_effort snap + thinking-disabled rejection gate pin (plan 065)"
+    },
+    {
+      "id": "web-tools/brave",
+      "package": "@arnilo/prism-web-tools",
+      "status": "active",
+      "source": "packages/web-tools/src/__tests__/live.test.ts",
+      "command": "node --test dist/__tests__/live.test.js",
+      "cwd": "packages/web-tools",
+      "requires": [
+        "PRISM_LIVE_WEB",
+        "PRISM_BRAVE_SEARCH_TOKEN"
+      ],
+      "scope": "Brave Search token, least-privilege plan; 1 result per query.",
+      "cost": "1 search request."
+    },
+    {
+      "id": "web-tools/exa",
+      "package": "@arnilo/prism-web-tools",
+      "status": "active",
+      "source": "packages/web-tools/src/__tests__/live.test.ts",
+      "command": "node --test dist/__tests__/live.test.js",
+      "cwd": "packages/web-tools",
+      "requires": [
+        "PRISM_LIVE_WEB",
+        "PRISM_EXA_API_KEY"
+      ],
+      "scope": "Exa key; 1 result per query.",
+      "cost": "1 search request."
+    },
+    {
+      "id": "web-tools/firecrawl",
+      "package": "@arnilo/prism-web-tools",
+      "status": "active",
+      "source": "packages/web-tools/src/__tests__/live.test.ts",
+      "command": "node --test dist/__tests__/live.test.js",
+      "cwd": "packages/web-tools",
+      "requires": [
+        "PRISM_LIVE_WEB",
+        "PRISM_FIRECRAWL_API_KEY"
+      ],
+      "scope": "Firecrawl key; bounded 64 KiB markdown fetch.",
+      "cost": "1 fetch request."
+    },
+    {
+      "id": "web-tools/browser-live",
+      "package": "@arnilo/prism-web-tools",
+      "status": "active",
+      "source": "packages/web-tools/src/browser/__tests__/live.test.ts",
+      "command": "node --test dist/browser/__tests__/live.test.js",
+      "cwd": "packages/web-tools",
+      "requires": [],
+      "requiresAny": [
+        "PRISM_LIVE_PLAYWRIGHT",
+        "PRISM_TEST_PLAYWRIGHT"
+      ],
+      "scope": "Real Chromium, no secret; needs Playwright browsers installed.",
+      "cost": "Local browser session, no API spend."
+    },
+    {
+      "id": "web-tools/obscura-live",
+      "package": "@arnilo/prism-web-tools",
+      "status": "active",
+      "source": "packages/web-tools/src/obscura/__tests__/live.test.ts",
+      "command": "node --test dist/obscura/__tests__/live.test.js",
+      "cwd": "packages/web-tools",
+      "requires": [
+        "PRISM_LIVE_OBSCURA",
+        "PRISM_OBSCURA_BIN"
+      ],
+      "scope": "Local obscura CLI binary; suite fails closed if flag set without binary.",
+      "cost": "Local process, no API spend."
+    },
+    {
+      "id": "memory/observational-live",
+      "package": "@arnilo/prism-memory",
+      "status": "active",
+      "source": "packages/memory/src/compaction/observational-memory/__tests__/live.test.ts",
+      "command": "node --test dist/compaction/observational-memory/__tests__/live.test.js",
+      "cwd": "packages/memory",
+      "requires": [
+        "PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS",
+        "OPENAI_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_OPENAI_MODEL",
+          "default": "gpt-5.1",
+          "wired": false
+        }
+      ],
+      "scope": "Reuses the OpenAI key as the compaction worker provider.",
+      "cost": "A few small summarization requests."
+    },
+    {
+      "id": "memory/compaction-llm-live",
+      "package": "@arnilo/prism-memory",
+      "status": "active",
+      "source": "packages/memory/src/compaction/llm/__tests__/live.test.ts",
+      "command": "node --test dist/compaction/llm/__tests__/live.test.js",
+      "cwd": "packages/memory",
+      "requires": [
+        "PRISM_LIVE_COMPACTION_TESTS"
+      ],
+      "scope": "Stub leg today: live summary-provider checks are wired by plans/064 Task 6 (provider key + model env TBD there).",
+      "cost": "n/a until wired."
+    },
+    {
+      "id": "office/libreoffice-golden",
+      "package": "@arnilo/prism-office",
+      "status": "active",
+      "source": "packages/office/src/documents/__tests__/golden.test.ts",
+      "command": "node --test dist/documents/__tests__/golden.test.js",
+      "cwd": "packages/office",
+      "requires": [
+        "PRISM_TEST_LIBREOFFICE"
+      ],
+      "scope": "Local LibreOffice binary renders golden documents; no secret.",
+      "cost": "Local process, no API spend."
+    },
+    {
+      "id": "office/drawio-live",
+      "package": "@arnilo/prism-office",
+      "status": "active",
+      "source": "packages/office/src/diagrams/__tests__/drawio-live.test.ts",
+      "command": "node --test dist/diagrams/__tests__/drawio-live.test.js",
+      "cwd": "packages/office",
+      "requires": [],
+      "requiresAny": [
+        "PRISM_LIVE_DRAWIO_URL",
+        "PRISM_TEST_DRAWIO_URL"
+      ],
+      "scope": "Operator-hosted drawio export service URL (not a secret).",
+      "cost": "1-2 export requests to your own service."
+    },
+    {
+      "id": "core/postgres",
+      "package": "@arnilo/prism-core",
+      "status": "active",
+      "source": "packages/prism-core/src/sessions/postgres/__tests__/postgres-persistence.test.ts",
+      "command": "npm run test:postgres --workspace=@arnilo/prism-core",
+      "requires": [
+        "PRISM_TEST_POSTGRES_URL"
+      ],
+      "scope": "Throwaway PostgreSQL database URL (sessions + enterprise + event-source + memory vector legs).",
+      "cost": "Local/container DB, no API spend."
+    },
+    {
+      "id": "core/nats",
+      "package": "@arnilo/prism-core",
+      "status": "active",
+      "source": "packages/prism-core/src/sessions/nats/__tests__/nats.integration.test.ts",
+      "command": "npm run test:nats --workspace=@arnilo/prism-core",
+      "requires": [
+        "PRISM_TEST_NATS_URL"
+      ],
+      "scope": "NATS server URL with JetStream enabled.",
+      "cost": "Local/container server, no API spend."
+    },
+    {
+      "id": "coding-tools/docker-sandbox",
+      "package": "@arnilo/prism-coding-tools",
+      "status": "active",
+      "source": "packages/prism-coding-tools/src/security/__tests__/docker-sandbox.test.ts",
+      "command": "node --test dist/security/__tests__/docker-sandbox.test.js",
+      "cwd": "packages/prism-coding-tools",
+      "requires": [
+        "PRISM_TEST_DOCKER_SANDBOX",
+        "PRISM_TEST_DOCKER_BIN",
+        "PRISM_TEST_DOCKER_IMAGE",
+        "PRISM_TEST_DOCKER_USER"
+      ],
+      "scope": "Local Docker daemon + pinned minimal sandbox image; no secret.",
+      "cost": "Local containers, no API spend."
+    },
+    {
+      "id": "core/keychain",
+      "package": "@arnilo/prism-core",
+      "status": "active",
+      "source": "packages/prism-core/src/credentials/node/__tests__/credentials-node.test.ts",
+      "command": "node --test dist/credentials/node/__tests__/credentials-node.test.js",
+      "cwd": "packages/prism-core",
+      "requires": [
+        "PRISM_TEST_KEYCHAIN"
+      ],
+      "scope": "Real OS keychain; writes throwaway test entries only.",
+      "cost": "Local, no API spend."
+    },
+    {
+      "id": "acp/client-smoke",
+      "package": "@arnilo/prism-acp-agent",
+      "status": "active",
+      "source": "scripts/acp-client-smoke.mjs",
+      "command": "node scripts/acp-client-smoke.mjs",
+      "requires": [
+        "PRISM_TEST_ACP_CLIENT"
+      ],
+      "scope": "Real ACP SDK client over stdio in a subprocess; sandboxed, policy never disabled.",
+      "cost": "Local process, no API spend."
+    },
+    {
+      "id": "canaries/deployed",
+      "package": "@arnilo/prism",
+      "status": "active",
+      "source": "scripts/live-canary.mjs",
+      "command": "node scripts/live-canary.mjs",
+      "requires": [
+        "PRISM_LIVE_CANARIES"
+      ],
+      "optional": [
+        "PRISM_CANARY_TIMEOUT_MS",
+        "PRISM_CANARY_REPORT"
+      ],
+      "scope": "Deployed prism provider/MCP/A2A endpoints; script itself validates all PRISM_CANARY_* URL/token vars and credential-free HTTPS.",
+      "cost": "1-4 bounded requests (64 KiB JSON cap) against your deployments."
+    },
+    {
+      "id": "providers/azure",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/azure/__tests__/live.test.ts",
+      "command": "node --test dist/azure/__tests__/live.test.js",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "AZURE_OPENAI_ENDPOINT",
+        "AZURE_OPENAI_API_KEY",
+        "PRISM_LIVE_AZURE_MODEL"
+      ],
+      "scope": "Azure OpenAI resource key.",
+      "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
+      "notes": "Deployment name is the model knob (PRISM_LIVE_AZURE_MODEL or AZURE_OPENAI_DEPLOYMENT).",
+      "model": [
+        {
+          "env": "PRISM_LIVE_AZURE_MODEL",
+          "default": "gpt-5.1",
+          "wired": true
+        }
+      ],
+      "cost": "3-4 requests on the configured deployment.",
+      "thinkingProbe": "reasoning_effort acceptance probe (plan 065)"
+    },
+    {
+      "id": "providers/bedrock",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/bedrock/__tests__/live.test.ts",
+      "command": "node --test dist/bedrock/__tests__/live.test.js",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_REGION"
+      ],
+      "scope": "AWS access key + secret (SigV4).",
+      "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
+      "notes": "Static keys or AWS_SESSION_TOKEN; IAM-role hosts can harden later.",
+      "model": [
+        {
+          "env": "PRISM_LIVE_BEDROCK_MODEL",
+          "default": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+          "wired": true
+        }
+      ],
+      "cost": "3-4 requests on haiku-class model."
+    },
+    {
+      "id": "providers/vertex",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/vertex/__tests__/live.test.ts",
+      "command": "node --test dist/vertex/__tests__/live.test.js",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "GOOGLE_VERTEX_PROJECT",
+        "PRISM_VERTEX_ACCESS_TOKEN"
+      ],
+      "scope": "Pre-minted Vertex bearer token (e.g. gcloud auth print-access-token).",
+      "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
+      "notes": "Location defaults to us-central1 (GOOGLE_VERTEX_LOCATION).",
+      "model": [
+        {
+          "env": "PRISM_LIVE_VERTEX_MODEL",
+          "default": "gemini-2.5-flash",
+          "wired": true
+        }
+      ],
+      "cost": "3-4 requests on flash-class model."
+    },
+    {
+      "id": "providers/ollama",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/ollama/__tests__/live.test.ts",
+      "command": "node --test dist/ollama/__tests__/live.test.js",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "OLLAMA_BASE_URL"
+      ],
+      "scope": "No credential for local ollama serve; Ollama Cloud key optional via provider options.",
+      "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
+      "notes": "Health gate lists served models and skips when none are pulled.",
+      "model": [
+        {
+          "env": "PRISM_LIVE_OLLAMA_MODEL",
+          "default": "(first model served by OLLAMA_BASE_URL)",
+          "wired": true
+        }
+      ],
+      "cost": "3-4 requests on the first locally pulled model."
+    },
+    {
+      "id": "providers/ai-sdk",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/ai-sdk/__tests__/live.test.ts",
+      "command": "node --test dist/ai-sdk/__tests__/live.test.js",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "OPENAI_API_KEY"
+      ],
+      "scope": "Reuses OPENAI_API_KEY through the real @ai-sdk/openai provider.",
+      "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
+      "notes": "Validates the LanguageModelV4 mapping against a genuine AI SDK provider package.",
+      "model": [
+        {
+          "env": "PRISM_LIVE_AISDK_MODEL",
+          "default": "gpt-5.1",
+          "wired": true
+        }
+      ],
+      "cost": "3 requests on gpt-5.1."
+    },
+    {
+      "id": "providers/model-discovery",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/model-discovery/__tests__/live.test.ts",
+      "command": "node --test dist/model-discovery/__tests__/live.test.js",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS"
+      ],
+      "requiresAny": [
+        "OPENAI_API_KEY",
+        "GEMINI_API_KEY"
+      ],
+      "scope": "Reuses OPENAI_API_KEY or GEMINI_API_KEY for a real listing request.",
+      "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
+      "notes": "Probes the OpenAI-compatible route when OPENAI_API_KEY is set, else the Google route.",
+      "cost": "2 GET /models requests (second cached in TTL)."
+    },
+    {
+      "id": "cli/live-journey",
+      "package": "@arnilo/prism",
+      "status": "planned",
+      "source": null,
+      "command": null,
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "OPENAI_API_KEY"
+      ],
+      "scope": "Packed CLI: init/provider-add/print/json/rpc over a real provider; transcript secret-scanned.",
+      "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
+      "notes": "Task 5.",
+      "cost": "1 pack + install, offline scaffold tests, <=3 wire prompts on the selected provider model (wire legs skip on 401/403)."
+    },
+    {
+      "id": "memory/rag-rerankers-live",
+      "package": "@arnilo/prism-memory",
+      "status": "active",
+      "source": "packages/memory/src/rag/__tests__/live.test.ts",
+      "command": "node --test dist/rag/__tests__/live.test.js",
+      "requires": [],
+      "optional": [
+        "PRISM_TEST_HOSTED_RERANK_URL"
+      ],
+      "scope": "Real TEI / OpenAI-compatible rerank endpoints; each leg self-skips when its endpoint env is unset.",
+      "notes": "Permutation-only reorder + descending-score conformance on live responses; optional TEI gateway key rides the trusted-transport seam; credential never appears in error transcripts.",
+      "cwd": "packages/memory",
+      "requiresAny": [
+        "PRISM_TEST_TEI_RERANKER_URL",
+        "PRISM_TEST_HOSTED_RERANK_URL"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_TEI_RERANKER_MODEL",
+          "default": "(endpoint default model)",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_HOSTED_RERANK_MODEL",
+          "default": "(endpoint default model)",
+          "wired": true
+        }
+      ],
+      "cost": "1 rerank request per configured endpoint (\u22642 total)."
+    },
+    {
+      "id": "coding-tools/openapi-live",
+      "package": "@arnilo/prism-coding-tools",
+      "status": "active",
+      "source": "packages/prism-coding-tools/src/openapi/__tests__/live.test.ts",
+      "command": "node --test dist/openapi/__tests__/live.test.js",
+      "requires": [
+        "PRISM_LIVE_OPENAPI_TOOLS"
+      ],
+      "scope": "Real public OpenAPI 3.1 spec (warnely.com) + real GET tool calls; no credential.",
+      "cwd": "packages/prism-coding-tools",
+      "cost": "3 HTTP requests against example.com-class public hosts (plan budget \u22645)."
+    },
+    {
+      "id": "coding-tools/computer-use-live",
+      "package": "@arnilo/prism-coding-tools",
+      "status": "active",
+      "source": "packages/prism-coding-tools/src/computer-use-linux/__tests__/live.test.ts",
+      "command": "node --test dist/computer-use-linux/__tests__/live.test.js",
+      "requires": [
+        "PRISM_TEST_COMPUTER_USE",
+        "PRISM_COMPUTER_USE_BIN"
+      ],
+      "scope": "Real host computer-use-linux MCP binary over stdio; real tool inventory + one bounded read-only screenshot.",
+      "notes": "Headless/no-session environments skip at the screenshot probe; binary-wire contract is proven by the inventory. No network I/O in suite \u2014 screenshot bytes cannot leave the process.",
+      "cwd": "packages/prism-coding-tools",
+      "cost": "Local desktop only; \u226430s ceiling."
+    },
+    {
+      "id": "mcp/client-smoke",
+      "package": "@arnilo/prism-mcp",
+      "status": "active",
+      "source": "scripts/mcp-client-smoke.mjs",
+      "command": "node scripts/mcp-client-smoke.mjs",
+      "requires": [
+        "PRISM_TEST_MCP_CLIENT"
+      ],
+      "scope": "Real @modelcontextprotocol/client SDK over a real stdio subprocess serving createPrismMcpServer.",
+      "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
+      "notes": "Modern+legacy handshake, tools/list, tools/call round-trip, authorize-gated denial, malformed-frame fail-closed. Server-initiated elicitation is a documented Prism boundary (scripts/mcp-conformance-2026-baseline.yaml); the bridge-side MRTR elicitation round-trip is covered over real HTTP by packages/mcp modern-bridge tests.",
+      "cwd": ".",
+      "cost": "Local only; \u226430s."
+    },
+    {
+      "id": "core/opa-live",
+      "package": "@arnilo/prism-core",
+      "status": "active",
+      "source": "packages/prism-core/src/governance/policy/__tests__/opa-live.test.ts",
+      "command": "npm run test",
+      "requires": [
+        "PRISM_TEST_OPA_URL"
+      ],
+      "scope": "Operator-hosted OPA REST endpoint (optionally token-gated).",
+      "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
+      "notes": "Real decision evaluations (\u22642 requests) + fail-closed deny probe on an unroutable endpoint. npm test runs the whole prism-core dist suite; live files skip without their env.",
+      "cwd": "packages/prism-core",
+      "cost": "<=3 decision requests to the operator OPA endpoint; fail-closed probe never reaches the wire."
+    },
+    {
+      "id": "core/oidc-live",
+      "package": "@arnilo/prism-core",
+      "status": "active",
+      "source": "packages/prism-core/src/credentials/node/__tests__/oidc-live.test.ts",
+      "command": "npm run test",
+      "requires": [
+        "PRISM_TEST_OIDC_ISSUER",
+        "PRISM_TEST_OIDC_AUDIENCE",
+        "PRISM_TEST_OIDC_TOKEN"
+      ],
+      "scope": "Real IdP issuer/JWKS + short-lived test bearer token.",
+      "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
+      "notes": "Valid token verifies against live JWKS (1 fetch); tampered/garbage tokens fail closed without echoing the bearer token.",
+      "cwd": "packages/prism-core",
+      "cost": "1 JWKS fetch (cached) + 3 local verify calls; no token endpoint traffic."
+    },
+    {
+      "id": "core/webhooks-live",
+      "package": "@arnilo/prism-core",
+      "status": "active",
+      "source": "packages/prism-core/src/runtime/server/__tests__/webhooks-live.test.ts",
+      "command": "npm run test",
+      "requires": [
+        "PRISM_TEST_WEBHOOK_URL"
+      ],
+      "scope": "Operator-controlled signed webhook receiver.",
+      "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
+      "notes": "Signed delivery to an operator-owned HTTPS receiver + retry-after-5xx over a local loopback receiver with receiver-side signature verification.",
+      "cwd": "packages/prism-core",
+      "cost": "<=3 webhook deliveries (1 signed target + 1 loopback retry receiver)."
+    },
+    {
+      "id": "core/artifact-bodies-s3-live",
+      "package": "@arnilo/prism-core",
+      "status": "active",
+      "source": "packages/prism-core/src/runtime/server/__tests__/artifact-bodies-live.test.ts",
+      "command": "npm run test",
+      "requires": [
+        "PRISM_TEST_S3_ENDPOINT",
+        "PRISM_TEST_S3_KEY",
+        "PRISM_TEST_S3_SECRET",
+        "PRISM_TEST_S3_BUCKET"
+      ],
+      "scope": "Dedicated throwaway S3-compatible bucket.",
+      "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
+      "notes": "put\u2192get hash-verified, presigned GET URL, idempotent double delete against a throwaway bucket (\u22643 requests).",
+      "cwd": "packages/prism-core",
+      "cost": "<=5 S3 requests (put/get/presign/delete x2)."
+    },
+    {
+      "id": "cli/journey",
+      "package": "@arnilo/prism",
+      "status": "active",
+      "source": "scripts/e2e-cli-live.test.mjs",
+      "command": "node --test scripts/e2e-cli-live.test.mjs",
+      "cwd": ".",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS"
+      ],
+      "requiresAny": [
+        "OPENAI_API_KEY",
+        "OPENROUTER_API_KEY",
+        "KIMI_API_KEY",
+        "ZAI_API_KEY",
+        "OPENCODE_API_KEY",
+        "NEURALWATT_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "OLLAMA_API_KEY"
+      ],
+      "scope": "First init-catalog provider credential present in the environment.",
+      "cost": "4-5 one-shot requests on the default catalog model.",
+      "notes": "Provider picked via PRISM_LIVE_CLI_PROVIDER or the first catalog entry with a present key; wire legs skip when the provider rejects the credential (401/403)."
+    },
+    {
+      "id": "memory/postgres",
+      "status": "active",
+      "source": "packages/memory/src/__tests__/postgres-memory.integration.test.ts",
+      "command": "npm run test:postgres",
+      "cwd": "packages/memory",
+      "requires": [
+        "PRISM_TEST_POSTGRES_URL"
+      ],
+      "scope": "Postgres memory store + pgvector index round-trips on the operator database.",
+      "cost": "Bounded insert/query cycles against the configured Postgres.",
+      "notes": "Existing integration suites (postgres-memory, postgres-vector) over the real wire.",
+      "package": "@arnilo/prism-memory"
+    },
+    {
+      "id": "memory/graft",
+      "status": "active",
+      "source": "packages/memory/src/graft/__tests__/commands.test.ts",
+      "command": "node --test dist/graft/__tests__/*.test.js",
+      "cwd": "packages/memory",
+      "requires": [],
+      "scope": "Graft upstream CLI child-process protocol (real binary spawns against the in-repo fixture graft bin).",
+      "cost": "Hermetic; no network.",
+      "notes": "Always-runnable leg: empty requires = hermetic fixture-binary execution. An operator real-upstream-binary probe (PRISM_TEST_GRAFT_BIN) can be added later without matrix changes.",
+      "package": "@arnilo/prism-memory"
+    },
+    {
+      "id": "memory/wiki",
+      "status": "active",
+      "source": "packages/memory/src/wiki/__tests__/commands.test.ts",
+      "command": "node --test dist/wiki/__tests__/*.test.js",
+      "cwd": "packages/memory",
+      "requires": [],
+      "scope": "Wiki lifecycle over real fs trees (init/refresh/lint/search fallback; qmd child-process client degrades without the binary).",
+      "cost": "Hermetic; no network.",
+      "notes": "Always-runnable leg; qmd real-binary probe (PRISM_TEST_QMD_BIN) can be added later without matrix changes.",
+      "package": "@arnilo/prism-memory"
+    },
+    {
+      "id": "coding-tools/lsp-forge",
+      "status": "active",
+      "package": "@arnilo/prism-coding-tools",
+      "source": "packages/prism-coding-tools/src/agent/__tests__/language-intelligence.test.ts",
+      "command": "node --test dist/agent/__tests__/language-intelligence.test.js dist/agent/__tests__/language-diagnostics.test.js dist/agent/__tests__/forge-github.test.js",
+      "cwd": "packages/prism-coding-tools",
+      "requires": [],
+      "scope": "LSP/language-intelligence + forge suites: real child-process spawns over the real LSP/forge wire protocols against fixture binaries.",
+      "cost": "Hermetic; no network.",
+      "notes": "Always-runnable leg (empty requires). document-reader/caveman/ponytail/impeccable personas stay covered by unit + journey suites via the e2e surface gate (98/98)."
+    },
+    {
+      "id": "ag-ui/conformance",
+      "status": "active",
+      "package": "@arnilo/prism-ag-ui",
+      "source": "packages/ag-ui/src/__tests__",
+      "command": "npm run test",
+      "cwd": "packages/ag-ui",
+      "requires": [],
+      "scope": "AG-UI + ACP conformance suites: real-event replay over the acp/a2a/ag-ui protocol surfaces (fixture agents, real event-source wire semantics).",
+      "cost": "Hermetic; no network.",
+      "notes": "Always-runnable leg (empty requires). The deployed A2A canary leg lives in canaries/deployed (PRISM_CANARY_A2A_URL/TOKEN within PRISM_LIVE_CANARIES=1)."
+    },
+    {
+      "id": "prism-providers/conformance",
+      "package": "@arnilo/prism-providers",
+      "status": "active",
+      "source": "packages/prism-providers/src/__tests__/thinking-conformance.test.ts",
+      "command": "node --test dist/__tests__/thinking-conformance.test.js",
+      "cwd": "packages/prism-providers",
+      "requires": [],
+      "scope": "Plan-065 machine-checked thinking coverage: every first-party reasoning catalog model declares capabilities.thinkingLevels + a compat.thinkingFamily stamp and emits a legal effort field on the wire (14 catalogs walked hermetically).",
+      "cost": "free",
+      "plan": "065 (task 15)",
+      "notes": "Hermetic leg \u2014 no credentials. Live acceptance of the emitted fields is pinned by the thinkingProbe entries (providers/anthropic, google, kimi, xai, zai, azure)."
+    }
+  ]
+}

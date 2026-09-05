@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ProviderRequest, ToolDefinition } from "@arnilo/prism";
-import { assertNoSecretLeak, assertProviderStreamConforms } from "@arnilo/prism/testing/provider-conformance";
+import { assertNoSecretLeak, assertProviderStreamConforms, collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
 import { anthropicModels, createAnthropicMessagesProvider } from "../index.js";
 
 // Env-gated live smoke tests for @arnilo/prism-providers/anthropic.
@@ -17,7 +17,10 @@ const API_KEY = process.env.ANTHROPIC_API_KEY;
 const skip: string | false =
   !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and ANTHROPIC_API_KEY to run live Anthropic smoke tests" : false;
 
-const model = anthropicModels.find((item) => item.model === "claude-haiku-4-5") ?? anthropicModels[0]!;
+const modelOverride = process.env.PRISM_LIVE_ANTHROPIC_MODEL;
+const model = modelOverride
+  ? { ...(anthropicModels.find((item) => item.model === "claude-haiku-4-5") ?? anthropicModels[0]!), model: modelOverride }
+  : (anthropicModels.find((item) => item.model === "claude-haiku-4-5") ?? anthropicModels[0]!);
 const apiKey = (): string | undefined => process.env.ANTHROPIC_API_KEY;
 
 function provider() {
@@ -56,6 +59,36 @@ describe("@arnilo/prism-providers/anthropic live tests", () => {
       events.some((e) => e.type === "tool_call" || e.type === "tool_call_delta"),
       "expected a tool call",
     );
+    assertNoSecretLeak(events, [API_KEY!]);
+  });
+
+  // Thinking-effort probe (plan 065 task 15): the adapter's output_config.effort
+  // patch must be accepted by the live API (no 400 on the wire field).
+  it("live_output_config_effort_is_accepted", { skip }, async () => {
+    const events = await assertProviderStreamConforms({
+      provider: provider(),
+      request: { ...textRequest, options: { compat: { effort: "low" } } },
+    });
+    assert.ok(
+      events.some((e) => e.type === "done"),
+      "live effort probe produced no done event",
+    );
+    assertNoSecretLeak(events, [API_KEY!]);
+  });
+
+  // Legacy-field probe (plan 065 task 16): top-level `effort` (pre-output_config
+  // emission) — if the API still tolerates it, a dual-emit transition shim may be
+  // warranted; if it rejects, the task-3 move to output_config.effort is final.
+  // Either outcome ends the stream (done or error); interpretation is recorded in
+  // docs/_evidence/thinking-coverage-2026-09-05.md.
+  it("live_legacy_top_level_effort_outcome", { skip }, async () => {
+    const events = await collectProviderEvents(provider(), {
+      ...textRequest,
+      options: { extra: { effort: "low" } },
+    });
+    const terminal = events.at(-1);
+    assert.ok(terminal, "live legacy-effort probe produced no events");
+    assert.ok(terminal.type === "done" || terminal.type === "error", `live legacy-effort probe ended with ${terminal.type}`);
     assertNoSecretLeak(events, [API_KEY!]);
   });
 });

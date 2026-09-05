@@ -91,7 +91,10 @@ const PDF_MAGIC = "%PDF-";
 
 /** v2 `PDFParse` surface used by the adapter (typed locally; the package is ambient). */
 type PdfParseResult = { readonly total: number; readonly text: string };
-type PdfParseCtor = new (options: { readonly data: Uint8Array; readonly isEvalSupported?: boolean }) => {
+type PdfParseCtor = new (options: {
+  readonly data: Uint8Array;
+  readonly isEvalSupported?: boolean;
+}) => {
   getText(options?: { readonly pageJoiner?: string }): Promise<PdfParseResult>;
   destroy(): Promise<void>;
 };

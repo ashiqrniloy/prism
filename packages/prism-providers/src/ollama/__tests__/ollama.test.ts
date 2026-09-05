@@ -241,6 +241,29 @@ describe("@arnilo/prism-providers/ollama", () => {
   });
 });
 
+describe("ollama_thinking_levels_and_clamp", () => {
+  const user = [{ role: "user", content: [{ type: "text", text: "hi" }] }] as const;
+
+  it("gpt_oss_declares_levels_and_family_others_passthrough", () => {
+    const gptoss = defineOllamaModel({ model: "gpt-oss:20b" });
+    assert.deepEqual(gptoss.capabilities?.thinkingLevels, ["low", "medium", "high"]);
+    assert.equal(gptoss.compat?.thinkingFamily, "reasoning_effort");
+    const r1 = defineOllamaModel({ model: "deepseek-r1:32b" });
+    assert.equal(r1.capabilities?.thinkingLevels, undefined);
+    assert.equal(r1.compat?.thinkingFamily, undefined);
+  });
+
+  it("reasoning_effort_snaps_on_declared_and_passes_through_verbatim_otherwise", () => {
+    const gptoss = defineOllamaModel({ model: "gpt-oss:20b" });
+    const snapped = ollamaBody({ model: gptoss, messages: [...user], options: { compat: { reasoning_effort: "xhigh" } } });
+    assert.equal(snapped.reasoning_effort, "high");
+    const unknown = defineOllamaModel({ model: "deepseek-r1:32b" });
+    const verbatim = ollamaBody({ model: unknown, messages: [...user], options: { compat: { reasoning_effort: "medium" } } });
+    assert.equal(verbatim.reasoning_effort, "medium");
+    assert.equal(verbatim.thinkingFamily, undefined, "stamp stripped from the wire");
+  });
+});
+
 function mockFetch(body: ReadableStream<Uint8Array>): typeof fetch {
   return (async () => ok(body)) as typeof fetch;
 }

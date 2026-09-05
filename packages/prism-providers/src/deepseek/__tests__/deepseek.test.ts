@@ -306,3 +306,20 @@ function sse(events: readonly object[]): ReadableStream<Uint8Array> {
     },
   });
 }
+
+describe("deepseek_thinking_level_pins_and_stamps", () => {
+  it("xhigh_snaps_to_high_and_none_disables_thinking", () => {
+    const xhigh = deepseekBody({ ...request, options: { compat: { reasoning_effort: "xhigh" } } });
+    assert.equal(xhigh.reasoning_effort, "high");
+    const none = deepseekBody({ ...request, options: { compat: { reasoning_effort: "none" } } });
+    assert.deepEqual(none.thinking, { type: "disabled" });
+    assert.equal(none.reasoning_effort, undefined);
+  });
+
+  it("featured_models_declare_levels_and_family_stamp", () => {
+    for (const model of deepseekModels) {
+      assert.deepEqual(model.capabilities?.thinkingLevels, ["low", "high", "max"]);
+      assert.equal(model.compat?.thinkingFamily, "reasoning_effort");
+    }
+  });
+});

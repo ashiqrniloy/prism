@@ -26,6 +26,7 @@ export function createDeepSeekProviderPackage(options: DeepSeekProviderPackageOp
 
 export { canonicalizeDeepSeekTools, canonicalizeJsonSchema } from "./cache.js";
 export {
+  DEEPSEEK_THINKING_LEVELS,
   type DeepSeekModelConfig,
   type DeepSeekModelEntry,
   deepseekModels,

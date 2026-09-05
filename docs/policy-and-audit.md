@@ -194,6 +194,16 @@ await evaluateAndAppend(request, { store: state.policy, evaluator, id: crypto.ra
 
 `state.close()` leaves a caller-owned pool open. Run `state.cleanup(...)` from an authorized host schedule only when expiration cleanup is needed; it does not run in the background.
 
+## Live probe (plans/064 Task 9)
+
+The OPA policy evaluator has an operator-gated live probe against a real decision endpoint:
+
+```bash
+PRISM_TEST_OPA_URL=https://opa:8181/v1/data/prism/allow npm test -w @arnilo/prism-core -- opa-live
+```
+
+Probes: two real decision evaluations (any valid outcome) and one fail-closed probe (unroutable endpoint ⇒ `deny` with `OPA endpoint unavailable`). Bounded to ≤ 2 real requests. Registered in `scripts/live-matrix.json` as `core/opa-live`.
+
 ## Related APIs
 
 - [Model routing](model-routing.md)

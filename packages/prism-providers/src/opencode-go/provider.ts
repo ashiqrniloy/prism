@@ -1,10 +1,19 @@
 import type { AIProvider, CredentialValueSource, ProviderRequest } from "@arnilo/prism";
 import { providerError, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
 import { httpStatusError, readBoundedResponseText } from "@arnilo/prism/providers/transport";
-import { anthropicMessagesBody, anthropicMessagesEvents } from "./anthropic-messages.js";
-import { opencodeOwnedHeaders } from "./cache.js";
+import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "../shared/anthropic-messages.js";
+import { applyOpencodeAnthropicCacheControl, opencodeOwnedHeaders } from "./cache.js";
 import { OPENCODE_GO_DEFAULT_BASE_URL } from "./models.js";
 import { openAIChatBody, openAIChatEvents } from "./openai-chat.js";
+import { openCodeGoPreserveThinking, openCodeGoReasoningEffort, openCodeGoThinking, stripOpenCodeGoOwnedCompat } from "./thinking.js";
+
+const OPENCODE_GO_ANTHROPIC_HOOKS: AnthropicMessagesRouteHooks = {
+  applyCacheControl: applyOpencodeAnthropicCacheControl,
+  preserveThinking: openCodeGoPreserveThinking,
+  stripOwnedCompat: stripOpenCodeGoOwnedCompat,
+  thinking: openCodeGoThinking,
+  effort: openCodeGoReasoningEffort,
+};
 
 export interface OpenCodeGoProviderOptions {
   readonly id?: string;
@@ -25,7 +34,7 @@ export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}
       const secrets: (string | undefined)[] = [];
       try {
         const route = routeFor(request);
-        const body = route === "anthropic" ? await anthropicMessagesBody(request) : openAIChatBody(request);
+        const body = route === "anthropic" ? await anthropicMessagesBody(request, OPENCODE_GO_ANTHROPIC_HOOKS) : openAIChatBody(request);
         token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
         secrets.push(token);
         const response = await (options.fetch ?? fetch)(`${baseUrl}${route === "anthropic" ? "/messages" : "/chat/completions"}`, {

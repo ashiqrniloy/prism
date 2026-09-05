@@ -1,4 +1,5 @@
 import type { JsonObject, ProviderRequest } from "@arnilo/prism";
+import { snapThinkingLevel } from "@arnilo/prism";
 
 /**
  * Whether to replay historical thinking on the next request.
@@ -21,7 +22,7 @@ export function openCodeGoPreserveThinking(request: ProviderRequest): boolean {
  * Upstream Chat Completions `thinking` object (Kimi K2.x / GLM-style). Request wins.
  * OpenCode Go does not document gateway-owned thinking fields — these are forwarded.
  */
-export function openCodeGoThinking(request: ProviderRequest): JsonObject | boolean | undefined {
+export function openCodeGoThinking(request: ProviderRequest): JsonObject | undefined {
   const value = request.options?.compat?.thinking ?? request.model.compat?.thinking;
   if (value === false) return { type: "disabled" };
   if (value && typeof value === "object") return value as JsonObject;
@@ -30,21 +31,26 @@ export function openCodeGoThinking(request: ProviderRequest): JsonObject | boole
 
 /**
  * Upstream `reasoning_effort` (e.g. Kimi K3). Request wins over model default.
+ * Snapped to the model's declared set when stamped; undeclared pass through.
  */
 export function openCodeGoReasoningEffort(request: ProviderRequest): string | undefined {
   const effort =
     request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort ?? request.model.compat?.reasoning_effort;
-  return typeof effort === "string" ? effort : undefined;
+  if (typeof effort !== "string" || !effort.trim()) return undefined;
+  return String(snapThinkingLevel(request.model, effort.trim().toLowerCase()));
 }
 
 /**
  * Upstream OpenAI-style `reasoning` object merge (model default + per-turn override).
+ * `effort` snapped to the model's declared set when stamped.
  */
 export function openCodeGoReasoning(request: ProviderRequest): JsonObject | undefined {
   const fromModel = asObject(request.model.compat?.reasoning);
   const fromOptions = asObject(request.options?.compat?.reasoning);
   if (!fromModel && !fromOptions) return undefined;
-  return clean({ ...fromModel, ...fromOptions });
+  const merged = clean({ ...fromModel, ...fromOptions });
+  const effort = merged.effort;
+  return typeof effort === "string" ? clean({ ...merged, effort: snapThinkingLevel(request.model, effort) }) : merged;
 }
 
 /**
@@ -61,6 +67,8 @@ export function stripOpenCodeGoOwnedCompat(compat: JsonObject | undefined): Json
     reasoningEffort: _effortCamel,
     preserveThinking: _preserve,
     preserve_thinking: _preserveSnake,
+    output_config: _outputConfig,
+    thinkingFamily: _family,
     ...rest
   } = compat;
   return Object.keys(rest).length > 0 ? rest : undefined;

@@ -95,6 +95,19 @@ describe("@arnilo/prism-coding-tools conformance", () => {
   });
 
   it("document-reader fails closed when parser peers are absent", async () => {
+    // npm >= 7 auto-installs optional peers (hoisted to the root node_modules),
+    // so absence is environment-dependent. The fail-closed contract is asserted
+    // unconditionally by the packed-consumer journeys (no peers installed);
+    // here it is only provable when the peers are genuinely missing.
+    const peersAbsent = await Promise.all(
+      ["pdf-parse", "mammoth"].map(async (name) =>
+        import(name).then(
+          () => false,
+          () => true,
+        ),
+      ),
+    );
+    if (!peersAbsent.every(Boolean)) return; // peers installed: rejection path unreachable
     await assert.rejects(async () => await createDocumentReader(), /optional peer parser/);
   });
 });

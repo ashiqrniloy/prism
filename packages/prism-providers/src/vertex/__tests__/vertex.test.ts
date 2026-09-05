@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import type { JsonObject } from "@arnilo/prism";
 import { assertAbortIsObserved, assertNoFetches, assertNoForeignCacheFields } from "@arnilo/prism/testing/provider-conformance";
 import { createVertexProvider, createVertexProviderPackage, vertexOpenApiBaseUrl } from "../index.js";
 
@@ -163,5 +164,39 @@ describe("@arnilo/prism-providers/vertex", () => {
     assert.ok(!google.includes("provider-vertex"));
     const manifest = JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8"));
     assert.deepEqual(manifest.dependencies ?? {}, {});
+  });
+
+  it("forwards_sanitized_reasoning_compat_and_snaps_gemini_levels", async () => {
+    let body: Record<string, unknown> | undefined;
+    const provider = createVertexProvider({
+      projectId: "proj-1",
+      location: "europe-west1",
+      credential: async () => "adc-token",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return new Response('data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', {
+          status: 200,
+          headers: { "content-type": "text/event-stream" },
+        });
+      }) as typeof fetch,
+    });
+    const gemini = { provider: "vertex", model: "google/gemini-2.0-flash-001" } as const;
+    const generate = async (compat?: JsonObject) => {
+      for await (const _event of provider.generate({
+        model: gemini,
+        messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+        options: { compat },
+      })) {
+        /* drain */
+      }
+    };
+    // Gemini on Vertex: xhigh snaps to high (declared low/medium/high).
+    await generate({ reasoning_effort: "xhigh" });
+    assert.equal(body!.reasoning_effort, "high");
+    await generate();
+    assert.equal(body!.reasoning_effort, undefined);
+    await generate({ route: "x", reasoning_effort: "low" });
+    assert.equal(body!.reasoning_effort, "low");
+    assert.equal(body!.route, undefined);
   });
 });

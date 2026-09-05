@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { SpeechProvider, SpeechResult, TranscriptEvent, TranscriptionProvider, } from "../contracts.js";
+import type { SpeechProvider, SpeechResult, TranscriptEvent, TranscriptionProvider } from "../contracts.js";
 import {
   assertSpeechSupported,
   assertTranscriptionSupported,

@@ -63,6 +63,22 @@ const provider = createVertexProvider({
 - Conformance-proven (Task 6): package `setup()` performs zero fetch and zero credential resolution; an already-aborted signal fails fast; a truncated SSE stream (no `data: [DONE]`) ends in an `error` event; native Vertex cached-content lifecycle is intentionally unsupported on the OpenAI-compatible route — no cache wire fields are emitted even when the request carries Prism cache hints (use `@arnilo/prism-providers/google`'s `extra.cachedContent` on that package, or manage cache resources host-side).
 - Pair with model-router residency allow-lists on `location`.
 
+## Live probe
+
+Opt-in smoke against Vertex's OpenAI-compatible endpoint. The suite takes a pre-minted bearer token (host ADC/workload identity stays host-owned):
+
+```bash
+PRISM_LIVE_PROVIDER_TESTS=1 GOOGLE_VERTEX_PROJECT=my-project \
+  PRISM_VERTEX_ACCESS_TOKEN=$(gcloud auth print-access-token) \
+  node --test packages/prism-providers/dist/vertex/__tests__/live.test.js
+```
+
+`GOOGLE_VERTEX_LOCATION` (default `us-central1`) and `PRISM_LIVE_VERTEX_MODEL` (default `gemini-2.5-flash`) are optional. Missing project or token → skip.
+
+## Thinking and reasoning
+
+Vertex AI OpenAI-compat chat uses the same sanitized thinking-compat forwarding as Azure: `reasoning_effort` (aliases `effort`/`reasoningEffort`) or a `reasoning` object, snapped to the model's declared levels (Gemini → `low/medium/high`). `reasoning_effort` and `extra_body.google.thinking_config` are mutually exclusive upstream — send one. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Google Gemini (consumer)](google.md)

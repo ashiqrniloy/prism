@@ -170,4 +170,37 @@ describe("@arnilo/prism-providers/azure", () => {
     const manifest = JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8"));
     assert.deepEqual(manifest.dependencies ?? {}, {});
   });
+
+  it("forwards_sanitized_reasoning_compat_and_snaps_to_family_levels", async () => {
+    let body: Record<string, unknown> | undefined;
+    const provider = createAzureOpenAIProvider({
+      endpoint: "https://demo.openai.azure.com",
+      credential: () => "t",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return new Response('data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', {
+          status: 200,
+          headers: { "content-type": "text/event-stream" },
+        });
+      }) as typeof fetch,
+    });
+    const generate = (model: Record<string, unknown>, compat?: Record<string, unknown>) =>
+      collect(provider, { model, options: { compat } });
+
+    // gpt-5.1 deployment + xhigh → snapped high via the OpenAI family heuristic.
+    await generate({ provider: "azure", model: "gpt-5.1" }, { reasoning_effort: "xhigh" });
+    assert.equal(body!.reasoning_effort, "high");
+    // reasoning object: effort snapped, summary preserved.
+    await generate({ provider: "azure", model: "gpt-5.1" }, { reasoning: { effort: "xhigh", summary: "auto" } });
+    assert.deepEqual(body!.reasoning, { effort: "high", summary: "auto" });
+    // No thinking compat → field absent.
+    await generate({ provider: "azure", model: "gpt-4o" });
+    assert.equal(body!.reasoning_effort, undefined);
+    assert.equal(body!.reasoning, undefined);
+    // Unrecognized compat keys never reach the body.
+    await generate({ provider: "azure", model: "gpt-4o" }, { route: "anthropic", preserveThinking: true, reasoning_effort: "low" });
+    assert.equal(body!.reasoning_effort, "low");
+    assert.equal(body!.route, undefined);
+    assert.equal(body!.preserveThinking, undefined);
+  });
 });

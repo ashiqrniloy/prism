@@ -68,7 +68,9 @@ export {
   type OpenAIModelConfig,
   type OpenAIModelEntry,
   openAICodexModels,
+  openAIDefaultEffort,
   openAIModels,
+  openAIThinkingLevels,
 } from "./models.js";
 export {
   createOpenAIModerationProvider,

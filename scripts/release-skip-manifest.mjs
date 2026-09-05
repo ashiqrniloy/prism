@@ -116,10 +116,13 @@ function buildSurfaces({ baseline, artifact, thresholds, packages }) {
     if (!hasSuite && !row) continue;
     if (exception) {
       const srcEnvs = envsInTree(join(ROOT, "packages", dir, "src"));
-      const requiredEnv = srcEnvs.has("PRISM_TEST_NATS_URL")
-        ? "PRISM_TEST_NATS_URL"
-        : srcEnvs.has("PRISM_TEST_POSTGRES_URL")
-          ? "PRISM_TEST_POSTGRES_URL"
+      // Prefer POSTGRES here: the nats legs already carry their own dedicated
+      // "test:nats real JetStream legs" surface, so naming POSTGRES on the core
+      // suite row keeps both durable-env classes visible in the manifest.
+      const requiredEnv = srcEnvs.has("PRISM_TEST_POSTGRES_URL")
+        ? "PRISM_TEST_POSTGRES_URL"
+        : srcEnvs.has("PRISM_TEST_NATS_URL")
+          ? "PRISM_TEST_NATS_URL"
           : /(PRISM_[A-Z0-9_]+)/.exec(exception)?.[1];
       surfaces.push({
         name: `${name} suite`,

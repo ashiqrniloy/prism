@@ -8,7 +8,14 @@ import {
   assertSerializedRequestCoversContent,
   assertToolCallDeltasReconstruct,
 } from "@arnilo/prism/testing/provider-conformance";
-import { createOpenAIProviderPackage, createOpenAIResponsesProvider, listOpenAIModels, mapOpenAIModel } from "../index.js";
+import {
+  createOpenAIProviderPackage,
+  createOpenAIResponsesProvider,
+  listOpenAIModels,
+  mapOpenAIModel,
+  resolveOpenAIReasoning,
+} from "../index.js";
+import { openAICodexModels, openAIModels, openAIThinkingLevels } from "../models.js";
 import { createOpenAIFileUploadManager } from "../uploads.js";
 
 const request: ProviderRequest = {
@@ -408,6 +415,81 @@ describe("@arnilo/prism-providers/openai responses", () => {
     });
     assert.deepEqual(body.reasoning, { effort: "high", summary: "auto" });
     assert.equal(body.api, undefined);
+  });
+
+  it("openai_responses_snaps_effort_to_declared_levels", async () => {
+    const gpt51: ModelConfig = {
+      provider: "openai",
+      model: "gpt-5.1",
+      capabilities: { input: ["text"], output: ["text"], reasoning: true, thinkingLevels: ["none", "low", "medium", "high"] },
+      compat: { api: "openai-responses", reasoning: { effort: "none" } },
+    };
+    const gpt52: ModelConfig = {
+      provider: "openai",
+      model: "gpt-5.2",
+      capabilities: {
+        input: ["text"],
+        output: ["text"],
+        reasoning: true,
+        thinkingLevels: ["none", "minimal", "low", "medium", "high", "xhigh"],
+      },
+      compat: { api: "openai-responses", reasoning: { effort: "medium" } },
+    };
+    const opts = (effort: string, summary?: string) => ({ compat: { reasoning: summary ? { effort, summary } : { effort } } });
+    // gpt-5.1 + xhigh → snapped high (xhigh not declared).
+    assert.deepEqual(resolveOpenAIReasoning(gpt51, opts("xhigh") as any), { effort: "high" });
+    // gpt-5.2 + xhigh → forwarded (declared).
+    assert.deepEqual(resolveOpenAIReasoning(gpt52, opts("xhigh") as any), { effort: "xhigh" });
+    // gpt-5.1 + none → forwarded (non-thinking mode declared).
+    assert.deepEqual(resolveOpenAIReasoning(gpt51, opts("none") as any), { effort: "none" });
+    // Per-turn compat beats model default; summary preserved through the snap.
+    assert.deepEqual(resolveOpenAIReasoning(gpt51, opts("max", "auto") as any), { effort: "high", summary: "auto" });
+    assert.deepEqual(resolveOpenAIReasoning(gpt51, undefined), { effort: "none" });
+    // Undeclared model → passthrough untouched.
+    const unknown: ModelConfig = {
+      provider: "openai",
+      model: "gpt-9",
+      capabilities: { input: ["text"], output: ["text"], reasoning: true },
+    };
+    assert.deepEqual(resolveOpenAIReasoning(unknown, opts("xhigh") as any), { effort: "xhigh" });
+    // Wire-level: body carries the snapped effort.
+    let body: any;
+    const provider = createOpenAIResponsesProvider({
+      apiKey: "fake-openai-key",
+      fetch: async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      },
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: { ...request, model: gpt51, options: { ...request.options, compat: { reasoning: { effort: "xhigh" } } } },
+    });
+    assert.deepEqual(body.reasoning, { effort: "high" });
+  });
+
+  it("openai_model_tables_stamp_levels_and_default_effort", () => {
+    // Family tables.
+    assert.deepEqual(openAIThinkingLevels("gpt-5.1"), ["none", "low", "medium", "high"]);
+    assert.deepEqual(openAIThinkingLevels("gpt-5.2-mini"), ["none", "minimal", "low", "medium", "high", "xhigh"]);
+    assert.deepEqual(openAIThinkingLevels("gpt-5.6"), ["minimal", "low", "medium", "high"]);
+    assert.deepEqual(openAIThinkingLevels("o4-mini"), ["minimal", "low", "medium", "high"]);
+    assert.equal(openAIThinkingLevels("gpt-4.1"), undefined);
+    assert.equal(openAIThinkingLevels("text-embedding-3-small"), undefined);
+    // Discovery mapping carries declared levels + default effort; non-reasoning ids get none.
+    const mapped = mapOpenAIModel({ id: "gpt-5.2" });
+    assert.deepEqual(mapped.capabilities?.thinkingLevels, ["none", "minimal", "low", "medium", "high", "xhigh"]);
+    assert.deepEqual(mapped.compat?.reasoning, { effort: "medium" });
+    const unmapped = mapOpenAIModel({ id: "text-embedding-3-small" });
+    assert.equal(unmapped.capabilities?.thinkingLevels, undefined);
+    assert.equal(unmapped.compat?.reasoning, undefined);
+    // Featured + codex subscription aliases carry the gpt-5.1 stamps.
+    const featured = openAIModels.find((m) => m.model === "gpt-5.1")!;
+    assert.deepEqual(featured.capabilities?.thinkingLevels, ["none", "low", "medium", "high"]);
+    assert.deepEqual(featured.compat?.reasoning, { effort: "none" });
+    const codex = openAICodexModels[0]!;
+    assert.deepEqual(codex.capabilities?.thinkingLevels, ["none", "low", "medium", "high"]);
+    assert.deepEqual(codex.compat?.reasoning, { effort: "none" });
   });
 
   it("openai_responses_keeps_provider_owned_headers_after_caller_headers", async () => {

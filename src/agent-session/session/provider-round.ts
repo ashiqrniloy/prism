@@ -59,7 +59,9 @@ async function withCatalogCost(catalog: CostCatalog | undefined, model: ModelCon
 
 export async function recordProviderUsage(ctx: RoundContext, turnUsage: Usage | undefined, turn: number, attempt: number): Promise<void> {
   const { session, limits, runUsage, runId } = ctx;
-  const usage = turnUsage ? await withCatalogCost(session.agent.config.costCatalog, ctx.model, turnUsage, ctx.controller.signal) : undefined;
+  const usage = turnUsage
+    ? await withCatalogCost(session.agent.config.costCatalog, ctx.model, turnUsage, ctx.controller.signal)
+    : undefined;
   limits.recordUsage(usage);
   if (!usage) return;
   runUsage.add(usage);

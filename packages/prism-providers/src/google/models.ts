@@ -67,9 +67,39 @@ export function defineGoogleModel(config: GoogleModelConfig): ModelConfig {
     },
     compat: {
       preserveThinking: true,
+      thinkingFamily: "google",
       ...config.compat,
     },
   };
+}
+
+/**
+ * Declared portable thinking levels for level-native Gemini 3.x models
+ * (Research Matrix row google, phase 65). 2.5 models are budget-only and
+ * declare none — see {@link googleThinkingBudgetRange}.
+ * @see https://ai.google.dev/gemini-api/docs/generate-content/thinking
+ */
+export function googleThinkingLevels(modelId: string): readonly string[] | undefined {
+  const id = modelId.toLowerCase();
+  if (id.includes("gemini-3.6-flash") || id.includes("gemini-3.5-flash") || id.includes("gemini-3-flash")) {
+    return ["minimal", "low", "medium", "high"];
+  }
+  if (id.includes("gemini-3.1-pro")) return ["low", "medium", "high"];
+  if (id.includes("gemini-3-pro")) return ["low", "high"];
+  return undefined;
+}
+
+/**
+ * Inclusive `thinkingBudget` range for budget-only Gemini 2.5 models;
+ * `undefined` for level-native 3.x and unknown ids. Minimum doubles as the
+ * "cannot disable" floor: 2.5-pro starts at 128 (thinking cannot be off),
+ * 2.5-flash/flash-lite at 0 (`thinkingBudget: 0` disables).
+ */
+export function googleThinkingBudgetRange(modelId: string): readonly [number, number] | undefined {
+  const id = modelId.toLowerCase();
+  if (id.includes("gemini-2.5-pro")) return [128, 32_768];
+  if (id.includes("gemini-2.5-flash")) return [0, 24_576];
+  return undefined;
 }
 
 /**
@@ -111,6 +141,7 @@ export function mapGoogleModel(entry: GoogleModelEntry, options: { readonly prov
   }
   const id = stripModelsPrefix(entry.name);
   if (!id) throw new Error("Google model entry missing name");
+  const budgetRange = googleThinkingBudgetRange(id);
   return defineGoogleModel({
     provider: options.provider ?? "google",
     model: id,
@@ -119,8 +150,12 @@ export function mapGoogleModel(entry: GoogleModelEntry, options: { readonly prov
       contextWindow: entry.inputTokenLimit,
       maxOutputTokens: entry.outputTokenLimit,
     }),
+    capabilities: {
+      thinkingLevels: googleThinkingLevels(id),
+    },
     compat: cleanJson({
       preserveThinking: true,
+      ...(budgetRange ? { thinkingBudgetRange: budgetRange } : {}),
       google: cleanJson({
         name: entry.name,
         version: entry.version,
@@ -139,6 +174,8 @@ export const googleModels = [
     limits: { contextWindow: 1_048_576, maxOutputTokens: 65_536 },
     compat: {
       preserveThinking: true,
+      // Budget-only model; thinking cannot be disabled (floor 128, -1 dynamic).
+      thinkingBudgetRange: [128, 32_768],
       thinkingConfig: { includeThoughts: true },
     },
     cost: { input: 1.25, output: 10 },
@@ -149,6 +186,8 @@ export const googleModels = [
     limits: { contextWindow: 1_048_576, maxOutputTokens: 65_536 },
     compat: {
       preserveThinking: true,
+      // Budget-only model; `thinkingBudget: 0` disables.
+      thinkingBudgetRange: [0, 24_576],
       thinkingConfig: { includeThoughts: true },
     },
     cost: { input: 0.3, output: 2.5 },
@@ -159,6 +198,8 @@ export const googleModels = [
     limits: { contextWindow: 1_048_576, maxOutputTokens: 65_536 },
     compat: {
       preserveThinking: true,
+      // Budget-only model; `thinkingBudget: 0` disables.
+      thinkingBudgetRange: [0, 24_576],
     },
     cost: { input: 0.1, output: 0.4 },
   }),
@@ -166,6 +207,7 @@ export const googleModels = [
     model: "gemini-3.5-flash",
     displayName: "Gemini 3.5 Flash",
     limits: { contextWindow: 1_048_576, maxOutputTokens: 65_536 },
+    capabilities: { thinkingLevels: ["minimal", "low", "medium", "high"] },
     compat: {
       preserveThinking: true,
       thinkingConfig: { includeThoughts: true },

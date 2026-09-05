@@ -257,3 +257,37 @@ function sse(events: readonly object[]): ReadableStream<Uint8Array> {
     },
   });
 }
+
+describe("xai_reasoning_effort_wire_field", () => {
+  const grok46 = xaiModels.find((model) => model.model === "grok-4.6")!;
+  const grok43 = xaiModels.find((model) => model.model === "grok-4.3")!;
+  const grokBuild = xaiModels.find((model) => model.model === "grok-build-0.1")!;
+  const base = { messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] } as const;
+
+  it("grok_4_6_forwards_xhigh_and_grok_4_3_snaps_to_high", () => {
+    const xhigh = xaiBody({ ...base, model: grok46, options: { compat: { reasoning_effort: "xhigh" } } } as never);
+    assert.equal(xhigh.reasoning_effort, "xhigh");
+    const snapped = xaiBody({ ...base, model: grok43, options: { compat: { reasoning_effort: "xhigh" } } } as never);
+    assert.equal(snapped.reasoning_effort, "high");
+    assert.equal(grok46.compat?.thinkingFamily, "reasoning_effort");
+  });
+
+  it("grok_4_5_none_floors_to_low_reasoning_cannot_be_disabled", () => {
+    const grok45 = { ...grok46, model: "grok-4.5", compat: undefined };
+    const body = xaiBody({ ...base, model: grok45, options: { compat: { reasoning_effort: "none" } } } as never);
+    assert.equal(body.reasoning_effort, "low");
+  });
+
+  it("models_without_a_map_omit_the_field_unless_declared", () => {
+    const build = xaiBody({ ...base, model: grokBuild, options: { compat: { reasoning_effort: "xhigh" } } } as never);
+    assert.equal(build.reasoning_effort, undefined);
+    const declared = { ...grokBuild, capabilities: { ...grokBuild.capabilities, thinkingLevels: ["low", "high"] } };
+    const forwarded = xaiBody({ ...base, model: declared, options: { compat: { reasoning_effort: "xhigh" } } } as never);
+    assert.equal(forwarded.reasoning_effort, "high");
+  });
+
+  it("no_field_without_host_effort", () => {
+    const body = xaiBody({ ...base, model: grok46 } as never);
+    assert.equal(body.reasoning_effort, undefined);
+  });
+});

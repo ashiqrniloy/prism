@@ -199,6 +199,10 @@ await kernel.load([
 - Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus provider-specific
   env names; default tests are network-free.
 
+## Thinking and reasoning
+
+Kimi models are family-stamped by id: K3 (`kimiThinkingFamily`) routes through `reasoning_effort` with declared levels `low/high/max` — other portable levels snap (`medium`→`high`, `xhigh`→`max`, `none`/`minimal`→`low`); unknown effort strings pass through for forward compatibility. K2.x models route through `thinking_type` (on/off toggle; K2.7-code thinking is always on). Do not send conflicting `thinking` + `reasoning_effort`. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider packages](../provider-packages.md): `defineProviderPackage`,

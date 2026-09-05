@@ -9,9 +9,16 @@ import {
   type JsonObject,
   type ToolResult,
 } from "@arnilo/prism";
-import { fromJsonSchema, McpServer, WebStandardStreamableHTTPServerTransport, createMcpHandler, InMemoryServerEventBus, isLegacyRequest } from "@modelcontextprotocol/server";
-import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import type { CallToolResult, McpServerFactory } from "@modelcontextprotocol/server";
+import {
+  createMcpHandler,
+  fromJsonSchema,
+  InMemoryServerEventBus,
+  isLegacyRequest,
+  McpServer,
+  WebStandardStreamableHTTPServerTransport,
+} from "@modelcontextprotocol/server";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import * as z from "zod/v4";
 import { measureBoundedJson } from "./json-bounds.js";
 import { isLoopbackHostname } from "./transport.js";
@@ -20,7 +27,6 @@ import type {
   CreatePrismMcpWebHandlerOptions,
   McpProtectedResource,
   PrismMcpAuthorization,
-  PrismMcpCacheHints,
   PrismMcpStdioHandle,
   PrismMcpWebHandler,
   ServePrismMcpStdioOptions,
@@ -160,11 +166,16 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
         mimeType: resource.mimeType,
       },
       async (uri, extra) => {
-        const authorization = await authorize("resource", resource.name, { uri: uri.href }, {
-          authInfo: extra.http?.authInfo,
-          sessionId: extra.sessionId,
-          signal: extra.mcpReq.signal,
-        });
+        const authorization = await authorize(
+          "resource",
+          resource.name,
+          { uri: uri.href },
+          {
+            authInfo: extra.http?.authInfo,
+            sessionId: extra.sessionId,
+            signal: extra.mcpReq.signal,
+          },
+        );
         const result = await resource.read({ uri: uri.href, authorization, signal: extra.mcpReq.signal });
         return boundedProtocolResult(result, maxResultBytes, `MCP resource ${resource.name} result`, options.redactor) as never;
       },

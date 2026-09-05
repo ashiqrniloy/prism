@@ -94,6 +94,17 @@ tenant's reads, writes, and lease takeover all fail closed.
   with bounded, jittered acquisition polls (no hot loops) and reports the
   measured numbers in the evidence JSON.
 
+## Live probe (plans/064 Task 9)
+
+The outbound webhook notifier has an operator-gated live probe against a receiver you own:
+
+```bash
+PRISM_TEST_WEBHOOK_URL=https://ops.example.com/hooks/prism \
+PRISM_TEST_WEBHOOK_SECRET=<at-least-32-byte-shared-key> npm test -w @arnilo/prism-core -- webhooks-live
+```
+
+Probes: one signed delivery to your receiver (verify `x-prism-signature: sha256=<hex>` over the raw body) and a retry-after-5xx leg over a local loopback receiver (500 then 200, signature verified, retries recorded). Bounded to 1 real request + ≤ 2 loopback requests. Registered in `scripts/live-matrix.json` as `core/webhooks-live`.
+
 ## Related APIs
 
 - `LeaseStore` / `CheckpointStore` — the durable contracts this runbook relies on.

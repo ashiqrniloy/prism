@@ -8,7 +8,7 @@ import type {
   ToolDefinition,
   ToolResult,
 } from "@arnilo/prism";
-import { applyThinkingLevel, redactSecrets, thinkingFamilyForModel } from "@arnilo/prism";
+import { applyThinkingLevelForModel, redactSecrets } from "@arnilo/prism";
 import { type MemoryWorkerLimitOptions, measureWorkerJson, resolveMemoryWorkerLimits, truncateWorkerText } from "./limits.js";
 
 export interface MemoryWorkerLoopOptions extends MemoryWorkerLimitOptions {
@@ -47,20 +47,16 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
   let totalCalls = 0;
   for (let turn = 0; turn < limits.maxTurns; turn += 1) {
     const calls: { readonly raw: ToolCallContent; readonly safe: ToolCallContent }[] = [];
-    const thinkingFamily = thinkingFamilyForModel(options.model);
     try {
       throwIfAborted(options.signal);
       for await (const event of options.provider.generate({
         model: options.model,
         messages,
         tools: options.tools,
+        // Model-aware adapter: stamped/heuristic family per model; non-reasoning
+        // models get no invented field (omitted, not guessed).
         options: options.thinkingLevel
-          ? applyThinkingLevel(
-              options.providerOptions,
-              options.thinkingLevel,
-              // Explicit host thinkingLevel must not become inert on unknown models.
-              thinkingFamily === "noop" ? "reasoning_effort" : thinkingFamily,
-            )
+          ? applyThinkingLevelForModel(options.providerOptions, options.thinkingLevel, options.model)
           : options.providerOptions,
         signal: options.signal,
       })) {

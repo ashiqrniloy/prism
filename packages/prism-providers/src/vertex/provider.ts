@@ -1,6 +1,7 @@
 import type { AIProvider, CredentialValueSource, ModelConfig, ProviderPackage } from "@arnilo/prism";
 import { defineProviderPackage, providerError, resolveCredentialValue as resolveOnce, trimTrailingSlashes } from "@arnilo/prism";
 import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
+import { openAICompatThinkingExtra } from "../shared/openai-compat.js";
 
 export interface VertexProviderOptions {
   readonly id?: string;
@@ -63,6 +64,7 @@ export function createVertexProvider(options: VertexProviderOptions): AIProvider
         apiKey: token,
         authStyle: "bearer",
         fetch: options.fetch,
+        buildBodyExtra: openAICompatThinkingExtra,
       });
       yield* inner.generate(request);
     },

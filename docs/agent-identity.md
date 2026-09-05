@@ -132,6 +132,17 @@ Identity is optional. Hosts that only set `ownership` keep prior behavior. When 
 - Checks are O(fields) and network-free in core; remote auth stays in the host verifier.
 - Raising hard caps requires updating `docs/_evidence/review-coverage-2026-07-23-phase-8.md`, tests, and docs.
 
+## Live probe (plans/064 Task 9)
+
+The OIDC/JWKS identity verifier has an operator-gated live probe against a real issuer:
+
+```bash
+PRISM_TEST_OIDC_ISSUER=https://id.example.com/tenant PRISM_TEST_OIDC_AUDIENCE=prism-api \
+PRISM_TEST_OIDC_TOKEN=<real bearer token> npm test -w @arnilo/prism-core -- oidc-live
+```
+
+Set `PRISM_TEST_OIDC_JWKS_URL` to pin a non-default JWKS URL (default `<issuer>/.well-known/jwks.json`). Probes: a valid token verifies against the live JWKS (1 fetch), a tampered token fails closed with `ERR_PRISM_OIDC_SIGNATURE` (error text never echoes the token), and a garbage token fails closed without JWKS traffic. Bounded to 1 real request. Registered in `scripts/live-matrix.json` as `core/oidc-live`.
+
 ## Related APIs
 
 - [Policy and audit](policy-and-audit.md)

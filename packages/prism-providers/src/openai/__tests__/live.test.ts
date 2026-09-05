@@ -28,7 +28,8 @@ const API_KEY = process.env.OPENAI_API_KEY;
 const skip: string | false =
   !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and OPENAI_API_KEY to run live OpenAI smoke tests" : false;
 
-const model = openAIModels[0]!;
+const modelOverride = process.env.PRISM_LIVE_OPENAI_MODEL;
+const model = modelOverride ? { ...openAIModels[0]!, model: modelOverride } : openAIModels[0]!;
 const apiKey = (): string | undefined => process.env.OPENAI_API_KEY;
 
 function provider() {

@@ -14,6 +14,61 @@ export const ANTHROPIC_DEFAULT_BASE_URL = "https://api.anthropic.com/v1";
 /** Anthropic Messages API version header value. */
 export const ANTHROPIC_API_VERSION = "2023-06-01";
 
+/** Default `budget_tokens` injected for bare `enabled` thinking on legacy (≤ 4.5) models. */
+export const ANTHROPIC_LEGACY_THINKING_DEFAULT_BUDGET = 10_000;
+
+/**
+ * Thinking-mode generation: `adaptive` models (Opus 4.6+, Sonnet 4.6+,
+ * Fable/Mythos, Opus 5, unknowns assumed current) reject `enabled`+budget;
+ * `legacy` models (Opus/Sonnet/Haiku 4.5) accept manual `enabled`+budget only.
+ * @see https://platform.claude.com/docs/en/build-with-claude/extended-thinking
+ */
+export type AnthropicThinkingGeneration = "adaptive" | "legacy";
+
+export function anthropicThinkingGeneration(modelId: string): AnthropicThinkingGeneration {
+  const id = modelId.toLowerCase();
+  if (
+    id.includes("haiku-4-5") ||
+    id.includes("haiku-4.5") ||
+    id.includes("opus-4-5") ||
+    id.includes("opus-4.5") ||
+    id.includes("sonnet-4-5") ||
+    id.includes("sonnet-4.5")
+  ) {
+    return "legacy";
+  }
+  return "adaptive";
+}
+
+/**
+ * Declared portable thinking levels per model family (Research Matrix, phase 65):
+ * all effort models accept low/medium/high (default high); +max (no xhigh) on
+ * Mythos Preview / Opus 4.6 / Sonnet 4.6; +xhigh+max on Opus 5, Opus 4.8, Opus 4.7,
+ * Sonnet 5, Fable 5, Mythos 5; Opus 4.5 is extended-thinking-only (low/medium/high).
+ * `undefined` for unknown ids → forward-compat passthrough.
+ * @see https://platform.claude.com/docs/en/build-with-claude/effort.md
+ */
+export function anthropicThinkingLevels(modelId: string): readonly string[] | undefined {
+  const id = modelId.toLowerCase();
+  if (
+    id.includes("fable") ||
+    id.includes("mythos-5") ||
+    id.includes("opus-5") ||
+    id.includes("opus-4-8") ||
+    id.includes("opus-4-7") ||
+    id.includes("sonnet-5")
+  ) {
+    return ["low", "medium", "high", "xhigh", "max"];
+  }
+  if (id.includes("mythos-preview") || id.includes("opus-4-6") || id.includes("sonnet-4-6")) {
+    return ["low", "medium", "high", "max"];
+  }
+  if (id.includes("opus-4-5") || id.includes("opus-4.5")) {
+    return ["low", "medium", "high"];
+  }
+  return undefined;
+}
+
 export interface AnthropicModelConfig extends Omit<ModelConfig, "provider" | "compat"> {
   readonly provider?: "anthropic" | string;
   readonly compat?: JsonObject & {
@@ -73,6 +128,7 @@ export function defineAnthropicModel(config: AnthropicModelConfig): ModelConfig 
     },
     compat: {
       preserveThinking: true,
+      thinkingFamily: "output_config_effort",
       ...config.compat,
     },
   };
@@ -123,6 +179,9 @@ export function mapAnthropicModel(entry: AnthropicModelEntry, options: { readonl
       contextWindow: entry.max_input_tokens,
       maxOutputTokens: entry.max_tokens,
     }),
+    capabilities: {
+      thinkingLevels: anthropicThinkingLevels(id),
+    },
     compat: cleanJson({
       preserveThinking: true,
       anthropic: cleanJson({
@@ -140,6 +199,7 @@ export const anthropicModels = [
     model: "claude-opus-4-8",
     displayName: "Claude Opus 4.8",
     limits: { contextWindow: 1_000_000, maxOutputTokens: 128_000 },
+    capabilities: { thinkingLevels: ["low", "medium", "high", "xhigh", "max"] },
     compat: {
       preserveThinking: true,
       thinking: { type: "adaptive" },
@@ -151,6 +211,7 @@ export const anthropicModels = [
     model: "claude-sonnet-5",
     displayName: "Claude Sonnet 5",
     limits: { contextWindow: 1_000_000, maxOutputTokens: 128_000 },
+    capabilities: { thinkingLevels: ["low", "medium", "high", "xhigh", "max"] },
     compat: {
       preserveThinking: true,
       thinking: { type: "adaptive" },
@@ -162,6 +223,7 @@ export const anthropicModels = [
     model: "claude-haiku-4-5",
     displayName: "Claude Haiku 4.5",
     limits: { contextWindow: 200_000, maxOutputTokens: 64_000 },
+    capabilities: { thinkingLevels: ["none", "low", "medium", "high"] },
     compat: {
       preserveThinking: true,
       // Manual extended thinking still supported on Haiku 4.5.
@@ -173,6 +235,7 @@ export const anthropicModels = [
     model: "claude-fable-5",
     displayName: "Claude Fable 5",
     limits: { contextWindow: 1_000_000, maxOutputTokens: 128_000 },
+    capabilities: { thinkingLevels: ["low", "medium", "high", "xhigh", "max"] },
     compat: {
       preserveThinking: true,
       thinking: { type: "adaptive" },

@@ -71,7 +71,11 @@ describe("cost catalog adapter", () => {
   });
 
   it("catalog failure degrades to usage-only instead of failing the round", async () => {
-    const catalog: CostCatalog = { get: async () => { throw new Error("catalog down"); } };
+    const catalog: CostCatalog = {
+      get: async () => {
+        throw new Error("catalog down");
+      },
+    };
     const { ctx, records } = ctxFixture(catalog);
     await recordProviderUsage(ctx, USAGE, 1, 0);
     assert.equal(records[0].usage.cost, undefined);
@@ -87,7 +91,12 @@ describe("cost catalog adapter", () => {
 
   it("provider-reported cost wins: catalog is not consulted", async () => {
     let lookedUp = false;
-    const catalog: CostCatalog = { get: async () => { lookedUp = true; return QUOTE; } };
+    const catalog: CostCatalog = {
+      get: async () => {
+        lookedUp = true;
+        return QUOTE;
+      },
+    };
     const { ctx, records } = ctxFixture(catalog);
     await recordProviderUsage(ctx, { ...USAGE, cost: 0.25, currency: "EUR" }, 1, 0);
     assert.equal(lookedUp, false);

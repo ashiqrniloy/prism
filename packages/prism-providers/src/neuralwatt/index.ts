@@ -29,6 +29,7 @@ export {
   type ListNeuralWattModelsOptions,
   listNeuralWattModels,
   mapNeuralWattModel,
+  NEURALWATT_THINKING_LEVELS,
   type NeuralWattModelConfig,
   type NeuralWattModelEntry,
   neuralWattModels,

@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
-import { createServer as createHttpServer, type Server as HttpServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { afterEach, describe, it } from "node:test";
-import { pathToFileURL } from "node:url";
 import {
   type CommandDefinition,
   createAgent,
@@ -333,7 +332,8 @@ describe("dual-era MCP serving (plan 063 task 4)", () => {
     parameters: { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
     execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: { echo: args.text } }),
   };
-  const factory = () => createPrismMcpServer({ tools: [echoTool], authorize: () => ({ allowed: true, ownership: { tenantId: "tenant-1" } }) });
+  const factory = () =>
+    createPrismMcpServer({ tools: [echoTool], authorize: () => ({ allowed: true, ownership: { tenantId: "tenant-1" } }) });
 
   async function listen(handler: (request: Request) => Promise<Response>) {
     const responseHeaders: Array<Array<[string, string]>> = [];
@@ -374,7 +374,12 @@ describe("dual-era MCP serving (plan 063 task 4)", () => {
   it("serves modern HTTP through createMcpHandler with SDK-generated discover and no session ids", async () => {
     const handler = await createPrismMcpWebHandler(factory);
     const wire = await listen(handler);
-    open.push({ close: async () => { await handler.close(); await wire.close(); } });
+    open.push({
+      close: async () => {
+        await handler.close();
+        await wire.close();
+      },
+    });
 
     const client = new Client(
       { name: "modern-client", version: "1.0.0" },
@@ -385,7 +390,10 @@ describe("dual-era MCP serving (plan 063 task 4)", () => {
     assert.equal(client.getProtocolEra(), "modern");
 
     const listed = await client.listTools();
-    assert.deepEqual(listed.tools.map((tool) => tool.name), ["echo"]);
+    assert.deepEqual(
+      listed.tools.map((tool) => tool.name),
+      ["echo"],
+    );
     // Tasks boundary (plan 063 task 6): the server advertises no Tasks capability.
     const serverCaps = client.getServerCapabilities() as { tasks?: unknown; extensions?: Record<string, unknown> };
     assert.equal(serverCaps.tasks, undefined);
@@ -402,14 +410,22 @@ describe("dual-era MCP serving (plan 063 task 4)", () => {
   it("keeps legacy stateless HTTP clients on the SDK stateless fallback", async () => {
     const handler = await createPrismMcpWebHandler(factory);
     const wire = await listen(handler);
-    open.push({ close: async () => { await handler.close(); await wire.close(); } });
+    open.push({
+      close: async () => {
+        await handler.close();
+        await wire.close();
+      },
+    });
 
     const client = new Client({ name: "legacy-client", version: "1.0.0" }, { capabilities: {} });
     await client.connect(new StreamableHTTPClientTransport(new URL(`${wire.origin}/mcp`)));
     open.push({ close: () => client.close() });
     assert.equal(client.getProtocolEra(), "legacy");
     const listed = await client.listTools();
-    assert.deepEqual(listed.tools.map((tool) => tool.name), ["echo"]);
+    assert.deepEqual(
+      listed.tools.map((tool) => tool.name),
+      ["echo"],
+    );
     const result = await client.callTool({ name: "echo", arguments: { text: "yo" } });
     assert.match(JSON.stringify(result.content), /yo/);
   });
@@ -421,7 +437,12 @@ describe("dual-era MCP serving (plan 063 task 4)", () => {
       allowedOrigins: ["https://example.test"],
     });
     const wire = await listen(handler);
-    open.push({ close: async () => { await handler.close(); await wire.close(); } });
+    open.push({
+      close: async () => {
+        await handler.close();
+        await wire.close();
+      },
+    });
 
     const initialized = await handler(
       new Request("https://example.test/mcp", {
@@ -492,14 +513,24 @@ describe("dual-era MCP serving (plan 063 task 4)", () => {
       },
     );
     const wire = await listen(authHandler);
-    open.push({ close: async () => { await authHandler.close(); await wire.close(); } });
+    open.push({
+      close: async () => {
+        await authHandler.close();
+        await wire.close();
+      },
+    });
     const client = new Client({ name: "legacy-client", version: "1.0.0" }, { capabilities: {} });
-    await client.connect(new StreamableHTTPClientTransport(new URL(`${wire.origin}/mcp`), {
-      requestInit: { headers: { authorization: "Bearer token-1" } },
-    }));
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(`${wire.origin}/mcp`), {
+        requestInit: { headers: { authorization: "Bearer token-1" } },
+      }),
+    );
     open.push({ close: () => client.close() });
     await client.callTool({ name: "echo", arguments: { text: "auth" } });
-    assert.ok(seenAuth.some((authInfo) => authInfo?.clientId === "web-client"), "verified AuthInfo reaches authorize");
+    assert.ok(
+      seenAuth.some((authInfo) => authInfo?.clientId === "web-client"),
+      "verified AuthInfo reaches authorize",
+    );
   });
 
   it("keeps the handler callable and exposes SDK fetch/close/notify/bus lifecycle", async () => {
@@ -528,14 +559,8 @@ describe("dual-era MCP serving (plan 063 task 4)", () => {
   });
 
   it("bounds modern subscriptions and keepalive options", async () => {
-    await assert.rejects(
-      createPrismMcpWebHandler(factory, { maxSubscriptions: 5000 }),
-      /maxSubscriptions must be a positive safe integer/,
-    );
-    await assert.rejects(
-      createPrismMcpWebHandler(factory, { keepAliveMs: -1 }),
-      /keepAliveMs must be a safe integer/,
-    );
+    await assert.rejects(createPrismMcpWebHandler(factory, { maxSubscriptions: 5000 }), /maxSubscriptions must be a positive safe integer/);
+    await assert.rejects(createPrismMcpWebHandler(factory, { keepAliveMs: -1 }), /keepAliveMs must be a safe integer/);
   });
 
   it("serves auto and legacy stdio connections with protocol-only stdout", async () => {
@@ -563,7 +588,11 @@ servePrismMcpStdio(() => createPrismMcpServer({ tools: [echo], authorize: async 
       if (label === "modern auto") assert.equal(client.getProtocolEra(), "modern", "auto negotiation probes modern over stdio");
       else assert.equal(client.getProtocolEra(), "legacy", "legacy opening pins a legacy instance");
       const listed = await client.listTools();
-      assert.deepEqual(listed.tools.map((tool) => tool.name), ["echo"], label);
+      assert.deepEqual(
+        listed.tools.map((tool) => tool.name),
+        ["echo"],
+        label,
+      );
       const result = await client.callTool({ name: "echo", arguments: { text: label } });
       assert.match(JSON.stringify(result.content), new RegExp(label.replace(" ", ".")));
       await client.close();

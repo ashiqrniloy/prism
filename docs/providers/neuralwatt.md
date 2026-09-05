@@ -380,6 +380,10 @@ const decision = classifyNeuralWattError({ status: 429, headers: { "retry-after"
 - Live tests stay opt-in behind `NEURALWATT_API_KEY` (plus `PRISM_LIVE_PROVIDER_TESTS=1`);
   default tests are network-free.
 
+## Thinking and reasoning
+
+NeuralWatt reasoning models declare `low/medium/high/max` and snap `reasoning_effort` to that set; non-reasoning models (`-fast`, gemma) declare nothing. `thinking_token_budget` and `chat_template_kwargs` (`preserve_thinking`/`clear_thinking`) stay package-local. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider packages](../provider-packages.md): `defineProviderPackage`,

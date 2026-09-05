@@ -208,6 +208,23 @@ describe("@arnilo/prism-providers/neuralwatt (model registry)", () => {
     }
   });
 
+  it("reasoning_models_declare_levels_family_and_snap_illegal_values", () => {
+    const glm = neuralWattModels.find((m) => m.model === "glm-5.2")!;
+    assert.deepEqual(glm.capabilities?.thinkingLevels, ["low", "medium", "high", "max"]);
+    assert.equal(glm.compat?.thinkingFamily, "reasoning_effort");
+    const fast = neuralWattModels.find((m) => m.model === "glm-5.2-fast")!;
+    assert.equal(fast.capabilities?.thinkingLevels, undefined);
+    assert.equal(fast.compat?.thinkingFamily, undefined);
+    // Illegal value snaps to the declared set: xhigh → max (tie between high and max breaks up).
+    const snapped = neuralWattBody({
+      model: glm,
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { compat: { reasoning_effort: "xhigh" } },
+    });
+    assert.equal(snapped.reasoning_effort, "max");
+    assert.equal((snapped as any).thinkingFamily, undefined, "stamp stripped from the wire");
+  });
+
   it("defineNeuralWattModel_overrides_model_config", () => {
     const custom = defineNeuralWattModel({
       model: "custom-llm",
@@ -235,11 +252,13 @@ describe("@arnilo/prism-providers/neuralwatt (model discovery)", () => {
         reasoning: true,
         streaming: true,
         structuredOutput: "json_schema",
+        thinkingLevels: ["low", "medium", "high", "max"],
       },
       limits: { contextWindow: 202_752, maxOutputTokens: 16_384 },
       cost: { input: 0.35, output: 1.38, cacheRead: 0.0875, currency: "USD", unit: "per_million_tokens" },
       cache: { kind: "implicit" },
       compat: {
+        thinkingFamily: "reasoning_effort",
         reasoning: true,
         reasoning_effort: "max",
         tool_stream: true,

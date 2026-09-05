@@ -26,7 +26,8 @@ const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
 const API_KEY = process.env.KIMI_API_KEY;
 const skip: string | false = !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and KIMI_API_KEY to run live Kimi smoke tests" : false;
 
-const model = kimiCodingModels[0]!;
+const modelOverride = process.env.PRISM_LIVE_KIMI_MODEL;
+const model = modelOverride ? { ...kimiCodingModels[0]!, model: modelOverride } : kimiCodingModels[0]!;
 const apiKey = (): string | undefined => process.env.KIMI_API_KEY;
 
 function provider() {
@@ -77,6 +78,20 @@ describe("@arnilo/prism-providers/kimi live tests", () => {
     const events = await collectProviderEvents(provider(), badRequest);
     const terminal = events.at(-1);
     assert.ok(terminal, "live error request produced no events");
+    assertNoSecretLeak(events, [API_KEY!]);
+  });
+
+  // Thinking-effort probe (plan 065 task 15): the K3 snap table (low/high/max)
+  // must produce a reasoning_effort the live API accepts.
+  it("live_reasoning_effort_snap_is_accepted", { skip }, async () => {
+    const events = await assertProviderStreamConforms({
+      provider: provider(),
+      request: { ...textRequest, options: { compat: { reasoning_effort: "medium" } } },
+    });
+    assert.ok(
+      events.some((e) => e.type === "done"),
+      "live effort probe produced no done event",
+    );
     assertNoSecretLeak(events, [API_KEY!]);
   });
 });

@@ -12,5 +12,9 @@ scripts/release-evidence.json
 scripts/lint-report.sarif
 scripts/unused-report.json
 
+# live credential files — names-only *.example stays tracked, real files never (see scripts/live.env.example)
+scripts/live.env
+*.local.env
+
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/

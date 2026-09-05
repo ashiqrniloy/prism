@@ -219,7 +219,9 @@ describe("performance budget gate", () => {
     const index = readFileSync("docs/index.md", "utf8");
     for (const match of index.matchAll(/\]\(([^)]+)\)/g)) {
       const href = match[1].split("#")[0];
-      if (!href.endsWith(".md") || href.startsWith("http") || href.startsWith("../")) continue;
+      // docs/_evidence is deliberately tarball-excluded (in-repo audit trail);
+      // its links resolve in the repo, not in the shipped pack.
+      if (!href.endsWith(".md") || href.startsWith("http") || href.startsWith("../") || href.includes("_evidence/")) continue;
       const path = `docs/${href.replace(/^\.\//, "")}`;
       assert.ok(packedSet.has(path), `shipped index links ${path} missing from pack`);
     }

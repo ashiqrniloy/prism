@@ -3,7 +3,7 @@
  *  auto-chunking — callers chunk (e.g. memory's `embedBatched`). Keys resolve through
  *  the existing `CredentialValueSource` seam and are redacted from every error. */
 
-import type { EmbeddingsProvider, } from "@arnilo/prism";
+import type { EmbeddingsProvider } from "@arnilo/prism";
 import { type CredentialValueSource, EmbeddingsError, redactSecrets, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 

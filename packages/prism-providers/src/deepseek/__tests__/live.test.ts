@@ -14,7 +14,8 @@ const API_KEY = process.env.DEEPSEEK_API_KEY;
 const skip: string | false =
   !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and DEEPSEEK_API_KEY to run live DeepSeek smoke tests" : false;
 
-const model = deepseekModels[0]!;
+const modelOverride = process.env.PRISM_LIVE_DEEPSEEK_MODEL;
+const model = modelOverride ? { ...deepseekModels[0]!, model: modelOverride } : deepseekModels[0]!;
 const apiKey = (): string | undefined => process.env.DEEPSEEK_API_KEY;
 
 function provider() {

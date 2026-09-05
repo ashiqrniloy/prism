@@ -1,0 +1,1106 @@
+{
+  "schemaVersion": 1,
+  "mode": "baseline",
+  "packages": {
+    "@arnilo/prism": {
+      ".": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/agent-approval-coverage.test.ts",
+          "src/__tests__/agent-config.types.test.ts",
+          "src/__tests__/agent-loops.test.ts",
+          "src/__tests__/agent-run-lifecycle.test.ts",
+          "src/__tests__/agent-run-state.test.ts",
+          "src/__tests__/agents.test.ts",
+          "src/__tests__/artifacts-coverage.test.ts",
+          "src/__tests__/batch.test.ts",
+          "src/__tests__/cache-helpers.test.ts",
+          "src/__tests__/cache-telemetry.test.ts",
+          "src/__tests__/capture.test.ts",
+          "src/__tests__/checkpoint-event-primitives.test.ts",
+          "src/__tests__/cli-dev.test.ts",
+          "src/__tests__/cli-discovery.test.ts",
+          "src/__tests__/cli-init.test.ts",
+          "src/__tests__/cli-instruction-injectors.test.ts",
+          "src/__tests__/cli-provider-add.test.ts",
+          "src/__tests__/cli-system-project-prompts.test.ts",
+          "src/__tests__/cli.test.ts",
+          "src/__tests__/compaction.test.ts",
+          "src/__tests__/compatibility-0-0-3.test.ts",
+          "src/__tests__/config-manifests.test.ts",
+          "src/__tests__/content.test.ts",
+          "src/__tests__/context-budget.test.ts",
+          "src/__tests__/contribution-discovery.types.test.ts",
+          "src/__tests__/contribution-parsing.test.ts",
+          "src/__tests__/contributions-discovered.test.ts",
+          "src/__tests__/contributions.test.ts",
+          "src/__tests__/conversations-coverage.test.ts",
+          "src/__tests__/core-boundaries.test.ts",
+          "src/__tests__/cost-catalog.test.ts",
+          "src/__tests__/credentials-redaction.test.ts",
+          "src/__tests__/crew-hierarchy-example.test.ts",
+          "src/__tests__/delegated-agent-step.test.ts",
+          "src/__tests__/devices.test.ts",
+          "src/__tests__/docs.test.ts",
+          "src/__tests__/durable-loops.test.ts",
+          "src/__tests__/embeddings.test.ts",
+          "src/__tests__/execution-policy.test.ts",
+          "src/__tests__/extensions.test.ts",
+          "src/__tests__/field-policy.test.ts",
+          "src/__tests__/fixtures.test.ts",
+          "src/__tests__/guardrails.test.ts",
+          "src/__tests__/handoff-swarm-example.test.ts",
+          "src/__tests__/identity.test.ts",
+          "src/__tests__/images.test.ts",
+          "src/__tests__/index.test.ts",
+          "src/__tests__/input-pipeline.test.ts",
+          "src/__tests__/install-smoke.test.ts",
+          "src/__tests__/instruction-injection-assembler.test.ts",
+          "src/__tests__/instruction-injection.test.ts",
+          "src/__tests__/instruction-injection.types.test.ts",
+          "src/__tests__/leak-sessions.test.ts",
+          "src/__tests__/middleware.test.ts",
+          "src/__tests__/mock-provider.test.ts",
+          "src/__tests__/moderation.test.ts",
+          "src/__tests__/network-free-guard.test.ts",
+          "src/__tests__/oauth-device-code.test.ts",
+          "src/__tests__/observability.test.ts",
+          "src/__tests__/package-setup-boundaries.test.ts",
+          "src/__tests__/packaging.test.ts",
+          "src/__tests__/persistence-contracts.types.test.ts",
+          "src/__tests__/persistence-lifecycle.test.ts",
+          "src/__tests__/pinned-fetch.test.ts",
+          "src/__tests__/providers.test.ts",
+          "src/__tests__/public-contracts.test.ts",
+          "src/__tests__/public-export-contract.test.ts",
+          "src/__tests__/registries.test.ts",
+          "src/__tests__/release.test.ts",
+          "src/__tests__/resources.test.ts",
+          "src/__tests__/retry.test.ts",
+          "src/__tests__/rpc-instruction-injectors.test.ts",
+          "src/__tests__/rpc.test.ts",
+          "src/__tests__/run-decisions.test.ts",
+          "src/__tests__/run-ledger-batching.test.ts",
+          "src/__tests__/run-ledger.test.ts",
+          "src/__tests__/run-limits.test.ts",
+          "src/__tests__/runtime-redaction.test.ts",
+          "src/__tests__/secure-agent.test.ts",
+          "src/__tests__/session-stores.test.ts",
+          "src/__tests__/skill-disclosure.test.ts",
+          "src/__tests__/skill-load.test.ts",
+          "src/__tests__/skills.test.ts",
+          "src/__tests__/speech.test.ts",
+          "src/__tests__/structured-output.test.ts",
+          "src/__tests__/supply-chain-security.test.ts",
+          "src/__tests__/system-prompts.test.ts",
+          "src/__tests__/thinking.test.ts",
+          "src/__tests__/tool-result-fold.test.ts",
+          "src/__tests__/tool-search.test.ts",
+          "src/__tests__/tools.test.ts",
+          "src/__tests__/use-case-model.test.ts",
+          "src/__tests__/video.test.ts"
+        ],
+        "mode": ""
+      },
+      "./providers/openai-compatible": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/openai-compatible.test.ts"
+        ],
+        "mode": ""
+      },
+      "./providers/transport": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/provider-events.test.ts",
+          "src/__tests__/provider-transport.test.ts"
+        ],
+        "mode": ""
+      },
+      "./providers/openai": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/openai-primitives.test.ts"
+        ],
+        "mode": ""
+      },
+      "./providers/schema": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/schema.test.ts"
+        ],
+        "mode": ""
+      },
+      "./providers/media": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/provider-media.test.ts"
+        ],
+        "mode": ""
+      },
+      "./testing/provider-conformance": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/provider-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./testing/agent-event-source-conformance": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/agent-event-source.test.ts",
+          "src/__tests__/conformance-helpers.test.ts"
+        ],
+        "mode": ""
+      },
+      "./testing/state-concurrency-conformance": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/state-concurrency-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./testing/session-store-conformance": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/conformance-helpers.test.ts",
+          "src/__tests__/session-index.test.ts"
+        ],
+        "mode": ""
+      },
+      "./testing/compaction-conformance": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/conformance-helpers.test.ts"
+        ],
+        "mode": ""
+      },
+      "./testing/tool-conformance": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/conformance-helpers.test.ts"
+        ],
+        "mode": ""
+      },
+      "./testing/tool-effect-store-conformance": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/conformance-helpers.test.ts",
+          "src/__tests__/tool-effect-store-coverage.test.ts",
+          "src/__tests__/tool-effects.test.ts"
+        ],
+        "mode": ""
+      },
+      "./testing/extension-conformance": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/conformance-helpers.test.ts"
+        ],
+        "mode": ""
+      },
+      "./testing/persistence-schema": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/persistence-schema.test.ts"
+        ],
+        "mode": ""
+      },
+      "./testing/run-ledger-conformance": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/conformance-helpers.test.ts"
+        ],
+        "mode": ""
+      },
+      "./testing/feedback": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/feedback.test.ts"
+        ],
+        "mode": ""
+      },
+      "./node/config": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/node-config.test.ts"
+        ],
+        "mode": ""
+      },
+      "./node/settings": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/settings-security.test.ts"
+        ],
+        "mode": ""
+      },
+      "./node/trust": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/contribution-security-boundaries.test.ts",
+          "src/__tests__/settings-security.test.ts",
+          "src/__tests__/system-project-prompts.test.ts"
+        ],
+        "mode": ""
+      },
+      "./node/session-store-jsonl": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/node-session-store-jsonl.test.ts"
+        ],
+        "mode": ""
+      },
+      "./node/contribution-discovery": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/node-contribution-discovery.test.ts"
+        ],
+        "mode": ""
+      },
+      "./node/instruction-injectors": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/node-instruction-injectors.test.ts"
+        ],
+        "mode": ""
+      },
+      "./node/system-prompts": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/system-project-prompts.test.ts"
+        ],
+        "mode": ""
+      },
+      "./node/agent-definitions": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/agent-definitions.test.ts",
+          "src/__tests__/node-agent-definitions.test.ts"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-mcp": {
+      ".": {
+        "suites": [
+          "packages/mcp/src/__tests__/auth.test.ts",
+          "packages/mcp/src/__tests__/bridge.test.ts",
+          "packages/mcp/src/__tests__/capabilities.test.ts",
+          "packages/mcp/src/__tests__/content.test.ts",
+          "packages/mcp/src/__tests__/elicitation.test.ts",
+          "packages/mcp/src/__tests__/modern-bridge.test.ts",
+          "packages/mcp/src/__tests__/server.test.ts",
+          "packages/mcp/src/__tests__/transport.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-providers": {
+      "./ai-sdk": {
+        "suites": [
+          "packages/prism-providers/src/ai-sdk/__tests__/ai-sdk-provider.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./alibaba": {
+        "suites": [
+          "packages/prism-providers/src/alibaba/__tests__/alibaba.test.ts",
+          "packages/prism-providers/src/alibaba/__tests__/embeddings.test.ts",
+          "packages/prism-providers/src/alibaba/__tests__/images.test.ts",
+          "packages/prism-providers/src/alibaba/__tests__/live.test.ts",
+          "packages/prism-providers/src/alibaba/__tests__/video.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./anthropic": {
+        "suites": [
+          "packages/prism-providers/src/anthropic/__tests__/anthropic.test.ts",
+          "packages/prism-providers/src/anthropic/__tests__/index.test.ts",
+          "packages/prism-providers/src/anthropic/__tests__/live.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./azure": {
+        "suites": [
+          "packages/prism-providers/src/azure/__tests__/azure.test.ts",
+          "packages/prism-providers/src/azure/__tests__/credential-once.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./bedrock": {
+        "suites": [
+          "packages/prism-providers/src/bedrock/__tests__/bedrock.test.ts",
+          "packages/prism-providers/src/bedrock/__tests__/sigv4-canonical.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./clinepass": {
+        "suites": [
+          "packages/prism-providers/src/clinepass/__tests__/clinepass.test.ts",
+          "packages/prism-providers/src/clinepass/__tests__/index.test.ts",
+          "packages/prism-providers/src/clinepass/__tests__/live.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./commandcode": {
+        "suites": [
+          "packages/prism-providers/src/commandcode/__tests__/commandcode.test.ts",
+          "packages/prism-providers/src/commandcode/__tests__/live.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./deepseek": {
+        "suites": [
+          "packages/prism-providers/src/deepseek/__tests__/deepseek.test.ts",
+          "packages/prism-providers/src/deepseek/__tests__/index.test.ts",
+          "packages/prism-providers/src/deepseek/__tests__/live.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./google": {
+        "suites": [
+          "packages/prism-providers/src/google/__tests__/google.test.ts",
+          "packages/prism-providers/src/google/__tests__/index.test.ts",
+          "packages/prism-providers/src/google/__tests__/live.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./hyper": {
+        "suites": [
+          "packages/prism-providers/src/hyper/__tests__/hyper.test.ts",
+          "packages/prism-providers/src/hyper/__tests__/live.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./kimi": {
+        "suites": [
+          "packages/prism-providers/src/kimi/__tests__/index.test.ts",
+          "packages/prism-providers/src/kimi/__tests__/kimi.test.ts",
+          "packages/prism-providers/src/kimi/__tests__/live.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./model-discovery": {
+        "suites": [
+          "packages/prism-providers/src/anthropic/__tests__/index.test.ts",
+          "packages/prism-providers/src/clinepass/__tests__/index.test.ts",
+          "packages/prism-providers/src/deepseek/__tests__/index.test.ts",
+          "packages/prism-providers/src/google/__tests__/index.test.ts",
+          "packages/prism-providers/src/kimi/__tests__/index.test.ts",
+          "packages/prism-providers/src/neuralwatt/__tests__/index.test.ts",
+          "packages/prism-providers/src/openai/__tests__/index.test.ts",
+          "packages/prism-providers/src/opencode-go/__tests__/index.test.ts",
+          "packages/prism-providers/src/openrouter/__tests__/index.test.ts",
+          "packages/prism-providers/src/xai/__tests__/index.test.ts",
+          "packages/prism-providers/src/zai/__tests__/index.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": "live+hermetic"
+      },
+      "./neuralwatt": {
+        "suites": [
+          "packages/prism-providers/src/neuralwatt/__tests__/index.test.ts",
+          "packages/prism-providers/src/neuralwatt/__tests__/live.test.ts",
+          "packages/prism-providers/src/neuralwatt/__tests__/neuralwatt-quota.test.ts",
+          "packages/prism-providers/src/neuralwatt/__tests__/neuralwatt-retry.test.ts",
+          "packages/prism-providers/src/neuralwatt/__tests__/neuralwatt.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./ollama": {
+        "suites": [
+          "packages/prism-providers/src/ollama/__tests__/ollama.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./openai": {
+        "suites": [
+          "packages/prism-providers/src/openai/__tests__/batch.test.ts",
+          "packages/prism-providers/src/openai/__tests__/codex-oauth.test.ts",
+          "packages/prism-providers/src/openai/__tests__/embeddings.test.ts",
+          "packages/prism-providers/src/openai/__tests__/hosted-continuation-realtime.test.ts",
+          "packages/prism-providers/src/openai/__tests__/images.test.ts",
+          "packages/prism-providers/src/openai/__tests__/index.test.ts",
+          "packages/prism-providers/src/openai/__tests__/live.test.ts",
+          "packages/prism-providers/src/openai/__tests__/moderation.test.ts",
+          "packages/prism-providers/src/openai/__tests__/openai-media.test.ts",
+          "packages/prism-providers/src/openai/__tests__/openai.test.ts",
+          "packages/prism-providers/src/openai/__tests__/speech.test.ts",
+          "packages/prism-providers/src/openai/__tests__/transcription.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./opencode-go": {
+        "suites": [
+          "packages/prism-providers/src/opencode-go/__tests__/index.test.ts",
+          "packages/prism-providers/src/opencode-go/__tests__/live.test.ts",
+          "packages/prism-providers/src/opencode-go/__tests__/opencode-go.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./openrouter": {
+        "suites": [
+          "packages/prism-providers/src/openrouter/__tests__/index.test.ts",
+          "packages/prism-providers/src/openrouter/__tests__/live.test.ts",
+          "packages/prism-providers/src/openrouter/__tests__/openrouter.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./vertex": {
+        "suites": [
+          "packages/prism-providers/src/vertex/__tests__/credential-once.test.ts",
+          "packages/prism-providers/src/vertex/__tests__/vertex.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./xai": {
+        "suites": [
+          "packages/prism-providers/src/xai/__tests__/index.test.ts",
+          "packages/prism-providers/src/xai/__tests__/live.test.ts",
+          "packages/prism-providers/src/xai/__tests__/oauth.test.ts",
+          "packages/prism-providers/src/xai/__tests__/xai.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./zai": {
+        "suites": [
+          "packages/prism-providers/src/zai/__tests__/index.test.ts",
+          "packages/prism-providers/src/zai/__tests__/live.test.ts",
+          "packages/prism-providers/src/zai/__tests__/zai.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-memory": {
+      ".": {
+        "suites": [
+          "packages/memory/src/__tests__/memory.test.ts",
+          "packages/memory/src/__tests__/postgres-memory.integration.test.ts",
+          "packages/memory/src/__tests__/postgres-vector.integration.test.ts",
+          "packages/memory/src/__tests__/public-surface.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./rag": {
+        "suites": [
+          "packages/memory/src/rag/__tests__/fusion.test.ts",
+          "packages/memory/src/rag/__tests__/hosted-rerankers.test.ts",
+          "packages/memory/src/rag/__tests__/rag.test.ts",
+          "packages/memory/src/rag/__tests__/tei-reranker.test.ts",
+          "packages/memory/src/rag/__tests__/telemetry.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./rag/loaders": {
+        "suites": [
+          "packages/memory/src/rag/__tests__/rag.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": "live+hermetic"
+      },
+      "./rag/parsers": {
+        "suites": [
+          "packages/memory/src/rag/__tests__/rag.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": "live+hermetic"
+      },
+      "./compaction/llm": {
+        "suites": [
+          "packages/memory/src/compaction/llm/__tests__/coding.test.ts",
+          "packages/memory/src/compaction/llm/__tests__/index.test.ts",
+          "packages/memory/src/compaction/llm/__tests__/live.test.ts",
+          "packages/memory/src/compaction/llm/__tests__/prepare.test.ts",
+          "packages/memory/src/compaction/llm/__tests__/runtime.test.ts",
+          "packages/memory/src/compaction/llm/__tests__/serialize.test.ts",
+          "packages/memory/src/compaction/llm/__tests__/strategy.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./compaction/observational-memory": {
+        "suites": [
+          "packages/memory/src/compaction/observational-memory/__tests__/attach.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/commands.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/coverage.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/extension.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/index.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/ledger.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/live.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/recall.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/recent-messages.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/runtime-coverage.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/runtime-drop.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/runtime.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/settings.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/strategy.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/tool.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/worker-split.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/workers.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./graft": {
+        "suites": [
+          "packages/memory/src/graft/__tests__/cli.test.ts",
+          "packages/memory/src/graft/__tests__/commands.test.ts",
+          "packages/memory/src/graft/__tests__/edit-watch.test.ts",
+          "packages/memory/src/graft/__tests__/injector.test.ts",
+          "packages/memory/src/graft/__tests__/tools.test.ts",
+          "packages/memory/src/graft/__tests__/upstream.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./wiki": {
+        "suites": [
+          "packages/memory/src/wiki/__tests__/cli.test.ts",
+          "packages/memory/src/wiki/__tests__/commands.test.ts",
+          "packages/memory/src/wiki/__tests__/compiler.test.ts",
+          "packages/memory/src/wiki/__tests__/context7-hydrator.test.ts",
+          "packages/memory/src/wiki/__tests__/contradictions.test.ts",
+          "packages/memory/src/wiki/__tests__/e2e-codebase.test.ts",
+          "packages/memory/src/wiki/__tests__/e2e-pkm.test.ts",
+          "packages/memory/src/wiki/__tests__/linter.test.ts",
+          "packages/memory/src/wiki/__tests__/manifest.test.ts",
+          "packages/memory/src/wiki/__tests__/primitive-seams.test.ts",
+          "packages/memory/src/wiki/__tests__/profiles.test.ts",
+          "packages/memory/src/wiki/__tests__/qmd-client.test.ts",
+          "packages/memory/src/wiki/__tests__/skills.test.ts",
+          "packages/memory/src/wiki/__tests__/tools.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-core": {
+      "./runtime/server": {
+        "suites": [
+          "packages/prism-core/src/runtime/server/__tests__/artifact-bodies.test.ts",
+          "packages/prism-core/src/runtime/server/__tests__/artifacts.test.ts",
+          "packages/prism-core/src/runtime/server/__tests__/conversations.test.ts",
+          "packages/prism-core/src/runtime/server/__tests__/deployment.test.ts",
+          "packages/prism-core/src/runtime/server/__tests__/server.test.ts",
+          "packages/prism-core/src/runtime/server/__tests__/webhooks.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./runtime/server/artifact-bodies": {
+        "suites": [
+          "packages/prism-core/src/runtime/server/__tests__/artifact-bodies.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./runtime/supervisor": {
+        "suites": [
+          "packages/prism-core/src/runtime/supervisor/__tests__/a2a.test.ts",
+          "packages/prism-core/src/runtime/supervisor/__tests__/nested-approvals.test.ts",
+          "packages/prism-core/src/runtime/supervisor/__tests__/supervisor.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./runtime/workflows": {
+        "suites": [
+          "packages/prism-core/src/runtime/workflows/__tests__/active-runs.test.ts",
+          "packages/prism-core/src/runtime/workflows/__tests__/checkpoints.test.ts",
+          "packages/prism-core/src/runtime/workflows/__tests__/commands.test.ts",
+          "packages/prism-core/src/runtime/workflows/__tests__/composition-replay.test.ts",
+          "packages/prism-core/src/runtime/workflows/__tests__/coordinator.test.ts",
+          "packages/prism-core/src/runtime/workflows/__tests__/define.test.ts",
+          "packages/prism-core/src/runtime/workflows/__tests__/events.test.ts",
+          "packages/prism-core/src/runtime/workflows/__tests__/run.test.ts",
+          "packages/prism-core/src/runtime/workflows/__tests__/saga.test.ts",
+          "packages/prism-core/src/runtime/workflows/__tests__/schedule-capabilities.test.ts",
+          "packages/prism-core/src/runtime/workflows/__tests__/schedules.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./sessions/codecs": {
+        "suites": [
+          "packages/prism-core/src/sessions/codecs/__tests__/parity.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./sessions/sqlite": {
+        "suites": [
+          "packages/prism-core/src/sessions/sqlite/__tests__/lifecycle.test.ts",
+          "packages/prism-core/src/sessions/sqlite/__tests__/sqlite-persistence.test.ts",
+          "packages/prism-core/src/sessions/sqlite/__tests__/state-concurrency-conformance.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./sessions/postgres": {
+        "suites": [
+          "packages/prism-core/src/sessions/postgres/__tests__/event-source.integration.test.ts",
+          "packages/prism-core/src/sessions/postgres/__tests__/postgres-integration.test.ts",
+          "packages/prism-core/src/sessions/postgres/__tests__/postgres-persistence.test.ts",
+          "packages/prism-core/src/sessions/postgres/__tests__/root-exports.test.ts",
+          "packages/prism-core/src/sessions/postgres/__tests__/state-concurrency-conformance.integration.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./sessions/nats": {
+        "suites": [
+          "packages/prism-core/src/sessions/nats/__tests__/event-source.test.ts",
+          "packages/prism-core/src/sessions/nats/__tests__/nats.integration.test.ts",
+          "packages/prism-core/src/sessions/nats/__tests__/state-concurrency-conformance.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./governance/policy": {
+        "suites": [
+          "packages/prism-core/src/governance/policy/__tests__/approvals.test.ts",
+          "packages/prism-core/src/governance/policy/__tests__/audit-export.test.ts",
+          "packages/prism-core/src/governance/policy/__tests__/opa.test.ts",
+          "packages/prism-core/src/governance/policy/__tests__/policy.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./governance/policy/opa": {
+        "suites": [
+          "packages/prism-core/src/governance/policy/__tests__/opa.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./governance/evals": {
+        "suites": [
+          "packages/prism-core/src/governance/evals/__tests__/curate.test.ts",
+          "packages/prism-core/src/governance/evals/__tests__/erp-invariants.test.ts",
+          "packages/prism-core/src/governance/evals/__tests__/evals.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./governance/prompts": {
+        "suites": [
+          "packages/prism-core/src/governance/prompts/__tests__/promotion.test.ts",
+          "packages/prism-core/src/governance/prompts/__tests__/prompts.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./governance/model-router": {
+        "suites": [
+          "packages/prism-core/src/governance/model-router/__tests__/model-router.test.ts",
+          "packages/prism-core/src/governance/model-router/__tests__/selection.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./governance/observability": {
+        "suites": [
+          "packages/prism-core/src/governance/observability/__tests__/instrumentation.test.ts",
+          "packages/prism-core/src/governance/observability/__tests__/rag-telemetry.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./credentials/node": {
+        "suites": [
+          "packages/prism-core/src/credentials/node/__tests__/credentials-node.test.ts",
+          "packages/prism-core/src/credentials/node/__tests__/oauth.test.ts",
+          "packages/prism-core/src/credentials/node/__tests__/oidc.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./credentials/node/oidc": {
+        "suites": [
+          "packages/prism-core/src/credentials/node/__tests__/oidc.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./enterprise/postgres": {
+        "suites": [
+          "packages/prism-core/src/enterprise/postgres/__tests__/approvals.integration.test.ts",
+          "packages/prism-core/src/enterprise/postgres/__tests__/enterprise-conformance.integration.test.ts",
+          "packages/prism-core/src/enterprise/postgres/__tests__/enterprise-conformance.test.ts",
+          "packages/prism-core/src/enterprise/postgres/__tests__/erp-messaging.integration.test.ts",
+          "packages/prism-core/src/enterprise/postgres/__tests__/migrations.integration.test.ts",
+          "packages/prism-core/src/enterprise/postgres/__tests__/model-router.integration.test.ts",
+          "packages/prism-core/src/enterprise/postgres/__tests__/package.test.ts",
+          "packages/prism-core/src/enterprise/postgres/__tests__/state-concurrency-conformance.test.ts",
+          "packages/prism-core/src/enterprise/postgres/__tests__/stores.integration.test.ts",
+          "packages/prism-core/src/enterprise/postgres/__tests__/stores.test.ts",
+          "packages/prism-core/src/enterprise/postgres/__tests__/tool-effects.integration.test.ts",
+          "packages/prism-core/src/enterprise/postgres/__tests__/work-idempotency.integration.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./integrations/work": {
+        "suites": [
+          "packages/prism-core/src/integrations/work/__tests__/work-tools.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./integrations/work/microsoft365": {
+        "suites": [
+          "packages/prism-core/src/integrations/work/__tests__/work-tools.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": "live+hermetic"
+      },
+      "./integrations/work/google-workspace": {
+        "suites": [
+          "packages/prism-core/src/integrations/work/__tests__/work-tools.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": "live+hermetic"
+      },
+      "./validation/json-schema": {
+        "suites": [
+          "packages/prism-core/src/validation/json-schema/__tests__/json-schema.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-coding-tools": {
+      "./agent": {
+        "suites": [
+          "packages/prism-coding-tools/src/agent/__tests__/acp-operations.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/aggregators.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/ask-user-decision.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/atomic-write.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/coding-checkpoint.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/delete-move.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/edit-diff.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/edit.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/effects.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/env.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/eval-fixtures.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/execution-policy.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/file-mutation-queue.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/forge-github.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/git-aware-repository.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/git.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/glob.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/goal-verify.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/indexed-search.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/language-diagnostics.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/language-intelligence.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/leak-processes.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/lifecycle.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/output-accumulator.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/path-utils.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/process-pty.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/process-recovery.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/process-session-phases.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/process-sessions.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/read-before-write.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/read-path-set-persistence.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/read.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/repository.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/review.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/shell.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/truncate.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/workspace-lifecycle.test.ts",
+          "packages/prism-coding-tools/src/agent/__tests__/write.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./security": {
+        "suites": [
+          "packages/prism-coding-tools/src/security/__tests__/approval.test.ts",
+          "packages/prism-coding-tools/src/security/__tests__/docker-sandbox.test.ts",
+          "packages/prism-coding-tools/src/security/__tests__/egress.test.ts",
+          "packages/prism-coding-tools/src/security/__tests__/native-sandbox.test.ts",
+          "packages/prism-coding-tools/src/security/__tests__/sandbox-coding-operations.test.ts",
+          "packages/prism-coding-tools/src/security/__tests__/sandbox-fs-operations.test.ts",
+          "packages/prism-coding-tools/src/security/__tests__/workspace-consistency.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./document-reader": {
+        "suites": [
+          "packages/prism-coding-tools/src/document-reader/__tests__/index.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./openapi": {
+        "suites": [
+          "packages/prism-coding-tools/src/openapi/__tests__/openapi-tools.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./computer-use-linux": {
+        "suites": [
+          "packages/prism-coding-tools/src/computer-use-linux/__tests__/create.test.ts",
+          "packages/prism-coding-tools/src/computer-use-linux/__tests__/skill.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./dev": {
+        "suites": [
+          "packages/prism-coding-tools/src/dev/__tests__/bind.test.ts",
+          "packages/prism-coding-tools/src/dev/__tests__/cli.test.ts",
+          "packages/prism-coding-tools/src/dev/__tests__/composition.test.ts",
+          "packages/prism-coding-tools/src/dev/__tests__/server-routes.test.ts",
+          "packages/prism-coding-tools/src/dev/__tests__/ui.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./dev/cli": {
+        "suites": [
+          "packages/prism-coding-tools/src/dev/__tests__/cli.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./caveman": {
+        "suites": [
+          "packages/prism-coding-tools/src/caveman/__tests__/caveman.test.ts",
+          "packages/prism-coding-tools/src/caveman/__tests__/index.test.ts",
+          "packages/prism-coding-tools/src/caveman/__tests__/packed-consumer.test.ts",
+          "packages/prism-coding-tools/src/caveman/__tests__/upstream.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./ponytail": {
+        "suites": [
+          "packages/prism-coding-tools/src/ponytail/__tests__/index.test.ts",
+          "packages/prism-coding-tools/src/ponytail/__tests__/packed-consumer.test.ts",
+          "packages/prism-coding-tools/src/ponytail/__tests__/ponytail.test.ts",
+          "packages/prism-coding-tools/src/ponytail/__tests__/subagent-hook.test.ts",
+          "packages/prism-coding-tools/src/ponytail/__tests__/upstream.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./impeccable": {
+        "suites": [
+          "packages/prism-coding-tools/src/impeccable/__tests__/impeccable.test.ts",
+          "packages/prism-coding-tools/src/impeccable/__tests__/index.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-office": {
+      "./documents": {
+        "suites": [
+          "packages/office/src/documents/__tests__/generate.test.ts",
+          "packages/office/src/documents/__tests__/golden.test.ts",
+          "packages/office/src/documents/__tests__/model.test.ts",
+          "packages/office/src/documents/__tests__/parse.test.ts",
+          "packages/office/src/documents/__tests__/patch-history.test.ts",
+          "packages/office/src/documents/__tests__/patch.test.ts",
+          "packages/office/src/documents/__tests__/preview-html.test.ts",
+          "packages/office/src/documents/__tests__/preview.test.ts",
+          "packages/office/src/documents/__tests__/schema-slice.test.ts",
+          "packages/office/src/documents/__tests__/telemetry.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./sheets": {
+        "suites": [
+          "packages/office/src/sheets/__tests__/caps.test.ts",
+          "packages/office/src/sheets/__tests__/corpus.test.ts",
+          "packages/office/src/sheets/__tests__/csv.test.ts",
+          "packages/office/src/sheets/__tests__/decimal.test.ts",
+          "packages/office/src/sheets/__tests__/inference.test.ts",
+          "packages/office/src/sheets/__tests__/telemetry.test.ts",
+          "packages/office/src/sheets/__tests__/xlsx.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./diagrams": {
+        "suites": [
+          "packages/office/src/diagrams/__tests__/canonicalize.test.ts",
+          "packages/office/src/diagrams/__tests__/drawio-live.test.ts",
+          "packages/office/src/diagrams/__tests__/embed.test.ts",
+          "packages/office/src/diagrams/__tests__/xml.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-ag-ui": {
+      ".": {
+        "suites": [
+          "packages/ag-ui/src/__tests__/a2a-server.test.ts",
+          "packages/ag-ui/src/__tests__/a2ui.test.ts",
+          "packages/ag-ui/src/__tests__/acp-agent.test.ts",
+          "packages/ag-ui/src/__tests__/acp-capabilities.test.ts",
+          "packages/ag-ui/src/__tests__/acp-coding.test.ts",
+          "packages/ag-ui/src/__tests__/acp-lifecycle.test.ts",
+          "packages/ag-ui/src/__tests__/acp-mapper.test.ts",
+          "packages/ag-ui/src/__tests__/acp-modes-config.test.ts",
+          "packages/ag-ui/src/__tests__/acp-prompt-content.test.ts",
+          "packages/ag-ui/src/__tests__/acp-recovery.test.ts",
+          "packages/ag-ui/src/__tests__/acp-session-lifecycle.test.ts",
+          "packages/ag-ui/src/__tests__/acp-session-store.test.ts",
+          "packages/ag-ui/src/__tests__/ag-ui-mapper.test.ts",
+          "packages/ag-ui/src/__tests__/cowork.test.ts",
+          "packages/ag-ui/src/__tests__/encrypted-value.test.ts",
+          "packages/ag-ui/src/__tests__/handler.test.ts",
+          "packages/ag-ui/src/__tests__/input.test.ts",
+          "packages/ag-ui/src/__tests__/interoperability.test.ts",
+          "packages/ag-ui/src/__tests__/mcp-apps-effect.test.ts",
+          "packages/ag-ui/src/__tests__/projection-async.test.ts",
+          "packages/ag-ui/src/__tests__/projectors.test.ts",
+          "packages/ag-ui/src/__tests__/renderer-bind.test.ts",
+          "packages/ag-ui/src/__tests__/renderer-core-export.test.ts",
+          "packages/ag-ui/src/__tests__/renderer-core.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./acp": {
+        "suites": [
+          "packages/ag-ui/src/__tests__/a2a-server.test.ts",
+          "packages/ag-ui/src/__tests__/acp-agent.test.ts",
+          "packages/ag-ui/src/__tests__/acp-capabilities.test.ts",
+          "packages/ag-ui/src/__tests__/acp-coding.test.ts",
+          "packages/ag-ui/src/__tests__/acp-lifecycle.test.ts",
+          "packages/ag-ui/src/__tests__/acp-mapper.test.ts",
+          "packages/ag-ui/src/__tests__/acp-modes-config.test.ts",
+          "packages/ag-ui/src/__tests__/acp-prompt-content.test.ts",
+          "packages/ag-ui/src/__tests__/acp-recovery.test.ts",
+          "packages/ag-ui/src/__tests__/acp-session-lifecycle.test.ts",
+          "packages/ag-ui/src/__tests__/acp-session-store.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": "live+hermetic"
+      },
+      "./renderer": {
+        "suites": [
+          "packages/ag-ui/src/__tests__/projection-async.test.ts",
+          "packages/ag-ui/src/__tests__/projectors.test.ts",
+          "packages/ag-ui/src/__tests__/renderer-bind.test.ts",
+          "packages/ag-ui/src/__tests__/renderer-core-export.test.ts",
+          "packages/ag-ui/src/__tests__/renderer-core.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": "live+hermetic"
+      }
+    },
+    "@arnilo/prism-web-tools": {
+      ".": {
+        "suites": [
+          "packages/web-tools/src/__tests__/leak-pages.test.ts",
+          "packages/web-tools/src/__tests__/live.test.ts",
+          "packages/web-tools/src/__tests__/web-tools.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./brave": {
+        "suites": [
+          "packages/web-tools/src/__tests__/live.test.ts",
+          "packages/web-tools/src/__tests__/web-tools.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": "live+hermetic"
+      },
+      "./exa": {
+        "suites": [
+          "packages/web-tools/src/__tests__/live.test.ts",
+          "packages/web-tools/src/__tests__/web-tools.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": "live+hermetic"
+      },
+      "./firecrawl": {
+        "suites": [
+          "packages/web-tools/src/__tests__/live.test.ts",
+          "packages/web-tools/src/__tests__/web-tools.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": "live+hermetic"
+      },
+      "./browser": {
+        "suites": [
+          "packages/web-tools/src/browser/__tests__/browser.test.ts",
+          "packages/web-tools/src/browser/__tests__/cdp.test.ts",
+          "packages/web-tools/src/browser/__tests__/checkpoint.test.ts",
+          "packages/web-tools/src/browser/__tests__/eval-fixtures.test.ts",
+          "packages/web-tools/src/browser/__tests__/evaluate.test.ts",
+          "packages/web-tools/src/browser/__tests__/live.test.ts",
+          "packages/web-tools/src/browser/__tests__/observe.test.ts",
+          "packages/web-tools/src/browser/__tests__/policy.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./obscura": {
+        "suites": [
+          "packages/web-tools/src/obscura/__tests__/browser.test.ts",
+          "packages/web-tools/src/obscura/__tests__/cdp.test.ts",
+          "packages/web-tools/src/obscura/__tests__/cli.test.ts",
+          "packages/web-tools/src/obscura/__tests__/live.test.ts",
+          "packages/web-tools/src/obscura/__tests__/mcp.test.ts",
+          "packages/web-tools/src/obscura/__tests__/process.test.ts",
+          "packages/web-tools/src/obscura/__tests__/web.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-acp-agent": {
+      ".": {
+        "suites": [
+          "packages/acp-agent/src/__tests__/agent.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      }
+    }
+  }
+}

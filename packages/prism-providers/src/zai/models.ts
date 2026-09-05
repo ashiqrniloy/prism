@@ -22,6 +22,8 @@ export interface ZaiModelConfig extends Omit<ModelConfig, "provider" | "compat">
     readonly clear_thinking?: boolean;
     /** Prism-local: replay prior thinking as `reasoning_content` when not clearing. */
     readonly preserveThinking?: boolean;
+    /** Prism compat-family stamp (`reasoning_effort` GLM-5.2+, `thinking_type` otherwise) — stripped from wire bodies. */
+    readonly thinkingFamily?: string;
   };
 }
 
@@ -56,6 +58,8 @@ interface ZaiModelsResponse {
 }
 
 export function defineZaiModel(config: ZaiModelConfig): ModelConfig {
+  const levels = zaiThinkingLevels(config.model);
+  const family = zaiThinkingFamily(config.model);
   return {
     ...config,
     provider: "zai",
@@ -66,10 +70,40 @@ export function defineZaiModel(config: ZaiModelConfig): ModelConfig {
       tools: true,
       streaming: true,
       structuredOutput: "json_schema",
+      ...(levels ? { thinkingLevels: levels } : {}),
       ...config.capabilities,
     },
     cache: config.cache ?? { kind: "implicit" },
+    compat: { ...(family ? { thinkingFamily: family } : {}), ...config.compat },
   };
+}
+
+/** GLM-5.3 / 5.3-FLASH accept only low | high | max (thinking cannot be disabled). */
+export const ZAI_GLM_5_3_THINKING_LEVELS = ["low", "high", "max"] as const;
+/** GLM-5.2 requestable effort values (upstream maps low/medium→high, xhigh→max, minimal/none→thinking off). */
+export const ZAI_GLM_5_2_THINKING_LEVELS = ["low", "medium", "high", "xhigh", "max"] as const;
+
+export function isGlm52Model(modelId: string): boolean {
+  const id = modelId.toLowerCase();
+  return id.includes("glm-5.2") || id.includes("glm-5-2");
+}
+
+export function isGlm53Model(modelId: string): boolean {
+  const id = modelId.toLowerCase();
+  return id.includes("glm-5.3") || id.includes("glm-5-3");
+}
+
+/** Declared portable effort levels for a Z.AI model id (GLM-5.2+ only). */
+export function zaiThinkingLevels(modelId: string): readonly string[] | undefined {
+  if (isGlm53Model(modelId)) return ZAI_GLM_5_3_THINKING_LEVELS;
+  if (isGlm52Model(modelId)) return ZAI_GLM_5_2_THINKING_LEVELS;
+  return undefined;
+}
+
+/** Compat-family stamp: GLM-5.2+ → `reasoning_effort`; other reasoning models → `thinking_type`. */
+export function zaiThinkingFamily(modelId: string): "reasoning_effort" | "thinking_type" | undefined {
+  if (isGlm52Model(modelId) || isGlm53Model(modelId)) return "reasoning_effort";
+  return looksLikeReasoningModel(modelId) ? "thinking_type" : undefined;
 }
 
 /**
@@ -195,8 +229,8 @@ function thinkingDefaultsForModel(modelId: string): JsonObject {
   if (!looksLikeReasoningModel(id)) return {};
   const compat: Record<string, JsonValue> = { thinking: true };
   if (supportsToolStream(id)) compat.tool_stream = true;
-  // Official: reasoning_effort only for GLM-5.2+.
-  if (supportsReasoningEffort(id)) compat.reasoning_effort = "max";
+  // Official: reasoning_effort for GLM-5.2+; documented default `max` on 5.2 (5.3 default undocumented).
+  if (isGlm52Model(id)) compat.reasoning_effort = "max";
   return compat;
 }
 
@@ -234,11 +268,6 @@ function supportsToolStream(modelId: string): boolean {
   const id = modelId.toLowerCase();
   // Official: tool_stream supported by GLM-4.6 and above.
   return id.includes("glm-5") || id.includes("glm-4.7") || id.includes("glm-4.6");
-}
-
-function supportsReasoningEffort(modelId: string): boolean {
-  const id = modelId.toLowerCase();
-  return id.includes("glm-5.2") || id.includes("glm-5-2");
 }
 
 function cleanJson(value: Record<string, unknown>): JsonObject {

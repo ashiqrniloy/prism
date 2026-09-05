@@ -123,6 +123,10 @@ await kernel.load([
 - Bounded OAuth and API error bodies. No retry loop. No refresh timer.
 - Live API-key smoke: `PRISM_LIVE_PROVIDER_TESTS=1` + `XAI_API_KEY`. SuperGrok login is operator-only (`PRISM_LIVE_XAI_OAUTH=1`).
 
+## Thinking and reasoning
+
+Reasoning models now send `reasoning_effort` (task-065 change — previously dropped): grok-4.6 declares `low/medium/high/xhigh` (default `high`), grok-4.5 `low/medium/high`, grok-4.3 `none/low/medium/high`. Effort snaps to the declared set (nearest, ties up); `grok-build` declares nothing and passes `reasoning_effort` through verbatim. Reasoning models must still replay `reasoning_content` — Featured Completions flatten nothing. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider packages](../provider-packages.md): OAuth support matrix.

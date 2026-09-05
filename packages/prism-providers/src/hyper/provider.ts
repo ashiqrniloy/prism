@@ -7,7 +7,7 @@ import { applyHyperAnthropicCacheControl } from "./cache.js";
 import { HYPER_DEFAULT_BASE_URL, type HyperRoute } from "./models.js";
 import { hyperChatBody, hyperChatEvents } from "./openai-chat.js";
 import { classifyHyperError, hyperHttpError } from "./retry.js";
-import { hyperPreserveThinking, stripHyperOwnedCompat } from "./thinking.js";
+import { hyperPreserveThinking, hyperReasoningEffort, hyperThinking, stripHyperOwnedCompat } from "./thinking.js";
 
 export interface HyperProviderOptions {
   readonly id?: string;
@@ -21,6 +21,8 @@ const HYPER_ANTHROPIC_HOOKS: AnthropicMessagesRouteHooks = {
   applyCacheControl: applyHyperAnthropicCacheControl,
   preserveThinking: hyperPreserveThinking,
   stripOwnedCompat: stripHyperOwnedCompat,
+  thinking: hyperThinking,
+  effort: hyperReasoningEffort,
 };
 
 export function createHyperProvider(options: HyperProviderOptions = {}): AIProvider {

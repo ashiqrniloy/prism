@@ -1,4 +1,5 @@
-import type { JsonObject, ProviderRequest } from "@arnilo/prism";
+import type { JsonObject, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { snapThinkingLevel } from "@arnilo/prism";
 
 /**
  * Whether to replay historical thinking on the next request.
@@ -20,23 +21,31 @@ export function hyperPreserveThinking(request: ProviderRequest): boolean {
 /**
  * Upstream Chat Completions `reasoning_effort`. Request wins over the model
  * default (`reasoning.effort_levels` / `default_effort_level` from the live
- * catalog). Clamped to the model's documented effort set when one is declared —
- * a value outside the documented set is dropped rather than risking a 400.
+ * catalog). Snapped to the model's declared set when one is declared —
+ * `capabilities.thinkingLevels` primary, legacy `compat.effortLevels` mirror
+ * kept for hosts that set compat directly. Undeclared models and opaque
+ * (non-ladder) values pass through.
  */
 export function hyperReasoningEffort(request: ProviderRequest): string | undefined {
   const effort =
     request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort ?? request.model.compat?.reasoning_effort;
-  if (typeof effort !== "string" || !effort) return undefined;
-  const allowed = request.model.compat?.effortLevels;
-  if (Array.isArray(allowed) && allowed.length > 0 && !allowed.includes(effort)) return undefined;
-  return effort;
+  if (typeof effort !== "string" || !effort.trim()) return undefined;
+  const normalized = effort.trim().toLowerCase();
+  const declared = request.model.capabilities?.thinkingLevels ?? (request.model.compat?.effortLevels as readonly string[] | undefined);
+  if (!declared || declared.length === 0) return normalized;
+  const view: Pick<ModelConfig, "provider" | "compat" | "capabilities"> = {
+    provider: request.model.provider,
+    compat: request.model.compat,
+    capabilities: { ...request.model.capabilities, thinkingLevels: declared },
+  };
+  return String(snapThinkingLevel(view, normalized));
 }
 
 /**
  * Upstream Chat Completions `thinking` object (Kimi K2.x / GLM-style). Request
  * wins. Hyper does not document gateway-owned thinking fields — forwarded.
  */
-export function hyperThinking(request: ProviderRequest): JsonObject | boolean | undefined {
+export function hyperThinking(request: ProviderRequest): JsonObject | undefined {
   const value = request.options?.compat?.thinking ?? request.model.compat?.thinking;
   if (value === false) return { type: "disabled" };
   if (value && typeof value === "object") return value as JsonObject;
@@ -59,6 +68,7 @@ export function stripHyperOwnedCompat(compat: JsonObject | undefined): JsonObjec
     preserveThinking: _preserve,
     preserve_thinking: _preserveSnake,
     effortLevels: _levels,
+    thinkingFamily: _family,
     ...rest
   } = compat;
   return Object.keys(rest).length > 0 ? rest : undefined;

@@ -84,6 +84,10 @@ api.registerProviderPackage(createAnthropicProviderPackage({ apiKey: hostKey, mo
 - Media/SSRF bounds reuse `@arnilo/prism/providers/media` / transport helpers.
 - Offline conformance: `@arnilo/prism/testing/provider-conformance`.
 
+## Thinking and reasoning
+
+Anthropic models route through the `output_config_effort` family: the adapter merges `compat.output_config.effort` (from `applyThinkingLevelForModel`) and the provider emits `output_config: { effort }` on Messages bodies. Declared levels per generation (from `capabilities.thinkingLevels`): Opus 4.8/4.7, Sonnet 5, Fable/Mythos 5, Opus 5 accept `low`–`max` incl. `xhigh`; Mythos Preview, Opus 4.6, Sonnet 4.6 accept `low/medium/high/max`; Opus 4.5 accepts `low/medium/high`; Haiku 4.5 declares `none`–`high` (upstream effort support undocumented — live-probe pending). Undeclared levels snap to the nearest declared level (ladder distance, ties up); values below the minimum snap up. Thinking type: `adaptive` on 4.6+/Sonnet 5/Fable/Mythos (bare `enabled` maps to `adaptive`); legacy 4.5 models get `enabled` plus a `budget_tokens` default of 10000 when absent. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider packages](../provider-packages.md): package setup + discovery contract.

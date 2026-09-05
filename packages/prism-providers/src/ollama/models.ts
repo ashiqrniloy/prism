@@ -40,6 +40,8 @@ export interface OllamaModelConfig extends Omit<ModelConfig, "provider" | "compa
     readonly route?: "openai";
     /** Reasoning effort (`reasoning_effort`); omitted on the wire unless set. */
     readonly reasoning_effort?: string;
+    /** Core `reasoning_effort` family stamp on models with a documented level set. */
+    readonly thinkingFamily?: string;
   };
 }
 
@@ -71,7 +73,20 @@ interface OllamaModelsResponse {
   readonly data?: readonly OllamaModelEntry[];
 }
 
+/**
+ * Documented per-model `reasoning_effort` sets for the OpenAI-compatible
+ * endpoint (`reasoning_effort`, never the native disjoint `think` field).
+ * gpt-oss accepts low/medium/high; other reasoning models (deepseek-r1, qwq…)
+ * have no documented set — undeclared → passthrough.
+ */
+export function ollamaThinkingLevels(modelId: string): readonly string[] | undefined {
+  const id = modelId.toLowerCase();
+  if (id.includes("gpt-oss")) return ["low", "medium", "high"];
+  return undefined;
+}
+
 export function defineOllamaModel(config: OllamaModelConfig): ModelConfig {
+  const thinkingLevels = ollamaThinkingLevels(config.model);
   return {
     ...config,
     provider: config.provider ?? "ollama",
@@ -81,7 +96,12 @@ export function defineOllamaModel(config: OllamaModelConfig): ModelConfig {
       reasoning: looksLikeReasoningModel(config.model),
       tools: true,
       streaming: true,
+      ...(thinkingLevels ? { thinkingLevels } : {}),
       ...config.capabilities,
+    },
+    compat: {
+      ...(thinkingLevels ? { thinkingFamily: "reasoning_effort" as const } : {}),
+      ...config.compat,
     },
   };
 }

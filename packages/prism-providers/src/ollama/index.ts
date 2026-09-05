@@ -46,6 +46,7 @@ export {
   type OllamaModelConfig,
   type OllamaModelEntry,
   ollamaBaseUrl,
+  ollamaThinkingLevels,
 } from "./models.js";
 export {
   createOllamaProvider,

@@ -6,12 +6,7 @@
  *  byte-bounded). Keys resolve through the existing `CredentialValueSource` seam and are
  *  redacted from every error. */
 
-import type {
-  GeneratedImage,
-  ImageContent,
-  ImageGenerationProvider,
-  ImageGenerationResult,
-} from "@arnilo/prism";
+import type { GeneratedImage, ImageContent, ImageGenerationProvider, ImageGenerationResult } from "@arnilo/prism";
 import {
   type CredentialValueSource,
   ImageGenerationError,

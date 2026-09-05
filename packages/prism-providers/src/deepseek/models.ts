@@ -13,6 +13,8 @@ export interface DeepSeekModelConfig extends Omit<ModelConfig, "provider" | "com
   readonly compat?: JsonObject & {
     readonly thinking?: boolean | JsonObject;
     readonly reasoning_effort?: string;
+    /** Prism compat-family stamp (`reasoning_effort`) — stripped from wire bodies. */
+    readonly thinkingFamily?: string;
   };
 }
 
@@ -41,6 +43,9 @@ const FLASH_COST = { input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0
 const PRO_COST = { input: 0.435, output: 0.87, cacheRead: 0.003625, cacheWrite: 0 } as const;
 const DEFAULT_LIMITS = { contextWindow: 1_000_000, maxOutputTokens: 384_000 } as const;
 
+/** Official accepted `reasoning_effort` values (ascending); `none` disables thinking instead. */
+export const DEEPSEEK_THINKING_LEVELS = ["low", "high", "max"] as const;
+
 export function defineDeepSeekModel(config: DeepSeekModelConfig): ModelConfig {
   return {
     ...config,
@@ -52,9 +57,11 @@ export function defineDeepSeekModel(config: DeepSeekModelConfig): ModelConfig {
       tools: true,
       streaming: true,
       structuredOutput: "json_schema",
+      thinkingLevels: DEEPSEEK_THINKING_LEVELS,
       ...config.capabilities,
     },
     cache: config.cache ?? { kind: "implicit" },
+    compat: { thinkingFamily: "reasoning_effort", ...config.compat },
   };
 }
 

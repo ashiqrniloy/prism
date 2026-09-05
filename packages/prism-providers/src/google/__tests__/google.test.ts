@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, AuthMethod, JsonObject, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { applyThinkingLevelForModel } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
   assertCanonicalToolParameters,
@@ -35,6 +36,76 @@ const request: ProviderRequest = {
 };
 
 describe("@arnilo/prism-providers/google", () => {
+  it("google_thinking_levels_clamp_and_none_policy", async () => {
+    type Body = JsonObject & { readonly generationConfig?: JsonObject };
+    const bodyFor = async (model: ModelConfig, compat: JsonObject): Promise<Body> =>
+      (await googleGenerateContentBody({ ...request, model, options: { ...request.options, compat } })) as Body;
+
+    // Level-native 3.x: below-floor level snaps up to the declared minimum.
+    const pro31 = mapGoogleModel({ name: "models/gemini-3.1-pro-preview" });
+    assert.deepEqual(pro31.capabilities?.thinkingLevels, ["low", "medium", "high"]);
+    let body = await bodyFor(pro31, { thinkingLevel: "minimal" });
+    assert.deepEqual(body.generationConfig?.thinkingConfig, { includeThoughts: true, thinkingLevel: "low" });
+
+    // Budget-only 2.5: `none` → range minimum (0 disables where supported…).
+    const flash25 = googleModels.find((m) => m.model === "gemini-2.5-flash")!;
+    body = await bodyFor(flash25, { thinkingLevel: "none" });
+    assert.deepEqual(body.generationConfig?.thinkingConfig, { includeThoughts: true, thinkingBudget: 0 });
+    // …and the range floor where disabling is unsupported (2.5-pro floor 128).
+    body = await bodyFor(googleModels[0]!, { thinkingLevel: "none" });
+    assert.deepEqual(body.generationConfig?.thinkingConfig, { includeThoughts: true, thinkingBudget: 128 });
+
+    // Budget-only 2.5: non-none levels unsupported → level dropped, model default survives.
+    body = await bodyFor(flash25, { thinkingLevel: "high" });
+    assert.deepEqual(body.generationConfig?.thinkingConfig, { includeThoughts: true });
+
+    // Unknown id: passthrough when reasoning-capable…
+    body = await bodyFor(mapGoogleModel({ name: "models/gemini-9-ursa" }), { thinkingLevel: "high" });
+    assert.deepEqual(body.generationConfig?.thinkingConfig, { includeThoughts: true, thinkingLevel: "high" });
+    // …dropped on non-reasoning models.
+    const nonReasoning: ModelConfig = {
+      provider: "google",
+      model: "gemini-embedding",
+      capabilities: { input: ["text"], output: ["text"], reasoning: false },
+    };
+    body = await bodyFor(nonReasoning, { thinkingLevel: "low" });
+    assert.equal(body.generationConfig?.thinkingConfig, undefined);
+  });
+
+  it("google_adapter_path_emits_thinking_level_on_wire", async () => {
+    // Defect 1 end-to-end: core adapter → google family → generationConfig.thinkingConfig.thinkingLevel.
+    const gemini35 = googleModels.find((m) => m.model === "gemini-3.5-flash")!;
+    const adapted = applyThinkingLevelForModel(request.options, "high", gemini35);
+    let body = (await googleGenerateContentBody({ ...request, model: gemini35, options: adapted })) as JsonObject & {
+      readonly generationConfig?: JsonObject;
+    };
+    assert.deepEqual(body.generationConfig?.thinkingConfig, { includeThoughts: true, thinkingLevel: "high" });
+
+    // 2.5 budget policy through the same adapter path: `none` → budget floor.
+    const flash25 = googleModels.find((m) => m.model === "gemini-2.5-flash")!;
+    const adaptedNone = applyThinkingLevelForModel(request.options, "none", flash25);
+    body = await googleGenerateContentBody({ ...request, model: flash25, options: adaptedNone });
+    assert.deepEqual(body.generationConfig?.thinkingConfig, { includeThoughts: true, thinkingBudget: 0 });
+  });
+
+  it("google_stamps_family_levels_and_strips_them", async () => {
+    for (const entry of googleModels) {
+      assert.equal(entry.compat?.thinkingFamily, "google");
+    }
+    assert.deepEqual(mapGoogleModel({ name: "models/gemini-3-pro-preview" }).capabilities?.thinkingLevels, ["low", "high"]);
+    const mapped25 = mapGoogleModel({ name: "models/gemini-2.5-flash" });
+    assert.equal(mapped25.capabilities?.thinkingLevels, undefined);
+    assert.deepEqual(mapped25.compat?.thinkingBudgetRange, [0, 24576]);
+    // Stamp + range metadata never reach generationConfig.
+    const body = await googleGenerateContentBody({
+      ...request,
+      options: { ...request.options, compat: { thinkingFamily: "openai_reasoning", thinkingBudgetRange: [0, 100] } },
+    });
+    const serialized = JSON.stringify(body.generationConfig ?? {});
+    assert.ok(!serialized.includes("thinkingFamily"));
+    assert.ok(!serialized.includes("thinkingBudgetRange"));
+  });
+
   it("google_implicit_requests_carry_no_foreign_cache_fields", async () => {
     assertNoForeignCacheFields(await googleGenerateContentBody(request));
   });

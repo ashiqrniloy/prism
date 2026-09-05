@@ -269,6 +269,10 @@ PRISM_LIVE_PROVIDER_TESTS=1 HYPER_API_KEY=sk-hyper-... \
 - Intelligent-routing re-check (2026-09): roadmap-only, no documented controls — see
   `../_evidence/phase55-hyper-intelligent-routing.md`
 
+## Thinking and reasoning
+
+Hyper models derive `capabilities.thinkingLevels` from `compat.effortLevels` (the live `/v1/models` `reasoning.effort_levels` list) and stamp `reasoning_effort`. `hyperReasoningEffort` snaps to the declared set instead of dropping out-of-set values (`max`↔`xhigh` on deepseek-v4-flash); undeclared models and opaque values pass through. The Anthropic route emits resolved `output_config.effort` (snapped) instead of leaking raw `reasoning_effort`. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider packages](../provider-packages.md): `defineProviderPackage`,

@@ -129,6 +129,10 @@ await session.prompt("Plan the refactor", {
 - One POST per generate. No provider retry loop.
 - Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus `DEEPSEEK_API_KEY`.
 
+## Thinking and reasoning
+
+DeepSeek models declare `low/high/max` and stamp `reasoning_effort`; the wire table maps `medium`/`xhigh`→`high`, `none`/`minimal` stop thinking. `thinking.type: "enabled"/"disabled"` stays available (thinking on by default, `high`); a request-level `reasoning_effort: none` stops thinking only when no explicit `thinking` switch was sent. Tool turns must replay `reasoning_content` or the API returns 400. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [Provider packages](../provider-packages.md): `defineProviderPackage`,

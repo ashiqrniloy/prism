@@ -30,6 +30,20 @@ function map(
   return { off, minimal, low, medium, high, xhigh };
 }
 
+/**
+ * Invert a slot map into the declared portable level set (host-facing mirror of the
+ * wire map — the map itself stays the wire authority): every slot with a non-null
+ * wire value declares its portable level; the `off` slot declares `none`.
+ */
+export function clinePassDeclaredLevels(table: ClinePassThinkingLevelMap): readonly string[] {
+  const levels: string[] = [];
+  if (table.off !== null) levels.push("none");
+  for (const slot of ["minimal", "low", "medium", "high", "xhigh"] as const) {
+    if (table[slot] !== null) levels.push(slot);
+  }
+  return levels;
+}
+
 /** Portable level → ClinePass map slot. `none` is `off`; `max` uses the `high` slot (K3 → `max`, GLM stays off `max`). */
 export function clinePassThinkingSlot(value: unknown): ClinePassThinkingSlot | undefined {
   if (value === false) return "off";

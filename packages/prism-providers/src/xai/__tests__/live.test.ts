@@ -15,7 +15,8 @@ const skip: string | false = !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=
 const oauthSkip: string | false =
   process.env.PRISM_LIVE_XAI_OAUTH === "1" ? false : "set PRISM_LIVE_XAI_OAUTH=1 to run SuperGrok device-code login (opens a browser)";
 
-const model = xaiModels[0]!;
+const modelOverride = process.env.PRISM_LIVE_XAI_MODEL;
+const model = modelOverride ? { ...xaiModels[0]!, model: modelOverride } : xaiModels[0]!;
 const apiKey = (): string | undefined => process.env.XAI_API_KEY;
 
 function provider() {
@@ -54,6 +55,20 @@ describe("@arnilo/prism-providers/xai live tests", () => {
     for (const call of events.filter((e: ProviderEvent) => e.type === "tool_call")) {
       if (call.type === "tool_call") assert.ok(call.call.name, "live tool call missing name");
     }
+    assertNoSecretLeak(events, [API_KEY!]);
+  });
+
+  // Thinking-effort probe (plan 065 task 15): reasoning_effort must be accepted
+  // by the live API (no 400 on the wire field).
+  it("live_reasoning_effort_is_accepted", { skip }, async () => {
+    const events = await assertProviderStreamConforms({
+      provider: provider(),
+      request: { ...textRequest, options: { compat: { reasoning_effort: "low" } } },
+    });
+    assert.ok(
+      events.some((e) => e.type === "done"),
+      "live effort probe produced no done event",
+    );
     assertNoSecretLeak(events, [API_KEY!]);
   });
 

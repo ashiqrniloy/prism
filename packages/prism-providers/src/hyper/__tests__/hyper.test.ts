@@ -18,6 +18,8 @@ import {
   defineHyperModel,
   getHyperCredits,
   HYPER_DEFAULT_BASE_URL,
+  hyperChatBody,
+  hyperModels,
   listHyperModels,
   parseHyperUsageCost,
   routeForHyperModel,
@@ -216,7 +218,8 @@ describe("@arnilo/prism-providers/hyper", () => {
       request: { ...baseRequest, options: { compat: { reasoning_effort: "ultra" } } },
     });
     assert.equal(bodies[0].reasoning_effort, "xhigh", "request effort within documented set wins");
-    assert.equal(bodies[1].reasoning_effort, undefined, "effort outside documented set dropped");
+    // Snap replaces drop: max floors into the declared set's ceiling, opaque values pass through.
+    assert.equal(bodies[1].reasoning_effort, "ultra", "opaque non-ladder effort passes through");
   });
 
   it("hyper_anthropic_route_uses_messages_endpoint_with_claude_code_auth", async () => {
@@ -409,6 +412,10 @@ describe("@arnilo/prism-providers/hyper", () => {
     assert.equal(deepseek.cache?.kind, "implicit");
     assert.equal(deepseek.cost?.cacheRead, 0.2);
     assert.equal(deepseek.compat?.reasoning_effort, "high");
+    // API-derived: effort_levels → declared levels + family stamp (back-compat effortLevels kept).
+    assert.deepEqual(deepseek.capabilities?.thinkingLevels, ["high", "xhigh"]);
+    assert.deepEqual(deepseek.compat?.effortLevels, ["high", "xhigh"]);
+    assert.equal(deepseek.compat?.thinkingFamily, "reasoning_effort");
     assert.equal(qwen.compat?.route, "anthropic");
     assert.equal(qwen.cache?.kind, "cache_control");
     assert.deepEqual(qwen.capabilities?.input, ["text", "image"]);
@@ -618,5 +625,53 @@ describe("@arnilo/prism-providers/hyper", () => {
       assert.equal(defined.compat?.route, "responses");
       assert.equal(defined.cache?.kind, "implicit");
     });
+  });
+});
+
+describe("hyper_api_derived_levels_and_anthropic_effort", () => {
+  const base = { messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] } as const;
+
+  it("featured_models_declare_levels_and_family_stamp", () => {
+    const flash = hyperModels.find((model) => model.model === "deepseek-v4-flash")!;
+    assert.deepEqual(flash.capabilities?.thinkingLevels, ["high", "xhigh"]);
+    assert.equal(flash.compat?.thinkingFamily, "reasoning_effort");
+    assert.deepEqual(flash.compat?.effortLevels, ["high", "xhigh"]);
+  });
+
+  it("chat_route_snaps_max_to_xhigh_and_xhigh_forwarded", () => {
+    const body = hyperChatBody({
+      ...base,
+      model: hyperModels.find((model) => model.model === "deepseek-v4-flash")!,
+      options: { compat: { reasoning_effort: "max" } },
+    } as never);
+    assert.equal(body.reasoning_effort, "xhigh");
+    const within = hyperChatBody({
+      ...base,
+      model: hyperModels.find((model) => model.model === "deepseek-v4-flash")!,
+      options: { compat: { reasoning_effort: "xhigh" } },
+    } as never);
+    assert.equal(within.reasoning_effort, "xhigh");
+  });
+
+  it("anthropic_route_emits_resolved_thinking_and_output_config_effort", async () => {
+    let body: any;
+    const provider = createHyperProvider({
+      apiKey: "fake-hyper-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        ...baseRequest,
+        model: qwenAnthropicModel,
+        options: { compat: { reasoning_effort: "max", thinking: true } },
+      },
+    });
+    assert.deepEqual(body.output_config, { effort: "max" });
+    assert.deepEqual(body.thinking, { type: "enabled" });
+    assert.equal(body.reasoning_effort, undefined, "raw compat never leaks");
   });
 });

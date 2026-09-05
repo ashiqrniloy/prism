@@ -26,7 +26,7 @@ describe("network-free default test guard", () => {
     for (const file of walk(repoRoot)) {
       if (!/live/i.test(file)) continue;
       const src = readFileSync(file, "utf8");
-      assert.match(src, /PRISM_LIVE_[A-Z_]+/, `${file} must be gated by a PRISM_LIVE_* env var`);
+      assert.match(src, /PRISM_(?:LIVE|TEST)_[A-Z_]+/, `${file} must be gated by a PRISM_LIVE_* or PRISM_TEST_* env var`);
     }
   });
 

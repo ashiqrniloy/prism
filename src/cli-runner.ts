@@ -3,10 +3,11 @@ import { basename, dirname } from "node:path";
 import process from "node:process";
 import type { Readable, Writable } from "node:stream";
 import { runPrismDevSubcommand } from "./cli-dev.js";
-import { type InitRuntime, initUsage, runInitCommand } from "./cli-init.js";
+import { type InitRuntime, initUsage, loadProvidersCatalog, runInitCommand } from "./cli-init.js";
 import { type ProviderAddRuntime, providerAddUsage, runProviderAddCommand } from "./cli-provider-add.js";
 import type {
   AgentSession,
+  AIProvider,
   ContributionFileKind,
   InstructionInjector,
   ModelConfig,
@@ -81,7 +82,7 @@ export interface CliRuntime {
   readonly stdin: Readable;
   readonly stdout: Writable;
   readonly stderr: Writable;
-  readonly createSession?: (options: CliOptions) => AgentSession;
+  readonly createSession?: (options: CliOptions) => AgentSession | Promise<AgentSession>;
   readonly commands?: RpcSessionFactory["commands"];
   /** Workspace root for `--discover`. Defaults to `process.cwd()`. */
   readonly workspaceRoot?: string;
@@ -112,7 +113,9 @@ export const usage = `Usage: prism [--mode print|json|rpc] [-p prompt] [options]
 
 Options:
   -p, --prompt <text>        Prompt to run in print/json mode
-  --provider <name>          Explicit provider id (mock is built in for smoke tests)
+  --provider <name>          Provider id from the init provider catalog ('mock' is built in;
+                             real providers need their @arnilo/prism-providers package +
+                             credential env var)
   --model <name>             Explicit model name
   --session <id>             Session id
   --system <text>            System instructions
@@ -405,7 +408,7 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
       });
       options = { ...options, systemPromptLayers: layers };
     }
-    const session = (runtime.createSession ?? defaultCreateSession)(options);
+    const session = await (runtime.createSession ?? defaultCreateSession)(options);
     await runPromptMode(session, options, runtime.stdout, mode);
     return 0;
   } catch (error) {
@@ -437,13 +440,52 @@ export async function runPromptMode(session: AgentSession, options: CliOptions, 
 
 export class CliUsageError extends Error {}
 
-function defaultCreateSession(options: CliOptions): AgentSession {
-  if (options.provider !== "mock")
-    throw new CliUsageError("No provider configured. Pass --provider mock for a smoke test or embed Prism with an explicit provider.");
-  const model: ModelConfig = { provider: "mock", model: options.model ?? "mock" };
+/** Build the agent session for the CLI. Real providers resolve through the init
+ *  provider catalog (`templates/init/providers.json`): the catalog names the
+ *  factory module/export and credential env var, the CLI imports it from the
+ *  consumer's node_modules — same catalog `prism init` scaffolds from, so the
+ *  CLI and the scaffold never disagree about how a provider is built. */
+async function defaultCreateSession(options: CliOptions): Promise<AgentSession> {
+  const providerId = options.provider;
+  if (!providerId) {
+    throw new CliUsageError(
+      "No provider configured. Pass --provider <id> (see the init provider catalog, or 'mock') or embed Prism with an explicit provider.",
+    );
+  }
+  if (providerId === "mock") return mockSession(options);
+  const spec = loadProvidersCatalog().get(providerId);
+  if (!spec?.factoryModule || !spec.factoryExport) {
+    throw new CliUsageError(
+      `Unknown provider "${providerId}". Supported: ${["mock", ...loadProvidersCatalog().keys()].join(", ")} — or embed Prism with an explicit provider.`,
+    );
+  }
+  const envKey = spec.envKey ?? "";
+  if (!process.env[envKey]) throw new CliUsageError(`Provider "${providerId}" requires ${envKey} in the environment.`);
+  let factory: unknown;
+  try {
+    factory = (await import(spec.factoryModule))[spec.factoryExport];
+  } catch {
+    throw new CliUsageError(
+      `Provider "${providerId}" needs the ${spec.packageName} package installed (import ${spec.factoryModule} failed).`,
+    );
+  }
+  if (typeof factory !== "function") {
+    throw new CliUsageError(`Provider "${providerId}": ${spec.factoryModule} does not export ${spec.factoryExport}.`);
+  }
+  const providerInstance = (factory as (opts: { apiKey: () => string | undefined }) => AIProvider)({ apiKey: () => process.env[envKey] });
+  const modelConfig: ModelConfig = { provider: spec.modelProvider, model: options.model ?? spec.modelName };
+  return agentSession({ ...options, providerInstance, modelConfig });
+}
+
+function mockSession(options: CliOptions): AgentSession {
+  const modelConfig: ModelConfig = { provider: "mock", model: options.model ?? "mock" };
+  return agentSession({ ...options, providerInstance: createMockProvider([providerTextDelta("Hello"), providerDone()]), modelConfig });
+}
+
+function agentSession(options: Omit<CliOptions, "provider"> & { providerInstance: AIProvider; modelConfig: ModelConfig }): AgentSession {
   return createAgent({
-    model,
-    provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
+    model: options.modelConfig,
+    provider: options.providerInstance,
     instructions: options.system,
     // ponytail: Phase 31 — file layers compose with `instructions` (base) via the existing
     // composeSystemPrompt pipeline; rank order (user<package<app<run) is enforced inside.

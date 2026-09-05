@@ -65,7 +65,7 @@ export async function anthropicMessagesBody(request: ProviderRequest): Promise<J
     ...request.options?.extra,
     // Resolved official fields win over raw compat/extra escape hatches.
     thinking: anthropicThinking(request),
-    effort: anthropicEffort(request),
+    output_config: anthropicEffort(request) ? { effort: anthropicEffort(request) } : undefined,
   });
 }
 

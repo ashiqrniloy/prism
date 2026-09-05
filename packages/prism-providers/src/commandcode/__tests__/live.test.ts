@@ -41,9 +41,15 @@ const skip: string | false =
 // chat route → Qwen/Qwen3.8-Flash ($0.16/$0.47); messages route →
 // claude-haiku-4-5-20251001 ($1/$5); GPT-5.6 explicit-cache probe →
 // gpt-5.6-luna ($0.2/$1.2).
-const chatModel = commandCodeModels.find((m) => m.model === "Qwen/Qwen3.8-Flash")!;
-const messagesModel = commandCodeModels.find((m) => m.model === "claude-haiku-4-5-20251001")!;
-const gpt56Model = commandCodeModels.find((m) => m.model === "gpt-5.6-luna")!;
+const chatOverride = process.env.PRISM_LIVE_COMMANDCODE_CHAT_MODEL;
+const chatBase = commandCodeModels.find((m) => m.model === "Qwen/Qwen3.8-Flash")!;
+const chatModel = chatOverride ? { ...chatBase, model: chatOverride } : chatBase;
+const messagesOverride = process.env.PRISM_LIVE_COMMANDCODE_MESSAGES_MODEL;
+const messagesBase = commandCodeModels.find((m) => m.model === "claude-haiku-4-5-20251001")!;
+const messagesModel = messagesOverride ? { ...messagesBase, model: messagesOverride } : messagesBase;
+const gptOverride = process.env.PRISM_LIVE_COMMANDCODE_GPT_MODEL;
+const gptBase = commandCodeModels.find((m) => m.model === "gpt-5.6-luna")!;
+const gpt56Model = gptOverride ? { ...gptBase, model: gptOverride } : gptBase;
 
 const apiKey = (): string | undefined => process.env.COMMAND_CODE_API_KEY;
 

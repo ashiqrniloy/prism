@@ -37,7 +37,7 @@ export interface RpcRequest {
 }
 
 export interface RpcSessionFactory {
-  createSession(id?: string): AgentSession;
+  createSession(id?: string): AgentSession | Promise<AgentSession>;
   readonly commands?: readonly CommandDefinition[];
   /** Host-opt-in driver capabilities forwarded to contributed commands on the
    *  `command` execution context. Absent ⇒ context shape unchanged. */
@@ -58,7 +58,7 @@ interface RpcState {
   model?: ModelConfig;
   readonly sessions: Map<string, AgentSession>;
   readonly commands: Map<string, CommandDefinition>;
-  readonly createSession: (id?: string) => AgentSession;
+  readonly createSession: (id?: string) => AgentSession | Promise<AgentSession>;
   readonly drivers?: CommandDrivers;
   readonly instructionInjectors?: ContributionRegistry<InstructionInjector>;
 }
@@ -69,7 +69,7 @@ interface ActiveRun {
 }
 
 export async function runRpcServer(options: RpcServerOptions): Promise<void> {
-  const first = options.createSession();
+  const first = await options.createSession();
   const state: RpcState = {
     current: first,
     currentHandleId: first.id,
@@ -199,7 +199,7 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
       const handleId =
         stringParam(request.params, "handleId") ?? stringParam(request.params, "sessionId") ?? stringParam(request.params, "id");
       if (!handleId) throw new Error("switchSession requires params.handleId (or sessionId)");
-      const session = state.sessions.get(handleId) ?? makeSession(state, handleId);
+      const session = state.sessions.get(handleId) ?? (await makeSession(state, handleId));
       state.current = session;
       state.currentHandleId = handleId;
       write(stdout, { id: request.id, ok: true, result: { sessionId: session.id, leafId: session.leafId, handleId } });
@@ -280,8 +280,8 @@ function registerSession(state: RpcState, session: AgentSession, preferredHandle
   return handleId;
 }
 
-function makeSession(state: RpcState, id: string): AgentSession {
-  const session = state.createSession(id);
+async function makeSession(state: RpcState, id: string): Promise<AgentSession> {
+  const session = await state.createSession(id);
   state.sessions.set(session.id, session);
   return session;
 }

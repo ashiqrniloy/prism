@@ -615,11 +615,16 @@ export { assertAgentEventSourceConforms } from "./testing/agent-event-source-con
 export type { ThinkingCompatFamily, ThinkingLevel } from "./thinking.js";
 export {
   applyThinkingLevel,
+  applyThinkingLevelForModel,
+  isSupportedThinkingLevel,
   isThinkingLevel,
   normalizeThinkingLevel,
+  parseThinkingLevel,
+  snapThinkingLevel,
   THINKING_LEVELS,
   thinkingCompatFor,
   thinkingFamilyForModel,
+  thinkingLevelsForModel,
 } from "./thinking.js";
 export type { ToolEffectErrorCode } from "./tool-effects.js";
 export { createMemoryToolEffectStore, ToolEffectError } from "./tool-effects.js";

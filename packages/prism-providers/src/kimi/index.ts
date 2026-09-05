@@ -70,9 +70,13 @@ export {
 } from "./cache.js";
 export {
   defineKimiModel,
+  KIMI_K3_THINKING_LEVELS,
   type KimiModelConfig,
   type KimiModelEntry,
   kimiCodingModels,
+  kimiIsK3Model,
+  kimiThinkingFamily,
+  kimiThinkingLevels,
   type ListKimiModelsOptions,
   listKimiModels,
   mapKimiModel,

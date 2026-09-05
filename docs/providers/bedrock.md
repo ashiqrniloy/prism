@@ -66,6 +66,21 @@ Uses Bedrock’s OpenAI-compatible runtime route (not Converse eventstream). Hos
 - Credential secrets are redacted from provider errors.
 - No credential prefetch at import.
 
+## Live probe
+
+Opt-in smoke over real AWS Bedrock (package-local SigV4, static keys or session token):
+
+```bash
+PRISM_LIVE_PROVIDER_TESTS=1 AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... AWS_REGION=us-east-1 \
+  node --test packages/prism-providers/dist/bedrock/__tests__/live.test.js
+```
+
+`PRISM_LIVE_BEDROCK_MODEL` overrides the probed model (default `us.anthropic.claude-haiku-4-5-20251001-v1:0`). Without credentials the suite skips.
+
+## Thinking and reasoning
+
+Bedrock OpenAI-compat chat expects snake_case `reasoning_effort` (with `effort`/`reasoningEffort` aliases) or a sanitized `reasoning` object. OpenAI-family models on Bedrock snap effort to their declared levels (gpt-5.1 → `none/low/medium/high`); non-OpenAI models pass through untouched. See [Thinking and reasoning](../thinking-and-reasoning.md).
+
 ## Related APIs
 
 - [OpenAI-compatible provider](openai-compatible.md)

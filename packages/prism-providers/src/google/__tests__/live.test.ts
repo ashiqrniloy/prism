@@ -17,7 +17,10 @@ const API_KEY = process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY;
 const skip: string | false =
   !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and GOOGLE_API_KEY (or GEMINI_API_KEY) to run live Google smoke tests" : false;
 
-const model = googleModels.find((item) => item.model === "gemini-2.5-flash-lite") ?? googleModels[0]!;
+const modelOverride = process.env.PRISM_LIVE_GOOGLE_MODEL;
+const model = modelOverride
+  ? { ...(googleModels.find((item) => item.model === "gemini-2.5-flash-lite") ?? googleModels[0]!), model: modelOverride }
+  : (googleModels.find((item) => item.model === "gemini-2.5-flash-lite") ?? googleModels[0]!);
 const apiKey = (): string | undefined => process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY;
 
 function provider() {
@@ -55,6 +58,20 @@ describe("@arnilo/prism-providers/google live tests", () => {
     assert.ok(
       events.some((e) => e.type === "tool_call" || e.type === "tool_call_delta"),
       "expected a tool call",
+    );
+    assertNoSecretLeak(events, [API_KEY!]);
+  });
+
+  // Thinking-effort probe (plan 065 task 15): thinkingLevel must be accepted by
+  // the live API (no 400 on generationConfig.thinkingConfig.thinkingLevel).
+  it("live_thinking_level_is_accepted", { skip }, async () => {
+    const events = await assertProviderStreamConforms({
+      provider: provider(),
+      request: { ...textRequest, options: { compat: { thinkingLevel: "low" } } },
+    });
+    assert.ok(
+      events.some((e) => e.type === "done"),
+      "live effort probe produced no done event",
     );
     assertNoSecretLeak(events, [API_KEY!]);
   });

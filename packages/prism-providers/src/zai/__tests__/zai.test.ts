@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AIProvider, AuthMethod, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, AuthMethod, JsonObject, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import {
   assertNoForeignCacheFields,
   assertProviderOwnedHeadersWin,
@@ -126,7 +126,8 @@ describe("@arnilo/prism-providers/zai", () => {
       },
     });
     assert.deepEqual(body.thinking, { type: "disabled" });
-    assert.equal(body.reasoning_effort, "minimal");
+    // GLM-5.2 documented snapping: minimal stops thinking — no reasoning_effort on the wire.
+    assert.equal(body.reasoning_effort, undefined);
     assert.equal(body.tool_stream, false);
   });
 
@@ -430,3 +431,36 @@ function sse(events: readonly object[]): ReadableStream<Uint8Array> {
     },
   });
 }
+
+describe("zai_thinking_level_snap_and_stamps", () => {
+  const glm52 = zaiModels.find((model) => model.model === "glm-5.2")!;
+  const glm46 = zaiModels.find((model) => model.model === "glm-4.6")!;
+  const base = { messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] } as const;
+
+  it("glm_4_6_drops_reasoning_effort_compat", () => {
+    const body = zaiBody({ ...base, model: glm46, options: { compat: { reasoning_effort: "high" } } } as never);
+    assert.equal(body.reasoning_effort, undefined);
+    assert.equal(glm46.compat?.thinkingFamily, "thinking_type");
+  });
+
+  it("glm_5_2_snaps_xhigh_to_max_and_none_disables_thinking", () => {
+    const xhigh = zaiBody({ ...base, model: glm52, options: { compat: { reasoning_effort: "xhigh" } } } as never);
+    assert.equal(xhigh.reasoning_effort, "max");
+    const none = zaiBody({ ...base, model: glm52, options: { compat: { reasoning_effort: "none" } } } as never);
+    assert.deepEqual(none.thinking, { type: "disabled" });
+    assert.equal(none.reasoning_effort, undefined);
+    assert.equal(glm52.compat?.thinkingFamily, "reasoning_effort");
+    assert.deepEqual(glm52.capabilities?.thinkingLevels, ["low", "medium", "high", "xhigh", "max"]);
+  });
+
+  it("glm_5_3_snaps_into_low_high_max_and_never_disables_thinking", () => {
+    const model = { ...glm52, model: "glm-5.3", compat: { thinking: true } };
+    const minimal = zaiBody({ ...base, model, options: { compat: { reasoning_effort: "minimal" } } } as never);
+    assert.equal(minimal.reasoning_effort, "low");
+    assert.notEqual((minimal.thinking as JsonObject | undefined)?.type, "disabled");
+    const medium = zaiBody({ ...base, model, options: { compat: { reasoning_effort: "medium" } } } as never);
+    assert.equal(medium.reasoning_effort, "high");
+    const disabled = zaiBody({ ...base, model, options: { compat: { thinking: false, reasoning_effort: "high" } } } as never);
+    assert.notEqual((disabled.thinking as JsonObject | undefined)?.type, "disabled");
+  });
+});

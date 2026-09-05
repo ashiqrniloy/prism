@@ -636,3 +636,52 @@ function sse(events: readonly object[]): ReadableStream<Uint8Array> {
 function chatSse(events: readonly object[]): ReadableStream<Uint8Array> {
   return sse(events);
 }
+
+describe("kimi_thinking_level_snap_and_stamps", () => {
+  const k3 = moonshotKimiModels.find((model) => model.model === "kimi-k3")!;
+  const k25 = moonshotKimiModels.find((model) => model.model === "kimi-k2.5")!;
+
+  it("k3_snaps_medium_to_high_and_none_to_low", () => {
+    const medium = moonshotBody({
+      model: k3,
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { compat: { reasoning_effort: "medium" } },
+    });
+    assert.equal(medium.reasoning_effort, "high");
+    const none = moonshotBody({
+      model: k3,
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { compat: { reasoning_effort: "none" } },
+    });
+    assert.equal(none.reasoning_effort, "low");
+  });
+
+  it("k3_catalog_default_preserved_and_coding_route_stays_high", () => {
+    const openPlatform = moonshotBody({ model: k3, messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
+    assert.equal(openPlatform.reasoning_effort, "max");
+    const coding = kimiCodingModels.find((model) => model.model === "k3")!;
+    assert.equal(coding.compat?.reasoning_effort, "high");
+  });
+
+  it("k2_5_drops_reasoning_effort_compat_thinking_family_instead", () => {
+    const body = moonshotBody({
+      model: k25,
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { compat: { reasoning_effort: "high" } },
+    });
+    assert.equal(body.reasoning_effort, undefined);
+    assert.equal(k25.compat?.thinkingFamily, "thinking_type");
+    assert.equal(k3.compat?.thinkingFamily, "reasoning_effort");
+    assert.deepEqual(k3.capabilities?.thinkingLevels, ["low", "high", "max"]);
+  });
+
+  it("strip_removes_thinking_family_stamp_from_raw_compat", () => {
+    const body = moonshotBody({
+      model: k25,
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { compat: { thinkingFamily: "reasoning_effort", thinking: false } },
+    });
+    assert.equal(body.thinkingFamily, undefined);
+    assert.deepEqual(body.thinking, { type: "disabled" });
+  });
+});
