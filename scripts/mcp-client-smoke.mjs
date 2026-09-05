@@ -28,7 +28,7 @@
 
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { fileURLToPath, } from "node:url";
+import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 

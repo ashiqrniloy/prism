@@ -16,7 +16,7 @@
  * Prints: FULL SURFACE JOURNEY OK
  */
 import assert from "node:assert/strict";
-import { mkdtempSync, } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -87,7 +87,10 @@ await section("@arnilo/prism: .", async () => {
   assert.equal(prism.snapThinkingLevel(reasoner, "none"), "low");
   assert.deepEqual(prism.applyThinkingLevelForModel(undefined, "medium", reasoner)?.compat, { reasoning_effort: "high" });
   assert.deepEqual(prism.applyThinkingLevelForModel(undefined, "low", gemini)?.compat, { thinkingLevel: "low" });
-  assert.equal(Object.keys(prism.applyThinkingLevelForModel(undefined, "high", { provider: "mock", model: "plain" })?.compat ?? {}).length, 0);
+  assert.equal(
+    Object.keys(prism.applyThinkingLevelForModel(undefined, "high", { provider: "mock", model: "plain" })?.compat ?? {}).length,
+    0,
+  );
 });
 
 for (const sub of ["providers/openai-compatible", "providers/transport", "providers/openai", "providers/schema", "providers/media"]) {
