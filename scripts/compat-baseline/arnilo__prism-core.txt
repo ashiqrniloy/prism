@@ -7,6 +7,7 @@ ADAPTER_INDEX_NAMES	export declare const ADAPTER_INDEX_NAMES: readonly ["prism_s
 ADAPTER_TABLE_NAMES	export declare const ADAPTER_TABLE_NAMES: readonly ["prism_tenants", "prism_accounts", "prism_users", "prism_agent_definitions", "prism_sessions", "prism_branches", "prism_session_entries", "prism_session_append_idempotency", "prism_runs", "prism_agent_events", "prism_agent_event_streams", "prism_tool_calls", "prism_usage", "prism_run_feedback", "prism_retention_policies", "prism_legal_holds", "prism_tenant_quotas", "prism_migrations"]
 APPROVAL_HARD_LIMITS	export declare const APPROVAL_HARD_LIMITS: Readonly<
 AUDIT_EXPORT_HARD_LIMITS	export declare const AUDIT_EXPORT_HARD_LIMITS:
+AUDIT_REF_PATTERN	export declare const AUDIT_REF_PATTERN: RegExp
 AgentNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, WorkflowDefinition, WorkflowEvent, Work
 AppendEvaluationFeedbackInput	export type { AppendEvaluationFeedbackInput } from "./feedback.js"
 AppendPolicyDecisionInput	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
@@ -158,9 +159,11 @@ DEFAULT_JUDGE_MAX_OUTPUT_BYTES	export declare const DEFAULT_JUDGE_MAX_OUTPUT_BYT
 DEFAULT_JUDGE_MAX_RUBRIC_BYTES	export declare const DEFAULT_JUDGE_MAX_RUBRIC_BYTES: number
 DEFAULT_JUDGE_TIMEOUT_MS	export declare const DEFAULT_JUDGE_TIMEOUT_MS = 30000
 DEFAULT_KEYCHAIN_TIMEOUT_MS	export declare const DEFAULT_KEYCHAIN_TIMEOUT_MS = 5000
+DEFAULT_LEASE_TTL_MS	export declare const DEFAULT_LEASE_TTL_MS = 30000
 DEFAULT_LIST_PAGE_SIZE	export declare const DEFAULT_LIST_PAGE_SIZE = 100
 DEFAULT_M365_OPS	export declare const DEFAULT_M365_OPS: readonly Microsoft365Op[]
 DEFAULT_MAX_ACTIVE_CHILDREN	export declare const DEFAULT_MAX_ACTIVE_CHILDREN = 4
+DEFAULT_MAX_ATTEMPTS	export declare const DEFAULT_MAX_ATTEMPTS = 3
 DEFAULT_MAX_CHECKPOINT_BYTES	export declare const DEFAULT_MAX_CHECKPOINT_BYTES: number
 DEFAULT_MAX_CHILD_EVENTS_PER_DELEGATION	export declare const DEFAULT_MAX_CHILD_EVENTS_PER_DELEGATION = 256
 DEFAULT_MAX_CHILD_EVENT_BYTES	export declare const DEFAULT_MAX_CHILD_EVENT_BYTES: number
@@ -324,8 +327,10 @@ HARD_JUDGE_MAX_OUTPUT_BYTES	export declare const HARD_JUDGE_MAX_OUTPUT_BYTES: nu
 HARD_JUDGE_MAX_RUBRIC_BYTES	export declare const HARD_JUDGE_MAX_RUBRIC_BYTES: number
 HARD_JUDGE_TIMEOUT_MS	export declare const HARD_JUDGE_TIMEOUT_MS = 300000
 HARD_KEYCHAIN_TIMEOUT_MS	export declare const HARD_KEYCHAIN_TIMEOUT_MS = 60000
+HARD_LEASE_TTL_MS	export declare const HARD_LEASE_TTL_MS = 300000
 HARD_LIST_PAGE_CAP	export declare const HARD_LIST_PAGE_CAP = 500
 HARD_MAX_ACTIVE_CHILDREN	export declare const HARD_MAX_ACTIVE_CHILDREN = 32
+HARD_MAX_ATTEMPTS	export declare const HARD_MAX_ATTEMPTS = 10
 HARD_MAX_CHECKPOINT_BYTES	export declare const HARD_MAX_CHECKPOINT_BYTES: number
 HARD_MAX_CHILD_EVENTS_PER_DELEGATION	export declare const HARD_MAX_CHILD_EVENTS_PER_DELEGATION = 4096
 HARD_MAX_CHILD_EVENT_BYTES	export declare const HARD_MAX_CHILD_EVENT_BYTES: number
@@ -394,6 +399,11 @@ LiveScoreOptions	export type { ComparisonCandidate, ComparisonRecord, Comparison
 LoopNodeConfig	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, WorkflowDefinition, WorkflowEvent, Work
 LoopNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, WorkflowDefinition, WorkflowEvent, Work
 MAX_ACTIVE_WORKFLOW_RUNS	export declare const MAX_ACTIVE_WORKFLOW_RUNS = 512
+MAX_ERROR_BYTES	export declare const MAX_ERROR_BYTES: number
+MAX_ID_BYTES	export declare const MAX_ID_BYTES = 256
+MAX_REASON_BYTES	export declare const MAX_REASON_BYTES: number
+MAX_REVISION_BYTES	export declare const MAX_REVISION_BYTES = 256
+MAX_SAGA_STEPS	export declare const MAX_SAGA_STEPS = 100
 MICROSOFT365_BASE_SCOPES	export declare const MICROSOFT365_BASE_SCOPES: readonly ["openid", "profile", "offline_access", "User.Read"]
 MICROSOFT365_SCOPE_BUNDLES	export declare const MICROSOFT365_SCOPE_BUNDLES: Readonly<Record<string, WorkloadScopeBundle>>
 MIGRATION_001_INIT	export declare const MIGRATION_001_INIT = "\nCREATE TABLE IF NOT EXISTS prism_tenants (\n id TEXT NOT NULL PRIMARY KEY,\n name TEXT NOT NULL,\n created_at TEXT NOT NULL,\n metadata TEXT\n)
@@ -547,6 +557,9 @@ S3ArtifactBodyError	export declare class S3ArtifactBodyError extends Error
 S3ArtifactBodyErrorCode	export type { ArtifactBodyLimits, ResolvedArtifactBodyLimits, S3ArtifactBodyErrorCode, S3ArtifactBodyStoreOptions, S3Credentials, } from "./artifact-bodies.js"
 S3ArtifactBodyStoreOptions	export type { ArtifactBodyLimits, ResolvedArtifactBodyLimits, S3ArtifactBodyErrorCode, S3ArtifactBodyStoreOptions, S3Credentials, } from "./artifact-bodies.js"
 S3Credentials	export type { ArtifactBodyLimits, ResolvedArtifactBodyLimits, S3ArtifactBodyErrorCode, S3ArtifactBodyStoreOptions, S3Credentials, } from "./artifact-bodies.js"
+SAGA_ID_PATTERN	export declare const SAGA_ID_PATTERN: RegExp
+SAGA_NAMESPACE	export declare const SAGA_NAMESPACE = "prism.workflow.saga"
+SAGA_SCHEMA_VERSION	export declare const SAGA_SCHEMA_VERSION: 1
 SSE_HEADERS	export declare const SSE_HEADERS:
 SagaDefinition	export type { SagaDefinition, SagaRunResult, SagaStep } from "./saga.js"
 SagaRunResult	export type { SagaDefinition, SagaRunResult, SagaStep } from "./saga.js"
@@ -661,6 +674,7 @@ agentNode	export declare function agentNode(config: Omit<AgentNodeDefinition, "k
 appendEvaluationFeedback	export declare function appendEvaluationFeedback(input: AppendEvaluationFeedbackInput): Promise<RunFeedbackRecord>
 applyConditionalSkip	export declare function applyConditionalSkip(state: SchedulerState, nodeId: string, passed: boolean, emit: (event: WorkflowEventInput) => void): void
 applyEnterpriseMigrations	export declare function applyEnterpriseMigrations(pool: Pool, schema: string): Promise<void>
+applyManualResolution	export declare function applyManualResolution(runtime: Runtime, resolution: SagaManualResolutionInput): Promise<SagaRunResult>
 applyPostgresMigrations	export declare function applyPostgresMigrations(pool: Pool, schema: string): Promise<readonly AppliedPersistenceMigration[]>
 applyPostgresPromptMigrations	export declare function applyPostgresPromptMigrations(pool: Pool, schema?: string): Promise<readonly AppliedPromptMigration[]>
 applySqliteMigrations	export declare function applySqliteMigrations(db: Database.Database): readonly AppliedPersistenceMigration[]
@@ -669,12 +683,16 @@ asEnterprisePostgresError	export declare function asEnterprisePostgresError(erro
 asTimestamp	export declare function asTimestamp(value: unknown, label: string): string
 assertBoundedJson	export declare function assertBoundedJson(value: unknown, maxDepth: number, maxProperties: number, maxBytes: number): void
 assertBytes	export declare function assertBytes(value: string, maxBytes: number, label: string): void
+assertCheckpointInput	export declare function assertCheckpointInput(input:
+assertCompatible	export declare function assertCompatible(value: SagaCheckpointValue, definition: SagaDefinition, tenantId: string, runId: string): void
 assertCredentialFileMode	export declare function assertCredentialFileMode(mode: number): void
 assertEnterpriseMigrationHistory	export declare function assertEnterpriseMigrationHistory(applied: readonly AppliedEnterpriseMigration[]): void
 assertEnterpriseSchemaReady	export declare function assertEnterpriseSchemaReady(source: Queryable, schema: string): Promise<void>
 assertEvaluationThreshold	export declare function assertEvaluationThreshold(report: ExperimentReport | ComparisonReport, thresholds: EvaluationThresholds): void
 assertFiniteUnitInterval	export declare function assertFiniteUnitInterval(value: number, label: string): number
 assertHoldReason	export declare function assertHoldReason(reason: string): string
+assertLeaseInput	export declare function assertLeaseInput(namespace: string, key: string, ownerId: string, ttlMs?: number, signal?: AbortSignal, token?: string): void
+assertLifecycleOwnership	export declare function assertLifecycleOwnership(input: OwnershipScope): void
 assertNoUnrestrictedPayload	export declare function assertNoUnrestrictedPayload(input: object): void
 assertOwnershipForLoad	export declare function assertOwnershipForLoad(expected: WorkflowCheckpointSaveInput["ownership"] | undefined, actual: WorkflowCheckpointRecord["ownership"] | undefined): void
 assertOwnershipForSave	export declare function assertOwnershipForSave(existing: WorkflowCheckpointRecord | null | undefined, input: WorkflowCheckpointSaveInput): void
@@ -694,12 +712,17 @@ assertVaultEntry	export declare function assertVaultEntry(entry: unknown): asser
 assertVersionAdvance	export declare function assertVersionAdvance(existing: WorkflowCheckpointRecord | null | undefined, version: number): void
 assertWithinBytes	export declare function assertWithinBytes(value: unknown, maxBytes: number, label: string): void
 atomicWriteFile	export declare function atomicWriteFile(path: string, data: Buffer, mode?: number): void
+attemptCompensation	export declare function attemptCompensation(runtime: Runtime, step: SagaStep): Promise<void>
+attemptForward	export declare function attemptForward(runtime: Runtime, step: SagaStep): Promise<void>
 authorize	export declare function authorize(options: CreatePrismHandlerOptions, request: Request, operation: PrismServerOperation, capabilityId: string, timeoutMs: number): Promise<PrismServerAuthorization | false>
 awaitWithSignal	export declare function awaitWithSignal<T>(promise: Promise<T>, signal: AbortSignal): Promise<T>
 awsUriEncode	export declare function awsUriEncode(value: string): string
+beginCompensation	export declare function beginCompensation(runtime: Runtime, error?: SagaErrorRecord): Promise<void>
 boundCheckpointValue	export declare function boundCheckpointValue(value: unknown, options?:
 boundNodeOutput	export declare function boundNodeOutput(output: unknown, options?:
 bounded	export declare function bounded<T>(value: T, maxBytes: number, label: string): T
+boundedJson	export declare function boundedJson(value: unknown, options: NormalizedOptions, label: string): unknown
+boundedText	export declare function boundedText(value: unknown, label: string, maxBytes: number): string
 boundsError	export declare function boundsError(message: string): never
 buildEnterpriseMigration001Ddl	export declare function buildEnterpriseMigration001Ddl(schema: string): string
 buildEnterpriseMigration002Ddl	export declare function buildEnterpriseMigration002Ddl(schema: string): string
@@ -727,11 +750,13 @@ canonicalJson	export declare function canonicalJson(value: unknown): string
 canonicalJsonBytes	export declare function canonicalJsonBytes(value: unknown): Buffer
 canonicalQueryString	export declare function canonicalQueryString(query: Readonly<Record<string, string>>): string
 canonicalizeA2AAgentCard	export declare function canonicalizeA2AAgentCard(card: A2AAgentCard): string
+checkpointKey	export declare function checkpointKey(tenantId: string, sagaId: string, runId: string): string
 cleanupExpiredPostgresToolEffects	export declare function cleanupExpiredPostgresToolEffects(pool: Pool, schema: string, input: CleanupScope): Promise<
 clipSearchSnippet	export declare function clipSearchSnippet(value: string | undefined): string | undefined
 cloneState	export declare function cloneState(value: JsonObject): JsonObject
 combineSignals	export declare function combineSignals(signals: readonly (AbortSignal | undefined)[]): AbortSignal | undefined
 comparePromptPosition	export declare function comparePromptPosition(name: string, version: number, cursor: PromptCursor | undefined, order: "asc" | "desc"): number
+compensationContext	export declare function compensationContext(runtime: Runtime, step: SagaStepRecord): SagaCompensationContext
 computeOAuth2S256Challenge	export declare function computeOAuth2S256Challenge(verifier: string): string
 conditionalNode	export declare function conditionalNode(config: Omit<ConditionalNodeDefinition, "kind">): ConditionalNodeDefinition
 configureSqliteDatabase	export declare function configureSqliteDatabase(db: Database.Database, options: Pick<SqlitePersistenceOptions, "wal" | "busyTimeoutMs">): void
@@ -845,6 +870,7 @@ deleteOAuthEntry	export declare function deleteOAuthEntry(vault: CredentialVault
 deliverA2APushEvent	export declare function deliverA2APushEvent(delivery: A2APushDelivery, config: A2APushConfig, event: A2ATaskEvent, options?: DeliverA2APushEventOptions): Promise<
 deriveKey	export declare function deriveKey(passphrase: string, salt: Buffer, params: ScryptParameters, maxMemoryBytes: number): Promise<Buffer>
 diffPromptRecords	export declare function diffPromptRecords(from: PromptRecord, to: PromptRecord, maxLines: number): PromptDiff
+driveSaga	export declare function driveSaga(runtime: Runtime): Promise<SagaRunResult>
 encodeBoundedJson	export declare function encodeBoundedJson(value: unknown, maxBytes: number, label: string): string
 encodeBranchCursor	export declare function encodeBranchCursor(offset: number): string
 encodeCheckpointJson	export declare function encodeCheckpointJson(value: unknown, label: string): string
@@ -853,18 +879,22 @@ encodeRecordCursor	export declare function encodeRecordCursor(createdAt: string,
 encryptBytes	export declare function encryptBytes(plaintext: Buffer, passphrase: string, scryptOptions?: Partial<ScryptParameters>, limitOptions?: EncryptedCredentialStoreLimits): Promise<EncryptedEnvelope>
 encryptWithHostKms	export declare function encryptWithHostKms(plaintext: Uint8Array, kms: HostKms, options?: HostKmsCryptoOptions): Promise<KmsEnvelope>
 enqueueWorkflow	export declare function enqueueWorkflow(workflow: WorkflowDefinition, input: unknown, options: EnqueueWorkflowOptions): Promise<
+enterManual	export declare function enterManual(runtime: Runtime, stepId: string | undefined, phase: SagaPhase, error: SagaErrorRecord): Promise<void>
 entrySearchFields	export declare function entrySearchFields(entry: SessionEntry):
 erpInvariantDataset	export declare const erpInvariantDataset: Dataset<unknown, unknown>
 errorCode	export declare function errorCode(error: unknown): string | number | undefined
 errorMessage	export declare function errorMessage(error: unknown): string
 errorResponse	export declare function errorResponse(error: unknown, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions): Response
+errorSnapshot	export declare function errorSnapshot(error: unknown, options: NormalizedOptions): SagaErrorRecord
 evaluateAndAppend	export declare function evaluateAndAppend(request: PolicyEvaluateRequest, options: EvaluateAndAppendOptions): Promise<PolicyDecisionRecord>
 evaluateApproval	export declare function evaluateApproval(requirements: readonly ApprovalRequirement[], decisions: readonly ApprovalDecision[]): "pending" | "approved" | "rejected"
 exactOwnershipKey	export declare function exactOwnershipKey(ownership?: OwnershipScope): string
 exactOwnershipMatches	export declare function exactOwnershipMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean
 executeScheduler	export declare function executeScheduler(state: SchedulerState, options: RunWorkflowOptions): Promise<WorkflowRunResult>
 exportPolicyDecisions	export declare function exportPolicyDecisions(options: ExportPolicyDecisionsOptions): AsyncGenerator<PersistencePage<PolicyDecisionRecord>, void, unknown>
+extractSagaState	export declare function extractSagaState(record: WorkflowCheckpointRecord, options: NormalizedOptions, definition?: SagaDefinition): SagaCheckpointValue
 fanOutNode	export declare function fanOutNode(config: Omit<FanOutNodeDefinition, "kind">): FanOutNodeDefinition
+forwardContext	export declare function forwardContext(runtime: Runtime, operationId: string): SagaForwardContext
 functionNode	export declare function functionNode(config: Omit<FunctionNodeDefinition, "kind">): FunctionNodeDefinition
 getActiveWorkflowRun	export declare function getActiveWorkflowRun(workflowId: string, runId: string, ownership?: OwnershipScope): ActiveWorkflowRun | undefined
 getCredentialEntry	export declare function getCredentialEntry(vault: CredentialVault, name: string, provider?: string): Credential | undefined
@@ -878,7 +908,12 @@ isAdmitOperation	export declare function isAdmitOperation(operation: string): bo
 isCredentialDecryptError	export declare function isCredentialDecryptError(error: unknown): error is CredentialDecryptError
 isCredentialStoreError	export declare function isCredentialStoreError(error: unknown): error is CredentialStoreError
 isCredentialStoreUnavailableError	export declare function isCredentialStoreUnavailableError(error: unknown): error is CredentialStoreUnavailableError
+isReconcileStatus	export declare function isReconcileStatus(value: unknown): value is SagaReconcileStatus
+isSagaStatus	export declare function isSagaStatus(value: unknown): value is SagaStatus
 isSqlState	export declare function isSqlState(error: unknown, state: string): boolean
+isStepStatus	export declare function isStepStatus(value: unknown): value is SagaStepStatus
+isTerminal	export declare function isTerminal(value: SagaCheckpointValue): boolean
+isUnknownError	export declare function isUnknownError(error: unknown): boolean
 isWorkflowSuspension	export declare function isWorkflowSuspension(value: unknown): value is WorkflowSuspension
 joinNode	export declare function joinNode(config?: Omit<JoinNodeDefinition, "kind">): JoinNodeDefinition
 json	export declare function json(value: unknown, status: number, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions): Response
@@ -891,6 +926,7 @@ listOAuthEntries	export declare function listOAuthEntries(vault: CredentialVault
 listPostgresPromptMigrations	export declare function listPostgresPromptMigrations(client: Pick<PoolClient, "query">, table: string): Promise<AppliedPromptMigration[]>
 listSqlitePromptMigrations	export declare function listSqlitePromptMigrations(db: Database.Database): AppliedPromptMigration[]
 listWorkflowRuns	export declare function listWorkflowRuns(checkpoints: WorkflowCheckpointAdapter, input?: WorkflowCheckpointListInput): Promise<WorkflowCheckpointListPage>
+loadCheckpoint	export declare function loadCheckpoint(options: NormalizedOptions, key: string): Promise<SagaCheckpoint | null>
 loopNode	export declare function loopNode(config: LoopNodeConfig): LoopNodeDefinition
 mapPool	export declare function mapPool<T, R>(items: readonly T[], concurrency: number, worker: (item: T, index: number) => Promise<R>, signal?: AbortSignal): Promise<R[]>
 markRemaining	export declare function markRemaining(state: SchedulerState, status: "aborted" | "skipped"): void
@@ -908,6 +944,7 @@ normalizeMailMessage	export declare function normalizeMailMessage(provider: Work
 normalizeMailPage	export declare function normalizeMailPage(provider: WorkProvider, raw: unknown, nextCursor?: string): WorkPage<WorkMailMessage>
 normalizeOwnership	export declare function normalizeOwnership(input?: PromptOwnership, fallback?: PromptOwnership): NormalizedOwnership
 normalizePageLimit	export declare function normalizePageLimit(limit: number | undefined): number
+normalizeReconcileResult	export declare function normalizeReconcileResult(result: SagaReconcileStatus | SagaReconcileResult): SagaReconcileResult
 normalizeSampleRate	export declare function normalizeSampleRate(sampleRate: number | undefined): number
 normalizeStatuses	export declare function normalizeStatuses(status: WorkflowRunStatus | readonly WorkflowRunStatus[] | undefined): Set<WorkflowRunStatus> | undefined
 normalizeStoredPrompt	export declare function normalizeStoredPrompt(row:
@@ -916,8 +953,10 @@ normalizeTaskPage	export declare function normalizeTaskPage(provider: WorkProvid
 nowIso	export declare function nowIso(): string
 oauthKey	export declare function oauthKey(provider: string, accountId?: string): string
 openEncryptedCredentialStore	export declare function openEncryptedCredentialStore(options: EncryptedCredentialStoreOptions): Promise<EncryptedCredentialStore>
+operationId	export declare function operationId(tenantId: string, sagaId: string, runId: string, stepId: string, phase: "forward" | "compensate"): string
 optionalCursor	export declare function optionalCursor(value: unknown, limits: ResolvedA2ALimits): string | undefined
-optionalText	export declare function optionalText(value: unknown, label: string, maxBytes?: number): string | undefined
+optionalText	export declare function optionalText(value: unknown, label: string): string | undefined
+outputs	export declare function outputs(state: SagaCheckpointValue): Readonly<Record<string, unknown>>
 ownedSignal	export declare function ownedSignal(request: Request, timeoutMs: number, disconnectAborts: boolean):
 ownerParams	export declare function ownerParams(owner: StoreOwner): [string, string, string]
 ownershipExactlyMatches	export declare function ownershipExactlyMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean
@@ -927,7 +966,7 @@ packageName	export declare const packageName = "@arnilo/prism-core/validation/js
 pages	export declare function pages<T>(query: (cursor?: string) => Promise<
 parseA2AMessage	export declare function parseA2AMessage(value: unknown, limits: ResolvedA2ALimits, policy?: A2APartPolicy): Promise<A2AMessage>
 parseA2APart	export declare function parseA2APart(value: unknown, limits: ResolvedA2ALimits, policy?: A2APartPolicy): Promise<A2APart>
-parseCheckpointValue	export declare function parseCheckpointValue(raw: unknown, maxNodeOutputBytes?: number): WorkflowCheckpointValue
+parseCheckpointValue	export declare function parseCheckpointValue(value: unknown, definition: SagaDefinition | undefined, tenantId: string, runId: string, allowEmptyDefinition?: boolean): SagaCheckpointValue
 parseCliJson	export declare function parseCliJson(stdout: string, limits: ResolvedWorkLimits): unknown
 parseCliNdjson	export declare function parseCliNdjson(stdout: string, limits: ResolvedWorkLimits): unknown[]
 parseEncryptedEnvelope	export declare function parseEncryptedEnvelope(value: unknown, limits?: ResolvedEncryptedCredentialStoreLimits): EncryptedEnvelope
@@ -936,7 +975,9 @@ parseSessionMetadata	export declare function parseSessionMetadata(raw: string | 
 parseStateHistory	export declare function parseStateHistory(history: Readonly<Record<string, JsonObject>> | undefined, current: JsonObject): Map<number, JsonObject>
 parseStringArray	export declare function parseStringArray(value: unknown): string[]
 parseVault	export declare function parseVault(bytes: Buffer, maxBytes?: number): CredentialVault
+persist	export declare function persist(runtime: Runtime, value: SagaCheckpointValue, stepId: string | undefined, phase: SagaPhase | "manual"): Promise<void>
 persistCheckpoint	export declare function persistCheckpoint(state: SchedulerState, options: RunWorkflowOptions, emit: (event: WorkflowEventInput) => void): Promise<void>
+positiveBoundedInteger	export declare function positiveBoundedInteger(value: unknown, hardCap: number, label: string): number
 prepareApprovalConsume	export declare function prepareApprovalConsume(current: ApprovalRecord, input: ApprovalConsumeInput, context: ApprovalTransitionContext): PreparedApprovalTransition
 prepareApprovalCreate	export declare function prepareApprovalCreate(input: ApprovalCreateInput, context: ApprovalTransitionContext, id: string): PreparedApprovalCreate
 prepareApprovalDecision	export declare function prepareApprovalDecision(current: ApprovalRecord, input: ApprovalDecideInput, context: ApprovalTransitionContext): Promise<PreparedApprovalDecision>
@@ -963,6 +1004,8 @@ readRequiredId	export declare function readRequiredId(value: unknown, name: stri
 readRequiredString	export declare function readRequiredString(value: unknown, name: string): string
 readResume	export declare function readResume(body: JsonObject): WorkflowResumeRequest
 readScheduleStatus	export declare function readScheduleStatus(value: string | null): WorkflowScheduleStatus | undefined
+reconcileCompensation	export declare function reconcileCompensation(runtime: Runtime, step: SagaStep): Promise<void>
+reconcileForward	export declare function reconcileForward(runtime: Runtime, step: SagaStep): Promise<void>
 record	export declare function record(value: unknown): value is Record<string, unknown>
 recordGuardrailDecision	export declare function recordGuardrailDecision(input:
 recordPermissionDecision	export declare function recordPermissionDecision(input:
@@ -1024,6 +1067,7 @@ s3ObjectKey	export declare function s3ObjectKey(ref: ArtifactBodyRef): string
 safeSearchMetadata	export declare function safeSearchMetadata(metadata: Readonly<Record<string, unknown>> | undefined): Readonly<Record<string, unknown>> | undefined
 sameOwnership	export declare function sameOwnership(left: PrismServerAuthorization["ownership"], right: PrismServerAuthorization["ownership"]): boolean
 sampleValue	export declare function sampleValue(overrides?: Partial<WorkflowCheckpointValue>): WorkflowCheckpointValue
+saveCheckpoint	export declare function saveCheckpoint(options: NormalizedOptions, key: string, value: SagaCheckpointValue, expectedVersion: number, guard: LeaseGuard, lease: LeaseRecord, stepId: string | undefined, phase: SagaPhase | "manual"): Promise<SagaCheckpoint>
 schemaAdvisoryLockKey	export declare function schemaAdvisoryLockKey(schema: string): number
 scopeKey	export declare function scopeKey(scope: NormalizedOwnership, name: string): string
 scoreRun	export declare function scoreRun<TInput = unknown, TExpected = unknown>(options: ScoreRunOptions<TInput, TExpected>): Promise<readonly EvaluationRecord[]>
@@ -1048,11 +1092,15 @@ staleCheckpointExpected	export declare function staleCheckpointExpected(expected
 staleCheckpointFence	export declare function staleCheckpointFence(fence: number | undefined, current: number): CheckpointConflictError
 startWorkflowBackground	export declare const startWorkflowBackground: typeof enqueueWorkflow
 statusMatches	export declare function statusMatches(expected: EvaluationStatus | readonly EvaluationStatus[] | undefined, actual: EvaluationStatus): boolean
+storageWorkflowId	export declare function storageWorkflowId(key: string): string
 storeError	export declare function storeError(error: unknown): EnterprisePostgresError
 suspend	export declare function suspend<ResumeInput = unknown>(input:
 sweepActiveWorkflowRuns	export declare function sweepActiveWorkflowRuns(): number
+textId	export declare function textId(value: unknown, label: string): string
 throwIfAborted	export declare function throwIfAborted(signal?: AbortSignal): void
 toErrorInfo	export declare function toErrorInfo(error: unknown): import("@arnilo/prism").ErrorInfo
+toResult	export declare function toResult(checkpoint: SagaCheckpoint): SagaRunResult
+toWorkflowCheckpointValue	export declare function toWorkflowCheckpointValue(value: SagaCheckpointValue, options: NormalizedOptions, workflowId: string): WorkflowCheckpointValue
 toolNode	export declare function toolNode(config: Omit<ToolNodeDefinition, "kind">): ToolNodeDefinition
 type ActiveWorkflowRun	export { ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE, type ActiveWorkflowRun, abortActiveWorkflowRun, getActiveWorkflowRun, listActiveWorkflowRuns, MAX_ACTIVE_WORKFLOW_RUNS, registerActiveWorkflowRun, sweepActiveWorkflowRuns, unregisterActiveWorkflowRun, } from "./active-runs.js"
 type CancelWorkflowRunInput	export { type CancelWorkflowRunInput, type CancelWorkflowRunResult, cancelWorkflowRun, getWorkflowRun, listWorkflowRuns, } from "./status.js"
@@ -1100,6 +1148,7 @@ type WorkflowSchedules	export { type CreateWorkflowScheduleInput, type CreateWor
 type WorkloadScopeAccess	export { resolveWorkloadScopes, type WorkloadScopeAccess, type WorkloadScopeBundle } from "./scopes.js"
 type WorkloadScopeBundle	export { resolveWorkloadScopes, type WorkloadScopeAccess, type WorkloadScopeBundle } from "./scopes.js"
 unregisterActiveWorkflowRun	export declare function unregisterActiveWorkflowRun(workflowId: string, runId: string, ownership?: OwnershipScope): void
+updateStep	export declare function updateStep(state: SagaCheckpointValue, id: string, patch: Partial<SagaStepRecord>): SagaCheckpointValue
 updateWorkflowState	export declare function updateWorkflowState(state: SchedulerState, patch: JsonObject, updateOptions: import("../types.js").WorkflowStateUpdateOptions | undefined, options: RunWorkflowOptions): Promise<Readonly<JsonObject>>
 upsertCredentialEntry	export declare function upsertCredentialEntry(vault: CredentialVault, record: CredentialRecord): CredentialVault
 upsertOAuthEntry	export declare function upsertOAuthEntry(vault: CredentialVault, provider: string, credentials: OAuthCredentials, accountId?: string): CredentialVault
@@ -1121,4 +1170,5 @@ verifyMigrationIdempotency	export declare function verifyMigrationIdempotency(db
 workflowLoopIterationId	export declare function workflowLoopIterationId(workflowId: string, runId: string, nodeId: string, iteration: number, tenantId?: string): string
 workflowNode	export declare function workflowNode(config: Omit<NestedWorkflowNodeDefinition, "kind">): NestedWorkflowNodeDefinition
 wrapOpenTelemetryApi	export declare function wrapOpenTelemetryApi(tracer: OpenTelemetryTracer, meter?: OpenTelemetryMeter, api?:
+writeCheckpoint	export declare function writeCheckpoint(options: NormalizedOptions, key: string, value: SagaCheckpointValue, expectedVersion: number, guard: LeaseGuard, lease: LeaseRecord): Promise<WorkflowCheckpointRecord>
 zeroBuffer	export declare function zeroBuffer(buffer: Buffer): void

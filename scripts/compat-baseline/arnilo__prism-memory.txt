@@ -9,7 +9,9 @@ ContradictionEngine	export declare class ContradictionEngine
 CoverageTier	export type { CoverageTier, FoldedMemoryDetails, MemoryId, MemoryObservation, MemoryReflection, MemoryRelevance, ObservationsDroppedData, ObservationsRecordedData, ReflectionsRecordedData, } from "./types.js"
 CreateMemoryOptions	export type { CreateMemoryOptions, Embedder, ExportMemoryOptions, LexicalMode, Memory, MemoryConsent, MemoryConsentInput, MemoryConsentScope, MemoryConsentSource, MemoryContextProviderOptions, MemoryEntryInput, MemoryExportIdentity, MemoryExportResult, MemoryRetentionPolicy, MemoryRetentionResult, MemoryScope, MemoryVectorHit, MemoryVectorListQuery, MemoryVectorOrder, MemoryVectorPage, MemoryVectorRecord, RebuildIndexOptions, RebuildIndexResult, RecallOptions, RecallResult, RecallScoringOptions,
 CreateObservationalMemoryOptions	export type { AttachedObservationalMemorySession, CreateObservationalMemoryOptions, ObservationalMemory, ObservationalMemoryAppendOptions, ObservationalMemoryAttachOptions, ObservationalMemoryContextConfig, ObservationalMemoryDropperConfig, ObservationalMemoryObservationConfig, ObservationalMemoryReflectionConfig, ObservationalMemoryRetrievalConfig, ObservationalMemoryWorkerConfig, } from "./compose.js"
+CreateOpenAiCompatibleRerankerOptions	export type { CreateOpenAiCompatibleRerankerOptions, CreateVoyageRerankerOptions } from "./hosted-rerankers.js"
 CreateTeiRerankerOptions	export type { CreateTeiRerankerOptions } from "./tei-reranker.js"
+CreateVoyageRerankerOptions	export type { CreateOpenAiCompatibleRerankerOptions, CreateVoyageRerankerOptions } from "./hosted-rerankers.js"
 DEFAULT_CHUNK_OVERLAP	export declare const DEFAULT_CHUNK_OVERLAP = 100
 DEFAULT_CHUNK_SIZE	export declare const DEFAULT_CHUNK_SIZE = 1000
 DEFAULT_DROPPER_INSTRUCTION	export declare const DEFAULT_DROPPER_INSTRUCTION = "Drop enough observations to approach the target token budget. Call drop_observations."
@@ -237,6 +239,8 @@ PrepareLlmCompactionOptions	export type { LlmCompactionEntryData, LlmCompactionP
 QmdClient	export declare class QmdClient
 RECALL_OVERSAMPLE	export declare const RECALL_OVERSAMPLE = 4
 REFLECTIONS_RECORDED	export declare const REFLECTIONS_RECORDED = "om.reflections.recorded"
+RERANK_DEFAULT_MAX_RESPONSE_BYTES	export declare const RERANK_DEFAULT_MAX_RESPONSE_BYTES: number
+RERANK_DEFAULT_TIMEOUT_MS	export declare const RERANK_DEFAULT_TIMEOUT_MS = 2000
 RagAbortError	export declare class RagAbortError extends RagError
 RagChunk	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
 RagCitation	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
@@ -345,6 +349,7 @@ coverageTierValues	export declare const coverageTierValues: readonly ["none", "p
 createCodingCompactionStrategy	export declare function createCodingCompactionStrategy(options: CodingCompactionStrategyOptions): CompactionStrategy
 createEditWatchMiddleware	export declare function createEditWatchMiddleware(deps: GraftEditWatchDeps, options:
 createEmptyManifest	export declare function createEmptyManifest(wikiRoot: string, rawRoots?: readonly string[], profile?: WikiProfileType): WikiManifest
+createFakeReranker	export declare function createFakeReranker(): Reranker
 createFoldedMemoryDetails	export declare function createFoldedMemoryDetails(projection: Pick<ObservationalMemoryProjection, "observations" | "reflections" | "droppedObservationIds">, fullFold?: boolean): FoldedMemoryDetails
 createGraftCommands	export declare function createGraftCommands(ctx: GraftCommandContext): readonly CommandDefinition[]
 createGraftContextProvider	export declare function createGraftContextProvider(deps: GraftContextProviderDeps): ContextProvider
@@ -366,12 +371,14 @@ createObservationalMemoryCommands	export declare function createObservationalMem
 createObservationalMemoryCompactionStrategy	export declare function createObservationalMemoryCompactionStrategy(options?: ObservationalMemoryCompactionStrategyOptions): CompactionStrategy
 createObservationalMemoryExtension	export declare function createObservationalMemoryExtension(options?: ObservationalMemoryExtensionOptions): Extension
 createObservationalMemoryRuntime	export declare function createObservationalMemoryRuntime(options: ObservationalMemoryRuntimeOptions): ObservationalMemoryRuntime
+createOpenAiCompatibleReranker	export declare function createOpenAiCompatibleReranker(options: CreateOpenAiCompatibleRerankerOptions): Reranker
 createPostgresMemoryStores	export declare function createPostgresMemoryStores(options: PostgresMemoryStoresOptions): Promise<PostgresMemoryStores>
 createPostgresVectorStore	export declare function createPostgresVectorStore(options: PostgresVectorStoreOptions): Promise<PostgresVectorStore &
 createRagContextProvider	export declare function createRagContextProvider(options: RagContextProviderOptions): ContextProvider
 createRecallMemoryTool	export declare function createRecallMemoryTool(options: RecallMemoryToolOptions): ToolDefinition
 createResourceDocumentLoader	export declare function createResourceDocumentLoader(options: ResourceDocumentLoaderOptions): DocumentLoader
 createTeiReranker	export declare function createTeiReranker(options: CreateTeiRerankerOptions): Reranker
+createVoyageReranker	export declare function createVoyageReranker(options: CreateVoyageRerankerOptions): Reranker
 createWebFetchDocumentLoader	export declare function createWebFetchDocumentLoader(options: WebFetchDocumentLoaderOptions): DocumentLoader
 createWikiExtension	export declare function createWikiExtension(options?: WikiExtensionOptions): Extension
 createWikiInitCommand	export declare function createWikiInitCommand(options?: WikiExtensionOptions): CommandDefinition
@@ -442,17 +449,20 @@ nonEmpty	export declare function nonEmpty(value: unknown, label: string): string
 normalizeImportance	export declare function normalizeImportance(value: number | undefined): number | undefined
 observationsUncoveredByReflection	export declare function observationsUncoveredByReflection(entries: readonly SessionEntry[], ledger: ObservationalMemoryLedger, fullRebuild?: boolean): readonly MemoryObservation[]
 oneLine	export declare function oneLine(value: string): string
+orderScores	export declare function orderScores(hits: readonly RagHit[], parsed: unknown, resultsKey: string, scoreKey: string, label: string): readonly RagHit[]
 packageName	export declare const packageName = "@arnilo/prism-memory/rag"
 parseConceptFrontmatter	export declare function parseConceptFrontmatter(content: string):
 parseMarkdownHeading	export declare function parseMarkdownHeading(line: string):
 parseSkillMarkdown	export declare function parseSkillMarkdown(content: string):
 pdfParser	export declare const pdfParser: Parser
 persistGraftPatch	export declare function persistGraftPatch(options: PersistGraftPatchOptions): Promise<void>
+postRerankJson	export declare function postRerankJson(transport: typeof globalThis.fetch, endpoint: string, payload: unknown, options: RerankHttpOptions, signal: AbortSignal | undefined, label: string, host: string, extraHeaders?: Record<string, string>): Promise<unknown>
 prepareLlmCompaction	export declare function prepareLlmCompaction(context: Pick<CompactionContext, "entries" | "trigger">, options?: PrepareLlmCompactionOptions): LlmCompactionPreparation
 prependLog	export declare function prependLog(existing: string | undefined, date: string, items: readonly
 qualifyTable	export declare function qualifyTable(schema: string, table: string): string
 queryPostgres	export declare function queryPostgres(pool: Queryable, sql: string, params?: unknown[]): Promise<import("pg").QueryResult<any>>
 quoteIdentifier	export declare function quoteIdentifier(value: string): string
+readBody	export declare function readBody(req: IncomingMessage): Promise<string>
 readBoundedFile	export declare function readBoundedFile(root: string, relativePath: string, maxBytes: number): string
 recallObservationalMemory	export declare function recallObservationalMemory(entries: readonly SessionEntry[], id: string, secrets?: readonly (string | undefined)[]): MemoryRecallResult
 recallObservationalMemoryBranchPage	export declare function recallObservationalMemoryBranchPage(entries: readonly SessionEntry[], request: RecallBranchPageRequest, secrets?: readonly (string | undefined)[]): RecallBranchPageResult
@@ -461,6 +471,7 @@ redactJson	export declare function redactJson<T>(value: T, redactor?: SecretReda
 redactPaths	export declare function redactPaths(text: string, paths?: readonly string[]): string
 refreshWiki	export declare function refreshWiki(options?: WikiExtensionOptions): Promise<RefreshWikiResult>
 relevanceValues	export declare const relevanceValues: readonly ["low", "medium", "high", "critical"]
+reliefHit	export declare function reliefHit(id: string, score: number, retrievalRank: number): RagHit
 renderConceptFrontmatter	export declare function renderConceptFrontmatter(input:
 renderDirIndex	export declare function renderDirIndex(dir: "entities" | "decisions" | "concepts", entities: readonly WikiEntityMetadata[]): string
 renderEntityMarkdown	export declare function renderEntityMarkdown(workspaceRoot: string, entity: WikiEntityMetadata, symbols: readonly ExtractedSymbol[], summary?: string): string
@@ -476,6 +487,7 @@ repoRelative	export declare function repoRelative(projectDir: string, path: stri
 requireNonEmptyString	export declare function requireNonEmptyString(value: unknown, label: string): string
 requireScope	export declare function requireScope(scope: MemoryScope, requireThread?: boolean): Required<MemoryScope> | MemoryScope
 requireSourceId	export declare function requireSourceId(value: unknown): string
+rerankEndpoint	export declare function rerankEndpoint(url: URL, path: string): string
 rerankHits	export declare function rerankHits(query: string, hits: readonly RagHit[], options:
 rerankRecallHits	export declare function rerankRecallHits(hits: readonly MemoryVectorHit[], scoring: ResolvedRecallScoring, now?: number): MemoryVectorHit[]
 resolveExtension	export declare function resolveExtension(options: GraftExtensionOptions):
@@ -490,6 +502,8 @@ resolveProfile	export declare function resolveProfile(profileType: WikiProfileTy
 resolveRagLimits	export declare function resolveRagLimits(input?: RagLimitsInput): RagLimits
 resolveRecallPageLimit	export declare function resolveRecallPageLimit(limit?: number): number
 resolveRecallScoring	export declare function resolveRecallScoring(options: RecallScoringOptions | undefined): ResolvedRecallScoring | undefined
+resolveRerankFetch	export declare function resolveRerankFetch(options: RerankHttpOptions, label: string): typeof globalThis.fetch
+resolveRerankLimits	export declare function resolveRerankLimits(options: RerankHttpOptions, label: string):
 resumeAgentRun	export { createObservationalMemory, resumeAgentRun, resumeAgentRunStream } from "./compose.js"
 resumeAgentRunStream	export { createObservationalMemory, resumeAgentRun, resumeAgentRunStream } from "./compose.js"
 retrieveContext	export declare function retrieveContext(query: string, options: RetrieveContextOptions): Promise<RagContextResult>
@@ -500,6 +514,7 @@ runMemoryConformance	export declare function runMemoryConformance(createStores: 
 runMemoryWorkerLoop	export declare function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Promise<void>
 runObserver	export declare function runObserver(options: RunObserverOptions): Promise<readonly MemoryObservation[]>
 runReflector	export declare function runReflector(options: RunReflectorOptions): Promise<readonly MemoryReflection[]>
+runRerankerConformance	export declare function runRerankerConformance(createReranker: () => Reranker): Promise<void>
 saveManifest	export declare function saveManifest(wikiRootPath: string, manifest: WikiManifest): Promise<void>
 scaffoldWiki	export declare function scaffoldWiki(options: ScaffoldOptions): Promise<ScaffoldResult>
 scanRawFiles	export declare function scanRawFiles(workspaceRoot: string, rawRoots?: readonly string[], options?: ScanOptions): Promise<Map<string, string>>
@@ -526,9 +541,11 @@ validateAgainstJsonSchema	export declare function validateAgainstJsonSchema(valu
 validateAnchor	export declare function validateAnchor(anchor: WikiSourceAnchor, currentFileContent?: string):
 validateCompactionLimit	export declare function validateCompactionLimit(name: string, value: number, hardCap: number): number
 validateIdentifier	export declare function validateIdentifier(value: string, label: string): string
+validateRerankUrl	export declare function validateRerankUrl(baseUrl: string, label: string): URL
 validateWorkingValue	export declare function validateWorkingValue(value: JsonObject, options:
 wikiActor	export declare function wikiActor(): string
 wikiDate	export declare function wikiDate(iso?: string): string
 wikiMaintainerSkill	export declare const wikiMaintainerSkill: Skill
 wikiSearcherSkill	export declare const wikiSearcherSkill: Skill
 wireEditWatch	export declare function wireEditWatch(api:
+withRerankServer	export declare function withRerankServer(handler: ServerHandler, fn: (port: number) => Promise<void>): Promise<void>

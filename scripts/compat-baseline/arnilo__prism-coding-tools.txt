@@ -223,6 +223,7 @@ DEFAULT_REPO_EXCLUDE	export declare const DEFAULT_REPO_EXCLUDE: readonly string[
 DEFAULT_SHELL_TIMEOUT_SECONDS	export declare const DEFAULT_SHELL_TIMEOUT_SECONDS = 600
 DEFAULT_STARTUP_TIMEOUT_MS	export declare const DEFAULT_STARTUP_TIMEOUT_MS = 30000
 DEFAULT_STOP_GRACE_MS	export declare const DEFAULT_STOP_GRACE_MS = 5000
+DEFAULT_TERM	export declare const DEFAULT_TERM = "xterm-256color"
 DEFAULT_TMP_BYTES	export declare const DEFAULT_TMP_BYTES: number
 DEFAULT_WALL_TIME_MS	export declare const DEFAULT_WALL_TIME_MS: number
 DEFAULT_WORKSPACE_BYTES	export declare const DEFAULT_WORKSPACE_BYTES: number
@@ -617,10 +618,13 @@ assertCodingResumeAllowed	export declare function assertCodingResumeAllowed(inpu
 assertDeadline	export declare function assertDeadline(deadlineAt: number | undefined): void
 assertEgressAttestation	export declare function assertEgressAttestation(attestation: EgressAttestation): EgressAttestation
 assertNotAborted	export declare function assertNotAborted(signal: AbortSignal | undefined): void
+assertNotDisposed	export declare function assertNotDisposed(host: SessionsHost): void
 assertPathInsideRoots	export declare function assertPathInsideRoots(roots: readonly string[], target: string): Promise<boolean>
 assertPinned	export declare function assertPinned(host: string, remoteAddress: string | undefined, pinned: readonly string[]): void
+assertPolicy	export declare function assertPolicy(host: SessionsHost, operation: string, command: string, args: readonly string[], cwd: string, owner: string): Promise<string>
 assertSandboxPath	export declare function assertSandboxPath(workspaceRoot: string, absolutePath: string): string
 atomicWriteUtf8File	export declare function atomicWriteUtf8File(targetPath: string, content: string, options?:
+attachRecoveredHandle	export declare function attachRecoveredHandle(host: SessionsHost, current: ProcessRecoveryRecord, handle: ProcessPtyHandle | ProcessSandboxHandle, version: number): void
 attachWithTimeout	export declare function attachWithTimeout(backend: ProcessRecoveryBackend, ref: string, timeoutMs: number): Promise<ProcessPtyHandle | ProcessSandboxHandle | null>
 buildCavemanInstructions	export declare function buildCavemanInstructions(upstreamRoot: string, level: CavemanLevel): string | undefined
 buildChildEnv	export declare function buildChildEnv(
@@ -629,12 +633,15 @@ buildDockerCreateArgsForTest	export declare function buildDockerCreateArgsForTes
 buildNativeSpawnCommand	export declare function buildNativeSpawnCommand(request: SandboxExecRequest | SandboxExecFileRequest, options:
 buildPonytailInstructions	export declare function buildPonytailInstructions(api: UpstreamPonytailInstructions, mode: PonytailMode): string | undefined
 buildProcessRecoveryRecord	export declare function buildProcessRecoveryRecord(input:
+cancelOwned	export declare function cancelOwned(host: SessionsHost, owner: string, cancelOptions?:
+checkSandboxAlive	export declare function checkSandboxAlive(host: SessionsHost): Promise<void>
 classifyComputerUseLinuxTool	export declare function classifyComputerUseLinuxTool(name: string): ComputerUseLinuxToolClass | undefined
 classifyGitApplyEffect	export declare function classifyGitApplyEffect(args: JsonObject): ToolEffectDeclaration
 classifyGitBranchEffect	export declare function classifyGitBranchEffect(args: JsonObject): ToolEffectDeclaration
 classifyGitWorktreeEffect	export declare function classifyGitWorktreeEffect(args: JsonObject): ToolEffectDeclaration
 codingCheckpointStatePatch	export declare function codingCheckpointStatePatch(metadata: CodingCheckpointMetadata): JsonObject
 codingPlanPathForTask	export declare function codingPlanPathForTask(taskId: string): string
+commandFingerprint	export declare function commandFingerprint(command: string, args: readonly string[]): string
 compileOpenApiDocument	export declare function compileOpenApiDocument(input:
 compileSearchPattern	export declare function compileSearchPattern(query: string, caseSensitive: boolean, maxPatternBytes: number):
 composeEgressSandboxNetwork	export declare function composeEgressSandboxNetwork(attestation: EgressAttestation, name: string): DockerNetworkConfig
@@ -706,6 +713,7 @@ createSandboxReadOnlyComposition	export declare function createSandboxReadOnlyCo
 createSandboxReadOnlyTools	export declare function createSandboxReadOnlyTools(cwd: string, options: SandboxCodingToolsOptions): readonly ToolDefinition[]
 createSandboxRepositoryOperations	export declare function createSandboxRepositoryOperations(sandbox: DisposableSandbox, options?: SandboxRepositoryOperationsOptions): RepositoryOperations
 createSecretRedactor	export declare function createSecretRedactor(secrets?: readonly string[]): (text: string) => string
+createSessionsHost	export declare function createSessionsHost(options: CreateProcessSessionsOptions): SessionsHost
 createShellTool	export declare function createShellTool(cwd: string, options?: ShellToolOptions): ToolDefinition
 createTempArtifactWriter	export declare function createTempArtifactWriter(prefix?: string): ArtifactWriter
 createWriteTool	export declare function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDefinition
@@ -715,10 +723,13 @@ detectSupportedImageMimeType	export declare function detectSupportedImageMimeTyp
 detectSupportedImageMimeTypeFromFile	export declare function detectSupportedImageMimeTypeFromFile(filePath: string): Promise<string | null>
 diagnosticDelta	export declare function diagnosticDelta(request: DiagnosticDeltaRequest): DiagnosticDelta
 diagnosticIdentity	export declare function diagnosticIdentity(diagnostic: NormalizedDiagnostic): string
+disposeSessions	export declare function disposeSessions(host: SessionsHost): Promise<void>
 dockerOutputText	export declare function dockerOutputText(runner: DockerRunner, request: Omit<DockerCliRequest, "collectStdout">): Promise<string>
+emit	export declare function emit(host: SessionsHost, event: CodingProcessEvent): void
 encodeLspFrame	export declare function encodeLspFrame(message: unknown): Buffer
 enforceExecutionPolicy	export declare function enforceExecutionPolicy(policy: ExecutionPolicy | undefined, action: ExecutionAction, toolCallId: string, toolName: string, /** Called once on policy denial so one site emits lifecycle permission_denied for every tool. */ onDenied?: (input:
 evaluateCommandRules	export declare function evaluateCommandRules(command: string, rules: readonly CommandRule[] | undefined, options?:
+evictRecoveryOverflow	export declare function evictRecoveryOverflow(host: SessionsHost): Promise<void>
 executeOpenApiOperation	export declare function executeOpenApiOperation(options: ExecuteOpenApiOperationOptions): Promise<ToolResult>
 expandGlobBraces	export declare function expandGlobBraces(pattern: string, options?: BraceExpansionOptions): string[]
 expandPath	export declare function expandPath(filePath: string): string
@@ -742,6 +753,7 @@ isBinaryBuffer	export declare function isBinaryBuffer(buffer: Buffer): boolean
 isCavemanLevel	export declare function isCavemanLevel(value: string): value is CavemanLevel
 isComputerUseLinuxTool	export declare function isComputerUseLinuxTool(name: string, includeSetupTools?: boolean): boolean
 isDeactivationCommand	export declare function isDeactivationCommand(text: string): boolean
+isInsideRoot	export declare function isInsideRoot(root: string, target: string): boolean
 isMetadataAddress	export declare function isMetadataAddress(address: string): boolean
 isOwnershipConflict	export declare function isOwnershipConflict(error: unknown): boolean
 isPathInside	export declare function isPathInside(root: string, target: string): boolean
@@ -749,15 +761,17 @@ isPathInsideReal	export declare function isPathInsideReal(root: string, target: 
 isPathInsideRoot	export declare function isPathInsideRoot(root: string, target: string): boolean
 isPonytailMode	export declare function isPonytailMode(value: string): value is PonytailMode
 isPrivateAddress	export declare function isPrivateAddress(address: string): boolean
+isTerminalState	export declare function isTerminalState(state: ProcessSessionState): boolean
 killProcessTree	export declare function killProcessTree(pid: number): void
 kindFromDirent	export declare function kindFromDirent(dirent: Dirent): RepoEntryKind
 listLocal	export declare function listLocal(request: RepositoryListRequest, defaults: ResolvedRepositoryLimits, walk: RepositoryWalk): Promise<RepositoryListResult>
 loadComputerUseLinuxSkill	export declare function loadComputerUseLinuxSkill(): Skill
-loadImpeccableSkill	export declare function loadImpeccableSkill(root: string, skillRelativePath: string): Skill
+loadImpeccableSkill	export declare function loadImpeccableSkill(root: string, skillRelativePath: string, expectedDigest?: string): Skill
 loadProcessRecoveryRecord	export declare function loadProcessRecoveryRecord(input:
 loadProcessRecoveryRecords	export declare function loadProcessRecoveryRecords(input:
 loadUpstreamHooks	export declare function loadUpstreamHooks(upstreamRoot: string): UpstreamPonytailHooks
 loadUpstreamSkills	export declare function loadUpstreamSkills(upstreamRoot: string): Skill[]
+makeHandle	export declare function makeHandle(host: SessionsHost, record: SessionRecord): ProcessSession
 matchGlobPattern	export declare function matchGlobPattern(pattern: string, path: string): boolean
 mountInspector	export declare function mountInspector(root: HTMLElement): Promise<MountHandles>
 normalizeAddress	export declare function normalizeAddress(address: string): string
@@ -765,6 +779,8 @@ normalizeDiagnostics	export declare function normalizeDiagnostics(raw: readonly 
 normalizeForFuzzyMatch	export declare function normalizeForFuzzyMatch(text: string): string
 normalizeLevelArg	export declare function normalizeLevelArg(arg: string): CavemanLevel | null
 normalizeToLF	export declare function normalizeToLF(text: string): string
+nowIso	export declare function nowIso(): string
+ownershipKey	export declare function ownershipKey(ownership: CreateProcessSessionsOptions["ownership"], identity: CreateProcessSessionsOptions["identity"]): string
 packageName	export declare const packageName = "@arnilo/prism-coding-tools/openapi"
 parseAskUserDecisionArgs	export declare function parseAskUserDecisionArgs(args: Record<string, unknown>, limits: ResolvedAskUserDecisionLimits):
 parseCodingPlanTodos	export declare function parseCodingPlanTodos(markdown: string, limits?: CodingCheckpointLimitOptions): CodingTodoItem[]
@@ -773,6 +789,8 @@ parsePorcelainV2	export declare function parsePorcelainV2(stdout: Buffer, option
 pathExists	export declare function pathExists(filePath: string): Promise<boolean>
 persistLevel	export declare function persistLevel(options: PersistLevelOptions): Promise<void>
 persistMode	export declare function persistMode(options: PersistModeOptions): Promise<void>
+persistRecoveryUnknown	export declare function persistRecoveryUnknown(host: SessionsHost, current: ProcessRecoveryRecord, version: number, signal?: AbortSignal): Promise<boolean>
+persistTransition	export declare function persistTransition(host: SessionsHost, record: SessionRecord): void
 readBoundedFile	export declare function readBoundedFile(root: string, relativePath: string, maxBytes: number): string
 readCavemanConfig	export declare function readCavemanConfig(configPath?: string): CavemanConfig
 readCodingCheckpointFromState	export declare function readCodingCheckpointFromState(state: Readonly<Record<string, unknown>>, limits?: CodingCheckpointLimitOptions): CodingCheckpointMetadata | undefined
@@ -780,7 +798,9 @@ readCodingPlanFile	export declare function readCodingPlanFile(input:
 readFileBounded	export declare function readFileBounded(path: string, maxBytes: number, signal?: AbortSignal): Promise<Buffer>
 readInitialConfig	export declare function readInitialConfig(configPath: string | undefined, defaultMode?: PonytailMode, quietStartup?: boolean): PonytailConfig
 readPonytailConfig	export declare function readPonytailConfig(configPath?: string): PonytailConfig
+reconcileAllUnknown	export declare function reconcileAllUnknown(host: SessionsHost): number
 reconcileCodingToolEffect	export declare function reconcileCodingToolEffect(input: CodingEffectReconciliationInput): Promise<CodingEffectReconciliation>
+recoverSessions	export declare function recoverSessions(host: SessionsHost, recoverOptions?:
 redactPaths	export declare function redactPaths(text: string, paths?: readonly string[]): string
 redactRemoteUrl	export declare function redactRemoteUrl(url: string): string
 refuseReadBeforeWrite	export declare function refuseReadBeforeWrite(operation: "write" | "edit", displayPath: string, absolutePath: string, options: ReadBeforeWriteOptions | undefined, force: boolean): string | null
@@ -788,6 +808,7 @@ releaseRecordLease	export declare function releaseRecordLease(input:
 replayRunPage	export declare function replayRunPage(seams: DevReplaySeams, request: Request, runId: string, cursor: string | undefined): Promise<Response>
 requireCavemanSkills	export declare function requireCavemanSkills(skills: readonly Skill[]): Map<string, Skill>
 requirePonytailSkills	export declare function requirePonytailSkills(skills: readonly Skill[]): Map<PonytailSkillName, Skill>
+requireRecord	export declare function requireRecord(host: SessionsHost, sessionId: string, owner?: string): SessionRecord
 resolveAskUserDecisionAnswer	export declare function resolveAskUserDecisionAnswer(answer: AskUserDecisionAnswer | null | undefined, selectionMode: AskUserDecisionSelectionMode, options: readonly AskUserDecisionOption[], gates:
 resolveAskUserDecisionLimits	export declare function resolveAskUserDecisionLimits(options?: Pick<AskUserDecisionToolOptions, "maxOptions" | "maxQuestionBytes" | "maxLabelBytes" | "maxBulletBytes" | "maxCustomTextBytes">): ResolvedAskUserDecisionLimits
 resolveCodingCheckpointLimits	export declare function resolveCodingCheckpointLimits(options?: CodingCheckpointLimitOptions): ResolvedCodingCheckpointLimits
@@ -814,6 +835,7 @@ resolveReadPathAsync	export declare function resolveReadPathAsync(filePath: stri
 resolveRepoPath	export declare function resolveRepoPath(root: string, inputPath: string | undefined): Promise<
 resolveRepositoryLimits	export declare function resolveRepositoryLimits(options?: RepositoryLimitOptions): ResolvedRepositoryLimits
 resolveSandboxCapabilities	export declare function resolveSandboxCapabilities(sandbox: SandboxAdapter | undefined): SandboxCapabilities
+resolveTerminal	export declare function resolveTerminal(host: SessionsHost, terminal: ProcessTerminalRequest | undefined):
 resolveToCwd	export declare function resolveToCwd(filePath: string, cwd: string): string
 resolveUnderRoot	export declare function resolveUnderRoot(root: string, candidate: string): string
 resolveUpstreamRoot	export declare function resolveUpstreamRoot(options?: ResolveUpstreamRootOptions): string
@@ -825,11 +847,15 @@ runDockerCli	export declare function runDockerCli(request: DockerCliRequest): Pr
 runGitCli	export declare function runGitCli(request: GitExecRequest &
 saveProcessRecoveryRecord	export declare function saveProcessRecoveryRecord(input:
 searchLocal	export declare function searchLocal(request: RepositorySearchRequest, defaults: ResolvedRepositoryLimits, walk: RepositoryWalk): Promise<RepositorySearchResult>
+settleWaiters	export declare function settleWaiters(record: SessionRecord): void
 sha256Hex	export declare function sha256Hex(data: Buffer | string): string
 shouldSkipName	export declare function shouldSkipName(name: string, includeHidden: boolean, exclude: ReadonlySet<string>): boolean
+startSession	export declare function startSession(host: SessionsHost, request: ProcessStartRequest): Promise<ProcessSession>
 stripBom	export declare function stripBom(content: string):
 summarizeTarStream	export declare function summarizeTarStream(stream: AsyncIterable<Buffer>, bounds: TarBounds): Promise<TarExportSummary>
 suspendAskUserDecision	export declare function suspendAskUserDecision(request: AskUserDecisionSuspendData | (Pick<AskUserDecisionRequest, "question" | "options" | "selectionMode" | "sessionId" | "runId"> &
+sweepExpired	export declare function sweepExpired(host: SessionsHost): void
+terminateRecord	export declare function terminateRecord(host: SessionsHost, record: SessionRecord, state: ProcessSessionState, exitCode: number | null): void
 toAskUserDecisionSuspendData	export declare function toAskUserDecisionSuspendData(request:
 toRepoRelative	export declare function toRepoRelative(root: string, absolutePath: string): string
 truncateHead	export declare function truncateHead(content: string, options?: TruncationOptions): TruncationResult

@@ -1,3 +1,4 @@
+ACTION_HANDLERS	export declare const ACTION_HANDLERS: Record<BrowserActionName, ActionHandler>
 BrowserActRequest	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserCdpOptions, BrowserDownloadInfo, BrowserEvaluateRequest, BrowserEvaluateResult, BrowserObserveResult, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, CdpConsoleEntry, CdpNetworkEntry, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
 BrowserActResult	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserCdpOptions, BrowserDownloadInfo, BrowserEvaluateRequest, BrowserEvaluateResult, BrowserObserveResult, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, CdpConsoleEntry, CdpNetworkEntry, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
 BrowserActionName	export type { BrowserActionName, BrowserActRequest, BrowserActResult, BrowserCdpOptions, BrowserDownloadInfo, BrowserEvaluateRequest, BrowserEvaluateResult, BrowserObserveResult, BrowserOpenResult, BrowserPageInfo, BrowserSnapshotResult, BrowserTarget, CdpConsoleEntry, CdpNetworkEntry, PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, SnapshotRefInfo, } from "./types.js"
@@ -151,6 +152,7 @@ approveUploadPaths	export declare function approveUploadPaths(paths: readonly st
 assertBoundedJson	export declare function assertBoundedJson(value: unknown, maxDepth: number, maxProperties: number, maxBytes: number): asserts value is JsonValue
 assertBrowserUrlAllowed	export declare function assertBrowserUrlAllowed(raw: string, policy?: BrowserNetworkPolicy): Promise<URL>
 assertValidRef	export declare function assertValidRef(ref: string): string
+blockUrls	export declare const blockUrls: ActionHandler
 boundedJson	export declare function boundedJson<T>(value: T, maxDepth: number, maxProperties: number, maxBytes: number): T
 buildBrowserExecutionAction	export declare function buildBrowserExecutionAction(input:
 canonicalUrl	export declare function canonicalUrl(input: string): string
@@ -165,12 +167,14 @@ cdpNetworkEnable	export declare function cdpNetworkEnable(session: PlaywrightCdp
 cdpNetworkSetBlockedUrls	export declare function cdpNetworkSetBlockedUrls(session: PlaywrightCdpSession, urls: readonly string[]): Promise<void>
 cdpRuntimeEnable	export declare function cdpRuntimeEnable(session: PlaywrightCdpSession): Promise<void>
 cdpRuntimeEvaluate	export declare function cdpRuntimeEvaluate(session: PlaywrightCdpSession, params:
+check	export declare const check: ActionHandler
 citation	export declare function citation(provider: WebProvider, inputUrl: string, sourceId?: string): WebCitation
 classifyBrowserOperation	export declare function classifyBrowserOperation(operation: string, details?:
 classifyBrowserToolEffect	export declare function classifyBrowserToolEffect(operation: string, details?: Parameters<typeof classifyBrowserOperation>[1]): ToolEffectDeclaration
 classifyBrowserUrl	export declare function classifyBrowserUrl(raw: string, policy?: BrowserNetworkPolicy): BrowserUrlDecision
 classifyHost	export declare function classifyHost(hostname: string): "public" | "loopback" | "private" | "link-local" | "ula" | "invalid"
 cleanupDownloads	export declare function cleanupDownloads(budget: DownloadBudget): Promise<void>
+click	export declare const click: ActionHandler
 connectObscuraCdp	export declare function connectObscuraCdp(options: ConnectObscuraCdpOptions): Promise<ObscuraCdpSession>
 createBraveSearch	export declare function createBraveSearch(options: WebAdapterOptions): WebSearchAdapter
 createBrowserCheckpointLedger	export declare function createBrowserCheckpointLedger(options?: BrowserCheckpointLimitOptions): BrowserCheckpointLedger
@@ -191,14 +195,20 @@ createSnapshotId	export declare function createSnapshotId(): string
 createUploadBudget	export declare function createUploadBudget(): UploadBudget
 createWebTools	export declare function createWebTools(options: WebToolsOptions): readonly ToolDefinition[]
 createWebTransport	export declare function createWebTransport(provider: WebProvider, apiOrigin: string, options: WebAdapterOptions): WebTransport
+dialog	export declare function dialog(ctx: ActionContext, session: RunSession, request: BrowserActRequest): Promise<BrowserActResult>
+downloadRelease	export declare function downloadRelease(ctx: ActionContext, session: RunSession, request: BrowserActRequest): Promise<BrowserActResult>
+emulate	export declare const emulate: ActionHandler
 endpointFromServeArgs	export declare function endpointFromServeArgs(args: readonly string[]): string
 evaluateInPage	export declare function evaluateInPage(session: PlaywrightCdpSession, input:
 fakeObscuraCliPath	export declare function fakeObscuraCliPath(): string
+fill	export declare const fill: ActionHandler
 getBrowserManagerFromTools	export declare function getBrowserManagerFromTools(options: BrowserToolsOptions): BrowserManager
 installCdpObservation	export declare function installCdpObservation(session: PlaywrightCdpSession, ring: ObservationRing): () => void
 installNetworkRouting	export declare function installNetworkRouting(options: InstallNetworkRoutingOptions): Promise<() => void>
+isActionName	export declare function isActionName(value: string): value is BrowserActionName
 isObscuraReadTool	export declare function isObscuraReadTool(name: string): boolean
 isSideEffectAction	export declare function isSideEffectAction(action: BrowserActionName | "evaluate" | "observe"): boolean
+navigate	export declare function navigate(ctx: ActionContext, session: RunSession, request: BrowserActRequest, signal: AbortSignal | undefined): Promise<BrowserActResult>
 normalizeSearchResults	export declare function normalizeSearchResults(provider: "brave" | "exa", _query: string, raw: unknown, maxResults: number, metadata?: WebProviderMetadata): readonly WebSearchResult[]
 normalizeTarget	export declare function normalizeTarget(raw: unknown): BrowserTarget
 object	export declare function object(value: unknown): Record<string, unknown>
@@ -219,9 +229,15 @@ resolveUploadCandidate	export declare function resolveUploadCandidate(root: stri
 resolveWebLimits	export declare function resolveWebLimits(input?: WebLimits): ResolvedWebLimits
 runObscuraCli	export declare function runObscuraCli(options: ObscuraCliRunOptions): Promise<ObscuraCliRunResult>
 sanitizeDownloadName	export declare function sanitizeDownloadName(name: string): string
+screenshot	export declare function screenshot(ctx: ActionContext, session: RunSession, request: BrowserActRequest, signal: AbortSignal | undefined): Promise<BrowserActResult>
+scroll	export declare function scroll(ctx: ActionContext, session: RunSession, request: BrowserActRequest): Promise<BrowserActResult>
+select	export declare const select: ActionHandler
+selectPage	export declare function selectPage(ctx: ActionContext, session: RunSession, request: BrowserActRequest): Promise<BrowserActResult>
 spawnObscuraProcess	export declare function spawnObscuraProcess(options: ObscuraProcessOptions): OwnedObscuraProcess
 text	export declare function text(value: unknown): string | undefined
+throttle	export declare const throttle: ActionHandler
 toSnapshotResult	export declare function toSnapshotResult(snapshot: LiveSnapshot): BrowserSnapshotResult
+type	export declare const type: ActionHandler
 type ApprovedUploadFile	export { type ApprovedUploadFile, approveUploadPaths, type BrowserUploadOptions, createUploadBudget, resolveUploadCandidate, type UploadBudget, } from "./uploads.js"
 type BrowserCheckpoint	export { type BrowserCheckpoint, type BrowserCheckpointInput, type BrowserCheckpointLedger, type BrowserCheckpointLimitOptions, type BrowserCheckpointLimits, createBrowserCheckpointLedger, DEFAULT_MAX_CHECKPOINT_URL_BYTES, DEFAULT_MAX_CHECKPOINTS_PER_RUN, DEFAULT_MAX_DOMAIN_STATE_HASH_BYTES, DEFAULT_MAX_HOST_DATA_REF_BYTES, HARD_MAX_CHECKPOINT_URL_BYTES, HARD_MAX_CHECKPOINTS_PER_RUN, HARD_MAX_DOMAIN_STATE_HASH_BYTES, HARD_MAX_HOST_DATA_REF_BYTES, resolveBrowserCheckpointLimits, } from "./checkpo
 type BrowserCheckpointInput	export { type BrowserCheckpoint, type BrowserCheckpointInput, type BrowserCheckpointLedger, type BrowserCheckpointLimitOptions, type BrowserCheckpointLimits, createBrowserCheckpointLedger, DEFAULT_MAX_CHECKPOINT_URL_BYTES, DEFAULT_MAX_CHECKPOINTS_PER_RUN, DEFAULT_MAX_DOMAIN_STATE_HASH_BYTES, DEFAULT_MAX_HOST_DATA_REF_BYTES, HARD_MAX_CHECKPOINT_URL_BYTES, HARD_MAX_CHECKPOINTS_PER_RUN, HARD_MAX_DOMAIN_STATE_HASH_BYTES, HARD_MAX_HOST_DATA_REF_BYTES, resolveBrowserCheckpointLimits, } from "./checkpo
@@ -265,6 +281,10 @@ type ScreenshotResult	export { type CaptureScreenshotOptions, captureBoundedScre
 type SharedSandboxBrowserAlignment	export { createSharedSandboxBrowserOptions, type SharedSandboxBrowserAlignment, type SharedSandboxBrowserOptions, } from "./shared-sandbox.js"
 type SharedSandboxBrowserOptions	export { createSharedSandboxBrowserOptions, type SharedSandboxBrowserAlignment, type SharedSandboxBrowserOptions, } from "./shared-sandbox.js"
 type UploadBudget	export { type ApprovedUploadFile, approveUploadPaths, type BrowserUploadOptions, createUploadBudget, resolveUploadCandidate, type UploadBudget, } from "./uploads.js"
+unblockUrls	export declare const unblockUrls: ActionHandler
+uncheck	export declare const uncheck: ActionHandler
+upload	export declare function upload(ctx: ActionContext, session: RunSession, request: BrowserActRequest): Promise<BrowserActResult>
 validateObscuraCommand	export declare function validateObscuraCommand(options: ObscuraProcessOptions, limits: ObscuraProcessLimits): void
 validateObscuraEndpoint	export declare function validateObscuraEndpoint(raw: string, allowRemote: boolean): URL
 validateObscuraWebUrl	export declare function validateObscuraWebUrl(input: string, allowedHostnames?: readonly string[]): string
+wait	export declare function wait(ctx: ActionContext, session: RunSession, request: BrowserActRequest, signal: AbortSignal | undefined): Promise<BrowserActResult>
