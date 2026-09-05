@@ -15,7 +15,16 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const report = JSON.parse(readFileSync(join(root, "scripts", "unused-report.json"), "utf8"));
+const reportPath = join(root, "scripts", "unused-report.json");
+if (!existsSync(reportPath)) {
+  // unused-report.json is gitignored; generate it on demand so CI (where the
+  // alphabetical file order runs this verifier before sweep-unused.test.mjs)
+  // has the same artifact a developer machine has.
+  const { spawnSync } = await import("node:child_process");
+  const gen = spawnSync(process.execPath, [join(root, "scripts", "sweep-unused.mjs"), "--json"], { encoding: "utf8" });
+  if (gen.status !== 0) throw new Error(`sweep-unused --json failed: ${gen.stderr}`);
+}
+const report = JSON.parse(readFileSync(reportPath, "utf8"));
 
 const candidates = [...report.deadExports.matchAll(/^(?<name>[A-Za-z_$][\w$]*) \(defined in (?<file>[^)]+)\)$/gm)].map((m) => ({
   name: m.groups.name,
