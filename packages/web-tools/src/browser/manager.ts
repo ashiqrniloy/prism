@@ -4,50 +4,19 @@
  * Task 6: egress routing, side-effect hooks, upload/download/screenshot policy.
  */
 import { setTimeout as sleep } from "node:timers/promises";
-import {
-  type CdpMode,
-  cdpEmulationClearDeviceMetrics,
-  cdpEmulationSetDeviceMetrics,
-  cdpEmulationSetUserAgent,
-  cdpNetworkEmulateConditions,
-  cdpNetworkEnable,
-  cdpNetworkSetBlockedUrls,
-  cdpRuntimeEnable,
-  createPageCdpSession,
-  resolveCdpMode,
-} from "./cdp.js";
-import {
-  type BrowserDownloadOptions,
-  cleanupDownloads,
-  createDownloadBudget,
-  type DownloadBudget,
-  quarantineDownload,
-  releaseDownload,
-} from "./downloads.js";
+import { ACTION_HANDLERS, isActionName } from "./actions/index.js";
+import type { ActionContext, ManagedPage, PageCdpState, RunSession } from "./actions/types.js";
+import { type CdpMode, cdpNetworkEnable, cdpRuntimeEnable, createPageCdpSession, resolveCdpMode } from "./cdp.js";
+import { type BrowserDownloadOptions, cleanupDownloads, createDownloadBudget, quarantineDownload } from "./downloads.js";
 import { BrowserError } from "./errors.js";
 import { evaluateInPage } from "./evaluate.js";
-import {
-  type BrowserLimitOptions,
-  HARD_MAX_DEVICE_SCALE_FACTOR,
-  HARD_MAX_EMULATE_DIMENSION,
-  HARD_MAX_EMULATE_UA_BYTES,
-  HARD_MAX_THROTTLE_KBPS,
-  HARD_MAX_THROTTLE_LATENCY_MS,
-  type ResolvedBrowserLimits,
-  resolveBrowserLimits,
-} from "./limits.js";
-import {
-  assertBrowserUrlAllowed,
-  type BrowserNetworkPolicy,
-  createNetworkBudget,
-  installNetworkRouting,
-  type NetworkBudget,
-} from "./network.js";
-import { createObservationRing, installCdpObservation, type ObservationRing } from "./observe.js";
+import { type BrowserLimitOptions, type ResolvedBrowserLimits, resolveBrowserLimits } from "./limits.js";
+import { assertBrowserUrlAllowed, type BrowserNetworkPolicy, createNetworkBudget, installNetworkRouting } from "./network.js";
+import { createObservationRing, installCdpObservation } from "./observe.js";
 import { classifyBrowserOperation, isSideEffectAction } from "./policy.js";
-import { captureBoundedScreenshot, createScreenshotBudget, type ScreenshotBudget } from "./screenshot.js";
-import { captureAriaSnapshot, type LiveSnapshot, toSnapshotResult } from "./snapshot.js";
-import { normalizeTarget, requireUniqueLocator, resolveTargetLocator } from "./targets.js";
+import { createScreenshotBudget } from "./screenshot.js";
+import { captureAriaSnapshot, toSnapshotResult } from "./snapshot.js";
+import { resolveTargetLocator } from "./targets.js";
 import type {
   BrowserActionName,
   BrowserActRequest,
@@ -63,12 +32,11 @@ import type {
   BrowserTarget,
   PlaywrightBrowser,
   PlaywrightBrowserContext,
-  PlaywrightCdpSession,
   PlaywrightDialog,
   PlaywrightDownload,
   PlaywrightPage,
 } from "./types.js";
-import { approveUploadPaths, type BrowserUploadOptions, createUploadBudget, type UploadBudget } from "./uploads.js";
+import { type BrowserUploadOptions, createUploadBudget } from "./uploads.js";
 
 export interface CreateBrowserManagerOptions {
   readonly browser: PlaywrightBrowser;
@@ -94,49 +62,6 @@ export interface CreateBrowserManagerOptions {
   readonly networkPolicy?: BrowserNetworkPolicy;
   readonly uploads?: BrowserUploadOptions;
   readonly downloads?: BrowserDownloadOptions;
-}
-
-interface ManagedPage {
-  readonly pageId: string;
-  readonly page: PlaywrightPage;
-  readonly kind: "main" | "popup";
-  closed: boolean;
-}
-
-/** Per-page CDP state: session, observation ring, network/emulation controls. */
-interface PageCdpState {
-  readonly session: PlaywrightCdpSession;
-  readonly ring: ObservationRing;
-  readonly unsubscribe: () => void;
-  domainsEnabled: boolean;
-  blockedPatterns: readonly string[] | undefined;
-  throttled: boolean;
-  emulated: boolean;
-}
-
-interface RunSession {
-  readonly runId: string;
-  readonly context: PlaywrightBrowserContext;
-  readonly createdAt: number;
-  readonly pages: Map<string, ManagedPage>;
-  activePageId: string | undefined;
-  actionCount: number;
-  popupCount: number;
-  dialogCount: number;
-  listenerCount: number;
-  snapshot: LiveSnapshot | undefined;
-  pendingDialog: PlaywrightDialog | undefined;
-  closed: boolean;
-  crashed: boolean;
-  queue: Promise<unknown>;
-  queued: number;
-  readonly cleanup: Array<() => void>;
-  readonly networkBudget: NetworkBudget;
-  readonly uploadBudget: UploadBudget;
-  readonly downloadBudget: DownloadBudget;
-  readonly screenshotBudget: ScreenshotBudget;
-  lastDownloadId: string | undefined;
-  readonly cdpPages: Map<string, PageCdpState>;
 }
 
 export interface BrowserManager {
@@ -517,324 +442,29 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
     if (!isActionName(action)) {
       throw new BrowserError("ERR_PRISM_BROWSER_INPUT", `Unsupported action: ${String(action)}`);
     }
-
-    if (action === "select_page") {
-      const id = request.pageId;
-      if (typeof id !== "string" || !id) {
-        throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "select_page requires pageId");
-      }
-      const page = session.pages.get(id);
-      if (!page || page.closed) {
-        throw new BrowserError("ERR_PRISM_BROWSER_STATE", `Unknown or closed pageId ${id}`);
-      }
-      chargeAction(session);
-      await maybeSideEffect(session, action, {
-        pageId: id,
-        pageKind: page.kind,
-      });
-      session.activePageId = id;
-      return resultFor(session, action, page);
+    const handler = ACTION_HANDLERS[action];
+    if (!handler) {
+      throw new BrowserError("ERR_PRISM_BROWSER_INPUT", `Unsupported action: ${action}`);
     }
-
-    if (action === "dialog") {
-      chargeAction(session);
-      await maybeSideEffect(session, action, {
-        dialogResponse: request.dialogResponse ?? "dismiss",
-      });
-      const dialog = session.pendingDialog;
-      if (!dialog) {
-        throw new BrowserError("ERR_PRISM_BROWSER_STATE", "No pending dialog");
-      }
-      const response = request.dialogResponse ?? "dismiss";
-      if (response === "accept") {
-        assertInputBytes(request.promptText ?? "");
-        await dialog.accept(request.promptText);
-      } else {
-        await dialog.dismiss();
-      }
-      session.pendingDialog = undefined;
-      invalidateSnapshot(session);
-      const page = resolvePage(session, request.pageId);
-      return { ...resultFor(session, action, page), dialogHandled: true };
-    }
-
-    if (action === "download_release") {
-      if (!options.downloads) {
-        throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "downloads are not configured");
-      }
-      const downloadId = request.downloadId ?? session.lastDownloadId;
-      if (!downloadId) {
-        throw new BrowserError("ERR_PRISM_BROWSER_STATE", "No downloadId available");
-      }
-      chargeAction(session);
-      await maybeSideEffect(session, action, { resource: downloadId });
-      const meta = await releaseDownload(downloadId, options.downloads, session.downloadBudget);
-      const page = resolvePage(session, request.pageId);
-      return {
-        ...resultFor(session, action, page),
-        download: toDownloadInfo(meta),
-      };
-    }
-
-    if (action === "screenshot") {
-      const page = resolvePage(session, request.pageId);
-      chargeAction(session);
-      await maybeSideEffect(session, action, { pageId: page.pageId, url: safeUrl(page.page) });
-      const shot = await captureBoundedScreenshot({
-        page: page.page,
-        limits,
-        budget: session.screenshotBudget,
-        fullPage: request.fullPage,
-        clip: request.clip ? { ...request.clip } : undefined,
-        signal,
-      });
-      return {
-        ...resultFor(session, action, page),
-        screenshotBytes: shot.bytes,
-        image: shot.image,
-      };
-    }
-
-    if (action === "upload") {
-      if (!options.uploads) {
-        throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "uploads are not configured");
-      }
-      const page = resolvePage(session, request.pageId);
-      if (!request.target) {
-        throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "upload requires target");
-      }
-      const paths = request.paths;
-      if (!paths || paths.length === 0) {
-        throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "upload requires paths");
-      }
-      for (const p of paths) assertInputBytes(p);
-      const approved = await approveUploadPaths(paths, options.uploads, limits, session.uploadBudget);
-      const target = normalizeTarget(request.target);
-      if ("ref" in target && !request.snapshotId) {
-        throw new BrowserError("ERR_PRISM_BROWSER_TARGET", "ref actions require snapshotId");
-      }
-      const locator = await resolveTargetForAction(session, page.page, target, request.snapshotId);
-      const unique = await requireUniqueLocator(locator);
-      if (typeof unique.setInputFiles !== "function") {
-        throw new BrowserError("ERR_PRISM_BROWSER", "Locator.setInputFiles is unavailable");
-      }
-      chargeAction(session);
-      await maybeSideEffect(session, action, {
-        pageId: page.pageId,
-        paths: approved.map((f) => f.path),
-      });
-      await unique.setInputFiles(
-        approved.map((f) => f.path),
-        { timeout: limits.actionTimeoutMs },
-      );
-      invalidateSnapshot(session);
-      return {
-        ...resultFor(session, action, page),
-        uploads: approved.map((f) => ({ path: f.name, bytes: f.bytes, sha256: f.sha256 })),
-      };
-    }
-
-    if (action === "wait") {
-      chargeAction(session);
-      const page = resolvePage(session, request.pageId);
-      const timeout = clampTimeout(request.timeoutMs, limits.waitTimeoutMs);
-      if (typeof request.url === "string" && request.url) {
-        assertInputBytes(request.url);
-        if (!page.page.waitForURL) {
-          throw new BrowserError("ERR_PRISM_BROWSER", "Page does not support waitForURL");
-        }
-        await page.page.waitForURL(request.url, { timeout });
-      } else if (typeof request.text === "string" && request.text) {
-        assertInputBytes(request.text);
-        const locator = page.page.getByText(request.text, { exact: false });
-        const start = Date.now();
-        while (Date.now() - start < timeout) {
-          throwIfAborted(signal);
-          if ((await locator.count()) > 0) break;
-          await sleep(50);
-        }
-        if ((await locator.count()) === 0) {
-          throw new BrowserError("ERR_PRISM_BROWSER", `wait text not found within ${timeout}ms`);
-        }
-      } else {
-        await sleep(Math.min(timeout, limits.waitTimeoutMs));
-      }
-      return resultFor(session, action, page);
-    }
-
-    if (action === "navigate") {
-      const url = request.url;
-      if (typeof url !== "string" || !url) {
-        throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "navigate requires url");
-      }
-      assertInputBytes(url);
-      await assertBrowserUrlAllowed(url, networkPolicy);
-      chargeAction(session);
-      await maybeSideEffect(session, action, { url, pageId: request.pageId });
-      await navigateActive(session, url, signal, request.pageId);
-      const page = resolvePage(session, request.pageId);
-      return resultFor(session, action, page);
-    }
-
-    if (action === "scroll") {
-      const page = resolvePage(session, request.pageId);
-      chargeAction(session);
-      await maybeSideEffect(session, action, { pageId: page.pageId });
-      if (request.target) {
-        const target = normalizeTarget(request.target);
-        const locator = await resolveTargetForAction(session, page.page, target, request.snapshotId);
-        const unique = await requireUniqueLocator(locator);
-        await unique.scrollIntoViewIfNeeded?.({ timeout: limits.actionTimeoutMs });
-      } else if (page.page.mouse?.wheel) {
-        const amount = Number.isSafeInteger(request.amount) ? Number(request.amount) : 600;
-        const delta = request.direction === "up" ? -Math.abs(amount) : Math.abs(amount);
-        await page.page.mouse.wheel(0, delta);
-      } else {
-        throw new BrowserError("ERR_PRISM_BROWSER", "scroll requires a target or page.mouse.wheel support");
-      }
-      invalidateSnapshot(session);
-      return resultFor(session, action, page);
-    }
-
-    // CDP-backed network/emulation control actions (0.1.4, plan 016 Task 4).
-    if (action === "block_urls" || action === "unblock_urls" || action === "throttle" || action === "emulate") {
-      const page = resolvePage(session, request.pageId);
-      chargeAction(session);
-      await maybeSideEffect(session, action, { pageId: page.pageId });
-      const state = await ensurePageCdp(session, page);
-      switch (action) {
-        case "block_urls": {
-          const patterns = request.patterns;
-          if (!patterns || patterns.length === 0) {
-            throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "block_urls requires patterns");
-          }
-          if (patterns.length > limits.maxBlockedUrlPatterns) {
-            throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `block_urls exceeds maxBlockedUrlPatterns ${limits.maxBlockedUrlPatterns}`);
-          }
-          for (const pattern of patterns) {
-            if (typeof pattern !== "string" || !pattern) {
-              throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "block_urls patterns must be non-empty strings");
-            }
-            assertInputBytes(pattern);
-          }
-          await cdpNetworkSetBlockedUrls(state.session, patterns);
-          state.blockedPatterns = [...patterns];
-          break;
-        }
-        case "unblock_urls":
-          await cdpNetworkSetBlockedUrls(state.session, []);
-          state.blockedPatterns = undefined;
-          break;
-        case "throttle": {
-          if (request.reset === true) {
-            await cdpNetworkEmulateConditions(state.session, {
-              offline: false,
-              latencyMs: 0,
-              downloadThroughputBps: -1,
-              uploadThroughputBps: -1,
-            });
-            state.throttled = false;
-            break;
-          }
-          const offline = request.offline === true;
-          const latencyMs = clampCdpNumber(request.latencyMs, 0, HARD_MAX_THROTTLE_LATENCY_MS, "latencyMs", 0);
-          const downloadKbps = clampCdpNumber(request.downloadKbps, 0, HARD_MAX_THROTTLE_KBPS, "downloadKbps", undefined);
-          const uploadKbps = clampCdpNumber(request.uploadKbps, 0, HARD_MAX_THROTTLE_KBPS, "uploadKbps", undefined);
-          await cdpNetworkEmulateConditions(state.session, {
-            offline,
-            latencyMs,
-            downloadThroughputBps: downloadKbps === undefined ? -1 : kbpsToBps(downloadKbps),
-            uploadThroughputBps: uploadKbps === undefined ? -1 : kbpsToBps(uploadKbps),
-          });
-          state.throttled = true;
-          break;
-        }
-        case "emulate": {
-          if (request.reset === true) {
-            await cdpEmulationClearDeviceMetrics(state.session);
-            state.emulated = false;
-            break;
-          }
-          const width = clampCdpNumber(request.width, 1, HARD_MAX_EMULATE_DIMENSION, "width", undefined);
-          const height = clampCdpNumber(request.height, 1, HARD_MAX_EMULATE_DIMENSION, "height", undefined);
-          if (width === undefined || height === undefined) {
-            throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "emulate requires width and height");
-          }
-          const deviceScaleFactor = clampCdpNumber(request.deviceScaleFactor, 0.01, HARD_MAX_DEVICE_SCALE_FACTOR, "deviceScaleFactor", 1);
-          await cdpEmulationSetDeviceMetrics(state.session, {
-            width,
-            height,
-            mobile: request.mobile === true,
-            deviceScaleFactor,
-          });
-          if (typeof request.userAgent === "string" && request.userAgent.length > 0) {
-            if (Buffer.byteLength(request.userAgent, "utf8") > HARD_MAX_EMULATE_UA_BYTES) {
-              throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `userAgent exceeds ${HARD_MAX_EMULATE_UA_BYTES} bytes`);
-            }
-            await cdpEmulationSetUserAgent(state.session, request.userAgent);
-          }
-          state.emulated = true;
-          break;
-        }
-      }
-      // Blocking/throttling/emulation change what loads and how it renders: refs are stale.
-      invalidateSnapshot(session);
-      return resultFor(session, action, page);
-    }
-
-    // Locator-backed actions.
-    const page = resolvePage(session, request.pageId);
-    if (!request.target) {
-      throw new BrowserError("ERR_PRISM_BROWSER_INPUT", `${action} requires target`);
-    }
-    const target = normalizeTarget(request.target);
-    if ("ref" in target && !request.snapshotId) {
-      throw new BrowserError("ERR_PRISM_BROWSER_TARGET", "ref actions require snapshotId");
-    }
-    const locator = await resolveTargetForAction(session, page.page, target, request.snapshotId);
-    const unique = await requireUniqueLocator(locator);
-    chargeAction(session);
-    await maybeSideEffect(session, action, { pageId: page.pageId });
-    const timeout = limits.actionTimeoutMs;
-
-    switch (action) {
-      case "click":
-        await unique.click({ timeout });
-        break;
-      case "fill": {
-        const text = requireText(request.text);
-        assertInputBytes(text);
-        await unique.fill(text, { timeout });
-        break;
-      }
-      case "type": {
-        const text = requireText(request.text);
-        assertInputBytes(text);
-        if (unique.pressSequentially) await unique.pressSequentially(text, { timeout });
-        else if (unique.type) await unique.type(text, { timeout });
-        else await unique.fill(text, { timeout });
-        break;
-      }
-      case "select": {
-        const values = request.values;
-        if (!values || values.length === 0) {
-          throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "select requires values");
-        }
-        for (const v of values) assertInputBytes(v);
-        await unique.selectOption([...values], { timeout });
-        break;
-      }
-      case "check":
-        await unique.check({ timeout });
-        break;
-      case "uncheck":
-        await unique.uncheck({ timeout });
-        break;
-      default:
-        throw new BrowserError("ERR_PRISM_BROWSER_INPUT", `Unsupported action: ${action}`);
-    }
-    invalidateSnapshot(session);
-    return resultFor(session, action, page);
+    const ctx: ActionContext = {
+      limits,
+      networkPolicy,
+      downloads: options.downloads,
+      uploads: options.uploads,
+      chargeAction,
+      maybeSideEffect,
+      resultFor,
+      resolvePage,
+      assertInputBytes,
+      invalidateSnapshot,
+      safeUrl,
+      resolveTargetForAction,
+      navigateActive,
+      ensurePageCdp,
+      toDownloadInfo,
+      throwIfAborted,
+    };
+    return handler(ctx, session, request, signal);
   }
 
   async function ensurePageCdp(session: RunSession, page: ManagedPage): Promise<PageCdpState> {
@@ -1069,62 +699,4 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted) {
     throw new BrowserError("ERR_PRISM_BROWSER", "Operation aborted");
   }
-}
-
-function requireText(text: unknown): string {
-  if (typeof text !== "string") {
-    throw new BrowserError("ERR_PRISM_BROWSER_INPUT", "text is required");
-  }
-  return text;
-}
-
-function clampTimeout(value: number | undefined, hard: number): number {
-  if (value === undefined) return hard;
-  if (!Number.isSafeInteger(value) || value < 1 || value > hard) {
-    throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `timeoutMs must be 1..${hard}`);
-  }
-  return value;
-}
-
-function clampCdpNumber(value: number | undefined, min: number, max: number, name: string, fallback: number): number;
-function clampCdpNumber(value: number | undefined, min: number, max: number, name: string, fallback: undefined): number | undefined;
-function clampCdpNumber(
-  value: number | undefined,
-  min: number,
-  max: number,
-  name: string,
-  fallback: number | undefined,
-): number | undefined {
-  if (value === undefined) return fallback;
-  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
-    throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `${name} must be ${min}..${max}`);
-  }
-  return value;
-}
-
-function kbpsToBps(kbps: number): number {
-  return Math.round((kbps * 1_000) / 8);
-}
-
-function isActionName(value: string): value is BrowserActionName {
-  return (
-    value === "navigate" ||
-    value === "click" ||
-    value === "type" ||
-    value === "fill" ||
-    value === "select" ||
-    value === "check" ||
-    value === "uncheck" ||
-    value === "scroll" ||
-    value === "wait" ||
-    value === "dialog" ||
-    value === "select_page" ||
-    value === "upload" ||
-    value === "screenshot" ||
-    value === "download_release" ||
-    value === "block_urls" ||
-    value === "unblock_urls" ||
-    value === "throttle" ||
-    value === "emulate"
-  );
 }

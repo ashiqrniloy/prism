@@ -135,12 +135,6 @@ export function hashPromptBody(body: string): string {
   return `sha256:${createHash("sha256").update(body, "utf8").digest("hex")}`;
 }
 
-export function encodeMetadata(metadata: Readonly<Record<string, unknown>> | undefined, limits: PromptLimits): string | null {
-  if (metadata === undefined) return null;
-  const normalized = normalizeMetadata(metadata, limits);
-  return normalized === undefined ? null : JSON.stringify(normalized);
-}
-
 export function normalizeLabels(labels: readonly string[] | undefined, limits: PromptLimits): readonly string[] {
   if (labels === undefined) return Object.freeze([]);
   if (!Array.isArray(labels) || labels.length > limits.maxLabels) {

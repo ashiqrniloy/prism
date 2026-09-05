@@ -101,7 +101,7 @@ await assertToolDispatchConforms(createToolRegistry(), {
 ## Security and performance notes
 
 - No credentials, no network required.
-- Supply `validate` to exercise your policy; use `createJsonSchemaToolArgumentValidator()` from `@arnilo/prism-tool-validator-json-schema` for standards-based `parameters` validation.
+- Supply `validate` to exercise your policy; use `createJsonSchemaToolArgumentValidator()` from `@arnilo/prism-core/validation/json-schema` for standards-based `parameters` validation.
 - The helper uses an allow-all permission policy by default; supply `permission` to validate your fail-closed policy.
 - Blocked calls are proven not to execute by the absence of `tool_execution_started`.
 

@@ -478,8 +478,3 @@ export function createIndexedRepositoryOperations(
     },
   };
 }
-
-/** Stable repo-relative label used in errors; kept for tests and docs. */
-export function indexErrorCode(error: unknown): string | undefined {
-  return error instanceof IndexError ? error.code : undefined;
-}

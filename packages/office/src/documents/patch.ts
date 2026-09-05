@@ -7,9 +7,7 @@ const UNSAFE_SEGMENTS = new Set(["__proto__", "prototype", "constructor"]);
 
 function assertSafeTarget(target: PatchTarget): void {
   if ("metadata" in target && typeof target.metadata === "string" && UNSAFE_SEGMENTS.has(target.metadata)) {
-    throw new DocumentsPatchError(
-      `patch metadata target must not be prototype-polluting key "${target.metadata}"`,
-    );
+    throw new DocumentsPatchError(`patch metadata target must not be prototype-polluting key "${target.metadata}"`);
   }
 }
 
@@ -21,6 +19,7 @@ function assertSafePatchSegments(patch: SetPatch): void {
     }
   }
 }
+
 import type { CellValue, DeckModel, DocBlock, DocModel, DocumentModel, SheetData, SheetModel, SlideData } from "./types.js";
 
 export interface BlockTarget {

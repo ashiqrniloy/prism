@@ -185,3 +185,12 @@ test("envelope: a max-page document completes within the recorded budget or refu
   assert.equal(result?.pages, envelope.maxPagesBaseline);
   assert.ok(elapsed <= envelope.extractMsCeiling, `extract ${elapsed.toFixed(0)}ms exceeds ${envelope.extractMsCeiling}ms ceiling`);
 });
+
+test("fuzz: a %PDF- magic buffer with a malformed body rejects promptly, never hangs", { skip: !PEERS_OK }, async () => {
+  const reader = await createDocumentReader({ maxPages: 10 });
+  // valid magic header followed by 256KiB of non-PDF garbage — passes detect(), must fail parse.
+  const sizeable = Buffer.concat([Buffer.from("%PDF-1.7", "latin1"), Buffer.alloc(256 * 1024, 0x42)]);
+  const started = performance.now();
+  await assert.rejects(reader.extract({ buffer: sizeable, path: "broken.pdf" }));
+  assert.ok(performance.now() - started < envelope.extractMsCeiling, "malformed parse must fail within the same ceiling");
+});

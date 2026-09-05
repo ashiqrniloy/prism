@@ -3,14 +3,15 @@ import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { afterEach, describe, it } from "node:test";
 import type { ToolDefinition } from "@arnilo/prism";
-import type { OAuthDiscoveryState } from "@modelcontextprotocol/sdk/client/auth.js";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import type { OAuthClientInformationMixed, OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
-import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
+import type { OAuthDiscoveryState } from "@modelcontextprotocol/client";
+import { Client } from "@modelcontextprotocol/client";
+import type { StoredOAuthClientInformation, StoredOAuthTokens } from "@modelcontextprotocol/client";
+import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/client";
 import { createMcpClientAuth, type McpClientAuthState, McpOAuthError } from "../auth.js";
 import { createPrismMcpServer, createPrismMcpWebHandler } from "../server.js";
 import { createMcpOAuthFetch, createMcpOAuthTransport } from "../transport.js";
 import type { McpStreamableHttpTransport } from "../types.js";
+import { InsufficientScopeError } from "@modelcontextprotocol/client";
 
 const servers: Server[] = [];
 // server.close(cb) pends forever while keep-alive sockets hold connections
@@ -63,19 +64,34 @@ function sha256b64url(value: string): string {
 function memoryState(): McpClientAuthState {
   const data = new Map<string, unknown>();
   return {
-    loadTokens: async () => data.get("tokens") as OAuthTokens | undefined,
-    saveTokens: async (tokens) => void data.set("tokens", tokens),
+    // Credential methods take the optional issuer key (plan 063 task 5): hosts
+    // may partition by issuer; this store keeps a "most-recent" slot so
+    // ctx-less reads keep working, and records carry the SDK issuer stamp.
+    loadTokens: async (issuer) => data.get(issuer ? `tokens@${issuer}` : "tokens") as StoredOAuthTokens | undefined,
+    saveTokens: async (tokens, issuer) => {
+      const key = issuer ?? tokens.issuer;
+      data.set("tokens", tokens);
+      if (key) data.set(`tokens@${key}`, tokens);
+    },
     loadDiscovery: async () => data.get("discovery") as OAuthDiscoveryState | undefined,
     saveDiscovery: async (state) => void data.set("discovery", state),
-    loadClientInformation: async () => data.get("client") as OAuthClientInformationMixed | undefined,
-    saveClientInformation: async (info) => void data.set("client", info),
+    loadClientInformation: async (issuer) =>
+      data.get(issuer ? `client@${issuer}` : "client") as StoredOAuthClientInformation | undefined,
+    saveClientInformation: async (info, issuer) => {
+      const key = issuer ?? info.issuer;
+      data.set("client", info);
+      if (key) data.set(`client@${key}`, info);
+    },
     loadCodeVerifier: async () => data.get("verifier") as string | undefined,
     saveCodeVerifier: async (verifier) => void data.set("verifier", verifier),
+    loadAuthorizationState: async () => data.get("authorizationState") as { state: string; authorizationServerUrl?: string } | undefined,
+    saveAuthorizationState: async (record) => void data.set("authorizationState", record),
     clear: async (scope) => {
       if (scope === "all") data.clear();
       else if (scope === "tokens") data.delete("tokens");
       else if (scope === "client") data.delete("client");
       else if (scope === "verifier") data.delete("verifier");
+      else if (scope === "authorizationState") data.delete("authorizationState");
       else data.delete("discovery");
     },
   };
@@ -503,16 +519,26 @@ describe("@arnilo/prism-mcp OAuth client (RFC 9728 + PKCE + refresh)", () => {
     const authOptions = baseAuthOptions(state, (url) => {
       authorizationUrl = url;
     });
-    // Pre-seed tokens whose refresh token the AS rejects (invalid_grant).
+    // Pre-seed a stale token that lacks the challenged scope. The 403 challenge
+    // scope is a strict superset of it, so the v2 SDK step-up force-reauthorizes
+    // (RFC 6749 §6: refresh cannot widen scope) instead of attempting a refresh.
     await state.saveTokens({ access_token: "at-old", refresh_token: "rt-rejected", token_type: "Bearer" });
     as.rejectRefresh("rt-rejected");
     const { auth, connect } = await connectWithOAuth(oauthTransportConfig(mcp.origin, { auth: authOptions }));
     await assert.rejects(() => connect());
-    assert.equal(await state.loadTokens(), undefined, "invalid refresh cleared before interactive re-auth");
     assert.ok(authorizationUrl, "interactive re-authorization required");
-    assert.equal(authorizationUrl.searchParams.get("scope"), "extended", "challenged scope carried into re-authorization");
+    assert.equal(
+      authorizationUrl.searchParams.get("scope"),
+      "extended",
+      "challenged scope carried into re-authorization",
+    );
     as.setExpectedAuth(authorizationUrl);
     await auth.finishAuth("test-code");
+    assert.equal(
+      as.tokenRequests.filter((request) => request.grantType === "refresh_token").length,
+      0,
+      "superset step-up never refreshes (a refresh could silently drop the widened scope)",
+    );
     assert.equal(as.tokenScopes.get("at-1"), "extended", "AS issued the upscoped token");
 
     const { client, connect: connect2 } = await connectWithOAuth(oauthTransportConfig(mcp.origin, { auth: authOptions }));
@@ -524,7 +550,7 @@ describe("@arnilo/prism-mcp OAuth client (RFC 9728 + PKCE + refresh)", () => {
     await as.close();
   });
 
-  it("fails closed after one bounded upscoping retry when the server keeps 403ing", async () => {
+  it("fails closed after one bounded step-up retry when the server keeps 403ing", async () => {
     const as = await startAuthServer();
     const mcp = await listen((request, response, body) => {
       const url = new URL(request.url ?? "/", `http://${request.headers.host}`);
@@ -544,8 +570,10 @@ describe("@arnilo/prism-mcp OAuth client (RFC 9728 + PKCE + refresh)", () => {
         return;
       }
       if (body.includes("tools/list")) {
+        // Same-scope re-challenge: not a strict superset, so the v2 SDK steps up
+        // through a bounded refresh loop rather than a fresh authorization.
         response.writeHead(403, {
-          "www-authenticate": `Bearer resource_metadata="${mcp.origin}/.well-known/oauth-protected-resource", scope="extended", error="insufficient_scope"`,
+          "www-authenticate": `Bearer resource_metadata="${mcp.origin}/.well-known/oauth-protected-resource", scope="mcp", error="insufficient_scope"`,
         });
         response.end(JSON.stringify({ error: { message: "Insufficient scope" } }));
         return;
@@ -570,12 +598,14 @@ describe("@arnilo/prism-mcp OAuth client (RFC 9728 + PKCE + refresh)", () => {
     const authOptions = baseAuthOptions(state, () => {
       throw new Error("must not redirect");
     });
-    // Valid refresh token, but the server never grants the wider scope.
-    await state.saveTokens({ access_token: "at-0", refresh_token: "rt-0", token_type: "Bearer" });
+    // Valid refresh token, but the server never stops 403ing the same scope.
+    // 2026-07-28 issuer binding: seeded records must carry the SDK issuer stamp
+    // (un-stamped legacy records are refused, not guessed).
+    await state.saveTokens({ access_token: "at-0", refresh_token: "rt-0", token_type: "Bearer", issuer: as.origin });
     const { client, connect } = await connectWithOAuth(oauthTransportConfig(mcp.origin, { auth: authOptions }));
     await connect();
-    await assert.rejects(() => client.listTools(), /403|upscoping/i);
-    assert.equal(as.tokenRequests.length, 2, "one refresh + one upscoping retry, then circuit breaker");
+    await assert.rejects(() => client.listTools(), /403|step-up/i);
+    assert.equal(as.tokenRequests.length, 2, "one refresh + one step-up refresh, then circuit breaker");
     await client.close();
     await mcp.close();
     await as.close();
@@ -596,7 +626,7 @@ describe("@arnilo/prism-mcp OAuth client (RFC 9728 + PKCE + refresh)", () => {
     );
     assert.equal(await auth.ensureAuthorized(), "REDIRECT");
     assert.equal(as.discoveryRequests.length, 1, "AS metadata discovery (PRM is served by the MCP server)");
-    await state.saveTokens({ access_token: "at-0", refresh_token: "rt-0", token_type: "Bearer" });
+    await state.saveTokens({ access_token: "at-0", refresh_token: "rt-0", token_type: "Bearer", issuer: as.origin });
     assert.equal(await auth.ensureAuthorized(), "AUTHORIZED");
     assert.equal(as.discoveryRequests.length, 1, "discovery cached within TTL");
     now += 60_001;
@@ -737,6 +767,301 @@ describe("@arnilo/prism-mcp OAuth client (RFC 9728 + PKCE + refresh)", () => {
   });
 });
 
+/**
+ * 2026-07-28 OAuth conformance (plan 063 task 5): callback state/iss validation,
+ * issuer-keyed credential isolation, CIMD, DCR deprecation defaults, and the
+ * explicit insufficient-scope policy.
+ */
+describe("2026-07-28 OAuth conformance (plan 063 task 5)", () => {
+  it("completes a full callback URLSearchParams round trip with validated state and iss", async () => {
+    const as = await startAuthServer();
+    const mcp = await startPrismServer(as);
+    let authorizationUrl: URL | undefined;
+    const state = memoryState();
+    const { auth, connect } = await connectWithOAuth(
+      oauthTransportConfig(mcp.origin, {
+        auth: baseAuthOptions(state, (url) => {
+          authorizationUrl = url;
+        }),
+      }),
+    );
+    await assert.rejects(() => connect());
+    as.setExpectedAuth(authorizationUrl!);
+    const callback = new URLSearchParams({
+      state: authorizationUrl!.searchParams.get("state")!,
+      code: "test-code",
+      iss: as.origin,
+    });
+    await auth.finishAuth(callback);
+    assert.equal(as.tokenRequests.length, 1, "exactly one code exchange");
+    assert.equal(as.tokenRequests[0].grantType, "authorization_code");
+    const tokens = await state.loadTokens();
+    assert.equal(tokens?.access_token, "at-1");
+    assert.equal(tokens?.issuer, as.origin, "SDK issuer-stamps persisted tokens");
+    await auth.revoke();
+    await mcp.close();
+    await as.close();
+  });
+
+  it("fails closed on a state mismatch before touching the token endpoint", async () => {
+    const as = await startAuthServer();
+    const mcp = await startPrismServer(as);
+    let authorizationUrl: URL | undefined;
+    const state = memoryState();
+    const { auth, connect } = await connectWithOAuth(
+      oauthTransportConfig(mcp.origin, {
+        auth: baseAuthOptions(state, (url) => {
+          authorizationUrl = url;
+        }),
+      }),
+    );
+    await assert.rejects(() => connect());
+    await assert.rejects(
+      () => auth.finishAuth(new URLSearchParams({ state: "forged", code: "test-code" })),
+      (error: unknown) => error instanceof McpOAuthError && error.code === "ERR_PRISM_MCP_OAUTH_STATE",
+    );
+    assert.equal(as.tokenRequests.length, 0, "no token exchange without a validated state");
+    await mcp.close();
+    await as.close();
+  });
+
+  it("never surfaces callback error fields after an issuer mismatch", async () => {
+    const as = await startAuthServer();
+    const mcp = await startPrismServer(as);
+    let authorizationUrl: URL | undefined;
+    const state = memoryState();
+    const { auth, connect } = await connectWithOAuth(
+      oauthTransportConfig(mcp.origin, {
+        auth: baseAuthOptions(state, (url) => {
+          authorizationUrl = url;
+        }),
+      }),
+    );
+    await assert.rejects(() => connect());
+    const validState = authorizationUrl!.searchParams.get("state")!;
+    const hostile = new URLSearchParams({
+      state: validState,
+      iss: "https://evil.example",
+      error: "access_denied",
+      error_description: "SECRET-SERVER-DETAIL",
+    });
+    await assert.rejects(
+      () => auth.finishAuth(hostile),
+      (error: unknown) => {
+        assert.ok(error instanceof McpOAuthError);
+        assert.equal(error.code, "ERR_PRISM_MCP_OAUTH_ORIGIN");
+        assert.ok(!error.message.includes("SECRET-SERVER-DETAIL"), "error_description stays undisclosed");
+        assert.ok(!error.message.includes("access_denied"), "callback error code stays undisclosed after issuer mismatch");
+        return true;
+      },
+    );
+    assert.equal(as.tokenRequests.length, 0);
+    await mcp.close();
+    await as.close();
+  });
+
+  it("fails closed when the AS requires iss but the callback omits it", async () => {
+    const as = await startAuthServer({ authorization_response_iss_parameter_supported: true });
+    const mcp = await startPrismServer(as);
+    let authorizationUrl: URL | undefined;
+    const state = memoryState();
+    const { auth, connect } = await connectWithOAuth(
+      oauthTransportConfig(mcp.origin, {
+        auth: baseAuthOptions(state, (url) => {
+          authorizationUrl = url;
+        }),
+      }),
+    );
+    await assert.rejects(() => connect());
+    as.setExpectedAuth(authorizationUrl!);
+    await assert.rejects(
+      () => auth.finishAuth(new URLSearchParams({ state: authorizationUrl!.searchParams.get("state")!, code: "test-code" })),
+      (error: unknown) => error instanceof McpOAuthError && error.code === "ERR_PRISM_MCP_OAUTH_ORIGIN",
+    );
+    await mcp.close();
+    await as.close();
+  });
+
+  it("never serves credentials across issuers and refuses ambiguous legacy records", async () => {
+    const as = await startAuthServer();
+    const mcp = await startPrismServer(as);
+    let authorizationUrl: URL | undefined;
+    const state = memoryState();
+    const { auth, connect } = await connectWithOAuth(
+      oauthTransportConfig(mcp.origin, {
+        auth: baseAuthOptions(state, (url) => {
+          authorizationUrl = url;
+        }),
+      }),
+    );
+    await assert.rejects(() => connect());
+    as.setExpectedAuth(authorizationUrl!);
+    await auth.finishAuth(new URLSearchParams({ state: authorizationUrl!.searchParams.get("state")!, code: "test-code" }));
+
+    const foreign = await auth.provider.tokens({ issuer: "https://other-as.example" });
+    assert.equal(foreign, undefined, "tokens stamped for one issuer are never served to another");
+    const own = await auth.provider.tokens({ issuer: as.origin });
+    assert.equal(own?.access_token, "at-1");
+
+    // Pre-upgrade storage shape: a single-slot store returns the same record
+    // for any issuer key; an un-stamped record is ambiguous, refuse it rather
+    // than guessing an issuer.
+    let flatRecord: StoredOAuthTokens | undefined = { access_token: "legacy", token_type: "Bearer" };
+    const flatState: McpClientAuthState = {
+      ...memoryState(),
+      loadTokens: async () => flatRecord,
+      saveTokens: async (tokens) => {
+        flatRecord = tokens;
+      },
+    };
+    const authFlat = createMcpClientAuth(baseAuthOptions(flatState, () => {}), {
+      serverUrl: `${mcp.origin}/mcp`,
+      fetch: createMcpOAuthFetch(oauthTransportConfig(mcp.origin)),
+    });
+    const refused = await authFlat.provider.tokens({ issuer: as.origin });
+    assert.equal(refused, undefined, "un-stamped legacy record is refused on an issuer-keyed read");
+    // ctx-less bearer reads still return the most-recent set (SDK contract).
+    assert.equal((await authFlat.getTokens())?.access_token, "legacy");
+    await mcp.close();
+    await as.close();
+  });
+
+  it("uses CIMD url-based client ids without DCR and validates the metadata URL", async () => {
+    const as = await startAuthServer({ client_id_metadata_document_supported: true });
+    const mcp = await startPrismServer(as);
+    let authorizationUrl: URL | undefined;
+    const state = memoryState();
+    const cimdUrl = "https://client.example/oauth/metadata.json";
+    const authOptions = {
+      ...baseAuthOptions(state, (url) => {
+        authorizationUrl = url;
+      }),
+      strategy: { kind: "cimd" as const, clientMetadataUrl: cimdUrl },
+    };
+    const { auth, connect } = await connectWithOAuth(oauthTransportConfig(mcp.origin, { auth: authOptions }));
+    await assert.rejects(() => connect());
+    assert.equal(as.registrations.length, 0, "CIMD performs no dynamic registration");
+    assert.equal(authorizationUrl!.searchParams.get("client_id"), cimdUrl);
+    as.setExpectedAuth(authorizationUrl!);
+    await auth.finishAuth(new URLSearchParams({ state: authorizationUrl!.searchParams.get("state")!, code: "test-code" }));
+    assert.equal(as.tokenRequests[0].clientId, cimdUrl, "url-based client id on the token request");
+
+    const invalid = [
+      "http://client.example/oauth/metadata.json", // not https
+      "https://client.example/", // root pathname
+    ];
+    for (const clientMetadataUrl of invalid) {
+      assert.throws(
+        () =>
+          createMcpClientAuth(
+            { ...baseAuthOptions(memoryState(), () => {}), strategy: { kind: "cimd", clientMetadataUrl } },
+            { serverUrl: `${mcp.origin}/mcp`, fetch: createMcpOAuthFetch(oauthTransportConfig(mcp.origin)) },
+          ),
+        /clientMetadataUrl/,
+      );
+    }
+    await mcp.close();
+    await as.close();
+  });
+
+  it("defaults DCR application_type to native", async () => {
+    const as = await startAuthServer();
+    const mcp = await startPrismServer(as);
+    let authorizationUrl: URL | undefined;
+    const state = memoryState();
+    const authOptions = {
+      ...baseAuthOptions(state, (url) => {
+        authorizationUrl = url;
+      }),
+      strategy: {
+        kind: "dcr" as const,
+        clientMetadata: { client_name: "prism-mcp", redirect_uris: ["http://localhost:33418/callback"] },
+      },
+    };
+    const { auth, connect } = await connectWithOAuth(oauthTransportConfig(mcp.origin, { auth: authOptions }));
+    await assert.rejects(() => connect());
+    assert.equal((as.registrations[0] as { application_type?: string }).application_type, "native");
+    as.setExpectedAuth(authorizationUrl!);
+    await auth.finishAuth(new URLSearchParams({ state: authorizationUrl!.searchParams.get("state")!, code: "test-code" }));
+    await mcp.close();
+    await as.close();
+  });
+
+  it("surfaces typed InsufficientScopeError under the explicit throw policy", async () => {
+    const as = await startAuthServer();
+    const mcp = await listen((request, response, body) => {
+      const url = new URL(request.url ?? "/", `http://${request.headers.host}`);
+      if (url.pathname === "/.well-known/oauth-protected-resource") {
+        sendJson(response, 200, { authorization_servers: [as.origin], resource: `${mcp.origin}/mcp`, scopes_supported: ["mcp", "extended"] });
+        return;
+      }
+      if (request.method === "GET") {
+        response.writeHead(405);
+        response.end();
+        return;
+      }
+      const authorization = request.headers.authorization ?? "";
+      let parsedMethod: string | undefined;
+      try {
+        parsedMethod = JSON.parse(body).method;
+      } catch {}
+      if (parsedMethod?.startsWith("notifications/")) {
+        response.writeHead(202);
+        response.end();
+        return;
+      }
+      const scope = as.tokenScopes.get(authorization.slice("Bearer ".length)) ?? "";
+      if (parsedMethod === "initialize") {
+        sendJson(response, 200, {
+          jsonrpc: "2.0",
+          id: JSON.parse(body).id,
+          result: { protocolVersion: "2025-06-18", capabilities: { tools: { listChanged: false } }, serverInfo: { name: "fixture", version: "1.0.0" } },
+        });
+        return;
+      }
+      if (!scope.includes("extended")) {
+        response.writeHead(403, {
+          "www-authenticate": `Bearer resource_metadata="${mcp.origin}/.well-known/oauth-protected-resource", scope="extended", error="insufficient_scope"`,
+        });
+        response.end(JSON.stringify({ error: { message: "Forbidden" } }));
+        return;
+      }
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ jsonrpc: "2.0", id: JSON.parse(body).id, result: { tools: [] } }));
+    });
+    const state = memoryState();
+    const authOptions = {
+      ...baseAuthOptions(state, () => {}),
+      onInsufficientScope: "throw" as const,
+    };
+    const config = oauthTransportConfig(mcp.origin, { auth: authOptions });
+    const { transport, auth } = createMcpOAuthTransport(config);
+    const client = new Client({ name: "prism-oauth-test", version: "1.0.0" });
+    // Seed a stamped, scoped, refresh-less token so connect succeeds and the
+    // first tools/list reaches the 403.
+    await state.saveTokens({ access_token: "at-0", token_type: "Bearer", scope: "mcp", issuer: as.origin });
+    as.tokenScopes.set("at-0", "mcp");
+    await auth.ensureAuthorized({ scope: "mcp" });
+    await client.connect(transport);
+    await assert.rejects(
+      () => client.listTools(),
+      (error: unknown) => {
+        assert.ok(error instanceof InsufficientScopeError, "typed SDK InsufficientScopeError, not a redirect");
+        assert.equal(error.requiredScope, "extended");
+        return true;
+      },
+    );
+    assert.equal(
+      as.tokenRequests.filter((request) => request.grantType === "refresh_token").length,
+      0,
+      "throw policy never re-authorizes silently",
+    );
+    await client.close();
+    await mcp.close();
+    await as.close();
+  });
+});
+
 describe("@arnilo/prism-mcp OAuth server (RFC 9728 protected resource)", () => {
   it("serves protected-resource metadata and challenges unauthenticated requests", async () => {
     const handler = await createPrismMcpWebHandler(
@@ -761,7 +1086,7 @@ describe("@arnilo/prism-mcp OAuth server (RFC 9728 protected resource)", () => {
     assert.equal(denied.status, 401);
     assert.equal(
       denied.headers.get("www-authenticate"),
-      'Bearer resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource"',
+      'Bearer resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource", scope="mcp"',
     );
     const wrongMethod = await handler(
       new Request("https://mcp.example.com/.well-known/oauth-protected-resource", { method: "POST", body: "{}" }),

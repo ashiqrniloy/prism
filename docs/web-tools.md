@@ -44,7 +44,7 @@ Fetch returns bounded Markdown and selected attribution. Extract validates host 
 
 ```ts
 import { createEnvCredentialResolver } from "@arnilo/prism";
-import { createJsonSchemaArgumentValidator } from "@arnilo/prism-tool-validator-json-schema";
+import { createJsonSchemaArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
 import { createBraveSearch, createFirecrawlExtractor, createFirecrawlFetch, createWebTools } from "@arnilo/prism-web-tools";
 
 const credentials = createEnvCredentialResolver(process.env, {

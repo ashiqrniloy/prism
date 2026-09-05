@@ -12,7 +12,7 @@ describe("observational memory package skeleton", () => {
   it("observational_memory_subpath_ships_from_the_memory_family_manifest", () => {
     const pkg = JSON.parse(readFileSync(new URL("../../../../package.json", import.meta.url), "utf8"));
     assert.ok(pkg.exports["./compaction/observational-memory"], "family manifest must expose ./compaction/observational-memory");
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.4.0");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.5.0");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 });

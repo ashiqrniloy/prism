@@ -10,7 +10,7 @@ export function createImpeccableExtension(options: ImpeccableExtensionOptions): 
     name: "@arnilo/prism-coding-tools/impeccable",
     async setup(api) {
       const resolved = resolveUpstreamRoot({ upstreamPath: options.upstreamPath });
-      api.registerSkill(loadImpeccableSkill(resolved.root, resolved.skillRelativePath));
+      api.registerSkill(loadImpeccableSkill(resolved.root, resolved.skillRelativePath, options.expectedSnapshotDigest));
       api.registerCommand(createImpeccableCommand());
     },
   };

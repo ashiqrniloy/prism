@@ -3,6 +3,19 @@
 - Plan 054: family ships as part of the 11-package 0.4 lockstep; peer `@arnilo/prism@^0.4.0`.
 
 # Changelog
+## [Unreleased] — 2026-07-28 adoption (plan 063)
+
+### Changed
+- **Modular TypeScript SDK v2 (plan 063 task 1):** `@modelcontextprotocol/sdk` 1.30.0 → exact pins `@modelcontextprotocol/client` + `@modelcontextprotocol/server` 2.0.0. All client/server/transport/auth imports moved to the modular packages; `CompatibilityCallToolResultSchema` (`toolResult` member) is gone from the client codec; unknown tools now error (`-32602`) instead of `isError` results; OAuth persistence is SDK issuer-stamped (`StoredOAuthTokens`/`StoredOAuthClientInformation`) with issuer-keyed reads.
+- **Modern client negotiation + subscriptions (plan 063 task 2):** `connectMcpTools`/`connectMcpCapabilities` gain `protocolVersion` (`"legacy" | "auto | {pin}`) with one bounded `server/discover` probe per auto connection; the bridge exposes the negotiated `protocolEra`/`protocolVersion`; modern tool calls emit SDK-managed standard headers with `Mcp-Param-*` mirrors from retained `x-mcp-header` declarations; SDK `listChanged` + explicit-cursor list APIs + `callTool({toolDefinition})` replace custom wire handling; SEP-2549 list-cache hints honored (`ttlMs` ceiling = min(hint, configured), absent/zero = refetch-always), cache is private per principal by default.
+- **MRTR auto-fulfilment (plan 063 task 3):** elicitation works across eras — legacy `elicitation/create` dispatch, or SDK `input_required` auto-fulfilment on 2026-07-28 (`inputRequired: {autoFulfill: true, maxRounds}` capped by the new `maxMrtrRounds` option, default and hard cap 10). Roots/sampling callbacks are `@deprecated` (SEP-2577) and kept for legacy callers.
+- **Dual-era serving (plan 063 task 4):** `createPrismMcpWebHandler(factory)` serves 2026-07-28 via SDK `createMcpHandler` (fresh `McpServer` per request) with the stateless fallback for 2025 traffic, and gains `fetch`/`close`/`notify`/`bus` lifecycle; host/origin allowlists run before body parsing and auth; `servePrismMcpStdio` replaces hand-wired stdio; `cacheHints` option emits SEP-2549 hints. `relayStatelessBody` removed (obsolete).
+- **OAuth 2026-07-28 conformance (plan 063 task 5):** `finishAuth(URLSearchParams)` validates persisted `state` fail-closed then RFC 9207 `iss`; issuer-keyed credential storage; CIMD preferred, DCR deprecated (`application_type` defaults `"native"`); explicit `onInsufficientScope: "reauthorize" | "throw"`; server challenges carry the configured scope.
+- **Tool schema fidelity + no-arg prompts (found by the official conformance suite, plan 063 task 7):** registered tool `inputSchema` now reaches the wire verbatim via SDK `fromJsonSchema` (`$schema`/`$defs`/`$ref`/`additionalProperties` survive the `tools/list` round-trip; AJV-backed argument validation); prompt `argsSchema` defaults to `{}` so callers may omit the arguments object.
+
+### Added
+- `scripts/mcp-conformance-2026.mjs` deterministic official-conformance runner with the recorded boundary baseline (`scripts/mcp-conformance-2026-baseline.yaml`); conformance matrix and performance record in `docs/mcp-tools.md` / `docs/migration.md` (plan 063 task 7). Tasks (`io.modelcontextprotocol/tasks`) intentionally not advertised; draft vocabulary fails closed.
+
 ## [0.2.1] - 2026-08-13
 
 ### Changed

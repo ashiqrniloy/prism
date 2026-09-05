@@ -245,12 +245,12 @@ describe("@arnilo/prism-providers/alibaba", () => {
 
   it("serialized_request_covers_video_content", () => {
     const request: ProviderRequest = {
-      model: defineAlibabaModel({ model: "qwen-vl-max", capabilities: { input: ["text", "image", "file"] } }),
+      model: defineAlibabaModel({ model: "qwen-vl-max", capabilities: { input: ["text", "image", "file", "video"] } }),
       messages: [
         {
           role: "user",
           content: [
-            { type: "file", mediaType: "video/mp4", data: "AAAA" },
+            { type: "video", mediaType: "video/mp4", data: "AAAA" },
             { type: "text", text: "Summarize this video." },
           ],
         },
@@ -264,21 +264,21 @@ describe("@arnilo/prism-providers/alibaba", () => {
     const reasoning = mapAlibabaModel({ id: "qwq-plus", owned_by: "system", created: 1 });
     assert.equal(reasoning.capabilities?.reasoning, true);
     const vision = mapAlibabaModel({ id: "qwen-vl-max" });
-    assert.deepEqual(vision.capabilities?.input, ["text", "image", "file"]);
+    assert.deepEqual(vision.capabilities?.input, ["text", "image", "file", "video"]);
     const plain = mapAlibabaModel({ id: "qwen-plus" });
     assert.equal(plain.provider, "alibaba");
     assert.equal(plain.capabilities?.tools, true);
     assert.throws(() => mapAlibabaModel({ id: "" }), /missing id/);
   });
 
-  it("video_file_blocks_serialize_to_video_url_parts_when_file_capability_declared", () => {
+  it("typed_video_blocks_serialize_to_video_url_parts_when_video_capability_declared", () => {
     const body = alibabaBody({
-      model: defineAlibabaModel({ model: "qwen-vl-max", capabilities: { input: ["text", "image", "file"] } }),
+      model: defineAlibabaModel({ model: "qwen-vl-max", capabilities: { input: ["text", "image", "file", "video"] } }),
       messages: [
         {
           role: "user",
           content: [
-            { type: "file", mediaType: "video/mp4", url: "https://example.com/clip.mp4" },
+            { type: "video", mediaType: "video/mp4", url: "https://example.com/clip.mp4" },
             { type: "text", text: "Summarize this video." },
           ],
         },
@@ -289,23 +289,23 @@ describe("@arnilo/prism-providers/alibaba", () => {
     assert.equal(content[1].type, "text");
   });
 
-  it("video_blocks_require_the_file_input_capability_before_fetch", () => {
+  it("video_blocks_require_the_video_input_capability_before_fetch", () => {
     const model = defineAlibabaModel({ model: "qwen-plus" }); // text-only
     assert.throws(
       () =>
         alibabaBody({
           model,
-          messages: [{ role: "user", content: [{ type: "file", mediaType: "video/mp4", url: "https://example.com/clip.mp4" }] }],
+          messages: [{ role: "user", content: [{ type: "video", mediaType: "video/mp4", url: "https://example.com/clip.mp4" }] }],
         }),
-      /does not declare file input capability/,
+      /does not declare video input capability/,
     );
   });
 
   it("video_base64_data_urls_pass_through_and_resourceUri_only_blocks_throw", () => {
-    const model = defineAlibabaModel({ model: "qwen-vl-max", capabilities: { input: ["text", "image", "file"] } });
+    const model = defineAlibabaModel({ model: "qwen-vl-max", capabilities: { input: ["text", "image", "file", "video"] } });
     const dataBody = alibabaBody({
       model,
-      messages: [{ role: "user", content: [{ type: "file", mediaType: "video/mp4", data: "AAAA" }] }],
+      messages: [{ role: "user", content: [{ type: "video", mediaType: "video/mp4", data: "AAAA" }] }],
     });
     assert.deepEqual((dataBody.messages as any[])[0].content[0], {
       type: "video_url",
@@ -315,7 +315,7 @@ describe("@arnilo/prism-providers/alibaba", () => {
       () =>
         alibabaBody({
           model,
-          messages: [{ role: "user", content: [{ type: "file", mediaType: "video/mp4", resourceUri: "file:///tmp/clip.mp4" }] }],
+          messages: [{ role: "user", content: [{ type: "video", mediaType: "video/mp4", resourceUri: "file:///tmp/clip.mp4" }] }],
         }),
       /missing url or data/,
     );
@@ -345,7 +345,7 @@ describe("@arnilo/prism-providers/alibaba", () => {
     const cacheModel = defineAlibabaModel({
       model: "qwen-vl-max",
       cache: { kind: "cache_control" },
-      capabilities: { input: ["text", "image", "file"] },
+      capabilities: { input: ["text", "image", "file", "video"] },
     });
     const body = alibabaBody({
       model: cacheModel,
@@ -353,7 +353,7 @@ describe("@arnilo/prism-providers/alibaba", () => {
         {
           role: "user",
           content: [
-            { type: "file", mediaType: "video/mp4", url: "https://example.com/clip.mp4" },
+            { type: "video", mediaType: "video/mp4", url: "https://example.com/clip.mp4" },
             { type: "text", text: "Summarize." },
           ],
         },

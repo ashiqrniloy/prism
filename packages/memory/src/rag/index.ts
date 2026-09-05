@@ -1,10 +1,12 @@
 export { chunkMarkdown, chunkText } from "./chunk.js";
+export { runRerankerConformance } from "./conformance.js";
 export { createRagContextProvider } from "./context.js";
-
 export { RagAbortError, RagError, RagLimitError, RagScopeError, RagValidationError } from "./errors.js";
 export type { FusedCandidate, RetrievalLeg } from "./fusion.js";
 export { fuseReciprocalRank } from "./fusion.js";
 export { isValidContentHash } from "./hash.js";
+export type { CreateOpenAiCompatibleRerankerOptions, CreateVoyageRerankerOptions } from "./hosted-rerankers.js";
+export { createOpenAiCompatibleReranker, createVoyageReranker } from "./hosted-rerankers.js";
 export { indexChunks } from "./indexing.js";
 export { createMemoryIngestionStatusStore, listIngestionStatus } from "./ingestion-status.js";
 export type { RagLimits, RagLimitsInput } from "./limits.js";
@@ -49,6 +51,7 @@ export {
 } from "./limits.js";
 export { createResourceDocumentLoader, createWebFetchDocumentLoader } from "./loaders.js";
 export { htmlParser, markdownParser, pdfParser, textParser } from "./parsers.js";
+export { createFakeReranker } from "./rerank-fake.js";
 export { retrieveContext } from "./retrieve.js";
 export type { SourceMutationResult } from "./sources.js";
 export { deleteSource, replaceDocument, replaceSource } from "./sources.js";

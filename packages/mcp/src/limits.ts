@@ -31,6 +31,9 @@ export const DEFAULT_MAX_CAPABILITY_PAGES = 20;
 export const HARD_MAX_CAPABILITY_PAGES = 100;
 export const DEFAULT_MAX_SESSIONS = 32;
 export const HARD_MAX_SESSIONS = 512;
+/** MRTR auto-fulfilment rounds: SDK's own default is 10; the hard cap equals it so this option can only tighten, never widen. */
+export const DEFAULT_MAX_MRTR_ROUNDS = 10;
+export const HARD_MAX_MRTR_ROUNDS = 10;
 
 export interface McpClientLimitsInput {
   readonly maxListPages?: number;

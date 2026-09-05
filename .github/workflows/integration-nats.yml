@@ -1,0 +1,41 @@
+name: integration-nats
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-nats-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nats:
+    name: nats (events + cursor + restart)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      PRISM_TEST_NATS_URL: nats://127.0.0.1:4222
+    steps:
+      - name: redact connection string
+        run: echo "::add-mask::${PRISM_TEST_NATS_URL}"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build:core && npm run build -w @arnilo/prism-core
+      # GHA service containers cannot pass `-js`; JetStream is required.
+      - name: start nats jetstream
+        run: |
+          docker run -d --name nats -p 4222:4222 nats:2 -js
+          timeout 30 bash -c 'until echo >/dev/tcp/127.0.0.1/4222; do sleep 1; done'
+      - name: run prism-core nats suites
+        timeout-minutes: 5
+        run: npm run test:nats --workspace @arnilo/prism-core

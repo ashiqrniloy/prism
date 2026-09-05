@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import type { AgentIdentity, ToolEffectStore } from "@arnilo/prism";
 import { createMemoryToolEffectStore } from "@arnilo/prism";
 import type { McpAppsBridge } from "@arnilo/prism-mcp";
+import { McpBridgeError } from "@arnilo/prism-mcp";
 import { deriveAppEffectKey, hashJson, reconcileAppEffect } from "../effect-recovery.js";
 import { createAgUiMcpAppHandler } from "../mcp-apps.js";
 
@@ -107,6 +108,31 @@ describe("MCP Apps effect recording (FR-4)", () => {
     const handler = createAgUiMcpAppHandler(
       handlerOptions(store, async () => {
         throw new Error("boom");
+      }),
+    );
+    const response = await call(handler);
+    assert.equal(response.status, 400);
+    const record = await store.get({
+      identity,
+      ownership,
+      key: deriveAppEffectKey({ ownership, sessionId: "session", runId: "run", toolName: "mutate", argumentsHash: hashJson({ id: 1 }) }),
+      sessionId: "session",
+      runId: "run",
+      toolCallId: "call-1",
+      toolName: "mutate",
+      argumentsHash: hashJson({ id: 1 }),
+    });
+    assert.ok(record);
+    assert.equal(record.status, "failed_retryable");
+    assert.equal(record.failure?.code, "ERR_PRISM_AG_UI_CALL_FAILED");
+  });
+
+  it("records failed_retryable when the bridge refuses a deprecated Tasks result (plan 063 task 6)", async () => {
+    const store = createMemoryToolEffectStore();
+    const handler = createAgUiMcpAppHandler(
+      handlerOptions(store, async () => {
+        // Exactly what callRemoteTool throws for draft-era `task` members.
+        throw new McpBridgeError("MCP tool returned a deprecated task result");
       }),
     );
     const response = await call(handler);

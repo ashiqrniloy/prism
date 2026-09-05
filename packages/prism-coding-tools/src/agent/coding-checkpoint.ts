@@ -1,11 +1,3 @@
-/**
- * Bounded durable coding-task checkpoint metadata.
- *
- * This is not a second runtime. Hosts persist plan/todo Markdown in the workspace
- * and store only references/hashes/summaries in workflow checkpoint state. Resume
- * revalidates fingerprints and artifact integrity before import/execution.
- */
-import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import type { JsonObject } from "@arnilo/prism";
@@ -825,12 +817,6 @@ function sortValue(value: unknown): unknown {
     throw new CodingCheckpointError("Fingerprint input contains unsupported values");
   }
   return value;
-}
-
-/** Exported for tests that need a quick digest helper without importing crypto. */
-export function codingSha256Hex(data: Buffer | string): string {
-  const bytes = typeof data === "string" ? Buffer.from(data, "utf8") : data;
-  return createHash("sha256").update(bytes).digest("hex");
 }
 
 // Keep path join available for hosts constructing plan paths.

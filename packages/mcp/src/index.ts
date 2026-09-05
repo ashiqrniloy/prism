@@ -57,7 +57,7 @@ export {
   HARD_MAX_TOTAL_TOOL_SCHEMA_BYTES,
 } from "./limits.js";
 export { assertValidServerId, defaultMcpNamePrefix, formatMcpToolName } from "./names.js";
-export { createPrismMcpServer, createPrismMcpWebHandler } from "./server.js";
+export { createPrismMcpServer, createPrismMcpWebHandler, servePrismMcpStdio } from "./server.js";
 export { createMcpOAuthFetch, createMcpOAuthTransport, createMcpTransport } from "./transport.js";
 export type {
   AttachMcpToolBridgeOptions,
@@ -69,6 +69,7 @@ export type {
   McpAppsBridge,
   McpAppTool,
   McpCapabilityBridge,
+  McpProtocolNegotiation,
   McpProtectedResource,
   McpRoot,
   McpStdioTransport,
@@ -82,13 +83,17 @@ export type {
   PrismMcpAuthorization,
   PrismMcpAuthorizationInput,
   PrismMcpAuthorizer,
+  PrismMcpCacheHints,
+  PrismMcpCacheableMethod,
   PrismMcpElicitationRequest,
   PrismMcpElicitationResult,
   PrismMcpPrompt,
   PrismMcpRequestIdentity,
   PrismMcpResource,
   PrismMcpSamplingRequest,
+  PrismMcpStdioHandle,
   PrismMcpWebHandler,
+  ServePrismMcpStdioOptions,
 } from "./types.js";
 export {
   McpBridgeClosedError,

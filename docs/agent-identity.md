@@ -87,7 +87,7 @@ await agent.createSession().run("Summarize inbox", {
 
 Server / MCP / A2A authorize callbacks may include the same `identity` beside `ownership`. Handlers assert activity and ownership match before admitting work.
 
-## OIDC/JWKS verifier adapter (`@arnilo/prism-credentials-node/oidc`)
+## OIDC/JWKS verifier adapter (`@arnilo/prism-core/credentials/node/oidc`)
 
 Optional `createOidcIdentityVerifier` turns a pinned issuer/audience and pinned JWKS URL into a core `IdentityVerifier` — one bounded reference adapter for hosts that already authenticate callers with OIDC JWTs (Entra, Keycloak, Auth0, …). Native `fetch` + WebCrypto only; no JOSE dependency.
 
@@ -102,7 +102,7 @@ Optional `createOidcIdentityVerifier` turns a pinned issuer/audience and pinned 
 | `limits` | Bounded JWKS/claims knobs; `identity` reuses core identity caps |
 
 ```ts
-import { createOidcIdentityVerifier } from "@arnilo/prism-credentials-node/oidc";
+import { createOidcIdentityVerifier } from "@arnilo/prism-core/credentials/node/oidc";
 
 const verifier = createOidcIdentityVerifier({
   issuer: "https://id.example.com/tenant",

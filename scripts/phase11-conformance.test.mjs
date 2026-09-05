@@ -36,7 +36,7 @@ import {
 } from "@arnilo/prism-core/governance/policy";
 import { createArtifactService, createS3ArtifactBodyStore } from "@arnilo/prism-core/runtime/server";
 import { createMcpOAuthTransport, createPrismMcpServer, createPrismMcpWebHandler } from "@arnilo/prism-mcp";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { Client } from "@modelcontextprotocol/client";
 import { createOpenApiTools } from "../packages/prism-coding-tools/dist/openapi/index.js";
 
 const SECRET = "conformance-secret-value";

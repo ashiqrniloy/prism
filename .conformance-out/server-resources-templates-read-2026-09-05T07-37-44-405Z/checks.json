@@ -1,0 +1,19 @@
+[
+  {
+    "id": "resources-templates-read",
+    "name": "ResourcesTemplateRead",
+    "description": "Read resource from template with parameter substitution",
+    "status": "SUCCESS",
+    "timestamp": "2026-09-05T07:37:44.425Z",
+    "specReferences": [
+      {
+        "id": "MCP-Resources-Templates",
+        "url": "https://modelcontextprotocol.io/specification/2025-06-18/server/resources#resource-templates"
+      }
+    ],
+    "details": {
+      "uri": "test://template/123/data",
+      "content": "Template data for id 123"
+    }
+  }
+]

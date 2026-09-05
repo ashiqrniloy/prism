@@ -141,10 +141,6 @@ export function listInitTemplates(galleryRoot = defaultGalleryRoot()): readonly 
   }
 }
 
-export function isInitTemplate(value: string, galleryRoot?: string): boolean {
-  return listInitTemplates(galleryRoot).some((t) => t.name === value);
-}
-
 export function getInitUsage(templatesRoot?: string, galleryRoot?: string): string {
   const providers = listInitProviders(templatesRoot).join("|");
   const templates = listInitTemplates(galleryRoot)
@@ -478,10 +474,6 @@ function buildTokensForTemplate(input: {
     __OPTIONAL_DOCS__: "",
     __PROVIDER_README_NOTE__: "",
   };
-}
-
-export function isInitProvider(value: string, templatesRoot?: string): value is InitProvider {
-  return listInitProviders(templatesRoot).includes(value);
 }
 
 function resolveInitDirectory(input: string, cwd: string): string {

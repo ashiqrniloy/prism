@@ -1,6 +1,6 @@
 import { LeaseConflictError, type LeaseRecord, type LeaseStore } from "@arnilo/prism";
 import type { Pool } from "pg";
-import { assertOwnershipScope } from "../codecs/index.js";
+import { assertLeaseInput, assertOwnershipScope } from "../codecs/index.js";
 import { qualifyTable } from "./identifiers.js";
 
 interface Row {
@@ -41,7 +41,7 @@ export function createPostgresLeaseStore(pool: Pool, schema = "prism"): LeaseSto
 
   return {
     async tryAcquireLease(input) {
-      validate(input.namespace, input.key, input.ownerId, input.ttlMs, input.signal);
+      assertLeaseInput(input.namespace, input.key, input.ownerId, input.ttlMs, input.signal);
       await ensureReady();
       const result = await pool.query(
         `
@@ -72,7 +72,7 @@ RETURNING *`,
       return null;
     },
     async renewLease(input) {
-      validate(input.namespace, input.key, input.ownerId, input.ttlMs, input.signal, input.token);
+      assertLeaseInput(input.namespace, input.key, input.ownerId, input.ttlMs, input.signal, input.token);
       await ensureReady();
       const result = await pool.query(
         `UPDATE ${table} SET expires_at=CURRENT_TIMESTAMP + $5 * INTERVAL '1 millisecond', updated_at=CURRENT_TIMESTAMP
@@ -96,7 +96,7 @@ RETURNING *`,
       return null;
     },
     async releaseLease(input) {
-      validate(input.namespace, input.key, input.ownerId, undefined, input.signal, input.token);
+      assertLeaseInput(input.namespace, input.key, input.ownerId, undefined, input.signal, input.token);
       await ensureReady();
       const result = await pool.query(
         `UPDATE ${table} SET expires_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
@@ -136,15 +136,4 @@ function toRecord(row?: Row): LeaseRecord | null {
 }
 function iso(value: string | Date): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
-}
-function validate(namespace: string, key: string, ownerId: string, ttlMs?: number, signal?: AbortSignal, token?: string): void {
-  if (signal?.aborted) throw signal.reason ?? new DOMException("Aborted", "AbortError");
-  if (
-    !namespace ||
-    !key ||
-    !ownerId ||
-    (ttlMs !== undefined && (!Number.isSafeInteger(ttlMs) || ttlMs < 1)) ||
-    (token !== undefined && !token)
-  )
-    throw new LeaseConflictError("Invalid lease input");
 }

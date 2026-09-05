@@ -1,5 +1,10 @@
 import { CheckpointConflictError } from "@arnilo/prism";
 
+export function assertCheckpointInput(input: { namespace: string; key: string; version: number }): void {
+  if (!input.namespace || !input.key || !Number.isSafeInteger(input.version) || input.version < 1)
+    throw new CheckpointConflictError("Invalid checkpoint key or version");
+}
+
 export function staleCheckpoint(version: number, current?: number): CheckpointConflictError {
   return new CheckpointConflictError(`Stale checkpoint version ${version} (current ${current ?? "unknown"})`);
 }

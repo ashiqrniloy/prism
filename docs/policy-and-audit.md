@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-policy` records redacted allow/deny/modify/approval decisions with policy version, actor refs from verified `AgentIdentity`, target, reason, expiry, and evidence references. Hosts export cursor-paginated pages to append-only/WORM sinks. The package does not embed a mandatory global policy engine, KMS, or cloud WORM SDK.
+`@arnilo/prism-core/governance/policy` records redacted allow/deny/modify/approval decisions with policy version, actor refs from verified `AgentIdentity`, target, reason, expiry, and evidence references. Hosts export cursor-paginated pages to append-only/WORM sinks. The package does not embed a mandatory global policy engine, KMS, or cloud WORM SDK.
 
 ## When to use it
 
@@ -64,7 +64,7 @@ import {
   evaluateAndAppend,
   exportPolicyDecisions,
   recordToolApprovalDecision,
-} from "@arnilo/prism-policy";
+} from "@arnilo/prism-core/governance/policy";
 
 const evaluator = createPolicyEvaluator({
   policyId: "mail",
@@ -129,7 +129,7 @@ Immutable approval requests carry an action digest, requester, and required role
 | `ApprovalRecord` | Request + `status` (`pending/approved/rejected/revoked/consumed`) + `revision` + immutable `decisions` + `policyRevision` |
 | `ApprovalStore.create/decide/revoke/consume/get/query` | Durable transitions; every transition records an `auditRef` |
 | `createMemoryApprovalStore({ authority })` | Single-process reference adapter sharing the pure transition logic |
-| `createPostgresApprovalStore({ pool, schema, authority })` | Cross-replica storage (migration `005_erp_approvals`, `@arnilo/prism-enterprise-postgres`) |
+| `createPostgresApprovalStore({ pool, schema, authority })` | Cross-replica storage (migration `005_erp_approvals`, `@arnilo/prism-core/enterprise/postgres`) |
 
 Quorum rules:
 
@@ -152,7 +152,7 @@ WHERE status = 'pending' AND expires_at < now();
 
 Hosts own identity verification and the role source; Prism does not certify NIST compliance. NIST SP 800-53 AC-5 (separation of duties) and AC-6 (least privilege) are control guidance only, not certification claims.
 
-## OPA external policy adapter (`@arnilo/prism-policy/opa`, 0.0.28)
+## OPA external policy adapter (`@arnilo/prism-core/governance/policy/opa`, 0.0.28)
 
 Optional `createOpaPolicyEvaluator` evaluates `PolicyEvaluateRequest`s against a host-pinned OPA REST endpoint (`POST /v1/data/<path>` with `{"input": <document>}`) and returns a core `PolicyEvaluator` for `evaluateAndAppend`. Native `fetch` only; no OPA SDK dependency.
 
@@ -168,9 +168,9 @@ Optional `createOpaPolicyEvaluator` evaluates `PolicyEvaluateRequest`s against a
 | `ssrf` | `SsrfPolicy` for the endpoint; denials surface `MediaContentError` (`ssrf_denied`) |
 
 ```ts
-import { createOpaPolicyEvaluator } from "@arnilo/prism-policy/opa";
-import { createPostgresEnterpriseState } from "@arnilo/prism-enterprise-postgres";
-import { evaluateAndAppend } from "@arnilo/prism-policy";
+import { createOpaPolicyEvaluator } from "@arnilo/prism-core/governance/policy/opa";
+import { createPostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
+import { evaluateAndAppend } from "@arnilo/prism-core/governance/policy";
 
 const evaluator = createOpaPolicyEvaluator({
   url: "https://opa.internal:8181/v1/data/prism/allow",

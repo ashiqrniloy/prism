@@ -36,11 +36,37 @@ function walk(dir, out = []) {
 
 const sources = [...walk(join(scanRoot, "src")), ...walk(join(scanRoot, "packages"))];
 const text = new Map(sources.map((f) => [f, readFileSync(f, "utf8")]));
+const exportedSources = new Map(sources.map((f) => [f, readFileSync(f, "utf8")]));
+
+// Usage-evidence corpus (plan 058 task 1/task 3): tests, examples, scripts, and
+// templates also prove a symbol is alive. The old __tests__ exclusion made
+// test-only exports read as dead — the dominant false-positive class. Exported
+// names are still parsed from non-test sources only.
+function walkEvidence(dir, out = []) {
+  let entries;
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return out;
+  }
+  for (const entry of entries) {
+    if (entry === "node_modules" || entry.startsWith(".")) continue;
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) walkEvidence(full, out);
+    else if (/.\.(ts|mts|cts|mjs)$/.test(full) && !full.endsWith(".d.ts")) out.push(full);
+  }
+  return out;
+}
+for (const dir of ["src", "packages", "examples", "scripts", "templates"]) {
+  for (const f of walkEvidence(join(scanRoot, dir))) {
+    if (!text.has(f)) text.set(f, readFileSync(f, "utf8"));
+  }
+}
 
 // exported symbol names: `export function foo`, `export const foo`, `export class Foo`,
 // `export interface Foo`, `export type Foo`, `export { foo }`, `export { foo as bar }`
 const exported = new Map(); // name -> defining file
-for (const [file, src] of text) {
+for (const [file, src] of exportedSources) {
   for (const m of src.matchAll(/export\s+(?:async\s+)?(?:function|const|let|class|interface|type)\s+([A-Za-z_$][\w$]*)/g)) {
     if (!exported.has(m[1])) exported.set(m[1], file);
   }
@@ -69,7 +95,27 @@ for (const [name, defFile] of exported) {
 }
 
 candidates.sort((a, b) => a.defFile.localeCompare(b.defFile) || a.name.localeCompare(b.name));
-const lines = candidates.map((c) => `${c.name} (defined in ${c.defFile})`);
+// Plan 058 task 1: the committed evidence doc is the classification authority.
+// Zero-ref exports classified `keep` (security guards, canonical defaults) are
+// suppressed from the candidate list so deadExports reflects actionable surface.
+const keep = new Set();
+const evidenceDir = join(root, "docs", "_evidence");
+try {
+  const evidenceFile = readdirSync(evidenceDir).find((f) => f.startsWith("dead-export-verification-") && f.endsWith(".md"));
+  if (evidenceFile) {
+    for (const line of readFileSync(join(evidenceDir, evidenceFile), "utf8").split("\n")) {
+      if (!line.startsWith("|")) continue;
+      const cells = line.split("|").map((c) => c.trim());
+      if (cells.length > 7 && cells[7] === "keep") keep.add(cells[1].replace(/`/g, ""));
+    }
+  }
+} catch {}
+const suppressed = candidates.filter((c) => keep.has(c.name));
+const actionable = candidates.filter((c) => !keep.has(c.name));
+const lines = actionable.map((c) => `${c.name} (defined in ${c.defFile})`);
+const footer = suppressed.length
+  ? `\n${suppressed.length} zero-ref export${suppressed.length === 1 ? "" : "s"} suppressed (keep-classified security/canonical surface — see the evidence doc): ${suppressed.map((c) => c.name).join(", ")}\n`
+  : "";
 process.stdout.write(
-  `${lines.length} dead-export candidate${lines.length === 1 ? "" : "s"} (definition-only reference count):\n${lines.join("\n")}\n`,
+  `${lines.length} dead-export candidate${lines.length === 1 ? "" : "s"} (definition-only reference count):\n${lines.join("\n")}\n${footer}`,
 );

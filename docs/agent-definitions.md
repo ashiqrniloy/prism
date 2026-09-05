@@ -224,7 +224,7 @@ Use `activateAllCapabilities: true` only while migrating old configs. It intenti
 - `ExtensionAPI.registerAgent(agent)` contributes an inert `AgentDefinition` programmatically; its `create()` (if present) is only invoked when the host runs it through `resolveAgentDefinition`. See [Extensions](extensions.md).
 - Bundle resolution is config over code: every seam lives on `AgentDefinition`, `AgentDefinitionResolutionContext`, or `ResolveAgentBundleOptions`. `systemPrompt` and `loop` are passed via `context.overrides` / `create()` rather than frontmatter.
 - Migration note: before Phase 38, a definition that omitted `tools` but had a tool scope could receive every scoped tool. Now omitted `tools`/`skills` activates none. Add explicit names to `tools` / `skills`; use `activateAllCapabilities: true` only while migrating old configs.
-- `parseAgentFile(text, path)` (re-exported from `@arnilo/prism`) is the stdlib-only frontmatter parser for `AGENT.md`. `parseContextFile` and `parseToolFile` parse colocated `CONTEXT.md` / tool descriptors inside the Node subpath.
+- `parseAgentFile(text, path)` (re-exported from `@arnilo/prism`) is the stdlib-only frontmatter parser for `AGENT.md`. Colocated `CONTEXT.md` / tool-descriptor parsing is host-owned (the thin `parseContextFile`/`parseToolFile` helpers were removed in 0.5.0 — see `docs/migrate-to-0.5.md`).
 - Repo contributions (`<workspaceRoot>/.agents/{skills,tools}/`) are scanned by `discoverContributions` and passed via `repoContributions`. Repo `.agents/` is preserved as a shared contribution surface across every agent that operates on the same repository; multiple agents from different apps can work the same repo, and all share its repo-level skills.
 
 ## Security and performance notes

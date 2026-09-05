@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-model-router` is an optional governance facade over an existing `ProviderResolver`. It enforces allow-lists, residency, token/cost budgets, rate limits, circuit breaking, and bounded fallbacks before provider selection, and emits redacted selection diagnostics. It does not implement a second provider runtime.
+`@arnilo/prism-core/governance/model-router` is an optional governance facade over an existing `ProviderResolver`. It enforces allow-lists, residency, token/cost budgets, rate limits, circuit breaking, and bounded fallbacks before provider selection, and emits redacted selection diagnostics. It does not implement a second provider runtime.
 
 ## When to use it
 
@@ -57,8 +57,8 @@ Frozen caps (default / hard): attempts `3 / 8`, circuit keys `1,024 / 16,384`, d
 
 ```ts
 import { createAgent, createProviderResolver } from "@arnilo/prism";
-import { createModelRouter } from "@arnilo/prism-model-router";
-import { createPostgresEnterpriseState } from "@arnilo/prism-enterprise-postgres";
+import { createModelRouter } from "@arnilo/prism-core/governance/model-router";
+import { createPostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
 
 const enterprise = await createPostgresEnterpriseState({ pool, schema: "prism" });
 const router = createModelRouter({
@@ -91,7 +91,7 @@ await enterprise.close();
 
 ## Extension and configuration notes
 
-Router is optional. Chain returned `providerRequestPolicy` with other `ProviderRequestPolicy` values. Wire `onDiagnostics` to `@arnilo/prism-policy` when audit export is required. OpenRouter package behavior is unchanged; routing metadata participates only when this gate allows it.
+Router is optional. Chain returned `providerRequestPolicy` with other `ProviderRequestPolicy` values. Wire `onDiagnostics` to `@arnilo/prism-core/governance/policy` when audit export is required. OpenRouter package behavior is unchanged; routing metadata participates only when this gate allows it.
 
 ### Selection policies (0.1.7)
 
@@ -100,7 +100,7 @@ By default the router tries candidates in input order: the primary model, then
 `createModelRouter` to rank the candidates before the governance checks run:
 
 ```ts
-import { createCostLatencySelection, createModelRouter } from "@arnilo/prism-model-router";
+import { createCostLatencySelection, createModelRouter } from "@arnilo/prism-core/governance/model-router";
 
 const router = createModelRouter({
   resolver,

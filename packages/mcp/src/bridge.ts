@@ -1,13 +1,6 @@
 import type { JsonObject, ToolDefinition, ToolEffectDeclaration, ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import { Client } from "@modelcontextprotocol/sdk/client";
-import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import {
-  CompatibilityCallToolResultSchema,
-  ListResourcesResultSchema,
-  ListToolsResultSchema,
-  ReadResourceResultSchema,
-  ToolListChangedNotificationSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { Client } from "@modelcontextprotocol/client";
+import type { Transport } from "@modelcontextprotocol/client";
 import { DEFAULT_CALL_TIMEOUT_MS, DEFAULT_LIST_CACHE_TTL_MS, DEFAULT_MAX_RESULT_BYTES } from "./constants.js";
 import { boundedMcpErrorMessage, mapMcpContentToBlocks, mcpCallError, summarizeMcpContent } from "./content.js";
 import { measureBoundedJson } from "./json-bounds.js";
@@ -20,6 +13,7 @@ import type {
   McpAppResource,
   McpAppsBridge,
   McpAppTool,
+  McpProtocolNegotiation,
   McpToolBridge,
   McpToolEffectPolicy,
   McpUiResourceMetadata,
@@ -27,6 +21,12 @@ import type {
 import { McpBridgeClosedError, McpBridgeError, McpToolNameCollisionError } from "./types.js";
 
 type ListedMcpTool = Awaited<ReturnType<Client["listTools"]>>["tools"][number];
+
+/** SEP-2549 server cache hint carried by a cacheable result (`_meta.cacheHint`). */
+interface McpCacheHint {
+  readonly ttlMs: number;
+  readonly cacheScope: "public" | "private";
+}
 
 interface BridgeState {
   readonly client: Client;
@@ -40,6 +40,7 @@ interface BridgeState {
   readonly mcpApps: boolean;
   readonly effect?: McpToolEffectPolicy;
   listFetchedAt: number;
+  cacheHint?: McpCacheHint;
   closed: boolean;
   listRefresh?: Promise<void>;
 }
@@ -49,11 +50,17 @@ export async function connectMcpTools(options: ConnectMcpToolsOptions): Promise<
   options.signal?.throwIfAborted();
 
   const transport = createMcpTransport(options.transport);
-  const client = createMcpBridgeClient(options.mcpApps === true);
-  const state = createBridgeState(client, transport, options);
+  let state: BridgeState | undefined;
+  const client = createMcpBridgeClient(options.mcpApps === true, options.protocolVersion ?? "auto", () => {
+    // SDK listChanged hook (legacy notification or modern subscriptions/listen):
+    // refresh the bounded local list. Background refresh is best effort — errors
+    // surface on the next explicit refresh or tool access, matching notification semantics.
+    if (state) void refreshBridgeTools(state, { force: true }).catch(() => void 0);
+  });
+  state = createBridgeState(client, transport, options);
 
   const abortListener = () => {
-    void closeBridge(state);
+    void closeBridge(state!);
   };
   options.signal?.addEventListener("abort", abortListener, { once: true });
 
@@ -88,8 +95,16 @@ export async function attachMcpToolBridge(
   return createBridgeFacade(state);
 }
 
-/** List through raw SDK requests so untrusted output schemas are bounded before any Ajv compilation. */
+/** List through v2 explicit-cursor list calls so untrusted output schemas are bounded before any retention. */
 export async function listAllMcpTools(client: Client, signal?: AbortSignal, input: McpClientLimitsInput = {}): Promise<ListedMcpTool[]> {
+  return (await listAllMcpToolsWithHint(client, signal, input)).tools;
+}
+
+async function listAllMcpToolsWithHint(
+  client: Client,
+  signal: AbortSignal | undefined,
+  input: McpClientLimitsInput = {},
+): Promise<{ readonly tools: ListedMcpTool[]; readonly cacheHint: McpCacheHint | undefined }> {
   const limits = resolveMcpClientLimits(input, {
     maxResultBytes: DEFAULT_MAX_RESULT_BYTES,
     callTimeoutMs: DEFAULT_CALL_TIMEOUT_MS,
@@ -100,6 +115,7 @@ export async function listAllMcpTools(client: Client, signal?: AbortSignal, inpu
   let cursor: string | undefined;
   let pages = 0;
   let totalSchemaBytes = 0;
+  let cacheHint: McpCacheHint | undefined;
 
   do {
     signal?.throwIfAborted();
@@ -107,11 +123,18 @@ export async function listAllMcpTools(client: Client, signal?: AbortSignal, inpu
     if (pages > limits.maxListPages) {
       throw new McpBridgeError(`MCP tools/list exceeds ${limits.maxListPages} pages`);
     }
-    const page = await client.request({ method: "tools/list", params: cursor ? { cursor } : undefined }, ListToolsResultSchema, {
+    // Explicit-cursor per-page path on EVERY page (including the first, which
+    // uses the opaque empty cursor): the no-cursor form is the SDK's
+    // auto-aggregate, which reads/writes its own response cache and applies its
+    // own page cap — neither is acceptable behind Synapta's bounded loop.
+    const page = await client.listTools(cursor === undefined ? { cursor: "" } : { cursor }, {
       signal,
       timeout: limits.callTimeoutMs,
       maxTotalTimeout: limits.callTimeoutMs,
     });
+    if (cacheHint === undefined) {
+      cacheHint = parseCacheHint((page as { readonly _meta?: unknown })._meta, page);
+    }
     if (tools.length + page.tools.length > limits.maxTools) {
       throw new McpBridgeError(`MCP tools/list exceeds ${limits.maxTools} tools`);
     }
@@ -161,7 +184,41 @@ export async function listAllMcpTools(client: Client, signal?: AbortSignal, inpu
     }
     cursor = nextCursor;
   } while (cursor);
-  return tools;
+  return { tools, cacheHint };
+}
+
+/**
+ * Defensive parse of the SEP-2549 cache hint: top-level `ttlMs`/`cacheScope` on a
+ * cacheable result (SDK wire), or the draft-era `_meta.cacheHint` variant.
+ * Malformed or hostile hints are ignored (refetch-always fallback).
+ */
+function parseCacheHint(meta: unknown, topLevel: unknown): McpCacheHint | undefined {
+  const hint = record(meta)?.["cacheHint"] ?? topLevel;
+  const parsed = record(hint);
+  if (!parsed) return undefined;
+  const ttlMs = parsed.ttlMs;
+  if (typeof ttlMs !== "number" || !Number.isSafeInteger(ttlMs) || ttlMs < 0) return undefined;
+  const scope = parsed.cacheScope;
+  if (scope !== undefined && scope !== "public" && scope !== "private") return undefined;
+  return { ttlMs, cacheScope: scope === undefined ? "private" : scope };
+}
+
+/**
+ * Local list-cache TTL honoring SEP-2549 server cache hints under Synapta's configured
+ * ceiling: hint 0 = immediately stale (never serve locally); hint > 0 = min(hint, configured
+ * TTL); absent = no caching (spec: absent/≤0 ttlMs is immediately stale — changed lists are
+ * pushed via listChanged/subscriptions instead). The cache is per-bridge, so `private`-scoped
+ * hints never cross auth contexts by construction.
+ *
+ * ponytail: hint-driven local caching only — a hint-less server falls back to refetch-always
+ * on refresh() rather than the pre-adoption fixed 30 s local TTL, because list_changed
+ * notifications now drive invalidation; revive TTL caching for hint-less servers if a host
+ * reports refresh() chatter.
+ */
+function effectiveListTtlMs(state: BridgeState): number {
+  const hint = state.cacheHint?.ttlMs;
+  if (hint === undefined || hint <= 0) return 0;
+  return Math.min(state.limits.listCacheTtlMs, hint);
 }
 
 export function mapMcpToolsToDefinitions(
@@ -216,10 +273,20 @@ function resolveRemoteToolEffect(state: BridgeState, remote: ListedMcpTool): Too
   return Object.freeze({ kind: resolved.kind, idempotency: resolved.idempotency });
 }
 
-function createMcpBridgeClient(mcpApps: boolean): Client {
+function createMcpBridgeClient(mcpApps: boolean, protocolVersion: McpProtocolNegotiation, onListChanged: () => void): Client {
   return new Client(
     { name: "prism-mcp-bridge", version: "0.0.12" },
-    { capabilities: mcpApps ? { extensions: { "io.modelcontextprotocol/ui": {} } } : {} },
+    {
+      capabilities: mcpApps ? { extensions: { "io.modelcontextprotocol/ui": {} } } : {},
+      versionNegotiation: {
+        mode: protocolVersion === "legacy" ? "legacy" : protocolVersion === "auto" ? "auto" : { pin: protocolVersion.pin },
+      },
+      // SDK-owned listChanged in BOTH eras: legacy notification handler, or an
+      // auto-opened `subscriptions/listen` stream on 2026-07-28. autoRefresh is
+      // disabled so refreshes stay behind Synapta's bounded explicit-pagination
+      // list (byte/schema/page limits), not the SDK's uncapped aggregate.
+      listChanged: { tools: { autoRefresh: false, onChanged: () => onListChanged() } },
+    },
   );
 }
 
@@ -244,7 +311,7 @@ function createBridgeState(client: Client, transport: Transport, options: Attach
     closed: false,
   };
 
-  client.setNotificationHandler(ToolListChangedNotificationSchema, () => {
+  client.setNotificationHandler("notifications/tools/list_changed", () => {
     state.listFetchedAt = 0;
   });
   return state;
@@ -256,8 +323,12 @@ function createBridgeFacade(state: BridgeState): McpToolBridge {
       assertOpen(state);
       return state.tools;
     },
+    protocolEra: state.client.getProtocolEra?.(),
+    protocolVersion: state.client.getNegotiatedProtocolVersion?.(),
     ...(state.mcpApps ? { apps: createMcpAppsFacade(state) } : {}),
-    refresh: () => refreshBridgeTools(state, { force: true }),
+    // TTL-aware: refetches unless a fresh server-hinted cache entry allows a local serve
+    // (hint ttlMs capped by listCacheTtlMs); hint-less servers refetch on every call.
+    refresh: () => refreshBridgeTools(state, {}),
     close: () => closeBridge(state),
   };
 }
@@ -268,14 +339,15 @@ async function refreshBridgeTools(
 ): Promise<void> {
   assertOpen(state);
   const now = Date.now();
-  if (!options?.force && state.tools.length > 0 && now - state.listFetchedAt < state.limits.listCacheTtlMs) return;
+  if (!options?.force && state.tools.length > 0 && now - state.listFetchedAt < effectiveListTtlMs(state)) return;
   if (state.listRefresh) {
     await state.listRefresh;
     return;
   }
 
   state.listRefresh = (async () => {
-    const remoteTools = await listAllMcpTools(state.client, options?.signal, state.limits);
+    const { tools: remoteTools, cacheHint } = await listAllMcpToolsWithHint(state.client, options?.signal, state.limits);
+    state.cacheHint = cacheHint;
     const appTools = state.mcpApps ? remoteTools.map((tool) => toMcpAppTool(tool, state)) : [];
     const nextTools = mapMcpToolsToDefinitions(
       state.mcpApps ? remoteTools.filter((_tool, index) => appTools[index]!.visibility.includes("model")) : remoteTools,
@@ -325,31 +397,31 @@ async function callRemoteTool(
   listeners.push(() => clearTimeout(timeout));
 
   const prefixedName = formatMcpToolName(state.namePrefix, remoteName);
+  // Retained discovered definition drives both SEP-2243 `Mcp-Param-*` header
+  // mirroring and output-schema validation from the same bounded schema.
+  const remoteTool = state.remoteTools.find((tool) => tool.name === remoteName);
   try {
-    const result = await state.client.request(
-      { method: "tools/call", params: { name: remoteName, arguments: args } },
-      CompatibilityCallToolResultSchema,
+    const result = await state.client.callTool(
+      { name: remoteName, arguments: args },
       {
         signal: abortController.signal,
         timeout: state.limits.callTimeoutMs,
         maxTotalTimeout: state.limits.callTimeoutMs,
+        ...(remoteTool === undefined ? {} : { toolDefinition: remoteTool }),
       },
     );
+    // Deprecated Tasks wire vocabulary must never be read as a tool result
+    // (plan 063 task 6): the Tasks extension is unsupported in this release,
+    // so draft-era `task` members fail closed (modern `resultType: "task"`
+    // already fails decode inside the SDK).
+    if ((result as { readonly task?: unknown }).task !== undefined)
+      throw new McpBridgeError("MCP tool returned a deprecated task result");
     const measured = measureBoundedJson(result, {
       maxBytes: state.limits.maxResultBytes,
       maxDepth: state.limits.maxJsonDepth,
       maxProperties: state.limits.maxJsonProperties,
       label: `MCP tool ${remoteName} result`,
     });
-
-    if ("toolResult" in result) {
-      return {
-        toolCallId: context.toolCallId,
-        name: prefixedName,
-        value: result.toolResult,
-        metadata: { mcp: { serverId: state.serverId, remoteName, bytesUsed: measured.bytes } },
-      };
-    }
 
     const mapped = mapMcpContentToBlocks(result.content, { maxResultBytes: state.limits.maxResultBytes });
     const metadata = {
@@ -456,17 +528,15 @@ async function listMcpAppResources(state: BridgeState): Promise<readonly Omit<Mc
   const seen = new Set<string>();
   let cursor: string | undefined;
   for (let page = 0; page < state.limits.maxListPages; page += 1) {
-    const result = await state.client.request(
-      { method: "resources/list", params: cursor === undefined ? undefined : { cursor } },
-      ListResourcesResultSchema,
+    // Page-0 empty cursor forces the SDK per-page path (the no-cursor form is
+    // the uncapped aggregate/response-cache path — same as the tools/list walk).
+    const result = await state.client.listResources(
+      cursor === undefined ? { cursor: "" } : { cursor },
       { timeout: state.limits.callTimeoutMs, maxTotalTimeout: state.limits.callTimeoutMs },
     );
-    measureBoundedJson(result, {
-      maxBytes: state.limits.maxResultBytes,
-      maxDepth: state.limits.maxJsonDepth,
-      maxProperties: state.limits.maxJsonProperties,
-      label: "MCP Apps resources/list",
-    });
+    // Envelope measureBoundedJson is not applicable to decoded v2 results
+    // (undefined-valued optional members); per-descriptor bounds below plus
+    // the item/cursor caps bound the page instead.
     for (const resource of result.resources) {
       const parsed = resourceDescriptor(resource, state.limits);
       if (parsed) resources.push(parsed);
@@ -486,16 +556,14 @@ async function readMcpAppResource(state: BridgeState, uri: string): Promise<McpA
   assertUiUri(uri, "MCP App resource URI");
   const tool = state.appTools.find((candidate) => candidate.resourceUri === uri);
   if (!tool) throw new McpBridgeError("MCP App resource is unavailable");
-  const result = await state.client.request({ method: "resources/read", params: { uri } }, ReadResourceResultSchema, {
-    timeout: state.limits.callTimeoutMs,
-    maxTotalTimeout: state.limits.callTimeoutMs,
-  });
-  measureBoundedJson(result, {
-    maxBytes: state.limits.maxResultBytes,
-    maxDepth: state.limits.maxJsonDepth,
-    maxProperties: state.limits.maxJsonProperties,
-    label: "MCP Apps resources/read",
-  });
+  const result = await state.client.readResource(
+    { uri },
+    { timeout: state.limits.callTimeoutMs, maxTotalTimeout: state.limits.callTimeoutMs },
+  );
+  // Hostile-envelope guard replacing the old envelope measureBoundedJson:
+  // bound the contents array; the HTML body itself is byte-bounded below.
+  if (result.contents.length > state.limits.maxJsonProperties)
+    throw new McpBridgeError("MCP Apps resources/read exceeds configured item limit");
   const listed = await listMcpAppResources(state);
   const listedResource = listed.find((candidate) => candidate.uri === uri);
   const content = result.contents.find((candidate) => candidate.uri === uri);
@@ -531,6 +599,8 @@ function resourceDescriptor(value: unknown, limits: ResolvedMcpClientLimits): Om
   assertStringBytes("MCP App resource name", resource.name, limits.maxToolNameBytes);
   if (resource.description !== undefined && typeof resource.description !== "string")
     throw new McpBridgeError("MCP App resource description is invalid");
+  if (typeof resource.description === "string")
+    assertStringBytes("MCP App resource description", resource.description, limits.maxToolDescriptionBytes);
   const ui = uiResourceMetadata(resource._meta, limits, "MCP App resource");
   return {
     uri: resource.uri,

@@ -157,7 +157,7 @@ reranker. The verified compatible route is workspace-dedicated only:
 (`qwen3-rerank`, ≤500 documents, 4,000 tokens/item; base path `compatible-api/v1`,
 not `compatible-mode/v1`). A future `createAlibabaReranker` over that route is
 demand-gated: implement when a caller supplies a workspace-dedicated `baseUrl` and
-needs rerank (structural `Reranker` shape from `@arnilo/prism-rag`, no new
+needs rerank (structural `Reranker` shape from `@arnilo/prism-memory/rag`, no new
 dependency). Multimodal rerank (`qwen3-vl-rerank`) is native-only and stays out.
 
 ## Outputs / response / events

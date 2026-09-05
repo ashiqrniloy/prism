@@ -1,13 +1,13 @@
 # Coding workspaces
 
-Ownership-scoped multi-repository and worktree lifecycle (plan 026 Task 3, `@arnilo/prism-coding-agent`). A durable coding workspace correlates task/session/run identity with host repositories and linked worktrees so that resume, cleanup, artifacts, and recovery stay bounded and reconcilable.
+Ownership-scoped multi-repository and worktree lifecycle (plan 026 Task 3, `@arnilo/prism-coding-tools/agent`). A durable coding workspace correlates task/session/run identity with host repositories and linked worktrees so that resume, cleanup, artifacts, and recovery stay bounded and reconcilable.
 
 The lifecycle composes existing bounded primitives only: `CheckpointStore` CAS records in a separate versioned namespace (`prism.coding-agent.workspace.v1`), `LeaseStore` fencing, and cwd-bound `GitOperations` runners. There is no clone manager, Git library, watcher, new database schema, or second task runtime.
 
 ## Activation
 
 ```ts
-import { createCodingWorkspaceLifecycle } from "@arnilo/prism-coding-agent";
+import { createCodingWorkspaceLifecycle } from "@arnilo/prism-coding-tools/agent";
 
 const workspaces = createCodingWorkspaceLifecycle({
   checkpoints,                 // CheckpointStore (ownership-scoped)

@@ -2,7 +2,7 @@
 
 ## What it does
 
-Prism core ships generic `audio`, `file`, and `document` `ContentBlock` types plus bounded media resolution helpers. Blocks carry MIME type, optional name, and exactly one source: inline base64 `data`, remote `url`, or host `resourceUri`. Optional `transcript` metadata can accompany audio/document blocks.
+Prism core ships generic `audio`, `file`, `document`, and `video` `ContentBlock` types plus bounded media resolution helpers. Blocks carry MIME type, optional name, and exactly one source: inline base64 `data`, remote `url`, or host `resourceUri`. Optional `transcript` metadata can accompany audio/document blocks.
 
 `assembleProviderInput()` calls `assertMessagesSupportModelCapabilities()` so declared `ModelCapabilities.input` tags are enforced before provider calls. First-party provider packages map supported blocks locally; unsupported combinations fail closed with `UnsupportedModalityError` or an explicit provider error.
 
@@ -10,7 +10,7 @@ Prism core ships generic `audio`, `file`, and `document` `ContentBlock` types pl
 
 - **Host apps** attaching PDFs, audio clips, or generic files to user messages before a provider turn.
 - **Resource loaders** returning binary payloads for `resourceUri` references under trust/permission policy.
-- **Provider authors** reading truthful `ModelCapabilities.input` tags (`text`, `image`, `audio`, `file`, `document`) before mapping wire formats.
+- **Provider authors** reading truthful `ModelCapabilities.input` tags (`text`, `image`, `audio`, `file`, `document`, `video`) before mapping wire formats.
 
 Do not embed provider upload IDs, tenant-scoped remote file IDs, or API-specific handles in core content blocks.
 
@@ -54,6 +54,7 @@ Known `ModelCapabilities.input` tags are exported as `MODEL_INPUT_CAPABILITIES`:
 | `audio` | `audio` | OpenAI Responses (`input_audio`) and Google `generateContent` inline data. OpenAI Realtime instead receives `RealtimeSession.sendAudio()` chunks, not an `audio` `ContentBlock`. |
 | `file` | `file` | OpenAI Responses (`input_file`); Anthropic/Kimi/OpenCode Go Anthropic route accept PDF file/document forms; Google maps inline file data. |
 | `document` | `document` | OpenAI Responses (`input_file`); Anthropic/Kimi/OpenCode Go Anthropic route map PDF; Google maps inline document data. |
+| `video` | `video` | Alibaba (Qwen-VL compatible mode maps to `video_url`, plan 061 Task 5); other providers reject with `UnsupportedModalityError` until they declare and map the tag. Optional `fps` frame-sampling hint and `durationMs` ride on the block. |
 
 The AI SDK adapter maps declared user text/image/audio/file/document blocks (and assistant text/image/file/document) to AI SDK file parts; `resourceUri` remains host-resolved before `doStream`. Its output `file`, `reasoning-file`, and `source` parts are deliberately rejected as `unsupported_mapping`, not converted to trusted Prism content. Provider capability metadata is the gate—this matrix never upgrades a model that does not declare the matching input tag.
 
@@ -129,6 +130,29 @@ try {
   }
 }
 ```
+
+## Video generation (output)
+
+Video generation is a separate, deliberately minimal contract — jobs run minutes,
+not seconds, so there is no synchronous `generate`. `VideoGenerationProvider`
+(plan 061 Task 5, from `@arnilo/prism`) has two methods:
+
+- `submit(request)` → `{ jobId }`; the request carries `model`, `prompt`, optional
+  `images` (first entry wins, image-to-video), `size`, `durationSeconds`, `fps`, and
+  an `AbortSignal`. Providers without image-to-video reject with a typed
+  `VideoGenerationError("unsupported_operation")`-shaped error path.
+- `status(jobId, signal?)` → point-in-time `VideoGenerationJob` with `state`
+  (`queued` / `running` / `succeeded` / `failed`), a `video` (with `provider`/`model`
+  provenance and `bytes` or `url`) on success, and an `error` message on failure.
+  Hosts own the polling loop.
+
+Models declare the `capabilities.videoGeneration` flag; hosts gate with
+`modelSupportsVideoGeneration()` / `assertVideoGenerationSupported()`. The Alibaba
+adapter (`createAlibabaVideoGenerationProvider` from
+`@arnilo/prism-providers/alibaba`) runs the DashScope wanx async-task lifecycle
+(text-to-video and image-to-video routes) with an adapter-local `waitFor()`
+convenience poller; conformance runs offline via `runVideoGenerationConformance()`
+from `@arnilo/prism/testing/provider-conformance`.
 
 ## Extension and configuration notes
 

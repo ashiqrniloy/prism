@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-computer-use-linux` wraps the host-owned [`computer-use-linux`](https://github.com/agent-sh/computer-use-linux) MCP binary as Prism `ToolDefinition`s. It connects over stdio only when `createComputerUseLinuxTools()` is called, keeps upstream tool names, filters unknown tools, and composes desktop admission, execution approval, result bounds, serialization, redaction, and trust labeling over Prism's existing seams.
+`@arnilo/prism-coding-tools/computer-use-linux` wraps the host-owned [`computer-use-linux`](https://github.com/agent-sh/computer-use-linux) MCP binary as Prism `ToolDefinition`s. It connects over stdio only when `createComputerUseLinuxTools()` is called, keeps upstream tool names, filters unknown tools, and composes desktop admission, execution approval, result bounds, serialization, redaction, and trust labeling over Prism's existing seams.
 
 The package also exports `loadComputerUseLinuxSkill()`, which loads the short Prism-authored desktop procedure bundled at `skills/computer-use-linux/SKILL.md`. It does not resolve or vendor an upstream skill tree.
 
@@ -75,7 +75,7 @@ import { createToolRegistry, type Skill } from "@arnilo/prism";
 import {
   createComputerUseLinuxTools,
   loadComputerUseLinuxSkill,
-} from "@arnilo/prism-computer-use-linux";
+} from "@arnilo/prism-coding-tools/computer-use-linux";
 
 async function installDesktop(hostSkills: { register(skill: Skill): void }, hostApproved: boolean) {
   const desktop = await createComputerUseLinuxTools({

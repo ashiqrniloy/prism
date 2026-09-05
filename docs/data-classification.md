@@ -77,6 +77,6 @@ const redactor = createAuditFieldRedactor(fieldPolicy, { labelFor });
 
 - `redactMessage` / `redactProviderRequest` / `redactAgentEvent` / `redactSessionEntry` / `redactRunLedgerRecord` — the egress seams that take the optional policy (secret redaction first, then classification).
 - `createAuditFieldRedactor` → the audit-export `redact` hook; see [Signed, hash-chained audit export](audit-export.md).
-- `createOpenTelemetryInstrumentation` in `@arnilo/prism-observability-opentelemetry` — the telemetry `fieldPolicy` option.
+- `createOpenTelemetryInstrumentation` in `@arnilo/prism-core/governance/observability` — the telemetry `fieldPolicy` option.
 - `createProtectedFieldPolicy`, `ALLOW_FIELD_POLICY`, `FieldPolicyError`, `FIELD_POLICY_LIMITS` — the protected default and limits.
 - The ERP-T9 threat matrix (`src/__tests__/field-policy.test.ts`) and the boundary-drill scripts cover the enforcement evidence.

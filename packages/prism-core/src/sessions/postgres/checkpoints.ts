@@ -1,6 +1,7 @@
 import { CheckpointConflictError, type CheckpointQuery, type CheckpointRecord, type CheckpointStore } from "@arnilo/prism";
 import type { Pool } from "pg";
 import {
+  assertCheckpointInput,
   assertOwnershipScope,
   decodeCheckpointCursor,
   encodeCheckpointJson,
@@ -52,8 +53,7 @@ export function createPostgresCheckpointStore(pool: Pool, schema = "prism"): Che
   return {
     async saveCheckpoint(input) {
       throwIfAborted(input.signal);
-      if (!input.namespace || !input.key || !Number.isSafeInteger(input.version) || input.version < 1)
-        throw new CheckpointConflictError("Invalid checkpoint key or version");
+      assertCheckpointInput(input);
       const previous = await load(input.namespace, input.key);
       if (previous) assertOwnershipScope(input, previous, () => new CheckpointConflictError("Checkpoint ownership mismatch"));
       if (input.expectedVersion !== undefined && input.expectedVersion !== (previous?.version ?? 0))

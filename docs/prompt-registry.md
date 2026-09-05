@@ -2,12 +2,12 @@
 
 ## What it does
 
-The optional `@arnilo/prism-prompts` package stores prompt assets as immutable, content-hashed versions. It provides a memory store plus SQLite and PostgreSQL adapters. The registry returns prompt data; it does not compose system-prompt layers, evaluate prompt quality, discover files, or activate text.
+The optional `@arnilo/prism-core/governance/prompts` package stores prompt assets as immutable, content-hashed versions. It provides a memory store plus SQLite and PostgreSQL adapters. The registry returns prompt data; it does not compose system-prompt layers, evaluate prompt quality, discover files, or activate text.
 
 ## Inputs / request
 
 ```ts
-import { createMemoryPromptStore } from "@arnilo/prism-prompts";
+import { createMemoryPromptStore } from "@arnilo/prism-core/governance/prompts";
 
 const store = createMemoryPromptStore();
 const version = await store.put({
@@ -57,10 +57,10 @@ The ref is opaque identity — name, version number, and the store's SHA-256 bod
 ## Durable adapters
 
 ```ts
-import { createSqlitePromptStore } from "@arnilo/prism-prompts";
+import { createSqlitePromptStore } from "@arnilo/prism-core/governance/prompts";
 const sqlite = createSqlitePromptStore({ filename: "./prompts.db" });
 
-import { createPostgresPromptStore } from "@arnilo/prism-prompts";
+import { createPostgresPromptStore } from "@arnilo/prism-core/governance/prompts";
 const postgres = await createPostgresPromptStore({
   connectionString: process.env.DATABASE_URL,
   schema: "prism",
@@ -74,7 +74,7 @@ SQLite uses `better-sqlite3`; PostgreSQL uses a caller-supplied or adapter-owned
 `assertPromptPromotion` composes [evaluations](evaluations.md) with the store to answer one question — should this candidate version replace the baseline? It resolves both versions (read-only), runs them head-to-head over a dataset through `runComparison`, and returns a typed verdict. It never promotes anything, writes nothing, and never touches a live agent:
 
 ```ts
-import { assertPromptPromotion } from "@arnilo/prism-prompts";
+import { assertPromptPromotion } from "@arnilo/prism-core/governance/prompts";
 
 const v = await assertPromptPromotion({
   store,
@@ -90,13 +90,13 @@ const v = await assertPromptPromotion({
 if (v.verdict === "promote") await store.put({ ...hostInput, body: v.candidate.body, labels: ["production"] });
 ```
 
-The verdict carries `promote`/`hold`, per-scorer `wins/losses/ties/failures`, `winRate`, the raw `ComparisonReport`, a redacted bounded `reportJson` (`serializeEvaluationReport`), and `reasons` on hold. The default gate holds unless the candidate wins strictly more scored comparisons than the baseline; `minimumWinRate` and `thresholds` add stricter gates, and threshold equality passes. Requires the optional peer `@arnilo/prism-evals` (install it or the helper fails closed with `ERR_PRISM_PROMPT_EVALS_PEER`). Promotion itself stays a host decision: applying the verdict means `put`-ing a new version with labels — the helper never does.
+The verdict carries `promote`/`hold`, per-scorer `wins/losses/ties/failures`, `winRate`, the raw `ComparisonReport`, a redacted bounded `reportJson` (`serializeEvaluationReport`), and `reasons` on hold. The default gate holds unless the candidate wins strictly more scored comparisons than the baseline; `minimumWinRate` and `thresholds` add stricter gates, and threshold equality passes. Requires the optional peer `@arnilo/prism-core/governance/evals` (install it or the helper fails closed with `ERR_PRISM_PROMPT_EVALS_PEER`). Promotion itself stays a host decision: applying the verdict means `put`-ing a new version with labels — the helper never does.
 
 ## Limits and security
 
 Names, bodies, labels, metadata, cursors, pages, and diffs have finite defaults and hard caps. Prompt bodies are data: no evaluation, template execution, file discovery, or implicit layer injection occurs. Store body hashes are integrity checks; a durable row whose hash no longer matches its body fails closed. Never put credentials or provider clients in prompt metadata.
 
-Threat model: the registry is **host-trusted data**. Anyone who can write versions into the store is inside the trust boundary — `put`, label management, and `assertPromptPromotion` verdicts are host operations, never agent-reachable surfaces. Untrusted prompt-injection defense stays at Prism's existing untrusted-content boundaries (tool results, attachments, and provider output), which the store neither bypasses nor weakens: a resolved body enters the system-prompt layer exactly like a host-authored constant. The optional `@arnilo/prism-evals` peer is only loaded by `assertPromptPromotion` and never makes the store itself depend on evaluation infrastructure.
+Threat model: the registry is **host-trusted data**. Anyone who can write versions into the store is inside the trust boundary — `put`, label management, and `assertPromptPromotion` verdicts are host operations, never agent-reachable surfaces. Untrusted prompt-injection defense stays at Prism's existing untrusted-content boundaries (tool results, attachments, and provider output), which the store neither bypasses nor weakens: a resolved body enters the system-prompt layer exactly like a host-authored constant. The optional `@arnilo/prism-core/governance/evals` peer is only loaded by `assertPromptPromotion` and never makes the store itself depend on evaluation infrastructure.
 
 ## Related APIs
 

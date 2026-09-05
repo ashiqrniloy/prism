@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { CacheControlledMessage, JsonObject, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
-import { anthropicMessagesBody, anthropicMessagesEvents, type AnthropicMessagesRouteHooks } from "../anthropic-messages.js";
+import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "../anthropic-messages.js";
 
 const model: ModelConfig = {
   provider: "shared-fixture",

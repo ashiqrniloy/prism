@@ -189,7 +189,7 @@ cache-read pricing exists), and seeds `compat.reasoning.effort` from
   hidden app identity.
 - Live tests stay opt-in behind `PRISM_LIVE_PROVIDER_TESTS=1` plus fake-safe
   provider-specific env names; default tests are network-free.
-- Enterprise hosts that must gate `compat.openRouterRouting` should wrap selection with `@arnilo/prism-model-router` (`allowOpenRouterRouting`); the OpenRouter adapter itself still passthroughs routing when present on the request.
+- Enterprise hosts that must gate `compat.openRouterRouting` should wrap selection with `@arnilo/prism-core/governance/model-router` (`allowOpenRouterRouting`); the OpenRouter adapter itself still passthroughs routing when present on the request.
 
 ## Related APIs
 

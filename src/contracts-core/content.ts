@@ -25,6 +25,7 @@ export type ContentBlock =
   | AudioContent
   | FileContent
   | DocumentContent
+  | VideoContent
   | ThinkingContent
   | ToolCallDeltaContent
   | ToolCallContent
@@ -42,6 +43,20 @@ export interface ImageContent {
   readonly url?: string;
   readonly resourceUri?: string;
   readonly name?: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface VideoContent {
+  readonly type: "video";
+  readonly mediaType?: string;
+  readonly name?: string;
+  /** Base64-encoded video bytes. */
+  readonly data?: string;
+  readonly url?: string;
+  readonly resourceUri?: string;
+  readonly durationMs?: number;
+  /** Frame-sampling hint for providers that downsample (e.g. Qwen-VL defaults to 2.0). */
+  readonly fps?: number;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
@@ -114,6 +129,20 @@ export interface ModelCapabilities {
   readonly streaming?: boolean;
   /** Native JSON-schema structured output support for this model. */
   readonly structuredOutput?: boolean | "json_schema";
+  /** Provider-neutral embeddings generation support (plan 061). */
+  readonly embeddings?: boolean;
+  /** Provider-neutral speech synthesis support (plan 061). */
+  readonly speech?: boolean;
+  /** Provider-neutral speech transcription support (plan 061). */
+  readonly transcription?: boolean;
+  /** Provider-neutral image generation/editing support (plan 061). */
+  readonly imageGeneration?: boolean;
+  /** Provider-neutral video generation support (plan 061). */
+  readonly videoGeneration?: boolean;
+  /** Provider-neutral moderation classification support (plan 061). */
+  readonly moderation?: boolean;
+  /** Provider-neutral async batch-jobs support (plan 061). */
+  readonly batchJobs?: boolean;
 }
 
 export interface ModelLimits {
@@ -130,6 +159,40 @@ export interface ModelCost {
   readonly unit?: string;
 }
 
+/** Normalized model-list/capability discovery provenance (plan 062): where a
+ *  listing came from, when, and how long hosts may cache it. */
+export interface ModelDiscoveryProvenance {
+  readonly provider: string;
+  /** ISO-8601 timestamp of the fetch (or catalog snapshot) moment. */
+  readonly fetchedAt: string;
+  /** `"api"` = live provider listing; `"catalog"` = host/registry snapshot, no network. */
+  readonly source: "api" | "catalog";
+  /** Cache-TTL guidance in milliseconds; hosts may serve the result from cache this long. */
+  readonly ttlMs?: number;
+}
+
+export interface ModelDiscoveryOptions {
+  /** Cache window in ms; within TTL a cached result is returned without network.
+   *  `0` forces a refresh. Defaults to the adapter's configured TTL. */
+  readonly ttlMs?: number;
+  readonly signal?: AbortSignal;
+}
+
+/** Normalized `listModels()` result: the existing `ModelConfig` contract verbatim
+ *  (id = `model`, context window = `limits`, capabilities = `capabilities`, pricing
+ *  hint = `cost`) plus provenance. No new model shape ships. */
+export interface ModelDiscoveryResult {
+  readonly models: readonly ModelConfig[];
+  readonly provenance: ModelDiscoveryProvenance;
+}
+
+/** Model-list/capability discovery seam (plan 062). Adapter implementations
+ *  normalize provider listings to `ModelConfig` and cache per provider within
+ *  the configured TTL; hosts merge their own catalog overrides on top. */
+export interface ModelDiscovery {
+  listModels(options?: ModelDiscoveryOptions): Promise<ModelDiscoveryResult>;
+}
+
 export interface Usage {
   readonly inputTokens?: number;
   readonly outputTokens?: number;
@@ -138,4 +201,15 @@ export interface Usage {
   readonly cacheWriteTokens?: number;
   readonly cost?: number;
   readonly currency?: string;
+}
+
+/**
+ * Host-supplied pricing adapter (plan 062): quotes cost rates per model id. Core
+ * ships no pricing tables — when no catalog is configured, usage is reported
+ * without cost fields. Quotes follow the repo-wide `per_million_tokens` unit
+ * convention (see {@link ModelCost}); a stale or unknown model must resolve to
+ * `undefined` (degrades to usage-only), never throw.
+ */
+export interface CostCatalog {
+  get(modelId: string, options?: { readonly signal?: AbortSignal }): Promise<ModelCost | undefined>;
 }

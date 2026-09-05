@@ -1,7 +1,7 @@
 import { assertSsrfAllowedUrl, isLoopbackHostname, MediaContentError, pinnedFetch } from "@arnilo/prism";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import type { Transport } from "@modelcontextprotocol/client";
 import { createMcpClientAuth, type McpClientAuth, McpOAuthError, type ResolvedMcpOAuthLimits, resolveMcpOAuthLimits } from "./auth.js";
 import { DEFAULT_MAX_HTTP_RESPONSE_BYTES, HARD_MAX_HTTP_RESPONSE_BYTES, validateMcpLimit } from "./limits.js";
 import type { McpStreamableHttpTransport, McpTransportConfig } from "./types.js";
@@ -49,6 +49,7 @@ export function createMcpOAuthTransport(config: McpStreamableHttpTransport): {
       sessionId: config.sessionId,
       authProvider: auth.provider,
       fetch: oauthFetch,
+      ...(config.auth.onInsufficientScope !== undefined ? { onInsufficientScope: config.auth.onInsufficientScope } : {}),
     }),
     auth,
   };

@@ -59,11 +59,11 @@ describe("composition (plan 040 Task 1)", () => {
     );
   });
 
-  it("manifest: peers ^0.3.0, diff dependency declared", () => {
+  it("manifest: peers ^0.5.0, diff dependency declared", () => {
     const manifest = readManifest("package.json");
     assert.equal(manifest.name, "@arnilo/prism-coding-tools");
-    assert.equal(manifest.version, "0.4.0");
-    assert.equal(manifest.peerDependencies?.["@arnilo/prism"], "^0.4.0");
+    assert.equal(manifest.version, "0.5.0");
+    assert.equal(manifest.peerDependencies?.["@arnilo/prism"], "^0.5.0");
     assert.ok(manifest.dependencies?.diff, "diff dependency declared");
     assert.equal(manifest.private, undefined, "must be publishable");
   });

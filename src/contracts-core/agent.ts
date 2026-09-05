@@ -81,6 +81,8 @@ export interface AgentConfig {
   readonly systemPrompt?: SystemPromptConfig;
   readonly redactor?: SecretRedactor;
   readonly runLedger?: RunLedger;
+  /** Optional host-supplied pricing adapter: turn usage without a provider-reported cost is priced through it; absent or stale quotes degrade to usage-only. */
+  readonly costCatalog?: import("./content.js").CostCatalog;
   /** Optional durable recovery store. */
   readonly effectStore?: ToolEffectStore;
   readonly ownership?: OwnershipScope;

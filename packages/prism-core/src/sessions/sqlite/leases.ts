@@ -1,6 +1,6 @@
 import { LeaseConflictError, type LeaseRecord, type LeaseStore } from "@arnilo/prism";
 import type Database from "better-sqlite3";
-import { assertOwnershipScope } from "../codecs/index.js";
+import { assertLeaseInput, assertOwnershipScope } from "../codecs/index.js";
 
 interface Row {
   namespace: string;
@@ -56,7 +56,7 @@ RETURNING *
 
   return {
     async tryAcquireLease(input) {
-      validate(input.namespace, input.key, input.ownerId, input.ttlMs, input.signal);
+      assertLeaseInput(input.namespace, input.key, input.ownerId, input.ttlMs, input.signal);
       const row = acquire.get(
         input.namespace,
         input.key,
@@ -73,7 +73,7 @@ RETURNING *
       return null;
     },
     async renewLease(input) {
-      validate(input.namespace, input.key, input.ownerId, input.ttlMs, input.signal, input.token);
+      assertLeaseInput(input.namespace, input.key, input.ownerId, input.ttlMs, input.signal, input.token);
       const row = renew.get(
         `+${input.ttlMs / 1000} seconds`,
         input.namespace,
@@ -90,7 +90,7 @@ RETURNING *
       return null;
     },
     async releaseLease(input) {
-      validate(input.namespace, input.key, input.ownerId, undefined, input.signal, input.token);
+      assertLeaseInput(input.namespace, input.key, input.ownerId, undefined, input.signal, input.token);
       const result = release.run(
         input.namespace,
         input.key,
@@ -130,15 +130,4 @@ function toRecord(row: Row): LeaseRecord {
     ...(row.account_id === null ? {} : { accountId: row.account_id }),
     ...(row.user_id === null ? {} : { userId: row.user_id }),
   };
-}
-function validate(namespace: string, key: string, ownerId: string, ttlMs?: number, signal?: AbortSignal, token?: string): void {
-  if (signal?.aborted) throw signal.reason ?? new DOMException("Aborted", "AbortError");
-  if (
-    !namespace ||
-    !key ||
-    !ownerId ||
-    (ttlMs !== undefined && (!Number.isSafeInteger(ttlMs) || ttlMs < 1)) ||
-    (token !== undefined && !token)
-  )
-    throw new LeaseConflictError("Invalid lease input");
 }

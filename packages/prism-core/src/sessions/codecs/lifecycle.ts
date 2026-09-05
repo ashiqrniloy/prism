@@ -2,9 +2,15 @@ import {
   DEFAULT_LIFECYCLE_PAGE_SIZE,
   HARD_LIFECYCLE_PAGE_SIZE,
   HARD_MAX_HOLD_REASON_BYTES,
+  type OwnershipScope,
   PersistenceLifecycleError,
   type TenantQuota,
 } from "@arnilo/prism";
+import { assertOwnershipRequired } from "./ownership.js";
+
+export function assertLifecycleOwnership(input: OwnershipScope): void {
+  assertOwnershipRequired(input, () => new PersistenceLifecycleError("ownership required", "ERR_PRISM_LIFECYCLE_OWNERSHIP"));
+}
 
 export function rowToTenantQuota(row: Record<string, unknown>): TenantQuota {
   return {

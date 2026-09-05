@@ -1,13 +1,13 @@
 # Indexed code search
 
-Optional host-owned incremental search index for `repo_search` (plan 026 Task 2, `@arnilo/prism-coding-agent`). The index is a seam: Prism defines the contract, validates requests and results, and scopes identity and freshness — the host owns persistence, build, watch, and any embedding/ranking engine. There is no bundled index engine, vector store, watcher daemon, or embedding SDK.
+Optional host-owned incremental search index for `repo_search` (plan 026 Task 2, `@arnilo/prism-coding-tools/agent`). The index is a seam: Prism defines the contract, validates requests and results, and scopes identity and freshness — the host owns persistence, build, watch, and any embedding/ranking engine. There is no bundled index engine, vector store, watcher daemon, or embedding SDK.
 
 ## Activation
 
 Nothing starts on import or construction. A host builds and updates the index explicitly through the facade:
 
 ```ts
-import { createIndexedRepositoryOperations, createGitAwareRepositoryOperations } from "@arnilo/prism-coding-agent";
+import { createIndexedRepositoryOperations, createGitAwareRepositoryOperations } from "@arnilo/prism-coding-tools/agent";
 
 const operations = createIndexedRepositoryOperations(cwd, {
   index: hostIndex, // RepositoryIndexBackend

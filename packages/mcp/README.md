@@ -1,6 +1,6 @@
 # @arnilo/prism-mcp
 
-Bounded MCP client capabilities and explicit Prism MCP server exposure, pinned to official SDK 1.30.0. Client direction connects over stdio or Streamable HTTP and maps discovered tools to `ToolDefinition`s. Server direction registers selected Prism tools/commands on SDK `McpServer`, with required authorization and an optional bounded web-standard handler. Shared elicitation helpers (`mcpElicitationDecision` / `mcpElicitationResultFromDecision`) map onto Prism pending decisions and require host `humanInteraction: true` on accept. Server `guardrails` apply shared core tool stages to registered tools; commands remain host callbacks.
+Bounded MCP client capabilities and explicit Prism MCP server exposure, pinned to the modular TypeScript SDK v2 packages (@modelcontextprotocol/client and @modelcontextprotocol/server 2.0.0). Client direction connects over stdio or Streamable HTTP and maps discovered tools to `ToolDefinition`s. Server direction registers selected Prism tools/commands on SDK `McpServer`, with required authorization and an optional bounded web-standard handler. Shared elicitation helpers (`mcpElicitationDecision` / `mcpElicitationResultFromDecision`) map onto Prism pending decisions and require host `humanInteraction: true` on accept. Server `guardrails` apply shared core tool stages to registered tools; commands remain host callbacks.
 
 ## Install
 
@@ -76,11 +76,16 @@ const server = createPrismMcpServer({
 });
 
 const handleMcp = await createPrismMcpWebHandler(server, { resolveAuthInfo });
-// Stateful mode additionally requires sessionIdGenerator, exact allowedOrigins,
-// and resolveIdentity to bind every POST/GET/DELETE/SSE request to one principal.
+// Dual-era serving: modern 2026-07-28 through SDK createMcpHandler (one fresh
+// McpServer per request) plus the SDK stateless legacy fallback. Stateful mode
+// additionally requires sessionIdGenerator, exact allowedOrigins, and
+// resolveIdentity to bind every POST/GET/DELETE/SSE request to one principal;
+// classified legacy session traffic routes beside a strict modern handler.
+// The handler stays callable and carries fetch/close/notify/bus;
+// servePrismMcpStdio(factory) serves dual-era stdio.
 ```
 
-Nothing is exposed by default. To expose a durable agent, pass `agentRuns: { support: { lifecycle: createAgentRunLifecycle({ checkpoints, resolveAgent }) } }`; this registers only `agent.support.status` and `agent.support.resume` under normal MCP authorization. Handler uses SDK Web-standard Streamable HTTP transport; no listener or auth provider starts. Request/result/concurrency/timeouts are bounded. Use `server.connect()` directly for SDK stdio/in-memory transports.
+Nothing is exposed by default. To expose a durable agent, pass `agentRuns: { support: { lifecycle: createAgentRunLifecycle({ checkpoints, resolveAgent }) } }`; this registers only `agent.support.status` and `agent.support.resume` under normal MCP authorization. Handler uses the SDK dual-era serving entries; no listener or auth provider starts. Request/result/concurrency/timeouts are bounded, and Host/Origin allowlists run before body parsing and auth. Use `server.connect()` directly for in-memory transports; direct HTTP `server.connect()` is legacy-only.
 
 ## Security
 

@@ -35,6 +35,12 @@ export function createOpenAIProviderPackage(options: OpenAIProviderPackageOption
 }
 
 export {
+  createOpenAIBatchJobsProvider,
+  OPENAI_BATCH_COMPLETION_WINDOW,
+  OPENAI_BATCH_MAX_REQUESTS,
+  type OpenAIBatchJobsOptions,
+} from "./batch.js";
+export {
   applyPromptCacheBreakpoints,
   OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH,
   promptCacheKey,
@@ -42,6 +48,18 @@ export {
   promptCacheRetention,
 } from "./cache.js";
 export { createOpenAICodexProvider, type OpenAICodexProviderOptions } from "./codex.js";
+export {
+  createOpenAIEmbeddingsProvider,
+  OPENAI_EMBEDDINGS_MAX_BATCH_SIZE,
+  type OpenAIEmbeddingsOptions,
+} from "./embeddings.js";
+export {
+  createOpenAIImageGenerationProvider,
+  DEFAULT_IMAGE_MAX_BYTES,
+  OPENAI_IMAGE_MAX_COUNT,
+  OPENAI_IMAGE_PROMPT_MAX_CHARS,
+  type OpenAIImageGenerationOptions,
+} from "./images.js";
 export {
   defineOpenAIModel,
   type ListOpenAIModelsOptions,
@@ -52,6 +70,13 @@ export {
   openAICodexModels,
   openAIModels,
 } from "./models.js";
+export {
+  createOpenAIModerationProvider,
+  OPENAI_MODERATION_DEFAULT_MODEL,
+  OPENAI_MODERATION_INPUT_MAX_CHARS,
+  OPENAI_MODERATION_MAX_RESPONSE_BYTES,
+  type OpenAIModerationOptions,
+} from "./moderation.js";
 export {
   computeS256Challenge,
   createOpenAICodexOAuthProvider,
@@ -66,3 +91,14 @@ export {
   type RealtimeTransportOptions,
 } from "./realtime.js";
 export { createOpenAIResponsesProvider, type OpenAIResponsesProviderOptions, resolveOpenAIReasoning } from "./responses.js";
+export {
+  createOpenAISpeechProvider,
+  DEFAULT_SPEECH_MAX_AUDIO_BYTES,
+  OPENAI_SPEECH_MAX_INPUT_CHARS,
+  type OpenAISpeechOptions,
+} from "./speech.js";
+export {
+  createOpenAITranscriptionProvider,
+  OPENAI_TRANSCRIPTION_MAX_AUDIO_BYTES,
+  type OpenAITranscriptionOptions,
+} from "./transcription.js";

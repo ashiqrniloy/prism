@@ -189,10 +189,7 @@ describe("patchDocument", () => {
   it("rejects metadata set with __proto__ key before mutation", () => {
     const before = structuredClone(baseDoc);
     assert.throws(
-      () =>
-        patchDocument(baseDoc, [
-          { op: "set", target: { metadata: "__proto__" } as never, value: { polluted: true } },
-        ]),
+      () => patchDocument(baseDoc, [{ op: "set", target: { metadata: "__proto__" } as never, value: { polluted: true } }]),
       (err: unknown) => {
         assert.ok(err instanceof DocumentsPatchError);
         assert.equal((err as DocumentsPatchError).code, "ERR_PRISM_DOCUMENTS_UNSAFE_PATH");

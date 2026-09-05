@@ -670,7 +670,6 @@ asTimestamp	export declare function asTimestamp(value: unknown, label: string): 
 assertBoundedJson	export declare function assertBoundedJson(value: unknown, maxDepth: number, maxProperties: number, maxBytes: number): void
 assertBytes	export declare function assertBytes(value: string, maxBytes: number, label: string): void
 assertCredentialFileMode	export declare function assertCredentialFileMode(mode: number): void
-assertDiffLines	export declare function assertDiffLines(value: number, maxLines: number, label: string): void
 assertEnterpriseMigrationHistory	export declare function assertEnterpriseMigrationHistory(applied: readonly AppliedEnterpriseMigration[]): void
 assertEnterpriseSchemaReady	export declare function assertEnterpriseSchemaReady(source: Queryable, schema: string): Promise<void>
 assertEvaluationThreshold	export declare function assertEvaluationThreshold(report: ExperimentReport | ComparisonReport, thresholds: EvaluationThresholds): void
@@ -849,7 +848,6 @@ diffPromptRecords	export declare function diffPromptRecords(from: PromptRecord, 
 encodeBoundedJson	export declare function encodeBoundedJson(value: unknown, maxBytes: number, label: string): string
 encodeBranchCursor	export declare function encodeBranchCursor(offset: number): string
 encodeCheckpointJson	export declare function encodeCheckpointJson(value: unknown, label: string): string
-encodeMetadata	export declare function encodeMetadata(metadata: Readonly<Record<string, unknown>> | undefined, limits: PromptLimits): string | null
 encodePromptCursor	export declare function encodePromptCursor(scope: NormalizedOwnership, query: Pick<PromptListQuery, "name" | "label" | "order">, lastName: string, lastVersion: number): string
 encodeRecordCursor	export declare function encodeRecordCursor(createdAt: string, id: string, owner: StoreOwner, order: "asc" | "desc"): string
 encryptBytes	export declare function encryptBytes(plaintext: Buffer, passphrase: string, scryptOptions?: Partial<ScryptParameters>, limitOptions?: EncryptedCredentialStoreLimits): Promise<EncryptedEnvelope>
@@ -899,7 +897,6 @@ markRemaining	export declare function markRemaining(state: SchedulerState, statu
 maybeRestrictFileMode	export declare function maybeRestrictFileMode(filename: string, fileMode: number | undefined): void
 measureJsonBytes	export declare function measureJsonBytes(value: unknown): number
 narrowSupervisorLimits	export declare function narrowSupervisorLimits(parent: ResolvedSupervisorLimits, input?: SupervisorLimits): ResolvedSupervisorLimits
-nodeKindOf	export declare function nodeKindOf(node: WorkflowNodeDefinition): string
 normalizeBasePath	export declare function normalizeBasePath(value: string): string
 normalizeCalendarEvent	export declare function normalizeCalendarEvent(provider: WorkProvider, raw: unknown, citationId?: string): WorkCalendarEvent
 normalizeCalendarPage	export declare function normalizeCalendarPage(provider: WorkProvider, raw: unknown, nextCursor?: string): WorkPage<WorkCalendarEvent>
@@ -934,7 +931,6 @@ parseCheckpointValue	export declare function parseCheckpointValue(raw: unknown, 
 parseCliJson	export declare function parseCliJson(stdout: string, limits: ResolvedWorkLimits): unknown
 parseCliNdjson	export declare function parseCliNdjson(stdout: string, limits: ResolvedWorkLimits): unknown[]
 parseEncryptedEnvelope	export declare function parseEncryptedEnvelope(value: unknown, limits?: ResolvedEncryptedCredentialStoreLimits): EncryptedEnvelope
-parseListOffsetCursor	export declare function parseListOffsetCursor(cursor?: string): number
 parseRoute	export declare function parseRoute(request: Request, base: string): Route | undefined
 parseSessionMetadata	export declare function parseSessionMetadata(raw: string | null): Readonly<Record<string, unknown>> | undefined
 parseStateHistory	export declare function parseStateHistory(history: Readonly<Record<string, JsonObject>> | undefined, current: JsonObject): Map<number, JsonObject>

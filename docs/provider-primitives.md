@@ -251,7 +251,7 @@ export interface ProviderTurnMetadata {
 // - provider_turn_finished { sessionId, runId, turn, metadata, usage?, error? }
 ```
 
-Optional package `@arnilo/prism-observability-opentelemetry` subscribes via middleware + agent events. **Default:** content redacted/absent; high-cardinality IDs are span attributes, not metric labels. NeuralWatt `neuralwatt:telemetry` events remain package-local; the adapter may forward numeric energy/cost fields.
+Optional package `@arnilo/prism-core/governance/observability` subscribes via middleware + agent events. **Default:** content redacted/absent; high-cardinality IDs are span attributes, not metric labels. NeuralWatt `neuralwatt:telemetry` events remain package-local; the adapter may forward numeric energy/cost fields.
 
 ## Migration conformance fixtures
 

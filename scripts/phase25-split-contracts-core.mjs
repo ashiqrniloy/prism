@@ -2,6 +2,7 @@
 // Stdlib-only. Extracts declaration ranges verbatim, fixes inline import() paths for the
 // deeper location, auto-generates type-only imports (cross-family + external), writes the barrel.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const SRC = "src/contracts-core.ts";
 const lines = readFileSync(SRC, "utf8").split("\n");
@@ -248,55 +249,57 @@ for (const f of families) {
   familyDeclared.set(f.name, declared);
 }
 
-mkdirSync("src/contracts-core", { recursive: true });
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  mkdirSync("src/contracts-core", { recursive: true });
 
-for (const f of families) {
-  const declLines = [];
-  for (let i = f.start; i <= f.end; i++) {
-    if (f.exclude?.has(i)) continue;
-    declLines.push(lines[i - 1]);
-  }
-  // Fix inline import("./X.js") paths for the deeper location (the .d.ts resolves these to
-  // bare type names, so the surface signature is unchanged; only the source path moves).
-  const body = `${declLines
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/import\("\.\//g, 'import("../')
-    .trimEnd()}\n`;
-
-  const used = new Set();
-  let m2;
-  identRe.lastIndex = 0;
-  while ((m2 = identRe.exec(body)) !== null) used.add(m2[1]);
-  const local = familyDeclared.get(f.name);
-  const extByMod = new Map();
-  const coreByFam = new Map();
-  for (const name of [...used].sort()) {
-    if (skip.has(name) || local.has(name)) continue;
-    if (Object.hasOwn(externalMap, name)) {
-      const mod = externalMap[name];
-      if (!extByMod.has(mod)) extByMod.set(mod, new Set());
-      extByMod.get(mod).add(name);
-    } else if (nameToFamily.has(name) && nameToFamily.get(name) !== f.name) {
-      const fam = nameToFamily.get(name);
-      if (!coreByFam.has(fam)) coreByFam.set(fam, new Set());
-      coreByFam.get(fam).add(name);
+  for (const f of families) {
+    const declLines = [];
+    for (let i = f.start; i <= f.end; i++) {
+      if (f.exclude?.has(i)) continue;
+      declLines.push(lines[i - 1]);
     }
-  }
-  const importLines = [];
-  for (const [mod, names] of extByMod) importLines.push(`import type { ${[...names].join(", ")} } from "../${mod}.js";`);
-  for (const [fam, names] of coreByFam) importLines.push(`import type { ${[...names].join(", ")} } from "./${fam}.js";`);
-  const header = `/** Contracts-core ${f.name} family (0.2.5 plan 025 Task 1 split).\n * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */\n`;
-  writeFileSync(`src/contracts-core/${f.name}.ts`, header + (importLines.length ? `${importLines.join("\n")}\n\n` : "") + body);
-}
+    // Fix inline import("./X.js") paths for the deeper location (the .d.ts resolves these to
+    // bare type names, so the surface signature is unchanged; only the source path moves).
+    const body = `${declLines
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/import\("\.\//g, 'import("../')
+      .trimEnd()}\n`;
 
-const barrel =
-  `/** Contracts-core barrel (0.2.5 plan 025 Task 1 god-module split): re-exports the
+    const used = new Set();
+    let m2;
+    identRe.lastIndex = 0;
+    while ((m2 = identRe.exec(body)) !== null) used.add(m2[1]);
+    const local = familyDeclared.get(f.name);
+    const extByMod = new Map();
+    const coreByFam = new Map();
+    for (const name of [...used].sort()) {
+      if (skip.has(name) || local.has(name)) continue;
+      if (Object.hasOwn(externalMap, name)) {
+        const mod = externalMap[name];
+        if (!extByMod.has(mod)) extByMod.set(mod, new Set());
+        extByMod.get(mod).add(name);
+      } else if (nameToFamily.has(name) && nameToFamily.get(name) !== f.name) {
+        const fam = nameToFamily.get(name);
+        if (!coreByFam.has(fam)) coreByFam.set(fam, new Set());
+        coreByFam.get(fam).add(name);
+      }
+    }
+    const importLines = [];
+    for (const [mod, names] of extByMod) importLines.push(`import type { ${[...names].join(", ")} } from "../${mod}.js";`);
+    for (const [fam, names] of coreByFam) importLines.push(`import type { ${[...names].join(", ")} } from "./${fam}.js";`);
+    const header = `/** Contracts-core ${f.name} family (0.2.5 plan 025 Task 1 split).\n * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */\n`;
+    writeFileSync(`src/contracts-core/${f.name}.ts`, header + (importLines.length ? `${importLines.join("\n")}\n\n` : "") + body);
+  }
+
+  const barrel =
+    `/** Contracts-core barrel (0.2.5 plan 025 Task 1 god-module split): re-exports the
  * public contracts surface from cohesive family modules so the import surface
  * of \`./contracts-core.js\` is unchanged (0.1.4 barrel precedent). */
 export type { AudioContent, DocumentContent, FileContent } from "./content.js";
 ` +
-  families.map((f) => `export * from "./contracts-core/${f.name}.js";`).join("\n") +
-  "\n";
-writeFileSync(SRC, barrel);
-console.log("split contracts-core.ts into", families.length, "family files + barrel");
+    families.map((f) => `export * from "./contracts-core/${f.name}.js";`).join("\n") +
+    "\n";
+  writeFileSync(SRC, barrel);
+  console.log("split contracts-core.ts into", families.length, "family files + barrel");
+}

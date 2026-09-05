@@ -244,4 +244,4 @@ const summary = validateDrawioXml(xml, {
 - [`@arnilo/prism-office/sheets`](./sheets.md): Spreadsheet and CSV parsing engine with strict financial decimal safety guarantees.
 - [`@arnilo/prism-web-tools/browser`](./browser-automation.md): Browser automation tools and quarantine lifecycle.
 - [`@arnilo/prism-ag-ui`](./ag-ui.md): Agent-User Interface projection and timeline components.
-- [`@arnilo/prism-observability-opentelemetry`](./observability.md): OpenTelemetry instrumentation and trace adapters.
+- [`@arnilo/prism-core/governance/observability`](./observability.md): OpenTelemetry instrumentation and trace adapters.

@@ -431,10 +431,11 @@ export function createSessionRowMappers<R>(redacted: RedactedCodec<R>): SessionR
 export * from "./checkpoint.js";
 export * from "./cursor.js";
 export * from "./feedback.js";
+export * from "./lease.js";
 export * from "./lifecycle.js";
 // Shared ownership/cursor/checkpoint/lifecycle/search/util/feedback helpers extracted
-// from the Postgres and SQLite adapters (plan 025 Task 2). Pure and dependency-free;
-// each adapter imports these and supplies its own dialect-specific SQL/execution.
+// from the Postgres and SQLite adapters (plan 025 Task 2 / plan 059). Pure and
+// dependency-free; each adapter imports these and supplies its own dialect SQL.
 export * from "./ownership.js";
 export * from "./search.js";
 export * from "./util.js";

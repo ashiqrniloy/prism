@@ -1,0 +1,42 @@
+# Expected-failure baseline for the official MCP conformance suite
+# (`npx @modelcontextprotocol/conformance`) against the Prism dual-era serving
+# fixture (scripts/mcp-conformance-2026.mjs), plan 063 task 7.
+#
+# Each entry is a scenario that fails for a DOCUMENTED Prism boundary, not a
+# defect. Re-run with --expected-failures pointing at this file; remove an
+# entry when the underlying capability ships.
+#
+# CLI at time of recording: no 2026-07-28 scenarios exist upstream yet — the
+# suite is run at spec-version 2025-11-25 (latest published). Re-run when
+# 2026-07-28 scenarios ship.
+server:
+  # logging capability is not advertised by createPrismMcpServer; tool
+  # callbacks cannot emit log notifications (bounded, host-mediated dispatch).
+  - logging-set-level
+  - tools-call-with-logging
+  # No tool-initiated progress notifications (same boundary as logging).
+  - tools-call-with-progress
+  # completion capability is not advertised (no argument completion surface).
+  - completion-complete
+  # resources.subscribe capability is not advertised; resource update
+  # notifications have no Prism server surface yet.
+  - resources-subscribe
+  - resources-unsubscribe
+  # Prism MCP tool results flatten content to one bounded text block
+  # (server.ts toolResult); image/audio/resource blocks are model-facing text.
+  - tools-call-image
+  - tools-call-audio
+  - tools-call-embedded-resource
+  - tools-call-mixed-content
+  # Server-initiated client requests (sampling/createMessage,
+  # elicitation/create) are not exposed to Prism tool callbacks; elicitation
+  # is client->server via connectMcpCapabilities (plan 063 task 3).
+  - tools-call-sampling
+  - tools-call-elicitation
+  - elicitation-sep1034-defaults
+  - elicitation-sep1330-enums
+  # Session-based SSE polling (SEP-1699) requires Mcp-Session-Id + replayable
+  # streams; Prism serves stateless modern traffic with no session ids and
+  # Last-Event-ID replay is not enabled (documented in docs/mcp-tools.md).
+  - server-sse-polling
+  - server-sse-multiple-streams

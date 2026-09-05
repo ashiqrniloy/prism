@@ -225,5 +225,5 @@ const telemetry: SheetsTelemetry = {
 ## Related APIs
 
 - [`@arnilo/prism-office/documents`](./documents.md): Specification-compliant OpenXML document generation, parsing, patching, and preview rendering for DOCX, XLSX, and PPTX.
-- [`@arnilo/prism-document-reader`](./document-reader.md): Bounded literal text extraction from PDF and DOCX documents for coding agent tools.
-- [`@arnilo/prism-observability-opentelemetry`](./observability.md): OpenTelemetry instrumentation and trace adapters.
+- [`@arnilo/prism-coding-tools/document-reader`](./document-reader.md): Bounded literal text extraction from PDF and DOCX documents for coding agent tools.
+- [`@arnilo/prism-core/governance/observability`](./observability.md): OpenTelemetry instrumentation and trace adapters.

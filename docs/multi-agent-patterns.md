@@ -6,7 +6,7 @@ Maps the four Prism answers for "more than one agent" onto one decision table. A
 
 - **In-session handoff (swarm)** — agent A transfers control of the ongoing conversation to agent B by calling a host-built `handoff` tool; the host resolves the target `AgentDefinition` with `resolveAgentDefinition` and opens the specialist against the same session (same store + session id, previous run's `leafId`). One transcript, no new session. No helper primitive ships; the tool factory lives in [`examples/handoff-swarm.ts`](../examples/handoff-swarm.ts).
 - **Hierarchical crew** — a manager agent decomposes a goal into typed tasks (`{ tasks: [{ role, instruction }] }`) via structured output ([`Artifact*`](structured-output.md)), fans out to parallel role specialists with bounded `maxFanOut` ([`fanOutNode`](workflows.md)), aggregates deliverables with host reduce ([`joinNode`](workflows.md)), and validates outputs with conditional routing to completion or revision ([`conditionalNode`](workflows.md)). The entire process is a deterministic DAG workflow with zero new runtime primitives. Live demo in [`examples/crew-hierarchy.ts`](../examples/crew-hierarchy.ts).
-- **Supervisor delegation** — `@arnilo/prism-supervisor` `delegate()` invokes allow-listed child agents as bounded runs and returns their result to the parent. Separate child transcripts, hooks, budgets, narrowing.
+- **Supervisor delegation** — `@arnilo/prism-core/runtime/supervisor` `delegate()` invokes allow-listed child agents as bounded runs and returns their result to the parent. Separate child transcripts, hooks, budgets, narrowing.
 - **A2A 1.0** — cross-service interop over the JSON-RPC/HTTPS binding; the remote peer's lifecycle is host-owned behind `A2ATaskLifecycle`.
 
 ## When to use it
@@ -161,7 +161,7 @@ Live demo: [`examples/crew-hierarchy.ts`](../examples/crew-hierarchy.ts) — man
 - Handoff targets may be code-defined `AgentDefinition` objects or `<configRoot>/agents/<name>/AGENT.md` bundles resolved via `resolveAgentBundle` — the allow-list maps names to either.
 - Hosts wanting the pattern behind a UI timeline can emit their own step events from the swap.
 - A reusable in-session handoff helper was evaluated and **not** shipped in 0.3.x: the unavoidable boilerplate is a ~20-line allow-list tool plus one `createAgentSession` call. Revisit only if multiple hosts show materially different swap semantics.
-- Hierarchical crew patterns compose entirely on existing `@arnilo/prism-workflows` and `@arnilo/prism` primitives (`agentNode`, `fanOutNode`, `joinNode`, `conditionalNode`, `ArtifactValidator`, `resolveAgentDefinition`); no separate helper package is needed.
+- Hierarchical crew patterns compose entirely on existing `@arnilo/prism-core/runtime/workflows` and `@arnilo/prism` primitives (`agentNode`, `fanOutNode`, `joinNode`, `conditionalNode`, `ArtifactValidator`, `resolveAgentDefinition`); no separate helper package is needed.
 
 ## Related APIs
 

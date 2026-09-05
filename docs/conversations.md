@@ -2,9 +2,9 @@
 
 ## What it does
 
-`@arnilo/prism-server` ships a durable, user-scoped conversation service: create/list/get/continue/branch/archive/export/delete conversation threads on top of the existing session and event-ledger seams. A thread **is** an ownership-scoped session branch plus a `prismConversation` marker in `SessionRecord.metadata`; content stays in session entries and the redacted event ledger. Reconnectable replay pages durable redacted events without ever rerunning a provider or tool.
+`@arnilo/prism-core/runtime/server` ships a durable, user-scoped conversation service: create/list/get/continue/branch/archive/export/delete conversation threads on top of the existing session and event-ledger seams. A thread **is** an ownership-scoped session branch plus a `prismConversation` marker in `SessionRecord.metadata`; content stays in session entries and the redacted event ledger. Reconnectable replay pages durable redacted events without ever rerunning a provider or tool.
 
-Core (`@arnilo/prism`) exports only conversation **types and pure helpers** (`ConversationThread`, `ConversationError`, `CONVERSATION_METADATA_KEY`, thread-bound replay cursor codec, `conversationThreadFromRecord`, `conversationMarkerMetadata`). The service and optional HTTP handler live in `@arnilo/prism-server`.
+Core (`@arnilo/prism`) exports only conversation **types and pure helpers** (`ConversationThread`, `ConversationError`, `CONVERSATION_METADATA_KEY`, thread-bound replay cursor codec, `conversationThreadFromRecord`, `conversationMarkerMetadata`). The service and optional HTTP handler live in `@arnilo/prism-core/runtime/server`.
 
 ## When to use it
 
@@ -15,8 +15,8 @@ Do not use it as a chat UI, a push/always-on daemon, or a file store. Slack/Team
 ## Inputs / request
 
 ```ts
-import { createConversationService, createConversationHandler } from "@arnilo/prism-server";
-import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
+import { createConversationService, createConversationHandler } from "@arnilo/prism-core/runtime/server";
+import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
 
 const persistence = createSqlitePersistence({ filename }); // implements ConversationServiceStore
 const service = createConversationService(persistence, {

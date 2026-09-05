@@ -2,7 +2,7 @@
 
 ## What it does
 
-The optional `@arnilo/prism-session-store-postgres` package ships a production-oriented PostgreSQL adapter that implements:
+The optional `@arnilo/prism-core/sessions/postgres` package ships a production-oriented PostgreSQL adapter that implements:
 
 - `SessionStore` — atomic `append` / `list` / `get` / `readBranchPath` / bounded `searchSessions` / bounded `searchSessions`
 - `RunLedger` — durable run, event, tool-call, and usage rows
@@ -24,13 +24,13 @@ Use this package when you need server-backed persistence with pooled connections
 - managed cloud databases (RDS, Cloud SQL, Neon, Supabase, etc.)
 - CI integration tests against a real PostgreSQL service
 
-Prefer [`@arnilo/prism-session-store-sqlite`](sqlite-persistence.md) for local CLI tools, single-writer workloads, and network-free default tests. This adapter stores sessions/runs, not semantic vectors; use the separate [`@arnilo/prism-memory` pgvector path](working-and-semantic-memory.md), which rejects non-finite vectors before SQL, when vector recall is needed. For durable policy decisions, evaluations, work mutation idempotency, and model-router state, use the separate [`@arnilo/prism-enterprise-postgres`](enterprise-postgres-state.md) composition; it has its own migration history and does not replace session/run persistence.
+Prefer [`@arnilo/prism-core/sessions/sqlite`](sqlite-persistence.md) for local CLI tools, single-writer workloads, and network-free default tests. This adapter stores sessions/runs, not semantic vectors; use the separate [`@arnilo/prism-memory` pgvector path](working-and-semantic-memory.md), which rejects non-finite vectors before SQL, when vector recall is needed. For durable policy decisions, evaluations, work mutation idempotency, and model-router state, use the separate [`@arnilo/prism-core/enterprise/postgres`](enterprise-postgres-state.md) composition; it has its own migration history and does not replace session/run persistence.
 
 ## Inputs / request
 
 ```ts
 import { Pool } from "pg";
-import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres";
+import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
 ```
 
 | Field | Type | Purpose |
@@ -82,7 +82,7 @@ Migrations run automatically on open and are idempotent across reopen. Concurren
 ```ts
 import { Pool } from "pg";
 import { createAgentSession } from "@arnilo/prism";
-import { createPostgresPersistence } from "@arnilo/prism-session-store-postgres";
+import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
 
 const pool = new Pool({
@@ -111,7 +111,7 @@ await pool.end();
 Live conformance and integration tests:
 
 ```bash
-PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres --workspace @arnilo/prism-session-store-postgres
+PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres --workspace @arnilo/prism-core/sessions/postgres
 ```
 
 ## Extension and configuration notes

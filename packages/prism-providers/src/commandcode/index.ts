@@ -27,22 +27,22 @@ export function createCommandCodeProviderPackage(options: CommandCodeProviderPac
 
 export { applyCommandCodeCacheControl, commandCodeCacheEnabled } from "./cache.js";
 export {
+  type CommandCodeErrorInput,
+  type CommandCodeRetryDecision,
+  classifyCommandCodeError,
+  commandCodeHttpError,
+} from "./errors.js";
+export {
+  COMMAND_CODE_DEFAULT_BASE_URL,
   type CommandCodeModelConfig,
   type CommandCodeModelEntry,
   type CommandCodeRoute,
   commandCodeModels,
-  COMMAND_CODE_DEFAULT_BASE_URL,
   defineCommandCodeModel,
   listCommandCodeModels,
   mapCommandCodeModel,
   routeForCommandCodeModel,
 } from "./models.js";
 export { commandCodeChatBody, commandCodeChatEvents, serializeCommandCodeChatMessage } from "./openai-chat.js";
-export { createCommandCodeProvider, type CommandCodeProviderOptions } from "./provider.js";
-export {
-  classifyCommandCodeError,
-  commandCodeHttpError,
-  type CommandCodeErrorInput,
-  type CommandCodeRetryDecision,
-} from "./errors.js";
+export { type CommandCodeProviderOptions, createCommandCodeProvider } from "./provider.js";
 export { commandCodePreserveThinking, stripCommandCodeOwnedCompat } from "./thinking.js";

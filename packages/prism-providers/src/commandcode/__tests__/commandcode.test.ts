@@ -13,11 +13,11 @@ import {
   assertUsageAccounting,
 } from "@arnilo/prism/testing/provider-conformance";
 import {
+  COMMAND_CODE_DEFAULT_BASE_URL,
   classifyCommandCodeError,
   createCommandCodeProvider,
   createCommandCodeProviderPackage,
   listCommandCodeModels,
-  COMMAND_CODE_DEFAULT_BASE_URL,
   routeForCommandCodeModel,
 } from "../index.js";
 

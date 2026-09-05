@@ -587,7 +587,6 @@ defaultProviderTemplatesRoot	export declare function defaultProviderTemplatesRoo
 defaultResolver	export declare function defaultResolver(hostname: string): Promise<readonly MediaHostAddress[]>
 defaultTemplatesRoot	export declare function defaultTemplatesRoot(): string
 defaultUserConfigPath	export declare function defaultUserConfigPath(appName?: string): string
-defaultUserSettingsPath	export declare function defaultUserSettingsPath(appName?: string): string
 definePrismManifest	export declare function definePrismManifest(manifest: PrismManifest): PrismManifest
 defineProviderPackage	export declare function defineProviderPackage(providerPackage: ProviderPackage): ProviderPackage
 denialToErrorInfo	export declare function denialToErrorInfo(error: unknown): ErrorInfo
@@ -630,8 +629,6 @@ isCompactionEntryData	export declare function isCompactionEntryData(value: unkno
 isContextBudgetError	export declare function isContextBudgetError(error: unknown): error is ContextBudgetError
 isDurableLoop	export declare function isDurableLoop(loop: import("../contracts.js").AgentLoopStrategy | import("../contracts.js").AgentLoopOptions): boolean
 isFlushableRunLedger	export declare function isFlushableRunLedger(ledger: RunLedger): ledger is FlushableRunLedger
-isInitProvider	export declare function isInitProvider(value: string, templatesRoot?: string): value is InitProvider
-isInitTemplate	export declare function isInitTemplate(value: string, galleryRoot?: string): boolean
 isJsonObject	export declare function isJsonObject(value: unknown): value is JsonObject
 isLoopbackAddress	export declare function isLoopbackAddress(value: string): boolean
 isLoopbackHostname	export declare function isLoopbackHostname(value: string): boolean
@@ -691,7 +688,6 @@ ownershipFromIdentity	export declare function ownershipFromIdentity(identity: Ag
 parseAgentFile	export declare function parseAgentFile(text: string, path: string): ManifestContributionDeclaration
 parseAgentRunState	export declare function parseAgentRunState(value: unknown, version?: number): StoredAgentRunState
 parseCliArgs	export declare function parseCliArgs(argv: readonly string[]): CliOptions
-parseContextFile	export declare function parseContextFile(text: string, path: string): ContextProvider
 parseInitArgs	export declare function parseInitArgs(argv: readonly string[], templatesRoot?: string, galleryRoot?: string): InitOptions
 parseJsonObjectArguments	export declare function parseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): JsonObject
 parsePrismManifest	export declare function parsePrismManifest(value: unknown): PrismManifest
@@ -699,7 +695,6 @@ parseProviderAddArgs	export declare function parseProviderAddArgs(argv: readonly
 parseRetryAfterMs	export declare function parseRetryAfterMs(value: string | null, now?: number): number | undefined
 parseRpcRequest	export declare function parseRpcRequest(value: unknown): RpcRequest
 parseSkillFile	export declare function parseSkillFile(text: string, path: string): Skill
-parseToolFile	export declare function parseToolFile(text: string, path: string): ToolDefinition
 pathsEqual	export declare function pathsEqual(a: readonly string[] | undefined, b: readonly string[] | undefined): boolean
 pendingDecisionsOf	export declare function pendingDecisionsOf(state: StoredAgentRunState): readonly PendingDecision[] | undefined
 pinnedFetch	export declare function pinnedFetch(url: URL, init: RequestInit | undefined, options?: PinnedFetchOptions): Promise<Response>
@@ -763,7 +758,6 @@ resolveLoop	export declare function resolveLoop(options:
 resolveMediaContentBlock	export declare function resolveMediaContentBlock(block: MediaContentBlock, options?: ResolveMediaContentOptions): Promise<ResolvedMediaContent>
 resolveMediaContentBlocks	export declare function resolveMediaContentBlocks(blocks: readonly MediaContentBlock[], options?: ResolveMediaContentOptions): Promise<readonly ResolvedMediaContent[]>
 resolvePinnedAddress	export declare function resolvePinnedAddress(url: URL, resolver: MediaHostnameResolver, signal: AbortSignal | null | undefined, allowLoopback: boolean, ssrf: SsrfPolicy | undefined, hostnameErrorPrefix?: string): Promise<MediaHostAddress>
-resolveProviderMediaBlock	export declare function resolveProviderMediaBlock(block: AudioContent | FileContent | DocumentContent, options?: ResolveMediaContentOptions): Promise<ResolvedMediaContent>
 resolveProviderMediaMessages	export declare function resolveProviderMediaMessages(messages: readonly Message[], model: ModelConfig, options?: ResolveMediaContentOptions): Promise<ReadonlyMap<MediaContentBlock, ResolvedMediaContent>>
 resolveRedactor	export declare function resolveRedactor(redactor?: SecretRedactor, secrets?: readonly (string | undefined)[]): SecretRedactor | undefined
 resolveRunDecisions	export declare function resolveRunDecisions(input:
@@ -795,7 +789,6 @@ runProviderAddCommand	export declare function runProviderAddCommand(argv: readon
 runRpcServer	export declare function runRpcServer(options: RpcServerOptions): Promise<void>
 runRunLedgerConformance	export declare function runRunLedgerConformance(factory: RunLedgerConformanceFactory, options?: RunLedgerConformanceOptions): Promise<void>
 runSessionStoreConformance	export declare function runSessionStoreConformance(factory: SessionStoreConformanceFactory, options?: SessionStoreConformanceOptions): Promise<void>
-runToolEffectStoreConformance	export declare function runToolEffectStoreConformance(factory: () => ToolEffectStore | Promise<ToolEffectStore>, options?: ToolEffectStoreConformanceOptions): Promise<void>
 sanitizeCacheKey	export declare function sanitizeCacheKey(value: string | undefined, maxLength: number): string | undefined
 saveAgentRunState	export declare function saveAgentRunState(input:
 scoreTools	export declare function scoreTools(index: ToolSearchIndex, query: string, k: number, queryByteCap?: number): readonly ToolSearchMatch[]
@@ -815,7 +808,6 @@ skillPromptText	export declare function skillPromptText(skill: Skill, context?: 
 snapshotLoadedSkillBodies	export declare function snapshotLoadedSkillBodies(skills: readonly Skill[], loaded: LoadedSkillSet, restored?: ReadonlyMap<string, string>): LoadedSkillBodiesEntry[]
 sniffMediaMimeType	export declare function sniffMediaMimeType(bytes: Uint8Array): string | undefined
 splitFrontmatter	export declare function splitFrontmatter(text: string, path: string):
-statusFromState	export declare function statusFromState(state: StoredAgentRunState, version: number): AgentRunStatusResult
 systemCacheControlField	export declare function systemCacheControlField(messages: readonly CacheControlledMessage[], toText: (message: Message) => string): string | readonly SystemCacheControlTextBlock[] | undefined
 systemPromptContributionKey	export declare function systemPromptContributionKey(contribution: SystemPromptContribution): string
 tenantScopedUniqueKey	export declare function tenantScopedUniqueKey(baseColumns: readonly string[], tenantColumn?: "tenant_id" | "account_id" | "user_id"): readonly string[]

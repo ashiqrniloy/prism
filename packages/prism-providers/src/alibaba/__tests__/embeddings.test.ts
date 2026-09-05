@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ALIBABA_EMBEDDING_BATCH_SIZE, ALIBABA_EMBEDDING_DEFAULT_DIMENSIONS, createAlibabaEmbedder } from "../index.js";
+import { EmbeddingsError } from "@arnilo/prism";
+import { runEmbeddingsConformance } from "@arnilo/prism/testing/provider-conformance";
+import {
+  ALIBABA_EMBEDDING_BATCH_SIZE,
+  ALIBABA_EMBEDDING_DEFAULT_DIMENSIONS,
+  createAlibabaEmbedder,
+  createAlibabaEmbeddingsProvider,
+} from "../index.js";
 
 // Compile-time structural assignability: the embedder must satisfy the
 // @arnilo/prism-memory `Embedder` shape without importing it (no dependency).
@@ -183,5 +190,109 @@ describe("createAlibabaEmbedder", () => {
       fetch: (async () => embeddingResponse([{ index: 0, embedding: [1] }])) as typeof fetch,
     });
     await assert.rejects(() => embedder.embed(["a", "b"]), /missing index 1/);
+  });
+});
+
+describe("createAlibabaEmbeddingsProvider", () => {
+  it("posts_openai_embeddings_shape_and_maps_usage", async () => {
+    let body: any;
+    const provider = createAlibabaEmbeddingsProvider({
+      apiKey: "sk-x",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return new Response(
+          JSON.stringify({
+            object: "list",
+            data: [
+              { index: 0, embedding: [1] },
+              { index: 1, embedding: [2] },
+            ],
+            usage: { prompt_tokens: 7, total_tokens: 7 },
+          }),
+          { status: 200 },
+        );
+      }) as typeof fetch,
+    });
+    const result = await provider.embedMany({ model: "text-embedding-v4", inputs: ["a", "b"] });
+    assert.equal(body.model, "text-embedding-v4");
+    assert.deepEqual(body.input, ["a", "b"]);
+    assert.equal(body.dimensions, ALIBABA_EMBEDDING_DEFAULT_DIMENSIONS, "provider default dimensions when request omits it");
+    assert.deepEqual(result.vectors, [[1], [2]]);
+    assert.deepEqual(result.usage, { inputTokens: 7, totalTokens: 7 });
+    assert.equal(result.dimensions, 1, "result dimensions report the actual vector length");
+  });
+
+  it("request_dimensions_override_the_provider_default", async () => {
+    let body: any;
+    const provider = createAlibabaEmbeddingsProvider({
+      apiKey: "sk-x",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return embeddingResponse([{ index: 0, embedding: [1] }]);
+      }) as typeof fetch,
+    });
+    const result = await provider.embedMany({ model: "text-embedding-v4", inputs: ["a"], dimensions: 512 });
+    assert.equal(body.dimensions, 512);
+    assert.equal(result.dimensions, 1);
+  });
+
+  it("strict_batch_cap_and_empty_input_fail_typed_without_fetching", async () => {
+    let fetchCalls = 0;
+    const provider = createAlibabaEmbeddingsProvider({
+      apiKey: "sk-x",
+      fetch: (async () => {
+        fetchCalls += 1;
+        return embeddingResponse([]);
+      }) as typeof fetch,
+    });
+    const oversized = Array.from({ length: ALIBABA_EMBEDDING_BATCH_SIZE + 1 }, () => "x");
+    await assert.rejects(
+      () => provider.embedMany({ model: "text-embedding-v4", inputs: oversized }),
+      (error: unknown) => {
+        assert.ok(error instanceof EmbeddingsError);
+        assert.equal(error.code, "batch_too_large");
+        assert.match(error.message, /at most 10/);
+        return true;
+      },
+    );
+    await assert.rejects(
+      () => provider.embedMany({ model: "text-embedding-v4", inputs: [] }),
+      (error: unknown) => {
+        assert.ok(error instanceof EmbeddingsError);
+        assert.equal(error.code, "empty_input");
+        return true;
+      },
+    );
+    assert.equal(fetchCalls, 0);
+  });
+
+  it("passes_embeddings_conformance_with_fake_transport", async () => {
+    const provider = createAlibabaEmbeddingsProvider({
+      apiKey: "sk-x",
+      fetch: (async (_input, init) => {
+        const body = JSON.parse(String(init?.body));
+        return embeddingResponse(body.input.map((_: string, i: number) => ({ index: i, embedding: [0.1, 0.2] })));
+      }) as typeof fetch,
+    });
+    await runEmbeddingsConformance({
+      provider,
+      model: "text-embedding-v4",
+      maxBatchSize: ALIBABA_EMBEDDING_BATCH_SIZE,
+      sample: { inputs: ["a", "b"], dimensions: 2 },
+    });
+  });
+
+  it("structural_bridge_keeps_the_embedder_assignable_to_the_memory_host_seam", async () => {
+    // The embedder chunks at the DashScope cap even though the strict provider would reject oversized batches.
+    const embedder = createAlibabaEmbedder({
+      apiKey: "sk-x",
+      model: "text-embedding-v4",
+      fetch: (async (_input, init) => {
+        const body = JSON.parse(String(init?.body));
+        return embeddingResponse(body.input.map((_: string, i: number) => ({ index: i, embedding: [1] })));
+      }) as typeof fetch,
+    });
+    const texts = Array.from({ length: ALIBABA_EMBEDDING_BATCH_SIZE + 1 }, () => "t");
+    assert.equal((await embedder.embed(texts)).length, ALIBABA_EMBEDDING_BATCH_SIZE + 1);
   });
 });

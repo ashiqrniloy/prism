@@ -2,11 +2,11 @@
 
 ## What it does
 
-`@arnilo/prism-supervisor` adds optional runtime-selected delegation to an explicit local child allow-list. It returns normal `AgentRunResult` values and does not modify core `createAgent()` or deterministic workflows.
+`@arnilo/prism-core/runtime/supervisor` adds optional runtime-selected delegation to an explicit local child allow-list. It returns normal `AgentRunResult` values and does not modify core `createAgent()` or deterministic workflows.
 
 ## When to use it
 
-Use a supervisor when a host or agent must choose a child dynamically. Use `@arnilo/prism-workflows` for known DAGs, durable checkpoints, schedules, replay, or human suspension.
+Use a supervisor when a host or agent must choose a child dynamically. Use `@arnilo/prism-core/runtime/workflows` for known DAGs, durable checkpoints, schedules, replay, or human suspension.
 
 ## Inputs / request
 
@@ -36,7 +36,7 @@ Use a supervisor when a host or agent must choose a child dynamically. Use `@arn
 ## Implementation example
 
 ```ts
-import { createSupervisor } from "@arnilo/prism-supervisor";
+import { createSupervisor } from "@arnilo/prism-core/runtime/supervisor";
 
 const supervisor = createSupervisor({
   ownership: { tenantId: "tenant", userId: "user" },

@@ -2,9 +2,9 @@
 
 ## What it does
 
-`@arnilo/prism-dev` is a **loopback-only local dev inspector** over a host's already-configured Prism agent — the `prism dev` playground server (plan 040). It is a **composition-only consumer**: it adds zero core primitives and imports no core internals. Every capability is an existing public seam consumed verbatim:
+`@arnilo/prism-coding-tools/dev` is a **loopback-only local dev inspector** over a host's already-configured Prism agent — the `prism dev` playground server (plan 040). It is a **composition-only consumer**: it adds zero core primitives and imports no core internals. Every capability is an existing public seam consumed verbatim:
 
-- `@arnilo/prism-server` `createPrismHandler` — direct `POST /prism/agents/:id/runs` and SSE `POST /prism/agents/:id/stream` agent routes, authorization, ownership propagation, and the durable `Last-Event-ID` event route when an exposure carries `events` + `resolveRun`.
+- `@arnilo/prism-core/runtime/server` `createPrismHandler` — direct `POST /prism/agents/:id/runs` and SSE `POST /prism/agents/:id/stream` agent routes, authorization, ownership propagation, and the durable `Last-Event-ID` event route when an exposure carries `events` + `resolveRun`.
 - Core durable `AgentEventSource` contract (`page`/`subscribe`) — replay and reconnect without re-execution.
 - `@arnilo/prism-ag-ui/renderer` — event projection for the served UI page (plan 040 Task 3).
 - Run-ledger records (`RunRecord`/`AgentEventRecord`/`ToolCallRecord`/`UsageRecord`) surfaced only through the seams above — the package never touches a ledger.
@@ -12,16 +12,16 @@
 
 ## When to use it
 
-Use it when iterating on prompts in a local Prism host and you want a inspectable timeline (events, tool calls, usage, HITL decisions, run replay) instead of building your own trace viewer. Do not deploy it: it is a developer-time surface, intentionally omitted from `@arnilo/prism-all` and the profile packages, and it must never be the production API boundary — that stays `@arnilo/prism-server` under host authorization.
+Use it when iterating on prompts in a local Prism host and you want a inspectable timeline (events, tool calls, usage, HITL decisions, run replay) instead of building your own trace viewer. Do not deploy it: it is a developer-time surface, deliberately excluded from production dependency use, and it must never be the production API boundary — that stays `@arnilo/prism-core/runtime/server` under host authorization.
 
 ### Quickstart — `prism dev` (plan 040 Task 4)
 
 ```bash
-npm install --save-dev @arnilo/prism-dev
+npm install --save-dev @arnilo/prism-coding-tools/dev
 cd my-agent && npm run dev   # → prism dev → http://127.0.0.1:4311
 ```
 
-`prism dev` (and the standalone `prism-dev` bin, plus the programmatic `runDevCli` from `@arnilo/prism-dev/cli`) boots the inspector over the current `prism init` scaffold: it imports `dist/agent.js` and calls its `createAppAgent()` export — the scaffold's own agent, with its own credentials. It defaults to `127.0.0.1:4311`, prints the loopback URL once listening (start-to-listen under 1s excluding provider network), and `Ctrl+C` drains and closes. A non-loopback `--host` is refused before binding (`ERR_PRISM_DEV_REMOTE_BIND`); the CLI never reads environment secrets itself. See `docs/cli-rpc.md` for the flag table.
+`prism dev` (and the standalone `prism-dev` bin, plus the programmatic `runDevCli` from `@arnilo/prism-coding-tools/dev/cli`) boots the inspector over the current `prism init` scaffold: it imports `dist/agent.js` and calls its `createAppAgent()` export — the scaffold's own agent, with its own credentials. It defaults to `127.0.0.1:4311`, prints the loopback URL once listening (start-to-listen under 1s excluding provider network), and `Ctrl+C` drains and closes. A non-loopback `--host` is refused before binding (`ERR_PRISM_DEV_REMOTE_BIND`); the CLI never reads environment secrets itself. See `docs/cli-rpc.md` for the flag table.
 
 ## Inputs / request
 
@@ -89,7 +89,7 @@ POST /runs/<runId>/decisions/<approvalId>
 ## Implementation example
 
 ```ts
-import { createPrismDevInspector } from "@arnilo/prism-dev";
+import { createPrismDevInspector } from "@arnilo/prism-coding-tools/dev";
 
 const inspector = createPrismDevInspector({
   agent, // host-built agent (mock or provider-backed)

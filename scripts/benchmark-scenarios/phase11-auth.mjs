@@ -18,7 +18,7 @@ import { createOpaPolicyEvaluator } from "@arnilo/prism-core/governance/policy";
 import { createMcpOAuthTransport, createPrismMcpServer, createPrismMcpWebHandler } from "@arnilo/prism-mcp";
 import { createOpenApiTools } from "@arnilo/prism-openapi-tools";
 import { createS3ArtifactBodyStore } from "@arnilo/prism-server/artifact-bodies";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { Client } from "@modelcontextprotocol/client";
 
 const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 20);
 const ITERATIONS = Number(process.env.PRISM_BENCH_ITERATIONS ?? 100);

@@ -2,7 +2,7 @@
 
 ## What it does
 
-The optional `@arnilo/prism-session-store-sqlite` package ships a production-oriented SQLite adapter that implements:
+The optional `@arnilo/prism-core/sessions/sqlite` package ships a production-oriented SQLite adapter that implements:
 
 - `SessionStore` — atomic `append` / `list` / `get` / `readBranchPath` / bounded `searchSessions` / bounded `searchSessions`
 - `RunLedger` — durable run, event, tool-call, and usage rows
@@ -24,12 +24,12 @@ Use this package when you want a small, file-backed persistence layer on Node wi
 - single-writer or low-concurrency deployments
 - integration tests that need durable reopen semantics
 
-Do **not** use it as a substitute for PostgreSQL when you need heavy multi-writer concurrency, server-side pooling, or managed TLS. See [`@arnilo/prism-session-store-postgres`](postgres-persistence.md) for that path.
+Do **not** use it as a substitute for PostgreSQL when you need heavy multi-writer concurrency, server-side pooling, or managed TLS. See [`@arnilo/prism-core/sessions/postgres`](postgres-persistence.md) for that path.
 
 ## Inputs / request
 
 ```ts
-import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
 ```
 
 | Field | Type | Purpose |
@@ -73,7 +73,7 @@ Migrations run automatically on open and are idempotent across reopen. Under the
 
 ```ts
 import { createAgentSession } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
 
 const persistence = createSqlitePersistence({ filename: "./prism.db" });

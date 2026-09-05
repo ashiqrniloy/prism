@@ -125,6 +125,18 @@ The adapter receives these record shapes:
 | `usage` | `Usage` shape: input/output/total/cache tokens, cost, currency. |
 | `recordedAt` | ISO timestamp. |
 
+## Cost/catalog freshness (host adapter)
+
+Prism ships no pricing tables. Cost fields on usage rows come from exactly two sources: the provider's own reported cost (wins when present), or — when the provider reports none — the optional host-supplied `CostCatalog` adapter on `AgentConfig.costCatalog`:
+
+```ts
+import type { CostCatalog } from "@arnilo/prism";
+
+const agent = createAgent({ /* … */, costCatalog: hostCatalog });
+```
+
+`CostCatalog.get(modelId)` returns a [`ModelCost`](#related-apis) quote (repo-wide `per_million_tokens` unit convention) or `undefined` for unknown or stale models — a catalog with expired TTL entries must resolve them to `undefined`, not throw, so freshness lapses degrade to usage-only rows instead of wrong money math. Quotes in any other unit are ignored for the same reason. Catalog lookups happen once per provider turn, only when a cost field is missing, and only when a catalog is configured: without one, zero cost code paths execute. Catalog failures (throwing `get`) also degrade to usage-only. Computed cost flows into `provider_turn` rows and the `run_total` aggregate through the normal no-double-billing rules above.
+
 ## Prompt provenance
 
 Hosts that resolve prompts from the [versioned prompt registry](prompt-registry.md) can stamp each run with the resolved version's identity. `RunOptions.promptVersion` takes `{ name, version, hash }` — an opaque [ref](#related-apis): `name` is the prompt name (1–256 UTF-8 bytes), `version` the immutable version number (integer in `[1, 2147483647]`), and `hash` the prompt store's SHA-256 body hash (`sha256:` plus 64 lowercase hex). The ref is copied verbatim onto the run's start and finish ledger records; when it is omitted nothing is added and behavior is byte-identical. Malformed refs fail closed with a `TypeError` before the run starts.
@@ -165,7 +177,7 @@ const page = await feedback.query({ runId: result.runId, tenantId: "t1", userId:
 await feedback.delete({ id: "fb_1", tenantId: "t1", userId: "u1" });
 ```
 
-Default/hard bounds: comment 4/16 KiB, tags 16/64, scorer/evaluation IDs 16/64 each, metadata 16/64 KiB, query page 100/500; tags are 64 characters and identifiers 128. `@arnilo/prism-evals` may read `queryRuns/queryEvents/queryToolCalls/queryUsage` only through an explicit owner/session/run-scoped trace resolver with finite cursor pages and aggregate bytes. The store redacts comment/tags/metadata after run ownership validation and before persistence. IDs are linked, not scorer payloads. `ProductionPersistenceStore.feedback?` exposes this capability; first-party SQLite/PostgreSQL adapters implement it in schema migration `003_run_feedback` and reject missing/cross-owned runs.
+Default/hard bounds: comment 4/16 KiB, tags 16/64, scorer/evaluation IDs 16/64 each, metadata 16/64 KiB, query page 100/500; tags are 64 characters and identifiers 128. `@arnilo/prism-core/governance/evals` may read `queryRuns/queryEvents/queryToolCalls/queryUsage` only through an explicit owner/session/run-scoped trace resolver with finite cursor pages and aggregate bytes. The store redacts comment/tags/metadata after run ownership validation and before persistence. IDs are linked, not scorer payloads. `ProductionPersistenceStore.feedback?` exposes this capability; first-party SQLite/PostgreSQL adapters implement it in schema migration `003_run_feedback` and reject missing/cross-owned runs.
 
 ## Status transitions
 
@@ -299,7 +311,7 @@ console.log(cacheUsageReport(aggregate?.usage));
 - **Idempotency is host-owned.** The runtime writes the key into `RunRecord.idempotencyKey`; enforcing unique keys and deduplicating retries is the host adapter's responsibility.
 - **Tenant isolation.** `OwnershipScope` fields are copied from the active ownership scope, but the runtime does not enforce tenant isolation for ledger rows. Feedback is stricter: append/query/delete require tenant plus account/user, and first-party stores compare the exact scope to the linked run.
 - **Feedback privacy.** Comments/tags/metadata can contain PII. Configure a feedback redactor, apply retention, and call owned `delete()` for erasure. Never copy comments or tag values into metric labels.
-- **Policy audit is separate.** Enterprise allow/deny/modify/approval rows with evidence refs live in optional `@arnilo/prism-policy`, not `RunLedger`. See [Policy and audit](policy-and-audit.md).
+- **Policy audit is separate.** Enterprise allow/deny/modify/approval rows with evidence refs live in optional `@arnilo/prism-core/governance/policy`, not `RunLedger`. See [Policy and audit](policy-and-audit.md).
 
 ## Optional batching and durability
 

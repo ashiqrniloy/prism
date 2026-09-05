@@ -37,9 +37,6 @@ export type OidcAlgorithm = "RS256" | "ES256";
 /** Decoded JWT payload passed to `mapClaims` / `isRevoked`. */
 export type OidcClaims = Readonly<Record<string, unknown>>;
 
-/** A successful verification: a core verified identity. */
-export type OidcIdentityVerifierResult = AgentIdentity;
-
 /** Host mapping from verified claims to the identity fields Prism needs. */
 interface OidcMappedIdentity {
   readonly tenantId: string;

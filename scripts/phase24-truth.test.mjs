@@ -53,10 +53,10 @@ test("counts match manifests at the truth graph", () => {
     Number(hasSheetsPackage) +
     Number(hasDiagramsPackage);
   if (hasOfficePackage) {
-    // Current package set: delegated CLI adapter removed; provider family has 19 subpaths.
+    // Current package set: delegated CLI adapter removed; provider family has 20 subpaths (plan 062 added ./model-discovery).
     assert.equal(t.counts.publishable, 10);
     assert.equal(t.counts.workspace, 9);
-    assert.equal(t.counts.provider, 19);
+    assert.equal(t.counts.provider, 20);
     assert.equal(t.counts.prismFamily, 3);
     assert.equal(t.counts.capability, 6);
     assert.equal(t.counts.codeWithPeer, 9);
@@ -98,9 +98,9 @@ test("umbrella closures match manifests", () => {
   const t = computePackageTruth();
   const providers = t.umbrella["prism-providers"];
   if (hasCodingToolsPackage) {
-    // Plan 054 Task 6 + plan 055 Task 6: the family ships its 19 adapters as subpaths, not deps.
+    // Plan 054 Task 6 + plan 055 Task 6: the family ships its adapters as subpaths, not deps (20 since plan 062).
     assert.deepEqual(providers.deps, []);
-    assert.equal(providers.subpaths.length, 19);
+    assert.equal(providers.subpaths.length, 20);
     assert.deepEqual(providers.omitsProviders, []);
   } else {
     assert.equal(providers.deps.length, 14);
@@ -168,7 +168,7 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
   const secondPeers = {};
   for (const p of codeWithPeer) {
     const spec = p.peerDependencies["@arnilo/prism"];
-    assert.equal(spec, "^0.4.0", `${p.name} must peer @arnilo/prism@^0.4.0, got ${spec}`);
+    assert.equal(spec, "^0.5.0", `${p.name} must peer @arnilo/prism@^0.5.0, got ${spec}`);
     assert.match(spec, /^\^\d+\.\d+\.\d+$/, `${p.name} peer spec must be a 0.x caret range, got ${spec}`);
     const extra = Object.keys(p.peerDependencies).filter((n) => n.startsWith("@arnilo/prism-"));
     if (extra.length > 0) secondPeers[p.name] = extra;

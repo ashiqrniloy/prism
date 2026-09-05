@@ -49,6 +49,26 @@ Offline conformance is mandatory for every package; credentialed probes are not 
 
 All rows must retain bounded request/response fixtures, abort propagation, provider-owned-header precedence, and fake-secret leak assertions where the package surfaces those values. A successful fake transport proves Prism mapping, not account entitlement or vendor availability.
 
+## Modality conformance matrix (plan 061)
+
+One provider-neutral contract per modality, each with a capability flag, a typed error family, and an offline conformance runner from `@arnilo/prism/testing/provider-conformance`. Fake transports prove Prism mapping and typed-cap behavior only — never account entitlement or vendor availability.
+
+| Contract / runner | Offline evidence (fake transport) | Live probe |
+| --- | --- | --- |
+| `EmbeddingsProvider` — `runEmbeddingsConformance` | batch-cap/empty-input typed errors, index-ordered vectors, dimensions truthfulness, usage | probe pending |
+| `SpeechProvider` — `runSpeechConformance` | input/byte caps typed, audio bytes + mime provenance, first-chunk streaming | probe pending |
+| `TranscriptionProvider` — `runTranscriptionConformance` | audio caps typed, SSE partials, terminal transcript | probe pending |
+| `ImageGenerationProvider` — `runImageGenerationConformance` | prompt/byte caps typed, b64 provenance, edit route | probe pending |
+| `VideoGenerationProvider` — `runVideoGenerationConformance` | submit/status lifecycle, terminal-only resolution, provenance | probe pending |
+| `ModerationProvider` — `runModerationConformance` | empty/oversized typed errors, neutral category mapping + raw passthrough, score range [0,1], no local thresholds | probe pending |
+| `BatchJobsProvider` — `runBatchJobsConformance` | empty/oversized submits typed, opaque ids, state union, `pollBatch` terminal resolution, paged results walk to exhaustion | probe pending |
+
+Failure/cancel terminal transitions for long-running contracts (video, batch) are covered by provider fakes in the adapter suites; `pollBatch` surfaces typed `job_failed`/`job_cancelled`/`job_expired` errors. Live probes stay operator-gated like the package matrix above; ledger rows live in `docs/_evidence/modality-contracts-2026-09-03.md` marked "probe pending" until run.
+
+## Nightly live-provider canary (plan 060)
+
+`.github/workflows/canary-providers.yml` runs nightly (`0 3 * * *`, plus `workflow_dispatch`) against the `live-canaries` environment. Each matrix leg runs one provider's existing live suite (text completion + tool-call/structured legs, `assertNoSecretLeak` inside); legs skip without their key. The provider set is the `PRISM_CANARY_PROVIDERS` repo variable (JSON array, default `["openai"]`). Evidence is per-leg and aggregate job summaries (statuses only — responses are never logged); any failure opens a tracking issue and blocks nothing.
+
 ## Inputs / request
 
 ```ts

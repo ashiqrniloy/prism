@@ -16,8 +16,20 @@ import type {
   ToolResult,
   ToolValidator,
 } from "@arnilo/prism";
-import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import type { AuthInfo, CacheHint, ServerEventBus, ServerNotifier } from "@modelcontextprotocol/server";
 import type { McpClientAuthOptions } from "./auth.js";
+
+/** MCP methods whose 2026-07-28 results carry server cache hints (SEP-2549). */
+export type PrismMcpCacheableMethod =
+  | "tools/list"
+  | "prompts/list"
+  | "resources/list"
+  | "resources/templates/list"
+  | "resources/read"
+  | "server/discover";
+
+/** Per-method cache hints the server emits on cacheable modern results. */
+export type PrismMcpCacheHints = Partial<Record<PrismMcpCacheableMethod, CacheHint>>;
 
 export interface McpStdioTransport {
   readonly type: "stdio";
@@ -120,6 +132,8 @@ export interface CreatePrismMcpServerOptions {
   readonly maxResultBytes?: number;
   readonly maxConcurrentCalls?: number;
   readonly callTimeoutMs?: number;
+  /** Per-method cache hints emitted on cacheable 2026-07-28 results (SEP-2549); absent keeps SDK defaults (ttlMs: 0, private). */
+  readonly cacheHints?: PrismMcpCacheHints;
 }
 
 export interface PrismMcpRequestIdentity {
@@ -147,17 +161,48 @@ export interface CreatePrismMcpWebHandlerOptions {
   ) => PrismMcpRequestIdentity | false | Promise<PrismMcpRequestIdentity | false>;
   /** When set, serves RFC 9728 protected-resource metadata and challenges unauthenticated requests. */
   readonly protectedResource?: McpProtectedResource;
+  /** Legacy-only: configures sessionful 2025-era serving beside the modern handler. */
   readonly sessionIdGenerator?: () => string;
   readonly maxSessions?: number;
+  /** Exact Host header allowlist; checked before body parsing and auth on every request. */
   readonly allowedHosts?: readonly string[];
+  /** Exact Origin allowlist; checked before body parsing and auth on every request. */
   readonly allowedOrigins?: readonly string[];
   readonly maxRequestBytes?: number;
   readonly maxResponseBytes?: number;
   readonly maxConcurrentRequests?: number;
   readonly requestTimeoutMs?: number;
+  /** Ceiling on concurrently open modern `subscriptions/listen` streams (SDK default 1024). */
+  readonly maxSubscriptions?: number;
+  /** SSE keepalive interval in ms for modern subscription streams; 0 disables (SDK default 15000). */
+  readonly keepAliveMs?: number;
 }
 
-export type PrismMcpWebHandler = (request: Request) => Promise<Response>;
+/**
+ * Callable web handler with SDK lifecycle/notification properties. The call
+ * signature stays source-compatible with pre-2.0 handlers; `fetch` is the
+ * same function as the web-standard face, `close` tears down both eras, and
+ * `notify`/`bus` publish to open modern `subscriptions/listen` streams.
+ */
+export type PrismMcpWebHandler = ((request: Request) => Promise<Response>) & {
+  readonly fetch: (request: Request) => Promise<Response>;
+  close(): Promise<void>;
+  readonly notify: ServerNotifier;
+  readonly bus: ServerEventBus;
+};
+
+/** Options for {@linkcode servePrismMcpStdio} (dual-era stdio serving). */
+export interface ServePrismMcpStdioOptions {
+  /** `serve` (default) pins a 2025-era instance for a legacy opening; `reject` answers it with the unsupported-protocol-version error. */
+  readonly legacy?: "serve" | "reject";
+  /** Ceiling on concurrently open `subscriptions/listen` streams on the connection (SDK default 1024). */
+  readonly maxSubscriptions?: number;
+}
+
+/** Handle returned by {@linkcode servePrismMcpStdio}. */
+export interface PrismMcpStdioHandle {
+  close(): Promise<void>;
+}
 
 export type AttachMcpToolBridgeOptions = Omit<ConnectMcpToolsOptions, "transport">;
 
@@ -225,6 +270,16 @@ export interface ConnectMcpToolsOptions {
   readonly effect?: McpToolEffectPolicy;
   /** Explicitly negotiate `io.modelcontextprotocol/ui`; false/omitted preserves normal MCP behavior. */
   readonly mcpApps?: boolean;
+  /**
+   * Client-side protocol-era negotiation for bridge-owned clients.
+   *
+   * - `"auto"` (default): probe the server with `server/discover` once at connect; definitive
+   *   modern evidence selects the 2026-07-28 era, anything unrecognized falls back to the plain
+   *   2025 legacy `initialize` handshake. Adds one bounded discovery probe per connection.
+   * - `"legacy"`: no probe; byte-identical 2025 connect sequence.
+   * - `{ pin: "2026-07-28" }`: modern era at exactly the pinned revision; anything else fails loudly.
+   */
+  readonly protocolVersion?: McpProtocolNegotiation;
   readonly listCacheTtlMs?: number;
   readonly callTimeoutMs?: number;
   readonly maxResultBytes?: number;
@@ -240,10 +295,18 @@ export interface ConnectMcpToolsOptions {
   readonly signal?: AbortSignal;
 }
 
+/** Protocol-era negotiation selector (see {@linkcode ConnectMcpToolsOptions.protocolVersion}). */
+export type McpProtocolNegotiation = "legacy" | "auto" | { readonly pin: string };
+
+/**
+ * A host-approved filesystem root. Deprecated with the `roots` capability in MCP 2026-07-28 (SEP-2577).
+ * @deprecated Server-to-client `roots/list` is deprecated in MCP 2026-07-28 and remains in the spec for at least twelve months; prefer explicit tool arguments for host-owned state. Kept for existing legacy callers.
+ */
 export interface McpRoot {
   readonly uri: string;
   readonly name?: string;
 }
+/** @deprecated Server-to-client sampling is deprecated in MCP 2026-07-28 (SEP-2577); kept for legacy compatibility only. */
 export interface PrismMcpSamplingRequest {
   readonly params: unknown;
   readonly signal: AbortSignal;
@@ -259,9 +322,23 @@ export interface PrismMcpElicitationResult extends Readonly<Record<string, unkno
 }
 
 export interface ConnectMcpCapabilitiesOptions extends ConnectMcpToolsOptions {
+  /**
+   * Host-approved filesystem roots for server-to-client `roots/list`.
+   * @deprecated Deprecated in MCP 2026-07-28 (SEP-2577) and retained only for existing legacy callers; prefer explicit tool arguments. Synapta adds nothing on this surface.
+   */
   readonly roots?: () => readonly McpRoot[] | Promise<readonly McpRoot[]>;
+  /**
+   * Host-owned sampling (model/credentials stay with the host) for server-to-client `sampling/createMessage`.
+   * @deprecated Deprecated in MCP 2026-07-28 (SEP-2577) and retained only for existing legacy callers; prefer host-side model calls exposed as tools. Synapta adds nothing on this surface.
+   */
   readonly sampling?: (request: PrismMcpSamplingRequest) => unknown | Promise<unknown>;
+  /** Active capability: form/URL elicitation, fulfilled through SDK MRTR auto-fulfilment on the modern era and direct server-to-client dispatch on legacy. */
   readonly elicitation?: (request: PrismMcpElicitationRequest) => unknown | Promise<unknown>;
+  /**
+   * Maximum multi-round-trip (MRTR) fulfilment rounds per operation when a modern server answers `input_required`.
+   * Defaults to 10 (the SDK's own default); the hard cap is 10, so this option only ever tightens the bound.
+   */
+  readonly maxMrtrRounds?: number;
   readonly maxCapabilityBytes?: number;
 }
 
@@ -276,6 +353,10 @@ export interface McpCapabilityBridge extends McpToolBridge {
 
 export interface McpToolBridge {
   readonly tools: readonly ToolDefinition[];
+  /** Negotiated protocol era after connect: `"modern"` (2026-07-28+) or `"legacy"` (2025-era initialize). */
+  readonly protocolEra?: "legacy" | "modern";
+  /** Negotiated protocol revision (e.g. `"2025-11-25"` legacy, `"2026-07-28"` modern). */
+  readonly protocolVersion?: string;
   /** Present only when `mcpApps: true` negotiated the MCP Apps extension. */
   readonly apps?: McpAppsBridge;
   refresh(): Promise<void>;

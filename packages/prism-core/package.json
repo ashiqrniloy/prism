@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-core",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Core runtime, sessions, governance, credentials, enterprise state, and work integrations family package for Prism.",
   "type": "module",
   "exports": {
@@ -101,19 +101,21 @@
     "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node ../../scripts/with-build-lock.mjs node --test dist/**/__tests__/*.test.js",
+    "test:postgres": "node ../../scripts/require-postgres-url.mjs && node ../../scripts/with-build-lock.mjs node --test dist/sessions/postgres/__tests__/*.test.js dist/enterprise/postgres/__tests__/*.test.js",
+    "test:nats": "node ../../scripts/require-nats-url.mjs && node ../../scripts/with-build-lock.mjs node --test dist/sessions/nats/__tests__/nats.integration.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@napi-rs/keyring": "^1.3.0",
+    "@napi-rs/keyring": "^2.0.0",
     "ajv": "^8.17.1"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.4.0",
+    "@arnilo/prism": "^0.5.0",
+    "@arnilo/prism-memory": "^0.5.0",
     "@nats-io/jetstream": "^3.4.0",
     "@nats-io/transport-node": "^3.4.0",
-    "better-sqlite3": "^12.11.1",
-    "pg": "^8.22.0",
-    "@arnilo/prism-memory": "^0.4.0"
+    "better-sqlite3": "^13.0.3",
+    "pg": "^8.22.0"
   },
   "peerDependenciesMeta": {
     "@nats-io/jetstream": {
@@ -138,9 +140,9 @@
     "@nats-io/jetstream": "^3.4.0",
     "@nats-io/transport-node": "^3.4.0",
     "@opentelemetry/api": "^1.9.0",
-    "@types/better-sqlite3": "^7.6.13",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/pg": "^8.11.11",
-    "better-sqlite3": "^12.11.1",
+    "better-sqlite3": "^13.0.3",
     "pg": "^8.22.0"
   },
   "engines": {

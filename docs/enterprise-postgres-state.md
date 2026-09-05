@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-enterprise-postgres` is one optional PostgreSQL composition for existing enterprise state seams:
+`@arnilo/prism-core/enterprise/postgres` is one optional PostgreSQL composition for existing enterprise state seams:
 
 | State | Composition property | Durable behavior |
 | --- | --- | --- |
@@ -14,7 +14,7 @@
 | ERP messaging | `erpMessaging` | Transactional outbox/inbox markers plus bounded, tenant-scoped at-least-once dispatch (migration 004). |
 | Multi-party approvals | `createPostgresApprovalStore({ pool, schema, authority })` | Immutable approval requests, role/quorum decisions, revocation, bounded delegation, and atomic grant consumption (migration 005). |
 
-`createPostgresEnterpriseState()` opens a host-supplied or adapter-owned `pg` pool, verifies/applies checksum-protected enterprise migrations (`001_enterprise_state`, `002_tool_effects`, `003_router_reservations`, `004_erp_messaging`, `005_erp_approvals`), and returns those stores plus explicit cleanup and close operations. Importing it performs no I/O. It is separate from session/run persistence in [`@arnilo/prism-session-store-postgres`](postgres-persistence.md).
+`createPostgresEnterpriseState()` opens a host-supplied or adapter-owned `pg` pool, verifies/applies checksum-protected enterprise migrations (`001_enterprise_state`, `002_tool_effects`, `003_router_reservations`, `004_erp_messaging`, `005_erp_approvals`), and returns those stores plus explicit cleanup and close operations. Importing it performs no I/O. It is separate from session/run persistence in [`@arnilo/prism-core/sessions/postgres`](postgres-persistence.md).
 
 ## When to use it
 
@@ -25,7 +25,7 @@ Use memory/file stores only for tests, demos, or a deliberately single-process h
 ## Inputs / request
 
 ```ts
-import { createPostgresEnterpriseState } from "@arnilo/prism-enterprise-postgres";
+import { createPostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
 import { Pool } from "pg";
 
 const pool = new Pool({
@@ -95,7 +95,7 @@ A migration creates `prism_policy_decisions`, `prism_evaluations`, `prism_work_i
 ## Implementation example
 
 ```ts
-import { createPostgresErpMessaging } from "@arnilo/prism-enterprise-postgres";
+import { createPostgresErpMessaging } from "@arnilo/prism-core/enterprise/postgres";
 
 const messaging = createPostgresErpMessaging({ pool, schema: "prism" });
 const client = await pool.connect();
@@ -141,7 +141,7 @@ await messaging.dispatcher.replay({
 
 ```ts
 import type { AgentIdentity } from "@arnilo/prism";
-import { createPostgresEnterpriseState, type PostgresEnterpriseState } from "@arnilo/prism-enterprise-postgres";
+import { createPostgresEnterpriseState, type PostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
 
 const identity: AgentIdentity = {
   tenantId: "tenant-1",
@@ -202,13 +202,13 @@ export async function recordEnterpriseState(state: PostgresEnterpriseState) {
 
 ## Extension and configuration notes
 
-- `createModelRouter({ resolver, stateStore: state.modelRouter })` keeps allow-list, residency, fallback, and diagnostics behavior in `@arnilo/prism-model-router`; this package only supplies durable state. Router admission reservations (`reserveBudget`/`commitBudget`/`releaseBudget` on `state.modelRouter`) live in the `reservations` JSONB column of `prism_model_router_budgets`: one atomic UPSERT per admission, fencing-token-guarded commit/release in a SERIALIZABLE transaction, and TTL reconciliation as unknown usage; see [Model routing](model-routing.md).
+- `createModelRouter({ resolver, stateStore: state.modelRouter })` keeps allow-list, residency, fallback, and diagnostics behavior in `@arnilo/prism-core/governance/model-router`; this package only supplies durable state. Router admission reservations (`reserveBudget`/`commitBudget`/`releaseBudget` on `state.modelRouter`) live in the `reservations` JSONB column of `prism_model_router_budgets`: one atomic UPSERT per admission, fencing-token-guarded commit/release in a SERIALIZABLE transaction, and TTL reconciliation as unknown usage; see [Model routing](model-routing.md).
 - `createPostgresErpMessaging({ pool, schema? })` is the direct messaging composition. `outbox.append` and `inbox.record` accept a caller-owned `PoolClient`; the host must put them in the same transaction as its local mutation. The dispatcher owns only short claim/transition transactions and never invokes business callbacks or stores executable handlers.
 - `createPostgresApprovalStore({ pool, schema?, authority })` is the direct approval composition (migration 005). `authority.resolveRoles(actor, request)` and `policyRevision` are host-owned; Prism persists only accepted role grants and delegation chains. `decide`/`revoke` lock the request row and revision-check the terminal transition in one transaction. `consume` accepts an optional caller-owned `client`; grant consumption and the protected action commit (or roll back) together.
 - Rate/budget/circuit tables are capped like the memory store: `consumeRate`/`readBudget`/`addUsage`/`reserveBudget` accept `maxRateKeys`/`maxBudgetKeys` (the router passes its resolved limits) and evict the least-recently-used row on new-key insert — never the row just inserted, never a budget row holding an active reservation — else fail closed with `ERR_PRISM_MODEL_ROUTER_STATE`. Cleanup prunes expired reservations within its bounded batch.
 - Policy/evaluation/query public contracts stay in their owning packages. This package exports `createPostgresEnterpriseState`, `createPostgresApprovalStore`, `createPostgresErpMessaging`, their options/result/types, and `EnterprisePostgresError`; it has no SQL, DDL, codec, queryable, or migration subpath.
 - The fixed schema has no generic key/value table and no background cleanup scheduler. Schedule `state.cleanup()` from an authorized host job, size its bounded batch for the deployment, and monitor unknown work rows for reconciliation. Run protected integration checks with `PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres`; the command rejects an absent URL instead of silently skipping database coverage.
-- The OPA adapter (`@arnilo/prism-policy/opa`, 0.0.28) records decisions into the same `state.policy` store unchanged via `evaluateAndAppend` — see [Policy and audit](policy-and-audit.md#opa-external-policy-adapter-arniloprism-policyopa-008).
+- The OPA adapter (`@arnilo/prism-core/governance/policy/opa`, 0.0.28) records decisions into the same `state.policy` store unchanged via `evaluateAndAppend` — see [Policy and audit](policy-and-audit.md#opa-external-policy-adapter-arniloprism-policyopa-008).
 - Request-path state SQL uses `SELECT`, `INSERT`, `UPDATE`, and `DELETE` on the eight state tables. The open/migration lifecycle additionally needs schema/catalog/advisory-lock and DDL permissions. Use a deployment migration principal for that lifecycle and a least-privilege request role for request traffic; this release intentionally does not ship a migration CLI or worker.
 
 ## Security and performance notes

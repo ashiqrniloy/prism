@@ -8,7 +8,7 @@ The `prism` bin is a thin adapter over `AgentSession` plus a tiny project scaffo
 - `prism --mode json -p "prompt"`: write one normalized event envelope per line.
 - `prism --mode rpc`: read LF-delimited JSON requests from stdin and write correlated JSON responses/events to stdout.
 - `prism init <dir>`: create a minimal TypeScript project with one selected provider, `.env.example`, and one offline mock test.
-- `prism dev`: boot the loopback dev inspector over the scaffolded agent (delegates into `@arnilo/prism-dev` when resolvable; plan 040 Task 4).
+- `prism dev`: boot the loopback dev inspector over the scaffolded agent (delegates into `@arnilo/prism-coding-tools/dev` when resolvable; plan 040 Task 4).
 
 It does not add a TUI, app tools, provider globals, extension discovery, resource discovery, or credential storage. `init` uses Node standard-library filesystem APIs and checked-in templates only — no interactive prompts or template-engine dependency.
 
@@ -32,12 +32,12 @@ prism init <dir> [--template <name>] [--list-templates] [--provider <name>] [--w
 | `--template <name>` | Template starter name (`init` [default], `deep-research`). |
 | `--list-templates` | List available starter templates from the templates gallery. |
 | `--provider <name>` | `mock` (default), `openai`, `openrouter`, `kimi`, `zai`, `opencode-go`, or `neuralwatt`. |
-| `--with-workflows` | Add `@arnilo/prism-workflows` and `src/workflows-example.ts`. |
-| `--with-evals` | Add `@arnilo/prism-evals` and `src/evals-example.ts`. |
+| `--with-workflows` | Add `@arnilo/prism-core/runtime/workflows` and `src/workflows-example.ts`. |
+| `--with-evals` | Add `@arnilo/prism-core/governance/evals` and `src/evals-example.ts`. |
 | `--force` | Overwrite generated files when the destination already exists. |
 | `-h`, `--help` | Print init usage. |
 
-Default generation (`init` template) installs only `@arnilo/prism` (mock provider). Selecting a real provider adds exactly one dependency: the `@arnilo/prism-providers` family package (the selected adapter imports from `@arnilo/prism-providers/<id>`). Specifying `--template deep-research` scaffolds a flagship deep research agent pipeline (`@arnilo/prism`, `@arnilo/prism-web-tools`, `@arnilo/prism-rag`, `@arnilo/prism-workflows`) with planning, attributable citations, bounded refine loops, and HITL decision clarification. Rerunning without `--force` refuses non-empty destinations and existing generated files. `.env.example` contains placeholders only; `.gitignore` excludes `.env` and local stores.
+Default generation (`init` template) installs only `@arnilo/prism` (mock provider). Selecting a real provider adds exactly one dependency: the `@arnilo/prism-providers` family package (the selected adapter imports from `@arnilo/prism-providers/<id>`). Specifying `--template deep-research` scaffolds a flagship deep research agent pipeline (`@arnilo/prism`, `@arnilo/prism-web-tools`, `@arnilo/prism-memory/rag`, `@arnilo/prism-core/runtime/workflows`) with planning, attributable citations, bounded refine loops, and HITL decision clarification. Rerunning without `--force` refuses non-empty destinations and existing generated files. `.env.example` contains placeholders only; `.gitignore` excludes `.env` and local stores.
 
 
 ### `prism providers add` (0.1.7)
@@ -78,7 +78,7 @@ stub with docs-verified values before publishing.
 prism dev [--port <n>] [--host <addr>]
 ```
 
-Runs the local dev inspector over the current `prism init` scaffold's agent. Delegation, not duplication: the subcommand resolves `@arnilo/prism-dev` from the project's own `node_modules` (falling back to the CLI's own installation) and hands over to its `runDevCli` entry; unresolvable → install hint, exit `2`.
+Runs the local dev inspector over the current `prism init` scaffold's agent. Delegation, not duplication: the subcommand resolves `@arnilo/prism-coding-tools/dev` from the project's own `node_modules` (falling back to the CLI's own installation) and hands over to its `runDevCli` entry; unresolvable → install hint, exit `2`.
 
 | Flag / arg | Purpose |
 | --- | --- |
@@ -222,7 +222,7 @@ CLI/RPC are adapters over `AgentSession`. They do not scan packages, import exte
 
 RPC `command` executes only explicitly registered `CommandDefinition` values. `setModel` stores a model override for later prompt/follow-up calls. `compact`, `switchSession`, `forkSession`, `cloneSession`, and `checkout` call the existing session APIs.
 
-Optional workflow control (from `@arnilo/prism-workflows`) registers `workflow.start`, `workflow.enqueue`, `workflow.replay`, `workflow.status`, `workflow.list`, `workflow.cancel`, and `workflow.resume` via `createWorkflowCommands({ workflows, checkpoints, runOptions? })`. Supplying an ownership-scoped `schedules` service additionally registers `schedule.create`, `schedule.list`, `schedule.pause`, `schedule.resume`, `schedule.trigger`, and `schedule.delete`. Pass the returned `CommandDefinition[]` into `runRpcServer({ commands })` the same way as observational-memory commands. Cancel aborts in-process runs through the package active-run registry; orphaned durable checkpoints still marked `running` are fail-closed to `aborted`.
+Optional workflow control (from `@arnilo/prism-core/runtime/workflows`) registers `workflow.start`, `workflow.enqueue`, `workflow.replay`, `workflow.status`, `workflow.list`, `workflow.cancel`, and `workflow.resume` via `createWorkflowCommands({ workflows, checkpoints, runOptions? })`. Supplying an ownership-scoped `schedules` service additionally registers `schedule.create`, `schedule.list`, `schedule.pause`, `schedule.resume`, `schedule.trigger`, and `schedule.delete`. Pass the returned `CommandDefinition[]` into `runRpcServer({ commands })` the same way as observational-memory commands. Cancel aborts in-process runs through the package active-run registry; orphaned durable checkpoints still marked `running` are fail-closed to `aborted`.
 
 Suspended workflow resume parameters are `{ workflowId, runId, decision: "approve" | "deny", input?, expectedVersion, ownership? }`. Read `expectedVersion` from `workflow.status`/`workflow.list`; stale or duplicate decisions fail checkpoint CAS before node execution. Ordinary recovery resume for failed/aborted runs remains backward-compatible without decision fields.
 

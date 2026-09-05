@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-policy` exports tenant-scoped audit records as signed, hash-chained
+`@arnilo/prism-core/governance/policy` exports tenant-scoped audit records as signed, hash-chained
 batches: each record envelope is canonicalized (RFC 8785 semantics), hashed with
 SHA-256 including the prior digest, so records form a tamper-evident chain. A
 batch of chained records is wrapped in a manifest that a host-provided
@@ -69,7 +69,7 @@ canonical `record` payload. `verifyAuditBatch` returns `{ ok, errors, batch }`.
 ## Request/response example
 
 ```ts
-import { createAuditExporter, createMemoryAuditCursorStore } from "@arnilo/prism-policy";
+import { createAuditExporter, createMemoryAuditCursorStore } from "@arnilo/prism-core/governance/policy";
 
 const exporter = createAuditExporter({
   source,                                 // host: tenant-scoped record pages
@@ -87,7 +87,7 @@ const result = await exporter.exportNext({ tenantId: "acme", maxRecords: 1000 })
 
 ```ts
 import { readFileSync } from "node:fs";
-import { verifyAuditBatch } from "@arnilo/prism-policy";
+import { verifyAuditBatch } from "@arnilo/prism-core/governance/policy";
 
 const artifactBytes = new Uint8Array(readFileSync("./acme-000001.json"));
 const verified = verifyAuditBatch({

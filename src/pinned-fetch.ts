@@ -135,7 +135,11 @@ export async function requestPinned(
       {
         method,
         headers: Object.fromEntries(headers.entries()),
-        signal: init?.signal ?? undefined,
+        // NOTE: the caller signal is NOT passed as the http.request `signal` option:
+        // Node's internal abort wiring destroys the (possibly keep-alive, already
+        // completed) socket with the abort reason, surfacing it as an unhandled
+        // socket 'error' when the response resolved and nothing listens anymore.
+        // Abort is handled manually below with a reason-less destroy.
         lookup: ((_hostname, options, callback) => {
           if (options.all) callback(null, [{ address: address.address, family: address.family }]);
           else callback(null, address.address, address.family);
@@ -161,8 +165,13 @@ export async function requestPinned(
                   controller.error(error);
                 }
               },
-              cancel(reason) {
-                incoming.destroy(reason instanceof Error ? reason : undefined);
+              cancel() {
+                // Destroy WITHOUT the abort reason: once the response resolved,
+                // nothing listens on the socket, and propagate-destroy(reason)
+                // surfaces the DOMException as an unhandled socket 'error'
+                // (SDK transports abort their controller on close()). Readers
+                // that still pull observe EOF via the iterator.
+                incoming.destroy();
               },
             });
         resolve(
@@ -175,9 +184,30 @@ export async function requestPinned(
       },
     );
     nodeRequest.on("error", reject);
+    if (init?.signal) {
+      const signal = init.signal;
+      if (signal.aborted) {
+        reject(abortReason(signal));
+        nodeRequest.destroy();
+      } else {
+        signal.addEventListener(
+          "abort",
+          () => {
+            nodeRequest.destroy();
+            reject(abortReason(signal));
+          },
+          { once: true },
+        );
+      }
+    }
     if (body) nodeRequest.end(body);
     else nodeRequest.end();
   });
+}
+
+function abortReason(signal: AbortSignal): Error {
+  const reason = signal.reason;
+  return reason instanceof Error ? reason : new Error(String(reason));
 }
 
 async function requestBody(body: BodyInit | null | undefined, errorPrefix: string): Promise<Uint8Array | undefined> {

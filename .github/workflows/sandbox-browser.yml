@@ -1,6 +1,8 @@
 name: sandbox-browser
 
 on:
+  push:
+    branches: [main, master]
   schedule:
     - cron: "17 6 * * 3"
   workflow_dispatch:
@@ -15,6 +17,8 @@ concurrency:
 jobs:
   protected-matrix:
     environment: sandbox-browser
+    # Supported Linux runner: ubuntu-latest ships Docker Engine (protected Docker
+    # matrix) and unshare/netns (native T9 capability evidence). No self-hosted runner.
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -34,13 +38,17 @@ jobs:
           npm run build -w @arnilo/prism-evals
           npm run build -w @arnilo/prism-workflows
           npm run build -w @arnilo/prism-coding-agent
-          npm run build -w @arnilo/prism-coding-security
+          npm run build -w @arnilo/prism-coding-tools
           npm run build -w @arnilo/prism-web-tools
           npm run build -w @arnilo/prism-diagrams
       - name: network-free adversarial eval fixtures
         run: |
           npm test -w @arnilo/prism-coding-agent -- --test-name-pattern "adversarial"
           npm test -w @arnilo/prism-web-tools -- --test-name-pattern "adversarial"
+      - name: sandbox isolation + egress denial legs (network-free)
+        run: |
+          npm test -w @arnilo/prism-coding-tools -- --test-name-pattern "egress|dns pin"
+          npm test -w @arnilo/prism-web-tools -- --test-name-pattern "browser Task 6 policy"
       - name: protected Docker sandbox matrix
         if: ${{ vars.PRISM_TEST_DOCKER_IMAGE != '' }}
         timeout-minutes: 5
@@ -49,18 +57,21 @@ jobs:
           PRISM_TEST_DOCKER_BIN: /usr/bin/docker
           PRISM_TEST_DOCKER_IMAGE: ${{ vars.PRISM_TEST_DOCKER_IMAGE }}
           PRISM_TEST_DOCKER_USER: ${{ vars.PRISM_TEST_DOCKER_USER }}
-        run: npm test -w @arnilo/prism-coding-security -- --test-name-pattern "protected Docker"
+        run: npm test -w @arnilo/prism-coding-tools -- --test-name-pattern "protected Docker"
       - name: native sandbox capability evidence (plan 020 Task 5)
         timeout-minutes: 5
         run: |
           set +e
-          out=$(npm test -w @arnilo/prism-coding-security -- --test-name-pattern "T9: native reports truthful capabilities" 2>&1)
+          out=$(npm test -w @arnilo/prism-coding-tools 2>&1)
           rc=$?
           set -e
-          printf '%s' "$out" | tail -20
-          if [ "$rc" -ne 0 ]; then
+          printf '%s' "$out" | grep "T9: native reports truthful capabilities" | tail -5
+          # Match the T9 line itself: node --test ignores --test-name-pattern after
+          # file args, so the full suite runs and unrelated skips must not count.
+          t9=$(printf '%s' "$out" | grep "T9: native reports truthful capabilities" || true)
+          if [ "$rc" -ne 0 ] || [ -z "$t9" ]; then
             echo "native_capability=failed" >> "$GITHUB_ENV"
-          elif printf '%s' "$out" | grep -qi 'skipped'; then
+          elif printf '%s' "$t9" | grep -q "# SKIP"; then
             echo "native_capability=skipped" >> "$GITHUB_ENV"
           else
             echo "native_capability=passed" >> "$GITHUB_ENV"
@@ -76,6 +87,12 @@ jobs:
             exit 1
           fi
           echo "0.2.0 blocker gate: Docker + native capability evidence present"
+      - name: cache Playwright chromium
+        if: ${{ vars.PRISM_ENABLE_PLAYWRIGHT_GATE == '1' }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-1.61.0
       - name: install Playwright chromium (host-pinned)
         if: ${{ vars.PRISM_ENABLE_PLAYWRIGHT_GATE == '1' }}
         run: npx --no-install playwright-core install chromium

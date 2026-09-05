@@ -22,22 +22,22 @@ function loadManifests() {
   return pkgs;
 }
 
-test("phase34 freeze (plan 054 Task 9): every active manifest is 0.4.0 (plan 055 Task 6 cut: providers at 0.4.1)", () => {
+test("phase34 freeze (plan 054 Task 9): every active manifest is 0.5.0 (plan 058 task 3 lockstep cut)", () => {
   for (const pkg of loadManifests()) {
     // Plan 055 Task 6 (Decision B changed-package cut): the provider family moved to
     // 0.4.1 for the two new adapters; every other manifest stays 0.4.0.
-    const expected = pkg.name === "@arnilo/prism-providers" ? "0.4.1" : "0.4.0";
+    const expected = "0.5.0";
     assert.equal(pkg.version, expected, `${pkg.name} expected ${expected}, got ${pkg.version}`);
   }
 });
 
-test("phase34 freeze (plan 054 Task 9): internal @arnilo ranges are ^0.4.0", () => {
+test("phase34 freeze (plan 054 Task 9): internal @arnilo ranges are ^0.5.0", () => {
   for (const pkg of loadManifests()) {
     for (const field of ["dependencies", "peerDependencies", "optionalDependencies"]) {
       for (const [name, range] of Object.entries(pkg[field] ?? {})) {
         if (!name.startsWith("@arnilo/")) continue;
         if (String(range).startsWith("file:")) continue;
-        assert.equal(range, "^0.4.0", `${pkg.name} ${field}.${name} is ${range}`);
+        assert.equal(range, "^0.5.0", `${pkg.name} ${field}.${name} is ${range}`);
       }
     }
   }

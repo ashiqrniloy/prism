@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 
 // Root manifest version drives the core tarball name (arnilo-prism-<v>.tgz).
 const ROOT_VERSION = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
-// Plan 055 Task 6 (Decision B changed-package cut): the provider family carries its own 0.4.1.
+// Plan 055 Task 6 (Decision B changed-package cut): all manifests carry the 0.5.0 lockstep cut.
 const PROVIDERS_VERSION = JSON.parse(readFileSync(new URL("../../packages/prism-providers/package.json", import.meta.url), "utf8")).version;
 
 import { dirname, join } from "node:path";
@@ -281,8 +281,8 @@ import {
 import { createPrismHandler } from "@arnilo/prism-core/runtime/server";
 import { createPrismMcpServer } from "@arnilo/prism-mcp";
 import { createA2AClient, createA2AHandler, createSupervisor } from "@arnilo/prism-core/runtime/supervisor";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client } from "@modelcontextprotocol/client";
+import { InMemoryTransport } from "@modelcontextprotocol/client";
 
 const ownership = { tenantId: "packed", userId: "operator" };
 const fakeModel = {
@@ -823,7 +823,7 @@ describe("install smoke (fresh offline tarball install)", () => {
       `expected 'arnilo-prism-${ROOT_VERSION}.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
-    // The umbrella tarballs must be present too (providers carries its own 0.4.1 cut).
+    // The umbrella tarballs must be present too (providers carries the 0.5.0 lockstep cut).
     for (const meta of [`arnilo-prism-providers-${PROVIDERS_VERSION}.tgz`, `arnilo-prism-office-${ROOT_VERSION}.tgz`]) {
       assert.ok(result.tarballNames.includes(meta), `missing family tarball ${meta}`);
     }
@@ -837,16 +837,16 @@ describe("peer-version policy (plan 030 Task 9, Decision B: caret ranges)", () =
   const stage = mkdtempSync(join(tmpdir(), "prism-peer-mix-"));
   after(() => rmSync(stage, { recursive: true, force: true }));
 
-  it("a peer range outside the 0.4.x window fails clearly with npm ERESOLVE", () => {
+  it("a peer range outside the 0.5.x window fails clearly with npm ERESOLVE", () => {
     // Fake next-minor adapter: coding-tools with version + core peer outside
     // the current caret window — the only difference from the real tarball.
-    const fakeVersion = "0.5.0";
+    const fakeVersion = "0.6.0";
     const fakeDir = join(stage, "fake");
     cpSync(join(repoRoot, "packages", "prism-coding-tools"), fakeDir, { recursive: true });
     const manifestPath = join(fakeDir, "package.json");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     manifest.version = fakeVersion;
-    manifest.peerDependencies["@arnilo/prism"] = "^0.5.0";
+    manifest.peerDependencies["@arnilo/prism"] = "^0.6.0";
     writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     for (const [cwd, dest] of [
       [fakeDir, stage],
@@ -883,8 +883,8 @@ describe("peer-version policy (plan 030 Task 9, Decision B: caret ranges)", () =
     assert.notEqual(mix.status, 0, "an unsupported peer mixture must fail the install");
     assert.ok(mix.stderr.includes("ERESOLVE"), `expected npm ERESOLVE, got:\n${mix.stdout}${mix.stderr}`);
     assert.ok(
-      mix.stderr.includes('@arnilo/prism@"^0.5.0"'),
-      `expected the conflicting ^0.5.0 peer named, got:\n${mix.stdout}${mix.stderr}`,
+      mix.stderr.includes('@arnilo/prism@"^0.6.0"'),
+      `expected the conflicting ^0.6.0 peer named, got:\n${mix.stdout}${mix.stderr}`,
     );
   });
 });

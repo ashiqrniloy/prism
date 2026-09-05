@@ -15,8 +15,6 @@ export const CAVEMAN_SKILL_NAMES = [
   "cavecrew",
 ] as const;
 
-export type CavemanSkillName = (typeof CAVEMAN_SKILL_NAMES)[number];
-
 /** O(skills) scan. Dirs without SKILL.md (engine junk) skipped, not fatal. */
 export function loadUpstreamSkills(upstreamRoot: string): Skill[] {
   const skillsDir = join(upstreamRoot, SKILLS_DIR_NAME);

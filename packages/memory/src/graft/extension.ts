@@ -11,18 +11,9 @@ import { createGraftSkill } from "./skills.js";
 import { persistGraftPatch, resolveLatestGraftState } from "./state.js";
 import { defineGraftTools, shouldRegisterPullTools } from "./tools.js";
 import type { GraftExtensionOptions, GraftFreshness, GraftMode } from "./types.js";
-import { type ResolvedGraftCli, resolveGraftCli } from "./upstream.js";
+import { resolveGraftCli } from "./upstream.js";
 
 export const GRAFT_EXTENSION_NAME = "@arnilo/prism-memory/graft";
-
-export interface ResolvedGraftExtension {
-  readonly cli: ResolvedGraftCli;
-  readonly mode: GraftMode;
-  readonly projectDir: string;
-  readonly timeoutMs: number;
-  readonly maxResultBytes: number;
-  readonly env: Readonly<Record<string, string>>;
-}
 
 /** Resolve options to concrete values (single source for setup and tests). */
 export function resolveExtension(options: GraftExtensionOptions) {

@@ -78,6 +78,8 @@ export {
   createCacheTelemetry,
   DEFAULT_CACHE_TELEMETRY_CAP,
 } from "./cache-telemetry.js";
+export type { ProviderCapture, ProviderCaptureEntry, ProviderCaptureOptions, ProviderCapturePolicy } from "./capture.js";
+export { createProviderCapture } from "./capture.js";
 export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
 export { CHECKPOINT_CONFLICT_CODE, CheckpointConflictError, createMemoryCheckpointStore } from "./checkpoints.js";
 export type { DefaultCompactionStrategyOptions } from "./compaction.js";
@@ -185,7 +187,15 @@ export {
   AgentLoopStateError,
   AgentRunError,
   AgentRunStateError,
+  assertBatchJobsSupported,
+  assertEmbeddingsSupported,
+  assertImageGenerationSupported,
+  assertModerationSupported,
   assertSessionMetadataKey,
+  assertSpeechSupported,
+  assertTranscriptionSupported,
+  assertVideoGenerationSupported,
+  BatchJobsError,
   DEFAULT_MAX_PENDING_DECISIONS,
   DEFAULT_MAX_PENDING_STEER_BYTES,
   DEFAULT_MAX_PENDING_STEERS,
@@ -198,6 +208,7 @@ export {
   DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
   DEFAULT_MAX_STICKY_DECISIONS,
   DEFAULT_SESSION_SEARCH_LIMIT,
+  EmbeddingsError,
   HARD_MAX_ACTION_CONSTRAINT_BYTES,
   HARD_MAX_ACTION_CONSTRAINTS,
   HARD_MAX_DECISION_REASON_BYTES,
@@ -214,6 +225,8 @@ export {
   HARD_MAX_SESSION_SEARCH_QUERY_BYTES,
   HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES,
   HARD_MAX_STICKY_DECISIONS,
+  ImageGenerationError,
+  isBatchJobTerminal,
   isSessionAppendConflict,
   isSessionEntryKind,
   isSessionMetadataConflict,
@@ -223,6 +236,15 @@ export {
   MAX_ATTRIBUTION_DEPTH,
   MAX_DECISION_REASON_BYTES,
   MAX_ELICITATION_BYTES,
+  ModerationError,
+  modelSupportsBatchJobs,
+  modelSupportsEmbeddings,
+  modelSupportsImageGeneration,
+  modelSupportsModeration,
+  modelSupportsSpeech,
+  modelSupportsTranscription,
+  modelSupportsVideoGeneration,
+  pollBatch,
   resolveSessionSearchQuery,
   SESSION_APPEND_CONFLICT_CODE,
   SESSION_ENTRY_KINDS,
@@ -233,6 +255,9 @@ export {
   SessionAppendConflictError,
   SessionMetadataConflictError,
   SessionSearchUnsupportedError,
+  SpeechError,
+  TranscriptionError,
+  VideoGenerationError,
 } from "./contracts.js";
 export { parseAgentFile, parseSkillFile } from "./contribution-parsing.js";
 export type {
@@ -667,5 +692,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.4.0";
+export const version = "0.5.0";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

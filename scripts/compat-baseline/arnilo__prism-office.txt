@@ -33,6 +33,7 @@ DocumentsCapError	export declare class DocumentsCapError extends DocumentsError
 DocumentsError	export declare class DocumentsError extends Error
 DocumentsFormatError	export declare class DocumentsFormatError extends DocumentsError
 DocumentsParseError	export declare class DocumentsParseError extends DocumentsError
+DocumentsPatchError	export declare class DocumentsPatchError extends DocumentsError
 DocumentsValidationError	export declare class DocumentsValidationError extends DocumentsError
 DrawioAutosaveEvent	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
 DrawioConfigureAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me

@@ -70,15 +70,6 @@ function openRouterCacheTtl(request: ProviderRequest): boolean {
   return request.model.cache?.longRetention !== false;
 }
 
-/**
- * Preserve a `cache_control` marker carried on a Prism content block when
- * converting to the OpenRouter content shape. Marker only lands on the last
- * block of a breakpoint-selected message (set by `applyOpenRouterCacheControl`).
- */
-export function withOpenRouterCacheMarker(contentItem: JsonObject, marker: JsonObject | undefined): JsonObject {
-  return marker ? { ...contentItem, cache_control: marker } : contentItem;
-}
-
 export function openRouterUsage(usage: OpenRouterUsage | undefined): Usage | undefined {
   return usage
     ? {

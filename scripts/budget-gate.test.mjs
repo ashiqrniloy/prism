@@ -5,9 +5,11 @@ import { describe, it } from "node:test";
 import {
   assertAll,
   checkCeiling,
+  checkExportBudget,
   checkThroughput,
   checkUpperBound,
   loadBudgets,
+  measureExportCounts,
   measureRootPack,
   measureStartupMs,
 } from "./budget-gates.mjs";
@@ -200,6 +202,17 @@ describe("performance budget gate", () => {
     ]);
   });
 
+  it("per-package export counts stay at the plan 058 post-cut ceiling", () => {
+    const entries = Object.entries(budgets.exportCounts).filter(([key]) => key !== "$comment");
+    assert.ok(entries.length >= 10, "every publishable package needs an export ceiling");
+    for (const [name, entry] of entries) {
+      assert.ok(Number.isInteger(entry.baseline) && entry.baseline > 0, `exportCounts.${name}.baseline must be a positive integer`);
+      assert.ok(typeof entry.reason === "string" && entry.reason.length > 0, `exportCounts.${name} must record a reason`);
+    }
+    const measured = measureExportCounts();
+    assertAll(entries.map(([name, entry]) => checkExportBudget(name, measured[name], entry.baseline)));
+  });
+
   it("dry pack ships every docs/index.md page and excludes evidence/maps/tests", () => {
     const packed = packedFilePaths(process.cwd(), ".");
     const packedSet = new Set(packed);
@@ -229,5 +242,15 @@ describe("performance budget gate", () => {
     assert.equal(checkThroughput("x", 800, 1000, 0.25).ok, true, "within-tolerance throughput must pass");
     assert.equal(checkCeiling("x", 300, 250).ok, false, "above-ceiling startup must fail");
     assert.throws(() => assertAll([checkUpperBound("x", 200, 100, 0.05)]), /budget regression/);
+  });
+
+  it("export budget rejects growth and names the delta (negative fixtures)", () => {
+    const grown = checkExportBudget("@arnilo/prism", 1148, 1147);
+    assert.equal(grown.ok, false, "one export beyond ceiling must fail");
+    assert.match(grown.message, /@arnilo\/prism/);
+    assert.match(grown.message, /\(\+1\)/, "failure must name the exact delta");
+    assert.throws(() => assertAll([grown]), /budget regression/);
+    assert.equal(checkExportBudget("@arnilo/prism", 1147, 1147).ok, true, "at-ceiling must pass");
+    assert.equal(checkExportBudget("@arnilo/prism", 1146, 1147).ok, true, "shrinking the surface must pass");
   });
 });

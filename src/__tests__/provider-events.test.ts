@@ -62,6 +62,16 @@ describe("provider event helpers", () => {
     assert.equal(call?.argumentsError?.code, "invalid_json_arguments");
   });
 
+  it("reconstructToolCallDeltas keeps identity when continuation chunks repeat id/name as null", () => {
+    const [call] = reconstructToolCallDeltas([
+      providerToolCallDelta({ index: 0, id: "c1", name: "list_files", argumentsText: "" }),
+      { type: "tool_call_delta", index: 0, id: null, name: null, argumentsText: "{}" } as never,
+    ]);
+    assert.equal(call?.id, "c1");
+    assert.equal(call?.name, "list_files");
+    assert.deepEqual(call?.arguments, {});
+  });
+
   it("reconstructToolCallDeltas throws typed incomplete_delta when id or name is missing", () => {
     assert.throws(
       () => reconstructToolCallDeltas([providerToolCallDelta({ index: 2, id: "c1", argumentsText: "{}" })]),

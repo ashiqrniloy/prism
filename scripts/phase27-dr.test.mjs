@@ -64,8 +64,7 @@ const TARGET = flag("target", "PRISM_DR_TARGET_URL");
 const CONFIRM = flag("confirm-target");
 const PITR = flag("pitr", "PRISM_PITR_URL");
 const SCHEMA = flag("schema") ?? "prism_dr_seed";
-const ARTIFACT_DIR =
-  flag("artifact-dir") ?? mkdtempSync(join(tmpdir(), "prism-dr-")); // no predictable shared path (alert 102)
+const ARTIFACT_DIR = flag("artifact-dir") ?? mkdtempSync(join(tmpdir(), "prism-dr-")); // no predictable shared path (alert 102)
 const TTL_MS = 3 * 60 * 1000;
 
 if (!SOURCE || !TARGET || !CONFIRM || !PITR) {

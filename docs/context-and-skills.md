@@ -200,7 +200,7 @@ await agent.createSession().run("…", { activeSkills: ["ponytail"] });
 
 ### Third-party behavior packages (Caveman, Ponytail, Impeccable)
 
-`@arnilo/prism-caveman` and `@arnilo/prism-ponytail` register upstream skills into the extension kernel skill registry. Hosts should:
+`@arnilo/prism-coding-tools/caveman` and `@arnilo/prism-coding-tools/ponytail` register upstream skills into the extension kernel skill registry. Hosts should:
 
 1. `kernel.load([createCavemanExtension(...), createPonytailExtension(...)])` with session `appendEntry` / `getEntries` callbacks.
 2. Build `createSkillRegistry(kernel.registries.skills.list())` and pass `activeSkills` / `resolveActiveSkills` names.

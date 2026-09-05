@@ -140,9 +140,9 @@ await kernel.middleware.run("provider_request", { metadata: {} });
 - [Compaction and retry policies](compaction-and-retry.md): compaction strategy/retry policy contributions and `compaction`/`retry` middleware runtime behavior.
 - [LLM compaction package](compaction-llm.md): optional extension helper that registers a provider-backed compaction strategy.
 - [Observational memory compaction package](compaction-observational-memory.md): optional extension helper that registers an inert fast memory compaction strategy.
-- [Caveman behavior integration](caveman.md): optional `@arnilo/prism-caveman` upstream Caveman skills, commands, level injector, and session `caveman-level` persistence.
-- [Ponytail behavior integration](ponytail.md): optional `@arnilo/prism-ponytail` upstream Ponytail skills, commands, mode injector, and session `ponytail-mode` persistence.
-- [Impeccable behavior integration](impeccable.md): optional `@arnilo/prism-impeccable` upstream Impeccable skill and `load_skill` command.
+- [Caveman behavior integration](caveman.md): optional `@arnilo/prism-coding-tools/caveman` upstream Caveman skills, commands, level injector, and session `caveman-level` persistence.
+- [Ponytail behavior integration](ponytail.md): optional `@arnilo/prism-coding-tools/ponytail` upstream Ponytail skills, commands, mode injector, and session `ponytail-mode` persistence.
+- [Impeccable behavior integration](impeccable.md): optional `@arnilo/prism-coding-tools/impeccable` upstream Impeccable skill and `load_skill` command.
 - [Public contracts](public-contracts.md): `Extension`, `ExtensionAPI`, and contribution contract types.
 - [Credentials and redaction](credentials-and-redaction.md): secret-redaction behavior used for extension errors.
 

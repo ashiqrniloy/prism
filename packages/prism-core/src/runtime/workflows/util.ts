@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { OwnershipScope, SecretRedactor } from "@arnilo/prism";
 import { WorkflowCheckpointError } from "./errors.js";
 import { DEFAULT_MAX_CHECKPOINT_BYTES, DEFAULT_MAX_NODE_OUTPUT_BYTES, validateWorkflowLimits } from "./limits.js";
-import type { WorkflowDefinition, WorkflowNodeDefinition } from "./types.js";
+import type { WorkflowDefinition } from "./types.js";
 
 export function utf8ByteLength(value: string): number {
   return Buffer.byteLength(value, "utf8");
@@ -95,10 +95,6 @@ export function ownershipExactlyMatches(expected: OwnershipScope | undefined, ac
 export function exactOwnershipKey(ownership?: OwnershipScope): string {
   const field = (value: unknown) => (value === undefined ? [0] : [1, value]);
   return JSON.stringify([field(ownership?.tenantId), field(ownership?.accountId), field(ownership?.userId)]);
-}
-
-export function nodeKindOf(node: WorkflowNodeDefinition): string {
-  return node.kind;
 }
 
 export function nowIso(): string {

@@ -150,5 +150,5 @@ Emitted `.wiki/` trees are [OKF v0.2](https://github.com/GoogleCloudPlatform/ope
 
 - [`@arnilo/prism-memory/rag`](rag.md): Bounded document chunking and vector context injection.
 - [`@arnilo/prism-memory`](working-and-semantic-memory.md): Embedder and VectorStore primitives.
-- [`@arnilo/prism-coding-agent`](coding-agent-tools.md): Code manipulation and reading tools.
+- [`@arnilo/prism-coding-tools/agent`](coding-agent-tools.md): Code manipulation and reading tools.
 - [`Contribution registries`](contribution-registries.md): Extension contribution model.

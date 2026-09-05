@@ -1,18 +1,26 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import { CreateMessageRequestSchema, ElicitRequestSchema, ListRootsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { Client } from "@modelcontextprotocol/client";
+import type { Transport } from "@modelcontextprotocol/client";
 import { attachMcpToolBridge } from "./bridge.js";
 import { measureBoundedJson } from "./json-bounds.js";
 import {
   DEFAULT_MAX_CAPABILITY_BYTES,
   DEFAULT_MAX_CAPABILITY_ITEMS,
   DEFAULT_MAX_CAPABILITY_PAGES,
+  DEFAULT_MAX_MRTR_ROUNDS,
   HARD_MAX_CAPABILITY_BYTES,
+  HARD_MAX_MRTR_ROUNDS,
   validateMcpLimit,
 } from "./limits.js";
 import { createMcpTransport } from "./transport.js";
 import type { AttachMcpToolBridgeOptions, ConnectMcpCapabilitiesOptions, McpCapabilityBridge } from "./types.js";
 import { McpBridgeError, McpUnsupportedCapabilityError } from "./types.js";
+
+/**
+ * Per-client list-changed refresh hook: the SDK's `listChanged` config is fixed at
+ * client construction (before the tools bridge exists), so `attachMcpCapabilities`
+ * registers the tools-bridge refresh here after attaching. nullish = no tools bridge.
+ */
+const toolsRefreshes = new WeakMap<Client, () => Promise<void>>();
 
 /** Connect all explicitly selected MCP client capabilities without converting them into model tools. */
 export async function connectMcpCapabilities(options: ConnectMcpCapabilitiesOptions): Promise<McpCapabilityBridge> {
@@ -49,6 +57,7 @@ export async function attachMcpCapabilities(
   );
   const capabilities = (client.getServerCapabilities() ?? {}) as Readonly<Record<string, unknown>>;
   const tools = capabilities.tools ? await attachMcpToolBridge(client, transport, options) : undefined;
+  if (tools) toolsRefreshes.set(client, () => tools.refresh());
   const requireCapability = (name: string) => {
     if (!(name in capabilities)) throw new McpUnsupportedCapabilityError(name);
   };
@@ -122,10 +131,32 @@ export function createMcpCapabilityClient(options: ConnectMcpCapabilitiesOptions
         ...(options.sampling ? { sampling: {} } : {}),
         ...(options.elicitation ? { elicitation: { form: {}, url: {} } } : {}),
       },
+      versionNegotiation: {
+        mode: options.protocolVersion === undefined || options.protocolVersion === "auto"
+          ? "auto"
+          : options.protocolVersion === "legacy"
+            ? "legacy"
+            : { pin: options.protocolVersion.pin },
+      },
+      listChanged: {
+        tools: {
+          autoRefresh: false,
+          onChanged: () => {
+            void toolsRefreshes.get(client)?.().catch(() => void 0);
+          },
+        },
+      },
+      // MRTR auto-fulfilment: the SDK driver dispatches `input_required`
+      // embedded requests to the same method-string handlers registered below
+      // and retries the original call (fresh wire IDs, shrinking total budget).
+      inputRequired: {
+        autoFulfill: true,
+        maxRounds: validateMcpLimit("maxMrtrRounds", options.maxMrtrRounds ?? DEFAULT_MAX_MRTR_ROUNDS, HARD_MAX_MRTR_ROUNDS),
+      },
     },
   );
   if (options.roots)
-    client.setRequestHandler(ListRootsRequestSchema, async () => {
+    client.setRequestHandler("roots/list", async () => {
       const roots = bounded(await Promise.resolve(options.roots!()), maxBytes, "MCP roots");
       if (roots.length > 500) throw new McpBridgeError("MCP roots exceed 500 items");
       for (const root of roots) {
@@ -137,22 +168,20 @@ export function createMcpCapabilityClient(options: ConnectMcpCapabilitiesOptions
         }
         if (uri.protocol !== "file:") throw new McpBridgeError("MCP roots must use file: URIs approved by the host");
       }
-      return { roots };
+      return { roots: [...roots] };
     });
   if (options.sampling)
-    client.setRequestHandler(
-      CreateMessageRequestSchema,
-      async (request, extra) =>
-        bounded(
-          await options.sampling!({ params: bounded(request.params, maxBytes, "MCP sampling request"), signal: extra.signal }),
-          maxBytes,
-          "MCP sampling result",
-        ) as never,
+    client.setRequestHandler("sampling/createMessage", async (request, ctx) =>
+      bounded(
+        await options.sampling!({ params: bounded(request.params, maxBytes, "MCP sampling request"), signal: ctx.mcpReq.signal }),
+        maxBytes,
+        "MCP sampling result",
+      ) as never,
     );
   if (options.elicitation)
-    client.setRequestHandler(ElicitRequestSchema, async (request, extra) => {
+    client.setRequestHandler("elicitation/create", async (request, ctx) => {
       const result = bounded(
-        await options.elicitation!({ params: bounded(request.params, maxBytes, "MCP elicitation request"), signal: extra.signal }),
+        await options.elicitation!({ params: bounded(request.params, maxBytes, "MCP elicitation request"), signal: ctx.mcpReq.signal }),
         maxBytes,
         "MCP elicitation result",
       );

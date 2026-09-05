@@ -89,24 +89,46 @@ async function loadPeer(name: string): Promise<unknown> {
 
 const PDF_MAGIC = "%PDF-";
 
-/** Default PDF parser backed by the optional `pdf-parse` peer. */
+/** v2 `PDFParse` surface used by the adapter (typed locally; the package is ambient). */
+type PdfParseResult = { readonly total: number; readonly text: string };
+type PdfParseCtor = new (options: { readonly data: Uint8Array; readonly isEvalSupported?: boolean }) => {
+  getText(options?: { readonly pageJoiner?: string }): Promise<PdfParseResult>;
+  destroy(): Promise<void>;
+};
+
+/** Default PDF parser backed by the optional `pdf-parse` peer (v2 `PDFParse` class). */
 export async function createPdfParser(): Promise<DocumentParser> {
-  const pdfParse = (await loadPeer("pdf-parse")) as (data: Uint8Array) => Promise<{ numpages: number; text: string }>;
+  const ctor = (await loadPeer("pdf-parse")) as { PDFParse?: unknown };
+  if (typeof ctor.PDFParse !== "function") {
+    throw new DocumentReaderError('document-reader: optional peer "pdf-parse" (v2+) does not export the PDFParse class');
+  }
+  const PDFParse = ctor.PDFParse as PdfParseCtor;
   return {
     format: "pdf",
     detect: (buffer) => buffer.length >= PDF_MAGIC.length && buffer.toString("latin1", 0, PDF_MAGIC.length) === PDF_MAGIC,
     extract: async (buffer, { maxPages, maxTextBytes, signal }) => {
       signal?.throwIfAborted();
-      // pdf.js v1.10.100 mis-parses Node Buffers; a fresh Uint8Array view is required.
-      const data = await pdfParse(new Uint8Array(buffer));
-      if (data.numpages > maxPages) {
-        throw new DocumentReaderError(`document has ${data.numpages} pages, exceeds maxPages cap (${maxPages}); refusing to extract`);
+      // v2 runs pdf.js in a worker thread and claims the TypedArray (transfer);
+      // the adapter never reuses the buffer after parse, so passing a fresh
+      // Uint8Array view is safe. isEvalSupported:false keeps PDF functions from
+      // executing embedded scripts — the document-reader contract forbids it.
+      const parser = new PDFParse({ data: new Uint8Array(buffer), isEvalSupported: false });
+      let data: { total: number; text: string };
+      try {
+        // pageJoiner:'' keeps v2's page-boundary markers out of extracted text
+        // (v1 emitted none; goldens assert on raw page text).
+        data = await parser.getText({ pageJoiner: "" });
+      } finally {
+        await parser.destroy();
+      }
+      if (data.total > maxPages) {
+        throw new DocumentReaderError(`document has ${data.total} pages, exceeds maxPages cap (${maxPages}); refusing to extract`);
       }
       const text = data.text ?? "";
       if (Buffer.byteLength(text, "utf8") > maxTextBytes) {
-        return { text: truncateToBytes(text, maxTextBytes), pages: data.numpages, truncatedBy: "bytes" };
+        return { text: truncateToBytes(text, maxTextBytes), pages: data.total, truncatedBy: "bytes" };
       }
-      return { text, pages: data.numpages, truncatedBy: null };
+      return { text, pages: data.total, truncatedBy: null };
     },
   };
 }

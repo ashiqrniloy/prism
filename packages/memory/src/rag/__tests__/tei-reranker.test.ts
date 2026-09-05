@@ -1,50 +1,10 @@
 import assert from "node:assert/strict";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { describe, it } from "node:test";
 import { createHashEmbedder, createMemoryVectorStore } from "../../index.js";
 import { chunkText, createTeiReranker, RagLimitError, RagValidationError, replaceSource, retrieveContext } from "../index.js";
-import type { RagHit } from "../types.js";
+import { readBody, reliefHit, withRerankServer } from "./rerank-fixtures.js";
 
 const scope = { tenantId: "tenant-a", resourceId: "docs", corpusId: "handbook" };
-
-type ServerHandler = (req: IncomingMessage, res: ServerResponse) => Promise<void> | void;
-
-function reliefHit(id: string, score: number, retrievalRank: number): RagHit {
-  return {
-    id,
-    citationId: id,
-    sourceId: "src",
-    index: Number(id.split("#")[1]!.slice(1)) - 1,
-    start: 0,
-    end: 4,
-    text: `text ${id}`,
-    score,
-    retrievalRank,
-    provenance: {
-      sourceId: "src",
-      chunkId: id,
-      citationId: id,
-      provider: "host",
-      tenantId: "t",
-      resourceId: "r",
-      corpusId: "c",
-      retrieval: "vector",
-      retrievedAt: "0",
-    },
-    trust: { untrusted: true, inert: true, injectionCapable: true },
-  };
-}
-
-async function withRerankServer(handler: ServerHandler, fn: (port: number) => Promise<void>): Promise<void> {
-  const server: Server = createServer((req, res) => void handler(req, res));
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const port = (server.address() as { port: number }).port;
-  try {
-    await fn(port);
-  } finally {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-  }
-}
 
 describe("createTeiReranker", () => {
   it("reorders hits by TEI scores while preserving provenance/trust references", async () => {
@@ -204,11 +164,3 @@ describe("createTeiReranker", () => {
     assert.equal(fetched, false);
   });
 });
-
-function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve) => {
-    let body = "";
-    req.on("data", (chunk: Buffer) => (body += chunk.toString()));
-    req.on("end", () => resolve(body));
-  });
-}

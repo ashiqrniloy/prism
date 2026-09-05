@@ -105,7 +105,7 @@ await kernel.load([
 - Import alone registers nothing (`sideEffects: false`); no timers, watchers, or network. The only child processes are budgeted graft CLI calls.
 - Retrieval happens in-process via Prism primitives (context provider, injector, tool_result middleware) — no external hook shims.
 - Ask result shape is parsed tolerantly (`nodes|results|matches|hits`) because graft is pre-1.0; formatters emit pointers (`title` + `file:line` + `[[wikilink]]`), never source bodies.
-- Not included in `@arnilo/prism-code`, `@arnilo/prism-sdk`, or the `prism-all` umbrella (deliberate opt-out, like Caveman/Ponytail) — opt-in install only.
+- Not included in `@arnilo/prism-coding-tools`, `@arnilo/prism-core`, or the `prism-all` umbrella (deliberate opt-out, like Caveman/Ponytail) — opt-in install only.
 - Multi-repo layouts work as upstream graft defines them (workspaces, submodules with `--follow-submodules`, sibling repos); point `projectDir` at the graft root that owns the target repo.
 
 ## Security and performance notes

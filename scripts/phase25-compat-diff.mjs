@@ -4,6 +4,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { BASELINE_DIR, baselineName, diffSurface, extractDeclaredSurface, parseSurface } from "./release-gates.mjs";
 
 const root = process.cwd();
@@ -35,6 +36,8 @@ if (!out.length) {
   console.log(`${manifest.name}: zero breaking deltas (${surface.size} symbols, ${diff.added.length} added)`);
   process.exit(0);
 }
-console.log(`=== ${manifest.name} (${pkgPath}) ===`);
-console.log(out.join("\n\n"));
-process.exit(diff.removed.length || diff.changed.length ? 1 : 0);
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  console.log(`=== ${manifest.name} (${pkgPath}) ===`);
+  console.log(out.join("\n\n"));
+  process.exit(diff.removed.length || diff.changed.length ? 1 : 0);
+}

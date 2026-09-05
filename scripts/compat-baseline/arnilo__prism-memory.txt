@@ -29,7 +29,6 @@ DEFAULT_MAX_METADATA_BYTES	export declare const DEFAULT_MAX_METADATA_BYTES: numb
 DEFAULT_MAX_PARSE_MS	export declare const DEFAULT_MAX_PARSE_MS = 30000
 DEFAULT_MAX_PAYLOAD_BYTES	export declare const DEFAULT_MAX_PAYLOAD_BYTES: number
 DEFAULT_MAX_PDF_PAGES	export declare const DEFAULT_MAX_PDF_PAGES = 256
-DEFAULT_MAX_PROMPT_CHARS	export declare const DEFAULT_MAX_PROMPT_CHARS = 4096
 DEFAULT_MAX_RERANK_BYTES	export declare const DEFAULT_MAX_RERANK_BYTES: number
 DEFAULT_MAX_RERANK_MS	export declare const DEFAULT_MAX_RERANK_MS = 2000
 DEFAULT_MAX_RESULT_BYTES	export declare const DEFAULT_MAX_RESULT_BYTES: number
@@ -75,7 +74,6 @@ FusedCandidate	export type { FusedCandidate, RetrievalLeg } from "./fusion.js"
 GRAFT_EXTENSION_NAME	export declare const GRAFT_EXTENSION_NAME = "@arnilo/prism-memory/graft"
 GRAFT_PEER_PACKAGE	export declare const GRAFT_PEER_PACKAGE = "@nanonets/graft"
 GRAFT_PEER_RANGE	export declare const GRAFT_PEER_RANGE = "^0.16.0"
-GRAFT_RESOLVE_ERROR_CODE	export declare const GRAFT_RESOLVE_ERROR_CODE = "graft_resolve_failed"
 GRAFT_SKILL_BODY	export declare const GRAFT_SKILL_BODY: string
 GRAFT_STATE_TYPE	export declare const GRAFT_STATE_TYPE = "graft-state"
 GetMemoryEntries	export type { GetMemoryEntries, RecallMemoryToolOptions } from "./tool.js"

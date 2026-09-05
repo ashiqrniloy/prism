@@ -19,8 +19,8 @@ Bounded patch-review manifests plus normalized LSP/check diagnostics for the cod
 A review is created per patch handoff. The manifest binds: repository identity (credential-free remote fingerprint + default branch + optional worktree path), `base`/`head`, the patch artifact reference (`kind`, `uri`, `sha256`, `bytes`), changed paths, diffstat, named-check summaries, and diagnostic summaries. The `digest` is SHA-256 over the canonical manifest JSON; the structural artifact input carries the manifest in `preview.review` and the patch SHA-256 as the artifact hash.
 
 ```ts
-import { createCodingPatchReviewManifest, assertCodingPatchAccepted } from "@arnilo/prism-coding-agent";
-import { createArtifactService } from "@arnilo/prism-server";
+import { createCodingPatchReviewManifest, assertCodingPatchAccepted } from "@arnilo/prism-coding-tools/agent";
+import { createArtifactService } from "@arnilo/prism-core/runtime/server";
 
 const { review, artifactInput } = createCodingPatchReviewManifest({
   threadId: "thread-1",

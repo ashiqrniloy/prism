@@ -17,6 +17,6 @@ test("compaction_llm_live_tests_are_skipped_by_default", async () => {
 test("compaction_llm_subpath_ships_from_the_memory_family_manifest", async () => {
   const pkg = JSON.parse(await readFile(new URL("../../../../package.json", import.meta.url), "utf8"));
   assert.ok(pkg.exports["./compaction/llm"], "family manifest must expose ./compaction/llm");
-  assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.4.0");
+  assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.5.0");
   assert.equal(pkg.scripts.postinstall, undefined);
 });

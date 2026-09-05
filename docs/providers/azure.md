@@ -56,7 +56,7 @@ Opt-in live canaries: inject real `fetch` + host credential behind host CI secre
 
 ## Extension and configuration notes
 
-Register via `createExtensionKernel().load([createAzureOpenAIProviderPackage(...)])`. Pair with `@arnilo/prism-model-router` for residency allow-lists on Azure regions/endpoints.
+Register via `createExtensionKernel().load([createAzureOpenAIProviderPackage(...)])`. Pair with `@arnilo/prism-core/governance/model-router` for residency allow-lists on Azure regions/endpoints.
 
 ## Security and performance notes
 

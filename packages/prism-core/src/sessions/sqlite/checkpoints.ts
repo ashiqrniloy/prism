@@ -1,12 +1,7 @@
-import {
-  CheckpointConflictError,
-  type CheckpointKey,
-  type CheckpointQuery,
-  type CheckpointRecord,
-  type CheckpointStore,
-} from "@arnilo/prism";
+import { CheckpointConflictError, type CheckpointQuery, type CheckpointRecord, type CheckpointStore } from "@arnilo/prism";
 import type Database from "better-sqlite3";
 import {
+  assertCheckpointInput,
   assertOwnershipScope,
   decodeCheckpointCursor,
   encodeCheckpointJson,
@@ -79,7 +74,7 @@ WHERE prism_checkpoints.version < excluded.version
   return {
     async saveCheckpoint(input) {
       throwIfAborted(input.signal);
-      assertInput(input);
+      assertCheckpointInput(input);
       const previous = rowToRecord(select.get(input.namespace, input.key) as Row | undefined);
       if (previous) assertOwnershipScope(input, previous, () => new CheckpointConflictError("Checkpoint ownership mismatch"));
       if (input.expectedVersion !== undefined && input.expectedVersion !== (previous?.version ?? 0))
@@ -180,9 +175,4 @@ function rowToRecord(row?: Row): CheckpointRecord | null {
     updatedAt: row.updated_at,
     ...(row.metadata === null ? {} : { metadata: JSON.parse(row.metadata) as Record<string, unknown> }),
   };
-}
-
-function assertInput(input: CheckpointKey & { version: number }): void {
-  if (!input.namespace || !input.key || !Number.isSafeInteger(input.version) || input.version < 1)
-    throw new CheckpointConflictError("Invalid checkpoint key or version");
 }

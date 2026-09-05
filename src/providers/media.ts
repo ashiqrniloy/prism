@@ -7,20 +7,10 @@ import {
   type ModelInputCapability,
   type ResolvedMediaContent,
   type ResolveMediaContentOptions,
-  resolveMediaContentBlock,
   resolveMediaContentBlocks,
   UnsupportedModalityError,
 } from "../content.js";
-import type {
-  AudioContent,
-  ContentBlock,
-  DocumentContent,
-  FileContent,
-  JsonObject,
-  Message,
-  ModelCapabilities,
-  ModelConfig,
-} from "../contracts.js";
+import type { ContentBlock, JsonObject, Message, ModelCapabilities, ModelConfig } from "../contracts.js";
 
 /** Default upload-cache entry cap per provider media session. */
 export const DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES = 32;
@@ -137,13 +127,6 @@ export function serializePdfDocumentWireBlock(options: {
     source: { type: "base64", media_type: options.mediaType, data: options.data },
     ...(options.title ? { title: options.title } : {}),
   };
-}
-
-export async function resolveProviderMediaBlock(
-  block: AudioContent | FileContent | DocumentContent,
-  options: ResolveMediaContentOptions = {},
-): Promise<ResolvedMediaContent> {
-  return resolveMediaContentBlock(block, options);
 }
 
 /** Resolve every media block once and enforce aggregate request bounds before provider I/O. */

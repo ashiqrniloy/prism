@@ -13,7 +13,7 @@ describe("@arnilo/prism-providers/openrouter skeleton", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.deepEqual(pkg.dependencies ?? {}, {});
     // ponytail: peer follows the package's Decision B window (^0.3.1 since the plan 039 cut).
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.4.0");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.5.0");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 });

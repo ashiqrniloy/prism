@@ -2,9 +2,9 @@ import type { AIProvider, CredentialValueSource, ProviderRequest } from "@arnilo
 import { providerError, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { createOpenAIResponsesProvider } from "../openai/responses.js";
-import { HYPER_DEFAULT_BASE_URL, type HyperRoute } from "./models.js";
-import { anthropicMessagesBody, anthropicMessagesEvents, type AnthropicMessagesRouteHooks } from "../shared/anthropic-messages.js";
+import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "../shared/anthropic-messages.js";
 import { applyHyperAnthropicCacheControl } from "./cache.js";
+import { HYPER_DEFAULT_BASE_URL, type HyperRoute } from "./models.js";
 import { hyperChatBody, hyperChatEvents } from "./openai-chat.js";
 import { classifyHyperError, hyperHttpError } from "./retry.js";
 import { hyperPreserveThinking, stripHyperOwnedCompat } from "./thinking.js";

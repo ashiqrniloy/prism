@@ -69,6 +69,18 @@ describe("@arnilo/prism-web-tools/browser", () => {
     );
   });
 
+  it("rejects unknown action kinds with ERR_PRISM_BROWSER_INPUT", async () => {
+    const browser = new FakeBrowser();
+    const manager = mgr(browser);
+    await manager.open("run-1");
+    await assert.rejects(
+      () => manager.act("run-1", { action: "explode" as never }),
+      (error: unknown) =>
+        error instanceof BrowserError && error.code === "ERR_PRISM_BROWSER_INPUT" && error.message.includes("Unsupported action: explode"),
+    );
+    await manager.close();
+  });
+
   it("one context per run with cookie/storage isolation across runs", async () => {
     const browser = new FakeBrowser();
     const manager = mgr(browser);

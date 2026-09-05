@@ -1,0 +1,78 @@
+name: canary-providers
+
+# Operator-gated nightly live-provider smoke (plan 060). Scheduled only — it
+# never blocks PRs. Each leg runs one provider's existing live suite (text
+# completion + tool-call/structured legs with assertNoSecretLeak inside); legs
+# skip without their key. Only provider names and statuses are echoed —
+# responses are never logged.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canary-providers
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: live smoke (${{ matrix.provider }})
+    environment: live-canaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        # JSON array repo variable, e.g. ["openai","anthropic"].
+        provider: ${{ fromJSON(vars.PRISM_CANARY_PROVIDERS || '["openai"]') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build:core && npm run build -w @arnilo/prism-providers
+      - name: run provider live smoke
+        timeout-minutes: 3
+        env:
+          PRISM_LIVE_PROVIDER_TESTS: "1"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+          KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
+          NEURALWATT_API_KEY: ${{ secrets.NEURALWATT_API_KEY }}
+        run: node scripts/with-build-lock.mjs node --test "packages/prism-providers/dist/${{ matrix.provider }}/__tests__/live.test.js"
+      - name: record job summary (status only, no responses)
+        if: always()
+        run: echo "- ${{ matrix.provider }}: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+
+  report:
+    name: report (issue on failure)
+    needs: [smoke]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: write aggregate summary
+        run: echo "canary-providers nightly: ${{ needs.smoke.result }} (run ${{ github.run_id }})" >> "$GITHUB_STEP_SUMMARY"
+      - name: open issue on failure
+        if: needs.smoke.result != 'success' && needs.smoke.result != 'skipped'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "live-provider canary failed (${{ github.run_id }})" \
+            --body "Nightly canary-providers result: ${{ needs.smoke.result }}. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. Provider set: ${{ vars.PRISM_CANARY_PROVIDERS }}. No responses logged by design."

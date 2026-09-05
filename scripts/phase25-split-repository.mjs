@@ -1,6 +1,7 @@
 // Task 1 helper: split packages/coding-agent/src/repository.ts into cohesive family modules behind a barrel.
 // Adds `export` to internal declarations that are referenced cross-family (required for cross-file imports).
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const SRC = "packages/coding-agent/src/repository.ts";
 const lines = readFileSync(SRC, "utf8").split("\n");
@@ -192,80 +193,82 @@ for (const f of families)
       if (m) nameInfo.set(m[4], { family: f.name, kind: /interface|type|enum|namespace|module/.test(m[3]) ? "type" : "val" });
     }
 
-mkdirSync("packages/coding-agent/src/repository", { recursive: true });
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  mkdirSync("packages/coding-agent/src/repository", { recursive: true });
 
-// Phase A: per family, compute body + used + collect cross-family-imported names (needsExport).
-const perFamily = [];
-const needsExport = new Set();
-for (const f of families) {
-  const declLines = [];
-  for (const [s, e] of f.ranges) for (let i = s; i <= e; i++) declLines.push(lines[i - 1]);
-  const body = `${declLines
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/import\("\.\//g, 'import("../')
-    .trimEnd()}\n`;
-  const used = new Set();
-  let m2;
-  identRe.lastIndex = 0;
-  while ((m2 = identRe.exec(body)) !== null) used.add(m2[1]);
-  const local = new Set([...nameInfo.entries()].filter(([, info]) => info.family === f.name).map(([n]) => n));
-  for (const name of used) {
-    if (skip.has(name) || local.has(name)) continue;
-    if (nameInfo.has(name) && nameInfo.get(name).family !== f.name) needsExport.add(name);
-  }
-  perFamily.push({ f, body, used, local });
-}
-
-// Phase B: write each family file with imports + export-prefix on needsExport declarations.
-for (const { f, body, used, local } of perFamily) {
-  const extByMod = new Map(),
-    coreByFam = new Map();
-  const bump = (map, key, kind, name) => {
-    if (!map.has(key)) map.set(key, { type: new Set(), val: new Set() });
-    map.get(key)[kind].add(name);
-  };
-  for (const name of [...used].sort()) {
-    if (skip.has(name) || local.has(name)) continue;
-    if (Object.hasOwn(externalMap, name)) {
-      const [mod, kind] = externalMap[name];
-      bump(extByMod, mod, kind, name);
-    } else if (nameInfo.has(name) && nameInfo.get(name).family !== f.name) {
-      bump(coreByFam, nameInfo.get(name).family, nameInfo.get(name).kind, name);
+  // Phase A: per family, compute body + used + collect cross-family-imported names (needsExport).
+  const perFamily = [];
+  const needsExport = new Set();
+  for (const f of families) {
+    const declLines = [];
+    for (const [s, e] of f.ranges) for (let i = s; i <= e; i++) declLines.push(lines[i - 1]);
+    const body = `${declLines
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/import\("\.\//g, 'import("../')
+      .trimEnd()}\n`;
+    const used = new Set();
+    let m2;
+    identRe.lastIndex = 0;
+    while ((m2 = identRe.exec(body)) !== null) used.add(m2[1]);
+    const local = new Set([...nameInfo.entries()].filter(([, info]) => info.family === f.name).map(([n]) => n));
+    for (const name of used) {
+      if (skip.has(name) || local.has(name)) continue;
+      if (nameInfo.has(name) && nameInfo.get(name).family !== f.name) needsExport.add(name);
     }
+    perFamily.push({ f, body, used, local });
   }
-  const importLines = [];
-  for (const [mod, { type, val }] of extByMod) {
-    const spec = mod.startsWith(".") ? mod.replace(/^\.\//, "../") : mod;
-    if (type.size) importLines.push(`import type { ${[...type].join(", ")} } from "${spec}";`);
-    if (val.size) importLines.push(`import { ${[...val].join(", ")} } from "${spec}";`);
-  }
-  for (const [fam, { type, val }] of coreByFam) {
-    if (type.size) importLines.push(`import type { ${[...type].join(", ")} } from "./${fam}.js";`);
-    if (val.size) importLines.push(`import { ${[...val].join(", ")} } from "./${fam}.js";`);
-  }
-  // Add `export` to declarations referenced cross-family that aren't already exported.
-  const outBody = body
-    .split("\n")
-    .map((line) => {
-      const m = line.match(declRe);
-      if (m && !m[1] && needsExport.has(m[4])) return `export ${line}`;
-      return line;
-    })
-    .join("\n");
-  const header = `/** Repository ${f.name} family (0.2.5 plan 025 Task 1 split).\n * Moved verbatim from repository.ts; public surface unchanged behind the barrel. */\n`;
-  writeFileSync(
-    `packages/coding-agent/src/repository/${f.name}.ts`,
-    header + (importLines.length ? `${importLines.join("\n")}\n\n` : "") + outBody,
-  );
-}
 
-const barrel =
-  `/** Repository barrel (0.2.5 plan 025 Task 1 god-module split): re-exports the public
+  // Phase B: write each family file with imports + export-prefix on needsExport declarations.
+  for (const { f, body, used, local } of perFamily) {
+    const extByMod = new Map(),
+      coreByFam = new Map();
+    const bump = (map, key, kind, name) => {
+      if (!map.has(key)) map.set(key, { type: new Set(), val: new Set() });
+      map.get(key)[kind].add(name);
+    };
+    for (const name of [...used].sort()) {
+      if (skip.has(name) || local.has(name)) continue;
+      if (Object.hasOwn(externalMap, name)) {
+        const [mod, kind] = externalMap[name];
+        bump(extByMod, mod, kind, name);
+      } else if (nameInfo.has(name) && nameInfo.get(name).family !== f.name) {
+        bump(coreByFam, nameInfo.get(name).family, nameInfo.get(name).kind, name);
+      }
+    }
+    const importLines = [];
+    for (const [mod, { type, val }] of extByMod) {
+      const spec = mod.startsWith(".") ? mod.replace(/^\.\//, "../") : mod;
+      if (type.size) importLines.push(`import type { ${[...type].join(", ")} } from "${spec}";`);
+      if (val.size) importLines.push(`import { ${[...val].join(", ")} } from "${spec}";`);
+    }
+    for (const [fam, { type, val }] of coreByFam) {
+      if (type.size) importLines.push(`import type { ${[...type].join(", ")} } from "./${fam}.js";`);
+      if (val.size) importLines.push(`import { ${[...val].join(", ")} } from "./${fam}.js";`);
+    }
+    // Add `export` to declarations referenced cross-family that aren't already exported.
+    const outBody = body
+      .split("\n")
+      .map((line) => {
+        const m = line.match(declRe);
+        if (m && !m[1] && needsExport.has(m[4])) return `export ${line}`;
+        return line;
+      })
+      .join("\n");
+    const header = `/** Repository ${f.name} family (0.2.5 plan 025 Task 1 split).\n * Moved verbatim from repository.ts; public surface unchanged behind the barrel. */\n`;
+    writeFileSync(
+      `packages/coding-agent/src/repository/${f.name}.ts`,
+      header + (importLines.length ? `${importLines.join("\n")}\n\n` : "") + outBody,
+    );
+  }
+
+  const barrel =
+    `/** Repository barrel (0.2.5 plan 025 Task 1 god-module split): re-exports the public
  * repository surface from cohesive family modules so the import surface of
  * \`./repository.js\` is unchanged (0.1.4 barrel precedent). */
 ` +
-  families.map((f) => `export * from "./repository/${f.name}.js";`).join("\n") +
-  "\n";
-writeFileSync(SRC, barrel);
-console.log("split repository.ts into", families.length, "family files + barrel; needsExport:", [...needsExport].join(", "));
+    families.map((f) => `export * from "./repository/${f.name}.js";`).join("\n") +
+    "\n";
+  writeFileSync(SRC, barrel);
+  console.log("split repository.ts into", families.length, "family files + barrel; needsExport:", [...needsExport].join(", "));
+}

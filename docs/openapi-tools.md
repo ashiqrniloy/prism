@@ -1,15 +1,15 @@
-# OpenAPI tools adapter (`@arnilo/prism-openapi-tools`)
+# OpenAPI tools adapter (`@arnilo/prism-coding-tools/openapi`)
 
 Optional `createOpenApiTools` compiles host-selected OpenAPI 3.1 operations into bounded Prism `ToolDefinition`s. Zero dependencies (native fetch + WebCrypto-free); the compile step is pure and separated from the runtime executor.
 
 ## When to use it
 
-Hosts that already expose a JSON API with an OpenAPI 3.1 document and want the agent to call a **fixed, host-chosen subset** of it — never model-driven discovery, never a raw method/path passthrough. For vendor web search/extraction use `@arnilo/prism-web-tools`; for M365/GWS use `@arnilo/prism-work-tools`; this adapter is for arbitrary host APIs.
+Hosts that already expose a JSON API with an OpenAPI 3.1 document and want the agent to call a **fixed, host-chosen subset** of it — never model-driven discovery, never a raw method/path passthrough. For vendor web search/extraction use `@arnilo/prism-web-tools`; for M365/GWS use `@arnilo/prism-core/integrations/work`; this adapter is for arbitrary host APIs.
 
 ## Usage
 
 ```ts
-import { createOpenApiTools } from "@arnilo/prism-openapi-tools";
+import { createOpenApiTools } from "@arnilo/prism-coding-tools/openapi";
 
 const tools = createOpenApiTools({
   document, // OpenAPI 3.1 document (JSON string or parsed object)

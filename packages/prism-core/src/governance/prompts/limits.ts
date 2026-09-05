@@ -76,7 +76,3 @@ export function assertBytes(value: string, maxBytes: number, label: string): voi
   const bytes = Buffer.byteLength(value, "utf8");
   if (bytes > maxBytes) throw new PromptLimitError(`${label} exceeds ${maxBytes} bytes (${bytes})`);
 }
-
-export function assertDiffLines(value: number, maxLines: number, label: string): void {
-  if (value > maxLines) throw new PromptLimitError(`${label} exceeds ${maxLines} lines`);
-}

@@ -1,4 +1,4 @@
-# Document reader (`@arnilo/prism-document-reader`)
+# Document reader (`@arnilo/prism-coding-tools/document-reader`)
 
 ## What it does
 
@@ -6,7 +6,7 @@ Optional bounded literal-text extraction for PDF and DOCX files, consumed by the
 
 ## When to use it
 
-Use when coding agents must read PDF/Office files (specs, requirements docs, reports) as literal text. Do **not** use it when embedded content execution, macro evaluation, or external resource fetching is required — this adapter never does any of those by construction, and the optional peer parsers (`pdf-parse`, `mammoth`) are the only parsing code involved. Docker-less hosts that need document reads pair this with the network-free native sandbox backend (`@arnilo/prism-coding-security` `createNativeSandbox`) for the surrounding tool execution.
+Use when coding agents must read PDF/Office files (specs, requirements docs, reports) as literal text. Do **not** use it when embedded content execution, macro evaluation, or external resource fetching is required — this adapter never does any of those by construction, and the optional peer parsers (`pdf-parse`, `mammoth`) are the only parsing code involved. Docker-less hosts that need document reads pair this with the network-free native sandbox backend (`@arnilo/prism-coding-tools/security` `createNativeSandbox`) for the surrounding tool execution.
 
 Activation is explicit: no file-extension sniffing anywhere enables parsing. Absent `documentReader` option = exactly the 0.1.5 read behavior.
 
@@ -33,8 +33,8 @@ Errors: `DocumentReaderError` with code `ERR_PRISM_DOCUMENT_READER` for missing 
 ## Request/response example
 
 ```ts
-import { createReadTool } from "@arnilo/prism-coding-agent";
-import { createDocumentReader } from "@arnilo/prism-document-reader";
+import { createReadTool } from "@arnilo/prism-coding-tools/agent";
+import { createDocumentReader } from "@arnilo/prism-coding-tools/document-reader";
 
 const documentReader = await createDocumentReader({
   maxBytes: 32 * 1024 * 1024,
@@ -49,7 +49,7 @@ A `read` of `spec.pdf` yields text content extracted from the PDF (up to 2 MiB o
 ## Implementation example
 
 ```ts
-import { createDocumentReader, createPdfParser, type DocumentParser } from "@arnilo/prism-document-reader";
+import { createDocumentReader, createPdfParser, type DocumentParser } from "@arnilo/prism-coding-tools/document-reader";
 
 // Host-selected parser wiring: swap in a different PDF backend without touching bounds.
 const myPdfParser: DocumentParser = {
@@ -79,7 +79,7 @@ const reader = await createDocumentReader({ parsers: [myPdfParser, await createP
 
 ## Related APIs
 
-- `createReadTool` / `DocumentReader` / `DocumentReaderResult` (`@arnilo/prism-coding-agent`)
+- `createReadTool` / `DocumentReader` / `DocumentReaderResult` (`@arnilo/prism-coding-tools/agent`)
 - `SecretRedactor` (`@arnilo/prism` redaction)
 - `docs/_evidence/phase18-primitive-review.md` (doc-reader threat model D1–D8)
 - `docs/coding-security.md` (native sandbox backend for surrounding execution containment)

@@ -291,19 +291,20 @@ describe("docs", () => {
     }
   });
 
-  // plan 013 Task 4: exactly one canonical manifest-count statement lives in
-  // docs/release-and-install.md; the stale off-by-one strings must not
-  // reappear anywhere except docs/migration.md (historical release records
-  // are kept verbatim). Authoritative source: node scripts/release.mjs check
-  // (49 manifests) + the freeze-test filesystem coherence assertions.
+  // plan 013 Task 4: the canonical manifest-count statement lives in the
+  // generated package-truth blocks of docs/release-and-install.md; the stale
+  // off-by-one strings must not appear anywhere except docs/migration.md
+  // (historical release records are kept verbatim). Authoritative source:
+  // node scripts/package-truth.mjs --emit-docs + the generated-block equality
+  // test in scripts/truth-current.test.mjs.
   it("canonical manifest-count narrative: one statement, no stale counts", () => {
     const canonical = readFileSync("docs/release-and-install.md", "utf8");
     const truth = JSON.parse(readFileSync("scripts/package-truth.json", "utf8"));
     for (const token of [
       `**${truth.counts.publishable} publishable manifests**`,
-      `**${truth.counts.workspace} workspace packages**`,
+      `${truth.counts.workspace} workspace packages`,
       `${truth.counts.provider} provider adapters`,
-      `${truth.counts.prismFamily} \`prism-*\` family/profile packages`,
+      `${truth.counts.prismFamily} \`prism-*\` family packages`,
       `${truth.counts.capability} capability packages`,
       "node scripts/package-truth.mjs",
       "scripts/package-truth.json",
@@ -334,6 +335,7 @@ describe("docs", () => {
         "prism-all"?: { deps: string[]; closure: number; omits: string[] };
       };
       profiles: Record<string, string[]>;
+      versions: Record<string, string>;
     };
     const read = (file: string) => readFileSync(file, "utf8");
     const readme = read("README.md");
@@ -345,7 +347,7 @@ describe("docs", () => {
         `canonical publishable count must be ${truth.counts.publishable}`,
       );
       assert.ok(
-        release.includes(`**${truth.counts.workspace} workspace packages**`),
+        release.includes(`${truth.counts.workspace} workspace packages`),
         `canonical workspace count must be ${truth.counts.workspace}`,
       );
       assert.ok(
@@ -353,7 +355,7 @@ describe("docs", () => {
         `canonical provider count must be ${truth.counts.provider}`,
       );
       assert.ok(
-        release.includes(`${truth.counts.prismFamily} \`prism-*\` family/profile packages`),
+        release.includes(`${truth.counts.prismFamily} \`prism-*\` family packages`),
         `canonical family/profile count must be ${truth.counts.prismFamily}`,
       );
       assert.ok(
@@ -362,17 +364,65 @@ describe("docs", () => {
       );
     });
 
-    it("every generated provider is documented in README and the release page", () => {
+    it("plan 057 Task 5: retired 0.3-era package names stay out of current docs", () => {
+      // Retired names = the phase54 package-map evidence table (the
+      // consolidation spec's 55 retired manifests; draft names that were never
+      // published are exempt because migration-scoped notes may name them).
+      // History stays verbatim: exempt pages (migration records, the
+      // self-declared 0.1.x readiness record) and lines tied to dated records
+      // (release decisions, plan/phase cites, version-pinned tags).
+      const retired = [...readFileSync("docs/_evidence/phase54-package-map.md", "utf8").matchAll(/^\| `(@arnilo\/prism-[a-z0-9-]+)` \|/gm)]
+        .map((m) => m[1])
+        // Current 0.4 packages and never-published draft names are not retired.
+        .filter((n) => !/prism-(documents|sheets|diagrams)$/.test(n) && !(n in truth.versions));
+      assert.ok(retired.length === 55, `phase54 evidence must enumerate the 55 retired 0.3 packages, got ${retired.length}`);
+      const exemptPages = new Set(["docs/migration.md", "docs/migrate-to-0.4.md", "docs/0.1.0-readiness.md"]);
+      const historyLine =
+        /@arnilo\/prism[\w-]*@\d+\.\d+\.\d+|\*\*Decision: GO|\bplan \d{3}\b|\bPhase \d+\b|lockstep|historical|\bretired\b|replaces `@arnilo\/prism-all`|deleting the `@arnilo\/prism-[\w-]+` profile|at exact `0\.\d|\b0\.0\.1\d+`? (?:graph|line)/;
+      const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      for (const file of ["README.md", ...markdownFiles("docs")]) {
+        if (file.startsWith("docs/_evidence/") || exemptPages.has(file)) continue;
+        read(file)
+          .split("\n")
+          .forEach((line, i) => {
+            if (historyLine.test(line)) return;
+            for (const name of retired) {
+              assert.doesNotMatch(
+                line,
+                new RegExp(`${esc(name)}(?![-A-Za-z0-9])`),
+                `${file}:${i + 1} references retired package ${name} as current`,
+              );
+            }
+          });
+      }
+    });
+
+    it("plan 057 Task 4: no hand-copied package counts outside generated blocks", () => {
+      // Current-only pages; historical release narratives (release-and-install
+      // decision sections, readiness/performance timelines) record frozen 0.x-era
+      // graphs verbatim and are covered by the plan-013 canonical-token test and
+      // the generated-block equality test in scripts/truth-current.test.mjs.
+      const countPhrase =
+        /(?<!of )\b\d+ (?:publishable manifests|workspace packages|provider adapters|first-party adapters|`prism-\*` family packages|capability packages)\b/;
+      for (const file of ["README.md", "docs/index.md", "docs/provider-packages.md"]) {
+        const outsideBlocks = read(file).replace(
+          /<!-- generated:package-truth:[a-z]+ begin -->[\s\S]*?<!-- generated:package-truth:[a-z]+ end -->/g,
+          "",
+        );
+        assert.doesNotMatch(outsideBlocks, countPhrase, `${file} contains a hand-copied package count outside a generated block`);
+      }
+    });
+
+    it("every generated provider is documented in the provider pages", () => {
+      const providerPage = read("docs/provider-packages.md");
+      const index = read("docs/index.md");
       for (const provider of truth.providers) {
-        // Plan 054 Task 6: subpath providers appear in the README family row by
-        // short adapter name and in the release page as full specifiers.
-        const short = provider.replace("@arnilo/prism-providers/", "");
-        if (provider.startsWith("@arnilo/prism-providers/")) {
-          assert.ok(readme.includes(short), `README.md must list generated adapter ${short}`);
-        } else {
-          assert.ok(readme.includes(provider), `README.md must list generated provider ${provider}`);
-        }
         assert.ok(release.includes(provider), `release page must list generated provider ${provider}`);
+        assert.ok(providerPage.includes(provider), `provider-packages.md must list generated provider ${provider}`);
+        const short = provider.replace("@arnilo/prism-providers/", "");
+        if (short !== provider) {
+          assert.ok(index.includes(short), `docs/index.md must link generated adapter ${short}`);
+        }
       }
     });
 
@@ -382,12 +432,12 @@ describe("docs", () => {
       if (providers.subpaths !== undefined && providers.deps.length === 0) {
         // Plan 054 Task 6 family form: all adapters ship as subpaths.
         assert.ok(
-          readme.includes(`all ${truth.counts.provider} first-party adapters`),
-          `README prism-providers row must state all ${truth.counts.provider} adapters as subpaths`,
+          readme.includes("all provider adapters"),
+          "README must state that all provider adapters install via the providers family",
         );
         assert.ok(
-          release.includes(`${truth.counts.provider} provider adapter subpaths`),
-          `release page must state ${truth.counts.provider} provider adapter subpaths`,
+          release.includes(`${truth.counts.provider} provider adapters`),
+          `release page must state ${truth.counts.provider} provider adapters`,
         );
       } else {
         assert.ok(
@@ -542,7 +592,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.4.0", "root manifest must be at the plan 054 0.4 lockstep cut version");
+    assert.equal(pkg.version, "0.5.0", "root manifest must be at the plan 058 0.5 lockstep cut version");
     assert.ok(release.includes("### 0.2.7 publish handoff (plan 027 Task 10)"), "release page missing 0.2.7 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.7 handoff missing rollback notes");
     // Semantic tripwire: the nine 0.2.7 ERP roadmap items are present in the handoff
@@ -579,7 +629,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.4.0", "root manifest must be at the plan 054 0.4 lockstep cut version");
+    assert.equal(pkg.version, "0.5.0", "root manifest must be at the plan 058 0.5 lockstep cut version");
     assert.ok(release.includes("### 0.2.8 publish handoff (plan 028 Task 18)"), "release page missing 0.2.8 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.8 handoff missing rollback notes");
     assert.ok(release.includes("client-neutrality"), "0.2.8 handoff must cover client-neutrality");
@@ -609,7 +659,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.4.0", "root manifest must be at the plan 054 0.4 lockstep cut version");
+    assert.equal(pkg.version, "0.5.0", "root manifest must be at the plan 058 0.5 lockstep cut version");
     assert.ok(release.includes("### 0.2.9 publish handoff (plan 029 Task 10)"), "release page missing 0.2.9 handoff");
     assert.ok(release.includes("SuperGrok"), "0.2.9 handoff must cover SuperGrok");
     assert.ok(release.includes("@arnilo/prism-impeccable"), "0.2.9 handoff must name impeccable");
@@ -637,7 +687,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.4.0", "root manifest must be at the plan 054 0.4 lockstep cut version");
+    assert.equal(pkg.version, "0.5.0", "root manifest must be at the plan 058 0.5 lockstep cut version");
     assert.ok(release.includes("### 0.2.6 publish handoff (plan 026 Task 8)"), "release page missing 0.2.6 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.6 handoff missing rollback notes");
     // Semantic tripwire: the seven 0.2.6 roadmap items are present in the handoff
@@ -809,7 +859,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes(`@arnilo/prism@^${pkg.version}`), `release page peer range must be ^${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.equal(pkg.version, "0.4.0", "root manifest must be at the plan 054 0.4 lockstep cut version");
+    assert.equal(pkg.version, "0.5.0", "root manifest must be at the plan 058 0.5 lockstep cut version");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -2450,7 +2500,7 @@ describe("docs", () => {
   it("credential storage docs cover encrypted file and keychain backends", () => {
     const docs = readFileSync("docs/credential-storage.md", "utf8");
     for (const phrase of [
-      "@arnilo/prism-credentials-node",
+      "@arnilo/prism-core/credentials/node",
       "openEncryptedCredentialStore",
       "createKeychainCredentialStore",
       "createStoredCredentialResolver",
@@ -2873,16 +2923,11 @@ describe("docs", () => {
     for (const name of ["createAgent", "createAgentSession"]) {
       assert.ok(readme.includes(name), `README.md does not mention ${name}`);
     }
-    for (const adapter of ["openai", "opencode-go", "openrouter", "zai", "kimi", "neuralwatt", "alibaba", "ollama"]) {
-      assert.ok(readme.includes(adapter), `README.md does not mention the ${adapter} provider adapter`);
-    }
     assert.ok(readme.includes("@arnilo/prism-providers"), "README.md does not mention the provider family");
-    for (const phrase of [
-      "docs/provider-caching.md",
-      "best-effort explicit cache hints",
-      "best-effort implicit prefix caching",
-      "all 19 first-party adapters",
-    ]) {
+    // Per-adapter enumeration lives in docs/index.md provider links (asserted in
+    // the plan 024 provider test); README carries the family row, not the 19-name list.
+    assert.ok(readme.includes("all provider adapters"), "README.md must mention all provider adapters");
+    for (const phrase of ["docs/provider-caching.md", "best-effort explicit cache hints", "best-effort implicit prefix caching"]) {
       assert.ok(readme.includes(phrase), `README.md cache/provider summary missing ${phrase}`);
     }
     assert.equal(/guaranteed cache hit|will always cache|cache will hit/i.test(readme), false, "README.md promises cache hits");
@@ -3053,8 +3098,8 @@ describe("docs", () => {
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
     for (const phrase of [
+      "all provider adapters ship as `dist/<adapter>` subpaths in one tarball",
       "**49 publishable manifests**: the root `@arnilo/prism` core package plus **48 workspace packages**",
-      "all 19 adapters ship as `dist/<adapter>` subpaths in one tarball",
       "All 56 manifests (root + 55 workspace packages: 49 code packages + 6 pure-manifest family/profile packages",
       "eight provider packages' `src/__tests__/live.test.ts`",
       "Enterprise PostgreSQL package/docs/example gate",

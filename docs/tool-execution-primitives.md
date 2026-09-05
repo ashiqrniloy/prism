@@ -2,7 +2,7 @@
 
 ## What it does
 
-This page freezes the reusable tool validation, parallel dispatch, MCP bridge, and coding execution-policy designs for Plan 055. It inventories existing `@arnilo/prism` tool harness seams, `@arnilo/prism-coding-agent` behavior, extension/contribution boundaries, and the MCP mapping surface Tasks 1–6 will implement against.
+This page freezes the reusable tool validation, parallel dispatch, MCP bridge, and coding execution-policy designs for Plan 055. It inventories existing `@arnilo/prism` tool harness seams, `@arnilo/prism-coding-tools/agent` behavior, extension/contribution boundaries, and the MCP mapping surface Tasks 1–6 will implement against.
 
 Implementation is **shipped** for JSON Schema tool argument validation (Plan 055 Task 1), parallel single-shot tool dispatch (Task 2), the MCP client bridge (Task 3), coding execution policy (Task 4), and bounded image reads (Task 5). Task 6 verification evidence is recorded in [review coverage](_evidence/review-coverage-2026-07-14.md).
 
@@ -40,7 +40,7 @@ All paths converge on normal `ToolResult` values and `tool_execution_*` events. 
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import { createJsonSchemaToolArgumentValidator } from "@arnilo/prism-tool-validator-json-schema";
+import { createJsonSchemaToolArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
 
 const agent = createAgent({
   model,
@@ -123,7 +123,7 @@ Package performs **no** `PermissionPolicy`, `ToolValidator`, or trust checks of 
 | --- | --- |
 | `ToolDefinition.parameters` | Stored and forwarded to providers; **not validated** by core |
 | `ToolValidator` | Host function hook; Phase 25 threads through agent runtime |
-| Standards-based schema validation | Optional `@arnilo/prism-tool-validator-json-schema`; host wires it through `ToolValidator` |
+| Standards-based schema validation | Optional `@arnilo/prism-core/validation/json-schema`; host wires it through `ToolValidator` |
 | Schema compile cache | Adapter-owned finite LRU; core never compiles schemas |
 
 ### MCP mapping (shipped — Task 3)
@@ -178,10 +178,10 @@ export function createToolParameterValidator(
 ): ToolValidator;
 ```
 
-Optional package `@arnilo/prism-tool-validator-json-schema`:
+Optional package `@arnilo/prism-core/validation/json-schema`:
 
 ```ts
-import { createJsonSchemaToolArgumentValidator } from "@arnilo/prism-tool-validator-json-schema";
+import { createJsonSchemaToolArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
 
 createAgent({ model, validator: createJsonSchemaToolArgumentValidator() });
 ```
@@ -271,7 +271,7 @@ export async function assertExecutionAllowed(
 ): Promise<ExecutionAction>;
 ```
 
-`@arnilo/prism-coding-agent` tools call `executionPolicy.check()` **inside** `execute` before side effects (after dispatch permission + argument validation). Optional `@arnilo/prism-coding-security` supplies `createCodingApprovalPolicy({ roots, approve, readOnly, commandRules })` with realpath containment, default deny patterns, metacharacter approval, approval caching, and `createSandboxBashOperations()` for pluggable sandbox backends.
+`@arnilo/prism-coding-tools/agent` tools call `executionPolicy.check()` **inside** `execute` before side effects (after dispatch permission + argument validation). Optional `@arnilo/prism-coding-tools/security` supplies `createCodingApprovalPolicy({ roots, approve, readOnly, commandRules })` with realpath containment, default deny patterns, metacharacter approval, approval caching, and `createSandboxBashOperations()` for pluggable sandbox backends.
 
 **Permission vs execution policy:** `PermissionPolicy` remains `tool:<name>:execute` at dispatch. `ExecutionPolicy` adds command/path context for coding tools only — no MCP-specific branches in core.
 
@@ -366,9 +366,9 @@ Core remains dependency-free: validators, MCP bridges, coding policy, sandboxes,
 
 | Finding / capability | Plan 055 task | Primitive / doc |
 | --- | --- | --- |
-| C-001 JSON Schema tool validation | 1 | **shipped** — `ToolArgumentValidator`, `createToolParameterValidator`, `@arnilo/prism-tool-validator-json-schema` |
+| C-001 JSON Schema tool validation | 1 | **shipped** — `ToolArgumentValidator`, `createToolParameterValidator`, `@arnilo/prism-core/validation/json-schema` |
 | C-003 MCP client bridge | 3 | **shipped** — `@arnilo/prism-mcp` |
-| C-006 Approval/sandbox for coding tools | 4 | **shipped** — `ExecutionPolicy`, `@arnilo/prism-coding-security` |
+| C-006 Approval/sandbox for coding tools | 4 | **shipped** — `ExecutionPolicy`, `@arnilo/prism-coding-tools/security` |
 | C-007 Parallel tool execution | 2 | **shipped** — `toolConcurrency`, `dispatchToolCallsInOrder`, `resolveToolConcurrency` |
 | R-011 Image size / resize option | 5 | **shipped** — `maxImageBytes`, `transformImage`, `DEFAULT_MAX_IMAGE_BYTES` on read tool |
 | Phase verification | 6 | **verified** — `npm run sdk:ready` + audit + threat-model fixtures; evidence in review coverage |

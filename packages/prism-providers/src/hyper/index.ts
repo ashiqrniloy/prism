@@ -27,11 +27,11 @@ export { applyHyperAnthropicCacheControl, hyperAnthropicCacheEnabled } from "./c
 export {
   costFromHyperPricing,
   defineHyperModel,
+  HYPER_DEFAULT_BASE_URL,
   type HyperModelConfig,
   type HyperModelEntry,
   type HyperRoute,
   hyperModels,
-  HYPER_DEFAULT_BASE_URL,
   listHyperModels,
   mapHyperModel,
   routeForHyperModel,
@@ -39,8 +39,8 @@ export {
 export { hyperChatBody, hyperChatEvents, serializeHyperChatMessage } from "./openai-chat.js";
 export { createHyperProvider, type HyperProviderOptions } from "./provider.js";
 export { type GetHyperCreditsOptions, getHyperCredits, type HyperCreditsBalance } from "./quota.js";
-export { classifyHyperError, hyperHttpError, type HyperErrorInput, type HyperRetryDecision } from "./retry.js";
-export { parseHyperUsageCost, type HyperUsageCost } from "./telemetry.js";
+export { classifyHyperError, type HyperErrorInput, type HyperRetryDecision, hyperHttpError } from "./retry.js";
+export { type HyperUsageCost, parseHyperUsageCost } from "./telemetry.js";
 export {
   hyperPreserveThinking,
   hyperReasoningEffort,

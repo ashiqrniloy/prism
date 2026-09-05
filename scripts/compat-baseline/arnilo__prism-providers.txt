@@ -10,10 +10,12 @@ AiSdkProviderOptions	export type { AiSdkProviderOptions } from "./types.js"
 CLINEPASS_DEFAULT_BASE_URL	export declare const CLINEPASS_DEFAULT_BASE_URL = "https://api.cline.bot/api/v1"
 CLINEPASS_FEATURED_SLUGS	export declare const CLINEPASS_FEATURED_SLUGS: string[]
 CLINEPASS_THINKING_MAPS	export declare const CLINEPASS_THINKING_MAPS:
+COMMAND_CODE_DEFAULT_BASE_URL	export declare const COMMAND_CODE_DEFAULT_BASE_URL = "https://api.commandcode.ai/provider/v1"
 DEEPSEEK_DEFAULT_BASE_URL	export declare const DEEPSEEK_DEFAULT_BASE_URL = "https://api.deepseek.com"
 DEFAULT_ALIBABA_BASE_URL	export declare const DEFAULT_ALIBABA_BASE_URL: string
 DEFAULT_OLLAMA_BASE_URL	export declare const DEFAULT_OLLAMA_BASE_URL: string
 GOOGLE_DEFAULT_BASE_URL	export declare const GOOGLE_DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
+HYPER_DEFAULT_BASE_URL	export declare const HYPER_DEFAULT_BASE_URL = "https://hyper.charm.land/v1"
 OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH	export declare const OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH = 64
 OPENCODE_GO_DEFAULT_BASE_URL	export declare const OPENCODE_GO_DEFAULT_BASE_URL = "https://opencode.ai/zen/go/v1"
 OPENCODE_SESSION_ID_MAX_LENGTH	export declare const OPENCODE_SESSION_ID_MAX_LENGTH = 128
@@ -37,7 +39,7 @@ alibabaEnableThinking	export declare function alibabaEnableThinking(request: Pro
 alibabaEvents	export declare function alibabaEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 anthropicCacheEnabled	export declare function anthropicCacheEnabled(request: ProviderRequest): boolean
 anthropicEffort	export declare function anthropicEffort(request: ProviderRequest): string | undefined
-anthropicMessagesBody	export declare function anthropicMessagesBody(request: ProviderRequest): Promise<JsonObject>
+anthropicMessagesBody	export declare function anthropicMessagesBody(request: ProviderRequest, hooks: AnthropicMessagesRouteHooks): Promise<JsonObject>
 anthropicMessagesEvents	export declare function anthropicMessagesEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 anthropicModels	export declare const anthropicModels: readonly [ModelConfig, ModelConfig, ModelConfig, ModelConfig]
 anthropicOwnedHeaders	export declare function anthropicOwnedHeaders(token: string | undefined, options: ProviderRequestOptions | undefined, userAgent?: string): Record<string, string>
@@ -45,6 +47,8 @@ anthropicPreserveThinking	export declare function anthropicPreserveThinking(requ
 anthropicThinking	export declare function anthropicThinking(request: ProviderRequest): JsonObject | undefined
 applyAlibabaCacheControl	export declare function applyAlibabaCacheControl(request: ProviderRequest): readonly CacheControlledMessage[]
 applyAnthropicCacheControl	export declare function applyAnthropicCacheControl(request: ProviderRequest): readonly Message[]
+applyCommandCodeCacheControl	export declare function applyCommandCodeCacheControl(request: ProviderRequest): readonly import("@arnilo/prism").Message[]
+applyHyperAnthropicCacheControl	export declare function applyHyperAnthropicCacheControl(request: ProviderRequest): readonly Message[]
 applyKimiAnthropicCacheControl	export declare function applyKimiAnthropicCacheControl(request: ProviderRequest): readonly Message[]
 applyOpenRouterCacheControl	export declare function applyOpenRouterCacheControl(request: ProviderRequest): readonly Message[]
 applyOpencodeAnthropicCacheControl	export declare function applyOpencodeAnthropicCacheControl(request: ProviderRequest): readonly Message[]
@@ -54,6 +58,8 @@ azureChatCompletionsUrl	export declare function azureChatCompletionsUrl(input:
 bedrockRuntimeEndpoint	export declare function bedrockRuntimeEndpoint(region: string, endpoint?: string): string
 canonicalizeDeepSeekTools	export declare function canonicalizeDeepSeekTools(tools: unknown): unknown
 canonicalizeJsonSchema	export { canonicalizeDeepSeekTools, canonicalizeJsonSchema } from "./cache.js"
+classifyCommandCodeError	export declare function classifyCommandCodeError(input: CommandCodeErrorInput): CommandCodeRetryDecision
+classifyHyperError	export declare function classifyHyperError(input: HyperErrorInput): HyperRetryDecision
 classifyNeuralWattError	export declare function classifyNeuralWattError(input: NeuralWattErrorInput): NeuralWattRetryDecision
 clinePassBody	export declare function clinePassBody(request: ProviderRequest): JsonObject
 clinePassEvents	export declare function clinePassEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
@@ -61,7 +67,14 @@ clinePassModels	export declare const clinePassModels: ModelConfig[]
 clinePassReasoningEffort	export declare function clinePassReasoningEffort(request: ProviderRequest): string | undefined
 clinePassThinkingLevelMap	export declare function clinePassThinkingLevelMap(request: ProviderRequest): ClinePassThinkingLevelMap | undefined
 clinePassThinkingSlot	export declare function clinePassThinkingSlot(value: unknown): ClinePassThinkingSlot | undefined
+commandCodeCacheEnabled	export declare function commandCodeCacheEnabled(request: ProviderRequest): boolean
+commandCodeChatBody	export declare function commandCodeChatBody(request: ProviderRequest): JsonObject
+commandCodeChatEvents	export declare function commandCodeChatEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+commandCodeHttpError	export declare function commandCodeHttpError(decision: CommandCodeRetryDecision, bodyText: string, secrets: readonly (string | undefined)[]): Error
+commandCodeModels	export declare const commandCodeModels: readonly ModelConfig[]
+commandCodePreserveThinking	export declare function commandCodePreserveThinking(request: ProviderRequest): boolean
 computeS256Challenge	export declare function computeS256Challenge(verifier: string): string
+costFromHyperPricing	export declare function costFromHyperPricing(pricing: HyperModelEntry["pricing"]): ModelCost | undefined
 createAiSdkProvider	export declare function createAiSdkProvider(options: AiSdkProviderOptions): AIProvider
 createAlibabaEmbedder	export declare function createAlibabaEmbedder(options: AlibabaEmbedderOptions): AlibabaEmbedder
 createAlibabaProvider	export declare function createAlibabaProvider(options?: AlibabaProviderOptions): AIProvider
@@ -74,10 +87,14 @@ createBedrockProvider	export declare function createBedrockProvider(options: Bed
 createBedrockProviderPackage	export declare function createBedrockProviderPackage(options: BedrockProviderPackageOptions): ProviderPackage
 createClinePassProvider	export declare function createClinePassProvider(options?: ClinePassProviderOptions): AIProvider
 createClinePassProviderPackage	export declare function createClinePassProviderPackage(options?: ClinePassProviderPackageOptions): ProviderPackage
+createCommandCodeProvider	export declare function createCommandCodeProvider(options?: CommandCodeProviderOptions): AIProvider
+createCommandCodeProviderPackage	export declare function createCommandCodeProviderPackage(options?: CommandCodeProviderPackageOptions): ProviderPackage
 createDeepSeekProvider	export declare function createDeepSeekProvider(options?: DeepSeekProviderOptions): AIProvider
 createDeepSeekProviderPackage	export declare function createDeepSeekProviderPackage(options?: DeepSeekProviderPackageOptions): ProviderPackage
 createGoogleGenerateContentProvider	export declare function createGoogleGenerateContentProvider(options?: GoogleGenerateContentProviderOptions): AIProvider
 createGoogleProviderPackage	export declare function createGoogleProviderPackage(options?: GoogleProviderPackageOptions): ProviderPackage
+createHyperProvider	export declare function createHyperProvider(options?: HyperProviderOptions): AIProvider
+createHyperProviderPackage	export declare function createHyperProviderPackage(options?: HyperProviderPackageOptions): ProviderPackage
 createKimiCodingProvider	export declare function createKimiCodingProvider(options?: KimiCodingProviderOptions): AIProvider
 createKimiProviderPackage	export declare function createKimiProviderPackage(options?: KimiProviderPackageOptions): ProviderPackage
 createMoonshotProvider	export declare function createMoonshotProvider(options?: MoonshotProviderOptions): AIProvider
@@ -112,8 +129,10 @@ deepseekThinking	export declare function deepseekThinking(request: ProviderReque
 defineAlibabaModel	export declare function defineAlibabaModel(config: AlibabaModelConfig): ModelConfig
 defineAnthropicModel	export declare function defineAnthropicModel(config: AnthropicModelConfig): ModelConfig
 defineClinePassModel	export declare function defineClinePassModel(config: ClinePassModelConfig): ModelConfig
+defineCommandCodeModel	export declare function defineCommandCodeModel(config: CommandCodeModelConfig): ModelConfig
 defineDeepSeekModel	export declare function defineDeepSeekModel(config: DeepSeekModelConfig): ModelConfig
 defineGoogleModel	export declare function defineGoogleModel(config: GoogleModelConfig): ModelConfig
+defineHyperModel	export declare function defineHyperModel(config: HyperModelConfig): ModelConfig
 defineKimiModel	export declare function defineKimiModel(config: KimiModelConfig): ModelConfig
 defineNeuralWattModel	export declare function defineNeuralWattModel(config: NeuralWattModelConfig): ModelConfig
 defineOllamaModel	export declare function defineOllamaModel(config: OllamaModelConfig): ModelConfig
@@ -122,6 +141,7 @@ defineOpenCodeGoModel	export declare function defineOpenCodeGoModel(config: Open
 defineOpenRouterModel	export declare function defineOpenRouterModel(config: OpenRouterModelConfig): ModelConfig
 defineXaiModel	export declare function defineXaiModel(config: XaiModelConfig): ModelConfig
 defineZaiModel	export declare function defineZaiModel(config: ZaiModelConfig): ModelConfig
+getHyperCredits	export declare function getHyperCredits(options: GetHyperCreditsOptions): Promise<HyperCreditsBalance>
 getNeuralWattQuota	export declare function getNeuralWattQuota(options: GetNeuralWattQuotaOptions): Promise<NeuralWattQuota>
 googleGenerateContentBody	export declare function googleGenerateContentBody(request: ProviderRequest): Promise<JsonObject>
 googleGenerateContentEvents	export declare function googleGenerateContentEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
@@ -129,6 +149,14 @@ googleModels	export declare const googleModels: readonly [ModelConfig, ModelConf
 googleOwnedHeaders	export declare function googleOwnedHeaders(token: string | undefined, options: ProviderRequestOptions | undefined, userAgent?: string): Record<string, string>
 googlePreserveThinking	export declare function googlePreserveThinking(request: ProviderRequest): boolean
 googleThinkingConfig	export declare function googleThinkingConfig(request: ProviderRequest): JsonObject | undefined
+hyperAnthropicCacheEnabled	export declare function hyperAnthropicCacheEnabled(request: ProviderRequest): boolean
+hyperChatBody	export declare function hyperChatBody(request: ProviderRequest): JsonObject
+hyperChatEvents	export declare function hyperChatEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+hyperHttpError	export declare function hyperHttpError(decision: HyperRetryDecision, bodyText: string, secrets: readonly (string | undefined)[]): Error
+hyperModels	export declare const hyperModels: readonly ModelConfig[]
+hyperPreserveThinking	export declare function hyperPreserveThinking(request: ProviderRequest): boolean
+hyperReasoningEffort	export declare function hyperReasoningEffort(request: ProviderRequest): string | undefined
+hyperThinking	export declare function hyperThinking(request: ProviderRequest): JsonObject | boolean | undefined
 kimiAnthropicBody	export declare function kimiAnthropicBody(request: ProviderRequest): Promise<JsonObject>
 kimiAnthropicCacheEnabled	export declare function kimiAnthropicCacheEnabled(request: ProviderRequest): boolean
 kimiAnthropicEvents	export declare function kimiAnthropicEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
@@ -138,8 +166,10 @@ kimiReasoningEffort	export declare function kimiReasoningEffort(request: Provide
 kimiThinking	export declare function kimiThinking(request: ProviderRequest): JsonObject | undefined
 listAlibabaModels	export declare function listAlibabaModels(options?: ListAlibabaModelsOptions): Promise<ModelConfig[]>
 listAnthropicModels	export declare function listAnthropicModels(options?: ListAnthropicModelsOptions): Promise<ModelConfig[]>
+listCommandCodeModels	export declare function listCommandCodeModels(options?: ListCommandCodeModelsOptions): Promise<ModelConfig[]>
 listDeepSeekModels	export declare function listDeepSeekModels(options?: ListDeepSeekModelsOptions): Promise<ModelConfig[]>
 listGoogleModels	export declare function listGoogleModels(options?: ListGoogleModelsOptions): Promise<ModelConfig[]>
+listHyperModels	export declare function listHyperModels(options?: ListHyperModelsOptions): Promise<ModelConfig[]>
 listKimiModels	export declare function listKimiModels(options?: ListKimiModelsOptions): Promise<ModelConfig[]>
 listNeuralWattModels	export declare function listNeuralWattModels(options?: ListNeuralWattModelsOptions): Promise<ModelConfig[]>
 listOllamaModels	export declare function listOllamaModels(options?: ListOllamaModelsOptions): Promise<ModelConfig[]>
@@ -151,9 +181,11 @@ listZaiModels	export declare function listZaiModels(options?: ListZaiModelsOptio
 mapAiSdkStream	export declare function mapAiSdkStream(stream: ReadableStream<LanguageModelV4StreamPart>, signal?: AbortSignal, redactor?: SecretRedactor): AsyncIterable<ProviderEvent>
 mapAlibabaModel	export declare function mapAlibabaModel(entry: AlibabaModelEntry): ModelConfig
 mapAnthropicModel	export declare function mapAnthropicModel(entry: AnthropicModelEntry, options?:
+mapCommandCodeModel	export declare function mapCommandCodeModel(entry: CommandCodeModelEntry, options?:
 mapDeepSeekModel	export declare function mapDeepSeekModel(entry: DeepSeekModelEntry, options?:
 mapDeepseekEffort	export declare function mapDeepseekEffort(value: unknown): "low" | "high" | "max" | undefined
 mapGoogleModel	export declare function mapGoogleModel(entry: GoogleModelEntry, options?:
+mapHyperModel	export declare function mapHyperModel(entry: HyperModelEntry, options?:
 mapKimiModel	export declare function mapKimiModel(entry: KimiModelEntry, options?:
 mapNeuralWattModel	export declare function mapNeuralWattModel(entry: NeuralWattModelEntry): ModelConfig
 mapNeuralWattTelemetry	export declare function mapNeuralWattTelemetry(body: unknown):
@@ -202,6 +234,7 @@ openRouterUsage	export declare function openRouterUsage(usage: OpenRouterUsage |
 opencodeAnthropicCacheEnabled	export declare function opencodeAnthropicCacheEnabled(request: ProviderRequest): boolean
 opencodeOwnedHeaders	export declare function opencodeOwnedHeaders(options: ProviderRequestOptions | undefined): Record<string, string>
 opencodeSessionId	export declare function opencodeSessionId(options: ProviderRequestOptions | undefined): string | undefined
+parseHyperUsageCost	export declare function parseHyperUsageCost(usage: unknown): HyperUsageCost | undefined
 parseNeuralWattComment	export declare function parseNeuralWattComment(text: string): NeuralWattTelemetryEvent | undefined
 parseNeuralWattCost	export declare function parseNeuralWattCost(payload: string): NeuralWattCostTelemetry | undefined
 parseNeuralWattEnergy	export declare function parseNeuralWattEnergy(payload: string): NeuralWattEnergyTelemetry | undefined
@@ -211,13 +244,19 @@ promptCacheOptions	export declare function promptCacheOptions(options: ProviderR
 promptCacheRetention	export declare function promptCacheRetention(options: ProviderRequestOptions | undefined, model: ModelConfig): "24h" | undefined
 resolveOpenAIReasoning	export declare function resolveOpenAIReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
 resolveOpenRouterReasoning	export declare function resolveOpenRouterReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
+routeForCommandCodeModel	export declare function routeForCommandCodeModel(modelId: string): CommandCodeRoute
+routeForHyperModel	export declare function routeForHyperModel(modelId: string): HyperRoute
 routeForOpenCodeGoModel	export declare function routeForOpenCodeGoModel(modelId: string): OpenCodeGoRoute
 serializeAlibabaMessage	export declare function serializeAlibabaMessage(message: CacheControlledMessage, capabilities?: ModelCapabilities): JsonObject
+serializeCommandCodeChatMessage	export declare function serializeCommandCodeChatMessage(message: Message, preserveThinking: boolean): JsonObject
+serializeHyperChatMessage	export declare function serializeHyperChatMessage(message: Message, preserveThinking: boolean): JsonObject
 serializeMoonshotMessage	export declare function serializeMoonshotMessage(message: Message, capabilities?: ModelCapabilities, preserveThinking?: boolean): JsonObject
 serializeOpenCodeGoChatMessage	export declare function serializeOpenCodeGoChatMessage(message: Message, capabilities: ModelCapabilities, preserveThinking: boolean): JsonObject
 signAwsRequest	export declare function signAwsRequest(input: SignAwsRequestInput): Record<string, string>
 stripAnthropicOwnedCompat	export declare function stripAnthropicOwnedCompat(compat: JsonObject | undefined): JsonObject
+stripCommandCodeOwnedCompat	export declare function stripCommandCodeOwnedCompat(compat: JsonObject | undefined): JsonObject | undefined
 stripGoogleOwnedCompat	export declare function stripGoogleOwnedCompat(compat: JsonObject | undefined): JsonObject
+stripHyperOwnedCompat	export declare function stripHyperOwnedCompat(compat: JsonObject | undefined): JsonObject | undefined
 stripKimiThinkingCompat	export declare function stripKimiThinkingCompat(compat: JsonObject | undefined): JsonObject
 stripModelsPrefix	export declare function stripModelsPrefix(name: string): string
 stripNeuralWattOwnedCompat	export declare function stripNeuralWattOwnedCompat(compat: JsonObject | undefined): JsonObject | undefined
@@ -250,13 +289,28 @@ type ClinePassModelConfig	export { CLINEPASS_DEFAULT_BASE_URL, CLINEPASS_FEATURE
 type ClinePassProviderOptions	export { type ClinePassProviderOptions, clinePassBody, clinePassEvents, createClinePassProvider, } from "./provider.js"
 type ClinePassThinkingLevelMap	export { CLINEPASS_THINKING_MAPS, type ClinePassThinkingLevelMap, type ClinePassThinkingSlot, clinePassReasoningEffort, clinePassThinkingLevelMap, clinePassThinkingSlot, } from "./thinking.js"
 type ClinePassThinkingSlot	export { CLINEPASS_THINKING_MAPS, type ClinePassThinkingLevelMap, type ClinePassThinkingSlot, clinePassReasoningEffort, clinePassThinkingLevelMap, clinePassThinkingSlot, } from "./thinking.js"
+type CommandCodeErrorInput	export { classifyCommandCodeError, commandCodeHttpError, type CommandCodeErrorInput, type CommandCodeRetryDecision, } from "./errors.js"
+type CommandCodeModelConfig	export { type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeRoute, commandCodeModels, COMMAND_CODE_DEFAULT_BASE_URL, defineCommandCodeModel, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"
+type CommandCodeModelEntry	export { type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeRoute, commandCodeModels, COMMAND_CODE_DEFAULT_BASE_URL, defineCommandCodeModel, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"
+type CommandCodeProviderOptions	export { createCommandCodeProvider, type CommandCodeProviderOptions } from "./provider.js"
+type CommandCodeRetryDecision	export { classifyCommandCodeError, commandCodeHttpError, type CommandCodeErrorInput, type CommandCodeRetryDecision, } from "./errors.js"
+type CommandCodeRoute	export { type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeRoute, commandCodeModels, COMMAND_CODE_DEFAULT_BASE_URL, defineCommandCodeModel, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"
 type DeepSeekModelConfig	export { type DeepSeekModelConfig, type DeepSeekModelEntry, deepseekModels, defineDeepSeekModel, type ListDeepSeekModelsOptions, listDeepSeekModels, mapDeepSeekModel, } from "./models.js"
 type DeepSeekModelEntry	export { type DeepSeekModelConfig, type DeepSeekModelEntry, deepseekModels, defineDeepSeekModel, type ListDeepSeekModelsOptions, listDeepSeekModels, mapDeepSeekModel, } from "./models.js"
 type DeepSeekProviderOptions	export { createDeepSeekProvider, DEEPSEEK_DEFAULT_BASE_URL, type DeepSeekProviderOptions, deepseekBody, deepseekEvents, toDeepSeekMessage, } from "./provider.js"
+type GetHyperCreditsOptions	export { type GetHyperCreditsOptions, getHyperCredits, type HyperCreditsBalance } from "./quota.js"
 type GetNeuralWattQuotaOptions	export { type GetNeuralWattQuotaOptions, getNeuralWattQuota, type NeuralWattQuota, type NeuralWattQuotaBalance, type NeuralWattQuotaKey, type NeuralWattQuotaLimits, type NeuralWattQuotaSubscription, type NeuralWattQuotaUsage, } from "./quota.js"
 type GoogleGenerateContentProviderOptions	export { createGoogleGenerateContentProvider, type GoogleGenerateContentProviderOptions, googleOwnedHeaders, } from "./provider.js"
 type GoogleModelConfig	export { defineGoogleModel, GOOGLE_DEFAULT_BASE_URL, type GoogleModelConfig, type GoogleModelEntry, googleModels, type ListGoogleModelsOptions, listGoogleModels, mapGoogleModel, stripModelsPrefix, } from "./models.js"
 type GoogleModelEntry	export { defineGoogleModel, GOOGLE_DEFAULT_BASE_URL, type GoogleModelConfig, type GoogleModelEntry, googleModels, type ListGoogleModelsOptions, listGoogleModels, mapGoogleModel, stripModelsPrefix, } from "./models.js"
+type HyperCreditsBalance	export { type GetHyperCreditsOptions, getHyperCredits, type HyperCreditsBalance } from "./quota.js"
+type HyperErrorInput	export { classifyHyperError, hyperHttpError, type HyperErrorInput, type HyperRetryDecision } from "./retry.js"
+type HyperModelConfig	export { costFromHyperPricing, defineHyperModel, type HyperModelConfig, type HyperModelEntry, type HyperRoute, hyperModels, HYPER_DEFAULT_BASE_URL, listHyperModels, mapHyperModel, routeForHyperModel, } from "./models.js"
+type HyperModelEntry	export { costFromHyperPricing, defineHyperModel, type HyperModelConfig, type HyperModelEntry, type HyperRoute, hyperModels, HYPER_DEFAULT_BASE_URL, listHyperModels, mapHyperModel, routeForHyperModel, } from "./models.js"
+type HyperProviderOptions	export { createHyperProvider, type HyperProviderOptions } from "./provider.js"
+type HyperRetryDecision	export { classifyHyperError, hyperHttpError, type HyperErrorInput, type HyperRetryDecision } from "./retry.js"
+type HyperRoute	export { costFromHyperPricing, defineHyperModel, type HyperModelConfig, type HyperModelEntry, type HyperRoute, hyperModels, HYPER_DEFAULT_BASE_URL, listHyperModels, mapHyperModel, routeForHyperModel, } from "./models.js"
+type HyperUsageCost	export { parseHyperUsageCost, type HyperUsageCost } from "./telemetry.js"
 type KimiCodingProviderOptions	export { createKimiCodingProvider, type KimiCodingProviderOptions, kimiAnthropicBody, kimiAnthropicEvents, } from "./provider.js"
 type KimiModelConfig	export { defineKimiModel, type KimiModelConfig, type KimiModelEntry, kimiCodingModels, type ListKimiModelsOptions, listKimiModels, mapKimiModel, moonshotKimiModels, } from "./models.js"
 type KimiModelEntry	export { defineKimiModel, type KimiModelConfig, type KimiModelEntry, kimiCodingModels, type ListKimiModelsOptions, listKimiModels, mapKimiModel, moonshotKimiModels, } from "./models.js"
@@ -320,7 +374,6 @@ type ZaiModelEntry	export { defineZaiModel, type ListZaiModelsOptions, listZaiMo
 type ZaiProviderOptions	export { createZaiProvider, toZaiMessage, ZAI_DEFAULT_BASE_URL, type ZaiProviderOptions, zaiBody, zaiEvents, } from "./provider.js"
 vertexOpenApiBaseUrl	export declare function vertexOpenApiBaseUrl(input:
 withAlibabaCacheMarker	export declare function withAlibabaCacheMarker(contentItem: JsonObject, marker: JsonObject | undefined): JsonObject
-withOpenRouterCacheMarker	export declare function withOpenRouterCacheMarker(contentItem: JsonObject, marker: JsonObject | undefined): JsonObject
 xGrokConvId	export declare function xGrokConvId(request: ProviderRequest): string | undefined
 xaiBody	export declare function xaiBody(request: ProviderRequest): JsonObject
 xaiCacheEnabled	export declare function xaiCacheEnabled(request: ProviderRequest): boolean

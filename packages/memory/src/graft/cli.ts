@@ -8,7 +8,6 @@ export const HOOK_OVERHEAD_MS = 2000;
 export const MIN_CHILD_TIMEOUT_MS = 4000;
 export const DEFAULT_RETRIEVAL_BUDGET_MS = 8000;
 export const DEFAULT_MAX_RESULT_BYTES = 524_288;
-export const DEFAULT_MAX_PROMPT_CHARS = 4096;
 export const DEFAULT_STDERR_TAIL_CHARS = 2000;
 
 /**

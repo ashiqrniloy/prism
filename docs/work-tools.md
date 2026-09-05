@@ -1,6 +1,6 @@
 # Work tools
 
-Optional `@arnilo/prism-work-tools` package: identity-scoped Microsoft 365 and Google Workspace connectors. Host-pinned CLI binaries only; hard-coded `execFile` argv templates; draft-then-approve mutations; side-effect idempotency; shared mail/calendar/file/task result shapes.
+Optional `@arnilo/prism-core/integrations/work` package: identity-scoped Microsoft 365 and Google Workspace connectors. Host-pinned CLI binaries only; hard-coded `execFile` argv templates; draft-then-approve mutations; side-effect idempotency; shared mail/calendar/file/task result shapes.
 
 ## When to use
 
@@ -9,7 +9,7 @@ Use when agents must read or mutate tenant mail/calendar/files/tasks through the
 ## Install
 
 ```bash
-npm install @arnilo/prism-work-tools
+npm install @arnilo/prism-core/integrations/work
 # host separately:
 #   npm i -g @pnp/cli-microsoft365
 #   npm i -g @googleworkspace/cli
@@ -23,8 +23,8 @@ import {
   createMicrosoft365CliAdapter,
   createGoogleWorkspaceCliAdapter,
   createMemoryIdempotencyStore,
-} from "@arnilo/prism-work-tools";
-// or: import { createGoogleWorkspaceCliAdapter } from "@arnilo/prism-work-tools/google-workspace";
+} from "@arnilo/prism-core/integrations/work";
+// or: import { createGoogleWorkspaceCliAdapter } from "@arnilo/prism-core/integrations/work/google-workspace";
 
 const microsoft365 = createMicrosoft365CliAdapter({
   binary: process.env.M365_BIN!,
@@ -145,7 +145,7 @@ Approved mutations require core-derived `context.idempotencyKey` and a configure
 ## Security
 
 - Require host-verified `AgentIdentity`; no cross-identity configDir reuse.
-- Connector tokens (0.0.14): an optional `tokenProvider` resolves a per-identity access token into an env var per call — never argv, never model context. A missing/expired/revoked/cross-identity/wrong-tenant token fails the call closed before any exec. Refresh is late-bound and single-flighted per account (no refresh storm under reconnect). Build one with `createOAuthWorkTokenProvider()` from `@arnilo/prism-credentials-node`.
+- Connector tokens (0.0.14): an optional `tokenProvider` resolves a per-identity access token into an env var per call — never argv, never model context. A missing/expired/revoked/cross-identity/wrong-tenant token fails the call closed before any exec. Refresh is late-bound and single-flighted per account (no refresh storm under reconnect). Build one with `createOAuthWorkTokenProvider()` from `@arnilo/prism-core/credentials/node`.
 - External mail recipients fail closed unless `externalRecipients.allow` returns true.
 - Anonymous / `anyone` sharing denied.
 - CLI stdout/stderr capped (linear chunk capture, killed/rejected before bytes beyond the cap are retained); NDJSON page streams strictly parsed and page-capped; process killed on timeout/abort/overflow.

@@ -40,8 +40,9 @@ export function reconstructToolCallDeltas(events: readonly ProviderEvent[]): rea
   for (const event of events) {
     if (event.type !== "tool_call_delta") continue;
     const partial = partials.get(event.index) ?? { argumentsText: "" };
-    if (event.id !== undefined) partial.id = event.id;
-    if (event.name !== undefined) partial.name = event.name;
+    // Conformant OpenAI-compatible providers repeat identity as null on continuation chunks; coalesce like openai-compatible.js instead of clobbering.
+    partial.id = event.id ?? partial.id;
+    partial.name = event.name ?? partial.name;
     if (event.argumentsText !== undefined) partial.argumentsText += event.argumentsText;
     partials.set(event.index, partial);
   }

@@ -86,15 +86,27 @@ export class QmdClient {
 
       const parsed = JSON.parse(res.stdout.trim() || "[]");
       if (Array.isArray(parsed)) {
-        return parsed.slice(0, maxResults).map((item, idx) => ({
-          docId: item.docId ?? item.id ?? `#${idx + 1}`,
-          file: item.file ?? item.path ?? "",
-          score: typeof item.score === "number" ? item.score : 1.0,
-          snippet: item.snippet ?? item.content ?? item.text ?? "",
-          title: item.title,
-        }));
+        const hits = parsed
+          .slice(0, maxResults)
+          .map((item, idx) => ({
+            docId: item.docId ?? item.id ?? `#${idx + 1}`,
+            file: item.file ?? item.path ?? "",
+            score: typeof item.score === "number" ? item.score : 1.0,
+            snippet: item.snippet ?? item.content ?? item.text ?? "",
+            title: item.title,
+          }))
+          // qmd searches its whole global index (no collection scoping in the
+          // CLI); foreign collections surface as qmd:// URIs and must never
+          // outrank this workspace's own wiki content.
+          .filter((hit) => hit.file.length > 0 && !hit.file.startsWith("qmd://"));
+        if (hits.length > 0) {
+          return hits;
+        }
       }
-      return [];
+      // An empty or foreign-only answer means no usable index (installed qmd
+      // with an empty/wedged collection); fall back to the in-repo catalog
+      // scan so wiki_search answers from the compiled entities themselves.
+      return this.fallbackCatalogSearch(query, maxResults);
     } catch {
       // If qmd fails or is not installed, fall back to in-memory catalog scan
       return this.fallbackCatalogSearch(query, maxResults);

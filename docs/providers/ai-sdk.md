@@ -146,7 +146,7 @@ Official evidence: [Custom providers / LanguageModelV4](https://ai-sdk.dev/provi
 ## Extension and configuration notes
 
 - Peer dependency: `@ai-sdk/provider@4.0.10` (matrix also lists `4.0.3` and `4.0.4`). Upgrade policy adds a matrix row and offline conformance fixture before accepting any new version.
-- First-party HTTP providers remain independent; this adapter is available directly, through `@arnilo/prism-providers`, or through `@arnilo/prism-all`. Installation does not select a model or invoke AI SDK.
+- First-party HTTP providers remain independent; this adapter is available directly or through `@arnilo/prism-providers`. Installation does not select a model or invoke AI SDK.
 - `options.compat` / `options.extra` pass through as AI SDK `providerOptions.prism`.
 - Export helpers `toAiSdkCallOptions`, `toAiSdkPrompt`, and `mapAiSdkStream` for tests and custom hosts.
 

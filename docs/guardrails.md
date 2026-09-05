@@ -76,7 +76,7 @@ Guardrails are callbacks supplied by the host. Prism does not discover, load, re
 
 ## Security and performance notes
 
-Optional `@arnilo/prism-policy` can record guardrail outcomes via `recordGuardrailDecision` (evidence refs only; see [Policy and audit](policy-and-audit.md)).
+Optional `@arnilo/prism-core/governance/policy` can record guardrail outcomes via `recordGuardrailDecision` (evidence refs only; see [Policy and audit](policy-and-audit.md)).
 
 Output buffering prevents blocked provider content from reaching subscribers, session entries, ledgers, parsers, delegation, or tools. Tool-output checks receive raw results but Prism discards blocked raw output before event, ledger, transcript, or MCP exposure. Redaction replaces exact known values only; it is not general secret detection. Parallel checks receive an abort signal, but callback code must honor it to stop in-flight work. Browser snapshots and page text from the `browser` subpath are untrusted external content: never allow them to modify tools, permissions, credentials, or policy. Browser mutations still require host `ExecutionPolicy`/approval; prompt-injection text in a page cannot grant upload/download release.
 

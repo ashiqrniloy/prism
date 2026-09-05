@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-mcp` has two explicit directions. Its client bridge connects hosts to remote [Model Context Protocol](https://modelcontextprotocol.io) servers and maps discovered tools to ordinary `ToolDefinition`s. Its server API registers selected Prism `ToolDefinition` and `CommandDefinition` values on the official SDK `McpServer`, with required authorization and a bounded optional Web-standard Streamable HTTP handler. The package pins `@modelcontextprotocol/sdk` **1.30.0** (MCP protocol negotiation remains SDK-owned) and adds no MCP branch to core Prism.
+`@arnilo/prism-mcp` has two explicit directions. Its client bridge connects hosts to remote [Model Context Protocol](https://modelcontextprotocol.io) servers and maps discovered tools to ordinary `ToolDefinition`s. Its server API registers selected Prism `ToolDefinition` and `CommandDefinition` values on the official SDK `McpServer`, with required authorization and a bounded optional Web-standard Streamable HTTP handler. The package pins the modular TypeScript SDK v2 packages `@modelcontextprotocol/client` and `@modelcontextprotocol/server` **2.0.0** (MCP protocol negotiation remains SDK-owned; the 2026-07-28 adoption is tracked in plan 063) and adds no MCP branch to core Prism.
 
 Primary API:
 
@@ -32,19 +32,25 @@ const app = await bridge.apps!.readResource("ui://weather/card");
 
 `bridge.apps` exposes reviewed UI metadata, linked bounded `ui://` HTML, and same-server app tools for a host renderer/proxy; it never creates an iframe or executes HTML.
 
+**Conformance and verification record (plan 063 task 7):** the official `@modelcontextprotocol/conformance` suite runs against the dual-era serving stack via `node scripts/mcp-conformance-2026.mjs` — the 20 expressible scenarios pass and the 14 scenarios requiring surface Prism does not expose (server-initiated sampling/elicitation/logging/progress from tool callbacks, `resources/subscribe`, completion capability, session-based SSE polling, non-text tool content blocks) are recorded as documented boundaries in `scripts/mcp-conformance-2026-baseline.yaml`. The CLI publishes scenarios only up to spec version 2025-11-25; the run is repeated when 2026-07-28 scenarios ship upstream. Measured on the loopback fixture (single process): legacy connect ~60ms, auto connect (with the one discovery probe) ~40ms, pinned modern connect ~20ms, steady-state bridge tool call ~4ms, uncached list walk ~5ms, cached list refresh ~2ms — the only added connect cost versus 1.x is the single negotiation probe plus SDK codec work. Security regression coverage lives in the package suites: malformed envelopes/headers, auth mix-up (`ERR_PRISM_MCP_OAUTH_ORIGIN`), SSRF/DNS-rebinding, oversized JSON/schema/results, MRTR round/replay, subscription exhaustion caps, cross-principal cache/session isolation, timeouts, cancellation, and redaction.
+
+**Extension status (revalidated 2026-09-05 against the modular SDK v2, plan 063 task 6):** MCP Apps (`io.modelcontextprotocol/ui`) is the only extension Prism negotiates — on both the 2025 legacy handshake and 2026-07-28 (modern capabilities ride per request in `params._meta`); resource reads/pagination now go through SDK v2 `listResources`/`readResource` with the same per-descriptor byte bounds, item caps, cursor-loop detection, and linked-HTML validation as before. **Tasks (`io.modelcontextprotocol/tasks`) is intentionally not advertised and not supported in this release**: neither the bridge client nor `createPrismMcpServer` declares it, draft-era `task` members on tool results fail closed (`McpBridgeError` surfaced as a `ToolResult.error`, never read as tool output; modern `resultType: "task"` fails SDK decode), and task handles are not accepted without a supported extension codec plus a durable ownership model. Re-evaluate Tasks when the official TypeScript client/server extension codec supports task result dispatch, polling/update/cancel, and subscription notifications with green conformance.
+
 ```ts
 const bridge = await connectMcpCapabilities({
   serverId: "research",
   transport: { type: "streamable-http", url, allowedOrigins: [origin] },
-  roots: () => [{ uri: "file:///workspace", name: "workspace" }],
-  sampling: hostSampling,       // host selects model/provider/credentials
-  elicitation: hostElicitation, // URL mode returns approval; Prism never opens/fetches URL
+  roots: () => [{ uri: "file:///workspace", name: "workspace" }], // deprecated: kept for legacy callers only
+  sampling: hostSampling,       // deprecated: kept for legacy callers only
+  elicitation: hostElicitation, // active; URL mode returns approval; Prism never opens/fetches URL
 });
 await bridge.listResources();
 await bridge.getPrompt("review", { topic: "security" });
 ```
 
-Server capability matrix for SDK 1.30.0: tools/resources/prompts and their list-change notifications are supported through official registrations; roots/sampling/form+URL elicitation are supported as explicit client callbacks. Missing server resources/prompts throw `McpUnsupportedCapabilityError` with `ERR_PRISM_MCP_UNSUPPORTED_CAPABILITY`. Resource/prompt results and sampling/elicitation inputs/results are bounded JSON. Accepted form/URL elicitation requires host-only `humanInteraction: true`; bridge strips marker before protocol output and fails closed when absent. Automatic root discovery/consent, model selection, credential resolution, URL navigation, generic command proxying, and custom JSON-RPC are unsupported.
+Roots and sampling callbacks are **deprecated with MCP 2026-07-28 (SEP-2577)** and kept only for existing legacy callers; Synapta adds nothing on those surfaces and they may be removed when the protocol revision does (earliest per spec: a revision released on or after 2027-07-28). Elicitation is the active capability: on the modern era a server answering a tool call with `input_required` is fulfilled by the SDK's MRTR driver against the same `elicitation` callback, capped by `maxMrtrRounds` (default 10, the SDK's own bound — the option can only tighten it) with the call timeout as the outer ceiling; on the legacy era the same handler serves direct `elicitation/create` requests. `humanInteraction: true` remains mandatory for accepted elicitation, and no hand-written retry/state machinery exists on either path.
+
+Server capability matrix for the modular TypeScript SDK v2 (`@modelcontextprotocol/client` + `@modelcontextprotocol/server` 2.0.0): tools/resources/prompts and their list-change notifications are supported through official registrations; roots/sampling/form+URL elicitation are supported as explicit client callbacks. Missing server resources/prompts throw `McpUnsupportedCapabilityError` with `ERR_PRISM_MCP_UNSUPPORTED_CAPABILITY`. Resource/prompt results and sampling/elicitation inputs/results are bounded JSON. Accepted form/URL elicitation requires host-only `humanInteraction: true`; bridge strips marker before protocol output and fails closed when absent. Automatic root discovery/consent, model selection, credential resolution, URL navigation, generic command proxying, and custom JSON-RPC are unsupported.
 
 Server direction:
 
@@ -66,13 +72,17 @@ const handleMcp = await createPrismMcpWebHandler(server, {
   resolveAuthInfo: authenticateRequest,
   allowedHosts: ["api.example.test"],
   allowedOrigins: ["https://app.example.test"],
-  // Omit these two for bounded stateless JSON mode.
+  // Omit these two for dual-era serving without legacy sessions.
   sessionIdGenerator: crypto.randomUUID,
   resolveIdentity: (_request, auth) => auth ? { id: validatedPrincipalId(auth) } : false,
 });
 ```
 
-`McpServer.connect(transport)` remains available for SDK stdio or in-memory transports. The helper uses SDK `WebStandardStreamableHTTPServerTransport`; it does not start a listener. Default remains bounded stateless JSON-response mode. Supplying `sessionIdGenerator` enables SDK `MCP-Session-Id` POST/GET/DELETE/SSE lifecycle and requires exact `allowedOrigins` plus host `resolveIdentity`. Every request re-authenticates, and a different principal receives non-disclosing 404. SDK owns protocol-version/session headers and SSE semantics. SDK 1.30.0's in-memory event store is not enabled, so `Last-Event-ID` replay is explicitly unsupported; reconnect starts only through SDK-supported active session GET.
+`createPrismMcpWebHandler()` is dual-era on the modular SDK v2 serving entries. Default (factory, no `sessionIdGenerator`): modern 2026-07-28 serving through SDK `createMcpHandler` — one fresh `McpServer` per request, SDK-generated `server/discover`, result metadata, cancellation and modern headers — with the SDK stateless fallback answering 2025-era traffic; modern responses carry no `Mcp-Session-Id`. Supplying `sessionIdGenerator` keeps documented legacy `MCP-Session-Id` POST/GET/DELETE/SSE lifecycle on a sessionful `WebStandardStreamableHTTPServerTransport` beside a strict modern handler (classified legacy traffic routes separately), and still requires exact `allowedOrigins` plus host `resolveIdentity`; every request re-authenticates, and a different principal receives non-disclosing 404. `Last-Event-ID` replay remains explicitly unsupported.
+
+Security gates run in front of the SDK entries because `createMcpHandler` intentionally provides none: exact Host/Origin allowlist checks execute before body parsing, auth, and dispatch; bounded body parsing feeds `parsedBody`; verified `AuthInfo` is passed explicitly; authorization and identity checks run on every request; modern serving state never trusts a transport session id. A bare `McpServer` instance with sessions keeps legacy-only behavior; stateless mode requires a factory (one fresh server per request). The returned value stays callable and carries SDK lifecycle properties: `fetch` (same function), `close()` (tears down both eras), `notify.toolsChanged()/promptsChanged()/resourcesChanged()/resourceUpdated(uri)`, and `bus` for `subscriptions/listen`. `maxSubscriptions` (SDK default 1024) and `keepAliveMs` (SDK default 15000, 0 disables) bound modern subscription streams.
+
+`servePrismMcpStdio(factory, options)` serves dual-era stdio: the opening exchange pins the era (one factory instance per connection; `legacy: "serve"` default keeps 2025 openings working, `"reject"` answers them with the unsupported-protocol-version error), and stdout stays protocol-only. `McpServer.connect(transport)` remains available for in-memory transports; direct `server.connect()` over HTTP is legacy-only. `createPrismMcpServer({ cacheHints })` emits SEP-2549 cache hints on cacheable 2026-07-28 results (default `ttlMs: 0`, `private`). Neither HTTP nor stdio helper starts a listener or process lifecycle for you.
 
 ## When to use it
 
@@ -92,7 +102,7 @@ Do **not** use this package as a sandbox, permission engine, or auto-discovery l
 
 `McpToolBridge` exposes `tools`, optional `apps`, `refresh()`, and `close()`. Normal tools are Prism `ToolDefinition`s. Apps requires server acknowledgement; nested resource metadata wins over flat/deprecated and app-only tools stay outside `tools`. Resource reads require linked bounded `ui://` HTML5 with exact MIME; content metadata wins over list defaults.
 
-`createPrismMcpServer()` returns the SDK `McpServer`. It lists only passed tools/commands and explicitly selected `agentRuns` lifecycle tools; JSON Schema parameters are converted through installed Zod v4 for SDK validation, then Prism tool calls still pass through `dispatchToolCall` permission/validator/redactor gates. Command definitions support explicitly selected direct/background/replay workflow operations and optional ownership-scoped schedule operations from `createWorkflowCommands()`; none are registered unless the host passes those command definitions. Calls return bounded MCP text content and `isError` on denial/failure. `createPrismMcpWebHandler()` returns `(Request) => Promise<Response>`.
+`createPrismMcpServer()` returns the SDK `McpServer`. It lists only passed tools/commands and explicitly selected `agentRuns` lifecycle tools; JSON Schema parameters are converted through installed Zod v4 for SDK validation, then Prism tool calls still pass through `dispatchToolCall` permission/validator/redactor gates. Command definitions support explicitly selected direct/background/replay workflow operations and optional ownership-scoped schedule operations from `createWorkflowCommands()`; none are registered unless the host passes those command definitions. Calls return bounded MCP text content and `isError` on denial/failure. `createPrismMcpWebHandler()` remains callable for source compatibility and additionally carries `fetch`, `close`, `notify`, and `bus` from the SDK serving entry.
 
 ## Request/response example
 
@@ -241,15 +251,27 @@ import { createMcpClientAuth } from "@arnilo/prism-mcp";
 const auth = createMcpClientAuth(
   {
     state, // required persistence seam: load/save tokens, discovery, client info, code verifier
-    strategy: { kind: "static", clientId: "prism", clientSecret: "..." }, // or { kind: "dcr", clientMetadata }
+    strategy: { kind: "cimd", clientMetadataUrl: "https://client.example/oauth/metadata.json" }, // preferred
+    // or { kind: "static", clientId: "prism", clientSecret: "..." }
+    // or { kind: "dcr", clientMetadata } — deprecated (RFC 7591), application_type defaults to "native"
     redirectUri: "http://localhost:33418/callback",
     onRedirectRequired: (url) => openBrowser(url), // interactive flows
+    onInsufficientScope: "reauthorize", // or "throw" to surface SDK InsufficientScopeError instead
   },
   { serverUrl: "https://mcp.example.com/api", fetch },
 );
 ```
 
-The flow reuses the MCP SDK's `auth()` helper (401 → protected-resource metadata → RFC 8414 discovery → PKCE S256 → token exchange/refresh) wrapped in Prism policy: discovery URLs are SSRF-checked, https-only (loopback http opt-in), DNS-pinned, zero-redirect, and byte-bounded; RFC 8707 resource binding is enforced on every token request (`ERR_PRISM_MCP_OAUTH_AUDIENCE` on origin drift); issuer origin must match the discovered authorization server (`ERR_PRISM_MCP_OAUTH_ORIGIN`); bearer tokens are only ever attached to the allow-listed server origin. `McpClientAuthState` has no default implementation — production hosts back it with an encrypted/keychain store (refresh tokens must not live in plaintext persistence).
+The flow reuses the MCP SDK's `auth()` helper (401 → protected-resource metadata → RFC 8414 discovery → PKCE S256 → token exchange/refresh) wrapped in Prism policy: discovery URLs are SSRF-checked, https-only (loopback http opt-in), DNS-pinned, zero-redirect, and byte-bounded; RFC 8707 resource binding is enforced on every token request (`ERR_PRISM_MCP_OAUTH_AUDIENCE` on origin drift); issuer origin must match the discovered authorization server (`ERR_PRISM_MCP_OAUTH_ORIGIN`); bearer tokens are only ever attached to the allow-listed server origin.
+
+2026-07-28 authorization conformance (plan 063 task 5):
+
+- **Callback completion takes the full query**: `await auth.finishAuth(new URL(callbackUrl).searchParams)`. The persisted OAuth `state` is validated first (fail-closed `ERR_PRISM_MCP_OAUTH_STATE` when absent or mismatched), then the RFC 9207 `iss` parameter is checked against the persisted authorization server; the SDK independently validates `iss` against the recorded issuer (RFC 9207 §2.4) and the callback-leg AS binding (SEP-2352) before redeeming the code. Callback `error`/`error_description` fields are never surfaced after an issuer mismatch. A bare code string is accepted as the legacy form (no state/iss validation).
+- **Issuer-keyed credential storage**: persisted token/client records are SDK issuer-stamped (`StoredOAuthTokens`/`StoredOAuthClientInformation`); `McpClientAuthState` credential methods take the validated `issuer` so partitioned stores can key on it. Records stamped for a different issuer are never served, and ambiguous un-stamped pre-upgrade records are refused on issuer-keyed reads rather than guessed — re-authorization runs once and every persisted record is stamped thereafter.
+- **Registration strategy**: CIMD (SEP-991 URL-based client ids) is preferred, `static` remains supported, and `dcr` is deprecated; the DCR metadata defaults `application_type` to `"native"` when the host omits it.
+- **Insufficient-scope policy**: `onInsufficientScope: "reauthorize"` (default) runs the SDK's bounded step-up flow; `"throw"` surfaces the typed SDK `InsufficientScopeError` (with the challenge scope) instead of redirecting. Hosts gate interactive consent either way.
+
+`McpClientAuthState` has no default implementation — production hosts back it with an encrypted/keychain store (refresh tokens must not live in plaintext persistence).
 
 **Server** — advertise protected-resource metadata and challenge unauthenticated requests:
 
@@ -264,7 +286,7 @@ const handler = await createPrismMcpWebHandler(factory, {
 });
 ```
 
-The handler serves `GET /.well-known/oauth-protected-resource` and returns `401 WWW-Authenticate: Bearer resource_metadata="<origin>/.well-known/oauth-protected-resource"` on rejected requests. Token verification remains entirely host-owned via `resolveIdentity`; Prism only advertises and challenges.
+The handler serves `GET /.well-known/oauth-protected-resource` and returns `401 WWW-Authenticate: Bearer resource_metadata="<origin>/.well-known/oauth-protected-resource", scope="<configured scopes>"` on rejected requests. Token verification remains entirely host-owned via `resolveIdentity` — the host token verifier must validate the token audience (`aud`) against the protected resource and enforce the challenged scopes; Prism only advertises and challenges.
 
 ## Vendor web MCP prototype boundary
 

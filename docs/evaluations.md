@@ -2,11 +2,11 @@
 
 ## What it does
 
-`@arnilo/prism-evals` adds optional deterministic scorers, immutable datasets, bounded persistence-trace grading, explicit host model judges, pairwise comparisons, CI thresholds, live post-run scoring, and batch experiments over `AgentRunResult`. Scores are finite numbers in `[0, 1]` with optional reason/metadata and linkage to run/session/trace/experiment IDs.
+`@arnilo/prism-core/governance/evals` adds optional deterministic scorers, immutable datasets, bounded persistence-trace grading, explicit host model judges, pairwise comparisons, CI thresholds, live post-run scoring, and batch experiments over `AgentRunResult`. Scores are finite numbers in `[0, 1]` with optional reason/metadata and linkage to run/session/trace/experiment IDs.
 
 ## When to use it
 
-Use this package when a host needs offline quality checks or sampled live scoring without coupling scorers into core agent execution. Install it directly or through `@arnilo/prism-all`; installation does not attach scorers to runs.
+Use this package when a host needs offline quality checks or sampled live scoring without coupling scorers into core agent execution. Install it directly or through the `@arnilo/prism-core` family package; installation does not attach scorers to runs.
 
 ## Inputs / request
 
@@ -60,7 +60,7 @@ import {
   defineScorer,
   runExperiment,
   scoreRunLive,
-} from "@arnilo/prism-evals";
+} from "@arnilo/prism-core/governance/evals";
 
 const scorer = defineScorer({
   id: "contains-citation",
@@ -145,7 +145,7 @@ assertEvaluationThreshold(report, { minimumMean: 0.9, maximumFailures: 0 });
 Plan 043 adds `datasetFromRuns`: it turns recorded runs (production incident transcripts included) into dataset items in one call — resolve through `createPersistenceTraceResolver`, redact, map through an optional host `toItem`, and append as a **new immutable dataset version**. The prior version object is never mutated.
 
 ```ts
-import { datasetFromRuns, defineDataset } from "@arnilo/prism-evals";
+import { datasetFromRuns, defineDataset } from "@arnilo/prism-core/governance/evals";
 
 const result = await datasetFromRuns({
   runIds: ["run_9f2", "run_a71"],
@@ -169,16 +169,16 @@ Omit `toItem` and the default mapping is used: `input` = first user message, `ex
 - Feedback costs one bounded, owner-scoped query per curation batch (`store.feedback`); records are read id-only per the feedback linkage contract — scorer payloads are never copied. A feedback query failure (e.g. scope contract mismatch) omits `expected` instead of aborting the batch.
 - Every item field passes the host `redactor` after host mapping — fail closed: a redactor failure or an item over the frozen 4 MiB cap (`ERR_PRISM_EVAL_CURATE`) skips the run or aborts the append before anything is persisted. Cross-tenant runs are never readable (resolver ownership check → `ownership mismatch` skip).
 
-Prompt versions can ride the same primitives: [`assertPromptPromotion`](prompt-registry.md#eval-gated-promotion) in `@arnilo/prism-prompts` resolves two prompt versions, runs them through `runComparison`, and returns a `promote`/`hold` verdict with per-scorer aggregates and a bounded report — never applying the change itself.
+Prompt versions can ride the same primitives: [`assertPromptPromotion`](prompt-registry.md#eval-gated-promotion) in `@arnilo/prism-core/governance/prompts` resolves two prompt versions, runs them through `runComparison`, and returns a `promote`/`hold` verdict with per-scorer aggregates and a bounded report — never applying the change itself.
 
 ## Coding and browser adversarial evaluations (0.0.9)
 
 Release 0.0.9 ships curated network-free adversarial fixtures in package tests:
 
-- `@arnilo/prism-coding-agent` `eval-fixtures.test.ts`: safe native list vs shell, Git path/ref injection, dirty-tree rollback, unknown named-check failure, PR-handoff artifact completeness, and prompt-injection file content under read-only tools.
+- `@arnilo/prism-coding-tools/agent` `eval-fixtures.test.ts`: safe native list vs shell, Git path/ref injection, dirty-tree rollback, unknown named-check failure, PR-handoff artifact completeness, and prompt-injection file content under read-only tools.
 - `browser` `eval-fixtures.test.ts`: stale snapshot refs, side-effect approval, private/loopback/file deny, upload/download/screenshot policy, CSS/evaluate target rejection, and hostile accessible-name text.
 
-Fixtures reuse `@arnilo/prism-evals` (`defineDataset` / `defineScorer` / `scoreRun` / `assertEvaluationThreshold` / `serializeEvaluationReport`). Optional SWE-bench-compatible or live-browser harnesses remain host adapters — they are not default dependencies or quality claims. Protected real Docker/Playwright gates stay env-gated (`PRISM_TEST_DOCKER_SANDBOX`, `PRISM_LIVE_PLAYWRIGHT`) and never enter `sdk:ready`.
+Fixtures reuse `@arnilo/prism-core/governance/evals` (`defineDataset` / `defineScorer` / `scoreRun` / `assertEvaluationThreshold` / `serializeEvaluationReport`). Optional SWE-bench-compatible or live-browser harnesses remain host adapters — they are not default dependencies or quality claims. Protected real Docker/Playwright gates stay env-gated (`PRISM_TEST_DOCKER_SANDBOX`, `PRISM_LIVE_PLAYWRIGHT`) and never enter `sdk:ready`.
 
 ## PostgreSQL enterprise state (0.0.23)
 
@@ -214,7 +214,7 @@ The protected runner (`scripts/phase27-erp-journey.test.mjs`) carries the journe
 ### Hard-gate usage
 
 ```ts
-import { createErpInvariantScorers, erpInvariantDataset, scoreRun } from "@arnilo/prism-evals";
+import { createErpInvariantScorers, erpInvariantDataset, scoreRun } from "@arnilo/prism-core/governance/evals";
 
 const scorers = createErpInvariantScorers();
 const records = await scoreRun({

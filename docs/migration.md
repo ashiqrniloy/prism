@@ -1,5 +1,9 @@
 # Migration guide
 
+## 0.4.x → 0.5.0 dead-export removal (breaking)
+
+Prism 0.5 deletes the 27 unused public exports that were classified `deprecate`/`remove` in the plan 058 verification sweep and marked `@deprecated` earlier in the same cycle. It is a symbol-surface migration only — no package renames, no persisted-data change, no behavior change. See the complete removal table and per-symbol replacements in [migrate-to-0.5.md](migrate-to-0.5.md). All 10 publishable manifests bump to `0.5.0` lockstep; internal first-party ranges move `^0.4.0` → `^0.5.0`. Security keeper surface (ownership/checkpoint guards, `secureCompare`, `zeroBuffer`, sandbox path-escape guard, RAG scope guard, MCP content-bounds guard, secret-leak conformance assert) is unchanged.
+
 ## 0.3.3 → 0.4.0 package reorganization (breaking)
 
 Prism 0.4 consolidates package names into explicit family subpaths. It is a dependency and import-specifier migration, not a persisted-data migration. See the complete [legacy 0.3 → 0.4 guide](migrate-to-0.4.md) for all 54 retired package mappings, profile replacements, optional peers/host binaries, security checks, rollback, and npm legacy-warning behavior.
@@ -818,7 +822,31 @@ Existing text `createA2AHandler({ exposure })`, `client.send()`, and `client.str
 
 ## 0.0.7 → 0.0.8 MCP capabilities and sessions
 
-`@arnilo/prism-mcp` now pins official SDK 1.29.0. Existing `connectMcpTools()` and stateless web handlers remain compatible. Use `connectMcpCapabilities()` for bounded resources/prompts and explicit roots/sampling/elicitation callbacks. Server resources/prompts must be selected explicitly and authorize every operation. Stateful Streamable HTTP additionally requires `sessionIdGenerator`, exact `allowedOrigins`, and host `resolveIdentity`; omission preserves stateless mode. `Last-Event-ID` replay is not enabled. Missing capability calls fail with `ERR_PRISM_MCP_UNSUPPORTED_CAPABILITY`.
+`@arnilo/prism-mcp` now pins the modular TypeScript SDK v2 packages (`@modelcontextprotocol/client` + `@modelcontextprotocol/server` 2.0.0). Existing `connectMcpTools()` and stateless web handlers remain compatible. Use `connectMcpCapabilities()` for bounded resources/prompts and explicit callbacks. **Roots (`roots`) and sampling (`sampling`) callbacks are deprecated with protocol revision 2026-07-28 (SEP-2577)** and kept for existing legacy callers only — migrate server-hosted state to explicit tool arguments and host-side model calls; elicitation is the active capability and works across eras (legacy direct `elicitation/create` dispatch, or SDK MRTR `input_required` auto-fulfilment on the modern era, capped by `maxMrtrRounds` with the call timeout as the outer ceiling). Server resources/prompts must be selected explicitly and authorize every operation.
+
+HTTP/stdio serving is dual-era: `createPrismMcpWebHandler(factory)` now serves modern 2026-07-28 traffic through SDK `createMcpHandler` (one fresh `McpServer` per request, no `Mcp-Session-Id`, no sticky routing) with the SDK stateless fallback for 2025 traffic, and stays callable while gaining `fetch`/`close`/`notify`/`bus`. Host/origin allowlists are enforced by Prism before body parsing and auth (the SDK entry provides no validation); `maxRequestBytes`, response bounding, concurrency, and request timeouts are unchanged. Configuring `sessionIdGenerator` keeps legacy sessionful serving (identity-bound POST/GET/DELETE/SSE) beside a strict modern handler; a bare `McpServer` instance with sessions is legacy-only — pass a factory for dual-era serving. `servePrismMcpStdio(factory, options)` replaces hand-wired stdio serving with SDK dual-era `serveStdio` (era pinned by the opening exchange, stdout protocol-only). Stateful Streamable HTTP still requires `sessionIdGenerator`, exact `allowedOrigins`, and host `resolveIdentity`. `Last-Event-ID` replay is not enabled. Missing capability calls fail with `ERR_PRISM_MCP_UNSUPPORTED_CAPABILITY`.
+
+OAuth client behavior is 2026-07-28 conformant: `finishAuth` now takes the full callback `URLSearchParams` (persisted `state` validated fail-closed, RFC 9207 `iss` checked before the code is redeemed; the bare-code string form remains as the unvalidated legacy path — switch to the params form). Persisted token/client records are SDK issuer-stamped; `McpClientAuthState` credential methods take the validated `issuer` (existing implementations ignoring the parameter keep working for single-server hosts, but **un-stamped pre-upgrade records are refused on issuer-keyed reads** rather than guessed — hosts see one interactive re-authorization, after which every record is stamped). CIMD (SEP-991) is the preferred registration strategy, `dcr` is `@deprecated` with `application_type` defaulting to `"native"`, and `onInsufficientScope: "reauthorize" | "throw"` makes the 403 step-up policy explicit. Server 401 challenges now include the configured `scope`; host token verifiers must validate the token audience.
+
+### Monolithic SDK 1.x → modular SDK v2 migration table
+
+| v1 (`@modelcontextprotocol/sdk` 1.30.0) | v2 / current Synapta API | Notes |
+| --- | --- | --- |
+| `new Client(...)` from `sdk/client/index.js` | same name from `@modelcontextprotocol/client` | `ClientOptions` gains `versionNegotiation`, `listChanged`, `inputRequired`, `cachePartition`, `listMaxPages` |
+| `InMemoryTransport` / `StdioClientTransport` / `StreamableHTTPClientTransport` | `InMemoryTransport`/`StreamableHTTPClientTransport` from `@modelcontextprotocol/client`; `StdioClientTransport` from `@modelcontextprotocol/client/stdio` | subpath moves only |
+| `McpServer`, `WebStandardStreamableHTTPServerTransport` from `sdk/server/*` | `@modelcontextprotocol/server` root | `createMcpHandler` (dual-era HTTP) + `serveStdio` (dual-era stdio) replace hand-wired serving |
+| `client.request({method}, Schema, options)` | method-keyed `client.request(...)` or high-level `listTools`/`listResources`/`readResource`/`callTool` | per-page list walks must send an explicit cursor (`{cursor: ""}` on page 0) — the no-cursor form is the SDK's uncapped aggregate |
+| `CompatibilityCallToolResultSchema` (`toolResult` member) | gone from the client codec; `callTool` decodes `CallToolResult` only | draft-era `task` members fail closed at the bridge |
+| `server.setRequestHandler(Schema, handler)` | `setRequestHandler("method/string", handler)` with `ctx.mcpReq.{id,signal}` | `ctx.authInfo` moved to `ctx.http?.authInfo`; unknown tools now error (`-32602`) instead of `isError` results |
+| `sdk/server/auth/types.js` `AuthInfo` | `AuthInfo` from `@modelcontextprotocol/server` | type-only move |
+| `OAuthClientProvider` (string-keyed persistence) | issuer-keyed `StoredOAuthTokens`/`StoredOAuthClientInformation` + optional `ctx: {issuer}` params, `clientMetadataUrl` (CIMD) | see the OAuth paragraph above |
+| `LATEST_PROTOCOL_VERSION` mock fixtures (initialize results) | legacy-era negotiation unchanged; modern (2026-07-28) results need top-level `resultType: "complete"`, `ttlMs`, `cacheScope` | raw mock fixtures only |
+
+### Legacy-session timeline
+
+- **Now (default):** `createPrismMcpWebHandler(factory)` without `sessionIdGenerator` is stateless dual-era — modern 2026-07-28 serving plus the SDK stateless fallback for 2025 clients. No `Mcp-Session-Id`, no sticky routing, `Last-Event-ID` replay not enabled.
+- **Now (opt-in):** configuring `sessionIdGenerator` keeps identity-bound legacy sessions (POST/GET/DELETE/SSE beside the strict modern handler) for hosts that still need them; the pairing requires exact `allowedOrigins` and host `resolveIdentity`.
+- **Planned removal:** the legacy session leg is deprecated once Synapta's clients and documented hosts are modern-era; removal lands as a breaking 0.x cut with a migration note here (the `sessionIdGenerator` option disappears and legacy traffic gets the SDK stateless fallback, which 2025 clients already work against). No date is committed in this release.
 
 ## 0.0.7 → 0.0.8 OpenTelemetry adapter
 

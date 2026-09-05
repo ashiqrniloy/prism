@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-workflows` is an optional package for typed, bounded DAG orchestration over Prism sessions, tools, events, and persistence seams. Hosts define acyclic workflows with agent/function/tool/conditional/fan-out/join/nested-workflow/loop nodes; the package runs a Kahn-style scheduler with a bounded worker pool, emits package-local `WorkflowEvent`s, checkpoints progress, can coordinate queued runs across multiple host processes using durable leases and fencing, and can run bounded linear sagas with durable compensation.
+`@arnilo/prism-core/runtime/workflows` is an optional package for typed, bounded DAG orchestration over Prism sessions, tools, events, and persistence seams. Hosts define acyclic workflows with agent/function/tool/conditional/fan-out/join/nested-workflow/loop nodes; the package runs a Kahn-style scheduler with a bounded worker pool, emits package-local `WorkflowEvent`s, checkpoints progress, can coordinate queued runs across multiple host processes using durable leases and fencing, and can run bounded linear sagas with durable compensation.
 
 Primary exports:
 
@@ -21,7 +21,7 @@ Primary exports:
 | `createWorkflowSchedules` | Explicit ownership-scoped one-time/interval/host-calculated schedules over existing checkpoint/lease stores |
 | `createProactiveScheduleCapabilities` | Scoped, expiring, revocable capability tokens that enable proactive schedules; revocation stops firing fail-closed |
 
-Included through `@arnilo/prism-sdk` and `@arnilo/prism-all`; installing either profile does not start workflows. Interactive TUI is out of scope (C-012 deferred).
+Included through the `@arnilo/prism` / `@arnilo/prism-core` family packages; installing them does not start workflows. Interactive TUI is out of scope (C-012 deferred).
 
 ## When to use it
 
@@ -114,7 +114,7 @@ Saga statuses are `running → completed`, `running → compensating → compens
 
 `createWorkflowSchedules({ store, leases, checkpoints, workflows, ownership, ownerId, calculators? })` is inert until its host calls `pollOnce()` or `run({ signal })`). Ownership requires `tenantId` plus `accountId` or `userId`. Methods are `create`, `get`, `list`, `pause`, `resume`, `trigger`, `delete`, `pollOnce`, and `run`. A record has one required `nextRunAt`, optional fixed `intervalMs` or registered `calculatorId` (never both), bounded input/metadata, status, version, and last-fire attribution. Manual trigger requires an idempotency key. Scheduled run IDs derive from schedule ID plus fire timestamp, so retry after enqueue-before-advance finds the same queued checkpoint instead of duplicating it. Defaults: page 100/hard 500, due claims 16/hard 256, input 256 KiB/hard 1 MiB, poll 1s, fire lease 30s.
 
-`createProactiveScheduleCapabilities({ schedules, store, ownership, ownerId, defaultTtlMs?, maxTtlMs?, onCapability? })` wraps a `WorkflowSchedules` facade in explicit user enablement. `enable({ workflowId, scope, actor, nextRunAt, intervalMs?|calculatorId?, input?, ttlMs? })` creates the schedule plus a scoped, expiring `ScheduleCapabilityToken` (default TTL 24h / hard 31d, record ≤ 16 KiB) stamped with redacted actor refs. `revoke(tokenId, actor)` marks the token revoked and pauses the underlying schedule so `pollOnce()` never fires it (fail-closed). `assertActive(tokenId)` is a fail-closed guard for manual trigger paths — it throws on missing/revoked/expired tokens. `onCapability` emits `capability_enabled` / `capability_revoked` / `capability_denied` events (redacted refs only) that hosts bridge to `@arnilo/prism-policy` for an auditable ledger. Tokens are ownership-scoped checkpoint records; no cron expression or secret is persisted.
+`createProactiveScheduleCapabilities({ schedules, store, ownership, ownerId, defaultTtlMs?, maxTtlMs?, onCapability? })` wraps a `WorkflowSchedules` facade in explicit user enablement. `enable({ workflowId, scope, actor, nextRunAt, intervalMs?|calculatorId?, input?, ttlMs? })` creates the schedule plus a scoped, expiring `ScheduleCapabilityToken` (default TTL 24h / hard 31d, record ≤ 16 KiB) stamped with redacted actor refs. `revoke(tokenId, actor)` marks the token revoked and pauses the underlying schedule so `pollOnce()` never fires it (fail-closed). `assertActive(tokenId)` is a fail-closed guard for manual trigger paths — it throws on missing/revoked/expired tokens. `onCapability` emits `capability_enabled` / `capability_revoked` / `capability_denied` events (redacted refs only) that hosts bridge to `@arnilo/prism-core/governance/policy` for an auditable ledger. Tokens are ownership-scoped checkpoint records; no cron expression or secret is persisted.
 
 ## Outputs / response / events
 
@@ -192,9 +192,9 @@ import {
   runSaga,
   workflowNode,
   suspend,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-core/runtime/workflows";
 import { runRpcServer } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
 
 const research = agentNode({
   agent: "researcher",

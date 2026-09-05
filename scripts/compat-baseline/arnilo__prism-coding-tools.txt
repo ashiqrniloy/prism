@@ -95,6 +95,7 @@ CreateProcessSessionsOptions	export type { CodingProcessEvent, CreateProcessSess
 DEFAULT_BINARY_SNIFF_BYTES	export declare const DEFAULT_BINARY_SNIFF_BYTES = 8192
 DEFAULT_CAVEMAN_CONFIG	export declare const DEFAULT_CAVEMAN_CONFIG: CavemanConfig
 DEFAULT_CHECK_TIMEOUT_MS	export declare const DEFAULT_CHECK_TIMEOUT_MS: number
+DEFAULT_CHILD_ENV_INHERIT	export declare const DEFAULT_CHILD_ENV_INHERIT: readonly string[]
 DEFAULT_CLEANUP_DEADLINE_MS	export declare const DEFAULT_CLEANUP_DEADLINE_MS = 30000
 DEFAULT_CPUS	export declare const DEFAULT_CPUS = 2
 DEFAULT_DOWNLOAD_BYTES	export declare const DEFAULT_DOWNLOAD_BYTES: number
@@ -191,7 +192,6 @@ DEFAULT_MAX_REPO_ENTRIES	export declare const DEFAULT_MAX_REPO_ENTRIES = 10000
 DEFAULT_MAX_REPO_FILES	export declare const DEFAULT_MAX_REPO_FILES = 10000
 DEFAULT_MAX_REPO_RESULTS	export declare const DEFAULT_MAX_REPO_RESULTS = 1000
 DEFAULT_MAX_RETAINED_ARTIFACTS	export declare const DEFAULT_MAX_RETAINED_ARTIFACTS = 16
-DEFAULT_MAX_REVIEW_DELTA_ENTRIES	export declare const DEFAULT_MAX_REVIEW_DELTA_ENTRIES = 2000
 DEFAULT_MAX_REVIEW_DIAGNOSTICS	export declare const DEFAULT_MAX_REVIEW_DIAGNOSTICS = 500
 DEFAULT_MAX_REVIEW_MANIFEST_BYTES	export declare const DEFAULT_MAX_REVIEW_MANIFEST_BYTES: number
 DEFAULT_MAX_REVIEW_REVISIONS	export declare const DEFAULT_MAX_REVIEW_REVISIONS = 8
@@ -383,7 +383,6 @@ HARD_MAX_REPO_ENTRIES	export declare const HARD_MAX_REPO_ENTRIES = 100000
 HARD_MAX_REPO_FILES	export declare const HARD_MAX_REPO_FILES = 100000
 HARD_MAX_REPO_RESULTS	export declare const HARD_MAX_REPO_RESULTS = 10000
 HARD_MAX_RETAINED_ARTIFACTS	export declare const HARD_MAX_RETAINED_ARTIFACTS = 64
-HARD_MAX_REVIEW_DELTA_ENTRIES	export declare const HARD_MAX_REVIEW_DELTA_ENTRIES = 10000
 HARD_MAX_REVIEW_DIAGNOSTICS	export declare const HARD_MAX_REVIEW_DIAGNOSTICS = 5000
 HARD_MAX_REVIEW_MANIFEST_BYTES	export declare const HARD_MAX_REVIEW_MANIFEST_BYTES: number
 HARD_MAX_REVIEW_REVISIONS	export declare const HARD_MAX_REVIEW_REVISIONS = 32
@@ -469,7 +468,6 @@ OutputAccumulator	export declare class OutputAccumulator
 PONYTAIL_MODES	export declare const PONYTAIL_MODES: readonly ["off", "lite", "full", "ultra"]
 PONYTAIL_MODE_TYPE	export declare const PONYTAIL_MODE_TYPE: "ponytail-mode"
 PONYTAIL_PEER_PACKAGE	export declare const PONYTAIL_PEER_PACKAGE = "@dietrichgebert/ponytail"
-PONYTAIL_PEER_RANGE	export declare const PONYTAIL_PEER_RANGE = "^4.9.0"
 PONYTAIL_SKILL_NAMES	export declare const PONYTAIL_SKILL_NAMES: readonly ["ponytail", "ponytail-audit", "ponytail-debt", "ponytail-gain", "ponytail-help", "ponytail-review"]
 PROCESS_RECOVERY_CATEGORY	export declare const PROCESS_RECOVERY_CATEGORY = "coding-process"
 PROCESS_RECOVERY_LEASE_NAMESPACE	export declare const PROCESS_RECOVERY_LEASE_NAMESPACE = "prism.coding-agent.process.lease.v1"
@@ -625,6 +623,7 @@ assertSandboxPath	export declare function assertSandboxPath(workspaceRoot: strin
 atomicWriteUtf8File	export declare function atomicWriteUtf8File(targetPath: string, content: string, options?:
 attachWithTimeout	export declare function attachWithTimeout(backend: ProcessRecoveryBackend, ref: string, timeoutMs: number): Promise<ProcessPtyHandle | ProcessSandboxHandle | null>
 buildCavemanInstructions	export declare function buildCavemanInstructions(upstreamRoot: string, level: CavemanLevel): string | undefined
+buildChildEnv	export declare function buildChildEnv(
 buildCodingCheckpointMetadata	export declare function buildCodingCheckpointMetadata(input:
 buildDockerCreateArgsForTest	export declare function buildDockerCreateArgsForTest(options: Omit<CreateDockerSandboxOptions, "docker" | "runner" | "skipImport">): string[]
 buildNativeSpawnCommand	export declare function buildNativeSpawnCommand(request: SandboxExecRequest | SandboxExecFileRequest, options:
@@ -636,7 +635,6 @@ classifyGitBranchEffect	export declare function classifyGitBranchEffect(args: Js
 classifyGitWorktreeEffect	export declare function classifyGitWorktreeEffect(args: JsonObject): ToolEffectDeclaration
 codingCheckpointStatePatch	export declare function codingCheckpointStatePatch(metadata: CodingCheckpointMetadata): JsonObject
 codingPlanPathForTask	export declare function codingPlanPathForTask(taskId: string): string
-codingSha256Hex	export declare function codingSha256Hex(data: Buffer | string): string
 compileOpenApiDocument	export declare function compileOpenApiDocument(input:
 compileSearchPattern	export declare function compileSearchPattern(query: string, caseSensitive: boolean, maxPatternBytes: number):
 composeEgressSandboxNetwork	export declare function composeEgressSandboxNetwork(attestation: EgressAttestation, name: string): DockerNetworkConfig
@@ -737,7 +735,6 @@ gitRequireOk	export declare function gitRequireOk(runner: BoundGitRunner, reques
 gitText	export declare function gitText(result: GitExecResult, stream?: "stdout" | "stderr"): string
 globLocal	export declare function globLocal(request: RepositoryGlobRequest, defaults: ResolvedRepositoryLimits, walk: RepositoryWalk): Promise<RepositoryGlobResult>
 hasShellMetacharacters	export declare function hasShellMetacharacters(command: string): boolean
-indexErrorCode	export declare function indexErrorCode(error: unknown): string | undefined
 inspectorConfigResponse	export declare function inspectorConfigResponse(basePath: string, agentId: string): Response
 inspectorPageResponse	export declare function inspectorPageResponse(): Response
 inspectorScriptResponse	export declare function inspectorScriptResponse(): Response

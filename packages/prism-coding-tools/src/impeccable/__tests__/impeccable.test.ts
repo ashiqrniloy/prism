@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, it } from "node:test";
@@ -91,5 +92,23 @@ describe("impeccable extension", () => {
     assert.equal(result.metadata?.skill, IMPECCABLE_SKILL_NAME);
     assert.ok(!kernel.registries.commands.get("craft"));
     assert.ok(!kernel.registries.instructionInjectors.get("impeccable"));
+  });
+
+  it("setup_accepts_a_matching_snapshot_digest_pin", async () => {
+    const kernel = createExtensionKernel({ errorPolicy: "throw" });
+    const expected = createHash("sha256").update(readFileSync(join(fixtureRoot, "skills/impeccable/SKILL.md"), "utf8"), "utf8").digest("hex");
+    await kernel.load([createImpeccableExtension({ upstreamPath: fixtureRoot, expectedSnapshotDigest: expected })]);
+    assert.equal(kernel.registries.skills.list().length, 1);
+    assert.equal(kernel.registries.skills.list()[0]?.name, IMPECCABLE_SKILL_NAME);
+  });
+
+  it("setup_fails_closed_on_snapshot_digest_drift", async () => {
+    const kernel = createExtensionKernel({ errorPolicy: "throw" });
+    await assert.rejects(
+      () => kernel.load([createImpeccableExtension({ upstreamPath: fixtureRoot, expectedSnapshotDigest: "0".repeat(64) })]),
+      /Expected upstream impeccable SKILL.md to match recorded snapshot digest/,
+    );
+    assert.equal(kernel.registries.skills.list().length, 0);
+    assert.equal(kernel.registries.commands.list().length, 0);
   });
 });

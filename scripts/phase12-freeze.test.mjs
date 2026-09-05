@@ -75,7 +75,8 @@ test("protocol SDK pins match the shipped package manifests exactly", () => {
     return { ...pkg.dependencies, ...pkg.peerDependencies, ...pkg.optionalDependencies };
   };
   const checks = [
-    ["mcp", "@modelcontextprotocol/sdk"],
+    ["mcp", "@modelcontextprotocol/client"],
+    ["mcp", "@modelcontextprotocol/server"],
     ["ag-ui", "@agentclientprotocol/sdk"],
     ["ag-ui", "@ag-ui/core"],
     ["session-store-nats", "@nats-io/jetstream"],

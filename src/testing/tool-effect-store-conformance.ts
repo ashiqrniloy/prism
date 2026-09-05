@@ -55,13 +55,6 @@ export async function assertToolEffectStoreConforms(
   if (cleanup.deleted < 1) throw new Error("store cleanup must remove terminal effects");
 }
 
-export async function runToolEffectStoreConformance(
-  factory: () => ToolEffectStore | Promise<ToolEffectStore>,
-  options: ToolEffectStoreConformanceOptions = {},
-): Promise<void> {
-  await assertToolEffectStoreConforms(factory, options);
-}
-
 function key(identity: AgentIdentity, ownership: ToolEffectKey["ownership"], value: string, toolCallId = "call"): ToolEffectKey {
   return {
     identity,

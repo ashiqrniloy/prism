@@ -479,39 +479,3 @@ function parentDirName(path: string): string {
   const parts = path.split(/[/\\]+/).filter(Boolean);
   return parts.length >= 2 ? parts[parts.length - 2] : (parts[parts.length - 1] ?? "");
 }
-
-/** Parse a `CONTEXT.md` into a static {@link ContextProvider}. The markdown
- *  body becomes the context block content; frontmatter `name` overrides the
- *  directory name. */
-export function parseContextFile(text: string, path: string): ContextProvider {
-  const { front, body } = splitFrontmatter(text, path);
-  const rawName = String(front.get("name") ?? "").trim() || parentDirName(path);
-  if (!NAME_RE.test(rawName)) {
-    throw new Error(`Invalid context provider name in ${path}: ${JSON.stringify(rawName)}`);
-  }
-  const name = rawName.replace(/\s+/g, "-");
-  const title = String(front.get("title") ?? name);
-  return {
-    name,
-    resolve: () => [{ title, content: body.replace(/^\n+/, "").trimEnd() }],
-  };
-}
-
-/** Parse a `TOOL.md` into a descriptor-only {@link ToolDefinition}. The
- *  executable behavior is host-owned; calling `execute` throws. */
-export function parseToolFile(text: string, path: string): ToolDefinition {
-  const { front, body } = splitFrontmatter(text, path);
-  const rawName = String(front.get("name") ?? "").trim() || parentDirName(path);
-  if (!NAME_RE.test(rawName)) {
-    throw new Error(`Invalid tool name in ${path}: ${JSON.stringify(rawName)}`);
-  }
-  const name = rawName.replace(/\s+/g, "-");
-  const description = String(front.get("description") ?? "").trim() || body.replace(/^\n+/, "").slice(0, 80).trim();
-  return {
-    name,
-    ...(description ? { description } : {}),
-    execute: () => {
-      throw new Error(`Discovered tool ${name} requires host execution`);
-    },
-  };
-}

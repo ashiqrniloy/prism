@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-coding-agent` is an optional first-party package that provides host shell/filesystem/repository tools as Prism `ToolDefinition` objects. It ships nine default coding tools — `shell`, `read`, `write`, `edit`, `repo_list`, `repo_search`, `glob`, `delete`, `move` — plus opt-in structured Git/check set (`createGitTools`), opt-in `createAskUserDecisionTool({ ask })`, and bounded coding-plan/checkpoint helpers. The tools are **inert** until a host imports them and registers them into a `ToolRegistry`. Hosts may register any subset, omit aggregators entirely, or mix first-party tools with host-owned `ToolDefinition`s. Behavior for shell/read/write/edit is a behavioral port of the pi coding agent's tools, adapted to Prism's `ToolDefinition` / `ToolResult` contracts (no `@earendil-works/*` or `typebox` dependencies; only `diff` plus the Node standard library). List/search/glob/Git are native Prism tools with no picomatch/ripgrep/Git-library dependency (hand-rolled `*`/`?`/`**` glob matcher).
+`@arnilo/prism-coding-tools/agent` is an optional first-party package that provides host shell/filesystem/repository tools as Prism `ToolDefinition` objects. It ships nine default coding tools — `shell`, `read`, `write`, `edit`, `repo_list`, `repo_search`, `glob`, `delete`, `move` — plus opt-in structured Git/check set (`createGitTools`), opt-in `createAskUserDecisionTool({ ask })`, and bounded coding-plan/checkpoint helpers. The tools are **inert** until a host imports them and registers them into a `ToolRegistry`. Hosts may register any subset, omit aggregators entirely, or mix first-party tools with host-owned `ToolDefinition`s. Behavior for shell/read/write/edit is a behavioral port of the pi coding agent's tools, adapted to Prism's `ToolDefinition` / `ToolResult` contracts (no `@earendil-works/*` or `typebox` dependencies; only `diff` plus the Node standard library). List/search/glob/Git are native Prism tools with no picomatch/ripgrep/Git-library dependency (hand-rolled `*`/`?`/`**` glob matcher).
 
 | Export | Purpose |
 | --- | --- |
@@ -44,7 +44,7 @@ Each factory returns a plain `ToolDefinition` (no auto-registration). Register w
 
 ```ts
 import { createToolRegistry } from "@arnilo/prism";
-import { createCodingTools } from "@arnilo/prism-coding-agent";
+import { createCodingTools } from "@arnilo/prism-coding-tools/agent";
 
 const tools = createToolRegistry(createCodingTools(process.cwd()));
 ```
@@ -56,7 +56,7 @@ Every tool carries an explicit `kind` (`shell`→`execute`, `read`/`repo_list`�
 `createAcpFilesystemOperations` adapts any client with `readTextFile({ path, line?, limit? })` and `writeTextFile({ path, content })` methods to the `ReadOperations`, `WriteOperations`, and `EditOperations` seams. All reads and writes stay client-backed; `mkdir` is a no-op, `statFile` measures a bounded UTF-8 text read, and image MIME detection is always `null`.
 
 ```ts
-import { createAcpFilesystemOperations, createCodingTools } from "@arnilo/prism-coding-agent";
+import { createAcpFilesystemOperations, createCodingTools } from "@arnilo/prism-coding-tools/agent";
 
 const operations = createAcpFilesystemOperations(clientFilesystem);
 const tools = createCodingTools(cwd, {
@@ -72,11 +72,11 @@ This is an editor-buffer adapter, not a repository backend: `repo_list`, `repo_s
 
 Use this package when a host wants ready-made coding tools for an agent, session, or run, registered explicitly into a `ToolRegistry` and dispatched through the normal Prism tool harness. The tools perform **real** shell and filesystem operations on the host — they are not mocked or sandboxed. Use the individual factories when you need per-tool options or custom operation backends; use the aggregators when you want the default set.
 
-Do not use this package as a sandbox, permission policy, secret store, or provider loop. Prism gates tool dispatch with `PermissionPolicy` / `ToolValidator` / trust policies; pass an optional `ExecutionPolicy` (for example from `@arnilo/prism-coding-security`) for path/command approval before side effects. Do not register these tools for an untrusted provider.
+Do not use this package as a sandbox, permission policy, secret store, or provider loop. Prism gates tool dispatch with `PermissionPolicy` / `ToolValidator` / trust policies; pass an optional `ExecutionPolicy` (for example from `@arnilo/prism-coding-tools/security`) for path/command approval before side effects. Do not register these tools for an untrusted provider.
 
 ```ts
-import { createCodingTools } from "@arnilo/prism-coding-agent";
-import { createCodingApprovalPolicy } from "@arnilo/prism-coding-security";
+import { createCodingTools } from "@arnilo/prism-coding-tools/agent";
+import { createCodingApprovalPolicy } from "@arnilo/prism-coding-tools/security";
 
 const tools = createCodingTools(workspaceRoot, {
   executionPolicy: createCodingApprovalPolicy({
@@ -88,7 +88,7 @@ const tools = createCodingTools(workspaceRoot, {
 
 ### pi name mapping
 
-| Prism (`@arnilo/prism-coding-agent`) | pi coding agent |
+| Prism (`@arnilo/prism-coding-tools/agent`) | pi coding agent |
 | --- | --- |
 | `shell` | `bash` |
 | `read` | `read` |
@@ -180,7 +180,7 @@ Read a text or image file.
 | `executionPolicy` | — | Structured pre-execution policy (see [Coding security](coding-security.md)). |
 
 ```ts
-import { createReadTool, DEFAULT_MAX_IMAGE_BYTES } from "@arnilo/prism-coding-agent";
+import { createReadTool, DEFAULT_MAX_IMAGE_BYTES } from "@arnilo/prism-coding-tools/agent";
 
 const read = createReadTool(cwd, {
   maxImageBytes: DEFAULT_MAX_IMAGE_BYTES,
@@ -229,7 +229,7 @@ Default local `writeFile` uses same-directory temp + `rename` so a crash mid-wri
 Hosts may opt in to a session-scoped soft guard: share one `createReadPathSet()` across `read` / `write` / `edit` and set `requireReadBeforeWrite: true` on write/edit options. Successful `read` marks the path; unread existing-file writes/edits fail with a clear error unless `force: true`. Default is **off** (no behavior change for hosts that ignore it).
 
 ```ts
-import { createReadPathSet, createReadTool, createWriteTool, createEditTool } from "@arnilo/prism-coding-agent";
+import { createReadPathSet, createReadTool, createWriteTool, createEditTool } from "@arnilo/prism-coding-tools/agent";
 
 const readPaths = createReadPathSet();
 const read = createReadTool(cwd, { readPathSet: readPaths });
@@ -240,7 +240,7 @@ const edit = createEditTool(cwd, { requireReadBeforeWrite: true, readPathSet: re
 Since 0.1.3 (plan 015 Task 4) hosts may opt in to persisting the set across restarts via the host-owned `CheckpointStore`:
 
 ```ts
-import { createReadPathSet, createReadPathSetPersistence } from "@arnilo/prism-coding-agent";
+import { createReadPathSet, createReadPathSetPersistence } from "@arnilo/prism-coding-tools/agent";
 
 const readPaths = createReadPathSet();
 const persistence = createReadPathSetPersistence({ checkpoints, key: sessionId, ownership });
@@ -287,7 +287,7 @@ List repository entries with deterministic relative paths. Uses Node `opendir`/`
 - **Security:** `.git` internals never listed; paths re-checked against the workspace root; symlink escapes match native fail-closed behavior.
 
 ```ts
-import { createCodingTools, createGitAwareRepositoryOperations } from "@arnilo/prism-coding-agent";
+import { createCodingTools, createGitAwareRepositoryOperations } from "@arnilo/prism-coding-tools/agent";
 
 const operations = createGitAwareRepositoryOperations(cwd); // native fallback outside Git
 const tools = createCodingTools(cwd, { repository: { operations } });
@@ -392,7 +392,7 @@ Opt-in tools over a host-pinned Git executable (`gitPath`, default `/usr/bin/git
 | `coding_check` | Included when `checks` are declared: model selects only a name; executable/args/env are host-fixed. |
 
 ```ts
-import { createGitTools } from "@arnilo/prism-coding-agent";
+import { createGitTools } from "@arnilo/prism-coding-tools/agent";
 
 const gitTools = createGitTools(workspaceRoot, {
   gitPath: "/usr/bin/git",
@@ -431,7 +431,7 @@ import {
   createCodingTools,
   suspendAskUserDecision,
   createAskUserDecisionResumeValidator,
-} from "@arnilo/prism-coding-agent";
+} from "@arnilo/prism-coding-tools/agent";
 
 const tools = createToolRegistry([
   ...createCodingTools(workspaceRoot),
@@ -453,10 +453,10 @@ return suspendAskUserDecision({
 
 ### Goal → verify helper (`runCodingGoalVerify`)
 
-Thin composition over existing plan Markdown, named checks, workflow `suspend`/`resumeWorkflow`, and bounded PR handoff. **No Goal table / second runtime.** Peer `@arnilo/prism-workflows`. Example: `examples/coding-goal-verify.ts`.
+Thin composition over existing plan Markdown, named checks, workflow `suspend`/`resumeWorkflow`, and bounded PR handoff. **No Goal table / second runtime.** Peer `@arnilo/prism-core/runtime/workflows`. Example: `examples/coding-goal-verify.ts`.
 
 ```ts
-import { runCodingGoalVerify } from "@arnilo/prism-coding-agent";
+import { runCodingGoalVerify } from "@arnilo/prism-coding-tools/agent";
 
 const result = await runCodingGoalVerify({
   goal: "Fix the flake",
@@ -524,7 +524,7 @@ Minimal drop-in for any Prism app:
 
 ```ts
 import { createToolRegistry } from "@arnilo/prism";
-import { createCodingTools, createReadOnlyTools } from "@arnilo/prism-coding-agent";
+import { createCodingTools, createReadOnlyTools } from "@arnilo/prism-coding-tools/agent";
 
 // Full coding set (shell + read + write + edit + repo_list + repo_search + glob + delete + move):
 const tools = createToolRegistry(createCodingTools(process.cwd()));
@@ -536,7 +536,7 @@ const ro = createToolRegistry(createReadOnlyTools(process.cwd()));
 Customizing a single tool (force bash, cap output, delegate writes to a remote backend):
 
 ```ts
-import { createShellTool, createWriteTool } from "@arnilo/prism-coding-agent";
+import { createShellTool, createWriteTool } from "@arnilo/prism-coding-tools/agent";
 
 const shell = createShellTool("/repo", {
   shellPath: "/bin/bash",
@@ -560,11 +560,11 @@ Packed capability demo: `examples/coding-tools-capability-gaps.ts` (search modes
 
 ## Extension and configuration notes
 
-- **Long coding sessions.** Use `createCodingCompactionStrategy()` from optional `@arnilo/prism-compaction-llm` when history needs a bounded coding handoff. It is selected explicitly through normal `session.compact()` / agent compaction configuration, preserves raw session entries, and prioritizes file paths, patch intent, checks, plan/todo state, blockers, and verification steps. It does not read files, retain full diffs, or create a second coding runtime.
+- **Long coding sessions.** Use `createCodingCompactionStrategy()` from optional `@arnilo/prism-memory/compaction/llm` when history needs a bounded coding handoff. It is selected explicitly through normal `session.compact()` / agent compaction configuration, preserves raw session entries, and prioritizes file paths, patch intent, checks, plan/todo state, blockers, and verification steps. It does not read files, retain full diffs, or create a second coding runtime.
 - **Pluggable operation backends.** Every tool accepts an `operations` seam. Custom `ReadOperations` must implement bounded `readText` plus `statFile`; custom `EditOperations` must implement `statFile`; read/write methods receive caps/signals. `BashOperations` must stream through `onData` and honor `signal`/`timeout`. Custom `RepositoryOperations` must honor depth/entry/file/match/scan/time caps and abort (including `glob`). Custom `DeleteOperations` / `MoveOperations` must honor containment and abort. A hostile custom backend can still violate its host-owned contract, so isolate it separately.
 - **Per-tool options.** `ShellToolOptions` adds `timeout` and `maxTotalOutputBytes`; `ReadToolOptions` adds `maxScanBytes` and optional `readPathSet`; `WriteToolOptions` / `EditToolOptions` add input caps plus optional `requireReadBeforeWrite` / `readPathSet` / `force`; list/search/glob accept `repository` limits and shared aggregator `ToolsOptions.repository`.
 - **Aggregator options.** `ToolsOptions` (`{ executionPolicy?, shell?, read?, write?, edit?, delete?, move?, list?, search?, glob?, repository? }`) threads each sub-object to the matching tool. `createCodingTools()`, `createAllTools()`, and `createReadOnlyTools()` apply the shared policy unless that tool has an explicit per-tool override. Full membership is nine tools; read-only is `read` + `repo_list` + `repo_search` + `glob`.
-- **Sandbox composition.** Prefer `@arnilo/prism-coding-security` `createSandboxCodingComposition(cwd, { workspaceMode, sandbox, ... })` (or tools-only wrappers). `workspaceMode` is required: `"sandbox"` keeps shell/read/write/edit/list/search/glob/delete/move on one disposable tree; `"host"` runs against host cwd and never claims containment. Mixed sandbox-shell + host-FS wiring throws unless `allowMixedWorkspaceWiring: true`. Same-tree Git: `createGitTools(composition.workspaceRoot, { execFile: sandbox.execFile, commitIdentity })`.
+- **Sandbox composition.** Prefer `@arnilo/prism-coding-tools/security` `createSandboxCodingComposition(cwd, { workspaceMode, sandbox, ... })` (or tools-only wrappers). `workspaceMode` is required: `"sandbox"` keeps shell/read/write/edit/list/search/glob/delete/move on one disposable tree; `"host"` runs against host cwd and never claims containment. Mixed sandbox-shell + host-FS wiring throws unless `allowMixedWorkspaceWiring: true`. Same-tree Git: `createGitTools(composition.workspaceRoot, { execFile: sandbox.execFile, commitIdentity })`.
 - **`ToolsOptions`** and the per-tool option types are exported from the package barrel for host configuration.
 - No auto-discovery or manifest registration: import and register explicitly. This package registers no extensions and owns no globals (the mutation queue is a process-wide per-path map — see `ponytail:` note in the source).
 

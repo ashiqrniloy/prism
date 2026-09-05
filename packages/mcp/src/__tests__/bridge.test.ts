@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { createSecretRedactor, createToolRegistry, dispatchToolCall } from "@arnilo/prism";
-import { Client } from "@modelcontextprotocol/sdk/client";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Client } from "@modelcontextprotocol/client";
+import { InMemoryTransport } from "@modelcontextprotocol/client";
+import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import { attachMcpToolBridge, connectMcpTools, listAllMcpTools, mapMcpToolsToDefinitions } from "../bridge.js";
 import {
@@ -50,7 +50,7 @@ async function createFixture(
         },
       },
       async (args: { text?: string }) => ({
-        content: [{ type: "text", text: String(await tool.handler(args)) }],
+        content: [{ type: "text" as const, text: String(await tool.handler(args)) }],
       }),
     );
   }
@@ -155,7 +155,7 @@ describe("attachMcpToolBridge", () => {
     );
     server.registerTool("fail", { inputSchema: { reason: z.string().optional() } }, async () => ({
       isError: true,
-      content: [{ type: "text", text: "nope" }],
+      content: [{ type: "text" as const, text: "nope" }],
     }));
     await server.connect(serverTransport);
     const client = new Client({ name: "test-client", version: "0.0.1" }, { capabilities: {} });
@@ -221,7 +221,7 @@ describe("attachMcpToolBridge", () => {
     assert.equal(bridge.tools.length, 1);
 
     fixture.server.registerTool("two", { inputSchema: { value: z.string().optional() } }, async () => ({
-      content: [{ type: "text", text: "2" }],
+      content: [{ type: "text" as const, text: "2" }],
     }));
     await fixture.server.sendToolListChanged();
 
@@ -357,56 +357,60 @@ describe("attachMcpToolBridge", () => {
 
 describe("MCP Apps bridge", () => {
   it("negotiates, hides app-only tools, preserves nested metadata, and reads bounded HTML", async () => {
+    const request = async (request: { method: string; params?: Record<string, unknown> }) => {
+      if (request.method === "tools/list")
+        return {
+          tools: [
+            {
+              name: "weather",
+              description: "weather",
+              inputSchema: { type: "object" },
+              _meta: { ui: { resourceUri: "ui://weather/view", visibility: ["model", "app"] }, "ui/resourceUri": "ui://ignored/flat" },
+            },
+            {
+              name: "refresh",
+              inputSchema: { type: "object" },
+              _meta: { ui: { resourceUri: "ui://weather/view", visibility: ["app"] } },
+            },
+          ],
+        };
+      if (request.method === "resources/list")
+        return {
+          resources: [
+            {
+              uri: "ui://weather/view",
+              name: "weather",
+              mimeType: "text/html;profile=mcp-app",
+              _meta: { ui: { csp: { connectDomains: ["https://list.example"] } } },
+            },
+          ],
+        };
+      if (request.method === "resources/read")
+        return {
+          contents: [
+            {
+              uri: request.params?.uri as string | undefined,
+              mimeType: "text/html;profile=mcp-app",
+              text: "<!doctype html><html><body>safe</body></html>",
+              _meta: { ui: { csp: { connectDomains: ["https://read.example"] }, prefersBorder: true } },
+            },
+          ],
+        };
+      if (request.method === "tools/call") return { content: [{ type: "text", text: "ok" }] };
+      throw new Error(`unexpected ${request.method}`);
+    };
     const client = {
       getServerCapabilities: () => ({ extensions: { "io.modelcontextprotocol/ui": {} } }),
       setNotificationHandler: () => undefined,
       close: async () => undefined,
-      request: async (request: { method: string; params?: { uri?: string } }) => {
-        if (request.method === "tools/list")
-          return {
-            tools: [
-              {
-                name: "weather",
-                description: "weather",
-                inputSchema: { type: "object" },
-                _meta: { ui: { resourceUri: "ui://weather/view", visibility: ["model", "app"] }, "ui/resourceUri": "ui://ignored/flat" },
-              },
-              {
-                name: "refresh",
-                inputSchema: { type: "object" },
-                _meta: { ui: { resourceUri: "ui://weather/view", visibility: ["app"] } },
-              },
-            ],
-          };
-        if (request.method === "resources/list")
-          return {
-            resources: [
-              {
-                uri: "ui://weather/view",
-                name: "weather",
-                mimeType: "text/html;profile=mcp-app",
-                _meta: { ui: { csp: { connectDomains: ["https://list.example"] } } },
-              },
-            ],
-          };
-        if (request.method === "resources/read")
-          return {
-            contents: [
-              {
-                uri: request.params?.uri,
-                mimeType: "text/html;profile=mcp-app",
-                text: "<!doctype html><html><body>safe</body></html>",
-                _meta: { ui: { csp: { connectDomains: ["https://read.example"] }, prefersBorder: true } },
-              },
-            ],
-          };
-        if (request.method === "tools/call") return { content: [{ type: "text", text: "ok" }] };
-        throw new Error(`unexpected ${request.method}`);
-      },
+      request,
+      listTools: async (params?: { cursor?: string }) => request({ method: "tools/list", params }),
+      listResources: async (params?: { cursor?: string }) => request({ method: "resources/list", params }),
+      readResource: async (params: { uri: string }) => request({ method: "resources/read", params }),
     } as unknown as Client;
     const bridge = await attachMcpToolBridge(
       client,
-      { close: async () => undefined } as unknown as import("@modelcontextprotocol/sdk/shared/transport.js").Transport,
+      { close: async () => undefined } as unknown as import("@modelcontextprotocol/client").Transport,
       {
         serverId: "weather",
         mcpApps: true,
@@ -440,7 +444,7 @@ describe("MCP Apps bridge", () => {
     await assert.rejects(
       attachMcpToolBridge(
         client,
-        { close: async () => undefined } as unknown as import("@modelcontextprotocol/sdk/shared/transport.js").Transport,
+        { close: async () => undefined } as unknown as import("@modelcontextprotocol/client").Transport,
         {
           serverId: "weather",
           mcpApps: true,
@@ -619,8 +623,9 @@ function setClientRequest(client: Client, request: (request: { method: string })
 function fakeListClient(pages: readonly unknown[]): Client {
   let index = 0;
   return {
-    request: async (request: { method: string }) => {
-      assert.equal(request.method, "tools/list");
+    listTools: async (params?: { cursor?: string }) => {
+      if (index === 0) assert.deepEqual(params, { cursor: "" });
+      else assert.notEqual(params?.cursor, undefined);
       const page = pages[index++];
       if (!page) throw new Error("unexpected tools/list page");
       return page;

@@ -127,9 +127,10 @@ export function mapAlibabaModel(entry: AlibabaModelEntry): ModelConfig {
     model: id,
     displayName: id,
     capabilities: {
-      // qwen-vl family models accept image and (on compatible-mode chat) video file
-      // input via `video_url` parts; video reuses the `file` capability tag.
-      input: vision ? ["text", "image", "file"] : ["text"],
+      // qwen-vl family models accept image and (on compatible-mode chat) video
+      // input via `video_url` parts; video is the typed `video` capability tag
+      // (plan 061 Task 5 migrated video off the `file` tag).
+      input: vision ? ["text", "image", "file", "video"] : ["text"],
       output: ["text"],
       reasoning,
       tools: true,

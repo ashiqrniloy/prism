@@ -335,15 +335,12 @@ test("exit gate: null until Task 7 records it; green with full evidence once rec
   }
 });
 
-test("phase18-freeze.test.mjs is wired into the npm test script after phase 17 (Task 0 wiring)", () => {
+test("phase18-freeze.test.mjs is retired from npm test (plan 057) but stays runnable standalone", () => {
   assert.ok(
-    rootPkg.scripts.test.includes("scripts/phase18-freeze.test.mjs"),
-    "package.json test script runs scripts/phase18-freeze.test.mjs",
+    !rootPkg.scripts.test.includes("scripts/phase18-freeze.test.mjs"),
+    "retired freeze gate must not run in npm test (plan 057); run standalone for audits",
   );
-  assert.ok(
-    rootPkg.scripts.test.indexOf("scripts/phase18-freeze.test.mjs") > rootPkg.scripts.test.indexOf("scripts/phase17-freeze.test.mjs"),
-    "phase18 freeze test runs after phase17 freeze test",
-  );
+  assert.ok(!rootPkg.scripts.test.includes("scripts/phase17-freeze.test.mjs"), "phase17 freeze test retired too (plan 057)");
 });
 
 test("phase 18 baseline is newer than the phase 17 freeze manifest (captured at Task 0)", () => {

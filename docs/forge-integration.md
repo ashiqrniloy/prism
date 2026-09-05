@@ -2,7 +2,7 @@
 
 ## What it does
 
-`createGitHubForge` is an optional host-activated adapter in `@arnilo/prism-coding-agent` for the six **proven** GitHub operations: issue context read, authenticated push, pull-request create/update, review comments, and check/status retrieval, plus bounded handoff reconciliation. It is GitHub-first by freeze decision — there is no multi-forge generic abstraction, and no octokit dependency: HTTP uses Node's global `fetch` with a bounded streaming reader, timeout, and rate-limit backoff; push reuses the existing `BoundGitRunner` with the token injected via `GIT_CONFIG_*` environment variables (`http.extraHeader`) — never argv, never persisted, never in logs/events. Every mutation flows through Phase 8 approval (`ExecutionPolicy`) and Phase 7 `ToolEffectStore` idempotency keys; a retry after a completed call returns the existing record instead of duplicating the PR or comment.
+`createGitHubForge` is an optional host-activated adapter in `@arnilo/prism-coding-tools/agent` for the six **proven** GitHub operations: issue context read, authenticated push, pull-request create/update, review comments, and check/status retrieval, plus bounded handoff reconciliation. It is GitHub-first by freeze decision — there is no multi-forge generic abstraction, and no octokit dependency: HTTP uses Node's global `fetch` with a bounded streaming reader, timeout, and rate-limit backoff; push reuses the existing `BoundGitRunner` with the token injected via `GIT_CONFIG_*` environment variables (`http.extraHeader`) — never argv, never persisted, never in logs/events. Every mutation flows through Phase 8 approval (`ExecutionPolicy`) and Phase 7 `ToolEffectStore` idempotency keys; a retry after a completed call returns the existing record instead of duplicating the PR or comment.
 
 | Export | Purpose |
 | --- | --- |
@@ -18,7 +18,7 @@
 Use when a coding agent needs to open/update PRs, comment on reviews, push a branch with scoped credentials, or verify handoff state against GitHub before deciding the next step. Do not use as a general GitHub SDK, an auto-merge engine (`reconcileHandoff` never merges), or a replacement for host-owned App installation flows — the adapter resolves credentials through the host's `CredentialResolverSource`-compatible resolver and never stores them.
 
 ```ts
-import { createGitHubForge } from "@arnilo/prism-coding-agent";
+import { createGitHubForge } from "@arnilo/prism-coding-tools/agent";
 
 const forge = createGitHubForge({
   credentials: { name: "github", resolver: myCredentialResolver }, // App installation token preferred; PAT allowed
@@ -75,7 +75,7 @@ Every mutation result is recorded in the `effectStore` with a stable key derived
 ## Implementation example
 
 ```ts
-import { createGitHubForge } from "@arnilo/prism-coding-agent";
+import { createGitHubForge } from "@arnilo/prism-coding-tools/agent";
 
 const forge = createGitHubForge({
   credentials: { name: "github-app", resolver },

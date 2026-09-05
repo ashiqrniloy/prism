@@ -101,7 +101,7 @@ export const extension: Extension = {
 - `retry` middleware may stop retrying or adjust delay, but runtime still owns retry event emission, abort-aware waiting, and provider-turn boundaries.
 - The registry does not discover packages, read manifests, load config, call providers, execute tools, read resources, or start sessions.
 - Hosts may pass a middleware registry into `createExtensionKernel({ middleware })` to share it with direct host code.
-- For OpenTelemetry export, prefer `session.subscribe()` + `@arnilo/prism-observability-opentelemetry` (see [Observability](observability.md)) rather than adding a parallel event bus. Middleware hooks remain for transforming payloads at named boundaries.
+- For OpenTelemetry export, prefer `session.subscribe()` + `@arnilo/prism-core/governance/observability` (see [Observability](observability.md)) rather than adding a parallel event bus. Middleware hooks remain for transforming payloads at named boundaries.
 
 ## Security and performance notes
 

@@ -1,13 +1,25 @@
 {
-  "generatedAt": "2026-09-02T19:15:51.659Z",
+  "generatedAt": "2026-09-04T07:22:26.202Z",
   "root": {
     "name": "@arnilo/prism",
-    "version": "0.4.0"
+    "version": "0.5.0"
+  },
+  "versions": {
+    "@arnilo/prism": "0.5.0",
+    "@arnilo/prism-mcp": "0.5.0",
+    "@arnilo/prism-providers": "0.5.0",
+    "@arnilo/prism-memory": "0.5.0",
+    "@arnilo/prism-core": "0.5.0",
+    "@arnilo/prism-coding-tools": "0.5.0",
+    "@arnilo/prism-office": "0.5.0",
+    "@arnilo/prism-ag-ui": "0.5.0",
+    "@arnilo/prism-web-tools": "0.5.0",
+    "@arnilo/prism-acp-agent": "0.5.0"
   },
   "counts": {
     "publishable": 10,
     "workspace": 9,
-    "provider": 19,
+    "provider": 20,
     "prismFamily": 3,
     "capability": 6,
     "codeWithPeer": 9,
@@ -25,6 +37,7 @@
     "@arnilo/prism-providers/google",
     "@arnilo/prism-providers/hyper",
     "@arnilo/prism-providers/kimi",
+    "@arnilo/prism-providers/model-discovery",
     "@arnilo/prism-providers/neuralwatt",
     "@arnilo/prism-providers/ollama",
     "@arnilo/prism-providers/openai",
@@ -62,6 +75,7 @@
         "@arnilo/prism-providers/google",
         "@arnilo/prism-providers/hyper",
         "@arnilo/prism-providers/kimi",
+        "@arnilo/prism-providers/model-discovery",
         "@arnilo/prism-providers/neuralwatt",
         "@arnilo/prism-providers/ollama",
         "@arnilo/prism-providers/openai",
@@ -77,7 +91,7 @@
   "profiles": {},
   "peerPolicy": {
     "decision": "B",
-    "spec": "^0.4.0",
+    "spec": "^0.5.0",
     "atomicUpgrade": false
   }
 }

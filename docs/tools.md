@@ -198,11 +198,11 @@ Core exposes schema-agnostic adapters that wrap into the same `ToolValidator` se
 - `ToolArgumentValidator` — `validate(schema, value)` with structured errors
 - `createToolParameterValidator(adapter, { missingSchema?: "allow" | "reject" })` — maps `tool.parameters` through the adapter
 
-For standards-based validation install `@arnilo/prism-tool-validator-json-schema`:
+For standards-based validation install `@arnilo/prism-core/validation/json-schema`:
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import { createJsonSchemaToolArgumentValidator } from "@arnilo/prism-tool-validator-json-schema";
+import { createJsonSchemaToolArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
 
 const agent = createAgent({
   model,
@@ -242,7 +242,7 @@ await session.run(input, {
 
 ## JSON Schema validator limits
 
-Core stores `ToolDefinition.parameters` but does not compile schemas. Hosts that install `@arnilo/prism-tool-validator-json-schema` receive pre-Ajv schema limits: 256 KiB bytes, depth 64, 10,000 properties/keywords, 128 refs, and a 256-entry LRU compiled cache by default. All reject invalid values and have finite hard ceilings. Only fragment-local `$ref` values are accepted; non-local refs, cycles, forbidden keys, and non-finite schema numbers fail before tool execution.
+Core stores `ToolDefinition.parameters` but does not compile schemas. Hosts that install `@arnilo/prism-core/validation/json-schema` receive pre-Ajv schema limits: 256 KiB bytes, depth 64, 10,000 properties/keywords, 128 refs, and a 256-entry LRU compiled cache by default. All reject invalid values and have finite hard ceilings. Only fragment-local `$ref` values are accepted; non-local refs, cycles, forbidden keys, and non-finite schema numbers fail before tool execution.
 
 ```ts
 createJsonSchemaToolArgumentValidator({
@@ -275,7 +275,7 @@ Limits (mirroring the skill-disclosure DEFAULT/HARD cap pattern):
 - `search_tools({ query, k? })` returns inert `name: short description [matched: …]` lines — no schemas or tool bodies — and marks returned tools active for the session. Activation is names-only in run persistence (`sessionState.activatedToolNames`, capped at 128 names) and inert for tools absent from the current registry; a host can reset it with `session.clearActivatedTools()`.
 - Fail closed: any index or scoring error discloses the full input list — never zero tools, never wider than the input list. Exhausting the frozen 1024-tool index cap is surfaced the same way.
 - Disclosure never grants access: dispatch re-checks registry membership and allow/deny (`unknown_tool` / `tool_denied`) on every call regardless of what was described. Search results are intersected with the disclosed list structurally — searched tools are only ever selected from that list, never widened.
-- Scoring is BM25-lite lexical (name tokens weigh ×3, IDF from the registry): bounded, dependency-free, deterministic tie-breaks. ponytail ceiling: embedder-backed scoring via `@arnilo/prism-rag` if accuracy fixtures fall short.
+- Scoring is BM25-lite lexical (name tokens weigh ×3, IDF from the registry): bounded, dependency-free, deterministic tie-breaks. ponytail ceiling: embedder-backed scoring via `@arnilo/prism-memory/rag` if accuracy fixtures fall short.
 - Cross-link: skills apply the same discipline to prompt text — see [Context and skills](context-and-skills.md).
 
 ## Guardrails

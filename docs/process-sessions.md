@@ -2,7 +2,7 @@
 
 ## What it does
 
-`createProcessSessions` is an optional host-activated registry in `@arnilo/prism-coding-agent` for **long-running** child processes: start, cursor-paged output, input, wait, signal/kill, and release (detach). Sessions have bounded lifetime (sweep on registry access — no import-time timers), ownership/identity attribution, durable metadata (command fingerprint without env/secrets), and typed `CodingProcessEvent`s via a host callback. Reuses `ExecutionPolicy`, `killProcessTree`, and `OutputAccumulator` (including spill + `readRaw` cursor paging). Optional duck-typed `sandbox` backend uses `startProcess` when present; one-shot adapters fail closed. Nothing spawns on import or construction.
+`createProcessSessions` is an optional host-activated registry in `@arnilo/prism-coding-tools/agent` for **long-running** child processes: start, cursor-paged output, input, wait, signal/kill, and release (detach). Sessions have bounded lifetime (sweep on registry access — no import-time timers), ownership/identity attribution, durable metadata (command fingerprint without env/secrets), and typed `CodingProcessEvent`s via a host callback. Reuses `ExecutionPolicy`, `killProcessTree`, and `OutputAccumulator` (including spill + `readRaw` cursor paging). Optional duck-typed `sandbox` backend uses `startProcess` when present; one-shot adapters fail closed. Nothing spawns on import or construction.
 
 | Export | Purpose |
 | --- | --- |
@@ -20,7 +20,7 @@
 Use when a host needs attachable long-running processes (watch modes, language servers, interactive CLIs) that one-shot `shell` cannot model. Do not use as a job-control language. `pty: true` (host-selected PTY) requires a `ptyBackend` passed to `createProcessSessions`; without one it fails closed before spawn with `ERR_PRISM_PROCESS_PTY_UNSUPPORTED`. Pass a sandbox with `startProcess` for contained long-running work; omit `sandbox` for native spawn.
 
 ```ts
-import { createProcessSessions } from "@arnilo/prism-coding-agent";
+import { createProcessSessions } from "@arnilo/prism-coding-tools/agent";
 
 const sessions = createProcessSessions({ cwd: workspaceRoot, policy, sandbox, onEvent });
 const p = await sessions.start({ command: "npm", args: ["test", "--", "--watch"] });

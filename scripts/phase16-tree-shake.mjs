@@ -57,7 +57,12 @@ const reachableFromContractsJs = reachableFrom("contracts.js");
 const baseline = JSON.parse(readFileSync(outPath, "utf8"));
 const pre = baseline.splitBaseline ?? {};
 const treeShake = {
-  measured: new Date().toISOString().slice(0, 10),
+  // ponytail: date stamp refreshed only under PRISM_PHASE16_RECORD_EVIDENCE=1 (phase12 restart-recovery convention);
+  // a bare audit run must never rewrite the tracked baseline.
+  measured:
+    process.env.PRISM_PHASE16_RECORD_EVIDENCE === "1"
+      ? new Date().toISOString().slice(0, 10)
+      : (baseline.treeShake?.measured ?? new Date().toISOString().slice(0, 10)),
   agentsJsBytes,
   contractsJsBytes,
   distJsCount: jsFiles.length,

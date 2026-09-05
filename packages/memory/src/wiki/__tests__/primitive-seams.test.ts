@@ -21,7 +21,7 @@ describe("prism-wiki primitive seams & package scaffold", () => {
     const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
     assert.ok(pkg.exports["./wiki"], "memory family manifest must expose ./wiki");
     // peer follows the package's Decision B window (^0.3.1 since the plan 039 cut).
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.4.0");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.5.0");
     assert.equal(pkg.publishConfig?.access, "public");
   });
 

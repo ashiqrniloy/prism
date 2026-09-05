@@ -9,7 +9,7 @@ Implementation is **shipped and phase-verified** (Tasks 0–7). Optional package
 ## When to use it
 
 - **Adapter authors** implementing SQLite/PostgreSQL `SessionStore` + `RunLedger` should start here, then follow [Database persistence](database-persistence.md) and [Session store conformance](session-store-conformance.md).
-- **Host apps** wiring CLI/desktop credential persistence should use the credential seams and package matrix here before choosing `@arnilo/prism-credentials-node` backends.
+- **Host apps** wiring CLI/desktop credential persistence should use the credential seams and package matrix here before choosing `@arnilo/prism-core/credentials/node` backends.
 - **Provider and core authors** extending multimodal input should use the content/resource/capability designs here instead of embedding provider upload IDs in core contracts.
 - **Security reviewers** use the threat model and conformance matrix on this page as the acceptance baseline for Plan 056 Tasks 1–7.
 
@@ -108,10 +108,10 @@ Prism `engines.node` is `>=20`. Optional packages stay package-local; core adds 
 
 | Package (planned) | Driver / backend | Pinned version | Node support | Rationale |
 | --- | --- | --- | --- | --- |
-| `@arnilo/prism-session-store-sqlite` | `better-sqlite3` | `^12.11.1` | 20.x–26.x per upstream engines | Synchronous API, WAL/busy_timeout, mature Node 20 baseline; `node:sqlite` rejected — requires Node ≥22.5 and is still experimental vs declared `>=20` baseline |
-| `@arnilo/prism-session-store-postgres` | `pg` | `^8.22.0` | ≥16 (satisfies 20+) | Standard pool + parameterized queries; TLS/credentials host-owned |
-| `@arnilo/prism-credentials-node` encrypted file | Node `crypto` (AES-256-GCM + scrypt) | built-in | 20+ | No extra deps for AEAD/KDF; atomic rename writes |
-| `@arnilo/prism-credentials-node` keychain | `@napi-rs/keyring` | `^1.3.0` | ≥10 (satisfies 20+) | Cross-platform, actively maintained (2026); `keytar@7.9.0` rejected — last release 2022, heavier native rebuild friction |
+| `@arnilo/prism-core/sessions/sqlite` | `better-sqlite3` | `^12.11.1` | 20.x–26.x per upstream engines | Synchronous API, WAL/busy_timeout, mature Node 20 baseline; `node:sqlite` rejected — requires Node ≥22.5 and is still experimental vs declared `>=20` baseline |
+| `@arnilo/prism-core/sessions/postgres` | `pg` | `^8.22.0` | ≥16 (satisfies 20+) | Standard pool + parameterized queries; TLS/credentials host-owned |
+| `@arnilo/prism-core/credentials/node` encrypted file | Node `crypto` (AES-256-GCM + scrypt) | built-in | 20+ | No extra deps for AEAD/KDF; atomic rename writes |
+| `@arnilo/prism-core/credentials/node` keychain | `@napi-rs/keyring` | `^1.3.0` | ≥10 (satisfies 20+) | Cross-platform, actively maintained (2026); `keytar@7.9.0` rejected — last release 2022, heavier native rebuild friction |
 
 **Rejected options:**
 
@@ -131,7 +131,7 @@ Prism `engines.node` is `>=20`. Optional packages stay package-local; core adds 
 | Persistence location | Core built-in DB | Optional packages over contracts | **Optional packages** | Matches Plan 053 JSONL boundary and `ProductionPersistenceStore` extension point |
 | Schema/migrations | Core DDL generator | Shared fixture model + dialect-local SQL | **Shared fixtures + local SQL** | Two adapters without ORM |
 | Run ledger conformance | Per-package tests only | Shared conformance module (Task 1) | **Shared module** | Parity with session-store conformance |
-| Credential persistence | Core global store | `@arnilo/prism-credentials-node` | **Optional package** | Host selects file vs keychain |
+| Credential persistence | Core global store | `@arnilo/prism-core/credentials/node` | **Optional package** | Host selects file vs keychain |
 | KDF | PBKDF2 default | scrypt with documented minimums | **scrypt** (configurable N/r/p) | Node built-in; calibrate in Task 4 tests |
 | Multimodal content | Provider-specific options only | Generic `ContentBlock` + capability tags | **Generic blocks + capabilities** | Portable input; provider maps/uploads locally |
 | URL/file sources | Loader reads anything | Bounded loader policy + trust integration | **Bounded + trust** | Reuse `createPathTrustPolicy` patterns; SSRF deny-by-default for URLs |

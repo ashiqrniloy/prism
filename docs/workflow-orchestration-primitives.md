@@ -2,7 +2,7 @@
 
 ## What it does
 
-This page freezes the Plan 057 Task 0 inventory and Task 1 adapter-contract lock for workflow orchestration. It maps existing `@arnilo/prism` orchestration, CLI/RPC, event, approval, and persistence seams; records capability gap **C-009** (workflow/graph orchestration); pins performance and security limits for Tasks 2–7; and documents the final public design for `@arnilo/prism-workflows`.
+This page freezes the Plan 057 Task 0 inventory and Task 1 adapter-contract lock for workflow orchestration. It maps existing `@arnilo/prism` orchestration, CLI/RPC, event, approval, and persistence seams; records capability gap **C-009** (workflow/graph orchestration); pins performance and security limits for Tasks 2–7; and documents the final public design for `@arnilo/prism-core/runtime/workflows`.
 
 Interactive TUI (**C-012**) is **out of scope** for Plan 057 and deferred. Workflow start/status/cancel/resume is delivered through public package APIs and optional RPC/`CommandDefinition` bindings.
 
@@ -41,7 +41,7 @@ Static review of `src/agents.ts`, `src/agent-loops.ts`, `src/rpc.ts`, `src/cli-r
 | Middleware | `src/middleware.ts` | Ordered hooks at provider/input/tool/compaction/retry/session boundaries | Workflow does not need new hooks for v1 |
 | Compaction / retry | `src/compaction.ts`, `src/retry.ts` | Per-session/run policies | Workflow nodes inherit agent/session config; graph-level retry is package-owned |
 
-**Frozen boundary:** Core owns single-session run lifecycle, provider turns, tool dispatch, store append, redaction, and `AgentEvent` emission. Multi-node dependency scheduling, typed node I/O mapping, fan-out/join, workflow checkpoints, and workflow run control belong in `@arnilo/prism-workflows`.
+**Frozen boundary:** Core owns single-session run lifecycle, provider turns, tool dispatch, store append, redaction, and `AgentEvent` emission. Multi-node dependency scheduling, typed node I/O mapping, fan-out/join, workflow checkpoints, and workflow run control belong in `@arnilo/prism-core/runtime/workflows`.
 
 ### CLI/RPC host seam (shipped)
 
@@ -67,9 +67,9 @@ Static review of `src/agents.ts`, `src/agent-loops.ts`, `src/rpc.ts`, `src/cli-r
 | `redactAgentEvent` | `src/redaction.ts` | All subscriber/ledger events redacted when redactor active | Workflow persists only redacted node outputs/checkpoints |
 | `RunLedger` | `src/contracts.ts` | Durable `appendRun`, `appendEvent`, `appendToolCall`, `appendUsage` | Workflow run record + per-node run ids; serialized `ledgerChain` (R-004) |
 | Provider/tool metadata | `docs/observability.md` | `provider_turn_*`, `ToolExecutionMetadata` | Workflow progress / node diagnostics |
-| OpenTelemetry adapter | `@arnilo/prism-observability-opentelemetry` | Optional span/metric mapping | Workflow examples may attach |
+| OpenTelemetry adapter | `@arnilo/prism-core/governance/observability` | Optional span/metric mapping | Workflow examples may attach |
 
-**Final architecture (Task 6):** Core exports generic `createEventMultiplexer<T>()`. `@arnilo/prism-workflows` keeps its domain `WorkflowEvent` union but delegates bounded queues, source fan-in, overflow, abort, and close behavior to the core primitive.
+**Final architecture (Task 6):** Core exports generic `createEventMultiplexer<T>()`. `@arnilo/prism-core/runtime/workflows` keeps its domain `WorkflowEvent` union but delegates bounded queues, source fan-in, overflow, abort, and close behavior to the core primitive.
 
 ### Approval and execution policy (shipped)
 
@@ -102,7 +102,7 @@ Static review of `src/agents.ts`, `src/agent-loops.ts`, `src/rpc.ts`, `src/cli-r
 
 | ID | Capability | Review rank | Status after Task 0 rework | Owner |
 | --- | --- | ---: | --- | --- |
-| C-009 | Workflow/graph orchestration | 9 | Task 7 shipped durable multi-process coordination (enqueue/claim/renew/takeover/fencing/cancel) | `@arnilo/prism-workflows` |
+| C-009 | Workflow/graph orchestration | 9 | Task 7 shipped durable multi-process coordination (enqueue/claim/renew/takeover/fencing/cancel) | `@arnilo/prism-core/runtime/workflows` |
 | C-012 | Interactive TUI | 12 | **Deferred / out of scope for Plan 057** | Future optional plan/package only |
 
 ## Rejected options
@@ -132,7 +132,7 @@ Static review of `src/agents.ts`, `src/agent-loops.ts`, `src/rpc.ts`, `src/cli-r
 
 ## Locked package adapter contracts (Task 1)
 
-These TypeScript shapes are the frozen public contracts for Tasks 2–3. Implementations live in `@arnilo/prism-workflows` only.
+These TypeScript shapes are the frozen public contracts for Tasks 2–3. Implementations live in `@arnilo/prism-core/runtime/workflows` only.
 
 ### Checkpoint adapter
 
@@ -398,9 +398,9 @@ import {
   createWorkflowCommands,
   agentNode,
   functionNode,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-core/runtime/workflows";
 import { runRpcServer } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
 
 const persistence = createSqlitePersistence({ filename: "prism.db" });
 const checkpoints = createWorkflowCheckpoints({ store: persistence.checkpoints });
@@ -502,7 +502,7 @@ runRpcServer({
 | Core event multiplexer | **Yes (Task 6)** | `createEventMultiplexer<T>()`; `WorkflowEventBus` delegates fan-in/overflow/abort/close | Removes duplicate queue logic and remains domain-neutral. |
 | Generic `LeaseStore` | **Yes (Task 7)** | Core contract/memory reference; optional `ProductionPersistenceStore.leases`; SQLite/PostgreSQL implementations | Reusable atomic ownership, expiry, opaque claims, and monotonic fencing for coordinators. |
 | Core `ApprovalHandler` | **No** | Host `ExecutionPolicy` / `CodingApprovalFn` with `workflowId`/`nodeId` metadata | Coding-security already owns interactive/async approve callbacks; workflow must not invent a parallel UI type. |
-| Core workflow types | **No** | Stay in `@arnilo/prism-workflows` | Prevents graph vocabulary leaking into non-workflow hosts. |
+| Core workflow types | **No** | Stay in `@arnilo/prism-core/runtime/workflows` | Prevents graph vocabulary leaking into non-workflow hosts. |
 | Interactive TUI package | **No (Plan 057)** | Deferred (C-012); APIs + optional RPC commands | CLI/RPC `CommandDefinition` already is the host control seam. |
 
 Task 1's original no-core choice was superseded by Task 6 after review. DAG, approval, and TUI decisions are unchanged.
@@ -584,11 +584,11 @@ await session.run("Hi", { signal: AbortSignal.timeout(60_000) });
 
 ## Extension and configuration notes
 
-- `@arnilo/prism-workflows` is an optional workspace member; core `package.json` does not depend on it.
+- `@arnilo/prism-core/runtime/workflows` is an optional workspace member; core `package.json` does not depend on it.
 - Workflow agent nodes call public `AgentSession` APIs only; no imports from `src/agents.ts` internals.
 - Workflow checkpoints adapt `ProductionPersistenceStore.checkpoints` (or any `CheckpointStore`); no raw database handles enter the workflow package.
 - Multimodal and credential packages from Plan 056 compose unchanged in workflow examples (Task 4).
-- `@arnilo/prism-workflows` is available directly and through `prism-sdk`/`prism-all`; installation does not start a worker or workflow.
+- `@arnilo/prism-core/runtime/workflows` is available directly and through `prism-sdk`/`prism-all`; installation does not start a worker or workflow.
 - C-012 interactive TUI remains a future optional package if needed; it is not required for workflow feature completeness.
 
 ## Related APIs

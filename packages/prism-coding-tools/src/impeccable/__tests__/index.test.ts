@@ -8,7 +8,7 @@ describe("impeccable package scaffold", () => {
     assert.equal(pkg.name, "@arnilo/prism-coding-tools");
     assert.deepEqual(pkg.exports["./impeccable"], { types: "./dist/impeccable/index.d.ts", default: "./dist/impeccable/index.js" });
     assert.equal(pkg.sideEffects, false);
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.4.0");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.5.0");
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 });

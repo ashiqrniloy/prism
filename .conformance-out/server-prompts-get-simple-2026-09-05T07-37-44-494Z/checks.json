@@ -1,0 +1,18 @@
+[
+  {
+    "id": "prompts-get-simple",
+    "name": "PromptsGetSimple",
+    "description": "Get simple prompt successfully",
+    "status": "SUCCESS",
+    "timestamp": "2026-09-05T07:37:44.510Z",
+    "specReferences": [
+      {
+        "id": "MCP-Prompts-Get",
+        "url": "https://modelcontextprotocol.io/specification/2025-06-18/server/prompts#getting-prompts"
+      }
+    ],
+    "details": {
+      "messageCount": 1
+    }
+  }
+]

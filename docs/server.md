@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-server` exposes explicitly selected agents and workflows through one framework-free `(Request) => Promise<Response>` handler. It supports direct agent results, bounded agent/workflow SSE, cross-replica durable agent-event reconnect, opt-in durable agent status/resume, durable workflow start/enqueue/status/cancel/resume/replay, ownership-scoped schedules, host authorization, ownership propagation, redaction, resource ceilings, and optional deployment seams (health/readiness, drain, host rate-limit adapter, ownership-scoped event replay, worker/coordinator lease election).
+`@arnilo/prism-core/runtime/server` exposes explicitly selected agents and workflows through one framework-free `(Request) => Promise<Response>` handler. It supports direct agent results, bounded agent/workflow SSE, cross-replica durable agent-event reconnect, opt-in durable agent status/resume, durable workflow start/enqueue/status/cancel/resume/replay, ownership-scoped schedules, host authorization, ownership propagation, redaction, resource ceilings, and optional deployment seams (health/readiness, drain, host rate-limit adapter, ownership-scoped event replay, worker/coordinator lease election).
 
 No listener starts on import. Empty `agents`/`workflows` maps expose nothing. Authentication, authorization, route selection, durable stores, TLS, distributed rate limiting, queues, and framework/serverless adaptation remain host-owned.
 
@@ -82,7 +82,7 @@ Errors use `{ "error": { "code", "message" } }`. Unknown routes/capabilities are
 
 ```ts
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createPrismHandler } from "@arnilo/prism-server";
+import { createPrismHandler } from "@arnilo/prism-core/runtime/server";
 
 const agent = createAgent({
   model: { provider: "mock", model: "offline" },
@@ -183,7 +183,7 @@ const valid = request.headers.get("x-prism-signature") === `sha256=${expected}`;
 
 ```ts
 import { createSecretRedactor, type AgentSession } from "@arnilo/prism";
-import { createWebhookNotifier } from "@arnilo/prism-server";
+import { createWebhookNotifier } from "@arnilo/prism-core/runtime/server";
 
 const notifier = createWebhookNotifier({
   targets: [{ url: "https://ops.example.test/prism", events: ["run.failed", "workflow.suspended"] }],
@@ -228,7 +228,7 @@ Compose beside `createPrismHandler` — Prism starts no listener, container orch
 | `rateLimit` on handler | Host adapter after authorize, before session create. Return denial `{ retryAfterMs, code, message }` → `429` + optional `Retry-After`. `createMemoryRateLimiter` is single-process only. |
 | `createPrismAgentEventReplay` | Shared `AgentEventSource` page/follow semantics for exact-owned runs. |
 | `createPrismEventReplay` / `createPrismReplayHandler` | Compatible ownership-scoped legacy `queryEvents` pages (`redacted: true`). Does not re-run work. Unauthorized replay denies. |
-| `createPrismDeploymentLease` | Lease election under `prism.server.deployment`. Coordinator replica holds `key: "coordinator"` before schedule ticks; workers run `@arnilo/prism-workflows` `createWorkflowCoordinator` for queued runs (fencing tokens). |
+| `createPrismDeploymentLease` | Lease election under `prism.server.deployment`. Coordinator replica holds `key: "coordinator"` before schedule ticks; workers run `@arnilo/prism-core/runtime/workflows` `createWorkflowCoordinator` for queued runs (fencing tokens). |
 | `createConversationService` / `createConversationHandler` | Durable user-scoped conversation threads (create/list/continue/branch/archive/export/delete) over session + event-ledger seams, with thread-bound reconnectable replay. Mounts beside the handler; see [Conversations](conversations.md). |
 | `createArtifactService` / `createArtifactHandler` | Durable artifact co-work review (attach/revise/compare/approve/reject/last-validated/delivery-link + authorized download) over the versioned checkpoint store; records persist metadata/revisions/approvals only, never file bodies. Mounts beside the handler; see [Work artifacts and review](work-artifacts-and-review.md). |
 
@@ -251,7 +251,7 @@ Network-free demo: [`examples/server-deployment-seams.ts`](../examples/server-de
 - Schedule routes never accept ownership from JSON. Services carry mandatory ownership and explicit workflow/calculator registries; route authorization cannot broaden either. Replay applies workflow ownership/hash/approval checks.
 - Agent status/resume routes exist only for keys in `agentRuns`. Supply one core `createAgentRunLifecycle({ checkpoints, resolveAgent })` capability per selected agent; its resolver returns current `{ agent, definitionRevision }`. It reuses core checkpoint parsing/CAS/fingerprint checks, returns only public state/version, and needs a durable `SessionStore` as well as checkpoints for restart-safe resume. Empty/default configuration adds no agent lifecycle route, polling, or server cache.
 
-A2A routes are not added to `createPrismHandler()`. Install `@arnilo/prism-supervisor` and explicitly mount `createA2AHandler()` when protocol interoperability is required; this keeps cards and remote invoke absent from ordinary Prism servers.
+A2A routes are not added to `createPrismHandler()`. Install `@arnilo/prism-core/runtime/supervisor` and explicitly mount `createA2AHandler()` when protocol interoperability is required; this keeps cards and remote invoke absent from ordinary Prism servers.
 
 ## Related APIs
 

@@ -1,11 +1,11 @@
 import { lookup as dnsLookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import type { ContentBlock, ImageContent, Message, ModelConfig, ResourceLoadContext, ResourceLoader } from "./contracts.js";
+import type { ContentBlock, ImageContent, Message, ModelConfig, ResourceLoadContext, ResourceLoader, VideoContent } from "./contracts.js";
 import { pinnedFetch } from "./pinned-fetch.js";
 import { assertPermission } from "./security.js";
 
 /** Known model input capability tags for `ModelCapabilities.input`. */
-export const MODEL_INPUT_CAPABILITIES = ["text", "image", "audio", "file", "document"] as const;
+export const MODEL_INPUT_CAPABILITIES = ["text", "image", "audio", "file", "document", "video"] as const;
 export type ModelInputCapability = (typeof MODEL_INPUT_CAPABILITIES)[number];
 
 /** Default per-item media byte ceiling (10 MB; aligns with coding-agent image bounds). */
@@ -55,7 +55,7 @@ export interface DocumentContent {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
-export type MediaContentBlock = AudioContent | FileContent | DocumentContent | ImageContent;
+export type MediaContentBlock = AudioContent | FileContent | DocumentContent | ImageContent | VideoContent;
 
 export interface MediaContentBounds {
   readonly maxItemBytes?: number;
@@ -165,6 +165,8 @@ export function contentBlockInputModality(block: ContentBlock): ModelInputCapabi
       return "file";
     case "document":
       return "document";
+    case "video":
+      return "video";
     default:
       return undefined;
   }

@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-coding-security` is an optional package that supplies structured execution policy for `@arnilo/prism-coding-agent` tools and one disposable Docker/OCI sandbox reference. It complements name-based `PermissionPolicy` at dispatch time with path/command context checked **inside** each tool before side effects, and optionally contains untrusted coding work in a host-invoked container.
+`@arnilo/prism-coding-tools/security` is an optional package that supplies structured execution policy for `@arnilo/prism-coding-tools/agent` tools and one disposable Docker/OCI sandbox reference. It complements name-based `PermissionPolicy` at dispatch time with path/command context checked **inside** each tool before side effects, and optionally contains untrusted coding work in a host-invoked container.
 
 | Export | Purpose |
 | --- | --- |
@@ -43,7 +43,7 @@ Use `createEgressPolicy()` + `createAllowListEgressProxy()` when a coding agent 
 `createEgressPolicy({ allow, presets })` builds a deny-all policy. Rules are exact `{ host, port, protocol }` triples — no wildcards, no CIDR, no regex. Presets (`npm-registry`, `github`) expand to explicit rule lists at construction. The policy exposes a stable SHA-256 `fingerprint` over the canonical rule set.
 
 ```ts
-import { createEgressPolicy, createAllowListEgressProxy } from "@arnilo/prism-coding-security";
+import { createEgressPolicy, createAllowListEgressProxy } from "@arnilo/prism-coding-tools/security";
 
 const policy = createEgressPolicy({
   allow: [{ host: "api.github.com", port: 443, protocol: "https" }],
@@ -144,8 +144,8 @@ import {
   createCodingApprovalPolicy,
   createDockerSandbox,
   createSandboxCodingComposition,
-} from "@arnilo/prism-coding-security";
-import { createGitTools } from "@arnilo/prism-coding-agent";
+} from "@arnilo/prism-coding-tools/security";
+import { createGitTools } from "@arnilo/prism-coding-tools/agent";
 
 const policy = createCodingApprovalPolicy({
   roots: [workspaceRoot],

@@ -538,6 +538,9 @@ test("STATE MACHINE: shared files are byte-identical while all editors are pendi
               text.includes(marker) || text.includes(rootPkg.version),
               `shared file ${file} missing version marker '${marker}' (or current ${rootPkg.version}) required by ${editor}`,
             );
+          } else if (file === "package.json" && marker.endsWith(".test.mjs") && !text.includes(marker)) {
+            // gate-wiring marker for a retired freeze test (plan 057): absence asserted here, dedicated wiring test too
+            assert.ok(true, `retired gate ${marker} no longer wired (plan 057)`);
           } else {
             assert.ok(text.includes(marker), `shared file ${file} missing marker '${marker}' required by ${editor}`);
           }
@@ -663,15 +666,12 @@ test("exit gate: null until Task 6 records it; green with full evidence once rec
   }
 });
 
-test("phase20-freeze.test.mjs is wired into the npm test script after phase 19 (Task 1 wiring)", () => {
+test("phase20-freeze.test.mjs is retired from npm test (plan 057) but stays runnable standalone", () => {
   assert.ok(
-    rootPkg.scripts.test.includes("scripts/phase20-freeze.test.mjs"),
-    "package.json test script runs scripts/phase20-freeze.test.mjs",
+    !rootPkg.scripts.test.includes("scripts/phase20-freeze.test.mjs"),
+    "retired freeze gate must not run in npm test (plan 057); run standalone for audits",
   );
-  assert.ok(
-    rootPkg.scripts.test.indexOf("scripts/phase20-freeze.test.mjs") > rootPkg.scripts.test.indexOf("scripts/phase19-freeze.test.mjs"),
-    "phase20 freeze test runs after phase19 freeze test",
-  );
+  assert.ok(!rootPkg.scripts.test.includes("scripts/phase19-freeze.test.mjs"), "phase19 freeze test retired too (plan 057)");
 });
 
 test("phase 20 baseline is newer than the phase 19 freeze manifest (captured at Task 1)", () => {

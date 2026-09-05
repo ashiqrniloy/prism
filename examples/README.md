@@ -80,11 +80,11 @@ Each demo prints a single JSON line with its result.
 - `sdk-basics.ts` — createAgent / createAgentSession / mock provider.
 - `secure-agent.ts` — opt-in fail-closed agent composition with validation, trust/permission, redaction, limits, ownership, and durable approval.
 - `enterprise-identity.ts` — **demo**: verified `AgentIdentity`, `narrowIdentity`, and propagation guards (network-free).
-- `enterprise-policy-audit.ts` — **demo**: `@arnilo/prism-policy` evaluate → append → cursor export with fake identity.
+- `enterprise-policy-audit.ts` — **demo**: `@arnilo/prism-core/governance/policy` evaluate → append → cursor export with fake identity.
 - `enterprise-work-connectors.ts` — **demo**: fake M365/GWS CLI adapters, shared mail normalizers, and draft-gated work tools.
 - `distributed-events-and-tool-effects.ts` — **demo**: durable event cursor resume + required tool-effect claim/replay/unknown resolve (memory reference, network-free).
 - `enterprise-postgres-state.ts` — compile-checked durable policy/evaluation/work/router composition; host provides the PostgreSQL pool and explicitly schedules cleanup.
-- `server-deployment-seams.ts` — **demo**: health, drain, rate-limit, and deployment lease on `@arnilo/prism-server` (network-free).
+- `server-deployment-seams.ts` — **demo**: health, drain, rate-limit, and deployment lease on `@arnilo/prism-core/runtime/server` (network-free).
 - `conversation-durable-replay.ts` — **demo**: durable conversation thread (sqlite `:memory:`) with mock-agent continue and reconnectable redacted replay.
 - `artifact-review-delivery.ts` — **demo**: artifact attach/revise/approve review + expiring authorized delivery link over an in-memory checkpoint store.
 - `agent-durable-approval.ts` — suspend before a tool side effect, then resume once with durable CAS approval.
@@ -104,7 +104,7 @@ Each demo prints a single JSON line with its result.
 - `working-semantic-memory.ts` — optional working memory + semantic recall with hash embedder, context injection, and processor update.
 - `rag.ts` — optional bounded Markdown chunk/index/retrieve/citation flow using Phase 7 in-memory vector primitives.
 - `web-standard-server.ts` — optional framework-free authorized `Request -> Response` agent run using the offline mock provider.
-- `mcp-server.ts` — explicit authorized Prism tool exposure through SDK `McpServer` and linked in-memory transport.
+- `mcp-server.ts` — dual-era authorized Prism tool exposure: factory-based serving over in-memory (default), stdio (`--stdio`), and a commented modern HTTP wiring through SDK `createMcpHandler`.
 - `minimal-host-app.ts` — **demo**: canonical minimal host embed; stream events while a prompt runs via concurrent `Promise.all([drain, session.run])`.
 - `custom-builders.ts` — **demo**: replace the default InputBuilder and PromptBuilder to control input wrapping and final message ordering.
 - `custom-session-store.ts` — **demo**: implement the `SessionStore` contract (append + list) and pass it to `createAgentSession`; observe the entry kinds the runtime appends.

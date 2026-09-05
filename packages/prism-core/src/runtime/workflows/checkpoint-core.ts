@@ -32,15 +32,6 @@ export function resolveListLimit(limit?: number): number {
   return Math.min(Math.max(1, limit ?? DEFAULT_LIST_PAGE_SIZE), HARD_LIST_PAGE_CAP);
 }
 
-export function parseListOffsetCursor(cursor?: string): number {
-  if (cursor === undefined) return 0;
-  const offset = Number.parseInt(cursor, 10);
-  if (!Number.isFinite(offset) || offset < 0) {
-    throw new WorkflowCheckpointError("Invalid list cursor");
-  }
-  return offset;
-}
-
 export function normalizeStatuses(
   status: WorkflowRunStatus | readonly WorkflowRunStatus[] | undefined,
 ): Set<WorkflowRunStatus> | undefined {

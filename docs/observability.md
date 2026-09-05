@@ -4,14 +4,14 @@
 
 Prism exposes provider and tool timing through stable, metadata-only `AgentEvent` variants. Hosts subscribe via `session.subscribe()` or persist events through `RunLedger`. Core helpers build `ProviderTurnMetadata` and classify HTTP failures without echoing prompts, tool arguments, or credentials.
 
-Optional package `@arnilo/prism-observability-opentelemetry` maps those events to OpenTelemetry spans and low-cardinality metrics, and adapts `@arnilo/prism-rag`'s dependency-free telemetry seam (`createRagTelemetry()`) onto the same tracer. OpenTelemetry is **not** a dependency of `@arnilo/prism`.
+Optional package `@arnilo/prism-core/governance/observability` maps those events to OpenTelemetry spans and low-cardinality metrics, and adapts `@arnilo/prism-memory/rag`'s dependency-free telemetry seam (`createRagTelemetry()`) onto the same tracer. OpenTelemetry is **not** a dependency of `@arnilo/prism`.
 
 APIs:
 
 - `ProviderTurnMetadata`, `ToolExecutionMetadata` on `AgentEvent`
 - `createProviderTurnMetadata()`, `readProviderHttpStatus()` in `@arnilo/prism`
-- `createOpenTelemetryInstrumentation()`, `wrapOpenTelemetryApi()`, `createInMemoryTelemetry()` in `@arnilo/prism-observability-opentelemetry`
-- `createRagTelemetry()` in `@arnilo/prism-observability-opentelemetry` (RAG spans/events; see span tree below)
+- `createOpenTelemetryInstrumentation()`, `wrapOpenTelemetryApi()`, `createInMemoryTelemetry()` in `@arnilo/prism-core/governance/observability`
+- `createRagTelemetry()` in `@arnilo/prism-core/governance/observability` (RAG spans/events; see span tree below)
 - `handleRunFeedback()` / `handleEvaluation()` for explicit safe post-run projection
 
 ## When to use it
@@ -51,7 +51,7 @@ OpenTelemetry adapter:
 
 ```ts
 import { trace, metrics } from "@opentelemetry/api";
-import { createOpenTelemetryInstrumentation, wrapOpenTelemetryApi } from "@arnilo/prism-observability-opentelemetry";
+import { createOpenTelemetryInstrumentation, wrapOpenTelemetryApi } from "@arnilo/prism-core/governance/observability";
 
 const { tracer, meter } = wrapOpenTelemetryApi(
   trace.getTracer("app"),
@@ -97,7 +97,7 @@ OpenTelemetry mapping (when enabled):
 | `handleRunFeedback` | active-run `prism.run.feedback` event or ended-run span | `prism.run.feedback` |
 | `handleEvaluation` | active-run `gen_ai.evaluation.result` event or ended-run span | `prism.run.evaluation` (`status`) |
 
-RAG span tree (`@arnilo/prism-rag` + `createRagTelemetry()`):
+RAG span tree (`@arnilo/prism-memory/rag` + `createRagTelemetry()`):
 
 | Span | Parent | Notes |
 | --- | --- | --- |
@@ -148,7 +148,7 @@ High-cardinality identifiers (`sessionId`, `runId`, `requestId`, `toolCallId`) a
 
 ```ts
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createInMemoryTelemetry, createOpenTelemetryInstrumentation } from "@arnilo/prism-observability-opentelemetry";
+import { createInMemoryTelemetry, createOpenTelemetryInstrumentation } from "@arnilo/prism-core/governance/observability";
 
 const memory = createInMemoryTelemetry();
 const telemetry = createOpenTelemetryInstrumentation({ tracer: memory.tracer, meter: memory.meter });
@@ -176,17 +176,42 @@ const found = await retrieveContext("policy", { embedder, store, scope, telemetr
 - Events flow through `redactAgentEvent` before subscribers and ledger writes — configure `createSecretRedactor` on the agent/run.
 - `retry_scheduled` still signals backoff; each retry attempt emits its own `provider_turn_*` pair with `metadata.attempt`.
 - NeuralWatt `neuralwatt:telemetry` provider events remain package-local; hosts may forward numeric cost/energy into custom metrics.
-- `@arnilo/prism-observability-opentelemetry` is optional and included through `@arnilo/prism-sdk` and `@arnilo/prism-all`; instrumentation remains disabled until a host configures it.
+- `@arnilo/prism-core/governance/observability` is optional and included through `@arnilo/prism-core` family installs; instrumentation remains disabled until a host configures it.
 - Exporter failures are isolated: instrumentation catches tracer/meter errors and invokes `onExporterError` without affecting the run, feedback persistence, or evaluation scoring.
 - Trace grading uses `createPersistenceTraceResolver()` with explicit session/run/ownership and finite pages/bytes. Judge reasons remain evaluation data; `gen_ai.evaluation.result` receives only name, finite score, controlled status, and reason-presence.
 - Run spans parent provider, tool, guardrail, and explicit delegation spans. Pass `{ context, trace }` to `wrapOpenTelemetryApi()` for native parent context creation; `parentContext` can attach the run to host ambient/remote context.
 - `onTraceReference` receives `{ runId, traceId }` when a run starts. `traceId(runId)` keeps only the newest 1,024 mappings by default (`maxTraceReferences`, hard cap 10,000); durable linkage remains host-owned.
 - Run `error`, suspension, denial, and detach close every attributable span. Repeated terminal events are idempotent and cannot end a span twice.
 - Disabled instrumentation performs no per-delta span work (`enabled: false` or missing tracer/meter).
+- `createProviderCapture()` (plan 062) is the opt-in request/response capture middleware: register `capture.middleware()` on the existing `provider_request` hook and feed `provider_turn_finished` events from the session subscriber loop into `capture.observeEvent()`. Entries land in a capped FIFO ring buffer (`policy.maxEvents`, default 100) exposed via `capture.events()`.
+
+### Provider request/response capture middleware
+
+```ts
+import { createProviderCapture, createMiddlewareRegistry } from "@arnilo/prism";
+
+const capture = createProviderCapture({
+  secrets, // same redactor seam as the logging paths
+  policy: { redact: "secrets", maxEvents: 100 },
+});
+const middleware = createMiddlewareRegistry({ secrets });
+middleware.use("provider_request", capture.middleware()); // request entries, pass-through
+
+for await (const event of session.subscribe()) {
+  if (event.type === "provider_turn_finished") capture.observeEvent(event); // response entries
+}
+
+const entries = capture.events(); // oldest-first snapshot; capture.clear() resets
+```
+
+- The `policy.redact` field governs content retention: `"all"` keeps structure only, `"secrets"` (default) also drops message content, `"none"` retains message content for replay debugging. Secret redaction through the shared logging helpers is unconditional in every mode — captured buffers are replay-safe by construction.
+- Captured shapes are already-normalized (`ProviderRequest` on the request side, `provider_turn_finished` metadata/usage on the response side) — never raw HTTP. Request/response `options` and headers are never captured at all (headers are where credentials ride).
+- Disabled by default with zero overhead: an unregistered capture performs no work; the enabled path adds one entry per round plus the pass-through.
 
 ## Security and performance notes
 
 - Default events are metadata-only — no prompts, streamed deltas, tool arguments, or credentials.
+- Capture middleware follows the same default: `redact: "secrets"` drops message content; buffers are capped and secrets are redacted unconditionally, so a captured buffer can be persisted or replayed without leaking credentials.
 - Use `identityTelemetryAttributes(identity)` when attaching enterprise identity to run metadata or OTel attributes; it emits `prism.identity.*` refs only (tenant/principal/scope counts), never credential secrets or raw tokens.
 - Opt-in content in other event types (`message_delta`, tool `result`) is still subject to `redactAgentEvent`.
 - Metric labels stay low-cardinality (`gen_ai.operation.name`, `gen_ai.provider.name`, token type, controlled outcome/status, feedback rating bucket/link presence); never use session/run/request/call IDs, model output, comments, tag values, scorer/evaluation IDs, or arbitrary metadata as labels. Token usage is recorded once at provider operation scope.

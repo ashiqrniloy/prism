@@ -4,11 +4,6 @@ import { loadManifest, validateAnchor } from "../manifest.js";
 import type { BrokenLink, DeadAnchor, LintReport } from "../types.js";
 import { isIso8601Utc, parseConceptFrontmatter, resolveMarkdownHref } from "./okf.js";
 
-export interface LinterOptions {
-  readonly wikiRoot?: string;
-  readonly workspaceRoot?: string;
-}
-
 export class WikiLinter {
   async lint(wikiRootPath: string, workspaceRootPath: string = process.cwd()): Promise<LintReport> {
     const absWikiRoot = resolve(workspaceRootPath, wikiRootPath);

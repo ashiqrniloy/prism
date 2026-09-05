@@ -24,10 +24,10 @@ Event records preserve emission order within a run because the runtime drains pe
 
 ### Placement (FR-7 answer, 0.0.26)
 
-The durable `AgentEventSource` **stays in `@arnilo/prism-session-store-postgres`** for the 0.0.26 line and is importable from the package root (FR-6):
+The durable `AgentEventSource` **stays in `@arnilo/prism-core/sessions/postgres`** for the 0.0.26 line and is importable from the package root (FR-6):
 
 ```ts
-import { createPostgresAgentEventSource } from "@arnilo/prism-session-store-postgres";
+import { createPostgresAgentEventSource } from "@arnilo/prism-core/sessions/postgres";
 const source = createPostgresAgentEventSource({ pool, schema: "prism", cursorSecret });
 ```
 
@@ -35,11 +35,11 @@ PostgreSQL `LISTEN`/`NOTIFY` remains the **reference durable implementation**; `
 
 ### NATS JetStream adapter (FR-5)
 
-`@arnilo/prism-session-store-nats` ships a sibling durable `AgentEventSource` over NATS JetStream for JetStream backbones (Postgres remains the reference implementation):
+`@arnilo/prism-core/sessions/nats` ships a sibling durable `AgentEventSource` over NATS JetStream for JetStream backbones (Postgres remains the reference implementation):
 
 ```ts
 import { connect } from "@nats-io/transport-node";
-import { createNatsAgentEventSource, createNatsJetStream } from "@arnilo/prism-session-store-nats";
+import { createNatsAgentEventSource, createNatsJetStream } from "@arnilo/prism-core/sessions/nats";
 
 const nc = await connect({ servers: process.env.NATS_URL });
 const source = createNatsAgentEventSource({ connection: await createNatsJetStream(nc), stream: "prism_agent_events" });
@@ -249,4 +249,4 @@ for await (const event of session.stream("draft", { loop: { strategy: "generate-
 - [Observability](observability.md): `ProviderTurnMetadata`; optional adapter builds one parented GenAI span tree from metadata-only lifecycle events and ignores message/progress deltas.
 - [Tools](tools.md): `tool_execution_*` variants.
 - [Compaction and retry policies](compaction-and-retry.md): `compaction_*` and `retry_scheduled` variants.
-- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): optional redacted mapping of this stream; durable replay is ledger-backed and at-least-once, never a live-subscriber substitute. [ACP coding-host interop](acp.md) additionally maps `CodingLifecycleEvent`s from `@arnilo/prism-coding-agent` (`file_changed`, `worktree_changed`, `permission_denied`, `configuration_changed`, `plan_changed`, `plan_removed`; process events reuse `CodingProcessEvent`) into ACP session updates — locations/diff blocks only through projection allow-lists, terminal chunks under `process.outputChunkBytes`, plan updates only to clients that advertised the UNSTABLE `plan` capability.
+- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): optional redacted mapping of this stream; durable replay is ledger-backed and at-least-once, never a live-subscriber substitute. [ACP coding-host interop](acp.md) additionally maps `CodingLifecycleEvent`s from `@arnilo/prism-coding-tools/agent` (`file_changed`, `worktree_changed`, `permission_denied`, `configuration_changed`, `plan_changed`, `plan_removed`; process events reuse `CodingProcessEvent`) into ACP session updates — locations/diff blocks only through projection allow-lists, terminal chunks under `process.outputChunkBytes`, plan updates only to clients that advertised the UNSTABLE `plan` capability.

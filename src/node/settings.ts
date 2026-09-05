@@ -1,15 +1,9 @@
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { type ConfigLayer, mergeConfigLayers } from "../config.js";
 import type { SettingsProvider } from "../contracts.js";
 import { createStaticSettingsProvider } from "../settings.js";
 import { isNodeErrorCode, type NodeConfigFile, readConfigFile } from "./config.js";
 
 export type NodeSettingsFile = NodeConfigFile;
-
-export function defaultUserSettingsPath(appName = "prism"): string {
-  return join(homedir(), ".config", appName, "settings.json");
-}
 
 export function readSettingsFile(path: string): Promise<ConfigLayer["config"]> {
   return readConfigFile(path);

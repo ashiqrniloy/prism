@@ -131,14 +131,14 @@ export function serializeAlibabaMessage(message: CacheControlledMessage, capabil
       const url = part.url ?? (part.data ? `data:${part.mimeType ?? "image/png"};base64,${part.data}` : undefined);
       if (!url) throw new Error("Alibaba image block missing url or data");
       content.push(withAlibabaCacheMarker({ type: "image_url", image_url: { url } }, marker));
-    } else if (part.type === "file" && part.mediaType.startsWith("video/")) {
+    } else if (part.type === "video") {
       // Qwen-VL compatible-mode video input: `video_url` content part (public URL or
-      // base64 data URL). Gated on the `file` input capability (no core "video"
-      // capability in 0.1.2); `fps` defaults upstream to 2.0.
-      if (!capabilities.input?.includes("file")) {
-        throw new Error(`Alibaba ${message.role} message includes video but model does not declare file input capability`);
+      // base64 data URL). Gated on the typed `video` input capability; `fps` defaults
+      // upstream to 2.0. (Plan 061 Task 5 migrated video off the `file`-part workaround.)
+      if (!capabilities.input?.includes("video")) {
+        throw new Error(`Alibaba ${message.role} message includes video but model does not declare video input capability`);
       }
-      const url = part.url ?? (part.data ? `data:${part.mediaType};base64,${part.data}` : undefined);
+      const url = part.url ?? (part.data ? `data:${part.mediaType ?? "video/mp4"};base64,${part.data}` : undefined);
       if (!url) throw new Error("Alibaba video block missing url or data");
       content.push(withAlibabaCacheMarker({ type: "video_url", video_url: { url } }, marker));
     } else if (part.type === "audio" || part.type === "file" || part.type === "document") {

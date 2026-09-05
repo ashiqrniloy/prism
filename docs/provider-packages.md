@@ -18,6 +18,36 @@ Use provider packages when a host wants to bundle model metadata, provider adapt
 
 Do not use provider packages as a package manager, credential store, env loader, provider-specific cache implementation, or live integration runner.
 
+### Provider inventory
+
+<!-- generated:package-truth:providers begin -->
+**20 provider adapters** — first-party adapters ship as `@arnilo/prism-providers/<adapter>` subpaths in one tarball (importing one never evaluates another):
+
+| adapter package | version |
+| --- | --- |
+| `@arnilo/prism-providers/ai-sdk` | 0.5.0 |
+| `@arnilo/prism-providers/alibaba` | 0.5.0 |
+| `@arnilo/prism-providers/anthropic` | 0.5.0 |
+| `@arnilo/prism-providers/azure` | 0.5.0 |
+| `@arnilo/prism-providers/bedrock` | 0.5.0 |
+| `@arnilo/prism-providers/clinepass` | 0.5.0 |
+| `@arnilo/prism-providers/commandcode` | 0.5.0 |
+| `@arnilo/prism-providers/deepseek` | 0.5.0 |
+| `@arnilo/prism-providers/google` | 0.5.0 |
+| `@arnilo/prism-providers/hyper` | 0.5.0 |
+| `@arnilo/prism-providers/kimi` | 0.5.0 |
+| `@arnilo/prism-providers/model-discovery` | 0.5.0 |
+| `@arnilo/prism-providers/neuralwatt` | 0.5.0 |
+| `@arnilo/prism-providers/ollama` | 0.5.0 |
+| `@arnilo/prism-providers/openai` | 0.5.0 |
+| `@arnilo/prism-providers/opencode-go` | 0.5.0 |
+| `@arnilo/prism-providers/openrouter` | 0.5.0 |
+| `@arnilo/prism-providers/vertex` | 0.5.0 |
+| `@arnilo/prism-providers/xai` | 0.5.0 |
+| `@arnilo/prism-providers/zai` | 0.5.0 |
+<!-- generated:package-truth:providers end -->
+
+
 ### Subscription OAuth support matrix
 
 | Package | 0.0.12 auth registration | Subscription OAuth boundary |
@@ -316,7 +346,7 @@ await kernel.load([pkg]);
 - Provider-specific behavior belongs in provider packages, not Prism core.
 - Adapter serializers should preserve Prism content blocks (text, thinking, tool_call, tool_result, and image when the model declares image input) in provider-native request shape, or fail explicitly when a block is unsupported.
 - Adapter header merging must put caller-supplied `ProviderRequest.options.headers` first and provider-owned headers last. Caller headers may add non-owned headers, but cannot replace resolved credentials, content type, session/cache/security headers, or provider attribution headers.
-- For allow-list/residency/budget/circuit selection before resolve, use optional `@arnilo/prism-model-router` over `createProviderResolver` — do not fork provider packages for governance.
+- For allow-list/residency/budget/circuit selection before resolve, use optional `@arnilo/prism-core/governance/model-router` over `createProviderResolver` — do not fork provider packages for governance.
 - Enterprise cloud adapters (`azure` / `bedrock` / `vertex`) stay separate from consumer Anthropic/Google packages and authenticate only through host credential callbacks.
 
 ## Manifest declarations

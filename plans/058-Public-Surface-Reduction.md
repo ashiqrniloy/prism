@@ -19,7 +19,7 @@ any cut. Follows the versioning policy in `roadmap.md`.
 
 ## Tasks
 
-- [ ] Verify and classify the 87 dead-export candidates
+- [x] Verify and classify the 87 dead-export candidates
   - Acceptance Criteria:
     - Functional: every candidate in `scripts/unused-report.json` `deadExports` is cross-checked against (a) repo usage, (b) `scripts/compat-baseline*`, (c) docs/code examples, (d) npm public usage heuristics (download counts, GitHub code search for `@arnilo/prism*` imports); classified `keep`/`deprecate`/`remove` in a recorded table.
     - Performance: classification is a one-time analysis; verifier script (if any) runs <30 s.
@@ -49,8 +49,22 @@ any cut. Follows the versioning policy in `roadmap.md`.
     - Docs pages to create/edit: evidence doc.
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Status (2026-09-03): **complete.** Verdicts: **60 keep · 23 deprecate · 4 remove**
+    (`ResolvedGraftExtension`, `WikiCategory`, `CavemanSkillName`, `ResolvedPromptLimits` — all
+    dist-only, gate-invisible type aliases). Evidence table + security keeper notes:
+    `docs/_evidence/dead-export-verification-2026-09-03.md`. Verifier:
+    `scripts/dead-export-verify.mjs` (0.9 s; `--check` enforces full coverage + zero
+    `remove` verdicts on compat-baseline exports; gated by
+    `scripts/dead-export-verify.test.mjs`, wired into `npm test` next to
+    `sweep-unused.test.mjs`, which stays green — no emitter change). Dominant
+    false-positive classes: test-only usage (naive scan excludes `__tests__`),
+    documented public API (A2A/supervisor/conformance harness), security guards
+    (kept with explicit keeper notes). External heuristics: npm download counts
+    recorded; GitHub code search found no third-party `@arnilo/prism*` imports of
+    any candidate. The 23 `deprecate` verdicts feed task 2; the 4 `remove` + 23
+    deprecation-removals feed task 3.
 
-- [ ] Deprecation wave
+- [x] Deprecation wave
   - Acceptance Criteria:
     - Functional: every `deprecate`/`remove`-classified export gains `@deprecated` JSDoc naming the replacement (or "no replacement") and a CHANGELOG entry; runtime deprecation is type-level only (no console noise).
     - Performance: no runtime cost (types only).
@@ -75,8 +89,20 @@ any cut. Follows the versioning policy in `roadmap.md`.
     - Docs pages to create/edit: `CHANGELOG.md`; `docs/public-contracts.md` (deprecation annotations).
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Status (2026-09-03): **complete.** All 27 `deprecate`/`remove`-classified exports carry
+    type-level `/** @deprecated Unused; no replacement. Removal planned for 0.5.0 (plan 058). */`
+    JSDoc (merged into existing doc blocks where present; markers verified propagating to
+    emitted `.d.ts`, e.g. `packages/memory/dist/graft/cli.d.ts`, `dist/agent-run-state.d.ts`).
+    CHANGELOG gained a `### Deprecated` section under Unreleased listing all 27 per package.
+    Gate: `node scripts/dead-export-verify.mjs --deprecations` (string-presence check: every
+    deprecate/remove symbol has `@deprecated` at its definition site AND appears in the
+    CHANGELOG Deprecated section), gated by a third test in
+    `scripts/dead-export-verify.test.mjs` (3/3 pass, wired into `npm test`).
+    `npm run typecheck` (build + all-workspace `tsc --noEmit` + examples) clean; no runtime
+    change — annotations only, no contract/security impact. `docs/public-contracts.md`
+    needs no edit: none of the 27 deprecated symbols belong to its root-contract catalog.
 
-- [ ] Removal wave (breaking cut)
+- [x] Removal wave (breaking cut)
   - Acceptance Criteria:
     - Functional: all `remove`-classified exports deleted in one cut at the next version the policy allows; `scripts/unused-report.json` deadExports → 0; full offline suite green.
     - Performance: build time and packed size measurably reduced (record numbers).
@@ -97,8 +123,38 @@ any cut. Follows the versioning policy in `roadmap.md`.
     - Docs pages to create/edit: migration guide; `CHANGELOG.md`.
     - `docs/index.md` update: yes — link new migration guide entry.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Status (2026-09-03): **complete.** Executed as the 0.5.0 lockstep breaking cut.
+    - **Deletions:** all 27 `deprecate`/`remove`-classified exports deleted (declaration + doc
+      block; zero in-repo refs verified beforehand — no body edits needed; build surfaced zero
+      orphaned barrel entries). `phase25-compat-diff`: zero breaking deltas on all 10 packages
+      against regenerated baselines; keeper guards (ownership/checkpoint, `secureCompare`,
+      `zeroBuffer`, `resolveUnderRoot`, `assertScope`, `assertMcpContentWithinLimit`,
+      `assertNoSecretLeak`, `assertRestrictiveFileMode`) all present in regenerated baselines.
+    - **Sweep truth:** `scripts/dead-exports.mjs` now counts usage across `__tests__`,
+      `examples`, `scripts`, `templates` (the task-1 false-positive classes) while parsing
+      exported names from non-test sources only, and suppresses keep-classified zero-ref
+      exports (the 9 security/canonical keeps) with a footer note. `deadExports: 87 → 0`.
+    - **Version bump:** `release.mjs bump --lockstep 0.4.0 → 0.5.0` (9 manifests + caret
+      ranges + lockfile); providers `0.4.1 → 0.5.0` manually + ranges; `package-truth.json`
+      + `--emit-docs` regenerated (README/release/provider-packages blocks); version-literal
+      pins updated (docs.test ×5, packaging.test, phase34-freeze, phase24/27 peer checks,
+      18 workspace manifest-peers tests, install-smoke peer-mix fixture 0.6.0, dev
+      composition manifest test).
+    - **Docs:** `docs/migrate-to-0.5.md` (27-symbol removal table + local replacements +
+      rollback); `docs/migration.md` 0.4.x → 0.5.0 section (compat-gate version note);
+      `docs/index.md` link + current-line + inventory; CHANGELOG `## [0.5.0]` with Removed
+      entry; `docs/agent-definitions.md` + `docs/settings-auth-trust-security.md` de-symbol
+      edits (generated blocks regenerated via `--emit-docs`, truth-current green).
+    - **Numbers (before → after):** clean `npm run build` 3 s → 2 s; packed tarballs within
+      tar-header noise (±0.2–0.8 KB per affected package; the cut removes declarations, not
+      bulk — surface reduction 27 symbols is the deliverable). `deadExports 87 → 0`.
+    - **Gates:** full offline `npm test` **green** (rc=0 after fixing 9 noUnusedImports
+      orphans via `biome check --write --unsafe`, and lint/format gates green);
+      packaging + install-smoke (fresh offline tarball install, peer-mix ERESOLVE) pass on
+      the cut. Release gate stays operator-gated (postgres/live evidence env), per
+      `docs/release-and-install.md` handoff — not part of this task.
 
-- [ ] Export-count and package-size budgets
+- [x] Export-count and package-size budgets
   - Acceptance Criteria:
     - Functional: `scripts/budget-gate.test.mjs` (and `budgets.json`) gain per-package export-count ceilings and existing packed-size ceilings rebaselined post-cut; exceeding a ceiling fails CI with the delta named.
     - Performance: budget check adds <2 s.
@@ -124,11 +180,39 @@ any cut. Follows the versioning policy in `roadmap.md`.
     - Docs pages to create/edit: `docs/release-and-install.md` budget section mention.
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Status (2026-09-03): **complete.**
+    - **Ceilings:** `scripts/budgets.json` gains `exportCounts` — per-package baselines for all
+      10 publishable packages measured post-cut (root 1147, coding-tools 923, core 1208,
+      memory 595, providers 415, ag-ui 312, web-tools 276, office 230, mcp 122, acp-agent 11),
+      each with a `reason` string (repo convention). Root packed/unpacked baselines rebaselined
+      to the post-cut measurement (1026702/3464819, fileCount 409 unchanged) with a dated
+      `$comment`.
+    - **Gate:** `scripts/budget-gates.mjs` gains `measureExportCounts` (walks each package's
+      `src/`, same export-name classes as `scripts/dead-exports.mjs`, `export *` excluded,
+      no build needed) and `checkExportBudget` (names package + exact delta + remediation);
+      `scripts/budget-gate.test.mjs` gains the ceiling test (well-formedness: positive
+      integer baseline + reason per package) and negative fixtures (growth fails with
+      `(+1)` named; at-ceiling and shrink pass). Live end-to-end proof: a temporary probe
+      export made the gate fail with `@arnilo/prism-core ... (+1)`, removal restored green.
+    - **Performance:** export measurement ~0.56 s; full budget gate ~1.3 s (< 2 s ✓).
+    - **Docs:** `docs/release-and-install.md` "Security and performance notes" gains the
+      export-count budget bullet; truth-current/lint gates stay green.
+    - **Gates:** `budget-gate` + `tooling-gate` + `truth-current` + `lint-clean` green;
+      full offline `npm test` green (rc=0).
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass.
+- Export counting uses the same naive-regex name classes as `scripts/dead-exports.mjs`
+  (`export *` barrels excluded — names not attributable); a TS-parser rewrite would only
+  move the ceiling, not the enforcement. Same ceiling as the dead-export scan.
+- Packed-size rebaseline covers the root budget only (the pre-existing budget entries);
+  per-package packed-size ceilings were not added — export ceilings gate per-package
+  surface, and tar-header noise makes per-package byte budgets noise-prone. Add when a
+  package's tarball size actually matters (plan 055-style evidence first).
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- Re-run the export measurement and rebaseline (with reason) at the next deliberate
+  surface change — e.g. a future additive release — instead of letting CI fail first.
+- If package tarballs start growing in real use, add per-package packed-size ceilings
+  reusing `measureRootPack`'s npm-pack-json pattern per workspace.

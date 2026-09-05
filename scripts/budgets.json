@@ -2,21 +2,64 @@
   "$comment": "Release 0.0.24 baselines plus protected enterprise PostgreSQL evidence; root re-baselined for Phase 9 Task 6 allow-list egress module (0.0.26). Root packed/unpacked baselines corrected at 0.1.1 (plan 013 Task 4) to the published @arnilo/prism@0.1.0 registry artifact sizes (718738 packed / 2505460 unpacked) \u2014 the previously recorded 713454/2388118 were measured from an incomplete dist build. Pack bytes/file count are deterministic -> tight tolerance. Startup and network-free benchmark medians are machine-dependent -> generous ceiling/tolerance. Enterprise timing remains opt-in behind PRISM_TEST_POSTGRES_URL and is checked against fixed p95 ceilings by scripts/benchmark.mjs --scenario phase6-postgres. Root packed/unpacked/fileCount refreshed 2026-08-31 for the plans 041-044 changed-package cut (970580/3290347/386).",
   "root": {
     "packedBytes": {
-      "baseline": 1027233,
+      "baseline": 1046502,
       "tolerance": 0.05,
-      "$comment": "[2026-08-31] plans 041-044 cut: dist/tool-search.js+d.ts (progressive tool loading), run-ledger promptVersion plumbing, docs/prompt-registry.md + composite scoring docs (prior 923045/2026-08-27 diet)."
+      "$comment": "[2026-09-03] plans 061 Tasks 3-5 modality cuts: speech/transcription docs + image/video contract + adapters + docs pages (prior 1026702)."
     },
     "unpackedBytes": {
-      "baseline": 3464723,
+      "baseline": 3529890,
       "tolerance": 0.05,
-      "$comment": "[2026-08-31] plans 041-044 cut (tool-search dist + prompt/memory docs; prior 3149665/2026-08-27)."
+      "$comment": "[2026-09-03] plans 061 Tasks 3-5 modality cuts (prior 3464819)."
     },
     "fileCount": {
-      "baseline": 409,
+      "baseline": 432,
       "tolerance": 0.05,
-      "$comment": "[2026-09-01] plan 054 Task 2 cut: core consolidation and docs/core.md (measured 406 vs prior 386)."
+      "$comment": "[2026-09-03] plans 061 Tasks 3-5 modality cuts: docs/{speech,image-generation}.md + video/image contract and adapter modules with tests (measured 432 vs prior 409)."
     },
-    "$comment": "plan 055 Task 11: root packed/unpacked/fileCount rebaselined (2026-09) for the two new provider adapters (hyper, commandcode) + their docs pages and provider-packages/caching/index wiring \u2014 measured 1027233/3464723/409 (prior 970580/3290347/386); growth is the 055 addition, not bloat."
+    "$comment": "plan 055 Task 11: root packed/unpacked/fileCount rebaselined (2026-09) for the two new provider adapters (hyper, commandcode) + their docs pages and provider-packages/caching/index wiring \u2014 measured 1027233/3464723/409 (prior 970580/3290347/386); growth is the 055 addition, not bloat. [2026-09-03] plan 058 removal cut rebaseline: 27 dead exports deleted, migrate-to-0.5 docs added. [2026-09-03] plans 061 Tasks 3-5 modality contracts rebaseline: measured 1046502/3529890/432 \u2014 speech/transcription docs, image + video contracts, adapters, and docs pages."
+  },
+  "exportCounts": {
+    "$comment": "plan 058 Task 4: per-package public-surface ceilings at the post-0.5.0-cut state, measured 2026-09-03 by scripts/budget-gates.mjs measureExportCounts (same export-name classes as scripts/dead-exports.mjs; `export *` barrels excluded). Growth fails the budget gate naming the package and delta; lowering the surface requires a recorded reason on rebaseline.",
+    "@arnilo/prism": {
+      "baseline": 1266,
+      "reason": "plan 059 session.ts runInternal split: 23 internal phase exports in src/agent-session/session/*.ts (public barrel still RuntimeAgentSession only); [2026-09-03] plan 061 Task 2 embeddings contract cut: +9 (EmbeddingsRequest/EmbeddingsResult/EmbeddingsProvider/EmbeddingsErrorCode types, EmbeddingsError/modelSupportsEmbeddings/assertEmbeddingsSupported values, runEmbeddingsConformance/EmbeddingsConformanceOptions testing helpers); [2026-09-03] plan 061 Task 3 speech+transcription contracts: +22 (SpeechRequest/Result/StreamResult/Provider/ErrorCode + TranscriptionRequest/Result/TranscriptDelta/Done/Event/Provider/ErrorCode types, SpeechError/modelSupportsSpeech/assertSpeechSupported/TranscriptionError/modelSupportsTranscription/assertTranscriptionSupported values, runSpeechConformance/runTranscriptionConformance + options interfaces); [2026-09-03] plan 061 Task 4 image generation/editing contract: +11 (ImageGenerationRequest/ImageEditRequest/GeneratedImage/ImageGenerationResult/ImageGenerationProvider/ImageGenerationErrorCode types, ImageGenerationError/modelSupportsImageGeneration/assertImageGenerationSupported values, runImageGenerationConformance/ImageGenerationConformanceOptions testing helpers); [2026-09-03] plan 061 Task 5 video contract: +13 (VideoGenerationRequest/VideoGenerationJobState/VideoGenerationErrorCode/GeneratedVideo/VideoGenerationJob/VideoGenerationJobHandle/VideoGenerationProvider types, VideoGenerationError/modelSupportsVideoGeneration/assertVideoGenerationSupported values, runVideoGenerationConformance/VideoGenerationConformanceOptions testing helpers, typed VideoContent input part); [2026-09-03] plan 061 Task 6 moderation contract: +12 (ModerationRequest/ModerationCategory/ModerationErrorCode/ModerationCategoryResult/ModerationResult/ModerationProvider/MODERATION_CATEGORIES types+const, ModerationError/modelSupportsModeration/assertModerationSupported values, runModerationConformance/ModerationConformanceOptions testing helpers); [2026-09-03] plan 061 Task 7 batch-jobs contract: +18 (BatchJobState/BATCH_TERMINAL_STATES/isBatchJobTerminal/BatchJobsErrorCode/BatchJobsError/BatchRequestItem/BatchSubmitRequest/BatchJob/BatchResultItem/BatchResultsPage/BatchResultsOptions/BatchJobsProvider/PollBatchOptions types, modelSupportsBatchJobs/assertBatchJobsSupported/pollBatch values, runBatchJobsConformance/BatchJobsConformanceOptions testing helpers); [2026-09-04] plan 062 model discovery + capture middleware: +10 (ModelDiscoveryProvenance/ModelDiscoveryOptions/ModelDiscoveryResult/ModelDiscovery types + createProviderCapture value, ProviderCapture/ProviderCaptureEntry/ProviderCaptureOptions/ProviderCapturePolicy types); [2026-09-04] plan 062 cost/catalog freshness: +1 (CostCatalog host pricing-adapter type; consumes existing Usage/ModelCost, no new values)"
+    },
+    "@arnilo/prism-acp-agent": {
+      "baseline": 11,
+      "reason": "plan 058 post-0.5.0-cut baseline"
+    },
+    "@arnilo/prism-ag-ui": {
+      "baseline": 312,
+      "reason": "plan 058 post-0.5.0-cut baseline"
+    },
+    "@arnilo/prism-mcp": {
+      "baseline": 129,
+      "reason": "plan 058 post-0.5.0-cut baseline; [2026-09-05] plan 063 Task 2: +1 McpProtocolNegotiation option type; Task 3: +2 MRTR round caps (DEFAULT_MAX_MRTR_ROUNDS / HARD_MAX_MRTR_ROUNDS); Task 4: +4 dual-era serving exports (servePrismMcpStdio, PrismMcpCacheableMethod, PrismMcpCacheHints, PrismMcpStdioHandle/ServePrismMcpStdioOptions)"
+    },
+    "@arnilo/prism-memory": {
+      "baseline": 615,
+      "reason": "plan 058 post-0.5.0-cut baseline; [2026-09-04] plan 062 reranker adapters: +20 (createOpenAiCompatibleReranker/createVoyageReranker/createFakeReranker/runRerankerConformance values, HostedRerankerOptions/CreateOpenAiCompatibleRerankerOptions/CreateVoyageRerankerOptions/CreateFakeModelDiscovery-style option types, RerankerHttpOptions/RERANK_* limits exports from rerank-shared surface)"
+    },
+    "@arnilo/prism-office": {
+      "baseline": 230,
+      "reason": "plan 058 post-0.5.0-cut baseline"
+    },
+    "@arnilo/prism-coding-tools": {
+      "baseline": 951,
+      "reason": "plan 059 process/sessions.ts split: 28 internal phase exports in sessions-*.ts (process/index still re-exports createProcessSessions only)"
+    },
+    "@arnilo/prism-core": {
+      "baseline": 1279,
+      "reason": "plan 059 saga.ts split + codec helpers: internal saga-types/drive/persist + assertLeaseInput/assertCheckpointInput/assertLifecycleOwnership"
+    },
+    "@arnilo/prism-providers": {
+      "baseline": 465,
+      "reason": "plan 058 post-0.5.0-cut baseline; [2026-09-03] plan 061 Task 2 embeddings adapters: +5 (createOpenAIEmbeddingsProvider/OpenAIEmbeddingsOptions/OPENAI_EMBEDDINGS_MAX_BATCH_SIZE, createAlibabaEmbeddingsProvider/AlibabaEmbeddingsProviderOptions); [2026-09-03] plan 061 Task 3 speech+transcription adapters: +7 (createOpenAISpeechProvider/OpenAISpeechOptions/OPENAI_SPEECH_MAX_INPUT_CHARS/DEFAULT_SPEECH_MAX_AUDIO_BYTES, createOpenAITranscriptionProvider/OpenAITranscriptionOptions/OPENAI_TRANSCRIPTION_MAX_AUDIO_BYTES); [2026-09-03] plan 061 Task 4 image adapters: +9 (createOpenAIImageGenerationProvider/OpenAIImageGenerationOptions/OPENAI_IMAGE_PROMPT_MAX_CHARS/OPENAI_IMAGE_MAX_COUNT/DEFAULT_IMAGE_MAX_BYTES, createAlibabaImageGenerationProvider/AlibabaImageGenerationOptions/ALIBABA_IMAGE_MAX_BYTES/ALIBABA_IMAGE_MAX_COUNT); [2026-09-03] plan 061 Task 5 video adapter: +4 (createAlibabaVideoGenerationProvider/AlibabaVideoGenerationOptions/ALIBABA_VIDEO_PROMPT_MAX_CHARS/ALIBABA_VIDEO_MAX_DURATION_SECONDS); [2026-09-03] plan 061 Task 6 moderation adapter: +7 (createOpenAIModerationProvider/OpenAIModerationOptions/OPENAI_MODERATION_DEFAULT_MODEL/OPENAI_MODERATION_INPUT_MAX_CHARS/OPENAI_MODERATION_MAX_RESPONSE_BYTES + re-exported guards modelSupportsModeration/assertModerationSupported); [2026-09-03] plan 061 Task 7 batch adapter: +7 (createOpenAIBatchJobsProvider/OpenAIBatchJobsOptions/OPENAI_BATCH_MAX_REQUESTS/OPENAI_BATCH_COMPLETION_WINDOW/OPENAI_BATCH_MAX_RESPONSE_BYTES + re-exported guards modelSupportsBatchJobs/assertBatchJobsSupported); [2026-09-04] plan 062 model discovery adapters: +11 (createOpenAiCompatibleModelDiscovery/createGoogleModelDiscovery/createFakeModelDiscovery/runModelDiscoveryConformance/mergeModelCatalog/ModelDiscoveryError values, ModelDiscoveryAdapterOptions/CreateOpenAiCompatibleModelDiscoveryOptions/CreateGoogleModelDiscoveryOptions/CreateFakeModelDiscoveryOptions types)"
+    },
+    "@arnilo/prism-web-tools": {
+      "baseline": 300,
+      "reason": "plan 059 browser performAction split: internal actions/* handlers (manager public surface unchanged)"
+    }
   },
   "aggregate": {
     "$comment": "Historical 0.0.22 reference sum across 46 publishable manifests; 0.0.23 has 47 and must be remeasured before changing this non-fast-gated baseline.",

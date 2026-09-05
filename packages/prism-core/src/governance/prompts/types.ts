@@ -1,5 +1,5 @@
 import type { PersistencePage } from "@arnilo/prism";
-import type { PromptLimits, PromptLimitsInput } from "./limits.js";
+import type { PromptLimitsInput } from "./limits.js";
 
 /** Optional tenant/account/user scope. Omitted scope is an isolated local scope. */
 export interface PromptOwnership {
@@ -82,5 +82,3 @@ export interface PromptStoreOptions {
   readonly limits?: PromptLimitsInput;
   readonly now?: () => number;
 }
-
-export type ResolvedPromptLimits = PromptLimits;

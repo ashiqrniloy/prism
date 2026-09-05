@@ -5,7 +5,6 @@ import type {
   AgentRunRef,
   AgentRunState,
   AgentRunStateOptions,
-  AgentRunStatusResult,
   CheckpointRecord,
   CheckpointStore,
   JsonValue,
@@ -200,10 +199,6 @@ export async function saveAgentRunState(input: {
     ...input.ownership,
   });
   return { record, state: { ...bounded, version: record.version } };
-}
-
-export function statusFromState(state: StoredAgentRunState, version: number): AgentRunStatusResult {
-  return { state: publicState({ ...state, version }), version };
 }
 
 export function publicState(state: StoredAgentRunState): AgentRunState {

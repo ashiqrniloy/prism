@@ -444,12 +444,12 @@ test("exit gate (Task 6): lockfile gained no dependencies (name-set unchanged vs
   assert.equal(hash, gate.lockfilePackageNamesHash, "lockfile package name-set changed — no new dependencies allowed in 0.1.4");
 });
 
-test("phase16-freeze.test.mjs is wired into the npm test script (Task 0 wiring)", () => {
+test("phase16-freeze.test.mjs is retired from npm test (plan 057) but stays runnable standalone", () => {
   assert.ok(
-    rootPkg.scripts.test.includes("scripts/phase16-freeze.test.mjs"),
-    "package.json test script runs scripts/phase16-freeze.test.mjs",
+    !rootPkg.scripts.test.includes("scripts/phase16-freeze.test.mjs"),
+    "retired freeze gate must not run in npm test (plan 057); run standalone for audits",
   );
-  assert.ok(rootPkg.scripts.test.includes("scripts/phase15-freeze.test.mjs"), "phase15 freeze test stays wired (precedent preserved)");
+  assert.ok(!rootPkg.scripts.test.includes("scripts/phase15-freeze.test.mjs"), "phase15 freeze test retired too (plan 057)");
 });
 
 test("phase 16 baseline file is newer than the phase 15 freeze manifest (captured at Task 0)", () => {

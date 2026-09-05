@@ -46,8 +46,16 @@ export {
   ALIBABA_EMBEDDING_DEFAULT_DIMENSIONS,
   type AlibabaEmbedder,
   type AlibabaEmbedderOptions,
+  type AlibabaEmbeddingsProviderOptions,
   createAlibabaEmbedder,
+  createAlibabaEmbeddingsProvider,
 } from "./embeddings.js";
+export {
+  ALIBABA_IMAGE_MAX_BYTES,
+  ALIBABA_IMAGE_MAX_COUNT,
+  type AlibabaImageGenerationOptions,
+  createAlibabaImageGenerationProvider,
+} from "./images.js";
 export {
   type AlibabaBasePreset,
   type AlibabaModelConfig,
@@ -67,3 +75,9 @@ export {
   createAlibabaProvider,
   serializeAlibabaMessage,
 } from "./provider.js";
+export {
+  ALIBABA_VIDEO_MAX_DURATION_SECONDS,
+  ALIBABA_VIDEO_PROMPT_MAX_CHARS,
+  type AlibabaVideoGenerationOptions,
+  createAlibabaVideoGenerationProvider,
+} from "./video.js";

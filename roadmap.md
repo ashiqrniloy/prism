@@ -466,3 +466,4 @@ Every 0.2.x and 0.3.x release must satisfy:
 - Exactly-once execution claims for arbitrary external side effects.
 - Model-only usage of Cursor or Antigravity SDKs — neither exposes a model-only seam; they integrate as delegated agents, not providers.
 - A second agent runtime; all new capabilities extend the current sessions/ledgers/checkpoints/leases/workflows/tools/events.
+- Browser/edge/worker deployment profiles (plan 062 decision, [evidence](docs/_evidence/edge-profile-decision-2026-09-04.md)): native addons (better-sqlite3, @napi-rs/keyring) and `node:` built-ins across the core barrel make an edge subpath a porting project, not a build flag; revisit only on concrete demand plus a `node:`-free core loop.

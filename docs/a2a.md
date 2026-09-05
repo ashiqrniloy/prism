@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-supervisor` implements bounded A2A 1.0 over the JSON-RPC/HTTPS binding. Supported operations: `SendMessage`, `SendStreamingMessage`, `GetTask`, `ListTasks`, `CancelTask`, `SubscribeToTask`, push-notification-config create/get/list/delete, and `GetExtendedAgentCard`. `client.streamMessage()` additionally exposes verified rich task/message events for frontend adapters while legacy `stream()` remains text-compatible. Agent Cards retain explicit ES256 verification. gRPC, HTTP+JSON, discovery registries, automatic JWK/OAuth fetching, and an internal task worker/store are absent.
+`@arnilo/prism-core/runtime/supervisor` implements bounded A2A 1.0 over the JSON-RPC/HTTPS binding. Supported operations: `SendMessage`, `SendStreamingMessage`, `GetTask`, `ListTasks`, `CancelTask`, `SubscribeToTask`, push-notification-config create/get/list/delete, and `GetExtendedAgentCard`. `client.streamMessage()` additionally exposes verified rich task/message events for frontend adapters while legacy `stream()` remains text-compatible. Agent Cards retain explicit ES256 verification. gRPC, HTTP+JSON, discovery registries, automatic JWK/OAuth fetching, and an internal task worker/store are absent.
 
 ## When to use it
 
@@ -41,7 +41,7 @@ Parts, messages, artifacts, histories, metadata, and aggregate responses are unt
 
 ## AG-UI server-side exposure (Task 13, 0.0.26)
 
-`createAgUiA2AServer()` in `@arnilo/prism-ag-ui` fronts one host-selected **local AG-UI agent** as an A2A 1.0 server, the reverse direction of `createAgUiA2AAdapter()`: remote A2A clients start and stream local runs through the same AG-UI input allow-list and event mapper as the AG-UI SSE path (same projection, redaction, and byte caps). It reuses this package's `createA2AHandler` transport/lifecycle; it creates no second runtime, task store, or worker. Requires the optional `@arnilo/prism-supervisor` peer (imported lazily; plain `@arnilo/prism-ag-ui` imports keep working without it).
+`createAgUiA2AServer()` in `@arnilo/prism-ag-ui` fronts one host-selected **local AG-UI agent** as an A2A 1.0 server, the reverse direction of `createAgUiA2AAdapter()`: remote A2A clients start and stream local runs through the same AG-UI input allow-list and event mapper as the AG-UI SSE path (same projection, redaction, and byte caps). It reuses this package's `createA2AHandler` transport/lifecycle; it creates no second runtime, task store, or worker. Requires the optional `@arnilo/prism-core/runtime/supervisor` peer (imported lazily; plain `@arnilo/prism-ag-ui` imports keep working without it).
 
 ```ts
 import { createAgentEventSourceAgUiReplay, createAgUiA2AServer } from "@arnilo/prism-ag-ui";

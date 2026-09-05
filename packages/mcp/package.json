@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-mcp",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Bounded MCP tools, resources, prompts, client callbacks, and authorized Streamable HTTP sessions.",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,11 +25,12 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.30.0",
+    "@modelcontextprotocol/client": "2.0.0",
+    "@modelcontextprotocol/server": "2.0.0",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.4.0"
+    "@arnilo/prism": "^0.5.0"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."

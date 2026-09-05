@@ -2,7 +2,7 @@
 
 ## What it does
 
-The optional `@arnilo/prism-credentials-node` package ships host-owned credential persistence for Node.js CLI and desktop apps:
+The optional `@arnilo/prism-core/credentials/node` package ships host-owned credential persistence for Node.js CLI and desktop apps:
 
 - **Encrypted file store** — AES-256-GCM envelope with scrypt KDF, atomic rename writes, versioned on-disk format
 - **System keychain store** — cross-platform secret service via `@napi-rs/keyring@^1.3.0`
@@ -17,7 +17,7 @@ Factories:
 - `createOAuthCredentialStoreAdapter(store)`
 - `rotateEncryptedCredentialStorePassphrase(options)`
 
-The `@arnilo/prism-credentials-node/oidc` subpath adds the optional OIDC/JWKS identity verifier (`createOidcIdentityVerifier`) — pinned issuer/audience/JWKS verification over native `fetch` + WebCrypto (see [Agent identity](agent-identity.md)).
+The `@arnilo/prism-core/credentials/node/oidc` subpath adds the optional OIDC/JWKS identity verifier (`createOidcIdentityVerifier`) — pinned issuer/audience/JWKS verification over native `fetch` + WebCrypto (see [Agent identity](agent-identity.md)).
 
 Core `@arnilo/prism` remains storage-free. Hosts choose a backend explicitly at startup; there is no global credential singleton and no silent fallback from keychain to plaintext file storage.
 
@@ -37,7 +37,7 @@ Do **not** use it when credentials should live in a remote vault, HSM, or cloud 
 import {
   openEncryptedCredentialStore,
   createKeychainCredentialStore,
-} from "@arnilo/prism-credentials-node";
+} from "@arnilo/prism-core/credentials/node";
 ```
 
 ### Encrypted file
@@ -78,6 +78,10 @@ Encrypted file stores also expose:
 - `flush()` — force rewrite of the encrypted envelope
 
 `encryptBytes()` and `decryptBytes()` are Promise-based because they use asynchronous `node:crypto.scrypt`.
+
+### MCP OAuth records (plan 063)
+
+When backing `McpClientAuthState` from `@arnilo/prism-mcp` with one of these stores, key OAuth rows by the validated authorization-server `issuer` the SDK stamps onto every `StoredOAuthTokens`/`StoredOAuthClientInformation` record (the credential methods receive it). Credentials must never cross issuers: a store that cannot partition by issuer stays single-slot-safe (the MCP provider re-validates the stamp), but partitioning is the preferred shape for hosts talking to more than one MCP server. Refresh tokens belong only in the encrypted file or keychain backends — never the plaintext memory store in production.
 
 Errors are explicit and fail closed:
 
@@ -126,7 +130,7 @@ import {
   createOAuthCredentialStoreAdapter,
   createStoredCredentialResolver,
   openEncryptedCredentialStore,
-} from "@arnilo/prism-credentials-node";
+} from "@arnilo/prism-core/credentials/node";
 
 const store = await openEncryptedCredentialStore({
   path: "./credentials.vault",
@@ -157,7 +161,7 @@ import {
   createGoogleWorkspaceOAuthProvider,
   createOAuthWorkTokenProvider,
   createOAuthCredentialStoreAdapter,
-} from "@arnilo/prism-credentials-node";
+} from "@arnilo/prism-core/credentials/node";
 
 // Read-only mail/calendar (no mutation scopes requested).
 const m365 = createMicrosoft365OAuthProvider({ clientId: "<app-id>", capabilities: ["mail", "calendar"], access: "read" });
@@ -178,7 +182,7 @@ await revokeOAuthCredential({ provider: m365, credentials: creds, store: createO
 Passphrase rotation:
 
 ```ts
-import { rotateEncryptedCredentialStorePassphrase } from "@arnilo/prism-credentials-node";
+import { rotateEncryptedCredentialStorePassphrase } from "@arnilo/prism-core/credentials/node";
 
 await rotateEncryptedCredentialStorePassphrase({
   path: "./credentials.vault",
@@ -198,7 +202,7 @@ import {
 import {
   createKeychainCredentialStore,
   createStoredCredentialResolver,
-} from "@arnilo/prism-credentials-node";
+} from "@arnilo/prism-core/credentials/node";
 import { createOpenAIProviderPackage } from "@arnilo/prism-providers/openai";
 
 const keychain = createKeychainCredentialStore({

@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-server` ships a durable artifact co-work review service (Phase 9 / 0.0.14): authorized attach of source/output references with MIME/hash/version, producer-run attribution, citations/data sources, and preview metadata; revision comparison; reviewer approve/reject (request-changes) with last-validated recovery; and authorized, expiring delivery links. Core (`@arnilo/prism`) exports artifact **types only** (`ArtifactRecord`, `ArtifactRevision`, `ArtifactApproval`, `ArtifactDeliveryToken`, approval state `pending | approved | rejected`). Prism persists bounded metadata, revisions, approvals, and delivery references over the existing versioned checkpoint store — **never file bodies**; hosts own blob storage and rendering.
+`@arnilo/prism-core/runtime/server` ships a durable artifact co-work review service (Phase 9 / 0.0.14): authorized attach of source/output references with MIME/hash/version, producer-run attribution, citations/data sources, and preview metadata; revision comparison; reviewer approve/reject (request-changes) with last-validated recovery; and authorized, expiring delivery links. Core (`@arnilo/prism`) exports artifact **types only** (`ArtifactRecord`, `ArtifactRevision`, `ArtifactApproval`, `ArtifactDeliveryToken`, approval state `pending | approved | rejected`). Prism persists bounded metadata, revisions, approvals, and delivery references over the existing versioned checkpoint store — **never file bodies**; hosts own blob storage and rendering.
 
 ## When to use it
 
@@ -22,7 +22,7 @@ Not for: storing file content (use host blob storage), local Office preview/rend
 | `options.redactor` | yes | `SecretRedactor`; records are redacted before persist and on every response |
 | `options.linkSecret` | yes | Host HMAC key material for signing/verifying delivery links |
 | `options.limits` | no | Frozen caps (below); each clamped to a hard maximum |
-| `options.onDecision` | no | Audit seam (redacted refs) for attach/revise/approve/reject; bridge to `@arnilo/prism-policy` |
+| `options.onDecision` | no | Audit seam (redacted refs) for attach/revise/approve/reject; bridge to `@arnilo/prism-core/governance/policy` |
 
 Every operation input carries `ownership` (from host `authorize`, never request JSON) plus optional verified `identity`. `attach` requires `threadId`, `uri`, `mime`, `hash`; `revise` requires `uri`, `hash` (mime defaults to the previous revision); `compare` requires two distinct revision numbers; `approve`/`reject` require a `version`; `deliveryLink` accepts optional `version` (defaults to last validated, else latest) and `ttlSeconds`.
 
@@ -56,8 +56,8 @@ No package-owned agent events are emitted; `onDecision` is the audit seam (redac
 
 ```ts
 import { createSecretRedactor } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-session-store-sqlite";
-import { createArtifactService, createArtifactHandler } from "@arnilo/prism-server";
+import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createArtifactService, createArtifactHandler } from "@arnilo/prism-core/runtime/server";
 
 const persistence = createSqlitePersistence({ filename: "prism.db" });
 const artifacts = createArtifactService(persistence.checkpoints, {
@@ -79,7 +79,7 @@ export const handler = createArtifactHandler({ service: artifacts, authorize: ho
 - Artifact records are versioned checkpoint values (namespace `prism.artifact`, key `threadId:artifactId`). The checkpoint `version` is the CAS counter for concurrent reviewers, distinct from revision numbers. Any `CheckpointStore` works; sqlite/postgres persistence already expose `.checkpoints`, so there is no separate artifact schema or migration.
 - `createArtifactHandler` mounts attach/list/get/revise/compare/approve/reject/last-validated/delivery-link plus `GET /prism/artifacts/download?link=…`. Download verifies the link signature + expiry, then **reauthorizes** against the token's ownership (mismatch fails closed), and returns the authorized revision reference only — the host fetches the body.
 - Delivery links are `base64url(payload).base64url(HMAC-SHA256)` over `{ artifactId, threadId, version, ownership, issuedAt, expiresAt }`; they are reauthorized per download and are not bearer secrets.
-- **Blob storage (0.0.28)**: `createArtifactService` accepts an optional `bodies: ArtifactBodyStore` (core contract in `src/artifacts.ts`: `put`/`get`/`delete`/`presign` by opaque, ownership-scoped `ArtifactBodyRef`). When wired, `deliveryLink` resolves through `bodies.presign` and returns an additional `url` (bounded-TTL, single-object presigned URL) beside the signed link/token; revisions must carry a recorded `size` (optional on attach/revise) or delivery fails closed. The reference adapter is `@arnilo/prism-server/artifact-bodies` `createS3ArtifactBodyStore` (hand-rolled SigV4 over native fetch + WebCrypto, path-style, single-chunk PUT with verified `x-amz-content-sha256`; works with AWS S3, MinIO, Cloudflare R2). Hosts may substitute any store; the contract is storage-free in core.
+- **Blob storage (0.0.28)**: `createArtifactService` accepts an optional `bodies: ArtifactBodyStore` (core contract in `src/artifacts.ts`: `put`/`get`/`delete`/`presign` by opaque, ownership-scoped `ArtifactBodyRef`). When wired, `deliveryLink` resolves through `bodies.presign` and returns an additional `url` (bounded-TTL, single-object presigned URL) beside the signed link/token; revisions must carry a recorded `size` (optional on attach/revise) or delivery fails closed. The reference adapter is `@arnilo/prism-core/runtime/server/artifact-bodies` `createS3ArtifactBodyStore` (hand-rolled SigV4 over native fetch + WebCrypto, path-style, single-chunk PUT with verified `x-amz-content-sha256`; works with AWS S3, MinIO, Cloudflare R2). Hosts may substitute any store; the contract is storage-free in core.
 - Body stores verify ownership on every operation, verify size/SHA-256/MIME on put and get (fail closed), refuse delete under legal hold (host `isHeld` callback), and are idempotent on delete (retention sweeps delete bodies with metadata). Credentials come only from the host resolver; bucket/path/key never appear in errors, telemetry, or artifact records (the object key is derived from the ref).
 - Review loops driven by an agent consume the shared `RunLimits` at the host's agent layer; the artifact service itself is a passive, bounded record store.
 
@@ -93,7 +93,7 @@ export const handler = createArtifactHandler({ service: artifacts, authorize: ho
 
 ## Coding patch review composition (0.2.6, plan 026)
 
-`@arnilo/prism-coding-agent` composes over this service for the coding patch review workflow: `createCodingPatchReviewManifest` builds a bounded manifest (repository/worktree identity, base/head, patch digest, changed paths, diffstat, check and diagnostic summaries) and returns a structural `ArtifactAttachInput` whose `preview.review` embeds the manifest and whose `hash` is the patch SHA-256; `assertCodingPatchAccepted` derives `pending|accepted|rejected|superseded` from the returned `ArtifactRecord` by binding to the exact artifact revision, digest, and identity — any patch/repository/worktree/base/head change supersedes a prior acceptance (a newer revision attached after approval makes the old acceptance stale and refused). Decisions never apply/commit/push/merge; the manifest never embeds a raw patch body. Full contract: [Coding review and diagnostics](coding-review-and-diagnostics.md).
+`@arnilo/prism-coding-tools/agent` composes over this service for the coding patch review workflow: `createCodingPatchReviewManifest` builds a bounded manifest (repository/worktree identity, base/head, patch digest, changed paths, diffstat, check and diagnostic summaries) and returns a structural `ArtifactAttachInput` whose `preview.review` embeds the manifest and whose `hash` is the patch SHA-256; `assertCodingPatchAccepted` derives `pending|accepted|rejected|superseded` from the returned `ArtifactRecord` by binding to the exact artifact revision, digest, and identity — any patch/repository/worktree/base/head change supersedes a prior acceptance (a newer revision attached after approval makes the old acceptance stale and refused). Decisions never apply/commit/push/merge; the manifest never embeds a raw patch body. Full contract: [Coding review and diagnostics](coding-review-and-diagnostics.md).
 
 ## Related APIs
 

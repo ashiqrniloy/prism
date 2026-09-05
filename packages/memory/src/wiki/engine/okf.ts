@@ -14,8 +14,6 @@ export const OKF_TYPE_BY_CATEGORY = {
   tool: "Tool",
 } as const;
 
-export type WikiCategory = keyof typeof OKF_TYPE_BY_CATEGORY;
-
 export function wikiActor(): string {
   return `prism-wiki/${readPackageVersion()}`;
 }

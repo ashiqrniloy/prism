@@ -3,13 +3,12 @@ import {
   type ApplyRetentionInput,
   type LegalHoldExportItem,
   type LegalHoldRecord,
-  type OwnershipScope,
   PersistenceLifecycleError,
   type PersistenceLifecycleStore,
 } from "@arnilo/prism";
 import type { Pool } from "pg";
 import {
-  assertOwnershipRequired,
+  assertLifecycleOwnership as assertOwnership,
   assertOwnershipScope,
   assertHoldReason as assertReason,
   ownershipScope as ownership,
@@ -282,8 +281,4 @@ function rowToHold(row: Record<string, unknown>): LegalHoldRecord {
     ...(row.account_id == null ? {} : { accountId: String(row.account_id) }),
     ...(row.user_id == null ? {} : { userId: String(row.user_id) }),
   };
-}
-
-function assertOwnership(input: OwnershipScope): void {
-  assertOwnershipRequired(input, () => new PersistenceLifecycleError("ownership required", "ERR_PRISM_LIFECYCLE_OWNERSHIP"));
 }

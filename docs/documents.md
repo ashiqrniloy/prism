@@ -208,7 +208,7 @@ Financial worksheets often require exact decimal representations that JavaScript
 
 ## Related APIs
 
-- [`@arnilo/prism-document-reader`](./document-reader.md): Bounded literal text extraction from PDF and DOCX documents for coding agent tools.
-- [`@arnilo/prism-work-tools`](./work-tools.md): Microsoft 365 and Google Workspace identity-scoped connectors.
-- [`@arnilo/prism-coding-agent`](./coding-agent-tools.md): Coding tools and file operations.
-- [`@arnilo/prism-observability-opentelemetry`](./observability.md): OpenTelemetry instrumentation and trace adapters.
+- [`@arnilo/prism-coding-tools/document-reader`](./document-reader.md): Bounded literal text extraction from PDF and DOCX documents for coding agent tools.
+- [`@arnilo/prism-core/integrations/work`](./work-tools.md): Microsoft 365 and Google Workspace identity-scoped connectors.
+- [`@arnilo/prism-coding-tools/agent`](./coding-agent-tools.md): Coding tools and file operations.
+- [`@arnilo/prism-core/governance/observability`](./observability.md): OpenTelemetry instrumentation and trace adapters.

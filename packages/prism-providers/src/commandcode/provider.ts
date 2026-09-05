@@ -1,12 +1,12 @@
 import type { AIProvider, CredentialValueSource, ProviderRequest } from "@arnilo/prism";
 import { providerError, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
 import { readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "../shared/anthropic-messages.js";
 import { applyCommandCodeCacheControl } from "./cache.js";
 import { classifyCommandCodeError, commandCodeHttpError } from "./errors.js";
 import { COMMAND_CODE_DEFAULT_BASE_URL } from "./models.js";
 import { commandCodeChatBody, commandCodeChatEvents } from "./openai-chat.js";
 import { commandCodePreserveThinking, stripCommandCodeOwnedCompat } from "./thinking.js";
-import { anthropicMessagesBody, anthropicMessagesEvents, type AnthropicMessagesRouteHooks } from "../shared/anthropic-messages.js";
 
 export interface CommandCodeProviderOptions {
   readonly id?: string;

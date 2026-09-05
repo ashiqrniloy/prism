@@ -2,7 +2,7 @@
 
 ## What it does
 
-`createLanguageIntelligence` is an optional host-activated contract in `@arnilo/prism-coding-agent` that talks to **host-selected** language servers over one bounded in-package JSON-RPC client (LSP 3.17 Content-Length framing). It exposes workspace symbols, definitions, references, diagnostics, hover, and rename/workspace edits. No `vscode-languageserver-protocol` dependency. Nothing spawns on import or construction — servers start lazily on first use and stop on `dispose()`.
+`createLanguageIntelligence` is an optional host-activated contract in `@arnilo/prism-coding-tools/agent` that talks to **host-selected** language servers over one bounded in-package JSON-RPC client (LSP 3.17 Content-Length framing). It exposes workspace symbols, definitions, references, diagnostics, hover, and rename/workspace edits. No `vscode-languageserver-protocol` dependency. Nothing spawns on import or construction — servers start lazily on first use and stop on `dispose()`.
 
 | Export | Purpose |
 | --- | --- |
@@ -21,7 +21,7 @@ Use when a host wants IDE-like language intelligence without embedding a parser 
 Do not use this as a sandbox, tool registry, or process session manager. Optional process-session registration of LSP children can use `createProcessSessions` ([Process sessions](process-sessions.md)).
 
 ```ts
-import { createLanguageIntelligence } from "@arnilo/prism-coding-agent";
+import { createLanguageIntelligence } from "@arnilo/prism-coding-tools/agent";
 
 const lang = createLanguageIntelligence({
   workspaceRoot,
@@ -124,8 +124,8 @@ No package-owned events; hosts observe via their own run/tool wiring.
 import {
   createLanguageIntelligence,
   DEFAULT_MAX_LSP_TIMEOUT_MS,
-} from "@arnilo/prism-coding-agent";
-import { createCodingApprovalPolicy } from "@arnilo/prism-coding-security";
+} from "@arnilo/prism-coding-tools/agent";
+import { createCodingApprovalPolicy } from "@arnilo/prism-coding-tools/security";
 
 const policy = createCodingApprovalPolicy({
   roots: [workspaceRoot],
