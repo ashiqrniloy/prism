@@ -91,7 +91,7 @@
     "@arnilo/prism-core": "file:../prism-core",
     "@arnilo/prism-ag-ui": "file:../ag-ui",
     "@arnilo/prism-mcp": "file:../mcp",
-    "@types/diff": "^7.0.2",
+    "@types/diff": "^8.0.0",
     "@types/node": "^26.1.1",
     "mammoth": "^1.8.0",
     "pdf-parse": "^2.4.5",
