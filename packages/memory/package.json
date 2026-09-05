@@ -68,12 +68,12 @@
     }
   },
   "dependencies": {
-    "pg": "^8.22.0"
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
-    "@types/pg": "^8.11.11",
-    "@arnilo/prism-providers": "file:../prism-providers"
+    "@arnilo/prism-providers": "file:../prism-providers",
+    "@types/pg": "^8.23.1"
   },
   "engines": {
     "node": ">=20"
