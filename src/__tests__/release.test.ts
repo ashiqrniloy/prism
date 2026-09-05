@@ -188,7 +188,7 @@ test("registry failures stay attributable without leaking environment tokens", a
 
 test("release workflow publishes the lockstep cut once and package tags independently", () => {
   const workflow = readFileSync(join(process.cwd(), ".github/workflows/release.yml"), "utf8");
-  assert.match(workflow, /tags:\s*\["v0\.3\.0", "v0\.4\.0", "@arnilo\/\*@\*"\]/);
+  assert.match(workflow, /tags:\s*\["v0\.3\.0", "v0\.4\.0", "v0\.5\.0", "@arnilo\/\*@\*"\]/);
   assert.match(workflow, /id-token:\s*write/);
   assert.match(workflow, /release:publish -- --lockstep --version /);
   assert.match(workflow, /release:publish -- --resume/);
