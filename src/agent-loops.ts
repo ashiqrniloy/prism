@@ -19,22 +19,11 @@ import type {
 import { AgentLoopStateError } from "./contracts.js";
 import { createId } from "./ids.js";
 import type { AgentInput } from "./input.js";
-import { inputMessages } from "./input.js";
+import { inputMessages, toToolResultMessage } from "./input.js";
 import { artifactStructuredOutputRequest, withoutStructuredOutput } from "./structured-output.js";
 
 function throwIfAborted(signal: AbortSignal): void {
   if (signal.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Agent run aborted");
-}
-
-function toolResultMessage(result: ToolResult): Message {
-  return {
-    role: "tool",
-    content: [
-      { type: "tool_result", toolCallId: result.toolCallId, name: result.name, result: result.value, error: result.error },
-      ...(result.content ?? []),
-    ],
-    metadata: result.metadata,
-  };
 }
 
 // ponytail: SingleShotLoop extracted bit-for-bit from the former inline turn
@@ -357,7 +346,7 @@ async function appendToolResultMessage(result: ToolResult, ctx: LoopContext): Pr
   // Approval-gated calls return a marker instead of a real result; the transcript must not
   // record a phantom tool_result for a call that never dispatched.
   if ((result.metadata as { approvalPending?: unknown } | undefined)?.approvalPending === true) return;
-  const message = toolResultMessage(result);
+  const message = toToolResultMessage(result);
   ctx.history.push(message);
   await ctx.appendMessage(message);
 }

@@ -1,5 +1,5 @@
 import type { ContentBlock, JsonObject, Message, ModelCapabilities, ProviderEvent, ProviderRequest } from "@arnilo/prism";
-import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
+import { applyOpenAIChatStructuredOutput, serializeToolResultJson } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, openAIChatEvents as sharedOpenAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import {
   openCodeGoPreserveThinking,
@@ -48,7 +48,7 @@ export function serializeOpenCodeGoChatMessage(message: Message, capabilities: M
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+      content: serializeToolResultJson(message),
     };
   }
 

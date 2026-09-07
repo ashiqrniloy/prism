@@ -37,6 +37,7 @@ import {
   resolveProviderMediaMessages,
   serializePdfDocumentWireBlock,
 } from "@arnilo/prism/providers/media";
+import { serializeToolResultJson } from "@arnilo/prism/providers/openai";
 import { httpStatusError, readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
 import { applyKimiAnthropicCacheControl } from "./cache.js";
 import { kimiPreserveThinking, kimiReasoningEffort, kimiThinking, stripKimiThinkingCompat } from "./thinking.js";
@@ -187,7 +188,7 @@ async function toMessage(
         {
           type: "tool_result",
           tool_use_id: result?.toolCallId ?? "",
-          content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+          content: serializeToolResultJson(message),
           ...(last?.cache_control ? { cache_control: last.cache_control as unknown as JsonObject } : {}),
         },
       ],

@@ -1,6 +1,6 @@
 import type { AIProvider, ContentBlock, JsonObject, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import { type CredentialValueSource, trimTrailingSlashes } from "@arnilo/prism";
-import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
+import { applyOpenAIChatStructuredOutput, serializeToolResultJson } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { zaiPreserveThinking, zaiReasoningEffort, zaiThinking, zaiToolStream } from "./thinking.js";
 
@@ -70,7 +70,7 @@ export function toZaiMessage(message: Message, model: ModelConfig, preserveThink
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+      content: serializeToolResultJson(message),
     };
   }
 

@@ -38,7 +38,7 @@ import {
   serializeOpenAIResponsesInputAudio,
   serializeOpenAIResponsesInputFile,
 } from "@arnilo/prism/providers/media";
-import { applyOpenAIResponsesStructuredOutput } from "@arnilo/prism/providers/openai";
+import { applyOpenAIResponsesStructuredOutput, serializeToolResultJson } from "@arnilo/prism/providers/openai";
 import { httpStatusError, readBoundedResponseText, readSseData } from "@arnilo/prism/providers/transport";
 import {
   applyPromptCacheBreakpoints,
@@ -320,7 +320,7 @@ async function toResponsesInput(messages: readonly OpenAIBreakpointMessage[], me
         clean({
           type: "function_call_output",
           call_id: result?.toolCallId ?? "",
-          output: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+          output: serializeToolResultJson(message),
         }),
       );
       continue;

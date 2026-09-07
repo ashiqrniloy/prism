@@ -9,6 +9,7 @@ import {
   serializeOpenAIChatStructuredOutput,
   serializeOpenAIResponsesStructuredOutput,
   serializeOpenAITool,
+  serializeToolResultJson,
 } from "../providers/openai-primitives.js";
 
 describe("openai provider primitives", () => {
@@ -66,6 +67,19 @@ describe("openai provider primitives", () => {
       content: "calling",
       tool_calls: [{ id: "c1", type: "function", function: { name: "echo", arguments: '{"text":"x"}' } }],
     });
+  });
+
+  it("serializes sibling tool text when tool_result.result is missing", () => {
+    const message: Message = {
+      role: "tool",
+      content: [
+        { type: "tool_result", toolCallId: "c1", name: "repo_list" },
+        { type: "text", text: "file AGENTS.md" },
+      ],
+    };
+    assert.equal(serializeToolResultJson(message), JSON.stringify("file AGENTS.md"));
+    assert.equal(serializeOpenAIChatMessage(message).content, JSON.stringify("file AGENTS.md"));
+    assert.notEqual(serializeOpenAIChatMessage(message).content, "null");
   });
 
   it("joins uncoalesced tool-call text tokens without interstitial newlines", () => {

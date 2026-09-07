@@ -1,5 +1,5 @@
 import type { ContentBlock, JsonObject, Message, ProviderEvent, ProviderRequest } from "@arnilo/prism";
-import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
+import { applyOpenAIChatStructuredOutput, serializeToolResultJson } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, openAIChatEvents as sharedOpenAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { hyperPreserveThinking, hyperReasoningEffort, hyperThinking, stripHyperOwnedCompat } from "./thinking.js";
 
@@ -42,7 +42,7 @@ export function serializeHyperChatMessage(message: Message, preserveThinking: bo
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+      content: serializeToolResultJson(message),
     };
   }
 

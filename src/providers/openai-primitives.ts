@@ -57,13 +57,26 @@ export function serializeOpenAITool(tool: ToolDefinition): JsonObject {
   } as JsonObject;
 }
 
+export function serializeToolResultJson(message: Message): string {
+  const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
+  if (!result) return "";
+  const payload = result.result ?? result.error;
+  if (payload !== undefined) return JSON.stringify(payload);
+  const text = message.content
+    .filter((part): part is Extract<ContentBlock, { type: "text" }> => part.type === "text")
+    .map((part) => part.text)
+    .filter(Boolean)
+    .join("\n");
+  return JSON.stringify(text.length > 0 ? text : null);
+}
+
 export function serializeOpenAIChatMessage(message: Message, capabilities: ModelCapabilities = {}): JsonObject {
   if (message.role === "tool") {
     const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+      content: serializeToolResultJson(message),
     };
   }
   if (message.role === "assistant") {

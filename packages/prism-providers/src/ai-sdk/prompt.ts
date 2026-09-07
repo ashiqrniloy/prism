@@ -62,7 +62,15 @@ function toAiSdkMessage(message: Message, model: ModelConfig): LanguageModelV4Me
     return { role: "system", content: textOnlyContent(message.content, "system") };
   }
   if (message.role === "tool") {
-    return { role: "tool", content: message.content.map((part) => toToolResultPart(part)) };
+    const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
+    if (!result) throw unsupported("missing tool_result", "tool");
+    const text = message.content
+      .filter((part): part is Extract<ContentBlock, { type: "text" }> => part.type === "text")
+      .map((part) => part.text)
+      .filter(Boolean)
+      .join("\n");
+    const part = result.result === undefined && !result.error && text.length > 0 ? { ...result, result: text } : result;
+    return { role: "tool", content: [toToolResultPart(part)] };
   }
   if (message.role === "assistant") {
     return {

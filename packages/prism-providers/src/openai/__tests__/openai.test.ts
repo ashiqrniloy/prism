@@ -653,6 +653,35 @@ describe("@arnilo/prism-providers/openai responses", () => {
     assert.deepEqual(body.input[3].content, [{ type: "input_text", text: "thanks" }]);
   });
 
+  it("openai_responses_serializes_content_only_tool_result_instead_of_null", async () => {
+    const replay: ProviderRequest = {
+      model: { provider: "openai", model: "gpt-5.1", capabilities: { input: ["text"] } },
+      messages: [
+        {
+          role: "tool",
+          content: [
+            { type: "tool_result", toolCallId: "call_1", name: "repo_list" },
+            { type: "text", text: "file AGENTS.md" },
+          ],
+        },
+      ],
+    };
+    let body: any;
+    const provider = createOpenAIResponsesProvider({
+      apiKey: "fake-openai-key",
+      fetch: async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      },
+    });
+    await assertProviderStreamConforms({ provider, request: replay });
+    assert.deepEqual(body.input[0], {
+      type: "function_call_output",
+      call_id: "call_1",
+      output: JSON.stringify("file AGENTS.md"),
+    });
+  });
+
   it("openai_responses_serializes_full_prism_content_replay", async () => {
     const replay: ProviderRequest = {
       model: { provider: "openai", model: "gpt-5.1", capabilities: { input: ["text", "image"] } },

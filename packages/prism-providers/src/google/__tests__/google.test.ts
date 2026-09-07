@@ -411,6 +411,26 @@ describe("@arnilo/prism-providers/google", () => {
     assert.equal(body.contents[2].role, "user");
     assert.deepEqual(body.contents[2].parts[0].functionResponse, { name: "lookup", response: { result: { temp: 72 } } });
   });
+
+  it("serializes_content_only_tool_result_instead_of_null", async () => {
+    const body = await googleGenerateContentBody({
+      ...request,
+      messages: [
+        {
+          role: "tool",
+          content: [
+            { type: "tool_result", toolCallId: "c1", name: "repo_list" },
+            { type: "text", text: "file AGENTS.md" },
+          ],
+        },
+      ],
+      tools: undefined,
+    });
+    assert.deepEqual((body.contents as any)[0].parts[0].functionResponse, {
+      name: "repo_list",
+      response: { result: "file AGENTS.md" },
+    });
+  });
 });
 
 function mockFetch(body: ReadableStream<Uint8Array>): typeof fetch {

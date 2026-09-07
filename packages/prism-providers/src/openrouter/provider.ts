@@ -10,7 +10,7 @@ import type {
 } from "@arnilo/prism";
 import { trimTrailingSlashes } from "@arnilo/prism";
 import { rejectProviderMediaBlock } from "@arnilo/prism/providers/media";
-import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
+import { applyOpenAIChatStructuredOutput, serializeToolResultJson } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { applyOpenRouterCacheControl, openRouterSessionId, openRouterTopLevelCacheControl, openRouterUsage } from "./cache.js";
 import { openRouterPreserveThinking, resolveOpenRouterReasoning, stripOpenRouterOwnedCompat } from "./thinking.js";
@@ -90,7 +90,7 @@ function toOpenRouterMessage(message: CacheControlledMessage, model: ModelConfig
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+      content: serializeToolResultJson(message),
     };
   }
 

@@ -135,7 +135,7 @@ async function toContent(
               name: result.error.name,
             }),
           }
-        : { result: jsonResult(result?.result) };
+        : { result: jsonResult(result?.result !== undefined ? result.result : siblingToolText(message)) };
     return {
       role: "user",
       parts: [
@@ -246,6 +246,15 @@ function clean(value: Record<string, unknown>): JsonObject {
   return Object.fromEntries(
     Object.entries(value).filter(([, item]) => item !== undefined && !(Array.isArray(item) && item.length === 0)),
   ) as JsonObject;
+}
+
+function siblingToolText(message: Message): string | undefined {
+  const text = message.content
+    .filter((part): part is Extract<ContentBlock, { type: "text" }> => part.type === "text")
+    .map((part) => part.text)
+    .filter(Boolean)
+    .join("\n");
+  return text.length > 0 ? text : undefined;
 }
 
 function jsonResult(value: unknown): JsonObject | string | number | boolean | null {

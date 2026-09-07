@@ -221,6 +221,26 @@ describe("@arnilo/prism-providers/anthropic", () => {
     assert.deepEqual((schema as { enum: string[] }).enum, ["z", "a"]);
   });
 
+  it("serializes_content_only_tool_result_instead_of_null", async () => {
+    const body = await anthropicMessagesBody({
+      ...request,
+      messages: [
+        {
+          role: "tool",
+          content: [
+            { type: "tool_result", toolCallId: "c1", name: "repo_list" },
+            { type: "text", text: "file AGENTS.md" },
+          ],
+        },
+      ],
+    });
+    assert.deepEqual((body.messages as any)[0].content[0], {
+      type: "tool_result",
+      tool_use_id: "c1",
+      content: JSON.stringify("file AGENTS.md"),
+    });
+  });
+
   it("applies_cache_control_only_to_selected_breakpoints_with_1h_ttl", async () => {
     let body: any;
     const provider = createAnthropicMessagesProvider({

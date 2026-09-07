@@ -23,8 +23,8 @@ import type {
   ToolResult,
 } from "./contracts.js";
 import { runInstructionInjectors } from "./instruction-injection.js";
-import { applyDefaultProviderRequestOptions } from "./provider-request-policy.js";
 import type { MiddlewareRegistry } from "./middleware.js";
+import { applyDefaultProviderRequestOptions } from "./provider-request-policy.js";
 import type { SecretRedactor } from "./redaction.js";
 import { redactMessage } from "./redaction.js";
 import { loadTextResource } from "./resources.js";
@@ -431,21 +431,35 @@ async function resourceMessage(uri: string, context: DefaultInputBuildContext, a
   return textMessage("user", `Resource ${label}:\n${text}`, attachmentMetadata({ ...attachment, uri }));
 }
 
-function toolResultMessages(results: readonly ToolResult[] | undefined): Message[] {
-  return (results ?? []).map((result) => ({
-    role: "tool" as const,
+export function toToolResultMessage(result: ToolResult): Message {
+  return {
+    role: "tool",
     content: [
       {
-        type: "tool_result" as const,
+        type: "tool_result",
         toolCallId: result.toolCallId,
         name: result.name,
-        result: result.value,
+        result: toolResultPayload(result),
         error: result.error,
       },
-      ...(result.content ?? []),
+      ...(result.content ?? []).filter((block) => block.type !== "text"),
     ],
     metadata: result.metadata,
-  }));
+  };
+}
+
+function toolResultPayload(result: ToolResult): unknown {
+  if (result.value !== undefined) return result.value;
+  const text = (result.content ?? [])
+    .filter((block): block is Extract<ContentBlock, { type: "text" }> => block.type === "text")
+    .map((block) => block.text)
+    .filter(Boolean)
+    .join("\n");
+  return text.length > 0 ? text : undefined;
+}
+
+function toolResultMessages(results: readonly ToolResult[] | undefined): Message[] {
+  return (results ?? []).map(toToolResultMessage);
 }
 
 function textMessage(role: Message["role"], text: string, metadata?: Readonly<Record<string, unknown>>): Message {

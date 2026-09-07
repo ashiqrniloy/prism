@@ -9,7 +9,7 @@ import type {
   ProviderRequest,
 } from "@arnilo/prism";
 import { trimTrailingSlashes } from "@arnilo/prism";
-import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
+import { applyOpenAIChatStructuredOutput, serializeToolResultJson } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { kimiPreserveThinking, kimiReasoningEffort, kimiThinking, stripKimiThinkingCompat } from "./thinking.js";
 
@@ -78,7 +78,7 @@ export function serializeMoonshotMessage(message: Message, capabilities: ModelCa
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+      content: serializeToolResultJson(message),
     };
   }
 

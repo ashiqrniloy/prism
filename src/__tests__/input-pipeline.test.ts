@@ -87,6 +87,20 @@ describe("default input builder", () => {
     });
   });
 
+  it("folds content-only tool results onto tool_result.result", async () => {
+    const toolResults: ToolResult[] = [{ toolCallId: "call_1", name: "repo_list", content: [{ type: "text", text: "file AGENTS.md" }] }];
+    const messages = await createDefaultInputBuilder().build("Continue", { toolResults });
+    assert.deepEqual(messages[0]?.content, [
+      {
+        type: "tool_result",
+        toolCallId: "call_1",
+        name: "repo_list",
+        result: "file AGENTS.md",
+        error: undefined,
+      },
+    ]);
+  });
+
   it("uses cache_aware layout by default", async () => {
     const messages = await createDefaultInputBuilder().build("Now", {
       summaries: ["Earlier"],

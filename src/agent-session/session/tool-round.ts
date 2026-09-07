@@ -31,6 +31,7 @@ import {
   HARD_MAX_PENDING_DECISIONS,
   MAX_ATTRIBUTION_DEPTH,
 } from "../../contracts.js";
+import { toToolResultMessage } from "../../input.js";
 import { canonicalToolEffectJson, toolEffectArgumentsHash } from "../../tool-effects.js";
 import { dispatchToolCall, resolveToolEffectDeclaration } from "../../tools.js";
 import { randomId } from "../helpers.js";
@@ -253,17 +254,7 @@ export async function suspendNested(
 }
 
 export async function replayToolResult(ctx: RoundContext, result: ToolResult): Promise<void> {
-  await ctx.session.appendMessage(
-    {
-      role: "tool",
-      content: [
-        { type: "tool_result", toolCallId: result.toolCallId, name: result.name, result: result.value, error: result.error },
-        ...(result.content ?? []),
-      ],
-      metadata: result.metadata,
-    },
-    ctx.runId,
-  );
+  await ctx.session.appendMessage(toToolResultMessage(result), ctx.runId);
 }
 
 export async function handleNestedSignal(ctx: RoundContext, error: AgentDelegationSuspendedError): Promise<void> {

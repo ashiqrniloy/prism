@@ -8,7 +8,7 @@ import type {
   ProviderEvent,
   ProviderRequest,
 } from "@arnilo/prism";
-import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
+import { applyOpenAIChatStructuredOutput, serializeToolResultJson } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { applyAlibabaCacheControl, withAlibabaCacheMarker } from "./cache.js";
 import { type AlibabaBasePreset, alibabaBaseUrl, alibabaIsThinkingOnly } from "./models.js";
@@ -100,7 +100,7 @@ export function serializeAlibabaMessage(message: CacheControlledMessage, capabil
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+      content: serializeToolResultJson(message),
       ...(marker ? { cache_control: marker } : {}),
     };
   }

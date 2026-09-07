@@ -286,6 +286,30 @@ describe("createAiSdkProvider", () => {
     });
   });
 
+  it("maps sibling tool text when tool_result.result is missing", () => {
+    const options = toAiSdkCallOptions(
+      request({
+        messages: [
+          {
+            role: "tool",
+            content: [
+              { type: "tool_result", toolCallId: "call_1", name: "repo_list" },
+              { type: "text", text: "file AGENTS.md" },
+            ],
+          },
+        ],
+      }),
+    );
+    const toolMessage = options.prompt[0];
+    assert.ok(toolMessage && toolMessage.role === "tool");
+    assert.deepEqual(toolMessage.content[0], {
+      type: "tool-result",
+      toolCallId: "call_1",
+      toolName: "repo_list",
+      output: { type: "json", value: "file AGENTS.md" },
+    });
+  });
+
   it("propagates abort and model errors as provider error events", async () => {
     const alreadyAborted = new AbortController();
     alreadyAborted.abort(new Error("user-abort"));

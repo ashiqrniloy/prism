@@ -11,7 +11,7 @@ import type {
 } from "@arnilo/prism";
 import { trimTrailingSlashes } from "@arnilo/prism";
 import { rejectProviderMediaBlock } from "@arnilo/prism/providers/media";
-import { applyOpenAIChatStructuredOutput } from "@arnilo/prism/providers/openai";
+import { applyOpenAIChatStructuredOutput, serializeToolResultJson } from "@arnilo/prism/providers/openai";
 import { buildOpenAIChatBody, createOpenAICompatibleProvider, openAIChatEvents } from "@arnilo/prism/providers/openai-compatible";
 import { classifyNeuralWattError, neuralWattHttpError } from "./retry.js";
 import { type NeuralWattEvent, parseNeuralWattComment } from "./telemetry.js";
@@ -126,7 +126,7 @@ function toMessage(message: Message, model: ModelConfig, preserveReasoning = fal
     return {
       role: "tool",
       tool_call_id: result?.toolCallId ?? "",
-      content: result ? JSON.stringify(result.result ?? result.error ?? null) : "",
+      content: serializeToolResultJson(message),
     };
   }
   if (message.role === "assistant") {
