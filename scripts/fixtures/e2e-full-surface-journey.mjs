@@ -32,15 +32,50 @@ async function section(name, run) {
 await section("@arnilo/prism: .", async () => {
   const prism = await import("@arnilo/prism");
   // Mock-provider agent session round-trip through the public agent surface.
-  const provider = prism.createMockProvider([prism.providerTextDelta("pong"), prism.providerDone()]);
+  // Plan-066: the kernel must stamp session correlation + thinking intent on
+  // every generate request, even with no host policies configured.
+  const seen = [];
+  const provider = prism.createMockProvider([prism.providerTextDelta("pong"), prism.providerDone()], {
+    onRequest: (request) => seen.push(request),
+  });
   const agent = prism.createAgent({
-    model: { provider: "mock", model: "mock-1" },
+    model: {
+      provider: "mock",
+      model: "reasoner-1",
+      capabilities: { thinkingLevels: ["low", "high"] },
+      compat: { thinkingFamily: "reasoning_effort" },
+    },
     provider,
     instructions: "reply exactly: pong",
+    thinkingLevel: "low",
   });
   const session = prism.createAgentSession({ agent });
   const result = await session.prompt("say pong");
   assert.ok(result, "mock-provider session must complete a run");
+  assert.equal(seen.length, 1, "mock run must produce exactly one generate request");
+  const generated = seen[0];
+  assert.ok(generated.options?.sessionId && generated.options.sessionId.length > 0, "kernel must stamp a session id");
+  assert.equal(generated.options.cacheKey, generated.options.sessionId, "kernel must default cacheKey to the session id");
+  assert.deepEqual(
+    generated.options.compat,
+    { reasoning_effort: "low" },
+    "agent thinkingLevel must land on the wire request as the mapped compat",
+  );
+  // Plan-066 request-construction surface: the new exports must resolve from the pack.
+  assert.equal(typeof prism.applyDefaultProviderRequestOptions, "function");
+  assert.equal(typeof prism.ProviderRequirementError, "function");
+  const stamped = prism.applyDefaultProviderRequestOptions(
+    { model: { provider: "mock", model: "plain" }, options: {} },
+    { sessionId: "h-1" },
+  );
+  assert.equal(stamped.options.sessionId, "h-1");
+  assert.equal(stamped.options.cacheKey, "h-1", "helper must default cacheKey to sessionId");
+  const untouched = prism.applyDefaultProviderRequestOptions(
+    { model: { provider: "mock", model: "plain" }, options: { sessionId: "host" } },
+    { sessionId: "h-2" },
+  );
+  assert.equal(untouched.options.sessionId, "host", "host-set sessionId must win over the kernel default");
+  assert.equal(untouched.options.cacheKey, "host", "cacheKey must follow the host sessionId");
   // Tool registry dispatch round-trip.
   const echo = {
     name: "echo",
@@ -398,6 +433,32 @@ await section("@arnilo/prism-providers: adapter surfaces", async () => {
   assert.match(ollama.ollamaBaseUrl(), /^https:\/\//, "ollama default base url must be a valid origin");
   const opencodeGo = await import("@arnilo/prism-providers/opencode-go");
   assert.equal(typeof opencodeGo.createOpenCodeGoProvider, "function");
+  // Plan-066: opencode-go fail-fast must fire from the packed install before
+  // any wire call when session correlation is missing.
+  const prismRoot = await import("@arnilo/prism");
+  let opencodeFetches = 0;
+  const opencodeProvider = opencodeGo.createOpenCodeGoProvider({
+    apiKey: "fake-opencode-key",
+    fetch: async () => {
+      opencodeFetches += 1;
+      throw new Error("fail-fast must fire before any fetch");
+    },
+  });
+  await assert.rejects(
+    (async () => {
+      for await (const _ of opencodeProvider.generate({
+        model: { provider: "opencode-go", model: "opencode-test" },
+        messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      })) {
+        /* drain */
+      }
+    })(),
+    (error) =>
+      error instanceof prismRoot.ProviderRequirementError &&
+      error.code === "ERR_PRISM_PROVIDER_REQUIREMENT" &&
+      error.requirement === "sessionId",
+  );
+  assert.equal(opencodeFetches, 0, "fail-fast must fire before any fetch");
   const neuralwatt = await import("@arnilo/prism-providers/neuralwatt");
   assert.equal(typeof neuralwatt.createNeuralWattProvider, "function");
   const hyper = await import("@arnilo/prism-providers/hyper");
