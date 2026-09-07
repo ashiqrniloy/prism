@@ -1,3 +1,8 @@
+## [0.5.3] - 2026-09-08
+
+### Fixed
+- **Content-only tool results no longer serialize as JSON `"null"` on the provider wire.** First-party coding tools return output in `ToolResult.content` (`[{type:'text',text}]`), not `value`. Construction now folds that text onto `tool_result.result`; serializers join sibling `type:text` blocks when `result` is missing. Lockstep `0.5.2` → `0.5.3` with internal ranges `^0.5.2` → `^0.5.3`.
+
 ## [0.5.2] - 2026-09-08
 
 ### Fixed

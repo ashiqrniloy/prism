@@ -1,5 +1,9 @@
 # Migration guide
 
+## 0.5.2 → 0.5.3 (additive)
+
+Content-only tool results fold onto `tool_result.result` at construction. Serializers join sibling `type:text` blocks when `result` is missing, so coding tools that return `content` (not `value`) no longer reach the model as JSON `"null"`. No import, store, or peer-range break; bump `@arnilo/prism*` to `^0.5.3`.
+
 ## 0.5.1 → 0.5.2 (additive)
 
 Stream tokens coalesce on persist (adjacent `text`/`thinking` deltas merge). Replay serializers join those parts with an empty string instead of a newline. No import, store, or peer-range break; bump `@arnilo/prism*` to `^0.5.2`.

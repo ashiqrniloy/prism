@@ -1,7 +1,7 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-09-07T19:56:32.319Z`  
-Repository root version: `0.5.2`  
+Generated: `2026-09-07T21:34:35.914Z`  
+Repository root version: `0.5.3`  
 
 ## 1. Executive Summary & Counts
 
@@ -555,7 +555,7 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 
 | Package Name | Declared Public Exports | Snapshot Baseline File |
 |---|---|---|
-| `@arnilo/prism` | 904 | `scripts/compat-baseline/arnilo__prism.txt` |
+| `@arnilo/prism` | 906 | `scripts/compat-baseline/arnilo__prism.txt` |
 | `@arnilo/prism-mcp` | 123 | `scripts/compat-baseline/arnilo__prism-mcp.txt` |
 | `@arnilo/prism-providers` | 470 | `scripts/compat-baseline/arnilo__prism-providers.txt` |
 | `@arnilo/prism-memory` | 551 | `scripts/compat-baseline/arnilo__prism-memory.txt` |

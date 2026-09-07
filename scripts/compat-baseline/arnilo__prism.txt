@@ -862,6 +862,7 @@ serializeOpenAIResponsesInputAudio	export declare function serializeOpenAIRespon
 serializeOpenAIResponsesInputFile	export declare function serializeOpenAIResponsesInputFile(options:
 serializeOpenAIResponsesStructuredOutput	export declare function serializeOpenAIResponsesStructuredOutput(options: StructuredOutputOptions): JsonObject
 serializeOpenAITool	export declare function serializeOpenAITool(tool: ToolDefinition): JsonObject
+serializeToolResultJson	export declare function serializeToolResultJson(message: Message): string
 serializePdfDocumentWireBlock	export declare function serializePdfDocumentWireBlock(options:
 singleShotLoop	export declare const singleShotLoop: AgentLoopStrategy
 skillHasRenderableBody	export declare function skillHasRenderableBody(skill: Skill, context?: SkillRenderContext): boolean
@@ -898,7 +899,7 @@ validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(valu
 validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.5.2"
+version	export declare const version = "0.5.3"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]

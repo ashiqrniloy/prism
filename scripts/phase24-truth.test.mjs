@@ -168,7 +168,7 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
   const secondPeers = {};
   for (const p of codeWithPeer) {
     const spec = p.peerDependencies["@arnilo/prism"];
-    assert.equal(spec, "^0.5.2", `${p.name} must peer @arnilo/prism@^0.5.2, got ${spec}`);
+    assert.equal(spec, "^0.5.3", `${p.name} must peer @arnilo/prism@^0.5.3, got ${spec}`);
     assert.match(spec, /^\^\d+\.\d+\.\d+$/, `${p.name} peer spec must be a 0.x caret range, got ${spec}`);
     const extra = Object.keys(p.peerDependencies).filter((n) => n.startsWith("@arnilo/prism-"));
     if (extra.length > 0) secondPeers[p.name] = extra;
