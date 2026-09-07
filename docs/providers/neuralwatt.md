@@ -360,6 +360,18 @@ const decision = classifyNeuralWattError({ status: 429, headers: { "retry-after"
 // { retryable: true, code: 429, retryAfterMs: 1000, errorCode: "concurrent_budget_exceeded", strategy: undefined }
 ```
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | none |
+| Mandatory | no |
+| P2 default cache | implicit, no markers |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - SSE streams, HTTP error bodies, and quota/model-discovery failures use bounded `@arnilo/prism/providers/transport` helpers (`readSseEvents`, `readBoundedResponseText`). NeuralWatt `: energy` / `: cost` comment frames are surfaced via `readSseEvents` `comments` and mapped locally.

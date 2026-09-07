@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { applyDefaultProviderRequestOptions } from "@arnilo/prism";
 import {
   assertCanonicalToolParameters,
   assertProviderOwnedHeadersWin,
@@ -129,6 +130,29 @@ describe("@arnilo/prism-providers/openai responses", () => {
     assert.equal(body.temperature, 0.2);
     assert.equal(headers!.get("x-client-request-id"), "session-1");
     assert.equal(headers!.get("authorization"), "Bearer fake-openai-key");
+  });
+
+  it("openai_responses_sessionId_only_maps_to_prompt_cache_key_and_request_id", async () => {
+    let body: any;
+    let headers: Headers;
+    const provider = createOpenAIResponsesProvider({
+      apiKey: "fake-openai-key",
+      fetch: async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        headers = new Headers(init?.headers);
+        return ok(sse([]));
+      },
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        model: request.model,
+        messages: request.messages,
+        options: { sessionId: "session-1" },
+      },
+    });
+    assert.equal(body.prompt_cache_key, "session-1");
+    assert.equal(headers!.get("x-client-request-id"), "session-1");
   });
 
   it("canonicalizes_function_parameters", async () => {
@@ -269,6 +293,54 @@ describe("@arnilo/prism-providers/openai responses", () => {
     assert.deepEqual(body.input.find((item: any) => item.role === "assistant").content[0].prompt_cache_breakpoint, { mode: "explicit" });
     assert.equal(body.input.at(-1).content[0].prompt_cache_breakpoint, undefined);
     assert.equal((messages[0]!.content[0] as any).prompt_cache_breakpoint, undefined);
+  });
+
+  it("openai_responses_kernel_defaults_mark_explicit_breakpoints_on_gpt56", async () => {
+    let body: any;
+    const provider = createOpenAIResponsesProvider({
+      apiKey: "fake-openai-key",
+      fetch: async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      },
+    });
+    const messages: Message[] = [
+      { role: "system", content: [{ type: "text", text: "stable" }] },
+      { role: "user", content: [{ type: "text", text: "preamble" }] },
+      { role: "user", content: [{ type: "text", text: "current turn" }] },
+    ];
+    await assertProviderStreamConforms({
+      provider,
+      request: applyDefaultProviderRequestOptions({ ...request, model: gpt56Model, messages }),
+    });
+    assert.deepEqual(body.prompt_cache_options, { mode: "explicit" });
+    assert.deepEqual(body.input[0].content[0].prompt_cache_breakpoint, { mode: "explicit" });
+    assert.deepEqual(body.input[1].content[0].prompt_cache_breakpoint, { mode: "explicit" });
+    assert.equal(body.input.at(-1).content[0].prompt_cache_breakpoint, undefined);
+  });
+
+  it("openai_responses_kernel_defaults_skip_explicit_markers_on_older_family", async () => {
+    let body: any;
+    const provider = createOpenAIResponsesProvider({
+      apiKey: "fake-openai-key",
+      fetch: async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      },
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: applyDefaultProviderRequestOptions({
+        ...request,
+        model: { ...request.model, cache: { kind: "openai_key" as const, longRetention: true } },
+        messages: [
+          { role: "system", content: [{ type: "text", text: "stable" }] },
+          { role: "user", content: [{ type: "text", text: "hi" }] },
+        ],
+      }),
+    });
+    assert.equal(body.prompt_cache_options, undefined);
+    assert.ok(!JSON.stringify(body.input).includes("prompt_cache_breakpoint"));
   });
 
   it("openai_responses_explicit_breakpoints_cap_at_four_cache_writes", async () => {

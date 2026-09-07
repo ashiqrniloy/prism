@@ -41,7 +41,11 @@ import { DEFAULT_MAX_PENDING_STEER_BYTES, DEFAULT_MAX_PENDING_STEERS } from "../
 import { GuardrailError, runGuardrails } from "../guardrails.js";
 import type { AgentIdentity } from "../identity.js";
 import type { AgentInput } from "../input.js";
-import { createProviderRequestPolicyChain, normalizeProviderRequestPolicyResult } from "../provider-request-policy.js";
+import {
+  applyDefaultProviderRequestOptions,
+  createProviderRequestPolicyChain,
+  normalizeProviderRequestPolicyResult,
+} from "../provider-request-policy.js";
 import type { SecretRedactor } from "../redaction.js";
 import { redactAgentEvent, redactProviderRequest, redactRunLedgerRecord, redactSecrets, redactSessionEntry } from "../redaction.js";
 import type { RunLimitTracker } from "../run-limits.js";
@@ -465,9 +469,19 @@ export class RuntimeAgentSession implements AgentSession {
     metadata: Readonly<Record<string, unknown>>,
     signal: AbortSignal,
   ) {
+    const stamped = applyDefaultProviderRequestOptions(request, {
+      sessionId: this.id,
+      thinkingLevel: options.thinkingLevel ?? this.agent.config.thinkingLevel,
+    });
     const policies = [...policyList(this.agent.config.providerRequestPolicies), ...policyList(options.providerRequestPolicies)];
-    if (policies.length === 0) return { request, secrets: [] as readonly (string | undefined)[] };
-    const result = await createProviderRequestPolicyChain(policies).apply({ request, sessionId: this.id, runId, metadata, signal });
+    if (policies.length === 0) return { request: stamped, secrets: [] as readonly (string | undefined)[] };
+    const result = await createProviderRequestPolicyChain(policies).apply({
+      request: stamped,
+      sessionId: this.id,
+      runId,
+      metadata,
+      signal,
+    });
     return normalizeProviderRequestPolicyResult(result);
   }
 

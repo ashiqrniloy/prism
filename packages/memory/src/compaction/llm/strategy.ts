@@ -1,5 +1,6 @@
 import {
   type AIProvider,
+  applyDefaultProviderRequestOptions,
   applyThinkingLevelForModel,
   type CompactionContext,
   type CompactionResult,
@@ -178,6 +179,7 @@ async function runSummaryProvider(
       : options.providerOptions,
     signal: providerSignal,
   };
+  request = applyDefaultProviderRequestOptions(request, { sessionId: context.sessionId });
 
   const policy = normalizePolicies(options.providerRequestPolicies);
   if (policy) {

@@ -6,15 +6,17 @@ Provider request policies are small host/package hooks that can adjust `Provider
 
 Public helpers:
 
+- `applyDefaultProviderRequestOptions(request, { sessionId, thinkingLevel })` is the kernel constructor. Fill-if-missing `sessionId` / `cacheKey`; default cache breakpoints + `cacheRetention: "short"` when `model.cache.kind` is `cache_control` or `explicitBreakpoints` is true; optional `thinkingLevel` patches via `applyThinkingLevelForModel` after those fills. Host values win. Agent sessions, observational-memory workers, and LLM compaction already call it.
+- `ProviderRequirementError` (`ERR_PRISM_PROVIDER_REQUIREMENT`) is the fail-fast typed error adapters throw when a mandatory option is still missing (OpenCode Go `sessionId` → `x-opencode-session`). Thrown before fetch; messages contain no request bodies or secrets.
 - `createProviderRequestPolicyChain(policies)` runs policies in order.
-- `createSessionCachePolicy(options)` sets legacy `cacheKey` / `cacheRetention` aliases from `sessionId`.
+- `createSessionCachePolicy(options)` is a host overlay that sets legacy `cacheKey` / `cacheRetention` aliases from `sessionId`. Not required for request success.
 - `mergeProviderRequestOptions(base, patch)` merges request options, including structured `cache` hints.
 
 ## When to use it
 
-Use provider request policies when an app or provider package needs to set generic per-request options such as cache hints, caller-owned headers, `compat`, or `extra` without changing every provider call site.
+Use `createAgent({ thinkingLevel })` / `session.run(input, { thinkingLevel })` for session intent. Use `applyDefaultProviderRequestOptions` on custom `provider.generate` sites. Use provider request policies only as overlays (custom `cacheKey`, extra headers, `compat`/`extra`) — never to make a request valid.
 
-Do not use request policies to resolve credentials, read env vars, perform OAuth refresh, fetch model lists, or override provider-owned auth/session/security headers.
+Do not use request policies to resolve credentials, read env vars, perform OAuth refresh, fetch model lists, or override provider-owned auth/session/security headers. Session and cache keys are correlation ids, never secrets.
 
 ## Inputs / request
 
@@ -24,9 +26,11 @@ import type { ProviderRequestPolicy, ProviderRequestPolicyContext, ProviderReque
 
 | API | Input | Purpose |
 | --- | --- | --- |
+| `applyDefaultProviderRequestOptions(request, ctx)` | `{ sessionId?, thinkingLevel? }` | Fill-if-missing `sessionId` / `cacheKey`; cache defaults from `model.cache`; thinking patch. |
+| `ProviderRequirementError` | `message`, `{ requirement, providerId? }` | Typed missing-requirement error. |
 | `ProviderRequestPolicy.apply(context)` | `{ sessionId?, request, options? }` | Returns a patched request or options. |
 | `createProviderRequestPolicyChain(policies)` | ordered policies | Applies patches in order. |
-| `createSessionCachePolicy({ retention?, cacheKey? })` | optional cache defaults | Sets legacy aliases. |
+| `createSessionCachePolicy({ retention?, cacheKey? })` | optional cache overlay | Sets legacy aliases after kernel defaults. |
 | `mergeProviderRequestOptions(base, patch)` | two option bags | Shallow merges scalars and structurally merges `cache`. |
 
 `mergeProviderRequestOptions()` behavior:
@@ -62,11 +66,20 @@ No agent events are emitted by the policy chain itself.
 
 ```ts
 import {
+  applyDefaultProviderRequestOptions,
   createProviderRequestPolicyChain,
   createSessionCachePolicy,
   mergeProviderRequestOptions,
+  ProviderRequirementError,
   type ProviderRequestPolicy,
 } from "@arnilo/prism";
+
+const stamped = applyDefaultProviderRequestOptions(request, {
+  sessionId: session.id,
+  thinkingLevel: "low",
+});
+// stamped.options.sessionId === request.options?.sessionId ?? session.id
+// cache_control models also get default cache.breakpoints unless the host set mode/off / retention/none / explicit breakpoints
 
 const structuredCache: ProviderRequestPolicy = {
   name: "demo.structured-cache",
@@ -93,7 +106,7 @@ const chain = createProviderRequestPolicyChain([
 
 ## Extension and configuration notes
 
-Provider packages can register request policies during `defineProviderPackage().setup(api)`. Hosts decide which packages/policies load and in which order. Prism has no hidden provider request policy registry and no automatic provider-specific cache behavior in core.
+Provider packages can register request policies during `defineProviderPackage().setup(api)`. Hosts decide which overlay policies load and in which order. Prism has no hidden provider request policy registry. Kernel construction (`applyDefaultProviderRequestOptions`) already fills session/cache/thinking from `model.cache` and run intent — package-registered policies are never auto-activated and never required for success.
 
 Policy output should stay generic: use `ProviderRequestOptions.cache`, `headers`, `compat`, and `extra` instead of provider-name branches in core.
 

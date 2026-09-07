@@ -29,6 +29,7 @@ const requestFor = (id: string, options?: ProviderRequest["options"]): ProviderR
 describe("@arnilo/prism-providers/clinepass", () => {
   it("clinepass_implicit_requests_carry_no_foreign_cache_fields", () => {
     assertNoForeignCacheFields(clinePassBody(requestFor("cline-pass/glm-5.2", { cacheKey: "session-1", cacheRetention: "long" })));
+    assertNoForeignCacheFields(clinePassBody(requestFor("cline-pass/glm-5.2", { sessionId: "s1" })));
   });
 
   it("clinepass_registers_each_featured_slug_once_and_api_key_only", async () => {

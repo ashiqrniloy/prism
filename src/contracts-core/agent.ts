@@ -77,6 +77,8 @@ export interface AgentConfig {
   /** Optional trust check for tool and resource targets. */
   readonly trust?: TrustPolicy;
   readonly providerOptions?: ProviderRequestOptions;
+  /** Portable thinking intent. Snapped per model; run value overrides. */
+  readonly thinkingLevel?: string;
   readonly providerRequestPolicies?: ProviderRequestPolicy | readonly ProviderRequestPolicy[];
   readonly systemPrompt?: SystemPromptConfig;
   readonly redactor?: SecretRedactor;

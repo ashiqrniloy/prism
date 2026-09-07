@@ -25,26 +25,26 @@ Do not use provider packages as a package manager, credential store, env loader,
 
 | adapter package | version |
 | --- | --- |
-| `@arnilo/prism-providers/ai-sdk` | 0.5.0 |
-| `@arnilo/prism-providers/alibaba` | 0.5.0 |
-| `@arnilo/prism-providers/anthropic` | 0.5.0 |
-| `@arnilo/prism-providers/azure` | 0.5.0 |
-| `@arnilo/prism-providers/bedrock` | 0.5.0 |
-| `@arnilo/prism-providers/clinepass` | 0.5.0 |
-| `@arnilo/prism-providers/commandcode` | 0.5.0 |
-| `@arnilo/prism-providers/deepseek` | 0.5.0 |
-| `@arnilo/prism-providers/google` | 0.5.0 |
-| `@arnilo/prism-providers/hyper` | 0.5.0 |
-| `@arnilo/prism-providers/kimi` | 0.5.0 |
-| `@arnilo/prism-providers/model-discovery` | 0.5.0 |
-| `@arnilo/prism-providers/neuralwatt` | 0.5.0 |
-| `@arnilo/prism-providers/ollama` | 0.5.0 |
-| `@arnilo/prism-providers/openai` | 0.5.0 |
-| `@arnilo/prism-providers/opencode-go` | 0.5.0 |
-| `@arnilo/prism-providers/openrouter` | 0.5.0 |
-| `@arnilo/prism-providers/vertex` | 0.5.0 |
-| `@arnilo/prism-providers/xai` | 0.5.0 |
-| `@arnilo/prism-providers/zai` | 0.5.0 |
+| `@arnilo/prism-providers/ai-sdk` | 0.5.1 |
+| `@arnilo/prism-providers/alibaba` | 0.5.1 |
+| `@arnilo/prism-providers/anthropic` | 0.5.1 |
+| `@arnilo/prism-providers/azure` | 0.5.1 |
+| `@arnilo/prism-providers/bedrock` | 0.5.1 |
+| `@arnilo/prism-providers/clinepass` | 0.5.1 |
+| `@arnilo/prism-providers/commandcode` | 0.5.1 |
+| `@arnilo/prism-providers/deepseek` | 0.5.1 |
+| `@arnilo/prism-providers/google` | 0.5.1 |
+| `@arnilo/prism-providers/hyper` | 0.5.1 |
+| `@arnilo/prism-providers/kimi` | 0.5.1 |
+| `@arnilo/prism-providers/model-discovery` | 0.5.1 |
+| `@arnilo/prism-providers/neuralwatt` | 0.5.1 |
+| `@arnilo/prism-providers/ollama` | 0.5.1 |
+| `@arnilo/prism-providers/openai` | 0.5.1 |
+| `@arnilo/prism-providers/opencode-go` | 0.5.1 |
+| `@arnilo/prism-providers/openrouter` | 0.5.1 |
+| `@arnilo/prism-providers/vertex` | 0.5.1 |
+| `@arnilo/prism-providers/xai` | 0.5.1 |
+| `@arnilo/prism-providers/zai` | 0.5.1 |
 <!-- generated:package-truth:providers end -->
 
 
@@ -90,18 +90,15 @@ export default defineProviderPackage({
 
 `compat` is provider-owned inert JSON. Core does not branch on provider names or interpret vendor-specific fields.
 
-Provider packages can also contribute auth descriptors and request policies without resolving credentials:
+Provider packages can also contribute auth descriptors and prompt layers without resolving credentials:
 
 ```ts
-import { createSessionCachePolicy } from "@arnilo/prism";
-
 api.registerAuthMethod({ provider: "demo", kind: "api_key", credentialName: "apiKey" });
 api.registerAuthMethod({ provider: "demo", kind: "oauth", oauth: demoOAuthProvider });
-api.registerProviderRequestPolicy(createSessionCachePolicy({ retention: "short" }));
 api.registerSystemPromptContribution({ id: "demo-prompt", source: "package", mode: "append", text: "Use demo provider rules." });
 ```
 
-Hosts decide which credential resolvers, env objects, OAuth stores, request policies, and prompt contributions become active. Request policies can set generic `ProviderRequest.options` such as `sessionId`, `cacheRetention`, `headers`, `compat`, and opaque `extra`; provider adapters decide how to map those options to provider payloads. Caller headers are extension headers only: provider adapters must apply provider-owned headers (auth, content type, session/cache/security, attribution) after caller headers so requests cannot override credentials or provider policy.
+Host picks provider + model + intent (messages, tools, optional `thinkingLevel` / cache retention). Prism constructs a valid wire request for every generate site it owns. Host request policies are overlays — they are never required for success. Hosts still own credentials, env objects, OAuth stores, extra headers, custom `cacheKey`, `compat`/`extra` overlays, and which prompt contributions become active. Request policies can overlay generic `ProviderRequest.options` such as `sessionId`, `cacheRetention`, `headers`, `compat`, and opaque `extra`; provider adapters map those options to provider payloads. Caller headers are extension headers only: provider adapters must apply provider-owned headers (auth, content type, session/cache/security, attribution) after caller headers so requests cannot override credentials or provider policy.
 
 Provider request options: `ProviderRequestOptions` carries session/cache/header/compat/extra hints only. Timeouts are host-owned (`RunOptions.signal`/host abort controllers); retries are runtime-owned (`AgentConfig.retry`/`RunOptions.retry`). Provider-level timeout/retry hints were removed in 0.1.5. Provider packages should not add provider-specific retry loops unless the vendor protocol requires it and runtime retry cannot cover the failure mode.
 
@@ -294,10 +291,10 @@ Provider package manifest contribution and the generic request options a provide
 
 ## Implementation example
 
-Wire a provider package with model metadata plus a session cache policy through the extension kernel:
+Wire a provider package with model metadata through the extension kernel. Session correlation and cache defaults are kernel-constructed — do not register `createSessionCachePolicy` for request success:
 
 ```ts
-import { createExtensionKernel, defineProviderPackage, createSessionCachePolicy } from "@arnilo/prism";
+import { createExtensionKernel, defineProviderPackage } from "@arnilo/prism";
 
 const pkg = defineProviderPackage({
   name: "demo-provider",
@@ -312,7 +309,6 @@ const pkg = defineProviderPackage({
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, currency: "USD" },
       compat: { vendorSpecific: true },
     });
-    api.registerProviderRequestPolicy(createSessionCachePolicy({ retention: "short" }));
   },
 });
 
@@ -322,13 +318,13 @@ await kernel.load([pkg]);
 
 ## Extension and configuration notes
 
-- Hosts decide which credential resolvers, env objects, OAuth stores, request
-  policies, and prompt contributions become active; the package only *declares*
-  them.
-- `createSessionCachePolicy()` acts as a concrete cache policy hook
-  (`provider_request`) that sets generic `ProviderRequest.options`
+- Hosts own credentials, env objects, OAuth stores, extra headers, custom `cacheKey`,
+  `compat`/`extra`, and which prompt contributions become active; the package only *declares*
+  them. Prism constructs session/cache/thinking options for owned generate sites.
+- `createSessionCachePolicy()` is an optional host overlay (`provider_request` cache policy hook)
+  that sets generic `ProviderRequest.options`
   (`sessionId`, `cacheKey`, `cacheRetention`, `headers`, opaque `extra`) before
-  `AIProvider.generate()`; provider adapters map those options to provider payloads.
+  `AIProvider.generate()`; provider adapters map those options to provider payloads. Not required for request success.
 - `ModelConfig.cache` is the generic cache capability metadata documented in [Model registry](model-registry.md); `ModelConfig.compat` remains provider-owned inert JSON for behavior that has no generic field yet.
 - `ModelConfig.compat` is provider-owned inert JSON: cache policy overrides,
   reasoning/thinking formats, and provider-specific usage mapping live there

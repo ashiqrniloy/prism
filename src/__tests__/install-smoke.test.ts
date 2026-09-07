@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 
 // Root manifest version drives the core tarball name (arnilo-prism-<v>.tgz).
 const ROOT_VERSION = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
-// Plan 055 Task 6 (Decision B changed-package cut): all manifests carry the 0.5.0 lockstep cut.
+// Plan 066 lockstep bump: all manifests carry the 0.5.1 cut.
 const PROVIDERS_VERSION = JSON.parse(readFileSync(new URL("../../packages/prism-providers/package.json", import.meta.url), "utf8")).version;
 
 import { dirname, join } from "node:path";
@@ -823,7 +823,7 @@ describe("install smoke (fresh offline tarball install)", () => {
       `expected 'arnilo-prism-${ROOT_VERSION}.tgz' in ${JSON.stringify(result.tarballNames)}`,
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
-    // The umbrella tarballs must be present too (providers carries the 0.5.0 lockstep cut).
+    // The umbrella tarballs must be present too (providers carries the 0.5.1 lockstep cut).
     for (const meta of [`arnilo-prism-providers-${PROVIDERS_VERSION}.tgz`, `arnilo-prism-office-${ROOT_VERSION}.tgz`]) {
       assert.ok(result.tarballNames.includes(meta), `missing family tarball ${meta}`);
     }

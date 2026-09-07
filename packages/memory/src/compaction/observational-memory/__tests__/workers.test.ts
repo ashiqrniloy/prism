@@ -258,4 +258,43 @@ describe("observational memory workers", () => {
     assert.equal(replay?.[1]?.content[0]?.type, "tool_result");
     assert.equal((replay?.[1]?.content[0] as any)!.toolCallId, "c1");
   });
+
+  it("stamps sessionId and cacheKey on worker generate", async () => {
+    let request!: ProviderRequest;
+    await runObserver({
+      entries: [source],
+      provider: {
+        id: "mock",
+        async *generate(input) {
+          request = input;
+          yield providerDone();
+        },
+      },
+      model,
+      maxTurns: 1,
+      sessionId: "om:s1",
+    });
+    assert.equal(request.options?.sessionId, "om:s1");
+    assert.equal(request.options?.cacheKey, "om:s1");
+  });
+
+  it("host providerOptions.sessionId wins over worker sessionId", async () => {
+    let request!: ProviderRequest;
+    await runObserver({
+      entries: [source],
+      provider: {
+        id: "mock",
+        async *generate(input) {
+          request = input;
+          yield providerDone();
+        },
+      },
+      model,
+      maxTurns: 1,
+      sessionId: "om:s1",
+      providerOptions: { sessionId: "custom" },
+    });
+    assert.equal(request.options?.sessionId, "custom");
+    assert.equal(request.options?.cacheKey, "custom");
+  });
 });

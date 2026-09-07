@@ -15,6 +15,7 @@ import {
   createMockProvider,
   createProviderResolver,
   createSecretRedactor,
+  applyThinkingLevelForModel,
   createSessionCachePolicy,
   createSkillRegistry,
   getSessionBranchEntries,
@@ -2134,6 +2135,171 @@ describe("agent session runtime", () => {
     assert.equal(request.options?.cacheRetention, "long");
     assert.equal(JSON.stringify(request.messages).includes("Hi"), true);
     assert.equal(request.options?.cacheKey?.includes("Hi"), false);
+  });
+
+  it("no provider request policies still stamps sessionId and cacheKey", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    const session = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+    }).createSession({ id: "s1" });
+
+    await session.run("Hi");
+
+    assert.equal(request.options?.sessionId, session.id);
+    assert.equal(request.options?.cacheKey, session.id);
+  });
+
+  it("cache_control model gets default breakpoints and short retention without policies", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    await createAgent({
+      model: { provider: "mock", model: "demo", cache: { kind: "cache_control" } },
+      provider,
+    })
+      .createSession({ id: "s1" })
+      .run("Hi");
+
+    assert.equal(request.options?.sessionId, "s1");
+    assert.equal(request.options?.cacheRetention, "short");
+    assert.deepEqual(request.options?.cache?.breakpoints, [{ location: "system_prompt" }, { location: "last_stable_message" }]);
+  });
+
+  it("host providerOptions.sessionId wins over kernel session id", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      providerOptions: { sessionId: "custom" },
+    })
+      .createSession({ id: "s1" })
+      .run("Hi");
+
+    assert.equal(request.options?.sessionId, "custom");
+    assert.equal(request.options?.cacheKey, "custom");
+  });
+
+  it("agent thinkingLevel stamps the same compat as applyThinkingLevelForModel", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    const model = { provider: "openai", model: "gpt" };
+    await createAgent({ model, provider, thinkingLevel: "low" }).createSession().run("Hi");
+    assert.deepEqual(request.options?.compat, applyThinkingLevelForModel(undefined, "low", model).compat);
+  });
+
+  it("run thinkingLevel overrides agent thinkingLevel", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    const model = { provider: "openai", model: "gpt" };
+    await createAgent({ model, provider, thinkingLevel: "low" }).createSession().run("Hi", { thinkingLevel: "high" });
+    assert.deepEqual(request.options?.compat, applyThinkingLevelForModel(undefined, "high", model).compat);
+  });
+
+  it("omitted thinkingLevel invents no thinking compat on a noop model", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    await createAgent({ model: { provider: "mock", model: "demo" }, provider })
+      .createSession()
+      .run("Hi");
+    assert.equal(request.options?.compat, undefined);
+  });
+
+  it("thinkingLevel snaps to the catalog model declared set", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    const model = {
+      provider: "openai",
+      model: "gpt",
+      capabilities: { reasoning: true, thinkingLevels: ["low", "medium", "high"] as const },
+    };
+    await createAgent({ model, provider, thinkingLevel: "max" }).createSession().run("Hi");
+    assert.equal((request.options?.compat?.reasoning as { effort?: string } | undefined)?.effort, "high");
+  });
+
+  it("thinkingLevel wins over stale agent providerOptions compat", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    await createAgent({
+      model: { provider: "openai", model: "gpt" },
+      provider,
+      thinkingLevel: "low",
+      providerOptions: { compat: { reasoning: { effort: "high", summary: "auto" } } },
+    })
+      .createSession()
+      .run("Hi");
+    assert.deepEqual(request.options?.compat?.reasoning, { effort: "low", summary: "auto" });
+  });
+
+  it("createSessionCachePolicy overlay still sets cacheKey and retention", async () => {
+    let request!: ProviderRequest;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      providerRequestPolicies: createSessionCachePolicy({ cacheKey: "custom", retention: "long" }),
+    })
+      .createSession({ id: "s1" })
+      .run("Hi");
+
+    assert.equal(request.options?.sessionId, "s1");
+    assert.equal(request.options?.cacheKey, "custom");
+    assert.equal(request.options?.cacheRetention, "long");
   });
 
   it("provider request middleware runs once after policy", async () => {

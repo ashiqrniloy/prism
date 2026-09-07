@@ -98,6 +98,18 @@ await session.prompt("Plan the refactor", {
 - Multi-backend gateway: key compat off `api.cline.bot`, not the upstream vendor.
 - Reference USD-per-million costs are catalog metadata; ClinePass itself is a subscription.
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | none; strips `cache_control` |
+| Mandatory | no |
+| P2 default cache | implicit, no markers |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - No network on import, setup, build, or default tests.

@@ -16,6 +16,7 @@ export interface RunReflectorOptions extends MemoryWorkerLimitOptions {
   readonly instruction?: string;
   readonly providerOptions?: ProviderRequestOptions;
   readonly thinkingLevel?: string;
+  readonly sessionId?: string;
   readonly secrets?: readonly (string | undefined)[];
   readonly signal?: AbortSignal;
 }

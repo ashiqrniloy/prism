@@ -233,6 +233,18 @@ Owned compat keys (`route`, `thinking`, `reasoning`, `reasoning_effort`,
   `Usage.cacheReadTokens`/`cacheWriteTokens`; the Anthropic route maps
   `cache_read_input_tokens`/`cache_creation_input_tokens`.
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | `x-opencode-session` from `cacheKey??sessionId` |
+| Mandatory | **yes** — missing id throws `ProviderRequirementError` (`ERR_PRISM_PROVIDER_REQUIREMENT`) before fetch; message has no request body |
+| P2 default cache | Anthropic route: `cache_control` markers; OpenAI route: none |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport` helpers (`readSseData`, `readBoundedResponseText`).

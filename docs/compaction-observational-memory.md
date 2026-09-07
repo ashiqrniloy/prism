@@ -156,6 +156,8 @@ Observer/reflector/dropper may use separate providers, models, instructions, thi
 
 Token counting uses `estimateEntryTokens()` / `estimateMessageTokens()`.
 
+Worker `provider.generate` calls use a **derived** correlation id `om:{session.id}` (shared by observer/reflector/dropper of that attach; adapters sanitize via `sanitizeCacheKey`). This is fully separate from the agent session id so OM cache does not collide with chat. Host `providerOptions.sessionId` still wins. Workers may use a different model than the session.
+
 The runtime requires host-supplied `session`, an `appendEntry` callback bound to that session's owning store/branch, and at least one worker provider (`observation.provider` / `reflection.provider` / `dropper.provider`). Model selection uses [use-case model selection](use-case-model-selection.md): pass per-worker `model` (or settings `observation.model` / `reflection.model` / `dropper.model`) to override, and `sessionModel: agent.config.model` so workers fall back to the session model when no worker model is configured. `requireExplicitModel: true` restores the historical `missing_model` skip when no explicit worker model is set. It no longer accepts a separate `store` option because mismatched session/store pairs can append memory entries outside the active branch. After each memory append, the runtime checks the appended entry is visible at the session leaf and fails closed/restores the previous checkout if the callback points elsewhere. Optional credential resolution is explicit; missing requested credentials skip worker execution. Default credential requests use the **resolved** model's provider id.
 
 `createObservationalMemoryCompactionStrategy()` keeps recent message entries like the default compaction strategy, renders existing observations/reflections as the summary, and returns a standard Prism compaction entry. Its `data` includes `throughEntryId`, `keepEntryIds`, `strategy`, `trigger`, and `memory: { type: "om.folded", version: 1, fullFold, observations, reflections, droppedObservationIds }`. When active observations exceed `context.observationsPoolMaxTokens`, it performs a full fold and synchronously trims lowest-relevance observations until the folded payload fits hard byte/token caps (or throws a typed error).
@@ -230,6 +232,7 @@ Ownership: funnel only within the `OwnershipScope` already on the parent agent/s
 
 - [Use-case model selection](use-case-model-selection.md): session vs worker model binding and `resolveUseCaseModel`.
 - [Thinking and reasoning](thinking-and-reasoning.md): `thinkingLevel` → provider `compat`.
+- [Provider request policies](provider-request-policies.md): derived `om:{session.id}` on worker generate.
 - [Compaction and retry policies](compaction-and-retry.md): replaceable compaction strategy boundary.
 - [LLM compaction package](compaction-llm.md): existing optional compaction-package pattern.
 - [Session stores and branching](session-stores-and-branching.md): branch entries that observational memory reads and appends to.

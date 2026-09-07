@@ -592,7 +592,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.0", "root manifest must be at the plan 058 0.5 lockstep cut version");
+    assert.equal(pkg.version, "0.5.1", "root manifest must be at the plan 066 0.5.1 lockstep bump version");
     assert.ok(release.includes("### 0.2.7 publish handoff (plan 027 Task 10)"), "release page missing 0.2.7 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.7 handoff missing rollback notes");
     // Semantic tripwire: the nine 0.2.7 ERP roadmap items are present in the handoff
@@ -629,7 +629,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.0", "root manifest must be at the plan 058 0.5 lockstep cut version");
+    assert.equal(pkg.version, "0.5.1", "root manifest must be at the plan 066 0.5.1 lockstep bump version");
     assert.ok(release.includes("### 0.2.8 publish handoff (plan 028 Task 18)"), "release page missing 0.2.8 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.8 handoff missing rollback notes");
     assert.ok(release.includes("client-neutrality"), "0.2.8 handoff must cover client-neutrality");
@@ -659,7 +659,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.0", "root manifest must be at the plan 058 0.5 lockstep cut version");
+    assert.equal(pkg.version, "0.5.1", "root manifest must be at the plan 066 0.5.1 lockstep bump version");
     assert.ok(release.includes("### 0.2.9 publish handoff (plan 029 Task 10)"), "release page missing 0.2.9 handoff");
     assert.ok(release.includes("SuperGrok"), "0.2.9 handoff must cover SuperGrok");
     assert.ok(release.includes("@arnilo/prism-impeccable"), "0.2.9 handoff must name impeccable");
@@ -687,7 +687,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.0", "root manifest must be at the plan 058 0.5 lockstep cut version");
+    assert.equal(pkg.version, "0.5.1", "root manifest must be at the plan 066 0.5.1 lockstep bump version");
     assert.ok(release.includes("### 0.2.6 publish handoff (plan 026 Task 8)"), "release page missing 0.2.6 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.6 handoff missing rollback notes");
     // Semantic tripwire: the seven 0.2.6 roadmap items are present in the handoff
@@ -859,7 +859,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes(`@arnilo/prism@^${pkg.version}`), `release page peer range must be ^${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.equal(pkg.version, "0.5.0", "root manifest must be at the plan 058 0.5 lockstep cut version");
+    assert.equal(pkg.version, "0.5.1", "root manifest must be at the plan 066 0.5.1 lockstep bump version");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -1838,6 +1838,8 @@ describe("docs", () => {
     const policies = readFileSync("docs/provider-request-policies.md", "utf8");
     for (const phrase of [
       "createSessionCachePolicy",
+      "applyDefaultProviderRequestOptions",
+      "ProviderRequirementError",
       "mergeProviderRequestOptions",
       "cache.breakpoints",
       "provider-owned auth/session/security headers",
@@ -3835,6 +3837,65 @@ describe("docs", () => {
       compaction.includes("not inert `extra.thinkingLevel`"),
       "compaction-llm.md must document the move off inert extra.thinkingLevel",
     );
+  });
+
+  it("066_provider_request_construction_contract_is_documented", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const packages = readFileSync("docs/provider-packages.md", "utf8");
+    const policies = readFileSync("docs/provider-request-policies.md", "utf8");
+    const thinking = readFileSync("docs/thinking-and-reasoning.md", "utf8");
+    const caching = readFileSync("docs/provider-caching.md", "utf8");
+    const runtime = readFileSync("docs/agent-session-runtime.md", "utf8");
+    const om = readFileSync("docs/compaction-observational-memory.md", "utf8");
+    const compaction = readFileSync("docs/compaction-llm.md", "utf8");
+    const migrate = readFileSync("docs/migrate-to-0.5.md", "utf8");
+    const opencode = readFileSync("docs/providers/opencode-go.md", "utf8");
+    assert.ok(index.includes("Current line (0.5.1)"), "docs/index.md current line must be 0.5.1");
+    assert.ok(index.includes("applyDefaultProviderRequestOptions"), "docs/index.md missing construction helper blurb");
+    assert.ok(index.includes("om:{session.id}"), "docs/index.md missing OM derived id");
+    assert.ok(packages.includes("never required for success"), "provider-packages.md missing overlay contract");
+    assert.ok(
+      !packages.includes("api.registerProviderRequestPolicy(createSessionCachePolicy"),
+      "provider-packages.md skeleton must not require createSessionCachePolicy",
+    );
+    assert.ok(policies.includes("applyDefaultProviderRequestOptions"), "policies missing helper");
+    assert.ok(policies.includes("ERR_PRISM_PROVIDER_REQUIREMENT"), "policies missing requirement error code");
+    assert.ok(thinking.includes("AgentConfig.thinkingLevel"), "thinking-and-reasoning.md missing session thinkingLevel");
+    assert.ok(caching.includes("Kernel defaults (0.5.1)"), "provider-caching.md missing kernel defaults");
+    assert.ok(runtime.includes("thinkingLevel"), "agent-session-runtime.md missing thinkingLevel");
+    assert.ok(om.includes("om:{session.id}"), "compaction-observational-memory.md missing derived om id");
+    assert.ok(compaction.includes("agent"), "compaction-llm.md missing agent session id note");
+    assert.ok(migrate.includes("ProviderRequirementError"), "migrate-to-0.5.md missing 0.5.1 typed error");
+    assert.ok(opencode.includes("ProviderRequirementError"), "opencode-go.md missing fail-fast error");
+    assert.ok(opencode.includes("Mandatory"), "opencode-go.md missing mandatory session row");
+    for (const name of [
+      "openai",
+      "anthropic",
+      "google",
+      "openrouter",
+      "opencode-go",
+      "xai",
+      "alibaba",
+      "kimi",
+      "hyper",
+      "commandcode",
+      "deepseek",
+      "zai",
+      "neuralwatt",
+      "ollama",
+      "clinepass",
+      "azure",
+      "bedrock",
+      "vertex",
+      "ai-sdk",
+      "openai-compatible",
+    ]) {
+      const page = readFileSync(`docs/providers/${name}.md`, "utf8");
+      assert.ok(page.includes("## Request construction (0.5.1)"), `${name}.md missing request construction section`);
+      assert.ok(page.includes("P1 session wire"), `${name}.md missing P1 session wire`);
+      assert.ok(page.includes("Mandatory"), `${name}.md missing Mandatory row`);
+      assert.ok(page.includes("P2 default cache"), `${name}.md missing P2 default cache`);
+    }
   });
 
   it("use_case_model_selection_contract_is_documented", () => {

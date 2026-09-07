@@ -55,6 +55,18 @@ const provider = createVertexProvider({
 
 `@arnilo/prism-providers/google` remains API-key Gemini (`generativelanguage.googleapis.com`) and must not register Vertex OAuth/ADC. Load this package explicitly for Vertex.
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | none |
+| Mandatory | no |
+| P2 default cache | host-owned, no Prism cache fields |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - No Google Cloud SDK dependency in the package.

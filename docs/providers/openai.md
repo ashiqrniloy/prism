@@ -207,6 +207,18 @@ Official: [Reasoning models](https://developers.openai.com/api/docs/guides/reaso
   `response.output_item.added` + `response.function_call_arguments.delta`
   (string `delta`), not Chat Completions object deltas.
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | `prompt_cache_key` from `cacheKey??sessionId`; `x-client-request-id` from `sessionId` |
+| Mandatory | no |
+| P2 default cache | GPT-5.6+ `explicitBreakpoints` → `prompt_cache_breakpoint` + `cacheRetention: "short"`; older families none |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport` helpers (`readSseData`, `readBoundedResponseText`).

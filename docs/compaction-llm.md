@@ -32,6 +32,7 @@ Key exports:
 | `providerRequestPolicies` | Optional Prism provider request policies applied before the summary call. |
 | `customInstructions` | Additional summary focus appended to prompts. |
 | `thinkingLevel` | Mapped into `ProviderRequest.options.compat` via `applyThinkingLevel` / `thinkingFamilyForModel` (not inert `extra.thinkingLevel`). See [Thinking and reasoning](thinking-and-reasoning.md). |
+| session correlation | Summary `provider.generate` uses the **agent** `context.sessionId` (same cache key as the chat session). Kernel stamps `sessionId`/`cacheKey` even with no `providerRequestPolicies`. |
 | `reserveTokens` | Output budget basis; defaults to `16384`, hard cap `131072`. |
 | `keepRecentTokens` | Approximate recent-token budget; defaults to `20000`. |
 | `maxSummaryTokens` / `maxOutputTokens` | Summary retention/request ceiling; default `16384`, hard cap `131072`. `maxSummaryTokens` wins over the compatibility alias. The finite value is written to `model.parameters.maxTokens`; first-party providers map it to their wire field. |
@@ -132,6 +133,7 @@ The strategy makes only the needed provider call(s): one history summary plus on
 
 - [Use-case model selection](use-case-model-selection.md): `summaryModel` vs session `model` fallback.
 - [Thinking and reasoning](thinking-and-reasoning.md): `thinkingLevel` → `compat`.
+- [Provider request policies](provider-request-policies.md): kernel stamps agent `sessionId` on summary requests.
 - [Compaction and retry policies](compaction-and-retry.md): replaceable compaction strategy boundary and core compaction strategy surface.
 - [Observational memory compaction package](compaction-observational-memory.md): source-backed memory workers with the same use-case binding pattern.
 - [Agent/session runtime](agent-session-runtime.md): `AgentSession.compact()` and opt-in auto-compaction.

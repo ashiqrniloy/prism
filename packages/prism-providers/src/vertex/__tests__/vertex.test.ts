@@ -145,7 +145,7 @@ describe("@arnilo/prism-providers/vertex", () => {
     for await (const _ of provider.generate({
       model: { provider: "vertex", model: "m" },
       messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
-      options: { cacheKey: "session-1", cacheRetention: "long", cache: { breakpoints: [{ location: "system_prompt" }] } },
+      options: { sessionId: "s1", cacheKey: "session-1", cacheRetention: "long", cache: { breakpoints: [{ location: "system_prompt" }] } },
     })) {
       /* drain */
     }

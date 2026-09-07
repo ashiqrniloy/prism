@@ -258,3 +258,10 @@ node --test scripts/phase37-provider-matrix.test.mjs
 Plan 055 (2026-09): hyper + commandcode rows added (19 adapters); `shared/anthropic-messages.ts`
 is the 055 shared primitive (see `phase55-primitive-review.md`); hyper reuses the OpenAI
 Responses machinery for its pass-through route.
+
+## 0.5.1 kernel construction (plan 066)
+
+Not a new adapter primitive. Core `applyDefaultProviderRequestOptions` fills missing
+`sessionId`/`cacheKey` and, for `cache_control` / `explicitBreakpoints` models, default
+breakpoints `{ system_prompt, last_stable_message }` plus `cacheRetention: "short"`.
+Adapters still map the same P1 wire fields recorded above. See `docs/_evidence/phase66-primitive-review.md`.

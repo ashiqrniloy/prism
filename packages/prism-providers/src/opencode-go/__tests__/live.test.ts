@@ -16,7 +16,10 @@ const VERIFIED_JSON_SCHEMA_MODELS = ["mimo-v2.5", "mimo-v2.5-pro"];
 const structuredOutputRequest = (modelId: string): ProviderRequest => ({
   model: openCodeGoModels.find((m) => m.model === modelId)!,
   messages: [{ role: "user", content: [{ type: "text", text: "Reply with a JSON object matching the requested schema." }] }],
-  options: { structuredOutput: { name: "probe", schema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] } } },
+  options: {
+    sessionId: "prism-live-opencode-go",
+    structuredOutput: { name: "probe", schema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] } },
+  },
 });
 
 // Env-gated live smoke tests for @arnilo/prism-providers/opencode-go.
@@ -48,6 +51,7 @@ function provider() {
 const textRequest: ProviderRequest = {
   model,
   messages: [{ role: "user", content: [{ type: "text", text: "Reply with exactly the word: pong" }] }],
+  options: { sessionId: "prism-live-opencode-go" },
 };
 
 const getWeatherTool: ToolDefinition = {
@@ -61,6 +65,7 @@ const toolRequest: ProviderRequest = {
   model,
   messages: [{ role: "user", content: [{ type: "text", text: "What is the weather in Paris? Use the get_weather tool." }] }],
   tools: [getWeatherTool],
+  options: { sessionId: "prism-live-opencode-go" },
 };
 
 describe("@arnilo/prism-providers/opencode-go live tests", () => {

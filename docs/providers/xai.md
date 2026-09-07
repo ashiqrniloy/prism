@@ -115,6 +115,18 @@ await kernel.load([
 - Reasoning models replay `reasoning_content` and do not flatten thinking into text.
 - Generate always hits `https://api.x.ai/v1/chat/completions` (same backend for API key and SuperGrok access).
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | `x-grok-conv-id` from `cache.key??cacheKey??sessionId` |
+| Mandatory | no |
+| P2 default cache | implicit; header is the correlation |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - Public client id is documented as not a secret. Device/user/access/refresh codes are redacted.

@@ -34,6 +34,7 @@ const request: ProviderRequest = {
 describe("@arnilo/prism-providers/ollama", () => {
   it("ollama_implicit_requests_carry_no_foreign_cache_fields", () => {
     assertNoForeignCacheFields(ollamaBody({ ...request, options: { cacheKey: "session-1", cacheRetention: "long" } }));
+    assertNoForeignCacheFields(ollamaBody({ ...request, options: { sessionId: "s1" } }));
   });
 
   it("base_url_resolver_covers_cloud_local_and_explicit_override", () => {

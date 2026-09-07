@@ -77,6 +77,18 @@ api.registerProviderPackage(createAnthropicProviderPackage({ apiKey: hostKey, mo
 - Live smoke: `PRISM_LIVE_PROVIDER_TESTS=1` + `ANTHROPIC_API_KEY`.
 - Anthropic says OAuth is for purchasers' ordinary Claude Code/native-app use; developers building products must use Claude Console API keys or a supported cloud provider and may not offer Claude.ai login or route Free/Pro/Max credentials ([legal and compliance](https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance)). Prism therefore has no Anthropic subscription OAuth API or token-import shortcut.
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | `x-client-request-id` from `sessionId` |
+| Mandatory | no |
+| P2 default cache | `cache_control` on `system_prompt` + `last_stable_message`; `cacheRetention: "short"` |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - No network during import/setup/default tests; credentials host-owned and late-bound.

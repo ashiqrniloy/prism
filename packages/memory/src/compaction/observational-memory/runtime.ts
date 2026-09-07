@@ -139,6 +139,7 @@ async function flush(
   const workerLimits = { ...configuredWorkerLimits, maxTurns: options.maxWorkerTurns ?? settings.agentMaxTurns };
   if (settings.passive) return { observations: 0, reflections: 0, dropped: 0, skipped: "passive" };
 
+  const omSessionId = `om:${options.session.id}`;
   const entries = await options.session.entries();
   const ledger = foldObservationalMemoryLedger(entries);
   const pending = unscannedEntries(entries, ledger.latestObservationCoverageId);
@@ -168,6 +169,7 @@ async function flush(
         ...workerLimits,
         providerOptions: observer.providerOptions,
         thinkingLevel: observer.thinkingLevel,
+        sessionId: omSessionId,
         instruction: settings.observation.instruction,
         secrets,
         signal: options.signal,
@@ -203,6 +205,7 @@ async function flush(
       ...workerLimits,
       providerOptions: reflector.providerOptions,
       thinkingLevel: reflector.thinkingLevel,
+      sessionId: omSessionId,
       instruction: settings.reflection.instruction,
       secrets,
       signal: options.signal,
@@ -234,6 +237,7 @@ async function flush(
         ...workerLimits,
         providerOptions: dropper.providerOptions,
         thinkingLevel: dropper.thinkingLevel,
+        sessionId: omSessionId,
         instruction: settings.dropper.instruction,
         secrets,
         signal: options.signal,

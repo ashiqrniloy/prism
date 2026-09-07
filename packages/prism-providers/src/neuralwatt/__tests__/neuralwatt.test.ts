@@ -42,6 +42,7 @@ const request: ProviderRequest = {
 describe("@arnilo/prism-providers/neuralwatt (provider shell)", () => {
   it("neuralwatt_implicit_requests_carry_no_foreign_cache_fields", () => {
     assertNoForeignCacheFields(neuralWattBody({ ...request, options: { cacheKey: "session-1", cacheRetention: "long" } }));
+    assertNoForeignCacheFields(neuralWattBody({ ...request, options: { sessionId: "s1" } }));
   });
 
   it("neuralwatt_post_url_and_auth_header", async () => {

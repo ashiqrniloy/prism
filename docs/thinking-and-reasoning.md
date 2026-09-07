@@ -2,12 +2,13 @@
 
 ## What it does
 
-Prism gives hosts one portable way to set thinking/reasoning effort per model and per turn, and guarantees the level actually reaches the wire on every provider Prism ships. The single entry point is **`applyThinkingLevelForModel`**: it resolves the model's compat family, snaps the requested level to the model's **declared levels** (`capabilities.thinkingLevels`), and merges the family's compat patch into your base options. Every first-party provider catalog stamps the family and declares the per-model level set; provider resolvers translate the patch into official wire fields. Model defaults live on `ModelConfig.compat`; per-turn overrides live on `ProviderRequestOptions.compat` and win through the existing `mergeProviderRequestOptions` merge.
+Prism gives hosts one portable way to set thinking/reasoning effort per model and per turn, and guarantees the level actually reaches the wire on every provider Prism ships. **Session entry point:** `AgentConfig.thinkingLevel` / `RunOptions.thinkingLevel` (run overrides agent). The kernel passes that string through **`applyThinkingLevelForModel`**, which resolves the model's compat family, snaps the requested level to the model's **declared levels** (`capabilities.thinkingLevels`), and merges the family's compat patch into already-merged host `providerOptions`. Use `applyThinkingLevelForModel` directly only on custom `provider.generate` sites. Every first-party provider catalog stamps the family and declares the per-model level set; provider resolvers translate the patch into official wire fields. Model defaults live on `ModelConfig.compat`; per-turn overrides live on `ProviderRequestOptions.compat` and win through the existing `mergeProviderRequestOptions` merge. Omitted `thinkingLevel` invents no compat on non-reasoning / `noop` models.
 
 ## When to use it
 
-- Session runs: pass `providerOptions` from `applyThinkingLevelForModel` on `RunOptions` — one call, no per-provider branching.
+- Session runs: `createAgent({ thinkingLevel: "low" })` or `session.run(input, { thinkingLevel: "high" })` — no per-provider branching, no hand-merged `providerOptions.compat`.
 - Use-case workers (LLM compaction, observational memory): pass `thinkingLevel`; workers call `applyThinkingLevelForModel` with the bound model.
+- Custom generate sites: wrap with `applyDefaultProviderRequestOptions(request, { sessionId, thinkingLevel })` or call `applyThinkingLevelForModel` yourself.
 - Hosts building UI: read `model.capabilities.thinkingLevels` (when declared) to render a legal level picker; `isSupportedThinkingLevel` tells you whether a value is declared before sending.
 - Provider authors: read official wire fields from the compat patches below; keep unique knobs package-local.
 
@@ -32,12 +33,15 @@ Returns the merged `ProviderRequestOptions` (a new object when a patch applies; 
 ## Implementation example
 
 ```ts
-import { applyThinkingLevelForModel } from "@arnilo/prism";
+import { applyThinkingLevelForModel, createAgent } from "@arnilo/prism";
 
-// Per-turn override on a session run
-await session.run(input, {
-  providerOptions: applyThinkingLevelForModel(base, "high", model),
-});
+const agent = createAgent({ model, provider, thinkingLevel: "low" });
+const session = agent.createSession();
+await session.run(input); // low
+await session.run(input, { thinkingLevel: "high" }); // high this run
+
+// Custom generate sites still use the helper
+const options = applyThinkingLevelForModel(base, "high", model);
 
 // Declared-level-aware UI
 const levels = model.capabilities?.thinkingLevels; // e.g. ["low","medium","high","xhigh","max"]
@@ -47,7 +51,8 @@ const levels = model.capabilities?.thinkingLevels; // e.g. ["low","medium","high
 
 | Layer | Surface |
 | --- | --- |
-| Adapter (use this) | `applyThinkingLevelForModel(base, level, model)` — family resolution + snap + merge in one call |
+| Session (use this) | `AgentConfig.thinkingLevel` / `RunOptions.thinkingLevel` — kernel snaps via `applyThinkingLevelForModel` |
+| Adapter (custom generate) | `applyThinkingLevelForModel(base, level, model)` — family resolution + snap + merge in one call |
 | Model default | `ModelConfig.compat` (+ `capabilities.reasoning`, `capabilities.thinkingLevels` when declared) |
 | Per-turn override | `ProviderRequestOptions.compat` (request wins over model via merge) |
 | Portable level | `ThinkingLevel`: `none` \| `minimal` \| `low` \| `medium` \| `high` \| `xhigh` \| `max` |

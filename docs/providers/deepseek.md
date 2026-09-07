@@ -119,6 +119,18 @@ await session.prompt("Plan the refactor", {
 - Tool-turn assistants must replay `reasoning_content` or the API returns 400.
   Non-tool multi-turn may omit it (the API ignores it).
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | none |
+| Mandatory | no |
+| P2 default cache | implicit, no markers |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - SSE streams and HTTP error bodies use bounded transport helpers.

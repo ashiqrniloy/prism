@@ -30,6 +30,7 @@ const request: ProviderRequest = {
 describe("@arnilo/prism-providers/zai", () => {
   it("zai_implicit_requests_carry_no_foreign_cache_fields", () => {
     assertNoForeignCacheFields(zaiBody({ ...request, options: { cacheKey: "session-1", cacheRetention: "long" } }));
+    assertNoForeignCacheFields(zaiBody({ ...request, options: { sessionId: "s1" } }));
   });
 
   it("zai_registers_glm_model_metadata", async () => {

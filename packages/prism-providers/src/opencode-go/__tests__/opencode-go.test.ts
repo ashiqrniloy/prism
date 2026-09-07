@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { applyDefaultProviderRequestOptions, ProviderRequirementError } from "@arnilo/prism";
 import {
   assertProviderOwnedHeadersWin,
   assertProviderStreamConforms,
@@ -175,7 +176,7 @@ describe("@arnilo/prism-providers/opencode-go", () => {
         },
         { role: "tool", content: [{ type: "tool_result", toolCallId: "call_1", name: "lookup", result: { ok: true } }] },
       ],
-      options: { compat: { reasoning_effort: "high", preserveThinking: true } },
+      options: { sessionId: "s1", compat: { reasoning_effort: "high", preserveThinking: true } },
     };
     await assertProviderStreamConforms({ provider, request: replay });
     assert.equal(url.endsWith("/chat/completions"), true);
@@ -211,7 +212,7 @@ describe("@arnilo/prism-providers/opencode-go", () => {
             ],
           },
         ],
-        options: { compat: { preserveThinking: false } },
+        options: { sessionId: "s1", compat: { preserveThinking: false } },
       },
     });
     const assistant = body.messages[0];
@@ -245,6 +246,7 @@ describe("@arnilo/prism-providers/opencode-go", () => {
             ],
           },
         ],
+        options: { sessionId: "s1" },
       },
     });
     assert.equal(url.endsWith("/messages"), true);
@@ -278,6 +280,53 @@ describe("@arnilo/prism-providers/opencode-go", () => {
     });
     await assertProviderStreamConforms({ provider: provider2, request: baseRequest });
     assert.equal(headers2.get("x-opencode-session"), "session-with-spaces");
+  });
+
+  it("opencode_go_requires_session_id_before_fetch", async () => {
+    let fetches = 0;
+    const provider = createOpenCodeGoProvider({
+      apiKey: "fake-opencode-key",
+      fetch: (async () => {
+        fetches += 1;
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    await assert.rejects(
+      async () => {
+        for await (const _ of provider.generate({
+          model: openaiModel,
+          messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+        })) {
+          /* drain */
+        }
+      },
+      (error: unknown) =>
+        error instanceof ProviderRequirementError &&
+        error.code === "ERR_PRISM_PROVIDER_REQUIREMENT" &&
+        error.requirement === "sessionId" &&
+        error.providerId === "opencode-go",
+    );
+    assert.equal(fetches, 0);
+  });
+
+  it("opencode_go_sessionId_only_maps_to_x_opencode_session", async () => {
+    let headers = new Headers();
+    const provider = createOpenCodeGoProvider({
+      apiKey: "fake-opencode-key",
+      fetch: (async (_input, init) => {
+        headers = new Headers(init?.headers);
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: {
+        model: openaiModel,
+        messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+        options: { sessionId: "session with spaces" },
+      },
+    });
+    assert.equal(headers.get("x-opencode-session"), "session-with-spaces");
   });
 
   it("opencode_go_anthropic_route_applies_cache_control_only_to_selected_breakpoints", async () => {
@@ -384,6 +433,33 @@ describe("@arnilo/prism-providers/opencode-go", () => {
     for (const m of body.messages) for (const block of m.content) assert.equal(block.cache_control, undefined);
   });
 
+  it("opencode_go_anthropic_kernel_defaults_mark_system_and_last_stable", async () => {
+    let body: any;
+    const provider = createOpenCodeGoProvider({
+      apiKey: "fake-opencode-key",
+      fetch: (async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    const messages: Message[] = [
+      { role: "system", content: [{ type: "text", text: "stable" }] },
+      { role: "user", content: [{ type: "text", text: "preamble" }] },
+      { role: "user", content: [{ type: "text", text: "current turn" }] },
+    ];
+    await assertProviderStreamConforms({
+      provider,
+      request: applyDefaultProviderRequestOptions({
+        ...baseRequest,
+        model: anthropicModel,
+        messages,
+      }),
+    });
+    assert.deepEqual(body.system, [{ type: "text", text: "stable", cache_control: { type: "ephemeral" } }]);
+    assert.deepEqual(body.messages[0].content.at(-1).cache_control, { type: "ephemeral" });
+    assert.equal(body.messages[1].content.at(-1).cache_control, undefined);
+  });
+
   it("opencode_go_anthropic_route_serializes_pdf_document_blocks", async () => {
     const tinyPdf = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]).toString("base64");
     const replay: ProviderRequest = {
@@ -397,6 +473,7 @@ describe("@arnilo/prism-providers/opencode-go", () => {
           ],
         },
       ],
+      options: { sessionId: "s1" },
     };
     let body: unknown;
     const provider = createOpenCodeGoProvider({
@@ -785,6 +862,7 @@ describe("@arnilo/prism-providers/opencode-go", () => {
         { role: "assistant", content: [{ type: "tool_call", id: "call_1", name: "lookup", arguments: { q: "x" } }] },
         { role: "tool", content: [{ type: "tool_result", toolCallId: "call_1", name: "lookup", result: { ok: true } }] },
       ],
+      options: { sessionId: "s1" },
     };
     let bodyOpenAI: unknown;
     const openAI = createOpenCodeGoProvider({
@@ -803,6 +881,7 @@ describe("@arnilo/prism-providers/opencode-go", () => {
         { role: "assistant", content: [{ type: "tool_call", id: "tool_1", name: "lookup", arguments: { q: "y" } }] },
         { role: "tool", content: [{ type: "tool_result", toolCallId: "tool_1", name: "lookup", result: { ok: true } }] },
       ],
+      options: { sessionId: "s1" },
     };
     let bodyAnthropic: unknown;
     const anthropic = createOpenCodeGoProvider({

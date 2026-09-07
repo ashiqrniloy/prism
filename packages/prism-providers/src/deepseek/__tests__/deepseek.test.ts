@@ -34,6 +34,7 @@ const toolRequest: ProviderRequest = {
 describe("@arnilo/prism-providers/deepseek", () => {
   it("deepseek_implicit_requests_carry_no_foreign_cache_fields", () => {
     assertNoForeignCacheFields(deepseekBody({ ...request, options: { cacheKey: "session-1", cacheRetention: "long" } }));
+    assertNoForeignCacheFields(deepseekBody({ ...request, options: { sessionId: "s1" } }));
   });
 
   it("deepseek_registers_featured_catalog_and_api_key", async () => {

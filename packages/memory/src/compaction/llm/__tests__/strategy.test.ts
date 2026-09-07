@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   type AIProvider,
   createMockProvider,
+  createSessionCachePolicy,
   createSessionEntry,
   type ModelConfig,
   type ProviderRequest,
@@ -331,4 +332,37 @@ test("llm_compaction_strategy_non_reasoning_model_gets_no_invented_field", async
   });
   await strategy.compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old")] });
   assert.deepEqual(request?.options?.compat ?? {}, {});
+});
+
+test("llm_compaction_stamps_context_sessionId_without_policies", async () => {
+  let request: ProviderRequest | undefined;
+  const strategy = createLlmCompactionStrategy({
+    provider: createMockProvider([providerTextDelta("summary text"), { type: "done" }], {
+      onRequest: (value) => {
+        request = value;
+      },
+    }),
+    model,
+    keepRecentTokens: 1,
+  });
+  await strategy.compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old")] });
+  assert.equal(request?.options?.sessionId, "s1");
+  assert.equal(request?.options?.cacheKey, "s1");
+});
+
+test("llm_compaction_createSessionCachePolicy_overlays_cacheKey", async () => {
+  let request: ProviderRequest | undefined;
+  const strategy = createLlmCompactionStrategy({
+    provider: createMockProvider([providerTextDelta("summary text"), { type: "done" }], {
+      onRequest: (value) => {
+        request = value;
+      },
+    }),
+    model,
+    keepRecentTokens: 1,
+    providerRequestPolicies: createSessionCachePolicy({ cacheKey: "x" }),
+  });
+  await strategy.compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old")] });
+  assert.equal(request?.options?.sessionId, "s1");
+  assert.equal(request?.options?.cacheKey, "x");
 });

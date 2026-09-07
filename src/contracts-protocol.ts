@@ -78,6 +78,8 @@ export interface RunOptions {
   /** Run-scoped ceilings. When an agent config also sets limits, these can only narrow it. */
   readonly limits?: RunLimits;
   readonly providerOptions?: ProviderRequestOptions;
+  /** Portable thinking intent for this run. Overrides `AgentConfig.thinkingLevel`. */
+  readonly thinkingLevel?: string;
   readonly providerRequestPolicies?: ProviderRequestPolicy | readonly ProviderRequestPolicy[];
   readonly systemPrompt?: SystemPromptConfig;
   readonly compaction?: false | CompactionOptions;

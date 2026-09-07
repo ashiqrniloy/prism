@@ -1,5 +1,9 @@
 # Migration guide
 
+## 0.5.0 → 0.5.1 (additive)
+
+Kernel constructs valid provider requests: session correlation, default cache breakpoints, and `thinkingLevel` on `AgentConfig` / `RunOptions`. Clay may drop host-only `createSessionCachePolicy`. OpenCode Go raw `generate` without `sessionId` throws `ProviderRequirementError` (`ERR_PRISM_PROVIDER_REQUIREMENT`) before fetch instead of an upstream 400. Observational memory uses derived `om:{session.id}`; LLM compaction uses the agent session id. See [migrate-to-0.5.md](migrate-to-0.5.md#8-provider-request-construction--additive-plan-066--051).
+
 ## 0.4.x → 0.5.0 lockstep cut (breaking)
 
 Prism 0.5 (plans 055–065) ships four breaking surfaces: the 27 removed unused exports from the plan 058 sweep (symbol-surface only), the MCP TypeScript SDK v2 module move (plan 063 — hosts importing `@modelcontextprotocol/sdk` directly must move to the modular `client`/`server` 2.0.0 packages), the thinking-effort wire moves (plan 065 — Anthropic `effort` → `output_config.effort`, xAI `reasoning_effort` now sent, snap-on-declared semantics), and the plan 056 hardening behavior changes (tenant-scoped store factories, child env allow-list). Dependency majors (plan 062: pdf-parse 2.4 with Node ≥ 20.16, better-sqlite3 13, keyring 2 with typed locked-store errors) and the CLI real-provider contract (plan 064: explicit `--provider` required, exit 2 when omitted) are behavior changes without import impact. See the complete guide with per-symbol replacements and upgrade steps in [migrate-to-0.5.md](migrate-to-0.5.md). All 10 publishable manifests bump to `0.5.0` lockstep; internal first-party ranges move `^0.4.0` → `^0.5.0`. Security keeper surface (ownership/checkpoint guards, `secureCompare`, `zeroBuffer`, sandbox path-escape guard, RAG scope guard, MCP content-bounds guard, secret-leak conformance assert) is unchanged.

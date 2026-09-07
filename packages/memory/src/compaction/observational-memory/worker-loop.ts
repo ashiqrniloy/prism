@@ -8,7 +8,7 @@ import type {
   ToolDefinition,
   ToolResult,
 } from "@arnilo/prism";
-import { applyThinkingLevelForModel, redactSecrets } from "@arnilo/prism";
+import { applyDefaultProviderRequestOptions, applyThinkingLevelForModel, redactSecrets } from "@arnilo/prism";
 import { type MemoryWorkerLimitOptions, measureWorkerJson, resolveMemoryWorkerLimits, truncateWorkerText } from "./limits.js";
 
 export interface MemoryWorkerLoopOptions extends MemoryWorkerLimitOptions {
@@ -20,6 +20,7 @@ export interface MemoryWorkerLoopOptions extends MemoryWorkerLimitOptions {
   readonly maxTurns: number;
   readonly providerOptions?: ProviderRequestOptions;
   readonly thinkingLevel?: string;
+  readonly sessionId?: string;
   readonly secrets?: readonly (string | undefined)[];
   readonly signal?: AbortSignal;
 }
@@ -49,17 +50,21 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
     const calls: { readonly raw: ToolCallContent; readonly safe: ToolCallContent }[] = [];
     try {
       throwIfAborted(options.signal);
-      for await (const event of options.provider.generate({
-        model: options.model,
-        messages,
-        tools: options.tools,
-        // Model-aware adapter: stamped/heuristic family per model; non-reasoning
-        // models get no invented field (omitted, not guessed).
-        options: options.thinkingLevel
-          ? applyThinkingLevelForModel(options.providerOptions, options.thinkingLevel, options.model)
-          : options.providerOptions,
-        signal: options.signal,
-      })) {
+      const request = applyDefaultProviderRequestOptions(
+        {
+          model: options.model,
+          messages,
+          tools: options.tools,
+          // Model-aware adapter: stamped/heuristic family per model; non-reasoning
+          // models get no invented field (omitted, not guessed).
+          options: options.thinkingLevel
+            ? applyThinkingLevelForModel(options.providerOptions, options.thinkingLevel, options.model)
+            : options.providerOptions,
+          signal: options.signal,
+        },
+        { sessionId: options.sessionId },
+      );
+      for await (const event of options.provider.generate(request)) {
         throwIfAborted(options.signal);
         if (event.type === "error") throw new Error(safeWorkerError(event.error, secrets, limits.maxErrorBytes));
         if (event.type !== "tool_call") continue;

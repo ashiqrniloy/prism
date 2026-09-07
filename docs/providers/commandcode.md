@@ -212,6 +212,18 @@ PRISM_LIVE_PROVIDER_TESTS=1 COMMAND_CODE_API_KEY=cmd_... \
   npm run test --workspace=@arnilo/prism-providers/commandcode
 ```
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | none |
+| Mandatory | no |
+| P2 default cache | Anthropic: `cache_control`; OpenAI: implicit (no `prompt_cache_key`) |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport` helpers.

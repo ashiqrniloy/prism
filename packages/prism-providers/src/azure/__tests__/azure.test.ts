@@ -145,7 +145,7 @@ describe("@arnilo/prism-providers/azure", () => {
       }) as typeof fetch,
     });
     const events = await collect(provider, {
-      options: { cacheKey: "session-1", cacheRetention: "long", cache: { breakpoints: [{ location: "system_prompt" }] } },
+      options: { sessionId: "s1", cacheKey: "session-1", cacheRetention: "long", cache: { breakpoints: [{ location: "system_prompt" }] } },
     });
     assertNoForeignCacheFields(body);
     const usage = events.find((event) => event.type === "usage")?.usage;

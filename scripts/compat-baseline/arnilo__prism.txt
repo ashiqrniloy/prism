@@ -20,6 +20,7 @@ AgentRunLifecycleStreamRequest	export type { AgentRunLifecycle, AgentRunLifecycl
 AgentRunStateError	export declare class AgentRunStateError extends Error
 AgentRunSuspended	export declare class AgentRunSuspended extends Error
 ApplyCacheControlOptions	export type { ApplyCacheControlOptions, CacheControlledContentBlock, CacheControlledMessage, CacheControlValue, CacheUsageReport, } from "./cache-helpers.js"
+ApplyDefaultProviderRequestOptionsContext	export type { ApplyDefaultProviderRequestOptionsContext, SessionCachePolicyOptions } from "./provider-request-policy.js"
 ApplyFieldPolicyOptions	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
 ApplyRetentionInput	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 ApplyRetentionResult	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
@@ -331,6 +332,7 @@ ProviderCaptureOptions	export type { ProviderCapture, ProviderCaptureEntry, Prov
 ProviderCapturePolicy	export type { ProviderCapture, ProviderCaptureEntry, ProviderCaptureOptions, ProviderCapturePolicy } from "./capture.js"
 ProviderRegistry	export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js"
 ProviderRegistryOptions	export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js"
+ProviderRequirementError	export declare class ProviderRequirementError extends Error
 ProviderResolver	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
 ProviderTransportError	export declare class ProviderTransportError extends Error
 ProviderTurnFailure	export declare class ProviderTurnFailure extends Error
@@ -382,7 +384,7 @@ SecureAgentOptions	export type { ApprovalOutcome, DecisionScope, NestedRunApprov
 SessionAppendConflictError	export declare class SessionAppendConflictError extends Error
 SessionBranch	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 SessionBranchOptions	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
-SessionCachePolicyOptions	export type { SessionCachePolicyOptions } from "./provider-request-policy.js"
+SessionCachePolicyOptions	export type { ApplyDefaultProviderRequestOptionsContext, SessionCachePolicyOptions } from "./provider-request-policy.js"
 SessionContextSnapshot	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 SessionMetadataConflictError	export declare class SessionMetadataConflictError extends Error
 SessionSearchUnsupportedError	export declare class SessionSearchUnsupportedError extends Error
@@ -448,6 +450,7 @@ agentFingerprint	export declare function agentFingerprint(agent: Agent, revision
 agentId	export declare function agentId(agent: Agent): string
 applyCacheControl	export declare function applyCacheControl(messages: readonly Message[], breakpoints: readonly PromptCacheBreakpoint[], options?: ApplyCacheControlOptions): readonly CacheControlledMessage[]
 applyContextBudget	export declare function applyContextBudget(options:
+applyDefaultProviderRequestOptions	export declare function applyDefaultProviderRequestOptions(request: ProviderRequest, ctx?: ApplyDefaultProviderRequestOptionsContext): ProviderRequest
 applyExecutionDecision	export declare function applyExecutionDecision(action: ExecutionAction, decision: ExecutionDecision): ExecutionAction
 applyFieldPolicy	export declare function applyFieldPolicy<T>(value: T, policy: FieldPolicy, options: ApplyFieldPolicyOptions): T
 applyNestedRun	export declare function applyNestedRun(session: SessionHost, input:
@@ -895,7 +898,7 @@ validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(valu
 validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.5.0"
+version	export declare const version = "0.5.1"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]

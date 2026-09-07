@@ -383,6 +383,7 @@ describe("createAiSdkProvider", () => {
           cache: { key: "tenant:v1", retention: "long" },
           cacheKey: "should-not-emit",
           cacheRetention: "long",
+          sessionId: "s1",
         },
       }),
     );
@@ -390,6 +391,7 @@ describe("createAiSdkProvider", () => {
     assert.equal("cacheKey" in options, false);
     assert.equal("cacheRetention" in options, false);
     assert.equal("cache_control" in options, false);
+    assert.equal("sessionId" in options, false);
   });
 
   it("passes compat and extra through providerOptions.prism for host models", () => {

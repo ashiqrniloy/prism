@@ -489,8 +489,14 @@ export {
   toolCallFromArgumentsText,
 } from "./provider-events.js";
 export { authMethodKey, defineProviderPackage, systemPromptContributionKey } from "./provider-packages.js";
-export type { SessionCachePolicyOptions } from "./provider-request-policy.js";
-export { createProviderRequestPolicyChain, createSessionCachePolicy, mergeProviderRequestOptions } from "./provider-request-policy.js";
+export type { ApplyDefaultProviderRequestOptionsContext, SessionCachePolicyOptions } from "./provider-request-policy.js";
+export {
+  applyDefaultProviderRequestOptions,
+  createProviderRequestPolicyChain,
+  createSessionCachePolicy,
+  mergeProviderRequestOptions,
+  ProviderRequirementError,
+} from "./provider-request-policy.js";
 export { canonicalizeJsonSchema } from "./providers/schema.js";
 export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js";
 export { createProviderRegistry, createProviderResolver } from "./providers.js";
@@ -697,5 +703,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.5.0";
+export const version = "0.5.1";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

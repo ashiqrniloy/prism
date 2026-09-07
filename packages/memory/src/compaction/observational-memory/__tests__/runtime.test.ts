@@ -6,6 +6,7 @@ import {
   createMemorySessionStore,
   createMockProvider,
   type ProviderEvent,
+  type ProviderRequest,
   providerDone,
   providerTextDelta,
   providerToolCall,
@@ -357,5 +358,63 @@ describe("observational memory runtime", () => {
     });
     await withDefault.flush();
     assert.equal(defaultProvider, "worker-prov");
+  });
+
+  it("runtime stamps derived om session id on worker generate", async () => {
+    const { session, store } = await sessionWithMessage();
+    let request!: ProviderRequest;
+    const workerProvider: AIProvider = {
+      id: "memory",
+      async *generate(input) {
+        request = input;
+        yield providerToolCall(
+          toolCallContent("o", "record_observation", {
+            content: "from derived session",
+            relevance: "high",
+            sourceEntryIds: [(await session.entries())[0]?.id],
+          }),
+        );
+        yield providerDone();
+      },
+    };
+    const runtime = createObservationalMemoryRuntime({
+      session,
+      appendEntry: (entry) => store.append(entry),
+      observation: { provider: workerProvider, model: workerModel },
+      overrides: {
+        observation: { messageTokens: 1 },
+        reflection: { observationTokens: 999_999 },
+        agentMaxTurns: 1,
+      },
+    });
+    await runtime.flush();
+    assert.equal(request.options?.sessionId, "om:s1");
+    assert.equal(request.options?.cacheKey, "om:s1");
+  });
+
+  it("runtime host providerOptions.sessionId wins over derived om id", async () => {
+    const { session, store } = await sessionWithMessage();
+    let request!: ProviderRequest;
+    const workerProvider: AIProvider = {
+      id: "memory",
+      async *generate(input) {
+        request = input;
+        yield providerDone();
+      },
+    };
+    const runtime = createObservationalMemoryRuntime({
+      session,
+      appendEntry: (entry) => store.append(entry),
+      observation: { provider: workerProvider, model: workerModel },
+      providerOptions: { sessionId: "custom" },
+      overrides: {
+        observation: { messageTokens: 1 },
+        reflection: { observationTokens: 999_999 },
+        agentMaxTurns: 1,
+      },
+    });
+    await runtime.flush();
+    assert.equal(request.options?.sessionId, "custom");
+    assert.equal(request.options?.cacheKey, "custom");
   });
 });

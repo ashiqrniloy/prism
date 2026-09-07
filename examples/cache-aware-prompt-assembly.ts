@@ -38,6 +38,7 @@ async function assemble(model: ModelConfig): Promise<ProviderRequest> {
       { role: "assistant", content: [{ type: "text", text: "Keep stable context before new turns." }] },
     ],
     input: "What changed since the last turn?",
+    // Agent sessions stamp sessionId from session.id; this custom assemble site still passes it.
     providerOptions: {
       sessionId: "workspace-cache-demo",
       cache: {

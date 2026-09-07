@@ -58,6 +58,18 @@ Opt-in live canaries: inject real `fetch` + host credential behind host CI secre
 
 Register via `createExtensionKernel().load([createAzureOpenAIProviderPackage(...)])`. Pair with `@arnilo/prism-core/governance/model-router` for residency allow-lists on Azure regions/endpoints.
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | none |
+| Mandatory | no |
+| P2 default cache | host-owned, no Prism cache fields |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - No credential prefetch at import; the credential is resolved exactly once per request (a rotating `CredentialValueSource` is never consumed twice — the same resolved token drives the wrapper check and the inner auth header).

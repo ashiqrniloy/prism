@@ -2,7 +2,7 @@
 
 ## What it does
 
-Prism separates the **session chat model** (`AgentConfig.model` / `RunOptions.model`) from **use-case models** used by background or adjacent LLM jobs (observational memory workers, LLM compaction summarizers, declarative agents, supervisor children, evals). Hosts bind `{ model?, provider?, providerOptions?, thinkingLevel? }` per use case. When the use-case omits `model`, resolution falls back to the active session model. Workers never write `model_change` session entries for their own jobs.
+Prism separates the **session chat model** (`AgentConfig.model` / `RunOptions.model`) from **use-case models** used by background or adjacent LLM jobs (observational memory workers, LLM compaction summarizers, declarative agents, supervisor children, evals). Hosts bind `{ model?, provider?, providerOptions?, thinkingLevel? }` per use case. When the use-case omits `model`, resolution falls back to the active session model. Workers never write `model_change` session entries for their own jobs. Observational-memory workers stamp derived `om:{session.id}`; LLM compaction reuses the agent `sessionId` so summarization can hit the same prompt cache.
 
 ## When to use it
 

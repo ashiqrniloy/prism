@@ -57,6 +57,18 @@ Live canaries stay opt-in behind host credentials; default tests are network-fre
 
 Uses Bedrock’s OpenAI-compatible runtime route (not Converse eventstream). Hosts needing Converse-only models should supply a custom provider or AI SDK bridge.
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | none |
+| Mandatory | no |
+| P2 default cache | host-owned, no Prism cache fields |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - No AWS SDK; package-local SigV4 only for `bedrock` service.

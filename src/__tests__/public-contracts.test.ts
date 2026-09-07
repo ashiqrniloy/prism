@@ -70,6 +70,7 @@ import {
   createExplicitCredentialResolver,
   createExtensionKernel,
   createMemorySessionStore,
+  applyDefaultProviderRequestOptions,
   createProviderRequestPolicyChain,
   createSessionCachePolicy,
   createSessionEntry,
@@ -79,6 +80,7 @@ import {
   dispatchToolCall,
   filterTools,
   mergeProviderRequestOptions,
+  ProviderRequirementError,
   rebuildSessionContext,
   renderPromptTemplate,
   resolveActiveSkills,
@@ -318,6 +320,14 @@ describe("public contracts", () => {
       merged?.cache?.breakpoints?.map((item) => item.location),
       ["system_prompt", "last_user_message"],
     );
+
+    const stamped = applyDefaultProviderRequestOptions(
+      { model: { provider: "mock", model: "demo" }, messages: [], options },
+      { sessionId: "fallback" },
+    );
+    assert.equal(stamped.options?.sessionId, "s1");
+    assert.equal(stamped.options?.cacheKey, "s1");
+    assert.equal(new ProviderRequirementError("missing sessionId", { requirement: "sessionId" }).code, "ERR_PRISM_PROVIDER_REQUIREMENT");
   });
 
   it("host can type phase 2 contribution contracts", async () => {

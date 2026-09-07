@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { applyDefaultProviderRequestOptions } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
   assertNoFetches,
@@ -274,6 +275,35 @@ describe("@arnilo/prism-providers/commandcode", () => {
     const system = Array.isArray(body.system) ? body.system : [{ type: "text", text: body.system }];
     assert.ok(JSON.stringify(system).includes("cache_control"));
     assert.ok(!JSON.stringify(body.messages[1]).includes("cache_control"), "non-selected messages carry no marker");
+  });
+
+  it("commandcode_anthropic_kernel_defaults_mark_system_and_last_stable", async () => {
+    let body: any;
+    const provider = createCommandCodeProvider({
+      apiKey: "fake-key",
+      fetch: (async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: applyDefaultProviderRequestOptions({
+        ...baseRequest,
+        model: claudeModel,
+        messages: [
+          { role: "system", content: [{ type: "text", text: "rules" }] },
+          { role: "user", content: [{ type: "text", text: "prefix" }] },
+          { role: "user", content: [{ type: "text", text: "tail" }] },
+        ],
+      }),
+    });
+    const serialized = JSON.stringify(body);
+    assert.equal(serialized.match(/"cache_control"/g)?.length ?? 0, 2);
+    assert.ok(!serialized.includes('"ttl"'));
+    const system = Array.isArray(body.system) ? body.system : [{ type: "text", text: body.system }];
+    assert.ok(JSON.stringify(system).includes("cache_control"));
+    assert.ok(!JSON.stringify(body.messages[1]).includes("cache_control"));
   });
 
   it("commandcode_zdr_header_is_provider_owned_and_opt_in", async () => {

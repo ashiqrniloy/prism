@@ -139,6 +139,18 @@ await kernel.load([
   `Usage.cacheReadTokens` is intentionally left `undefined` (not `0`). If a future
   Ollama release reports cached tokens, map them in `mapOllamaModel`/usage handling.
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | none |
+| Mandatory | no |
+| P2 default cache | implicit, no markers |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport`

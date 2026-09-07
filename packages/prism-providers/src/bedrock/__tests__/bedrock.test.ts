@@ -119,7 +119,7 @@ describe("@arnilo/prism-providers/bedrock", () => {
     for await (const _ of provider.generate({
       model: { provider: "bedrock", model: "m", cache: { kind: "none" } },
       messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
-      options: { cacheKey: "session-1", cacheRetention: "long", cache: { breakpoints: [{ location: "system_prompt" }] } },
+      options: { sessionId: "s1", cacheKey: "session-1", cacheRetention: "long", cache: { breakpoints: [{ location: "system_prompt" }] } },
     })) {
       /* drain */
     }

@@ -1,6 +1,6 @@
 # Migrate Prism 0.4 to 0.5
 
-> **Status: released 2026-09-06** (`v0.5.0` tag). Covers every host-visible change from plan 055 onward: new provider adapters (055), security hardening (056), the dead-export cut (058), dependency majors (062), the MCP 2026-07-28 adoption (063), the CLI real-provider contract (064), and model-aware thinking effort (065).
+> **Status: 0.5.1** (plan 066, additive on the 2026-09-06 `v0.5.0` tag). 0.5.0 covers plans 055–065. 0.5.1 adds kernel provider-request construction.
 
 ## What changes
 
@@ -105,15 +105,37 @@ What to do:
 
 Contract reference: [`docs/thinking-and-reasoning.md`](thinking-and-reasoning.md); per-provider declared levels + wire fields on each `docs/providers/*.md` page.
 
+## 8. Provider request construction — additive (plan 066 / 0.5.1)
+
+Prism now constructs a valid wire request for every generate site it owns. Hosts pick provider + model + intent. Host request policies are overlays and are never required for success.
+
+Additive surface:
+
+| Change | Behavior |
+| --- | --- |
+| `applyDefaultProviderRequestOptions` | Fill-if-missing `sessionId`/`cacheKey`; default `{ system_prompt, last_stable_message }` + `cacheRetention: "short"` on `cache_control` / `explicitBreakpoints` models |
+| `AgentConfig.thinkingLevel` / `RunOptions.thinkingLevel` | Session thinking intent (run overrides agent); snapped via `applyThinkingLevelForModel` |
+| `ProviderRequirementError` (`ERR_PRISM_PROVIDER_REQUIREMENT`) | OpenCode Go throws **before fetch** when `sessionId`/`cacheKey` is missing — not an opaque upstream 400. Message has no request body. |
+| OM vs compaction ids | Observational-memory workers use derived `om:{session.id}`; LLM compaction uses the agent session id |
+
+What to do:
+
+1. You can drop `createSessionCachePolicy()` from Clay / host agent config if it existed only to inject session correlation.
+2. Prefer `createAgent({ thinkingLevel: "low" })` over hand-merging `providerOptions.compat`.
+3. Raw `provider.generate()` to OpenCode Go without `options.sessionId` now fails closed with `ProviderRequirementError` instead of HTTP 400.
+4. Custom generate sites should call `applyDefaultProviderRequestOptions(request, { sessionId, thinkingLevel })`.
+5. Nothing persisted changes. Session/cache keys are correlation ids, never secrets.
+
 ## Upgrade steps
 
-1. Bump every `@arnilo/*` dependency/peer to `^0.5.0`.
+1. Bump every `@arnilo/*` dependency/peer to `^0.5.1` (0.5.0 hosts: `^0.5.0` still works until you want construction).
 2. Build; if the compiler flags a removed symbol above, apply the replacement from the table.
 3. If you host MCP: move SDK imports to the v2 modular packages (section 5).
 4. If you spawn child processes with ambient env: pass env explicitly (section 2).
 5. If you construct durable stores: pass the tenant scope (section 2).
-6. If you set thinking levels: move to `applyThinkingLevelForModel` (section 7).
+6. If you set thinking levels: prefer `AgentConfig.thinkingLevel` / `RunOptions.thinkingLevel` (section 8); `applyThinkingLevelForModel` remains for custom generate sites (section 7).
 7. Run your suite. No persisted-data migration exists or is needed.
+8. After 0.5.1: drop host-only `createSessionCachePolicy` if it existed only for OpenCode Go / session headers (section 8).
 
 ## Rollback
 

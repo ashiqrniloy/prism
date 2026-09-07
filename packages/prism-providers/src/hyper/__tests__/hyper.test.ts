@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { applyDefaultProviderRequestOptions } from "@arnilo/prism";
 import {
   assertNoFetches,
   assertNoForeignCacheFields,
@@ -198,6 +199,7 @@ describe("@arnilo/prism-providers/hyper", () => {
     const assistant = body.messages[1];
     assert.equal(assistant.reasoning_content, "plan");
     assert.ok(!JSON.stringify(body).includes("effortLevels"), "metadata never reaches the wire");
+    assert.equal(body.prompt_cache_key, undefined);
   });
 
   it("hyper_chat_body_request_effort_wins_and_invalid_effort_is_dropped", async () => {
@@ -239,6 +241,7 @@ describe("@arnilo/prism-providers/hyper", () => {
     assert.equal(url, "https://hyper.charm.land/v1/messages");
     assert.equal(headers.get("x-api-key"), "fake-hyper-key");
     assert.equal(headers.get("anthropic-version"), "2023-06-01");
+    assert.equal(headers.get("x-client-request-id"), null);
     assert.equal(body.model, "qwen3.6-plus");
     assert.equal(body.stream, true);
     assertNoForeignCacheFields(body, ["cache_control"]);
@@ -276,6 +279,34 @@ describe("@arnilo/prism-providers/hyper", () => {
     assert.ok(!JSON.stringify(noMarker).includes("cache_control"), "non-selected messages carry no marker");
   });
 
+  it("hyper_anthropic_kernel_defaults_mark_system_and_last_stable", async () => {
+    let body: any;
+    const provider = createHyperProvider({
+      apiKey: "fake-hyper-key",
+      fetch: (async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    await assertProviderStreamConforms({
+      provider,
+      request: applyDefaultProviderRequestOptions({
+        ...baseRequest,
+        model: qwenAnthropicModel,
+        messages: [
+          { role: "system", content: [{ type: "text", text: "rules" }] },
+          { role: "user", content: [{ type: "text", text: "prefix" }] },
+          { role: "user", content: [{ type: "text", text: "tail" }] },
+        ],
+      }),
+    });
+    const serialized = JSON.stringify(body);
+    assert.equal(serialized.match(/"cache_control"/g)?.length ?? 0, 2);
+    const system = Array.isArray(body.system) ? body.system : [{ type: "text", text: body.system }];
+    assert.ok(JSON.stringify(system).includes("cache_control"));
+    assert.ok(!JSON.stringify(body.messages[1]).includes("cache_control"));
+  });
+
   it("hyper_keeps_provider_owned_headers_after_caller_headers", async () => {
     let headers = new Headers();
     const provider = createHyperProvider({
@@ -304,6 +335,7 @@ describe("@arnilo/prism-providers/hyper", () => {
       caller: { "x-caller": "kept" },
     });
     assert.equal(headers.get("x-caller"), "kept");
+    assert.equal(headers.get("x-client-request-id"), null);
   });
 
   it("hyper_402_billing_error_is_non_retryable_and_redacted", async () => {

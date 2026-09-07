@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { applyDefaultProviderRequestOptions } from "@arnilo/prism";
 import {
   assertNoForeignCacheFields,
   assertProviderOwnedHeadersWin,
@@ -224,6 +225,34 @@ describe("@arnilo/prism-providers/openrouter", () => {
     }
     assert.deepEqual(body.cache_control, { type: "ephemeral" });
     assert.equal(body.session_id, "session-with-spaces");
+  });
+
+  it("openrouter_kernel_defaults_use_per_message_markers_not_top_level", async () => {
+    let body: any;
+    const provider = createOpenRouterProvider({
+      apiKey: "fake-openrouter-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    const messages: Message[] = [
+      { role: "system", content: [{ type: "text", text: "rules" }] },
+      { role: "user", content: [{ type: "text", text: "prefix" }] },
+      { role: "user", content: [{ type: "text", text: "tail" }] },
+    ];
+    await assertProviderStreamConforms({
+      provider,
+      request: applyDefaultProviderRequestOptions({
+        ...request,
+        model: { ...request.model, cache: { kind: "cache_control" as const } },
+        messages,
+      }),
+    });
+    assert.equal(body.cache_control, undefined);
+    assert.deepEqual(body.messages[0].content.at(-1).cache_control, { type: "ephemeral" });
+    assert.deepEqual(body.messages[1].content.at(-1).cache_control, { type: "ephemeral" });
+    assert.equal(body.messages[2].content.at(-1).cache_control, undefined);
   });
 
   it("openrouter_long_retention_emits_1h_ttl_marker", async () => {

@@ -23,6 +23,7 @@ import type {
   ToolResult,
 } from "./contracts.js";
 import { runInstructionInjectors } from "./instruction-injection.js";
+import { applyDefaultProviderRequestOptions } from "./provider-request-policy.js";
 import type { MiddlewareRegistry } from "./middleware.js";
 import type { SecretRedactor } from "./redaction.js";
 import { redactMessage } from "./redaction.js";
@@ -308,15 +309,18 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
 
   const metadata = budgetReport ? { ...options.metadata, [CONTEXT_BUDGET_REPORT_METADATA_KEY]: budgetReport } : options.metadata;
 
-  return {
-    model: options.model,
-    messages: providerMessages,
-    tools,
-    context,
-    options: options.providerOptions,
-    metadata,
-    signal: options.signal,
-  };
+  return applyDefaultProviderRequestOptions(
+    {
+      model: options.model,
+      messages: providerMessages,
+      tools,
+      context,
+      options: options.providerOptions,
+      metadata,
+      signal: options.signal,
+    },
+    { sessionId: options.sessionId },
+  );
 }
 
 async function buildDefaultInputMessageGroups(input: AgentInput, context: DefaultInputBuildContext): Promise<DefaultInputMessageGroups> {

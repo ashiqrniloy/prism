@@ -203,6 +203,29 @@ describe("default input builder", () => {
   });
 });
 
+describe("assembleProviderInput session defaults", () => {
+  it("copies sessionId into request options when set", async () => {
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Hi",
+      sessionId: "s1",
+    });
+    assert.equal(request.options?.sessionId, "s1");
+    assert.equal(request.options?.cacheKey, "s1");
+  });
+
+  it("host providerOptions.sessionId wins over assembler sessionId", async () => {
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Hi",
+      sessionId: "s1",
+      providerOptions: { sessionId: "custom", cacheKey: "ck" },
+    });
+    assert.equal(request.options?.sessionId, "custom");
+    assert.equal(request.options?.cacheKey, "ck");
+  });
+});
+
 describe("prompt template rendering", () => {
   it("replaces variables", () => {
     assert.equal(

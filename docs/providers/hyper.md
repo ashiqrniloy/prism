@@ -245,6 +245,18 @@ PRISM_LIVE_PROVIDER_TESTS=1 HYPER_API_KEY=sk-hyper-... \
   npm run test --workspace=@arnilo/prism-providers/hyper
 ```
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | Responses: `prompt_cache_key`; chat/Anthropic: no session header |
+| Mandatory | no |
+| P2 default cache | Anthropic: `cache_control`; Responses: openai_key rules; chat: implicit |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport` helpers.

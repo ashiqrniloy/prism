@@ -73,6 +73,18 @@ api.registerProviderPackage(createGoogleProviderPackage({ apiKey: hostKey, model
 - Vertex / enterprise identity stays out of 0.0.11.
 - Gemini CLI says third-party software accessing its backend through Gemini CLI OAuth violates applicable terms, and its FAQ directs third-party coding agents to Vertex AI or Google AI Studio API keys ([terms](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/tos-privacy.md), [FAQ](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/faq.md)). Prism therefore has no Gemini CLI OAuth API or token-import shortcut.
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | `x-client-request-id` from `sessionId` |
+| Mandatory | no |
+| P2 default cache | none (no Prism cache markers) |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - No network during import/setup/default tests; credentials host-owned and late-bound.

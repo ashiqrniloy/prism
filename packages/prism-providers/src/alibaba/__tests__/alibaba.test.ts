@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
-import { applyThinkingLevelForModel } from "@arnilo/prism";
+import { applyDefaultProviderRequestOptions, applyThinkingLevelForModel } from "@arnilo/prism";
 import {
   assertNoForeignCacheFields,
   assertProviderOwnedHeadersWin,
@@ -430,6 +430,7 @@ describe("@arnilo/prism-providers/alibaba", () => {
 
   it("alibaba_implicit_default_carries_no_foreign_cache_fields", () => {
     assertNoForeignCacheFields(alibabaBody({ ...request, options: { cacheKey: "session-1", cacheRetention: "long" } }));
+    assertNoForeignCacheFields(alibabaBody({ ...request, options: { sessionId: "s1" } }));
   });
 
   it("alibaba_opt_in_markers_are_the_only_cache_fields", () => {
@@ -440,6 +441,26 @@ describe("@arnilo/prism-providers/alibaba", () => {
     });
     assertNoForeignCacheFields(body, ["cache_control"]);
     assert.ok(JSON.stringify(body).includes("cache_control"));
+  });
+
+  it("alibaba_kernel_defaults_mark_system_and_last_stable", () => {
+    const cacheModel = defineAlibabaModel({ model: "qwen-plus", cache: { kind: "cache_control" } });
+    const body = alibabaBody(
+      applyDefaultProviderRequestOptions({
+        model: cacheModel,
+        messages: [
+          { role: "system", content: [{ type: "text", text: "rules" }] },
+          { role: "user", content: [{ type: "text", text: "prefix" }] },
+          { role: "user", content: [{ type: "text", text: "tail" }] },
+        ],
+      }),
+    );
+    const serialized = JSON.stringify(body);
+    assert.equal(serialized.match(/"cache_control"/g)?.length ?? 0, 2);
+    const messages = body.messages as { content?: unknown }[];
+    assert.ok(JSON.stringify(messages[0]).includes("cache_control"));
+    assert.ok(JSON.stringify(messages[1]).includes("cache_control"));
+    assert.ok(!JSON.stringify(messages[2]).includes("cache_control"));
   });
 
   it("alibaba_provider_owned_authorization_wins_over_caller_header", async () => {

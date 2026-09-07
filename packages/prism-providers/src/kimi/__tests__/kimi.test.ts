@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { applyDefaultProviderRequestOptions } from "@arnilo/prism";
 import {
   assertNoForeignCacheFields,
   assertProviderOwnedHeadersWin,
@@ -235,6 +236,33 @@ describe("@arnilo/prism-providers/kimi", () => {
     for (const m of others) for (const block of m.content) assert.equal(block.cache_control, undefined);
   });
 
+  it("kimi_coding_kernel_defaults_mark_system_and_last_stable", async () => {
+    let body: any;
+    const provider = createKimiCodingProvider({
+      apiKey: "fake-kimi-key",
+      fetch: (async (_input, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([]));
+      }) as typeof fetch,
+    });
+    const messages: Message[] = [
+      { role: "system", content: [{ type: "text", text: "rules" }] },
+      { role: "user", content: [{ type: "text", text: "prefix" }] },
+      { role: "user", content: [{ type: "text", text: "tail" }] },
+    ];
+    await assertProviderStreamConforms({
+      provider,
+      request: applyDefaultProviderRequestOptions({
+        ...request,
+        model: { ...request.model, cache: { kind: "cache_control" as const } },
+        messages,
+      }),
+    });
+    assert.deepEqual(body.system, [{ type: "text", text: "rules", cache_control: { type: "ephemeral" } }]);
+    assert.deepEqual(body.messages[0].content.at(-1).cache_control, { type: "ephemeral" });
+    assert.equal(body.messages[1].content.at(-1).cache_control, undefined);
+  });
+
   it("kimi_anthropic_route_preserves_system_prompt_breakpoints_as_native_blocks", async () => {
     let body: any;
     const provider = createKimiCodingProvider({
@@ -288,6 +316,17 @@ describe("@arnilo/prism-providers/kimi", () => {
         options: { cacheKey: "session-1", cacheRetention: "long" },
       }),
     );
+    assertNoForeignCacheFields(
+      moonshotBody({
+        model: moonshotKimiModels[0],
+        messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+        options: { sessionId: "s1" },
+      }),
+    );
+  });
+
+  it("kimi_coding_sessionId_only_adds_no_cache_wire_fields", async () => {
+    assertNoForeignCacheFields(await kimiAnthropicBody({ ...request, options: { sessionId: "s1" } }));
   });
 
   it("moonshot_preserves_reasoning_content_on_assistant_replay", async () => {

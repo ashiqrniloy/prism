@@ -1,8 +1,8 @@
 import type { AIProvider, CredentialValueSource, ProviderRequest } from "@arnilo/prism";
-import { providerError, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
+import { providerError, ProviderRequirementError, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
 import { httpStatusError, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "../shared/anthropic-messages.js";
-import { applyOpencodeAnthropicCacheControl, opencodeOwnedHeaders } from "./cache.js";
+import { applyOpencodeAnthropicCacheControl, opencodeOwnedHeaders, opencodeSessionId } from "./cache.js";
 import { OPENCODE_GO_DEFAULT_BASE_URL } from "./models.js";
 import { openAIChatBody, openAIChatEvents } from "./openai-chat.js";
 import { openCodeGoPreserveThinking, openCodeGoReasoningEffort, openCodeGoThinking, stripOpenCodeGoOwnedCompat } from "./thinking.js";
@@ -30,6 +30,12 @@ export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}
     id,
     async *generate(request) {
       if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
+      if (!opencodeSessionId(request.options)) {
+        throw new ProviderRequirementError("opencode-go requires session correlation (options.sessionId → x-opencode-session)", {
+          providerId: id,
+          requirement: "sessionId",
+        });
+      }
       let token: string | undefined;
       const secrets: (string | undefined)[] = [];
       try {

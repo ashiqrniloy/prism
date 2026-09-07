@@ -1,3 +1,11 @@
+## [0.5.1] - 2026-09-07 (plan 066)
+
+### Changed
+- **Prism constructs valid provider requests on every owned generate site (plan 066, additive):** new `applyDefaultProviderRequestOptions(request, { sessionId, thinkingLevel? })` fills missing `options.sessionId` (from the kernel session id) and `options.cacheKey` (from that id) with host values always winning; new `AgentConfig.thinkingLevel` / `RunOptions.thinkingLevel` session intent (run overrides agent) reaches the wire through the existing `applyThinkingLevelForModel` snap/merge; cache-control and explicit-breakpoint models now get default `{ system_prompt, last_stable_message }` breakpoints with `cacheRetention: "short"` unless the host sets `cache.mode: "off"`, `cacheRetention: "none"`, or explicit breakpoints — implicit/host-owned providers (Azure, Bedrock, Vertex, AI SDK) emit nothing new. Host request policies (`createSessionCachePolicy` and friends) remain overlays and are never required for request success.
+- **Observational memory derives its own correlation id** (`om:{session.id}`, shared across observer/reflector/dropper) fully separate from the agent session (workers may use a different model); **LLM compaction reuses the agent session id** so summaries hit the same prompt cache.
+- **OpenCode Go fails closed before fetch:** a raw `provider.generate()` without resolvable `sessionId`/`cacheKey` throws the new typed `ProviderRequirementError` (`ERR_PRISM_PROVIDER_REQUIREMENT`, redacted message naming requirement + provider id) instead of an opaque upstream HTTP 400.
+- **Lockstep 0.5.1 bump:** all 10 publishable manifests `0.5.0` → `0.5.1` with internal ranges `^0.5.0` → `^0.5.1`. New exports: `applyDefaultProviderRequestOptions`, `ProviderRequirementError`, `ApplyDefaultProviderRequestOptionsContext`. Contract rewrite in `docs/provider-packages.md` and `docs/provider-request-policies.md`; additive 0.5.1 section in `docs/migrate-to-0.5.md`; each provider page documents its P1 session wire, mandatory flag, and P2 default cache behavior.
+
 ## [0.5.0] - 2026-09-06 (plans 055-065)
 
 ### Changed

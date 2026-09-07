@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, AuthMethod, JsonObject, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { applyDefaultProviderRequestOptions } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
   assertCanonicalToolParameters,
@@ -285,6 +286,29 @@ describe("@arnilo/prism-providers/anthropic", () => {
     assert.deepEqual(body.system, [{ type: "text", text: "stable", cache_control: { type: "ephemeral", ttl: "1h" } }]);
     assert.deepEqual(body.messages.find((m: any) => m.role === "assistant").content.at(-1).cache_control, { type: "ephemeral", ttl: "1h" });
     assert.equal((messages[0]!.content[0] as any).cache_control, undefined);
+  });
+
+  it("anthropic_kernel_defaults_mark_system_and_last_stable_without_host_breakpoints", async () => {
+    let body: any;
+    const provider = createAnthropicMessagesProvider({
+      apiKey: "fake-anthropic-key",
+      fetch: (async (_url, init) => {
+        body = JSON.parse(String(init?.body));
+        return ok(sse([{ type: "message_stop" }]));
+      }) as typeof fetch,
+    });
+    const messages: Message[] = [
+      { role: "system", content: [{ type: "text", text: "stable" }] },
+      { role: "user", content: [{ type: "text", text: "preamble" }] },
+      { role: "user", content: [{ type: "text", text: "current turn" }] },
+    ];
+    await assertProviderStreamConforms({
+      provider,
+      request: applyDefaultProviderRequestOptions({ ...request, messages }),
+    });
+    assert.deepEqual(body.system, [{ type: "text", text: "stable", cache_control: { type: "ephemeral" } }]);
+    assert.deepEqual(body.messages[0].content.at(-1).cache_control, { type: "ephemeral" });
+    assert.equal(body.messages[1].content.at(-1).cache_control, undefined);
   });
 
   it("serializes_pdf_document_and_file_blocks", async () => {

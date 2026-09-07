@@ -174,6 +174,18 @@ for Anthropic/Qwen/Gemini families with cache pricing; otherwise `implicit` when
 cache-read pricing exists), and seeds `compat.reasoning.effort` from
 `reasoning.default_effort` when present.
 
+## Request construction (0.5.1)
+
+Agent sessions stamp `sessionId`/`cacheKey` without a host policy. Session/cache keys are correlation ids, never secrets.
+
+| | |
+| --- | --- |
+| P1 session wire | `x-session-id` + body `session_id` |
+| Mandatory | no |
+| P2 default cache | kernel defaults → per-message `cache_control` (not top-level automatic) |
+
+See [Provider request policies](../provider-request-policies.md).
+
 ## Security and performance notes
 
 - SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport` helpers (`readSseData`, `readBoundedResponseText`).
