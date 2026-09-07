@@ -53,7 +53,7 @@ export function serializeOpenCodeGoChatMessage(message: Message, capabilities: M
   }
 
   const thinkingParts = message.content.filter((part): part is Extract<ContentBlock, { type: "thinking" }> => part.type === "thinking");
-  const reasoningContent = preserveThinking && thinkingParts.length > 0 ? thinkingParts.map((part) => part.text).join("\n") : undefined;
+  const reasoningContent = preserveThinking && thinkingParts.length > 0 ? thinkingParts.map((part) => part.text).join("") : undefined;
 
   if (message.role === "assistant") {
     const toolCalls = message.content.filter((part): part is Extract<ContentBlock, { type: "tool_call" }> => part.type === "tool_call");
@@ -61,7 +61,7 @@ export function serializeOpenCodeGoChatMessage(message: Message, capabilities: M
     if (toolCalls.length > 0) {
       return clean({
         role: "assistant",
-        content: textParts.map((part) => part.text).join("\n") || null,
+        content: textParts.map((part) => part.text).join("") || null,
         tool_calls: toolCalls.map((call) => ({
           id: call.id,
           type: "function",

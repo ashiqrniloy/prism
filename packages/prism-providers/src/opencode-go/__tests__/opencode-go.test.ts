@@ -189,6 +189,28 @@ describe("@arnilo/prism-providers/opencode-go", () => {
     assert.ok(!JSON.stringify(assistant.content).includes("plan the lookup"));
   });
 
+  it("joins uncoalesced stream tokens without interstitial newlines", () => {
+    const body = openAIChatBody({
+      model: openaiModel,
+      messages: [
+        {
+          role: "assistant",
+          content: [
+            { type: "thinking", text: "the" },
+            { type: "thinking", text: " user" },
+            { type: "thinking", text: " asked" },
+            { type: "text", text: "hello" },
+            { type: "text", text: " world" },
+            { type: "tool_call", id: "c1", name: "lookup", arguments: { q: "x" } },
+          ],
+        },
+      ],
+    });
+    const assistant = (body.messages as { content?: unknown; reasoning_content?: string }[])[0]!;
+    assert.equal(assistant.content, "hello world");
+    assert.equal(assistant.reasoning_content, "the user asked");
+  });
+
   it("opencode_go_openai_route_drops_thinking_without_flattening_when_preserve_disabled", async () => {
     let body: any;
     const provider = createOpenCodeGoProvider({

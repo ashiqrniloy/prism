@@ -63,7 +63,7 @@ export function zaiEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal
 export function toZaiMessage(message: Message, model: ModelConfig, preserveThinking = false): JsonObject {
   const capabilities = model.capabilities ?? {};
   const thinkingParts = message.content.filter((part): part is Extract<ContentBlock, { type: "thinking" }> => part.type === "thinking");
-  const reasoningContent = preserveThinking && thinkingParts.length > 0 ? thinkingParts.map((part) => part.text).join("\n") : undefined;
+  const reasoningContent = preserveThinking && thinkingParts.length > 0 ? thinkingParts.map((part) => part.text).join("") : undefined;
 
   if (message.role === "tool") {
     const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
@@ -80,7 +80,7 @@ export function toZaiMessage(message: Message, model: ModelConfig, preserveThink
     if (toolCalls.length > 0) {
       return clean({
         role: "assistant",
-        content: textParts.map((part) => part.text).join("\n") || null,
+        content: textParts.map((part) => part.text).join("") || null,
         tool_calls: toolCalls.map((call) => ({
           id: call.id,
           type: "function",

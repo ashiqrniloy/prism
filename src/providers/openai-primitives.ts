@@ -72,7 +72,7 @@ export function serializeOpenAIChatMessage(message: Message, capabilities: Model
     if (toolCalls.length > 0) {
       return {
         role: "assistant",
-        content: textParts.map((part) => part.text).join("\n") || null,
+        content: textParts.map((part) => part.text).join("") || null,
         tool_calls: toolCalls.map((call) => ({
           id: call.id,
           type: "function",

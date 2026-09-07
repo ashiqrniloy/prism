@@ -223,7 +223,7 @@ function textOnlyContent(content: readonly ContentBlock[], role: string): string
     }
     throw unsupported(part.type, role);
   }
-  return texts.join("\n");
+  return texts.join("");
 }
 
 function unsupported(type: string, role: string): never {

@@ -68,6 +68,18 @@ describe("openai provider primitives", () => {
     });
   });
 
+  it("joins uncoalesced tool-call text tokens without interstitial newlines", () => {
+    const serialized = serializeOpenAIChatMessage({
+      role: "assistant",
+      content: [
+        { type: "text", text: "hello" },
+        { type: "text", text: " world" },
+        { type: "tool_call", id: "c1", name: "echo", arguments: { text: "x" } },
+      ],
+    });
+    assert.equal(serialized.content, "hello world");
+  });
+
   it("serializes structured output wire formats", () => {
     const options = {
       name: "answer",

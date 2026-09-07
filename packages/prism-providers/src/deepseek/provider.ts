@@ -42,7 +42,7 @@ export function toDeepSeekMessage(message: Message, request: ProviderRequest): J
   const index = request.messages.indexOf(message);
   const replay = deepseekReplayThinking(request, index < 0 ? request.messages.length : index);
   const thinkingParts = message.content.filter((part): part is Extract<ContentBlock, { type: "thinking" }> => part.type === "thinking");
-  const reasoningContent = replay && thinkingParts.length > 0 ? thinkingParts.map((part) => part.text).join("\n") : undefined;
+  const reasoningContent = replay && thinkingParts.length > 0 ? thinkingParts.map((part) => part.text).join("") : undefined;
 
   if (message.role === "tool") {
     const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
@@ -59,7 +59,7 @@ export function toDeepSeekMessage(message: Message, request: ProviderRequest): J
     if (toolCalls.length > 0) {
       return clean({
         role: "assistant",
-        content: textParts.map((part) => part.text).join("\n") || null,
+        content: textParts.map((part) => part.text).join("") || null,
         tool_calls: toolCalls.map((call) => ({
           id: call.id,
           type: "function",

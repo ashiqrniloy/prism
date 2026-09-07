@@ -34,6 +34,23 @@ import {
 } from "../helpers.js";
 import type { RoundContext, SessionHost } from "./types.js";
 
+function pushCoalescedContent(content: ContentBlock[], block: ContentBlock): void {
+  const last = content.at(-1);
+  if (last?.type === "text" && block.type === "text") {
+    content[content.length - 1] = { type: "text", text: last.text + block.text };
+    return;
+  }
+  if (last?.type === "thinking" && block.type === "thinking") {
+    content[content.length - 1] = {
+      type: "thinking",
+      text: last.text + block.text,
+      ...((block.signature ?? last.signature) ? { signature: block.signature ?? last.signature } : {}),
+    };
+    return;
+  }
+  content.push(block);
+}
+
 /**
  * Plan 062: price usage through the host's {@link CostCatalog} when the provider
  * did not report a cost itself. Stale/unknown quotes, catalog failures, or
@@ -193,7 +210,7 @@ export async function generateProviderTurn(
           continue;
         }
         const block = providerContent(event);
-        content.push(block);
+        pushCoalescedContent(content, block);
         if (block.type === "tool_call") calls.push(block);
         emitOutput({ type: "message_delta", sessionId: session.id, runId, content: block });
       }

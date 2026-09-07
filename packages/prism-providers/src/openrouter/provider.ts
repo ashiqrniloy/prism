@@ -97,7 +97,7 @@ function toOpenRouterMessage(message: CacheControlledMessage, model: ModelConfig
   const thinkingText = message.content
     .filter((part): part is Extract<ContentBlock, { type: "thinking" }> => part.type === "thinking")
     .map((part) => part.text)
-    .join("\n");
+    .join("");
   const reasoningField = preserveThinking && thinkingText ? thinkingText : undefined;
 
   if (message.role === "assistant") {
@@ -106,7 +106,7 @@ function toOpenRouterMessage(message: CacheControlledMessage, model: ModelConfig
     if (toolCalls.length > 0) {
       return clean({
         role: "assistant",
-        content: textParts.map((part) => part.text).join("\n") || null,
+        content: textParts.map((part) => part.text).join("") || null,
         reasoning: reasoningField,
         tool_calls: toolCalls.map((call) => ({
           id: call.id,

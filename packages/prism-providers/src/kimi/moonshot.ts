@@ -86,8 +86,8 @@ export function serializeMoonshotMessage(message: Message, capabilities: ModelCa
     const toolCalls = message.content.filter((part): part is Extract<ContentBlock, { type: "tool_call" }> => part.type === "tool_call");
     const textParts = message.content.filter((part) => part.type === "text");
     const thinkingParts = message.content.filter((part) => part.type === "thinking");
-    const text = textParts.map((part) => part.text).join("\n");
-    const reasoning = thinkingParts.map((part) => part.text).join("\n");
+    const text = textParts.map((part) => part.text).join("");
+    const reasoning = thinkingParts.map((part) => part.text).join("");
     const base: Record<string, unknown> = {
       role: "assistant",
       content: text || (toolCalls.length > 0 ? null : ""),

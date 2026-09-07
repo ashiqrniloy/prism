@@ -50,7 +50,7 @@ export function toXaiMessage(message: Message, request: ProviderRequest): JsonOb
     return serializeOpenAIChatMessage(message, request.model.capabilities ?? {});
   }
   const thinking = message.content.filter((part) => part.type === "thinking").map((part) => part.text);
-  const reasoningContent = thinking.length > 0 ? thinking.join("\n") : undefined;
+  const reasoningContent = thinking.length > 0 ? thinking.join("") : undefined;
   const withoutThinking: Message = {
     ...message,
     content: message.content.filter((part) => part.type !== "thinking"),
