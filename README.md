@@ -162,16 +162,16 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 
 | package | version | notes |
 | --- | --- | --- |
-| `@arnilo/prism` | 0.5.1 | core — runtime, CLI/RPC, templates, docs |
-| `@arnilo/prism-coding-tools` | 0.5.1 | family — /agent, /security, /document-reader, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths |
-| `@arnilo/prism-core` | 0.5.1 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /work, /validation subpaths |
-| `@arnilo/prism-providers` | 0.5.1 | family — all provider adapters as `/<adapter>` subpaths |
-| `@arnilo/prism-acp-agent` | 0.5.1 | capability — ACP adapter |
-| `@arnilo/prism-ag-ui` | 0.5.1 | capability — AG-UI/A2A/A2UI adapter |
-| `@arnilo/prism-mcp` | 0.5.1 | capability — MCP client/server/OAuth interop |
-| `@arnilo/prism-memory` | 0.5.1 | capability — memory plus /rag, /compaction/*, /graft, /wiki subpaths |
-| `@arnilo/prism-office` | 0.5.1 | capability — /documents, /sheets, /diagrams subpaths |
-| `@arnilo/prism-web-tools` | 0.5.1 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
+| `@arnilo/prism` | 0.5.2 | core — runtime, CLI/RPC, templates, docs |
+| `@arnilo/prism-coding-tools` | 0.5.2 | family — /agent, /security, /document-reader, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths |
+| `@arnilo/prism-core` | 0.5.2 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /work, /validation subpaths |
+| `@arnilo/prism-providers` | 0.5.2 | family — all provider adapters as `/<adapter>` subpaths |
+| `@arnilo/prism-acp-agent` | 0.5.2 | capability — ACP adapter |
+| `@arnilo/prism-ag-ui` | 0.5.2 | capability — AG-UI/A2A/A2UI adapter |
+| `@arnilo/prism-mcp` | 0.5.2 | capability — MCP client/server/OAuth interop |
+| `@arnilo/prism-memory` | 0.5.2 | capability — memory plus /rag, /compaction/*, /graft, /wiki subpaths |
+| `@arnilo/prism-office` | 0.5.2 | capability — /documents, /sheets, /diagrams subpaths |
+| `@arnilo/prism-web-tools` | 0.5.2 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
 <!-- generated:package-truth:inventory end -->
 
 ## Scripts

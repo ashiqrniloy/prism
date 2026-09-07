@@ -1,6 +1,6 @@
 # Migrate Prism 0.4 to 0.5
 
-> **Status: 0.5.1** (plan 066, additive on the 2026-09-06 `v0.5.0` tag). 0.5.0 covers plans 055–065. 0.5.1 adds kernel provider-request construction.
+> **Status: 0.5.2** (stream-token coalesce, additive on the 2026-09-07 `v0.5.1` tag). 0.5.0 covers plans 055–065. 0.5.1 adds kernel provider-request construction.
 
 ## What changes
 

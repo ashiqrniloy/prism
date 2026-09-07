@@ -1,5 +1,9 @@
 # Migration guide
 
+## 0.5.1 → 0.5.2 (additive)
+
+Stream tokens coalesce on persist (adjacent `text`/`thinking` deltas merge). Replay serializers join those parts with an empty string instead of a newline. No import, store, or peer-range break; bump `@arnilo/prism*` to `^0.5.2`.
+
 ## 0.5.0 → 0.5.1 (additive)
 
 Kernel constructs valid provider requests: session correlation, default cache breakpoints, and `thinkingLevel` on `AgentConfig` / `RunOptions`. Clay may drop host-only `createSessionCachePolicy`. OpenCode Go raw `generate` without `sessionId` throws `ProviderRequirementError` (`ERR_PRISM_PROVIDER_REQUIREMENT`) before fetch instead of an upstream 400. Observational memory uses derived `om:{session.id}`; LLM compaction uses the agent session id. See [migrate-to-0.5.md](migrate-to-0.5.md#8-provider-request-construction--additive-plan-066--051).

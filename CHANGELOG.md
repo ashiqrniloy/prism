@@ -1,3 +1,8 @@
+## [0.5.2] - 2026-09-08
+
+### Fixed
+- **Stream tokens no longer persist as one content block per SSE delta.** Adjacent `text`/`thinking` deltas merge on persist (`text += delta`); `message_delta` events stay per-token. Replay serializers join those parts with `""` instead of `"\n"`, so multi-turn tool loops stop poisoning the next request into one token per line. Lockstep `0.5.1` → `0.5.2` with internal ranges `^0.5.1` → `^0.5.2`.
+
 ## [0.5.1] - 2026-09-07 (plan 066)
 
 ### Changed

@@ -67,7 +67,7 @@ describe("Plan 027 Task 10 release closeout", () => {
     // Decision B: the root may patch independently after the 0.3.0 cut
     // (plan 039 changed-package cut moved the root to 0.3.1).
     assert.ok(
-      ["0.3.0", "0.3.1", "0.3.2", "0.3.3", "0.4.0", "0.4.1", "0.5.0", "0.5.1"].includes(truth.root.version),
+      ["0.3.0", "0.3.1", "0.3.2", "0.3.3", "0.4.0", "0.4.1", "0.5.0", "0.5.1", "0.5.2"].includes(truth.root.version),
       `root manifest ${truth.root.version}`,
     );
     assert.equal(truth.peerPolicy.spec, `^${truth.root.version}`, "peer policy spec tracks the root");
