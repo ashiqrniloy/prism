@@ -267,7 +267,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          if [ "$GITHUB_REF_NAME" = "v0.3.0" ] || [ "$GITHUB_REF_NAME" = "v0.4.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.1" ] || [ "$GITHUB_REF_NAME" = "v0.5.2" ] || [ "$GITHUB_REF_NAME" = "v0.5.3" ]; then
+          if [ "$GITHUB_REF_NAME" = "v0.3.0" ] || [ "$GITHUB_REF_NAME" = "v0.4.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.1" ] || [ "$GITHUB_REF_NAME" = "v0.5.2" ] || [ "$GITHUB_REF_NAME" = "v0.5.3" ] || [ "$GITHUB_REF_NAME" = "v0.5.4" ]; then
             npm run release:publish -- --lockstep --version "${GITHUB_REF_NAME#v}" --resume --report release-artifacts/publish-report.json
           else
             npm run release:publish -- --resume --report release-artifacts/publish-report.json
