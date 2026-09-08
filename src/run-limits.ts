@@ -28,7 +28,9 @@ type ByteLimit = keyof typeof HARD_RUN_LIMITS;
 type PolicyLimit = Exclude<IntegerLimit, ByteLimit>;
 type IntegerLimit = keyof typeof DEFAULT_RUN_LIMITS;
 const LIMIT_NAMES = Object.keys(DEFAULT_RUN_LIMITS) as IntegerLimit[];
-const POLICY_NAMES: readonly PolicyLimit[] = LIMIT_NAMES.filter((name) => name !== "maxRequestBytes" && name !== "maxResponseBytes") as PolicyLimit[];
+const POLICY_NAMES: readonly PolicyLimit[] = LIMIT_NAMES.filter(
+  (name) => name !== "maxRequestBytes" && name !== "maxResponseBytes",
+) as PolicyLimit[];
 const COUNTER_FOR: Record<RunLimitName, keyof RunLimitCounters> = {
   maxTurns: "turns",
   maxProviderAttempts: "providerAttempts",
@@ -122,8 +124,7 @@ function validateLimits(input: RunLimits): RunLimits {
       continue;
     }
     if (value === null) continue;
-    if (!Number.isSafeInteger(value) || value < 1)
-      throw new TypeError(`${name} must be a positive safe integer or null to disable`);
+    if (!Number.isSafeInteger(value) || value < 1) throw new TypeError(`${name} must be a positive safe integer or null to disable`);
   }
   if (input.maxCost) {
     const { amount, currency } = input.maxCost;
@@ -142,7 +143,10 @@ export class RunLimitTracker {
   private timer?: ReturnType<typeof setTimeout>;
   private exceeded?: RunLimitBreach;
 
-  constructor(limits: Readonly<ResolvedRunLimits>, private readonly options: RunLimitTrackerOptions = {}) {
+  constructor(
+    limits: Readonly<ResolvedRunLimits>,
+    private readonly options: RunLimitTrackerOptions = {},
+  ) {
     this.limits = limits;
     this.counters = {
       turns: 0,
@@ -164,7 +168,11 @@ export class RunLimitTracker {
       }
     }
     // A restored durable deadline wins even when the wall limit is now disabled (never drop an existing wall).
-    const deadline = options.deadlineAt ? Date.parse(options.deadlineAt) : limits.maxWallTimeMs === null ? undefined : Date.now() + limits.maxWallTimeMs;
+    const deadline = options.deadlineAt
+      ? Date.parse(options.deadlineAt)
+      : limits.maxWallTimeMs === null
+        ? undefined
+        : Date.now() + limits.maxWallTimeMs;
     if (deadline === undefined) {
       this.deadlineAt = undefined;
     } else {

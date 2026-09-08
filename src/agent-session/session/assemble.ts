@@ -378,10 +378,7 @@ export async function executeRun(
   session.activeLimits = limits;
   const hasFiniteTokenCap = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value);
   session.activeLimitOutputBuffer = [session.agent.config.limits, requestedLimits].some(
-    (value) =>
-      hasFiniteTokenCap(value?.maxOutputTokens) ||
-      hasFiniteTokenCap(value?.maxTotalTokens) ||
-      value?.maxCost !== undefined,
+    (value) => hasFiniteTokenCap(value?.maxOutputTokens) || hasFiniteTokenCap(value?.maxTotalTokens) || value?.maxCost !== undefined,
   );
 
   try {

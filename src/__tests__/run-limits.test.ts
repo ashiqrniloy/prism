@@ -36,19 +36,22 @@ describe("run limits", () => {
 
   it("keeps DEFAULT_RUN_LIMITS as the unconfigured fence (LLM10 defaults unchanged)", () => {
     const resolved = resolveRunLimits(undefined, undefined);
-    assert.deepEqual({ ...resolved, maxCost: undefined }, {
-      maxTurns: 16,
-      maxProviderAttempts: 24,
-      maxToolRounds: 8,
-      maxToolCalls: 32,
-      maxWallTimeMs: 120_000,
-      maxRequestBytes: 8 * 1024 * 1024,
-      maxResponseBytes: 8 * 1024 * 1024,
-      maxInputTokens: 40_000,
-      maxOutputTokens: 10_000,
-      maxTotalTokens: 50_000,
-      maxCost: undefined,
-    });
+    assert.deepEqual(
+      { ...resolved, maxCost: undefined },
+      {
+        maxTurns: 16,
+        maxProviderAttempts: 24,
+        maxToolRounds: 8,
+        maxToolCalls: 32,
+        maxWallTimeMs: 120_000,
+        maxRequestBytes: 8 * 1024 * 1024,
+        maxResponseBytes: 8 * 1024 * 1024,
+        maxInputTokens: 40_000,
+        maxOutputTokens: 10_000,
+        maxTotalTokens: 50_000,
+        maxCost: undefined,
+      },
+    );
     assert.deepEqual({ ...HARD_RUN_LIMITS }, { maxRequestBytes: 64 * 1024 * 1024, maxResponseBytes: 64 * 1024 * 1024 });
   });
 
@@ -120,7 +123,9 @@ describe("run limits", () => {
 
   it("arms a finite wall timer and breaches through the real clock, without throwing", async () => {
     const breaches: RunLimitBreach[] = [];
-    const tracker = new RunLimitTracker(resolveRunLimits(undefined, { maxWallTimeMs: 5 }), { onExceeded: (breach) => breaches.push(breach) });
+    const tracker = new RunLimitTracker(resolveRunLimits(undefined, { maxWallTimeMs: 5 }), {
+      onExceeded: (breach) => breaches.push(breach),
+    });
     assert.ok(typeof tracker.deadlineAt === "string");
     await new Promise((resolve) => setTimeout(resolve, 20));
     assert.equal(tracker.breach?.limit, "maxWallTimeMs");
@@ -142,7 +147,9 @@ describe("run limits", () => {
   });
 
   it("breaches finite token caps on cumulative usage across rounds", () => {
-    const tracker = new RunLimitTracker(resolveRunLimits(undefined, { maxInputTokens: null, maxOutputTokens: null, maxTotalTokens: 5_000_000 }));
+    const tracker = new RunLimitTracker(
+      resolveRunLimits(undefined, { maxInputTokens: null, maxOutputTokens: null, maxTotalTokens: 5_000_000 }),
+    );
     tracker.recordUsage({ inputTokens: 3_000_000 });
     assert.equal(tracker.breach, undefined);
     assert.throws(() => tracker.recordUsage({ inputTokens: 2_000_000, outputTokens: 500_000 }), RunLimitError);
@@ -217,7 +224,13 @@ describe("run limits", () => {
     const result = await session.run("hi", { loop, limits: { maxTurns: null, maxOutputTokens: null } });
     assert.equal(result.status, "succeeded");
     const observed = await events;
-    assert.equal(observed.some((event) => event.type === "message_delta"), true);
-    assert.equal(observed.some((event) => event.type === "run_limit_exceeded"), false);
+    assert.equal(
+      observed.some((event) => event.type === "message_delta"),
+      true,
+    );
+    assert.equal(
+      observed.some((event) => event.type === "run_limit_exceeded"),
+      false,
+    );
   });
 });
