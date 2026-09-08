@@ -141,7 +141,7 @@ PRISM_TEST_POSTGRES_URL="$DATABASE_URL" npm run test:postgres --workspace @arnil
 - [SQLite persistence](sqlite-persistence.md): file-backed alternative for local/single-writer hosts.
 - [Session store conformance](session-store-conformance.md): `assertSessionStoreConforms` / `runSessionStoreConformance`.
 - [Run ledger conformance](run-ledger-conformance.md): `assertRunLedgerConforms` / `runRunLedgerConformance`.
-- [Persistence, credentials, and multimodality primitives](persistence-credentials-multimodality-primitives.md): package matrix and threat model.
+- [Persistence, credentials, and multimodality primitives](history/persistence-credentials-multimodality-primitives.md): package matrix and threat model.
 - [Workflows](workflows.md): adapt `persistence.checkpoints` and pass `persistence.leases` to `createWorkflowCoordinator()` and `createWorkflowSchedules()` for durable background execution and schedules.
 - [Working and semantic memory](working-and-semantic-memory.md): optional `@arnilo/prism-memory` PostgreSQL/pgvector working + semantic stores (separate from session/run persistence).
 - [Enterprise PostgreSQL state](enterprise-postgres-state.md): separate durable policy/evaluation/work/router stores and cleanup.

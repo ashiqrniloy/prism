@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prism execution"
+  short_description: "Execute Prism plan tasks without dumping docs"
+  default_prompt: "Execute the next unchecked plan task using prism-execution."

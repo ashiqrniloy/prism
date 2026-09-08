@@ -269,5 +269,5 @@ MCP credentials remain host inputs: resolve them before constructing client `req
 - [Azure OpenAI / Foundry](providers/azure.md) / [Amazon Bedrock](providers/bedrock.md) / [Google Vertex AI](providers/vertex.md): enterprise workload-identity credential callbacks
 - [Web search, fetch, and extraction](web-tools.md): late-bound Brave/Exa/Firecrawl credentials
 - [Security/auth/trust](settings-auth-trust-security.md): host-owned settings/credentials boundaries
-- [Persistence, credentials, and multimodality primitives](persistence-credentials-multimodality-primitives.md): Plan 056 threat model and conformance matrix rows 7–10
+- [Persistence, credentials, and multimodality primitives](history/persistence-credentials-multimodality-primitives.md): Plan 056 threat model and conformance matrix rows 7–10
 - `@arnilo/prism`: `CredentialResolver`, `OAuthCredentialStore`, `createMemoryCredentialStore()`

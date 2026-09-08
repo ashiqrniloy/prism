@@ -8,26 +8,39 @@ Every task must include `Documentation/Wiki Assessment` with:
 
 - `Public API or behavior impacted`: yes/no and why.
 - `Docs pages to create/edit`: concrete `/docs` paths, or `none` with reason.
-- `docs/index.md update`: yes/no and the navigation entry to add/change.
+- `docs/index.md update`: yes/no and the navigation entry to add/change. Answer `no` whenever `Public API or behavior impacted` is `no` — navigation edits require a behavior delta.
 - `Documentation structure reference`: this file when docs are required.
 
 Documentation is required when a task adds or changes any public API, extension point, configuration surface, provider/model/tool/session behavior, event name/payload, package export/subpath, CLI/RPC protocol, resource loader, settings/credential behavior, or default/replaceable implementation.
 
+## Current-line vs history (plan 068)
+
+- `/docs` documents the **current contract** of the latest released version. Release narrative is history.
+- Index entry = **one sentence** describing what the page covers today. No plan numbers (`plan 041`), no version narrative ("0.2.6 adds"), no changed-package cuts, no god-module line counts.
+- Historical content (migration cuts per era, publish handoffs, readiness records, primitive reviews) goes to `docs/history/` or `CHANGELOG.md` — never into an API page body and never into an index blurb.
+- API pages must not carry release-recap sections; record release deltas in `CHANGELOG.md` under the version heading.
+
 ## `/docs` structure
 
 - `/docs/index.md` is the navigation map for humans and AI agents.
-- Group entries by functionality, for example:
-  - Provider and model connection
+- Group entries by the index's live headings, for example:
+  - Public contracts
+  - Identity and governance
   - Agent/session runtime
-  - Input and prompt assembly
+  - Compaction/session memory
+  - Provider and model connection
+  - Input, prompt, and context assembly
   - Tools
-  - Context and skills
+  - Documents, sheets, and diagrams
   - Extensions/plugins
   - Configuration/manifests
-  - Compaction/session memory
+  - Server/API
+  - Multi-agent and interoperability
   - CLI/RPC
-  - Security/auth/trust
-- Each index entry must include a short functional description and a link to the detailed page.
+  - Security and credentials
+  - Testing and examples
+  - Third-party integrations
+- Each index entry must include a one-sentence functional description and a link to the detailed page.
 
 ## API page structure
 
@@ -37,7 +50,7 @@ Each API page must use this structure:
 # <API name>
 
 ## What it does
-<Small description of what the API does.>
+<Small description of what the API does — current contract, no release narrative.>
 
 ## When to use it
 <When an app/package/extension should use this API.>

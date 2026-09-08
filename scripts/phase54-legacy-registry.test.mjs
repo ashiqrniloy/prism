@@ -15,7 +15,7 @@ import { CONSOLIDATION_SPEC } from "./phase54-package-map.mjs";
 
 const rootDir = join(fileURLToPath(import.meta.url), "../..");
 const script = join(rootDir, "scripts/phase54-legacy-registry.mjs");
-const guide = join(rootDir, "docs/migrate-to-0.4.md");
+const guide = join(rootDir, "docs/history/migrate-to-0.4.md");
 
 const NAMES = CONSOLIDATION_SPEC.retiredPackages.map((r) => r.name);
 // Mirrors the real registry: two retired names were never published.
@@ -126,7 +126,7 @@ test("phase54 legacy registry: message contract names legacy status, exact succe
     assert.ok(entry.message.startsWith("Legacy 0.3 "), `legacy status first: ${entry.name}`);
     assert.ok(entry.message.includes("Prism 0.4+:"), `successor clause present: ${entry.name}`);
     assert.ok(
-      entry.message.includes(`https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.4.md${entry.migrationAnchor}`),
+      entry.message.includes(`https://github.com/ashiqrniloy/prism/blob/main/docs/history/migrate-to-0.4.md${entry.migrationAnchor}`),
       `guide URL+anchor present: ${entry.name}`,
     );
     assert.ok(anchors.has(entry.migrationAnchor.slice(1)), `anchor exists in guide: ${entry.name} -> ${entry.migrationAnchor}`);

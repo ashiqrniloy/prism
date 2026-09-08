@@ -126,7 +126,7 @@ SQLite applies migrations **006**/**007** for per-run event sequence compatibili
 - [Database persistence](database-persistence.md): shared schema model, conditional append pattern, indexes.
 - [Session store conformance](session-store-conformance.md): `assertSessionStoreConforms` / `runSessionStoreConformance`.
 - [Run ledger conformance](run-ledger-conformance.md): `assertRunLedgerConforms` / `runRunLedgerConformance`.
-- [Persistence, credentials, and multimodality primitives](persistence-credentials-multimodality-primitives.md): package matrix and threat model.
+- [Persistence, credentials, and multimodality primitives](history/persistence-credentials-multimodality-primitives.md): package matrix and threat model.
 - [Node JSONL session store](node-jsonl-session-store.md): dev-only single-process alternative.
 - [Workflows](workflows.md): adapt `persistence.checkpoints` and pass `persistence.leases` to `createWorkflowCoordinator()` and `createWorkflowSchedules()` for durable background execution and schedules.
 - [Migration guide](migration.md): moving from JSONL/in-memory to database-backed persistence.

@@ -168,7 +168,7 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
   const secondPeers = {};
   for (const p of codeWithPeer) {
     const spec = p.peerDependencies["@arnilo/prism"];
-    assert.equal(spec, "^0.5.4", `${p.name} must peer @arnilo/prism@^0.5.4, got ${spec}`);
+    assert.equal(spec, "^0.5.5", `${p.name} must peer @arnilo/prism@^0.5.5, got ${spec}`);
     assert.match(spec, /^\^\d+\.\d+\.\d+$/, `${p.name} peer spec must be a 0.x caret range, got ${spec}`);
     const extra = Object.keys(p.peerDependencies).filter((n) => n.startsWith("@arnilo/prism-"));
     if (extra.length > 0) secondPeers[p.name] = extra;
@@ -268,9 +268,7 @@ test("built dist exposes the manifest version and the frozen surface resolves", 
 test("docs current-line version equals the root manifest version", () => {
   const root = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
   const index = readFileSync(join(ROOT, "docs", "index.md"), "utf8");
-  const readiness = readFileSync(join(ROOT, "docs", "0.1.0-readiness.md"), "utf8");
   assert.ok(index.includes(`current **${root.version}**`), `docs/index.md current-line must be ${root.version}`);
-  assert.ok(readiness.includes(`## Current line (${root.version})`), `readiness current-line heading must be ${root.version}`);
 });
 
 test("no page claims all/every for the two umbrellas without closure proof", () => {
@@ -278,7 +276,7 @@ test("no page claims all/every for the two umbrellas without closure proof", () 
     "README.md",
     "docs/release-and-install.md",
     "docs/index.md",
-    "docs/0.1.0-readiness.md",
+    "docs/history/0.1.0-readiness.md",
     "packages/prism-providers/README.md",
     ...(existsSync(join(ROOT, "packages/prism-all/README.md")) ? ["packages/prism-all/README.md"] : []),
   ];

@@ -1,6 +1,6 @@
 # Migrate Prism 0.4 to 0.5
 
-> **Status: 0.5.4** (run-limit HARD split from host policy on the 2026-09-08 `v0.5.3` tag). 0.5.0 covers plans 055–065. 0.5.1 adds kernel provider-request construction. 0.5.2 coalesces stream tokens. 0.5.3 folds content-only tool results.
+> **Status: 0.5.4** (run-limit HARD split from host policy, plan 067). 0.5.0 covers plans 055–065. 0.5.1 adds kernel provider-request construction. 0.5.2 coalesces stream tokens. 0.5.3 folds content-only tool results.
 
 ## What changes
 

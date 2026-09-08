@@ -8,7 +8,7 @@ Implementation is **shipped and phase-verified** (Tasks 0–7). Optional package
 
 ## When to use it
 
-- **Adapter authors** implementing SQLite/PostgreSQL `SessionStore` + `RunLedger` should start here, then follow [Database persistence](database-persistence.md) and [Session store conformance](session-store-conformance.md).
+- **Adapter authors** implementing SQLite/PostgreSQL `SessionStore` + `RunLedger` should start here, then follow [Database persistence](../database-persistence.md) and [Session store conformance](../session-store-conformance.md).
 - **Host apps** wiring CLI/desktop credential persistence should use the credential seams and package matrix here before choosing `@arnilo/prism-core/credentials/node` backends.
 - **Provider and core authors** extending multimodal input should use the content/resource/capability designs here instead of embedding provider upload IDs in core contracts.
 - **Security reviewers** use the threat model and conformance matrix on this page as the acceptance baseline for Plan 056 Tasks 1–7.
@@ -289,15 +289,15 @@ See **Threat model summary** and **Performance notes** above. Cross-cutting rule
 
 ## Related APIs
 
-- [Database persistence](database-persistence.md): reference schema, indexes, conditional append pattern
-- [Session stores](session-stores.md): runtime `SessionStore` contract and branch handles
-- [Session store conformance](session-store-conformance.md): `assertSessionStoreConforms`
-- [Runs and usage ledger](runs-and-usage.md): `RunLedger` write seam
-- [Node JSONL session store](node-jsonl-session-store.md): dev-only file adapter boundaries
-- [Credentials and redaction](credentials-and-redaction.md): core resolver/OAuth helpers
-- [Security/auth/trust](settings-auth-trust-security.md): trust, permissions, memory credentials
-- [Input and prompt assembly](input-and-prompt-assembly.md): attachments and input layout
-- [Resource loading](resource-loading.md): `ResourceLoader` decode helpers
-- [Model registry](model-registry.md): `ModelCapabilities` metadata
-- [Provider conformance](provider-conformance.md): content preservation and secret leak checks
-- [Review coverage (2026-07-14)](_evidence/review-coverage-2026-07-14.md): traceability for C-005, C-010, C-011
+- [Database persistence](../database-persistence.md): reference schema, indexes, conditional append pattern
+- [Session stores](../session-stores.md): runtime `SessionStore` contract and branch handles
+- [Session store conformance](../session-store-conformance.md): `assertSessionStoreConforms`
+- [Runs and usage ledger](../runs-and-usage.md): `RunLedger` write seam
+- [Node JSONL session store](../node-jsonl-session-store.md): dev-only file adapter boundaries
+- [Credentials and redaction](../credentials-and-redaction.md): core resolver/OAuth helpers
+- [Security/auth/trust](../settings-auth-trust-security.md): trust, permissions, memory credentials
+- [Input and prompt assembly](../input-and-prompt-assembly.md): attachments and input layout
+- [Resource loading](../resource-loading.md): `ResourceLoader` decode helpers
+- [Model registry](../model-registry.md): `ModelCapabilities` metadata
+- [Provider conformance](../provider-conformance.md): content preservation and secret leak checks
+- [Review coverage (2026-07-14)](../_evidence/review-coverage-2026-07-14.md): traceability for C-005, C-010, C-011

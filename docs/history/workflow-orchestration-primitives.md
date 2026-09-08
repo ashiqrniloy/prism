@@ -16,7 +16,7 @@ Interactive TUI (**C-012**) is **out of scope** for Plan 057 and deferred. Workf
 
 ## When to use it
 
-- **Workflow package authors** should start here, then follow [Agent/session runtime](agent-session-runtime.md), [Agent loops](agent-loops.md), [Runs and usage ledger](runs-and-usage.md), [CLI/RPC](cli-rpc.md), and [Database persistence](database-persistence.md).
+- **Workflow package authors** should start here, then follow [Agent/session runtime](../agent-session-runtime.md), [Agent loops](../agent-loops.md), [Runs and usage ledger](../runs-and-usage.md), [CLI/RPC](../cli-rpc.md), and [Database persistence](../database-persistence.md).
 - **Host authors** use CLI/RPC and `CommandDefinition` as the non-interactive control seam for start/status/cancel/resume.
 - **Core maintainers** own generic `CheckpointStore` and `EventMultiplexer`; workflow node/DAG vocabulary remains outside core.
 - **Security reviewers** use the threat model and design matrix on this page as the acceptance baseline for Plan 057 Tasks 2–7.
@@ -593,14 +593,14 @@ await session.run("Hi", { signal: AbortSignal.timeout(60_000) });
 
 ## Related APIs
 
-- [Agent/session runtime](agent-session-runtime.md): single-session run surface workflow nodes call.
-- [Agent loops](agent-loops.md): within-node validate/revise; custom `AgentLoopStrategy` for function-equivalent behavior.
-- [Agent events](agent-events.md): per-session stream workflow may observe/merge.
-- [CLI/RPC](cli-rpc.md): non-interactive host seam for optional workflow commands.
-- [Runs and usage ledger](runs-and-usage.md): durable audit for workflow and agent runs.
-- [Database persistence](database-persistence.md): optional generic `CheckpointStore` capability implemented by first-party persistence adapters.
+- [Agent/session runtime](../agent-session-runtime.md): single-session run surface workflow nodes call.
+- [Agent loops](../agent-loops.md): within-node validate/revise; custom `AgentLoopStrategy` for function-equivalent behavior.
+- [Agent events](../agent-events.md): per-session stream workflow may observe/merge.
+- [CLI/RPC](../cli-rpc.md): non-interactive host seam for optional workflow commands.
+- [Runs and usage ledger](../runs-and-usage.md): durable audit for workflow and agent runs.
+- [Database persistence](../database-persistence.md): optional generic `CheckpointStore` capability implemented by first-party persistence adapters.
 - [Persistence, credentials, and multimodality primitives](persistence-credentials-multimodality-primitives.md): Plan 056 inventory baseline.
-- [Tool execution primitives](tool-execution-primitives.md): `ExecutionPolicy` and approval pattern.
-- [Host security guide](host-security.md): fail-closed checklist for workflow hosts.
-- [Performance limits](performance.md): subscriber queue defaults workflow tightens.
-- [Review coverage (2026-07-14)](_evidence/review-coverage-2026-07-14.md): C-009/C-012 traceability.
+- [Tool execution primitives](../tool-execution-primitives.md): `ExecutionPolicy` and approval pattern.
+- [Host security guide](../host-security.md): fail-closed checklist for workflow hosts.
+- [Performance limits](../performance.md): subscriber queue defaults workflow tightens.
+- [Review coverage (2026-07-14)](../_evidence/review-coverage-2026-07-14.md): C-009/C-012 traceability.

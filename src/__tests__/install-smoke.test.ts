@@ -940,9 +940,5 @@ describe("packed truth conformance (plan 024 Task 5)", () => {
       readFileSync(join(repoRoot, "docs", "index.md"), "utf8").includes(`current **${root.version}**`),
       "docs/index.md current-line must match the installed version",
     );
-    assert.ok(
-      readFileSync(join(repoRoot, "docs", "0.1.0-readiness.md"), "utf8").includes(`## Current line (${root.version})`),
-      "readiness current-line heading must match the installed version",
-    );
   });
 });

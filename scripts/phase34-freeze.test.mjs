@@ -22,23 +22,23 @@ function loadManifests() {
   return pkgs;
 }
 
-test("phase34 freeze (plan 054 Task 9): every active manifest is 0.5.4 (lockstep bump)", () => {
+test("phase34 freeze (plan 054 Task 9): every active manifest is 0.5.5 (lockstep bump)", () => {
   for (const pkg of loadManifests()) {
     // Plan 055 Task 6 (Decision B changed-package cut): the provider family moved to
     // 0.4.1 for the two new adapters; every other manifest stays 0.4.0.
     // Plan 066: lockstep 0.5.0 → 0.5.1 for all 10 publishable manifests.
-    const expected = "0.5.4";
+    const expected = "0.5.5";
     assert.equal(pkg.version, expected, `${pkg.name} expected ${expected}, got ${pkg.version}`);
   }
 });
 
-test("phase34 freeze (plan 054 Task 9): internal @arnilo ranges are ^0.5.4", () => {
+test("phase34 freeze (plan 054 Task 9): internal @arnilo ranges are ^0.5.5", () => {
   for (const pkg of loadManifests()) {
     for (const field of ["dependencies", "peerDependencies", "optionalDependencies"]) {
       for (const [name, range] of Object.entries(pkg[field] ?? {})) {
         if (!name.startsWith("@arnilo/")) continue;
         if (String(range).startsWith("file:")) continue;
-        assert.equal(range, "^0.5.4", `${pkg.name} ${field}.${name} is ${range}`);
+        assert.equal(range, "^0.5.5", `${pkg.name} ${field}.${name} is ${range}`);
       }
     }
   }
@@ -46,8 +46,8 @@ test("phase34 freeze (plan 054 Task 9): internal @arnilo ranges are ^0.5.4", () 
 
 test("phase34 freeze: changelog, migration, and handoff name 0.3.1", () => {
   const changelog = readFileSync(new URL("../CHANGELOG.md", import.meta.url), "utf8");
-  const migration = readFileSync(new URL("../docs/migration.md", import.meta.url), "utf8");
-  const release = readFileSync(new URL("../docs/release-and-install.md", import.meta.url), "utf8");
+  const migration = readFileSync(new URL("../docs/history/migration-0.3.md", import.meta.url), "utf8");
+  const release = readFileSync(new URL("../docs/history/release-handoffs.md", import.meta.url), "utf8");
   assert.ok(changelog.includes("## [0.3.1] - 2026-08-26"), "root CHANGELOG missing [0.3.1]");
   assert.ok(changelog.includes("ERR_PRISM_RAG_EMBEDDER_MISMATCH"), "CHANGELOG missing embedder mismatch");
   assert.ok(migration.includes("## 0.3.0 → 0.3.1"), "migration.md missing 0.3.0 → 0.3.1");

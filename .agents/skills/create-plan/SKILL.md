@@ -1,6 +1,6 @@
 ---
 name: create-plan
-description: Create and maintain numbered plan documents for work that requires documenting executable task lists. Use anytime a user asks an agent to create, write, update, execute, or maintain any plan, including an implementation plan, roadmap, task breakdown, phase plan, project plan, or plan document with objectives, expected outcomes, acceptance criteria, approaches, tests, compromises, and follow-up actions.
+description: Create and maintain numbered plan documents for work that requires documenting executable task lists. Use anytime a user asks an agent to create, write, update, or maintain any plan, including an implementation plan, roadmap, task breakdown, phase plan, project plan, or plan document with objectives, expected outcomes, acceptance criteria, approaches, tests, compromises, and follow-up actions. Executing a plan task is handled by the prism-execution skill.
 ---
 
 # Create Plan
@@ -89,16 +89,6 @@ Create or update actionable, numbered, documentation-backed implementation plans
 - Apply loaded project-specific requirements before finalizing the task list.
 - Do not fill `Compromises Made` or `Further Actions` before execution unless known constraints already exist.
 
-## Deterministic Execution Loop
+## Executing a Plan
 
-When executing a plan:
-
-1. Read the full plan.
-2. Select the first unchecked task unless the user names a specific task.
-3. Implement only the selected task unless dependencies require a small, explicitly noted prerequisite.
-4. Run the task's listed tests/checks and any directly relevant validation.
-5. Update the task checkbox to `- [x]` only after implementation and checks pass.
-6. If the approach, files, or tests changed, update that task before continuing.
-7. Repeat from step 2 until implementation and verification tasks are complete.
-8. Run final verification for the plan.
-9. Fill `Compromises Made` and `Further Actions` with actual deviations, deferred work, rationale, and priority.
+Executing a plan task is out of scope here — use the `prism-execution` skill for the task-execution loop.

@@ -144,8 +144,8 @@ describe("packaging guard", () => {
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
           assert.equal(
             peers?.["@arnilo/prism"],
-            "^0.5.4",
-            `${pkg.name} @arnilo/prism peer must be ^0.5.4, got ${peers?.["@arnilo/prism"]}`,
+            "^0.5.5",
+            `${pkg.name} @arnilo/prism peer must be ^0.5.5, got ${peers?.["@arnilo/prism"]}`,
           );
           const meta = manifest.peerDependenciesMeta as Readonly<Record<string, { readonly optional?: boolean }>> | undefined;
           assert.ok(!meta?.["@arnilo/prism"]?.optional, `${pkg.name} must not mark the @arnilo/prism peer optional`);
@@ -208,7 +208,7 @@ describe("packaging guard", () => {
     const meta = webTools.peerDependenciesMeta as Record<string, { optional?: boolean }>;
     assert.equal(peers["playwright-core"], "1.61.0", "browser subpath must pin the playwright-core peer");
     assert.equal(meta["playwright-core"]?.optional, true, "playwright-core must stay an optional peer");
-    assert.equal(peers["@arnilo/prism-mcp"], "^0.5.4", "obscura subpath must keep the MCP bridge peer");
+    assert.equal(peers["@arnilo/prism-mcp"], "^0.5.5", "obscura subpath must keep the MCP bridge peer");
     assert.equal(meta["@arnilo/prism-mcp"]?.optional, undefined, "@arnilo/prism-mcp must stay a required peer where Obscura needs it");
     const files = getPackList("packages/web-tools", "@arnilo/prism-web-tools");
     for (const required of [
@@ -277,8 +277,8 @@ describe("packaging guard", () => {
     // Plan 054 Task 8: prism-all is retired; the provider family is the only remaining umbrella.
     assert.match(
       (providersManifest.peerDependencies as Record<string, string>)["@arnilo/prism"] ?? "",
-      /^\^0\.5\.4$/,
-      "provider family must peer @arnilo/prism@^0.5.4",
+      /^\^0\.5\.5$/,
+      "provider family must peer @arnilo/prism@^0.5.5",
     );
   });
 
@@ -358,7 +358,7 @@ describe("packaging guard", () => {
 
   it("plan 054 Task 7: every retired name has legacy-registry metadata and a successor/recipe anchor", () => {
     const evidence = readFileSync(join(repoRoot, "docs/_evidence/phase54-package-map.md"), "utf8");
-    const guide = readFileSync(join(repoRoot, "docs/migrate-to-0.4.md"), "utf8");
+    const guide = readFileSync(join(repoRoot, "docs/history/migrate-to-0.4.md"), "utf8");
     const section = evidence.split("## 8. Legacy Registry Plan & Deprecation Commands (55 Packages)")[1];
     assert.ok(section, "evidence carries the legacy registry command block");
     // GitHub heading slugs of the migration guide (code fences ignored).
@@ -402,7 +402,7 @@ describe("packaging guard", () => {
     const office = readPkg("packages/office");
     const exports = Object.keys(office.exports as Record<string, unknown>).sort();
     assert.deepEqual(exports, ["./diagrams", "./documents", "./sheets"]);
-    const guide = readFileSync(join(repoRoot, "docs/migrate-to-0.4.md"), "utf8");
+    const guide = readFileSync(join(repoRoot, "docs/history/migrate-to-0.4.md"), "utf8");
     assert.ok(guide.includes("### Office suite"), "migration guide missing Office suite heading");
     for (const spec of ["@arnilo/prism-office/documents", "@arnilo/prism-office/sheets", "@arnilo/prism-office/diagrams"]) {
       assert.ok(guide.includes(spec), `migration guide missing ${spec}`);
@@ -413,14 +413,14 @@ describe("packaging guard", () => {
 
   it("0.4 package set — 10 manifests, no shims, family roots stay inert", () => {
     const root = readPkg(".");
-    assert.equal(root.version, "0.5.4");
+    assert.equal(root.version, "0.5.5");
     const names = packages.map((pkg) => pkg.name).sort();
     assert.equal(names.length, 10, "10 active packages including root");
     for (const pkg of packages) {
       // Plan 055 Task 6 (Decision B changed-package cut): the provider family
       // moved 0.4.0 → 0.4.1 for the two new adapters; every other manifest stays 0.4.0.
       // Plan 066: lockstep 0.5.0 → 0.5.1 for all 10 publishable manifests.
-      const expected = "0.5.4";
+      const expected = "0.5.5";
       assert.equal(readPkg(pkg.dir).version, expected, `${pkg.name} at ${expected}`);
     }
     const retired = [

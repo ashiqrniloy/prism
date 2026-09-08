@@ -29,8 +29,8 @@ import { fileURLToPath } from "node:url";
 import { CONSOLIDATION_SPEC } from "./phase54-package-map.mjs";
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const GUIDE_REL = "docs/migrate-to-0.4.md";
-const GUIDE_URL = "https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.4.md";
+const GUIDE_REL = "docs/history/migrate-to-0.4.md";
+const GUIDE_URL = "https://github.com/ashiqrniloy/prism/blob/main/docs/history/migrate-to-0.4.md";
 export const DEPRECATE_RANGE = "<0.4.0";
 export const LEGACY_TAG = "legacy";
 export const PLAN_REL = "release-artifacts/legacy-registry-plan.json";
@@ -175,7 +175,7 @@ function writePlan(rootDir, entries, extra = {}) {
     `${JSON.stringify(
       {
         $comment:
-          "Plan 054 Task 7 legacy registry plan. Generated from the Task 1 map (scripts/phase54-package-map.mjs CONSOLIDATION_SPEC) + registry-resolved final versions. Apply only after the 0.4 packages and docs/migrate-to-0.4.md are public (Task 9). Idempotent: --apply --confirm skips already-correct entries and fails closed on mismatches.",
+          "Plan 054 Task 7 legacy registry plan. Generated from the Task 1 map (scripts/phase54-package-map.mjs CONSOLIDATION_SPEC) + registry-resolved final versions. Apply only after the 0.4 packages and docs/history/migrate-to-0.4.md are public (Task 9). Idempotent: --apply --confirm skips already-correct entries and fails closed on mismatches.",
         generatedAt: new Date().toISOString(),
         guide: GUIDE_REL,
         guideUrl: GUIDE_URL,

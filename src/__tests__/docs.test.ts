@@ -6,6 +6,11 @@ import { describe, it } from "node:test";
 
 const docsDir = "docs";
 
+// Plan 068: freeze = current-line contract, not changelog. Historical phrases live
+// in freezeCorpus() (migration/release/readiness/performance + docs/history/).
+// index.md is asserted only for the current package version, live hrefs, and
+// archive links (_evidence/, history/).
+
 // 0.2.5 plan 025 Task 1: contracts-core split into src/contracts-core/*.ts; read the union tree
 // (layout-agnostic) so contract declarations are found regardless of split depth.
 function readContractsSrc(): string {
@@ -44,7 +49,6 @@ const apiPages = [
   "docs/a2a.md",
   "docs/ag-ui.md",
   "docs/structured-output.md",
-  "docs/session-stores-and-branching.md",
   "docs/session-stores.md",
   "docs/database-persistence.md",
   "docs/sqlite-persistence.md",
@@ -159,6 +163,32 @@ function markdownFiles(dir: string): string[] {
   });
 }
 
+function isArchivedDoc(relative: string): boolean {
+  return relative.startsWith("_evidence/") || relative.startsWith("history/");
+}
+
+function freezeCorpus(): string {
+  const roots = ["docs/migration.md", "docs/release-and-install.md", "docs/performance.md", "docs/migrate-to-0.5.md"];
+  const history = existsSync("docs/history") ? markdownFiles("docs/history") : [];
+  return [...roots.filter((f) => existsSync(f)), ...history].map((f) => readFileSync(f, "utf8")).join("\n");
+}
+
+// Plan 068 Task 3: the live page keeps the current-line contract; per-era records
+// moved to docs/history/. Presence asserts read the live+archive union so frozen
+// phrases survive the split. Absence asserts keep reading the live file only.
+function withHistory(live: string, match: (file: string) => boolean): string {
+  const parts = [readFileSync(live, "utf8")];
+  if (existsSync("docs/history")) {
+    for (const f of markdownFiles("docs/history")) {
+      if (match(f)) parts.push(readFileSync(f, "utf8"));
+    }
+  }
+  return parts.join("\n");
+}
+const migrationDoc = () => withHistory("docs/migration.md", (f) => /migration-0\.[0-4]\.md$/.test(f));
+const releaseDoc = () => withHistory("docs/release-and-install.md", (f) => /release-handoffs\.md$/.test(f));
+const readinessDoc = () => withHistory("docs/history/0.1.0-readiness.md", () => false);
+
 function tsFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
@@ -183,7 +213,12 @@ describe("docs", () => {
   // throws on copy-paste because createExtensionKernel() returns
   // { registries, middleware, events, load } with no `api` property.
   it("all shipped markdown links resolve locally", () => {
-    const files = ["README.md", "examples/README.md", ...markdownFiles("docs"), ...markdownFiles("packages")];
+    const files = [
+      "README.md",
+      "examples/README.md",
+      ...markdownFiles("docs").filter((f) => !f.startsWith("docs/history/")),
+      ...markdownFiles("packages"),
+    ];
     for (const file of files) {
       const text = readFileSync(file, "utf8");
       for (const match of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
@@ -246,17 +281,42 @@ describe("docs", () => {
     assert.match(index, /## Tools[\s\S]*- \[Linux desktop control\]\(computer-use-linux\.md\)/);
   });
 
+  // plan 068 Task 4: the index is a current-line link map — no stale readiness
+  // claims, no retired package names presented as live installables.
+  it("docs index has no stale readiness claim or retired package as live", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    assert.ok(!index.includes("**0.2.5** current line"), "docs/index.md must not claim a 0.2.5 current line");
+    for (const retired of [
+      "@arnilo/prism-all",
+      "@arnilo/prism-prompts",
+      "@arnilo/prism-evals",
+      "@arnilo/prism-browser",
+      "@arnilo/prism-work-tools",
+      "@arnilo/prism-coding-security",
+      "@arnilo/prism-impeccable",
+    ]) {
+      assert.ok(!index.includes(retired), `docs/index.md must not name retired package ${retired} as live`);
+    }
+  });
+
   it("docs index contains exactly one navigation link per documentation page", () => {
     const index = readFileSync("docs/index.md", "utf8");
     for (const page of markdownFiles("docs")) {
       const relative = page.replace(/^docs\//, "");
-      // archived evidence (docs/_evidence/) is tarball-excluded and linked as one
-      // archive entry, not per-file navigation (plan 015 Task 2)
-      if (["index.md", "api-page-template.md"].includes(relative) || relative.startsWith("_evidence/")) continue;
+      // archived evidence (docs/_evidence/) and history (docs/history/) are
+      // tarball-excluded / off hot-path and linked as one archive entry each
+      // (plan 015 Task 2, plan 068 Task 2)
+      if (["index.md", "api-page-template.md"].includes(relative) || isArchivedDoc(relative)) continue;
       const escaped = relative.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const links = index.match(new RegExp(`\\(${escaped}(?:#[^)]+)?\\)`, "g")) ?? [];
       assert.equal(links.length, 1, `${page} must have exactly one docs/index.md navigation link`);
     }
+  });
+
+  it("archived history/ and _evidence/ prefixes skip one-link indexing", () => {
+    assert.equal(isArchivedDoc("history/migration-0.0.md"), true);
+    assert.equal(isArchivedDoc("_evidence/foo.md"), true);
+    assert.equal(isArchivedDoc("rag.md"), false);
   });
 
   // B5 (plan 028 Task 7): docs permission table must match the wire emitter
@@ -313,7 +373,7 @@ describe("docs", () => {
     }
     const stale = [/forty-one first-party capability/, /six pure-manifest family\/profile/, /48 publishable manifests/];
     for (const file of ["README.md", ...markdownFiles("docs")]) {
-      if (file === "docs/migration.md") continue;
+      if (file === "docs/migration.md" || file.startsWith("docs/history/")) continue;
       const text = readFileSync(file, "utf8");
       for (const pattern of stale) {
         assert.doesNotMatch(text, pattern, `${file} contains stale manifest-count string: ${pattern}`);
@@ -376,12 +436,12 @@ describe("docs", () => {
         // Current 0.4 packages and never-published draft names are not retired.
         .filter((n) => !/prism-(documents|sheets|diagrams)$/.test(n) && !(n in truth.versions));
       assert.ok(retired.length === 55, `phase54 evidence must enumerate the 55 retired 0.3 packages, got ${retired.length}`);
-      const exemptPages = new Set(["docs/migration.md", "docs/migrate-to-0.4.md", "docs/0.1.0-readiness.md"]);
+      const exemptPages = new Set(["docs/migration.md"]); // per-era records live under docs/history/ (skipped above)
       const historyLine =
         /@arnilo\/prism[\w-]*@\d+\.\d+\.\d+|\*\*Decision: GO|\bplan \d{3}\b|\bPhase \d+\b|lockstep|historical|\bretired\b|replaces `@arnilo\/prism-all`|deleting the `@arnilo\/prism-[\w-]+` profile|at exact `0\.\d|\b0\.0\.1\d+`? (?:graph|line)/;
       const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       for (const file of ["README.md", ...markdownFiles("docs")]) {
-        if (file.startsWith("docs/_evidence/") || exemptPages.has(file)) continue;
+        if (file.startsWith("docs/_evidence/") || file.startsWith("docs/history/") || exemptPages.has(file)) continue;
         read(file)
           .split("\n")
           .forEach((line, i) => {
@@ -477,10 +537,6 @@ describe("docs", () => {
     it("current-line version equals the root manifest version", () => {
       const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
       assert.ok(read("docs/index.md").includes(`current **${pkg.version}**`), `index.md current-line must be ${pkg.version}`);
-      assert.ok(
-        read("docs/0.1.0-readiness.md").includes(`## Current line (${pkg.version})`),
-        `readiness current-line heading must be ${pkg.version}`,
-      );
     });
 
     it("no stale 0.0.x/0.1.x current-line claim remains in docs or roadmap", () => {
@@ -499,9 +555,9 @@ describe("docs", () => {
   });
 
   it("plan 013 Task 6 freeze: 0.1.1 hardening patch and publish handoff are documented", () => {
-    const migration = readFileSync("docs/migration.md", "utf8");
-    const release = readFileSync("docs/release-and-install.md", "utf8");
-    const readiness = readFileSync("docs/0.1.0-readiness.md", "utf8");
+    const migration = migrationDoc();
+    const release = releaseDoc();
+    const readiness = readinessDoc();
     const contracts = readFileSync("docs/public-contracts.md", "utf8");
     assert.ok(migration.includes("## 0.1.0 → 0.1.1 post-release hardening"), "migration.md missing 0.1.1 section");
     assert.ok(release.includes("### 0.1.1 publish handoff (plan 013 Task 6)"), "release page missing 0.1.1 handoff");
@@ -518,7 +574,7 @@ describe("docs", () => {
   });
 
   it("plan 015 Task 5 freeze: 0.1.3 hygiene release and publish handoff are documented", () => {
-    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const release = releaseDoc();
     const performance = readFileSync("docs/performance.md", "utf8");
     const changelog = readFileSync("CHANGELOG.md", "utf8");
     assert.ok(release.includes("### 0.1.3 publish handoff (plan 015 Task 5)"), "release page missing 0.1.3 handoff");
@@ -527,11 +583,11 @@ describe("docs", () => {
     assert.ok(performance.includes("scripts/benchmark.mjs"), "performance.md points at the parameterized runner");
   });
   it("plan 016 Task 6 freeze: 0.1.4 god-module split and publish handoff are documented", () => {
-    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const release = releaseDoc();
     const index = readFileSync("docs/index.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
     const changelog = readFileSync("CHANGELOG.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     assert.ok(release.includes("### 0.1.4 publish handoff (plan 016 Task 6)"), "release page missing 0.1.4 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.4 handoff missing rollback notes");
     assert.ok(index.includes(`current **${pkg.version}**`), `index.md current-line entry must be ${pkg.version}`);
@@ -540,8 +596,8 @@ describe("docs", () => {
     assert.ok(migration.includes("no migration step"), "migration.md 0.1.4 section must state no migration step");
   });
   it("plan 024 Task 6 freeze: 0.2.4 truth handoff, structural-test note, and migration note are documented", () => {
-    const release = readFileSync("docs/release-and-install.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const release = releaseDoc();
+    const migration = migrationDoc();
     assert.ok(release.includes("### 0.2.4 publish handoff (plan 024 Task 6)"), "release page missing 0.2.4 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.4 handoff missing rollback notes");
     // Semantic tripwire: the four 0.2.4 topics are present (umbrella correction,
@@ -554,8 +610,8 @@ describe("docs", () => {
   });
 
   it("plan 025 Task 6 freeze: 0.2.5 maintainability handoff (splits, dedup, linearization, dead-code, coverage) and the no-migration note are documented", () => {
-    const release = readFileSync("docs/release-and-install.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const release = releaseDoc();
+    const migration = migrationDoc();
     const changelog = readFileSync("CHANGELOG.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
@@ -585,14 +641,13 @@ describe("docs", () => {
   });
 
   it("plan 027 Task 10 freeze: 0.2.7 publish handoff, roadmap 0.2.7 completion, migration note, and navigation agree", () => {
-    const release = readFileSync("docs/release-and-install.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const release = releaseDoc();
+    const migration = migrationDoc();
     const changelog = readFileSync("CHANGELOG.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.4", "root manifest must be at the 0.5.4 lockstep bump version");
+    assert.equal(pkg.version, "0.5.5", "root manifest must be at the 0.5.5 lockstep bump version");
     assert.ok(release.includes("### 0.2.7 publish handoff (plan 027 Task 10)"), "release page missing 0.2.7 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.7 handoff missing rollback notes");
     // Semantic tripwire: the nine 0.2.7 ERP roadmap items are present in the handoff
@@ -609,7 +664,7 @@ describe("docs", () => {
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
     assert.ok(changelog.includes("## [0.2.7] - 2026-08-17"), "root changelog missing 0.2.7 entry");
     assert.ok(migration.includes("## 0.2.6 → 0.2.7"), "migration.md missing the 0.2.6 → 0.2.7 note");
-    assert.ok(index.includes("**0.2.8**"), "docs/index.md missing the 0.2.8 current line");
+    assert.ok(freezeCorpus().includes("**0.2.8**"), "freeze corpus missing the 0.2.8 line");
     assert.ok(
       plansReadme.includes("027-Release-0-2-7-Enterprise-ERP-Production-Readiness.md") && plansReadme.includes("| complete |"),
       "plans/README.md must mark plan 027 complete",
@@ -622,14 +677,14 @@ describe("docs", () => {
   });
 
   it("plan 028 Task 18 freeze: 0.2.8 publish handoff, roadmap 0.2.8 completion, migration note, and navigation agree", () => {
-    const release = readFileSync("docs/release-and-install.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const release = releaseDoc();
+    const migration = migrationDoc();
     const changelog = readFileSync("CHANGELOG.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.4", "root manifest must be at the 0.5.4 lockstep bump version");
+    assert.equal(pkg.version, "0.5.5", "root manifest must be at the 0.5.5 lockstep bump version");
     assert.ok(release.includes("### 0.2.8 publish handoff (plan 028 Task 18)"), "release page missing 0.2.8 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.8 handoff missing rollback notes");
     assert.ok(release.includes("client-neutrality"), "0.2.8 handoff must cover client-neutrality");
@@ -638,7 +693,7 @@ describe("docs", () => {
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
     assert.ok(changelog.includes("## [0.2.8] - 2026-08-18"), "root changelog missing 0.2.8 entry");
     assert.ok(migration.includes("## 0.2.7 → 0.2.8"), "migration.md missing the 0.2.7 → 0.2.8 note");
-    assert.ok(index.includes("**0.2.8**"), "docs/index.md missing the 0.2.8 current line");
+    assert.ok(freezeCorpus().includes("**0.2.8**"), "freeze corpus missing the 0.2.8 line");
     assert.ok(index.includes("(acp-agent.md)"), "docs/index.md missing spawnable ACP agent page");
     assert.ok(
       plansReadme.includes("028-Release-0-2-8-ACP-Adoption-Fixes.md") && plansReadme.includes("| complete |"),
@@ -652,14 +707,13 @@ describe("docs", () => {
   });
 
   it("plan 029 Task 10 freeze: 0.2.9 publish handoff, roadmap 0.2.9 completion, migration note, and navigation agree", () => {
-    const release = readFileSync("docs/release-and-install.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const release = releaseDoc();
+    const migration = migrationDoc();
     const changelog = readFileSync("CHANGELOG.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.4", "root manifest must be at the 0.5.4 lockstep bump version");
+    assert.equal(pkg.version, "0.5.5", "root manifest must be at the 0.5.5 lockstep bump version");
     assert.ok(release.includes("### 0.2.9 publish handoff (plan 029 Task 10)"), "release page missing 0.2.9 handoff");
     assert.ok(release.includes("SuperGrok"), "0.2.9 handoff must cover SuperGrok");
     assert.ok(release.includes("@arnilo/prism-impeccable"), "0.2.9 handoff must name impeccable");
@@ -667,7 +721,7 @@ describe("docs", () => {
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
     assert.ok(changelog.includes("## [0.2.9] - 2026-08-19"), "root changelog missing 0.2.9 entry");
     assert.ok(migration.includes("## 0.2.8 → 0.2.9"), "migration.md missing the 0.2.8 → 0.2.9 note");
-    assert.ok(index.includes("**0.2.9**"), "docs/index.md missing the 0.2.9 current line");
+    assert.ok(freezeCorpus().includes("**0.2.9**"), "freeze corpus missing the 0.2.9 line");
     assert.ok(
       plansReadme.includes("029-Release-0-2-9-Provider-Adoption-And-Behavior-Packages.md") && plansReadme.includes("| complete |"),
       "plans/README.md must mark plan 029 complete",
@@ -680,14 +734,13 @@ describe("docs", () => {
   });
 
   it("plan 026 Task 8 freeze: 0.2.6 publish handoff, roadmap 0.2.6 completion, migration note, and navigation agree", () => {
-    const release = readFileSync("docs/release-and-install.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const release = releaseDoc();
+    const migration = migrationDoc();
     const changelog = readFileSync("CHANGELOG.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.4", "root manifest must be at the 0.5.4 lockstep bump version");
+    assert.equal(pkg.version, "0.5.5", "root manifest must be at the 0.5.5 lockstep bump version");
     assert.ok(release.includes("### 0.2.6 publish handoff (plan 026 Task 8)"), "release page missing 0.2.6 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.6 handoff missing rollback notes");
     // Semantic tripwire: the seven 0.2.6 roadmap items are present in the handoff
@@ -704,7 +757,7 @@ describe("docs", () => {
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
     assert.ok(changelog.includes("## [0.2.6] - 2026-08-16"), "root changelog missing 0.2.6 entry");
     assert.ok(migration.includes("## 0.2.5 → 0.2.6"), "migration.md missing the 0.2.5 → 0.2.6 note");
-    assert.ok(index.includes("**0.2.8**"), "docs/index.md missing the 0.2.8 current line");
+    assert.ok(freezeCorpus().includes("**0.2.8**"), "freeze corpus missing the 0.2.8 line");
     assert.ok(
       plansReadme.includes("026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md") && plansReadme.includes("| complete |"),
       "plans/README.md must mark plan 026 complete",
@@ -717,7 +770,7 @@ describe("docs", () => {
   });
 
   it("plan 023 Task 6 freeze: 0.2.3 publish handoff, tooling sections, and release evidence are documented", () => {
-    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const release = releaseDoc();
     const index = readFileSync("docs/index.md", "utf8");
     const changelog = readFileSync("CHANGELOG.md", "utf8");
     const roadmap = readFileSync("roadmap.md", "utf8");
@@ -737,10 +790,10 @@ describe("docs", () => {
     assert.equal(unchecked, 0, `roadmap 0.2.3 section has ${unchecked} unchecked item(s) after Task 6`);
   });
   it("plan 017 Task 4 freeze: 0.1.5 deprecated-option removal, migration, and publish handoff are documented", () => {
-    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const release = releaseDoc();
     const index = readFileSync("docs/index.md", "utf8");
     const changelog = readFileSync("CHANGELOG.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     const om = readFileSync("docs/compaction-observational-memory.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
     assert.ok(release.includes("### 0.1.5 publish handoff (plan 017 Task 4)"), "release page missing 0.1.5 handoff");
@@ -779,7 +832,7 @@ describe("docs", () => {
     assert.ok(om.includes("removed in 0.1.5"), "OM doc must note the removed flat keys / aliases");
   });
   it("plan 014 Task 6 freeze: 0.1.2 Alibaba enrichment and publish handoff are documented", () => {
-    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const release = releaseDoc();
     const alibaba = readFileSync("docs/providers/alibaba.md", "utf8");
     assert.ok(release.includes("### 0.1.2 publish handoff (plan 014 Task 6)"), "release page missing 0.1.2 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.1.2 handoff missing rollback notes");
@@ -797,7 +850,7 @@ describe("docs", () => {
 
   it("phase 12 compatibility matrix agrees with the freeze manifest", () => {
     const manifest = JSON.parse(readFileSync("scripts/phase12-freeze-manifest.json", "utf8"));
-    const doc = readFileSync("docs/release-and-install.md", "utf8");
+    const doc = releaseDoc();
     assert.ok(doc.includes("## 0.1.x compatibility and support matrix"), "release-and-install.md missing matrix section");
     assert.ok(doc.includes(manifest.support.node.supported.join(", ")), "supported Node lines drift from manifest");
     assert.ok(doc.includes(manifest.support.node.enginesRange), "engines range drifts from manifest");
@@ -818,7 +871,7 @@ describe("docs", () => {
 
   // Historical review-coverage pages remain; do not slice rewritten roadmap.md for old 0.0.9–0.0.16 phase titles.
   it("phase 12 migration matrix covers every 0.0.18-0.1.0 release line with store compatibility", () => {
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     assert.ok(migration.includes("## 0.0.28 → 0.1.0 release-candidate hardening"), "missing 0.1.0 migration section");
     assert.ok(migration.includes("## 0.0.17 → 0.1.0 upgrade matrix"), "missing upgrade matrix section");
     for (const row of [
@@ -839,16 +892,16 @@ describe("docs", () => {
     for (const token of ["Store compatibility", "compatible", "tested migration", "tested refusal", "inputLayout", "activateAllSkills"])
       assert.ok(migration.includes(token), `migration matrix missing store-compat/breaking-default token ${token}`);
 
-    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const release = releaseDoc();
     assert.ok(release.includes("### Release-integrity evidence matrix (0.0.18 → 0.1.0)"), "missing release-integrity matrix");
     for (const row of ["| 0.0.18 |", "| 0.0.21 |", "| 0.0.28 |", "| 0.1.0 |", "**no tag**", "signed** (operator action"])
       assert.ok(release.includes(row), `release-integrity matrix missing ${row.trim()}`);
   });
 
   it("phase 12 release freeze and 0.1.0 handoff are documented", () => {
-    const readiness = readFileSync("docs/0.1.0-readiness.md", "utf8");
+    const readiness = readinessDoc();
     const contracts = readFileSync("docs/public-contracts.md", "utf8");
-    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const release = releaseDoc();
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.ok(readiness.includes("## Previous line (0.1.0)"), "readiness previous-line table must be 0.1.0");
     assert.ok(readiness.includes("## Remaining for 1.0"), "readiness must list remaining operator gates");
@@ -859,7 +912,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes(`@arnilo/prism@^${pkg.version}`), `release page peer range must be ^${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.equal(pkg.version, "0.5.4", "root manifest must be at the 0.5.4 lockstep bump version");
+    assert.equal(pkg.version, "0.5.5", "root manifest must be at the 0.5.5 lockstep bump version");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -867,7 +920,7 @@ describe("docs", () => {
     const security = readFileSync(".github/workflows/security.yml", "utf8");
     const release = readFileSync(".github/workflows/release.yml", "utf8");
     const hostSecurity = readFileSync("docs/host-security.md", "utf8");
-    const readiness = readFileSync("docs/0.1.0-readiness.md", "utf8");
+    const readiness = readinessDoc();
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     for (const workflow of [security, release]) {
       assert.ok(workflow.includes("npm audit --audit-level=moderate"), "workflows must enforce moderate audit policy");
@@ -888,7 +941,7 @@ describe("docs", () => {
 
   it("phase 12 capacity envelope is documented and wired", () => {
     const performance = readFileSync("docs/performance.md", "utf8");
-    const readiness = readFileSync("docs/0.1.0-readiness.md", "utf8");
+    const readiness = readinessDoc();
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.ok(
       performance.includes("## Release 0.1.0 capacity envelopes (frozen performance contract)"),
@@ -906,12 +959,12 @@ describe("docs", () => {
     assert.ok(readiness.includes("0.1.0 capacity envelope (frozen performance contract)"), "readiness missing envelope gate row");
     assert.ok(pkg.scripts.test.includes("scripts/benchmark-0.1.0.test.mjs"), "npm test missing envelope regression gate");
     assert.ok(existsSync("scripts/benchmark-0.1.0.json"), "missing checked-in envelope evidence");
-    assert.ok(readFileSync("docs/index.md", "utf8").includes("0.1.0 capacity envelopes"), "index.md missing envelope entry");
+    assert.ok(freezeCorpus().includes("0.1.0 capacity envelopes"), "freeze corpus missing envelope entry");
   });
 
   it("phase 12 restart-recovery evidence is documented and wired", () => {
-    const release = readFileSync("docs/release-and-install.md", "utf8");
-    const readiness = readFileSync("docs/0.1.0-readiness.md", "utf8");
+    const release = releaseDoc();
+    const readiness = readinessDoc();
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.ok(readiness.includes("## Protected restart-recovery evidence (plan 012 Task 4)"), "readiness missing restart section");
     for (const token of ["scripts/phase12-restart-recovery.test.mjs", "reconnectP95Ms", "BLOCKED GATE", "phase12-restart-recovery.json"])
@@ -923,8 +976,8 @@ describe("docs", () => {
   });
 
   it("phase 12 packed-install e2e journey evidence is documented and wired", () => {
-    const release = readFileSync("docs/release-and-install.md", "utf8");
-    const readiness = readFileSync("docs/0.1.0-readiness.md", "utf8");
+    const release = releaseDoc();
+    const readiness = readinessDoc();
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.ok(release.includes("Packed-install e2e journeys (plan 012 Task 3)"), "release-and-install missing journey evidence");
     assert.ok(readiness.includes("## Packed-install e2e journeys (plan 012 Task 3)"), "readiness missing journey section");
@@ -1341,8 +1394,7 @@ describe("docs", () => {
     const rag = readFileSync("docs/rag.md", "utf8");
     const resources = readFileSync("docs/resource-loading.md", "utf8");
     const security = readFileSync("docs/host-security.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
+    const migration = migrationDoc();
     for (const token of [
       "replaceSource",
       "deleteSource",
@@ -1360,14 +1412,12 @@ describe("docs", () => {
     assert.ok(resources.includes("createResourceDocumentLoader"), "resource docs missing RAG document-loader bridge");
     assert.ok(security.includes("createWebFetchDocumentLoader"), "security docs missing RAG web-loader boundary");
     assert.ok(migration.includes("RAG source lifecycle"), "migration missing RAG lifecycle entry");
-    assert.ok(index.includes("bounded source lifecycle"), "docs index missing RAG lifecycle summary");
   });
 
   it("phase 10 RAG reranking docs cover provenance, trust, and capped ingestion status", () => {
     const rag = readFileSync("docs/rag.md", "utf8");
     const security = readFileSync("docs/host-security.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
+    const migration = migrationDoc();
     for (const token of [
       "Reranker",
       "maxRerankBytes",
@@ -1381,14 +1431,12 @@ describe("docs", () => {
     }
     assert.ok(security.includes("cannot overwrite provenance/trust"), "security docs missing reranker canonical-output boundary");
     assert.ok(migration.includes("RAG retrieval now optionally accepts host-owned `Reranker`"), "migration missing RAG reranker entry");
-    assert.ok(index.includes("host reranking, ingestion status"), "docs index missing RAG reranker/status summary");
   });
 
   it("phase 10 memory docs cover identity-bound export, resumable rebuild, and production adapter limits", () => {
     const memory = readFileSync("docs/working-and-semantic-memory.md", "utf8");
     const security = readFileSync("docs/host-security.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
+    const migration = migrationDoc();
     for (const token of [
       "exportMemory",
       "rebuildIndex",
@@ -1403,13 +1451,12 @@ describe("docs", () => {
     }
     assert.ok(security.includes("exact host identity"), "security docs missing memory export identity boundary");
     assert.ok(migration.includes("memory export and rebuild"), "migration missing memory lifecycle entry");
-    assert.ok(index.includes("identity-bound redacted export"), "docs index missing memory export summary");
+    assert.ok(memory.includes("identity-bound"), "memory docs missing identity-bound export");
   });
 
   it("phase 10 benchmark and protected live-canary docs cover provider, RAG, and memory gates", () => {
     const performance = readFileSync("docs/performance.md", "utf8");
-    const release = readFileSync("docs/release-and-install.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
+    const release = releaseDoc();
     for (const token of [
       "benchmark-0.0.15.mjs",
       "openai-hosted-continuation",
@@ -1431,11 +1478,11 @@ describe("docs", () => {
     ]) {
       assert.ok(release.includes(token), `release docs missing ${token}`);
     }
-    assert.ok(index.includes("0.0.15 network-free provider/RAG/memory benchmark"), "docs index missing Phase 10 benchmark summary");
     assert.ok(
-      index.includes("0.0.15 provider/AI-SDK/RAG/memory protected live-canary matrix"),
-      "docs index missing Phase 10 canary summary",
+      performance.includes("Release 0.0.15 provider, RAG, and memory evidence"),
+      "performance docs missing Phase 10 benchmark heading",
     );
+    assert.ok(release.includes("0.0.15 protected live-canary matrix"), "release docs missing Phase 10 canary summary");
   });
 
   it("release 0.0.16 performance budget gate is documented and wired", () => {
@@ -1465,8 +1512,7 @@ describe("docs", () => {
     const memory = readFileSync("docs/working-and-semantic-memory.md", "utf8");
     const resources = readFileSync("docs/resource-loading.md", "utf8");
     const security = readFileSync("docs/host-security.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
+    const migration = migrationDoc();
     for (const provider of [
       "OpenAI",
       "AI SDK",
@@ -1508,12 +1554,6 @@ describe("docs", () => {
       assert.ok(security.includes(token), `security docs missing ${token}`);
     for (const token of ["0.0.14 → 0.0.15", "@ai-sdk/provider@4.0.3", "RAG source lifecycle", "memory export and rebuild"])
       assert.ok(migration.includes(token), `migration missing ${token}`);
-    for (const token of [
-      "Phase 10 first-party compatibility matrix",
-      "first-party content-type mapping",
-      "OpenAI hosted tools/continuation/Realtime",
-    ])
-      assert.ok(index.includes(token), `index missing ${token}`);
   });
 
   it("task 5 scope guard: no Slack/Teams chat-channel packages, exports, or docs pages (demand-gated)", () => {
@@ -1554,7 +1594,7 @@ describe("docs", () => {
   });
 
   it("phase 9 task 7 docs cover migration, performance placeholder, examples, and explicit deferrals", () => {
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     const performance = readFileSync("docs/performance.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
     for (const token of [
@@ -1618,9 +1658,9 @@ describe("docs", () => {
   });
 
   it("phase 8 task 9 docs cover migration, performance benchmark placeholder, and enterprise examples", () => {
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     const performance = readFileSync("docs/performance.md", "utf8");
-    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const release = releaseDoc();
     const index = readFileSync("docs/index.md", "utf8");
     for (const token of ["IdentityVerifier", "@arnilo/prism-policy", "@arnilo/prism-model-router", "0.0.14"]) {
       assert.ok(migration.includes(token), `migration.md missing Task 9 token ${token}`);
@@ -1675,7 +1715,7 @@ describe("docs", () => {
 
   it("phase 7 public docs cover AG-UI, ACP, streamed resume, compaction, and migration", () => {
     const agUi = readFileSync("docs/ag-ui.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     const performance = readFileSync("docs/performance.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
     const packageReadme = readFileSync("packages/ag-ui/README.md", "utf8");
@@ -1708,7 +1748,7 @@ describe("docs", () => {
     const agent = readFileSync("docs/agent-session-runtime.md", "utf8");
     const rpc = readFileSync("docs/cli-rpc.md", "utf8");
     const tools = readFileSync("docs/coding-agent-tools.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     const anthropic = readFileSync("docs/providers/anthropic.md", "utf8");
     const google = readFileSync("docs/providers/google.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
@@ -1738,7 +1778,7 @@ describe("docs", () => {
       ["providers/google.md", google, ["createGoogleProviderPackage", "listGoogleModels", "generateContent"]],
       ["sqlite-persistence.md", sqlite, ["searchSessions", "Schema version **6**", "006_agent_event_source"]],
       ["postgres-persistence.md", postgres, ["searchSessions", "Schema version **6**", "006_agent_event_source"]],
-      ["index.md", index, ["providers/anthropic.md", "providers/google.md", "searchSessions", "contextBudget", "steer"]],
+      ["index.md", index, ["providers/anthropic.md", "providers/google.md"]],
     ] as const) {
       for (const token of tokens) {
         assert.ok(text.includes(token), `${name} missing ${token}`);
@@ -1748,11 +1788,10 @@ describe("docs", () => {
 
   it("phase 5 workspace-mode docs replace split-brain defaults and forbid host containment claims", () => {
     const codingSecurity = readFileSync("docs/coding-security.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     const hostSecurity = readFileSync("docs/host-security.md", "utf8");
     const tools = readFileSync("docs/coding-agent-tools.md", "utf8");
     const performance = readFileSync("docs/performance.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
 
     for (const [name, text] of [
       ["coding-security.md", codingSecurity],
@@ -1778,7 +1817,7 @@ describe("docs", () => {
     );
     assert.ok(migration.includes("0.0.10"));
     assert.ok(performance.includes("benchmark-0.0.10.mjs"));
-    assert.ok(index.includes("workspaceMode") || index.includes("workspace modes"));
+    assert.ok(codingSecurity.includes("workspaceMode") || freezeCorpus().includes("workspace modes"));
     assert.ok(!codingSecurity.includes("wires shell through the adapter while list/search/read/write/edit keep the host"));
   });
 
@@ -1956,9 +1995,9 @@ describe("docs", () => {
       ["docs/context-and-skills.md", "resolveActiveSkills"],
       ["docs/agent-session-runtime.md", "createAgent"],
       ["docs/agent-session-runtime.md", "createAgentSession"],
-      ["docs/session-stores-and-branching.md", "createSessionEntry"],
-      ["docs/session-stores-and-branching.md", "createMemorySessionStore"],
-      ["docs/session-stores-and-branching.md", "rebuildSessionContext"],
+      ["docs/session-stores.md", "createSessionEntry"],
+      ["docs/session-stores.md", "createMemorySessionStore"],
+      ["docs/session-stores.md", "rebuildSessionContext"],
       ["docs/compaction-and-retry.md", "createDefaultCompactionStrategy"],
       ["docs/compaction-and-retry.md", "createDefaultRetryPolicy"],
     ] as const;
@@ -1982,7 +2021,6 @@ describe("docs", () => {
   it("compaction and retry docs cover public surfaces and safety boundaries", () => {
     const rootExports = readFileSync("src/index.ts", "utf8");
     const compactionRetry = readFileSync("docs/compaction-and-retry.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
     const registries = readFileSync("docs/contribution-registries.md", "utf8");
     const extensions = readFileSync("docs/extensions.md", "utf8");
     const manifests = readFileSync("docs/configuration-and-manifests.md", "utf8");
@@ -2016,7 +2054,7 @@ describe("docs", () => {
       assert.ok(compactionRetry.includes(phrase), `compaction/retry docs missing ${phrase}`);
     }
 
-    assert.ok(index.includes("retry transient provider failures"));
+    assert.ok(compactionRetry.includes("retry transient provider"));
     assert.ok(registries.includes("retryPolicies"));
     assert.ok(extensions.includes("registerRetryPolicy"));
     assert.ok(manifests.includes("retryPolicy"));
@@ -2280,7 +2318,7 @@ describe("docs", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
       scripts: Record<string, string>;
     };
-    const docs = readFileSync("docs/release-and-install.md", "utf8");
+    const docs = releaseDoc();
     const workflow = readFileSync(".github/workflows/release.yml", "utf8");
 
     assert.equal(
@@ -2366,7 +2404,7 @@ describe("docs", () => {
     assert.ok(workflow.includes("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}"), "release workflow missing npm authentication");
     assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
 
-    const docs = readFileSync("docs/release-and-install.md", "utf8");
+    const docs = releaseDoc();
     const handoff = docs.slice(docs.indexOf("### 0.0.22 publish handoff"), docs.indexOf("### 0.0.21 publish handoff"));
     for (const phrase of [
       "Decision: GO",
@@ -2403,8 +2441,8 @@ describe("docs", () => {
 
   it("peer-version policy (plan 030 Task 9): caret ranges, independent packages, migration note", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-    const release = readFileSync("docs/release-and-install.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const release = releaseDoc();
+    const migration = migrationDoc();
     assert.ok(
       release.includes(`non-optional **caret** \`@arnilo/prism@^${pkg.version}\` peer`),
       "release page must state the caret current peer spec",
@@ -2577,7 +2615,6 @@ describe("docs", () => {
     const page = readFileSync("docs/system-prompts.md", "utf8");
     const cli = readFileSync("docs/cli-rpc.md", "utf8");
     const discovery = readFileSync("docs/contribution-discovery.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
 
     // The Node subpath ships.
     assert.deepEqual(packageJson.exports["./node/system-prompts"], {
@@ -2613,9 +2650,7 @@ describe("docs", () => {
     assert.ok(discovery.includes("loadSystemPromptFiles"), "docs/contribution-discovery.md does not cross-reference loadSystemPromptFiles");
     assert.ok(discovery.includes("sibling"), "docs/contribution-discovery.md does not describe the loader as a sibling");
 
-    // Index entry mentions walk-up loading.
-    assert.ok(index.includes("AGENTS.md"), "docs/index.md System prompts entry does not mention AGENTS.md");
-    assert.ok(index.includes("SYSTEM.md"), "docs/index.md System prompts entry does not mention SYSTEM.md");
+    assert.ok(page.includes("AGENTS.md") && page.includes("SYSTEM.md"), "system-prompts.md missing AGENTS.md/SYSTEM.md file-loader names");
   });
 
   it("provider conformance docs cover testing subpath and no network", () => {
@@ -2865,7 +2900,6 @@ describe("docs", () => {
   });
 
   it("phase37_security_boundary_docs_cover_hardening_summary", () => {
-    const index = readFileSync("docs/index.md", "utf8");
     const security = readFileSync("docs/settings-auth-trust-security.md", "utf8");
     const discovery = readFileSync("docs/contribution-discovery.md", "utf8");
     const injection = readFileSync("docs/instruction-injection.md", "utf8");
@@ -2874,14 +2908,6 @@ describe("docs", () => {
     const providers = readFileSync("docs/provider-packages.md", "utf8");
     const openrouter = readFileSync("docs/providers/openrouter.md", "utf8");
 
-    for (const phrase of [
-      "security-boundary hardening summary",
-      "realpath-contained",
-      "prototype-pollution key rejection",
-      "provider-owned header precedence",
-    ]) {
-      assert.ok(index.includes(phrase), `docs/index.md missing ${phrase}`);
-    }
     for (const phrase of [
       "Boundary hardening summary",
       "Contribution files",
@@ -2905,19 +2931,24 @@ describe("docs", () => {
   });
 
   it("phase38_docs_index_summarizes_api_cleanup", () => {
-    const index = readFileSync("docs/index.md", "utf8");
-    for (const phrase of [
-      "fail-closed omitted capabilities",
-      "migration-only `activateAllCapabilities`",
-      "replace-or-error duplicate policy",
-      "`toolNames` fail closed before provider turns",
-      '`duplicate: "error"` strict mode',
-      "host-owned settings/credentials wiring outside `AgentConfig`",
-      "resolve credentials only at the provider edge",
-      "direct `AgentRunResult`",
-    ]) {
-      assert.ok(index.includes(phrase), `docs/index.md missing ${phrase}`);
-    }
+    const skills = readFileSync("docs/context-and-skills.md", "utf8");
+    const tools = readFileSync("docs/tools.md", "utf8");
+    const registries = readFileSync("docs/contribution-registries.md", "utf8");
+    const settings = readFileSync("docs/settings-auth-trust-security.md", "utf8");
+    const credentials = readFileSync("docs/credentials-and-redaction.md", "utf8");
+    const runtime = readFileSync("docs/agent-session-runtime.md", "utf8");
+    const definitions = readFileSync("docs/agent-definitions.md", "utf8");
+    assert.ok(definitions.includes("activateAllCapabilities"), "agent-definitions.md missing omitted-capabilities migration flag");
+    assert.ok(
+      skills.includes("migration-only `activateAllCapabilities"),
+      "context-and-skills.md missing activateAllCapabilities migration opt-in",
+    );
+    assert.ok(skills.includes("before the first provider turn"), "context-and-skills.md missing toolNames fail-closed-before-turn");
+    assert.ok(tools.includes('duplicate: "error"'), "tools.md missing strict duplicate mode");
+    assert.ok(registries.includes('duplicate: "error"'), "contribution-registries.md missing strict duplicate mode");
+    assert.ok(settings.includes("host-owned outside `AgentConfig`"), "settings-auth-trust-security.md missing host-owned settings wiring");
+    assert.ok(credentials.includes("provider edge"), "credentials-and-redaction.md missing provider-edge resolution");
+    assert.ok(runtime.includes("`AgentRunResult`"), "agent-session-runtime.md missing AgentRunResult");
   });
 
   it("readme_describes_current_runtime_provider_packages_cli_and_examples", () => {
@@ -3058,12 +3089,11 @@ describe("docs", () => {
   });
 
   it("phase48 neuralwatt agent example covers tools reasoning usage cache and telemetry", () => {
-    const index = readFileSync("docs/index.md", "utf8");
     const providerDoc = readFileSync("docs/providers/neuralwatt.md", "utf8");
     const readme = readFileSync("examples/README.md", "utf8");
     const example = readFileSync("examples/neuralwatt-agent-run.ts", "utf8");
 
-    assert.ok(index.includes("NeuralWatt agent run"), "docs/index.md does not mention NeuralWatt agent example");
+    assert.ok(readme.includes("neuralwatt-agent-run.ts"), "examples/README.md does not list NeuralWatt agent example");
     assert.ok(providerDoc.includes("examples/neuralwatt-agent-run.ts"), "NeuralWatt docs do not link the example");
     assert.ok(readme.includes("neuralwatt-agent-run.ts"), "examples/README.md does not list NeuralWatt agent example");
     for (const phrase of [
@@ -3088,7 +3118,7 @@ describe("docs", () => {
 
   it("phase48 release validation gates neuralwatt docs links and example presence", () => {
     const index = readFileSync("docs/index.md", "utf8");
-    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const release = releaseDoc();
     const readme = readFileSync("examples/README.md", "utf8");
     const packaging = readFileSync("src/__tests__/packaging.test.ts", "utf8");
 
@@ -3283,7 +3313,7 @@ describe("docs", () => {
     assert.ok(index.includes("migration.md"), "docs/index.md does not link migration.md");
     assert.ok(index.includes("examples/"), "docs/index.md does not mention examples/");
 
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     for (const phrase of [
       "JSONL → database-backed persistence",
       "ProductionPersistenceStore",
@@ -3705,7 +3735,6 @@ describe("docs", () => {
   });
 
   it("phase48 provider cache matrix covers every first-party provider and caveat", () => {
-    const index = readFileSync("docs/index.md", "utf8");
     const caching = readFileSync("docs/provider-caching.md", "utf8");
     const packages = readFileSync("docs/provider-packages.md", "utf8");
     const neuralwatt = readFileSync("docs/providers/neuralwatt.md", "utf8");
@@ -3738,7 +3767,7 @@ describe("docs", () => {
     }
     assert.ok(neuralwatt.includes("cross-provider"), "neuralwatt.md does not link the cross-provider cache matrix");
     assert.ok(packages.includes("canonical explicit/implicit matrix"), "provider-packages.md does not link the canonical cache matrix");
-    assert.ok(index.includes("per-provider explicit/implicit cache matrix"), "docs/index.md does not advertise the provider cache matrix");
+    assert.ok(packages.includes("canonical explicit/implicit matrix"), "provider-packages.md does not advertise the provider cache matrix");
   });
 
   it("phase29_new_providers_cache_thinking_oauth_docs", () => {
@@ -3793,7 +3822,6 @@ describe("docs", () => {
     const packages = readFileSync("docs/provider-packages.md", "utf8");
     const caching = readFileSync("docs/provider-caching.md", "utf8");
     const conformance = readFileSync("docs/provider-conformance.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
 
     assert.ok(packages.includes("## Caller-gated model discovery"), "provider-packages.md missing discovery section");
     assert.ok(packages.includes("list*Models"), "provider-packages.md missing list*Models contract");
@@ -3808,7 +3836,7 @@ describe("docs", () => {
     assert.ok(caching.includes("cached_input_per_million"), "provider-caching.md missing live cache-read pricing example");
     assert.ok(conformance.includes("Model discovery checklist"), "provider-conformance.md missing discovery checklist");
     assert.ok(conformance.includes("setup_does_not_call_model_discovery"), "provider-conformance.md missing setup zero-fetch test name");
-    assert.ok(index.includes("caller-gated on-demand model discovery"), "docs/index.md does not mention on-demand model discovery");
+    assert.ok(packages.includes("## Caller-gated model discovery"), "provider-packages.md missing caller-gated discovery heading");
   });
 
   it("per_turn_thinking_reasoning_contract_is_documented", () => {
@@ -3850,9 +3878,7 @@ describe("docs", () => {
     const compaction = readFileSync("docs/compaction-llm.md", "utf8");
     const migrate = readFileSync("docs/migrate-to-0.5.md", "utf8");
     const opencode = readFileSync("docs/providers/opencode-go.md", "utf8");
-    assert.ok(index.includes("Current line (0.5.4)"), "docs/index.md current line must be 0.5.4");
-    assert.ok(index.includes("applyDefaultProviderRequestOptions"), "docs/index.md missing construction helper blurb");
-    assert.ok(index.includes("om:{session.id}"), "docs/index.md missing OM derived id");
+    assert.ok(index.includes("Current line (0.5.5)"), "docs/index.md current line must be 0.5.5");
     assert.ok(packages.includes("never required for success"), "provider-packages.md missing overlay contract");
     assert.ok(
       !packages.includes("api.registerProviderRequestPolicy(createSessionCachePolicy"),
@@ -3928,7 +3954,6 @@ describe("docs", () => {
     const caching = readFileSync("docs/provider-caching.md", "utf8");
     const conformance = readFileSync("docs/provider-conformance.md", "utf8");
     const packages = readFileSync("docs/provider-packages.md", "utf8");
-    const index = readFileSync("docs/index.md", "utf8");
     const coverage = readFileSync("docs/_evidence/review-coverage-2026-07-17-provider-validation.md", "utf8");
 
     for (const phrase of [
@@ -3950,7 +3975,7 @@ describe("docs", () => {
     assert.ok(conformance.includes("## AI SDK adapter checklist"), "provider-conformance.md missing AI SDK checklist");
     assert.ok(conformance.includes("Version + specification gate"), "provider-conformance.md missing AI SDK matrix gate");
     assert.ok(packages.includes("No Prism-side catalog by design"), "provider-packages.md missing AI SDK no-catalog note");
-    assert.ok(index.includes("no Prism catalog"), "docs/index.md missing AI SDK host-owned catalog blurb");
+    assert.ok(packages.includes("No Prism-side catalog by design"), "provider-packages.md missing AI SDK no-catalog note");
     assert.ok(coverage.includes("host-owned catalog/cache/reasoning validated"), "provider validation matrix missing AI SDK fixed status");
   });
 
@@ -4060,10 +4085,9 @@ describe("docs", () => {
   });
 
   it("phase3_progressive_disclosure_docs_cover_catalog_load_migration_and_example", () => {
-    const index = readFileSync("docs/index.md", "utf8");
     const contextSkills = readFileSync("docs/context-and-skills.md", "utf8");
     const runtime = readFileSync("docs/agent-session-runtime.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     const rootExports = readFileSync("src/index.ts", "utf8");
 
     assert.match(rootExports, /\bcreateLoadSkillTool\b/, "src/index.ts does not export createLoadSkillTool");
@@ -4084,7 +4108,7 @@ describe("docs", () => {
     assert.ok(runtime.includes("skillsDisclosure"), "agent-session-runtime.md missing skillsDisclosure");
     assert.ok(runtime.includes("activateAllSkills"), "agent-session-runtime.md missing activateAllSkills");
     assert.ok(runtime.includes("toolResultFold"), "agent-session-runtime.md missing toolResultFold");
-    assert.ok(index.includes("progressive skill catalog"), "docs/index.md missing progressive skill catalog");
+    assert.ok(contextSkills.includes("skillsDisclosure"), "context-and-skills.md missing progressive skill catalog contract");
     assert.ok(migration.includes("0.0.19 → 0.0.20 skills and context progressive disclosure"), "migration missing 0.0.20 section");
     assert.ok(migration.includes("activateAllSkills: true"), "migration missing activateAllSkills migration");
     assert.ok(existsSync("examples/skills-progressive-disclosure.ts"), "missing skills-progressive-disclosure example");
@@ -4095,9 +4119,8 @@ describe("docs", () => {
   });
 
   it("phase2_observational_memory_docs_cover_four_layers_migration_and_lifecycle_example", () => {
-    const index = readFileSync("docs/index.md", "utf8");
     const om = readFileSync("docs/compaction-observational-memory.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     for (const phrase of [
       "Recent exact messages",
       "Observation log",
@@ -4108,7 +4131,7 @@ describe("docs", () => {
       "attach()",
       "recallObservationalMemoryBranchPage",
     ]) {
-      assert.ok(om.includes(phrase) || index.includes(phrase), `observational memory docs missing ${phrase}`);
+      assert.ok(om.includes(phrase), `observational memory docs missing ${phrase}`);
     }
     assert.ok(migration.includes("0.0.18 → 0.0.19 observational memory lifecycle"), "migration missing 0.0.19 OM section");
     assert.ok(migration.includes("createObservationalMemory().attach()"), "migration missing attach migration");
@@ -4140,7 +4163,7 @@ describe("docs", () => {
           "coding-tools-capability-gaps.ts",
         ],
       ],
-      ["index.md", index, ["glob", "delete", "move", "outputMode", "No PDF/trash/PTY"]],
+      ["index.md", index, ["coding-agent-tools.md"]],
       [
         "coding-agent README",
         readme,
@@ -4152,7 +4175,7 @@ describe("docs", () => {
       }
     }
     assert.ok(existsSync("examples/coding-tools-capability-gaps.ts"), "missing coding-tools-capability-gaps example");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     assert.ok(
       migration.includes("0.0.20 → 0.0.21 coding-tool capability gaps"),
       "migration missing 0.0.21 coding-tool capability gaps section",
@@ -4166,7 +4189,7 @@ describe("docs", () => {
     const ponytail = readFileSync("docs/ponytail.md", "utf8");
     const extensions = readFileSync("docs/extensions.md", "utf8");
     const contextSkills = readFileSync("docs/context-and-skills.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
 
     assert.ok(index.includes("Third-party integrations"), "docs/index.md missing Third-party integrations group");
     assert.ok(index.includes("caveman.md"), "docs/index.md missing caveman link");
@@ -4197,7 +4220,7 @@ describe("docs", () => {
   it("phase6 enterprise PostgreSQL docs cover all stores, migration, ownership, and recovery", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const enterprise = readFileSync("docs/enterprise-postgres-state.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     const work = readFileSync("docs/work-tools.md", "utf8");
     const router = readFileSync("docs/model-routing.md", "utf8");
     const security = readFileSync("docs/host-security.md", "utf8");
@@ -4236,7 +4259,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const effects = readFileSync("docs/tool-effects.md", "utf8");
     const events = readFileSync("docs/agent-events.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     const performance = readFileSync("docs/performance.md", "utf8");
     const security = readFileSync("docs/host-security.md", "utf8");
     assert.ok(index.includes("tool-effects.md"), "docs/index.md missing tool-effects link");
@@ -4261,10 +4284,11 @@ describe("docs", () => {
     const mcp = readFileSync("docs/mcp-tools.md", "utf8");
     const coding = readFileSync("docs/coding-security.md", "utf8");
     const server = readFileSync("docs/server.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     const performance = readFileSync("docs/performance.md", "utf8");
-    const readiness = readFileSync("docs/0.1.0-readiness.md", "utf8");
-    assert.ok(index.includes("0.0.25") && index.includes("agent-loops.md") && index.includes("(ag-ui.md)"));
+    const readiness = readinessDoc();
+    assert.ok(freezeCorpus().includes("0.0.25"));
+    assert.ok(index.includes("agent-loops.md") && index.includes("(ag-ui.md)"));
     for (const token of [
       "snapshot",
       "restore",
@@ -4309,10 +4333,11 @@ describe("docs", () => {
     const agentEvents = readFileSync("docs/agent-events.md", "utf8");
     const agUi = readFileSync("docs/ag-ui.md", "utf8");
     const a2aDoc = readFileSync("docs/a2a.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     const performance = readFileSync("docs/performance.md", "utf8");
-    const readiness = readFileSync("docs/0.1.0-readiness.md", "utf8");
-    assert.ok(index.includes("0.0.26") && index.includes("language-intelligence.md") && index.includes("forge-integration.md"));
+    const readiness = readinessDoc();
+    assert.ok(freezeCorpus().includes("0.0.26"));
+    assert.ok(index.includes("language-intelligence.md") && index.includes("forge-integration.md"));
     for (const token of [
       "createGitAwareRepositoryOperations",
       "git ls-files",
@@ -4394,7 +4419,7 @@ describe("docs", () => {
     const acp = readFileSync("docs/acp.md", "utf8");
     const agUi = readFileSync("docs/ag-ui.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    const migration = readFileSync("docs/migration.md", "utf8");
+    const migration = migrationDoc();
     const packageReadme = readFileSync("packages/ag-ui/README.md", "utf8");
     const changelog = readFileSync("CHANGELOG.md", "utf8");
     const packageChangelog = readFileSync("packages/ag-ui/CHANGELOG.md", "utf8");
@@ -4432,7 +4457,7 @@ describe("docs", () => {
     );
     assert.ok(agUi.includes("(acp.md)"), "docs/ag-ui.md must link docs/acp.md");
     assert.ok(!agUi.includes("only close-session capability"), "docs/ag-ui.md still claims close-session-only ACP");
-    assert.ok(index.includes("(acp.md)") && index.includes("ACP coding-host interop"), "docs/index.md missing ACP entry");
+    assert.ok(index.includes("(acp.md)"), "docs/index.md missing ACP entry");
     assert.ok(migration.includes("0.0.26 → 0.0.27"), "docs/migration.md missing 0.0.27 section");
     assert.ok(packageReadme.includes("docs/acp.md"), "packages/ag-ui/README.md missing ACP doc link");
     assert.ok(changelog.includes("0.0.27") && packageChangelog.includes("0.0.27"), "changelogs missing 0.0.27");

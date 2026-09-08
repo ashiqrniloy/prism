@@ -432,7 +432,7 @@ Use workflows for known, durable, replayable graphs. Use optional supervisor del
 ## Related APIs
 
 - Examples: `examples/workflow-research-and-review.ts`, `examples/workflow-parallel-research.ts`, `examples/workflow-tool-approval.ts`, `examples/workflow-multimodal-document.ts`, `examples/workflow-sqlite-resume.ts`, `examples/workflow-postgres-resume.ts`, `examples/workflow-event-sink.ts`, `examples/workflow-rpc-cancel.ts`, `examples/workflow-distributed-coordinator.ts`, `examples/autonomous-coding-loop.ts` (host-loop iterate-until-done) — offline runnable demos; PostgreSQL safely skips unless `PRISM_TEST_POSTGRES_URL` is set.
-- [Workflow orchestration primitives](workflow-orchestration-primitives.md): Task 0–1 inventory and locked adapter contracts
+- [Workflow orchestration primitives](history/workflow-orchestration-primitives.md): Task 0–1 inventory and locked adapter contracts
 - [Agent/session runtime](agent-session-runtime.md): `AgentSession.run()`/`stream()`, abort, subscribe
 - [Guardrails](guardrails.md): `RunWorkflowOptions.guardrails` routes tool nodes through core dispatch before policy and side effects.
 - [Supervisor delegation](supervisors.md): bounded dynamic child selection.

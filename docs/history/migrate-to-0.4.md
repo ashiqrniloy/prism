@@ -306,7 +306,7 @@ API page says so.
 
 ## Related APIs
 
-- [Release and install](release-and-install.md): package contents, peer rules, and publication.
-- [Migration guide](migration.md): migration history for prior releases.
-- [Provider packages](provider-packages.md): provider adapter behavior.
-- [Host security guide](host-security.md): preserve host trust boundaries while upgrading.
+- [Release and install](../release-and-install.md): package contents, peer rules, and publication.
+- [Migration guide](../migration.md): migration history for prior releases.
+- [Provider packages](../provider-packages.md): provider adapter behavior.
+- [Host security guide](../host-security.md): preserve host trust boundaries while upgrading.

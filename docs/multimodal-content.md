@@ -181,4 +181,4 @@ from `@arnilo/prism/testing/provider-conformance`.
 - [Resource loading](resource-loading.md): `loadBinaryResource()` and text/JSON helpers.
 - [Model registry](model-registry.md): `ModelCapabilities.input` metadata.
 - [Provider conformance](provider-conformance.md): serialized request coverage for content blocks.
-- [Persistence, credentials, and multimodality primitives](persistence-credentials-multimodality-primitives.md): Plan 056 inventory and threat model.
+- [Persistence, credentials, and multimodality primitives](history/persistence-credentials-multimodality-primitives.md): Plan 056 inventory and threat model.

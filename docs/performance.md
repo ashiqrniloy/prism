@@ -158,7 +158,7 @@ recorded JSON (`storageBeforeCleanup` / `storageAfterCleanup` per leg).
 
 Conformance companions: `scripts/phase8–11-conformance.test.mjs` plus the
 Task 3 packed-install journeys and Task 4 restart-recovery evidence (see
-[`docs/0.1.0-readiness.md`](./0.1.0-readiness.md)).
+[`docs/0.1.0-readiness.md`](history/./0.1.0-readiness.md)).
 
 ## Release 0.0.28 enterprise auth, policy, MCP OAuth, API, and artifact adapters
 

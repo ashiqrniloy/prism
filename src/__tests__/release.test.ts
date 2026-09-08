@@ -64,7 +64,7 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
     existsSync(join(process.cwd(), "packages/prism-providers/src/alibaba/index.ts")),
     "alibaba adapter must exist in the providers family",
   );
-  const docs = readFileSync(join(process.cwd(), "docs/release-and-install.md"), "utf8");
+  const docs = readFileSync(join(process.cwd(), "docs/history/release-handoffs.md"), "utf8");
   assert.ok(docs.includes("### 0.1.2 publish handoff (plan 014 Task 6)"));
   assert.ok(docs.includes("48 publishable manifests") || docs.includes("**48** manifests"));
 });
@@ -190,7 +190,7 @@ test("release workflow publishes the lockstep cut once and package tags independ
   const workflow = readFileSync(join(process.cwd(), ".github/workflows/release.yml"), "utf8");
   assert.match(
     workflow,
-    /tags:\s*\["v0\.3\.0", "v0\.4\.0", "v0\.5\.0", "v0\.5\.1", "v0\.5\.2", "v0\.5\.3", "v0\.5\.4", "@arnilo\/\*@\*"\]/,
+    /tags:\s*\["v0\.3\.0", "v0\.4\.0", "v0\.5\.0", "v0\.5\.1", "v0\.5\.2", "v0\.5\.3", "v0\.5\.4", "v0\.5\.5", "@arnilo\/\*@\*"\]/,
   );
   assert.match(workflow, /id-token:\s*write/);
   assert.match(workflow, /release:publish -- --lockstep --version /);
