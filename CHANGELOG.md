@@ -1,3 +1,8 @@
+## [Unreleased]
+
+### Fixed
+- **Byte limits are per-frame, not cumulative.** `maxRequestBytes`/`maxResponseBytes` now compare each individual provider frame (request payload, streamed event) against the cap instead of a run-lifetime byte sum, so long autonomous coding runs (many megabyte-scale frames, each far under 64 MiB) no longer trip `Run limit exceeded: maxRequestBytes` after ~40 turns. HARD stays per-frame process safety — one giant frame still fails, 40 legal frames never do. Cumulative byte counters remain in snapshots/telemetry; token/turn/wall/cost axes stay cumulative.
+
 ## [0.5.4] - 2026-09-08 (plan 067)
 
 ### Changed

@@ -216,7 +216,11 @@ export class RunLimitTracker {
     if (!Number.isSafeInteger(observed)) this.exceed(limit, Number.MAX_SAFE_INTEGER + 1);
     this.counters[counter] = observed;
     const cap = this.limits[limit];
-    if (cap !== null && observed > cap) this.exceed(limit, observed);
+    if (cap === null) return;
+    // Byte caps are per-frame (HARD exists so one giant provider frame cannot OOM the host),
+    // not run-lifetime sums; every other axis stays cumulative.
+    const against = limit === "maxRequestBytes" || limit === "maxResponseBytes" ? delta : observed;
+    if (against > cap) this.exceed(limit, against);
   }
 
   recordUsage(usage: Usage | undefined): void {

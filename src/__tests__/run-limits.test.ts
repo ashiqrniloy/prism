@@ -177,6 +177,23 @@ describe("run limits", () => {
     });
   });
 
+  it("treats byte caps as per-frame, not run-lifetime sums", () => {
+    const tracker = new RunLimitTracker(
+      resolveRunLimits(undefined, { maxRequestBytes: 8 * 1024 * 1024, maxResponseBytes: 8 * 1024 * 1024 }),
+    );
+    for (let i = 0; i < 20; i += 1) tracker.charge("maxRequestBytes", 2 * 1024 * 1024);
+    for (let i = 0; i < 20; i += 1) tracker.charge("maxResponseBytes", 2 * 1024 * 1024);
+    assert.equal(tracker.snapshot().requestBytes, 20 * 2 * 1024 * 1024);
+    assert.equal(tracker.snapshot().responseBytes, 20 * 2 * 1024 * 1024);
+    assert.throws(() => tracker.charge("maxRequestBytes", 9 * 1024 * 1024), RunLimitError);
+    assert.throws(() => tracker.charge("maxResponseBytes", 8 * 1024 * 1024 + 1), RunLimitError);
+    const breach = tracker.breach;
+    assert.ok(breach);
+    assert.equal(breach.limit, "maxRequestBytes");
+    assert.equal(breach.observed, 9 * 1024 * 1024);
+    tracker.dispose();
+  });
+
   it("emits one terminal breach and withholds configured-token-budget output", async () => {
     const loop: AgentLoopStrategy = {
       name: "two-turns",
