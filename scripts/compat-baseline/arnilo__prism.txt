@@ -138,7 +138,7 @@ DEFAULT_MEDIA_FETCH_TIMEOUT_MS	export declare const DEFAULT_MEDIA_FETCH_TIMEOUT_
 DEFAULT_OPENAI_INLINE_FILE_BYTES	export declare const DEFAULT_OPENAI_INLINE_FILE_BYTES: number
 DEFAULT_PROVIDER_MEDIA_ITEM_BYTES	export declare const DEFAULT_PROVIDER_MEDIA_ITEM_BYTES = 10000000
 DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES	export declare const DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES = 32
-DEFAULT_RUN_LIMITS	export declare const DEFAULT_RUN_LIMITS: Required<Omit<RunLimits, "maxCost">>
+DEFAULT_RUN_LIMITS	export declare const DEFAULT_RUN_LIMITS: Readonly<
 DEFAULT_SESSION_SEARCH_LIMIT	export declare const DEFAULT_SESSION_SEARCH_LIMIT = 20
 DEFAULT_TOOLS_SEARCH_TOP_K	export declare const DEFAULT_TOOLS_SEARCH_TOP_K = 16
 DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 512
@@ -222,7 +222,6 @@ HARD_MAX_PENDING_DECISIONS	export declare const HARD_MAX_PENDING_DECISIONS = 128
 HARD_MAX_PENDING_STEERS	export declare const HARD_MAX_PENDING_STEERS = 32
 HARD_MAX_PENDING_STEER_BYTES	export declare const HARD_MAX_PENDING_STEER_BYTES: number
 HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES	export declare const HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES: number
-HARD_MAX_RUN_COST	export declare const HARD_MAX_RUN_COST = 10000
 HARD_MAX_SESSION_SEARCH_CURSOR_BYTES	export declare const HARD_MAX_SESSION_SEARCH_CURSOR_BYTES: number
 HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES	export declare const HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES = 5000
 HARD_MAX_SESSION_SEARCH_LIMIT	export declare const HARD_MAX_SESSION_SEARCH_LIMIT = 100
@@ -238,7 +237,7 @@ HARD_MAX_STICKY_DECISIONS	export declare const HARD_MAX_STICKY_DECISIONS = 256
 HARD_MAX_TOOLS_INDEX	export declare const HARD_MAX_TOOLS_INDEX = 1024
 HARD_MAX_TOOLS_SEARCH_QUERY_BYTES	export declare const HARD_MAX_TOOLS_SEARCH_QUERY_BYTES = 65536
 HARD_MAX_TOOLS_SEARCH_TOP_K	export declare const HARD_MAX_TOOLS_SEARCH_TOP_K = 64
-HARD_RUN_LIMITS	export declare const HARD_RUN_LIMITS: Required<Omit<RunLimits, "maxCost">>
+HARD_RUN_LIMITS	export declare const HARD_RUN_LIMITS: Readonly<
 HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 4096
 IdentityError	export declare class IdentityError extends Error
 IdentityLimits	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimits, IdentityVerifier, NarrowIdentityOptions, Principal, ResolvedIdentityLimits, } from "./identity.js"
@@ -816,7 +815,7 @@ resolveProviderMediaMessages	export declare function resolveProviderMediaMessage
 resolveRedactor	export declare function resolveRedactor(redactor?: SecretRedactor, secrets?: readonly (string | undefined)[]): SecretRedactor | undefined
 resolveRunDecisions	export declare function resolveRunDecisions(input:
 resolveRunIdentity	export declare function resolveRunIdentity(runIdentity: AgentIdentity | undefined, agentIdentity: AgentIdentity | undefined, ownership: OwnershipScope | undefined, options?: AssertIdentityActiveOptions): AgentIdentity | undefined
-resolveRunLimits	export declare function resolveRunLimits(agent?: RunLimits, run?: RunLimits): Readonly<Required<Omit<RunLimits, "maxCost">> & Pick<RunLimits, "maxCost">>
+resolveRunLimits	export declare function resolveRunLimits(agent?: RunLimits, run?: RunLimits): Readonly<ResolvedRunLimits>
 resolveRunProviderOptions	export declare function resolveRunProviderOptions(runOptions: Pick<RunOptions, "providerOptions" | "loop">, config: Pick<AgentConfig, "providerOptions" | "loop">): ProviderRequestOptions | undefined
 resolveSessionSearchQuery	export declare function resolveSessionSearchQuery(query: SessionSearchQuery): ResolvedSessionSearchQuery
 resolveSkillLoad	export declare function resolveSkillLoad(options: ResolveSkillLoadOptions): Skill
@@ -862,8 +861,8 @@ serializeOpenAIResponsesInputAudio	export declare function serializeOpenAIRespon
 serializeOpenAIResponsesInputFile	export declare function serializeOpenAIResponsesInputFile(options:
 serializeOpenAIResponsesStructuredOutput	export declare function serializeOpenAIResponsesStructuredOutput(options: StructuredOutputOptions): JsonObject
 serializeOpenAITool	export declare function serializeOpenAITool(tool: ToolDefinition): JsonObject
-serializeToolResultJson	export declare function serializeToolResultJson(message: Message): string
 serializePdfDocumentWireBlock	export declare function serializePdfDocumentWireBlock(options:
+serializeToolResultJson	export declare function serializeToolResultJson(message: Message): string
 singleShotLoop	export declare const singleShotLoop: AgentLoopStrategy
 skillHasRenderableBody	export declare function skillHasRenderableBody(skill: Skill, context?: SkillRenderContext): boolean
 skillMessages	export declare function skillMessages(skills: readonly Skill[] | undefined, context?: SkillRenderContext): Message[]
@@ -883,6 +882,7 @@ thinkingFamilyForModel	export declare function thinkingFamilyForModel(model: Pic
 thinkingLevelsForModel	export declare function thinkingLevelsForModel(model: Pick<ModelConfig, "provider" | "compat" | "capabilities">): readonly string[] | undefined
 throwIfAborted	export declare function throwIfAborted(signal?: AbortSignal): void
 throwIfAbortedSignal	export declare function throwIfAbortedSignal(signal: AbortSignal | undefined): void
+toToolResultMessage	export declare function toToolResultMessage(result: ToolResult): Message
 toolCallContent	export declare function toolCallContent(id: string, name: string, args?: JsonObject): ToolCallContent
 toolCallFromArgumentsText	export declare function toolCallFromArgumentsText(id: string, name: string, argumentsText: string): ToolCallContent
 toolEffectArgumentsHash	export declare function toolEffectArgumentsHash(argumentsValue: JsonObject): string
@@ -899,7 +899,7 @@ validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(valu
 validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.5.3"
+version	export declare const version = "0.5.4"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]
