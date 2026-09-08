@@ -144,7 +144,8 @@ async function assembleRoundContext(params: {
   if (inputGuardrails.terminal && !approvedByResume) assertGuardrailsAllowed(inputGuardrails);
   for (const message of inputMessages) await session.appendMessage(message, runId);
   await session.autoCompact(runId, options, controller.signal, inputMessages);
-  const maxToolRounds = resolveRunLimits(session.agent.config.limits, options.limits).maxToolRounds;
+  // Disabled cap (`null`) maps to +Infinity so loop comparisons never trip (`n >= null` would be true).
+  const maxToolRounds = resolveRunLimits(session.agent.config.limits, options.limits).maxToolRounds ?? Number.POSITIVE_INFINITY;
   const systemInstructions = composeSystemPrompt(mergeSystemPromptConfig(session.agent.config.systemPrompt, options.systemPrompt), {
     base: session.agent.config.instructions,
   });
@@ -375,8 +376,12 @@ export async function executeRun(
     deadlineAt: resumed?.state?.deadlineAt,
   });
   session.activeLimits = limits;
+  const hasFiniteTokenCap = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value);
   session.activeLimitOutputBuffer = [session.agent.config.limits, requestedLimits].some(
-    (value) => value?.maxOutputTokens !== undefined || value?.maxTotalTokens !== undefined || value?.maxCost !== undefined,
+    (value) =>
+      hasFiniteTokenCap(value?.maxOutputTokens) ||
+      hasFiniteTokenCap(value?.maxTotalTokens) ||
+      value?.maxCost !== undefined,
   );
 
   try {

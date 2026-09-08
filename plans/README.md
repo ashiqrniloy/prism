@@ -71,5 +71,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [064-E2E-Live-Test-Coverage-Matrix.md](064-E2E-Live-Test-Coverage-Matrix.md) | E2E live test coverage matrix | planned |
 | [065-Provider-Thinking-Effort-Coverage.md](065-Provider-Thinking-Effort-Coverage.md) | Provider thinking/effort coverage | in progress |
 | [066-Provider-Request-Construction-And-0-5-1.md](066-Provider-Request-Construction-And-0-5-1.md) | 0.5.1 — kernel constructs provider requests (session correlation, cache defaults, thinkingLevel) + lockstep bump | complete |
+| [067-Run-Limits-Hard-Vs-Host-Policy.md](067-Run-Limits-Hard-Vs-Host-Policy.md) | 0.5.4 — split run-limit HARD (bytes/process safety) from host policy (`null` disables an axis; DEFAULT unchanged) | complete (2026-09-08) |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

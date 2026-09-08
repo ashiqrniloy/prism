@@ -3,7 +3,7 @@ name: release
 on:
   push:
     branches: [main, master]
-    tags: ["v0.3.0", "v0.4.0", "v0.5.0", "v0.5.1", "v0.5.2", "v0.5.3", "@arnilo/*@*"]
+    tags: ["v0.3.0", "v0.4.0", "v0.5.0", "v0.5.1", "v0.5.2", "v0.5.3", "v0.5.4", "@arnilo/*@*"]
   pull_request:
   workflow_dispatch:
 
@@ -153,7 +153,7 @@ jobs:
 
   codeql-release:
     name: CodeQL release SAST
-    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || startsWith(github.ref, 'refs/tags/@arnilo/')
+    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || github.ref == 'refs/tags/v0.5.4' || startsWith(github.ref, 'refs/tags/@arnilo/')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -212,7 +212,7 @@ jobs:
   publish:
     name: publish (deterministic, resumable, provenance)
     needs: [verify, node20-compat, postgres-integration, office-validation, codeql-release, supply-chain]
-    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || startsWith(github.ref, 'refs/tags/@arnilo/')
+    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || github.ref == 'refs/tags/v0.5.4' || startsWith(github.ref, 'refs/tags/@arnilo/')
     runs-on: ubuntu-latest
     permissions:
       contents: read

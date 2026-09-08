@@ -1,3 +1,11 @@
+## [0.5.4] - 2026-09-08 (plan 067)
+
+### Changed
+- **Run limits: process-safety HARD split from host policy.** `DEFAULT_RUN_LIMITS` stays the unconfigured fence (turns 16, attempts 24, tool rounds 8, calls 32, wall 120s, bytes 8 MiB, tokens 40k/10k/50k), but `HARD_RUN_LIMITS` shrinks to the two process-integrity axes (`maxRequestBytes`/`maxResponseBytes`, 64 MiB) so a bug cannot OOM the host through a giant provider frame — and hosts can legally raise or disable everything else. Policy axes accept `number | null`: omit for the default, set a positive safe integer, or set `null` to disable the axis (disabled wall still honors `RunOptions.signal`). Resolution stays narrowing-only with `null` as +Infinity (agent 16 + run `null` → 16); an omitted `maxProviderAttempts` lifts to at least a raised/disabled `maxTurns` so attempts cannot undercut turns. Byte axes reject `null` and >64 MiB. The former `$10k` `maxCost` ceiling is removed (any finite non-negative amount). Documented ceiling: vendors that omit usage charge zero to token counters; a configured `maxCost` remains fail-closed. Durable checkpoints omit `deadlineAt` on no-wall runs; older checkpoints with a deadline still resume. New `ResolvedRunLimits` type; `resolveRunLimits` returns it.
+
+### Removed
+- **`HARD_MAX_RUN_COST` export** (was a `$10k` validation ceiling; `maxCost` now accepts any finite non-negative amount plus one currency).
+
 ## [0.5.3] - 2026-09-08
 
 ### Fixed

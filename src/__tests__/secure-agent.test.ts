@@ -64,6 +64,13 @@ describe("secure agent composition", () => {
     assert.equal(result.text, "done");
   });
 
+  it("accepts explicit null (disabled) policy caps alongside process-hard byte caps", async () => {
+    const agent = createSecureAgent(options({ limits: { maxTurns: null, maxRequestBytes: 1024 } }));
+    const result = await agent.createSession().run("go");
+    assert.equal(result.status, "succeeded");
+    assert.equal(result.text, "done");
+  });
+
   it("requires durable approval before an allowed tool side effect", async () => {
     const checkpoints = createMemoryCheckpointStore();
     let calls = 0;

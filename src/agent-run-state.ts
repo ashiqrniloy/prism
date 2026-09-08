@@ -49,7 +49,8 @@ export interface StoredAgentRunState extends AgentRunState {
   readonly stickyDecisions?: readonly StickyDecision[];
   readonly interruptBeforeTool?: boolean;
   readonly counters: RunLimitCounters;
-  readonly deadlineAt: string;
+  /** Wall deadline; absent when the run has no wall limit. Old snapshots with a deadline still parse. */
+  readonly deadlineAt?: string;
   /** Loop-local durable state captured by the strategy's snapshot hook at suspension. */
   readonly loopState?: { readonly name: string; readonly revision: string; readonly snapshot: JsonValue };
   /**
@@ -223,7 +224,7 @@ export function initialAgentRunState(input: {
   readonly leafId?: string;
   readonly model: ModelConfig;
   readonly counters: RunLimitCounters;
-  readonly deadlineAt: string;
+  readonly deadlineAt?: string;
   readonly status: "suspended" | "running";
   readonly interruption?: AgentRunInterruption;
   readonly messages?: readonly Message[];
@@ -265,8 +266,7 @@ export function parseAgentRunState(value: unknown, version?: number): StoredAgen
     !state.sessionId ||
     !state.model ||
     !state.status ||
-    !state.counters ||
-    !state.deadlineAt
+    !state.counters
   ) {
     throw new AgentRunStateError("Malformed agent run state");
   }

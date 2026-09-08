@@ -291,6 +291,34 @@ describe("agent session runtime", () => {
     assert.equal(events[0]?.type === "error" ? events[0].error.message : undefined, "Unknown provider: missing");
   });
 
+  it("runs a disabled maxToolRounds (null) past the old default ceiling of 8 rounds", async () => {
+    const requests: ProviderRequest[] = [];
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(request) {
+        requests.push(request);
+        // 9 tool rounds, then a final text turn — one past the legacy default of 8.
+        if (requests.length <= 9) yield { type: "tool_call", call: toolCallContent(`call_${requests.length}`, "echo", { text: "hi" }) };
+        else yield providerTextDelta("done");
+        yield providerDone();
+      },
+    };
+    const echo: ToolDefinition = {
+      name: "echo",
+      execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }),
+    };
+    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] });
+    const session = agent.createSession();
+    const reader = collect(session.subscribe());
+
+    const result = await session.run("Hi", { limits: { maxToolRounds: null } });
+    const events = await reader;
+
+    assert.equal(result.status, "succeeded");
+    assert.equal(requests.length, 10);
+    assert.equal(events.filter((event) => event.type === "tool_execution_finished").length, 9);
+  });
+
   it("executes one registered tool and continues", async () => {
     const requests: ProviderRequest[] = [];
     const provider: AIProvider = {

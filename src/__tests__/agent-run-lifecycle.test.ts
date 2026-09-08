@@ -74,6 +74,54 @@ describe("agent run lifecycle", () => {
     assert.equal(events.at(-1)?.type, "agent_finished");
   });
 
+  it("suspends and resumes a no-wall durable run (omitted deadlineAt)", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    const store = createMemorySessionStore();
+    let calls = 0;
+    const agent = createAgent({
+      id: "lifecycle-no-wall-demo",
+      model: { provider: "mock", model: "demo" },
+      store,
+      provider: (() => {
+        let turn = 0;
+        return {
+          id: "mock",
+          async *generate() {
+            turn += 1;
+            if (turn === 1) {
+              yield { type: "tool_call" as const, call: toolCallContent("call-no-wall", "write", {}) };
+              yield providerDone();
+              return;
+            }
+            yield providerTextDelta("finished");
+            yield providerDone();
+          },
+        };
+      })(),
+      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-no-wall", name: "write", value: ++calls }) }],
+    });
+    const suspended = await agent.createSession({ id: "no-wall-session" }).run("go", {
+      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      limits: { maxWallTimeMs: null },
+    });
+    const loaded = await loadAgentRunState(checkpoints, { runId: suspended.runId });
+    assert.equal(loaded.state.deadlineAt, undefined);
+
+    const lifecycle = createAgentRunLifecycle({
+      checkpoints,
+      resolveAgent: () => ({ agent, definitionRevision: "1" }),
+    });
+    const events = [];
+    for await (const event of lifecycle.resumeStream(
+      { runId: suspended.runId, sessionId: suspended.sessionId },
+      { decision: "approve", expectedVersion: suspended.runState!.version! },
+      { agentId: "lifecycle-no-wall-demo", maxQueuedEvents: 64, overflow: "close" },
+    ))
+      events.push(event);
+    assert.equal(calls, 1);
+    assert.equal(events.at(-1)?.type, "agent_finished");
+  });
+
   it("opt-in includeSkillBodies: exact skill instructions ride the checkpoint and render on resume (plan 018 Task 6)", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const requests: Array<{

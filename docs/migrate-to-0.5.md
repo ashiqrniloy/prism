@@ -1,6 +1,6 @@
 # Migrate Prism 0.4 to 0.5
 
-> **Status: 0.5.3** (tool-result content fold, additive on the 2026-09-08 `v0.5.2` tag). 0.5.0 covers plans 055–065. 0.5.1 adds kernel provider-request construction. 0.5.2 coalesces stream tokens.
+> **Status: 0.5.4** (run-limit HARD split from host policy on the 2026-09-08 `v0.5.3` tag). 0.5.0 covers plans 055–065. 0.5.1 adds kernel provider-request construction. 0.5.2 coalesces stream tokens. 0.5.3 folds content-only tool results.
 
 ## What changes
 
@@ -125,6 +125,16 @@ What to do:
 3. Raw `provider.generate()` to OpenCode Go without `options.sessionId` now fails closed with `ProviderRequirementError` instead of HTTP 400.
 4. Custom generate sites should call `applyDefaultProviderRequestOptions(request, { sessionId, thinkingLevel })`.
 5. Nothing persisted changes. Session/cache keys are correlation ids, never secrets.
+
+## 9. Run limits: HARD vs host policy (plan 067 / 0.5.4, export-shape break)
+
+- **Removed export:** `HARD_MAX_RUN_COST` (delete the import; no replacement — `maxCost` now accepts any finite non-negative amount).
+- **Reshaped export:** `HARD_RUN_LIMITS` is now `{ maxRequestBytes: 67108864, maxResponseBytes: 67108864 }` — the only process-safety caps (a giant provider frame cannot OOM the host). Product axes have no hard cap; hosts size them per workload.
+- **New capability:** `RunLimits` policy axes (`maxTurns`, `maxProviderAttempts`, `maxToolRounds`, `maxToolCalls`, `maxWallTimeMs`, `maxInputTokens`, `maxOutputTokens`, `maxTotalTokens`) accept `number | null`. `null` disables the axis; omitted keys resolve to `DEFAULT_RUN_LIMITS` (unchanged fence: 16/24/8/32/120s/8 MiB/40k/10k/50k). Byte axes reject `null` and values above 64 MiB.
+- **New type:** `ResolvedRunLimits` (`resolveRunLimits` return; policy axes `number | null`).
+- **Resolution rules:** narrowing-only is kept — `null` acts as +Infinity, so agent `16` + run `null` → `16`; an omitted `maxProviderAttempts` lifts to `max(24, maxTurns)` (or `null` when `maxTurns` is `null`); explicitly set attempts lift only when both are finite.
+- **Durable state:** runs with `maxWallTimeMs: null` persist checkpoints without `deadlineAt`; older checkpoints with a deadline still resume under it.
+- **Documented ceiling:** vendors that omit usage charge zero to token counters; a configured `maxCost` stays the fail-closed envelope (missing/mixed-currency cost breaches immediately).
 
 ## Upgrade steps
 

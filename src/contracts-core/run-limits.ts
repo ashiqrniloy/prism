@@ -3,17 +3,37 @@
 import type { ProviderTurnResult, ToolResult } from "../contracts-protocol.js";
 import type { Message, ToolCallContent } from "./content.js";
 
+/**
+ * Host-authored run limits. Policy axes accept `null` to explicitly disable the cap
+ * (process safety still caps request/response bytes, which reject `null`). Omitted keys
+ * resolve to `DEFAULT_RUN_LIMITS`.
+ */
 export interface RunLimits {
-  readonly maxTurns?: number;
-  readonly maxProviderAttempts?: number;
-  readonly maxToolRounds?: number;
-  readonly maxToolCalls?: number;
-  readonly maxWallTimeMs?: number;
+  readonly maxTurns?: number | null;
+  readonly maxProviderAttempts?: number | null;
+  readonly maxToolRounds?: number | null;
+  readonly maxToolCalls?: number | null;
+  readonly maxWallTimeMs?: number | null;
   readonly maxRequestBytes?: number;
   readonly maxResponseBytes?: number;
-  readonly maxInputTokens?: number;
-  readonly maxOutputTokens?: number;
-  readonly maxTotalTokens?: number;
+  readonly maxInputTokens?: number | null;
+  readonly maxOutputTokens?: number | null;
+  readonly maxTotalTokens?: number | null;
+  readonly maxCost?: { readonly amount: number; readonly currency: string };
+}
+
+/** Fully resolved limits after `resolveRunLimits`: every policy axis is a finite cap or `null` (disabled). */
+export interface ResolvedRunLimits {
+  readonly maxTurns: number | null;
+  readonly maxProviderAttempts: number | null;
+  readonly maxToolRounds: number | null;
+  readonly maxToolCalls: number | null;
+  readonly maxWallTimeMs: number | null;
+  readonly maxRequestBytes: number;
+  readonly maxResponseBytes: number;
+  readonly maxInputTokens: number | null;
+  readonly maxOutputTokens: number | null;
+  readonly maxTotalTokens: number | null;
   readonly maxCost?: { readonly amount: number; readonly currency: string };
 }
 

@@ -552,6 +552,9 @@ describe("durable agent runs", () => {
     // 0.1.2-shaped checkpoints have no sessionState key and must keep parsing.
     const legacy = parseAgentRunState(base());
     assert.equal(legacy.sessionState, undefined);
+    // No-wall runs (0.5.4+): deadlineAt is optional; old snapshots with a deadline still parse.
+    const noWall = parseAgentRunState({ ...base(), deadlineAt: undefined });
+    assert.equal(noWall.deadlineAt, undefined);
     // Round-trip with names.
     const withNames = parseAgentRunState({ ...base(), sessionState: { loadedSkillNames: ["brief", "review"] } });
     assert.deepEqual(withNames.sessionState?.loadedSkillNames, ["brief", "review"]);

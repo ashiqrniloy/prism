@@ -1,5 +1,9 @@
 # Migration guide
 
+## 0.5.3 → 0.5.4 (export-shape break in `@arnilo/prism`)
+
+Run-limit process ceilings split from host policy (plan 067). `HARD_RUN_LIMITS` shrinks to the two process-safety axes (`maxRequestBytes`/`maxResponseBytes`, 64 MiB) and `HARD_MAX_RUN_COST` is removed — delete imports; no replacement exists because product axes have no hard cap. `RunLimits` policy axes (turns, attempts, tool rounds/calls, wall time, tokens) now accept `number | null`, where `null` explicitly disables the axis and omitted keys keep the `DEFAULT_RUN_LIMITS` fence; byte axes reject `null`. Resolution stays narrowing-only (`null` acts as +Infinity), an omitted `maxProviderAttempts` lifts to at least a raised/disabled `maxTurns`, and the former `$10k` `maxCost` ceiling is gone (any finite non-negative amount is valid). `resolveRunLimits` returns the new `ResolvedRunLimits` type (policy axes `number | null`). Durable run state without a wall limit omits `deadlineAt`; older checkpoints carrying one still resume with it. `DEFAULT_RUN_LIMITS` values and all breach semantics are unchanged.
+
 ## 0.5.2 → 0.5.3 (additive)
 
 Content-only tool results fold onto `tool_result.result` at construction. Serializers join sibling `type:text` blocks when `result` is missing, so coding tools that return `content` (not `value`) no longer reach the model as JSON `"null"`. No import, store, or peer-range break; bump `@arnilo/prism*` to `^0.5.3`.

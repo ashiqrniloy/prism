@@ -532,7 +532,6 @@ export type { RunLimitTrackerOptions } from "./run-limits.js";
 export {
   createRunLimitTracker,
   DEFAULT_RUN_LIMITS,
-  HARD_MAX_RUN_COST,
   HARD_RUN_LIMITS,
   RunLimitError,
   RunLimitTracker,
@@ -703,5 +702,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.5.3";
+export const version = "0.5.4";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";
