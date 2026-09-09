@@ -12,8 +12,11 @@ CreateObservationalMemoryOptions	export type { AttachedObservationalMemorySessio
 CreateOpenAiCompatibleRerankerOptions	export type { CreateOpenAiCompatibleRerankerOptions, CreateVoyageRerankerOptions } from "./hosted-rerankers.js"
 CreateTeiRerankerOptions	export type { CreateTeiRerankerOptions } from "./tei-reranker.js"
 CreateVoyageRerankerOptions	export type { CreateOpenAiCompatibleRerankerOptions, CreateVoyageRerankerOptions } from "./hosted-rerankers.js"
+DEFAULT_BUILD_BUDGET_MS	export declare const DEFAULT_BUILD_BUDGET_MS = 120000
+DEFAULT_BUILD_MAX_RESULT_BYTES	export declare const DEFAULT_BUILD_MAX_RESULT_BYTES: number
 DEFAULT_CHUNK_OVERLAP	export declare const DEFAULT_CHUNK_OVERLAP = 100
 DEFAULT_CHUNK_SIZE	export declare const DEFAULT_CHUNK_SIZE = 1000
+DEFAULT_DEEP_BUILD_BUDGET_MS	export declare const DEFAULT_DEEP_BUILD_BUDGET_MS = 600000
 DEFAULT_DROPPER_INSTRUCTION	export declare const DEFAULT_DROPPER_INSTRUCTION = "Drop enough observations to approach the target token budget. Call drop_observations."
 DEFAULT_EDIT_TOOL_NAMES	export declare const DEFAULT_EDIT_TOOL_NAMES: readonly ["write", "edit", "move"]
 DEFAULT_EMBED_BATCH_SIZE	export declare const DEFAULT_EMBED_BATCH_SIZE = 32
@@ -79,10 +82,12 @@ GRAFT_PEER_RANGE	export declare const GRAFT_PEER_RANGE = "^0.16.0"
 GRAFT_SKILL_BODY	export declare const GRAFT_SKILL_BODY: string
 GRAFT_STATE_TYPE	export declare const GRAFT_STATE_TYPE = "graft-state"
 GetMemoryEntries	export type { GetMemoryEntries, RecallMemoryToolOptions } from "./tool.js"
-GraftAppendOptions	export type { GraftAppendOptions, GraftExtensionOptions, GraftExtensionState, GraftMode } from "./types.js"
-GraftExtensionOptions	export type { GraftAppendOptions, GraftExtensionOptions, GraftExtensionState, GraftMode } from "./types.js"
-GraftExtensionState	export type { GraftAppendOptions, GraftExtensionOptions, GraftExtensionState, GraftMode } from "./types.js"
-GraftMode	export type { GraftAppendOptions, GraftExtensionOptions, GraftExtensionState, GraftMode } from "./types.js"
+GraftAppendOptions	export type { GraftAppendOptions, GraftDeepModel, GraftDeepProvider, GraftExtensionOptions, GraftExtensionState, GraftMode, } from "./types.js"
+GraftDeepModel	export type { GraftAppendOptions, GraftDeepModel, GraftDeepProvider, GraftExtensionOptions, GraftExtensionState, GraftMode, } from "./types.js"
+GraftDeepProvider	export type { GraftAppendOptions, GraftDeepModel, GraftDeepProvider, GraftExtensionOptions, GraftExtensionState, GraftMode, } from "./types.js"
+GraftExtensionOptions	export type { GraftAppendOptions, GraftDeepModel, GraftDeepProvider, GraftExtensionOptions, GraftExtensionState, GraftMode, } from "./types.js"
+GraftExtensionState	export type { GraftAppendOptions, GraftDeepModel, GraftDeepProvider, GraftExtensionOptions, GraftExtensionState, GraftMode, } from "./types.js"
+GraftMode	export type { GraftAppendOptions, GraftDeepModel, GraftDeepProvider, GraftExtensionOptions, GraftExtensionState, GraftMode, } from "./types.js"
 GraftResolveError	export declare class GraftResolveError extends Error
 HARD_CHUNK_OVERLAP_CAP	export declare const HARD_CHUNK_OVERLAP_CAP = 4096
 HARD_CHUNK_SIZE_CAP	export declare const HARD_CHUNK_SIZE_CAP = 16384
@@ -302,6 +307,8 @@ VectorDeleteFilter	export type { CreateMemoryOptions, Embedder, ExportMemoryOpti
 VectorLexicalQuery	export type { CreateMemoryOptions, Embedder, ExportMemoryOptions, LexicalMode, Memory, MemoryConsent, MemoryConsentInput, MemoryConsentScope, MemoryConsentSource, MemoryContextProviderOptions, MemoryEntryInput, MemoryExportIdentity, MemoryExportResult, MemoryRetentionPolicy, MemoryRetentionResult, MemoryScope, MemoryVectorHit, MemoryVectorListQuery, MemoryVectorOrder, MemoryVectorPage, MemoryVectorRecord, RebuildIndexOptions, RebuildIndexResult, RecallOptions, RecallResult, RecallScoringOptions,
 VectorQuery	export type { CreateMemoryOptions, Embedder, ExportMemoryOptions, LexicalMode, Memory, MemoryConsent, MemoryConsentInput, MemoryConsentScope, MemoryConsentSource, MemoryContextProviderOptions, MemoryEntryInput, MemoryExportIdentity, MemoryExportResult, MemoryRetentionPolicy, MemoryRetentionResult, MemoryScope, MemoryVectorHit, MemoryVectorListQuery, MemoryVectorOrder, MemoryVectorPage, MemoryVectorRecord, RebuildIndexOptions, RebuildIndexResult, RecallOptions, RecallResult, RecallScoringOptions,
 VectorStore	export type { CreateMemoryOptions, Embedder, ExportMemoryOptions, LexicalMode, Memory, MemoryConsent, MemoryConsentInput, MemoryConsentScope, MemoryConsentSource, MemoryContextProviderOptions, MemoryEntryInput, MemoryExportIdentity, MemoryExportResult, MemoryRetentionPolicy, MemoryRetentionResult, MemoryScope, MemoryVectorHit, MemoryVectorListQuery, MemoryVectorOrder, MemoryVectorPage, MemoryVectorRecord, RebuildIndexOptions, RebuildIndexResult, RecallOptions, RecallResult, RecallScoringOptions,
+WIKI_INGEST_COMMAND_NAME	export declare const WIKI_INGEST_COMMAND_NAME = "wiki-ingest"
+WIKI_INGEST_TOOL_NAME	export declare const WIKI_INGEST_TOOL_NAME = "wiki_ingest"
 WIKI_INJECTOR_NAME	export declare const WIKI_INJECTOR_NAME = "wiki-guidance"
 WIKI_READ_PAGE_TOOL_NAME	export declare const WIKI_READ_PAGE_TOOL_NAME = "wiki_read_page"
 WIKI_RECORD_INSIGHT_TOOL_NAME	export declare const WIKI_RECORD_INSIGHT_TOOL_NAME = "wiki_record_insight"
@@ -381,6 +388,8 @@ createTeiReranker	export declare function createTeiReranker(options: CreateTeiRe
 createVoyageReranker	export declare function createVoyageReranker(options: CreateVoyageRerankerOptions): Reranker
 createWebFetchDocumentLoader	export declare function createWebFetchDocumentLoader(options: WebFetchDocumentLoaderOptions): DocumentLoader
 createWikiExtension	export declare function createWikiExtension(options?: WikiExtensionOptions): Extension
+createWikiIngestCommand	export declare function createWikiIngestCommand(options?: WikiExtensionOptions): CommandDefinition
+createWikiIngestTool	export declare function createWikiIngestTool(options?: WikiExtensionOptions): ToolDefinition
 createWikiInitCommand	export declare function createWikiInitCommand(options?: WikiExtensionOptions): CommandDefinition
 createWikiLintCommand	export declare function createWikiLintCommand(options?: WikiExtensionOptions): CommandDefinition
 createWikiReadPageTool	export declare function createWikiReadPageTool(options?: WikiExtensionOptions): ToolDefinition
@@ -388,6 +397,7 @@ createWikiRecordInsightTool	export declare function createWikiRecordInsightTool(
 createWikiRefreshCommand	export declare function createWikiRefreshCommand(options?: WikiExtensionOptions): CommandDefinition
 createWikiSearchTool	export declare function createWikiSearchTool(options?: WikiExtensionOptions): ToolDefinition
 decodeMemoryCursor	export declare function decodeMemoryCursor(cursor: string | undefined, order: MemoryVectorOrder): MemoryCursor | undefined
+deepProviderEnv	export declare function deepProviderEnv(deepModel: GraftDeepModel | undefined, providerEnv: Readonly<Record<string, string>> | undefined): Record<string, string>
 defaultObservationalMemorySettings	export declare const defaultObservationalMemorySettings: ObservationalMemorySettings
 defaultQmdRunner	export declare const defaultQmdRunner: QmdCommandRunner
 defineGraftTools	export declare function defineGraftTools(ctx: GraftToolsContext): readonly ToolDefinition[]
@@ -417,6 +427,10 @@ hashFile	export declare function hashFile(filePath: string): Promise<string>
 htmlParser	export declare const htmlParser: Parser
 indexChunkBatches	export declare function indexChunkBatches(options: IndexChunksOptions, write: (records: readonly MemoryVectorRecord[]) => Promise<void>): Promise<IndexChunksResult>
 indexChunks	export declare function indexChunks(options: IndexChunksOptions): Promise<IndexChunksResult>
+ingestImageBlock	export declare function ingestImageBlock(staged: WikiIngestResult, workspaceRoot: string): Promise<
+ingestOptionsFrom	export declare function ingestOptionsFrom(options: WikiExtensionOptions): WikiIngestOptions
+ingestSlug	export declare function ingestSlug(title: string): string
+ingestWikiSource	export declare function ingestWikiSource(input: WikiIngestInput, options?: WikiIngestOptions): Promise<WikiIngestResult>
 ingestionStatus	export declare function ingestionStatus(scope: RagScope, sourceId: string, state: IngestionStatus["state"], bytes: number, chunks: number, error?: string): IngestionStatus
 initWiki	export declare function initWiki(options?: WikiExtensionOptions): Promise<InitWikiResult>
 isEligibleObservationSourceEntry	export declare function isEligibleObservationSourceEntry(entry: SessionEntry): boolean
@@ -476,6 +490,7 @@ renderConceptFrontmatter	export declare function renderConceptFrontmatter(input:
 renderDirIndex	export declare function renderDirIndex(dir: "entities" | "decisions" | "concepts", entities: readonly WikiEntityMetadata[]): string
 renderEntityMarkdown	export declare function renderEntityMarkdown(workspaceRoot: string, entity: WikiEntityMetadata, symbols: readonly ExtractedSymbol[], summary?: string): string
 renderIndexCatalog	export declare function renderIndexCatalog(entities: readonly WikiEntityMetadata[]): string
+renderIngestBrief	export declare function renderIngestBrief(staged: WikiIngestResult): string
 renderObservationalMemory	export declare function renderObservationalMemory(reflections: readonly MemoryReflection[], observations: readonly MemoryObservation[], secretsOrOptions?: readonly (string | undefined)[] | RenderObservationalMemoryOptions): string
 renderRecentMessageWindow	export declare function renderRecentMessageWindow(entries: readonly SessionEntry[], secrets?: readonly (string | undefined)[]): string
 renderRootIndex	export declare function renderRootIndex(entities: readonly WikiEntityMetadata[]): string
@@ -509,6 +524,7 @@ resumeAgentRunStream	export { createObservationalMemory, resumeAgentRun, resumeA
 retrieveContext	export declare function retrieveContext(query: string, options: RetrieveContextOptions): Promise<RagContextResult>
 runCli	export declare function runCli(argv: readonly string[]): Promise<number>
 runDropper	export declare function runDropper(options: RunDropperOptions): Promise<readonly string[]>
+runGraftExit	export declare function runGraftExit(cli: ResolvedGraftCli, args: readonly string[], options?: RunGraftJsonOptions): Promise<RunGraftExitResult>
 runGraftJson	export declare function runGraftJson<T = unknown>(cli: ResolvedGraftCli, args: readonly string[], options?: RunGraftJsonOptions): Promise<RunGraftResult<T>>
 runMemoryConformance	export declare function runMemoryConformance(createStores: () => Promise<MemoryConformanceStores> | MemoryConformanceStores): Promise<void>
 runMemoryWorkerLoop	export declare function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Promise<void>
@@ -549,3 +565,4 @@ wikiMaintainerSkill	export declare const wikiMaintainerSkill: Skill
 wikiSearcherSkill	export declare const wikiSearcherSkill: Skill
 wireEditWatch	export declare function wireEditWatch(api:
 withRerankServer	export declare function withRerankServer(handler: ServerHandler, fn: (port: number) => Promise<void>): Promise<void>
+
