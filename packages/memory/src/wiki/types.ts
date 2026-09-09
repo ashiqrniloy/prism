@@ -95,4 +95,84 @@ export interface WikiExtensionOptions {
   readonly workspaceRoot?: string;
   /** Callback to auto-deploy skills to .agents/skills/ on setup/init. Defaults to true. */
   readonly autoDeploySkills?: boolean;
+  /** Optional host-injected extractor for formats the built-ins reject (compressed PDF, DOCX,
+   *  unknown binaries). Return null to fail closed. e.g. `createDocumentReader().extract`. */
+  readonly extractDocument?: (input: WikiIngestHookInput) => Promise<{ text: string; format: string } | null>;
+  /** Optional host-injected fetcher for `url` ingest sources. The wiki never fetches itself.
+   *  Return null to fail closed. e.g. an Obscura `web_fetch` wrapper. */
+  readonly fetchUrl?: (input: WikiIngestUrlHookInput) => Promise<WikiIngestFetch | null>;
+}
+
+/** Content to stage for {@link ingestWikiSource}. Exactly one source is used: `path` > `bytes` > `url` > `text`. */
+export interface WikiIngestInput {
+  /** Inline utf8 text (staged as `source.txt` unless `filename` gives an extension). */
+  readonly text?: string;
+  /** Workspace-relative or absolute file path; the file is staged as the immutable original. */
+  readonly path?: string;
+  /** In-memory upload (requires `filename` for the extension). */
+  readonly bytes?: Uint8Array;
+  /** URL to fetch via the host `fetchUrl` hook. The wiki never fetches on its own. */
+  readonly url?: string;
+  /** File name for `bytes`/`text` inputs; supplies the staged extension. */
+  readonly filename?: string;
+  /** Display title; defaults to the basename of `path`/`filename`. Sanitized to one line. */
+  readonly title?: string;
+}
+
+/** Arguments passed to `WikiExtensionOptions.extractDocument` for formats the built-ins reject. */
+export interface WikiIngestHookInput {
+  readonly bytes: Uint8Array;
+  readonly filename?: string;
+  readonly mediaType?: string;
+  readonly title?: string;
+}
+
+/** Arguments passed to the host `fetchUrl` hook. */
+export interface WikiIngestUrlHookInput {
+  /** Already SSRF-checked (http(s), no credentials, no private hosts) before the hook runs. */
+  readonly url: string;
+}
+
+/** Content a `fetchUrl` hook returns: utf8 text or raw bytes, plus an optional staged filename
+ *  (default `source.md`; the URL pathname's extension wins when it has one, e.g. `.pdf`). */
+export interface WikiIngestFetch {
+  readonly text?: string;
+  readonly bytes?: Uint8Array;
+  readonly filename?: string;
+}
+
+export interface WikiIngestOptions {
+  /** Root the wiki lives in. Defaults to process.cwd(). */
+  readonly workspaceRoot?: string;
+  /** Wiki root used for the log append (only if it already exists). Defaults to `.wiki`. */
+  readonly wikiRoot?: string;
+  /** Raw layer root. Defaults to `raw/ingest` under `workspaceRoot` (never inside `.wiki/`). */
+  readonly ingestRoot?: string;
+  /** Input byte cap. Defaults to 32 MiB. */
+  readonly maxInputBytes?: number;
+  /** Extract byte cap; larger extracts are truncated. Defaults to 2 MiB. */
+  readonly maxExtractBytes?: number;
+  /** Host extractor for compressed PDF/DOCX/unknown binaries. Return null to fail closed. */
+  readonly extractDocument?: (input: WikiIngestHookInput) => Promise<{ text: string; format: string } | null>;
+  /** Host fetcher for `url` sources (wiki never fetches). Return null to fail closed. */
+  readonly fetchUrl?: (input: WikiIngestUrlHookInput) => Promise<WikiIngestFetch | null>;
+}
+
+export interface WikiIngestResult {
+  /** Directory name under the ingest root: `<utc>-<slug>` (content-hash suffix on collision). */
+  readonly id: string;
+  /** Workspace-relative staged directory, e.g. `raw/ingest/2026-05-01T12-00-00Z-paper`. */
+  readonly rawDir: string;
+  /** Workspace-relative immutable original, e.g. `raw/ingest/.../source.pdf`. */
+  readonly sourcePath: string;
+  /** Workspace-relative utf8 extract, always `raw/ingest/.../extract.md`. */
+  readonly extractPath: string;
+  /** Derived media type (undefined for unknown binaries the hook handled). */
+  readonly mediaType?: string;
+  /** Original URL, present only when the source was staged from a `url` input. */
+  readonly url?: string;
+  /** Extract text as written to `extract.md` (already capped). */
+  readonly extract: string;
+  /** True when the extract hit the `maxExtractBytes` cap. */
+  readonly truncated: boolean;
 }

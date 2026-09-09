@@ -1,7 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AIProvider, Extension, ExtensionEvent, ToolDefinition } from "../index.js";
-import { createExtensionEventBus, createExtensionKernel, defineProviderPackage } from "../index.js";
+import type { AIProvider, Extension, ExtensionEvent, Skill, ToolDefinition } from "../index.js";
+import {
+  activateKernel,
+  createAgent,
+  createExtensionEventBus,
+  createExtensionKernel,
+  defineProviderPackage,
+  providerDone,
+  providerTextDelta,
+  toolCallContent,
+} from "../index.js";
 
 const provider: AIProvider = {
   id: "mock",
@@ -299,5 +308,119 @@ describe("extension kernel", () => {
         ]),
       /boom/,
     );
+  });
+});
+
+describe("activateKernel", () => {
+  it("copies_tools_skills_injectors_context_middleware_commands", async () => {
+    const tool: ToolDefinition = {
+      name: "echo",
+      execute: (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "echo", value: "ok" }),
+    };
+    const skill: Skill = { name: "brief", instructions: "Be brief." };
+    const kernel = createExtensionKernel();
+    await kernel.load([
+      {
+        name: "all",
+        setup: (api) => {
+          api.registerTool(tool);
+          api.registerSkill(skill);
+          api.registerInstructionInjector({ name: "briefing", apply: () => ({ when: "every_turn", instructions: "brief" }) });
+          api.registerContextProvider({ name: "project", resolve: () => [{ content: "ctx" }] });
+          api.registerCommand({ name: "say", execute: () => ({ name: "say", value: "ok" }) });
+        },
+      },
+    ]);
+
+    const activated = activateKernel(kernel);
+
+    assert.deepEqual(activated.tools, [tool]);
+    assert.deepEqual(activated.skills, [skill]);
+    assert.equal(activated.instructionInjectors.length, 1);
+    assert.equal(activated.instructionInjectors[0]?.name, "briefing");
+    assert.equal(activated.context.length, 1);
+    assert.equal(activated.context[0]?.name, "project");
+    assert.equal(activated.commands.length, 1);
+    assert.equal(activated.commands[0]?.name, "say");
+    assert.equal(activated.middleware, kernel.middleware);
+  });
+
+  it("empty_kernel_returns_empty_arrays_and_kernel_middleware", () => {
+    const kernel = createExtensionKernel();
+    const activated = activateKernel(kernel);
+
+    assert.deepEqual(activated.tools, []);
+    assert.deepEqual(activated.skills, []);
+    assert.deepEqual(activated.instructionInjectors, []);
+    assert.deepEqual(activated.context, []);
+    assert.deepEqual(activated.commands, []);
+    assert.equal(activated.middleware, kernel.middleware);
+  });
+
+  it("does_not_pick_promptBuilder_inputBuilder_or_provider", async () => {
+    const kernel = createExtensionKernel();
+    await kernel.load([
+      {
+        name: "single-slots",
+        setup: (api) => {
+          api.registerPromptBuilder({ name: "p", build: (request) => request.messages });
+          api.registerInputBuilder({ name: "i", build: () => [] });
+          api.registerProvider({
+            id: "mock",
+            async *generate() {
+              yield providerDone();
+            },
+          });
+        },
+      },
+    ]);
+
+    const activated = activateKernel(kernel);
+
+    assert.ok(!("promptBuilder" in activated));
+    assert.ok(!("inputBuilder" in activated));
+    assert.ok(!("provider" in activated));
+    assert.ok(!("model" in activated));
+  });
+
+  it("agent_run_sees_activated_tool", async () => {
+    let called = false;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(request) {
+        if (request.messages.some((message) => message.role === "tool")) {
+          yield providerTextDelta("done");
+          yield providerDone();
+          return;
+        }
+        yield { type: "tool_call", call: toolCallContent("c1", "echo", {}) };
+        yield providerDone();
+      },
+    };
+    const kernel = createExtensionKernel();
+    await kernel.load([
+      {
+        name: "tools",
+        setup: (api) => {
+          api.registerTool({
+            name: "echo",
+            execute: (_args, ctx) => {
+              called = true;
+              return { toolCallId: ctx.toolCallId, name: "echo", value: "ok" };
+            },
+          });
+        },
+      },
+    ]);
+    const activated = activateKernel(kernel);
+
+    const session = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      tools: activated.tools,
+    }).createSession();
+    await session.run("use the tool");
+
+    assert.equal(called, true);
   });
 });

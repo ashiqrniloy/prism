@@ -56,6 +56,7 @@ import type {
   ToolValidator,
 } from "../index.js";
 import {
+  applyDefaultProviderRequestOptions,
   assembleProviderInput,
   cacheUsageReport,
   composeSystemPrompt,
@@ -70,7 +71,6 @@ import {
   createExplicitCredentialResolver,
   createExtensionKernel,
   createMemorySessionStore,
-  applyDefaultProviderRequestOptions,
   createProviderRequestPolicyChain,
   createSessionCachePolicy,
   createSessionEntry,

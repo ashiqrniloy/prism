@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-coding-tools",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "description": "Unified coding agent tools, security sandboxing, document parsing, OpenAPI tools, Linux desktop integration, Dev inspector, and persona extensions for Prism.",
   "type": "module",
   "main": "./dist/agent/index.js",
@@ -70,7 +70,7 @@
     "diff": "^9.0.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.5.5",
+    "@arnilo/prism": "^0.5.6",
     "@dietrichgebert/ponytail": "^4.9.0",
     "mammoth": "^1.8.0",
     "pdf-parse": "^2.4.5"

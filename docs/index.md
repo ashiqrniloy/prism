@@ -2,13 +2,16 @@
 
 Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credentials, storage, and behavior; Prism supplies contracts, registries, events, and replaceable runtime primitives.
 
-## Current line (0.5.5)
+## Current line (0.5.6)
 
+- **Trusted extension activation**: `activateKernel(kernel)` returns ready-to-spread `AgentConfig` contributions; CLI loads allow-listed `--extension` packages (plan 069).
+- **Wiki ingest**: `/wiki-ingest` + `ingestWikiSource` stage text/file/image/PDF (and URLs via a host `fetchUrl` hook) into `raw/ingest/` with an OKF filing brief (plan 069).
+- **Graft graph commands**: `/graft-init`, `/graft-build`, `/graft-build-deep` (host-configured `deepModel`, key env-only) (plan 069).
 - **Run limits**: HARD caps are request/response bytes only; policy axes accept `null` (plan 067).
 - **Tool-result fold**: content-only `ToolResult`s fold into `tool_result.result` (0.5.3).
 - **Stream token coalesce**: adjacent text/thinking deltas merge on persist (0.5.2).
 - **Provider request construction**: kernel session/cache/thinking defaults; hosts overlay (0.5.1).
-- **10 publishable packages** at current **0.5.5** lockstep — inventory below.
+- **10 publishable packages** at current **0.5.6** lockstep — inventory below.
 
 ## Public contracts
 
@@ -85,7 +88,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 - [Versioned prompt registry](prompt-registry.md): immutable content-hashed prompt assets with durable stores and bounded diff.
 - [Instruction injection](instruction-injection.md): package injectors layer redacted instructions without granting capabilities.
 - [Context and skills](context-and-skills.md): ordered context providers, progressive skill disclosure, fail-closed activation.
-- [LLM Wiki](wiki.md): optional knowledge compiler emitting OKF bundles with on-device hybrid search.
+- [LLM Wiki](wiki.md): optional knowledge compiler emitting OKF bundles, with `/wiki-ingest` raw staging (text, file, image, or URL via a host `fetchUrl` hook) and on-device hybrid search.
 - [Retrieval-augmented generation](rag.md): bounded source lifecycle, hybrid retrieval, reranking, citations, inert injection.
 
 ## Tools
@@ -150,7 +153,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 ## CLI/RPC
 
 - [Dev inspector](dev-inspector.md): loopback-only local playground over a configured agent; `prism dev` composition.
-- [CLI/RPC](cli-rpc.md): print/json modes, LF-delimited RPC, `prism init` scaffold, provider scaffolding.
+- [CLI/RPC](cli-rpc.md): print/json modes, LF-delimited RPC, `prism init` scaffold, provider scaffolding, allow-listed `--extension` activation.
 - [Workflows](workflows.md): typed bounded DAG orchestration with durable suspend/resume, schedules, sagas.
 
 ## Security and credentials
@@ -176,7 +179,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 
 - [Caveman behavior integration](caveman.md): upstream Caveman skills with injector, persistence, and progressive catalog.
 - [Ponytail behavior integration](ponytail.md): upstream Ponytail skills with injector and peer resolution; opt-in.
-- [Graft context-graph integration](graft.md): graft CLI pull tools, retrieval-pack context provider, blast-radius middleware.
+- [Graft context-graph integration](graft.md): graft CLI pull tools, retrieval-pack context provider, blast-radius middleware, and `/graft-init` / `/graft-build` / `/graft-build-deep` commands (host-configured `deepModel`).
 - [Impeccable behavior integration](impeccable.md): upstream Impeccable skill behind `load_skill`; host supplies the compiled `SKILL.md`.
 
 ## Release and install
@@ -195,14 +198,14 @@ The generated inventory below derives from [`scripts/package-truth.json`](../scr
 
 | package | version | notes |
 | --- | --- | --- |
-| `@arnilo/prism` | 0.5.5 | core — runtime, CLI/RPC, templates, docs |
-| `@arnilo/prism-coding-tools` | 0.5.5 | family — /agent, /security, /document-reader, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths |
-| `@arnilo/prism-core` | 0.5.5 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /work, /validation subpaths |
-| `@arnilo/prism-providers` | 0.5.5 | family — all provider adapters as `/<adapter>` subpaths |
-| `@arnilo/prism-acp-agent` | 0.5.5 | capability — ACP adapter |
-| `@arnilo/prism-ag-ui` | 0.5.5 | capability — AG-UI/A2A/A2UI adapter |
-| `@arnilo/prism-mcp` | 0.5.5 | capability — MCP client/server/OAuth interop |
-| `@arnilo/prism-memory` | 0.5.5 | capability — memory plus /rag, /compaction/*, /graft, /wiki subpaths |
-| `@arnilo/prism-office` | 0.5.5 | capability — /documents, /sheets, /diagrams subpaths |
-| `@arnilo/prism-web-tools` | 0.5.5 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
+| `@arnilo/prism` | 0.5.6 | core — runtime, CLI/RPC, templates, docs |
+| `@arnilo/prism-coding-tools` | 0.5.6 | family — /agent, /security, /document-reader, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths |
+| `@arnilo/prism-core` | 0.5.6 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /work, /validation subpaths |
+| `@arnilo/prism-providers` | 0.5.6 | family — all provider adapters as `/<adapter>` subpaths |
+| `@arnilo/prism-acp-agent` | 0.5.6 | capability — ACP adapter |
+| `@arnilo/prism-ag-ui` | 0.5.6 | capability — AG-UI/A2A/A2UI adapter |
+| `@arnilo/prism-mcp` | 0.5.6 | capability — MCP client/server/OAuth interop |
+| `@arnilo/prism-memory` | 0.5.6 | capability — memory plus /rag, /compaction/*, /graft, /wiki subpaths |
+| `@arnilo/prism-office` | 0.5.6 | capability — /documents, /sheets, /diagrams subpaths |
+| `@arnilo/prism-web-tools` | 0.5.6 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
 <!-- generated:package-truth:inventory end -->

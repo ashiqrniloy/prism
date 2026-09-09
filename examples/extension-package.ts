@@ -1,4 +1,5 @@
 import {
+  activateKernel,
   createAgent,
   createAgentSession,
   createExtensionKernel,
@@ -53,12 +54,14 @@ export async function demo(): Promise<{
   const kernel = createExtensionKernel();
   await kernel.load([notesExtension]);
 
+  // Host activation: copy the array slots into createAgent() fields.
+  const activated = activateKernel(kernel);
   const agent = createAgent({
     model: { provider: "mock", model: "demo" },
     provider: createMockProvider([providerTextDelta("Summarized."), providerDone()]),
-    tools: kernel.registries.tools.list(),
-    skills: kernel.registries.skills.list(),
-    context: kernel.registries.contextProviders.list(),
+    tools: activated.tools,
+    skills: activated.skills,
+    context: activated.context,
   });
 
   const session = createAgentSession({ agent });

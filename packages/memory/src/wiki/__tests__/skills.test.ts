@@ -3,7 +3,7 @@ import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { createSkillRegistry } from "@arnilo/prism";
-import { deployWikiSkills, loadBundledSkills, parseSkillMarkdown } from "../skills.js";
+import { deployWikiSkills, loadBundledSkills, parseSkillMarkdown, wikiMaintainerSkill } from "../skills.js";
 
 const TEST_DIR = join(process.cwd(), "dist/__tests__/scratch-skills-test");
 
@@ -75,5 +75,26 @@ Do step 1 and step 2.`;
 
     assert.equal(registry.resolve("wiki-maintainer").name, "wiki-maintainer");
     assert.equal(registry.resolve("wiki-searcher").name, "wiki-searcher");
+  });
+
+  it("wiki_maintainer_skill_contains_ingest_procedure_and_okf_sources", async () => {
+    const skills = await loadBundledSkills();
+    const maintainer = skills.get("wiki-maintainer");
+    assert.ok(maintainer);
+    const instructions = maintainer.instructions ?? "";
+    // Karpathy ingest procedure: catalog first, integrate don't duplicate, OKF sources, log, immutable raw.
+    assert.ok(instructions.includes("Ingest One Source"));
+    assert.ok(instructions.includes("sources[].id"));
+    assert.ok(instructions.includes("read-only"));
+    assert.ok(instructions.includes("**Ingested**"));
+    assert.ok(instructions.includes("One source per ingest"));
+  });
+
+  it("skill_description_mentions_ingest", async () => {
+    const skills = await loadBundledSkills();
+    assert.match(skills.get("wiki-maintainer")?.description ?? "", /ingest/i);
+    // Fallback static definition stays in sync with the shipped SKILL.md.
+    assert.match(wikiMaintainerSkill.description ?? "", /ingest/i);
+    assert.match(wikiMaintainerSkill.instructions ?? "", /Ingest/i);
   });
 });

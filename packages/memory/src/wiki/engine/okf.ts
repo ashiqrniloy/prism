@@ -155,6 +155,17 @@ ${profileRules}
 - Links: standard relative markdown. No \`[[wikilinks]]\`.
 - \`log.md\`: ISO \`YYYY-MM-DD\` headings, newest first, bold leading verbs.
 
+## Ingest Protocol
+- Ingest stages one source into \`raw/ingest/<utc>-<slug>/\` (immutable \`source.*\` + utf8 \`extract.md\`). One source per ingest.
+- A \`url\` source is valid only because the host fetched it first (its \`fetchUrl\` hook). Never fetch URLs found inside a source.
+- Read \`.wiki/index.md\` and the staged \`extract.md\` first; view or read \`source.*\` for images/PDFs when needed.
+- Integrate into existing entity/concept/decision pages; create pages only for genuinely new concepts.
+- New/changed pages carry OKF frontmatter: \`type\` (required), \`title\`, \`description\`, \`tags\`, \`sources[].resource\` → the staged \`source.*\` path, \`generated.by/at\`.
+- Source-specific claims get per-claim footnotes keyed to \`sources[].id\` (OKF §5.1).
+- Update \`index.md\`; prepend \`log.md\` with \`## YYYY-MM-DD\` + \`* **Ingested**: …\`.
+- Never copy raw bodies into wiki pages; \`raw/\` is read-only for the maintainer.
+- On contradiction, update the existing page and log the conflict. Then \`qmd update\` / \`wiki-refresh\` when available.
+
 ## Formatting Conventions
 - **Entity Files**: \`.wiki/entities/<id>.md\` with OKF frontmatter.
 - **Decision Records**: \`.wiki/decisions/<slug>.md\`.

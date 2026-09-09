@@ -42,6 +42,7 @@ createExtensionEventBus(options?: { errorPolicy?: "event" | "throw"; secrets?: r
 - `kernel.events.on(type, handler)` registers ordered event handlers and returns an unsubscribe function.
 - `kernel.events.emit(event)` calls matching handlers in registration order.
 - `kernel.middleware.run(hook, value)` runs matching middleware in registration order.
+- `activateKernel(kernel)` copies the `createAgent()` array slots into one config: `{ tools, skills, instructionInjectors, context, commands, middleware }`. Contributions stay inert until the host passes them into runtime config; single-slot builders, `compaction`/`retry`, provider/model selection, and skill activation remain host-owned decisions.
 - With default `errorPolicy: "event"`, setup/listener/middleware errors become `extension_error` events with redacted `ErrorInfo`.
 - With `errorPolicy: "throw"`, setup/listener/middleware errors reject/throw.
 
@@ -57,7 +58,7 @@ createExtensionEventBus(options?: { errorPolicy?: "event" | "throw"; secrets?: r
 ## Implementation example
 
 ```ts
-import { createAgent, createExtensionKernel, type Extension } from "@arnilo/prism";
+import { activateKernel, createAgent, createExtensionKernel, type Extension } from "@arnilo/prism";
 
 const extension: Extension = {
   name: "demo-extension",
@@ -96,6 +97,17 @@ console.log(kernel.registries.skills.resolve("brief").name); // contributed only
 console.log(kernel.registries.agents.resolve("demo").name); // contributed only; host must create/select before runtime use
 console.log(kernel.registries.systemPromptContributions.resolve("demo-prompt").text); // contributed only; host must select before prompt use
 await kernel.middleware.run("provider_request", { metadata: {} });
+
+// Host activation: copy the array slots into createAgent() fields.
+const activated = activateKernel(kernel);
+const agent = createAgent({
+  model: { provider: "mock", model: "demo" },
+  tools: activated.tools,
+  skills: activated.skills,
+  instructionInjectors: activated.instructionInjectors,
+  context: activated.context,
+  middleware: activated.middleware,
+});
 ```
 
 ## Extension and configuration notes

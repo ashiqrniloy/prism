@@ -96,12 +96,11 @@ The `contributed` set is what the extension registered. The `active` set is what
 
 ```ts
 import {
+  activateKernel,
   createAgent,
   createExtensionKernel,
   createMockProvider,
   createContributionRegistries,
-  createSkillRegistry,
-  createToolRegistry,
   providerDone,
   type Extension,
 } from "@arnilo/prism";
@@ -139,19 +138,18 @@ const registries = createContributionRegistries({ duplicate: "error" });
 const kernel = createExtensionKernel({ registries, errorPolicy: "throw" });
 await kernel.load([extension]);
 
-// Host activation: select contributions explicitly.
-const tool = kernel.registries.tools.resolve("acme.echo");
-const skill = kernel.registries.skills.resolve("acme.brief");
+// Host activation: copy the array slots; filter/narrow before createAgent() as needed.
+const activated = activateKernel(kernel);
 const provider = createMockProvider([providerDone()]);
 
 const agent = createAgent({
   model: { provider: "mock", model: "demo" },
   provider,
-  tools: createToolRegistry([tool]),
-  skills: createSkillRegistry([skill]),
-  context: kernel.registries.contextProviders.list(),
+  tools: activated.tools,
+  skills: activated.skills,
+  context: activated.context,
   promptBuilder: kernel.registries.promptBuilders.resolve("acme.prompt"),
-  middleware: kernel.middleware,
+  middleware: activated.middleware,
 });
 
 await agent.createSession().run("Use the Acme extension.", { activeSkills: ["acme.brief"] });
@@ -166,6 +164,7 @@ await agent.createSession().run("Use the Acme extension.", { activeSkills: ["acm
 - `registerSkill()` contributes instructions only. Referenced `toolNames` are checked against host-active tools when the skill is activated.
 - `registerAuthMethod()` and `registerCredentialResolver()` must not contain resolved credential values. Use descriptors/resolvers; the host resolves secrets at the provider/request edge.
 - Middleware from `api.use()` runs only when the host passes `kernel.middleware` into runtime configuration.
+- `activateKernel(kernel)` copies the array slots (`tools`, `skills`, `instructionInjectors`, `context`, `commands`) plus `kernel.middleware` in one call; filter the returned arrays before `createAgent()` when the host wants narrower selection.
 - Provider packages, provider request policies, system prompt contributions, instruction injectors, builders, strategies, commands, store factories, resource loaders, settings providers, and credential resolvers are all inert until host code selects or invokes them.
 
 ### Host driver hooks (opt-in)

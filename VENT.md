@@ -38,3 +38,6 @@ Plan 054 consolidation tasks keep tripping on the same three hidden coupling poi
 ## 26-09-01 21:54 — release-skip-manifest protected-class derivation broke on providers family merge
 
 Task 6 fallout pattern (consistent with Tasks 2-5, third occurrence): release-skip-manifest.mjs derives live-provider-protected surfaces from per-package src scans — any family conversion that merges N packages into 1 silently drops N-1 protected classes and only the >=8 floor assertion catches it. Same class of bug as the coverage-thresholds and sweep-unused config floors. The pre-task checklist should now include: "update scripts/release-skip-manifest.mjs derivation when package count changes shape".
+## 26-09-09 16:50 — create-plan boilerplate vs two-slice plan
+
+create-plan skill required reading default.md which 404s, then prism-wiki.md, then full Karpathy/OKF fetches plus many graft calls before a single plan file. For a “write plan 069 covering X+Y” request, a shorter required inventory (existing plans 032/050 + current command list) would have been enough; the 7-task template forced repeating Documentation/Wiki Assessment seven times.

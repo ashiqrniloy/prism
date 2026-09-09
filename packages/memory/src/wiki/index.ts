@@ -1,4 +1,5 @@
 export * from "./cli.js";
+export * from "./commands/ingest.js";
 export * from "./commands/init.js";
 export * from "./commands/lint.js";
 export * from "./commands/refresh.js";
@@ -8,6 +9,7 @@ export * from "./engine/linter.js";
 export * from "./engine/scaffolder.js";
 export * from "./extension.js";
 export * from "./heading.js";
+export * from "./ingest.js";
 export * from "./manifest.js";
 export * from "./profiles/codebase.js";
 export * from "./profiles/hybrid.js";

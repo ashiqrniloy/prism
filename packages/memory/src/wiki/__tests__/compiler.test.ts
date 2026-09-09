@@ -33,6 +33,9 @@ describe("prism-wiki compiler & scaffolder engine", () => {
 
     assert.ok(schema.includes("Codebase Wiki Schema Rules"));
     assert.ok(schema.includes("OKF v0.2"));
+    assert.ok(schema.includes("## Ingest Protocol"));
+    assert.ok(schema.includes("read-only"));
+    assert.ok(schema.includes("sources[].resource"));
     assert.ok(index.includes("# Wiki Index"));
     assert.ok(index.includes('okf_version: "0.2"'));
     assert.ok(!index.includes("[["));

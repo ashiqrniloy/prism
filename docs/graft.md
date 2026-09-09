@@ -4,7 +4,7 @@
 
 `@arnilo/prism-memory/graft` is an optional subpath that wires [nanonets/graft](https://github.com/nanonets/graft) — a repository context-graph CLI (`graft/` directory, INDEX.md orientation, symbol-level wiring graph) — into Prism contribution contracts.
 
-It registers six pull tools backed by the graft CLI (`--json`, argv-safe), a push-mode retrieval-pack context provider plus first-turn orientation injector carried on the `graft` skill, commands (`graft`, `graft-build`, `graft-check`, `graft-viz`), and an edit-watch middleware that computes blast radius after mutating tool calls. Import is inert; a missing graft CLI fails closed at `setup` with a bounded redacted error.
+It registers six pull tools backed by the graft CLI (`--json`, argv-safe), a push-mode retrieval-pack context provider plus first-turn orientation injector carried on the `graft` skill, commands (`graft`, `graft-build`, `graft-build-deep`, `graft-check`, `graft-viz`, `graft-init`), and an edit-watch middleware that computes blast radius after mutating tool calls. Import is inert; a missing graft CLI fails closed at `setup` with a bounded redacted error.
 
 ## When to use it
 
@@ -32,6 +32,9 @@ Zero-code alternative (L0): hosts can skip this package entirely and let agents 
 | `maxPromptChars` | `number` | no | Prompts longer than this never become ask argv (default 4096). |
 | `allowUpstreamTelemetry` | `boolean` | no | Default false → children run with `DO_NOT_TRACK=1`. |
 | `providerEnv` | `Record<string, string>` | no | Explicit graft provider settings (`GRAFT_API_KEY`, …). Never inherited from host env; only `GRAFT_*` keys reach the child. |
+| `deepModel` | `{ provider: "openai" \| "anthropic" \| "litellm" \| "orcarouter", model: string, apiKey: string, baseUrl?: string }` | no | Model for `graft build --deep` (Graft's own LLM client — **Prism's `Provider` is not Graft's LLM**; they have different protocols). Merged over `providerEnv` as `GRAFT_PROVIDER`/`GRAFT_MODEL`/`GRAFT_API_KEY`/`GRAFT_BASE_URL`; wins on conflict. |
+| `initAgents` / `initYes` / `initWireMcp` | `readonly string[]` / `boolean` / `boolean` | no | `graft init` configuration: agent ids for `--agents`, `--yes`, and whether to wire graft MCP servers (default off — Prism provides its own graft surfaces). `graft-init` refuses to spawn without `initAgents` or `initYes` (the child has no TTY). |
+| `buildBudgetMs` / `deepBuildBudgetMs` / `buildMaxResultBytes` | `number` | no | Budgets for graph builds: structural `build`/`init` default 120000 ms, `--deep` default 600000 ms (the LLM pass over the graph), stdout cap 2 MiB. Ask/grep stay on `retrievalBudgetMs`. |
 | `editToolNames` | `readonly string[]` | no | Tools triggering blast-radius lookup. Default `write`, `edit`, `move`. |
 | `quietStartup`, `hideStatus` | `boolean` | no | Suppress startup status events / status reporting. |
 | `appendEntry` | `(entry, opts?) => Promise<void>` | yes | Host session append (OM attach pattern). |
@@ -41,7 +44,20 @@ Pull tools (mode includes `pull`): `graft_ask`, `graft_grep`, `graft_callers`, `
 
 Push surfaces (mode includes `push`): skill `graft` carrying context provider `graft-context` (per-turn pointers-only pack, gated: ≥12-char prompt, dedup by seen node ids, 32 KiB block ceiling) and instruction injector `graft-orient` (`first_turn`, byte-capped INDEX.md cut + staleness banner).
 
-Registered commands: `graft` (`status` \| `build` \| `check` \| `viz` dispatch), plus `graft-build`, `graft-check`, `graft-viz` aliases.
+Registered commands: `graft` (`status` \| `build` [deep:true] \| `check` \| `viz` \| `init` dispatch), plus `graft-build`, `graft-build-deep`, `graft-check`, `graft-viz`, `graft-init` aliases.
+
+### Graph builds and init
+
+- `/graft-build` — structural rebuild via `graft build` (tree-sitter pass, no API key, plain-text progress — no `JSON.parse` on this surface).
+- `/graft-build-deep` — `graft build --deep --provider <> --model <> [--base-url <>]` using the host's `deepModel`. Without a configured model it errors before spawning. `GRAFT_API_KEY` rides in the child env, never on argv.
+- `/graft-init` — `graft init --no-global` (never writes user-level state), default `--no-mcp --no-hooks --no-statusline` (opt in via `initWireMcp`), plus `--agents <id>` per `initAgents` and `--yes` when `initYes`. Requires one of the two; non-interactive by design.
+
+```bash
+# structural, no key
+/graft-build
+# deep — host-configured model
+e.g. /graft-build-deep
+```
 
 ## Outputs / response / events
 
@@ -49,7 +65,8 @@ Registered commands: `graft` (`status` \| `build` \| `check` \| `viz` dispatch),
 | --- | --- |
 | `createGraftExtension(options)` | Returns an inert `Extension` until `kernel.load([...])`; emits `graft:loaded` on setup. |
 | `resolveGraftCli(options)` | Fail-closed CLI resolution (`explicit` → command+argv, `peer-bin` → node + manifest bin). |
-| `runGraftJson(cli, argv, options)` / `childEnv(options)` / `childTimeoutMs` / `DEFAULT_MAX_RESULT_BYTES` | Shared budgeted JSON runner for hosts building custom surfaces. |
+| `runGraftJson(cli, argv, options)` / `runGraftExit(cli, argv, options)` / `childEnv(options)` / `childTimeoutMs` / `DEFAULT_MAX_RESULT_BYTES` | Budgeted runners for hosts building custom surfaces — JSON surfaces (`check`/`ask`) vs exit-code surfaces (`build`/`init`). |
+| `deepProviderEnv(deepModel, providerEnv)` | `deepModel` merged over `providerEnv`, filtered to `GRAFT_*`. |
 | `readBoundedFile` / `redactPaths` / `GraftResolveError` | Bounded-read and redaction helpers. |
 
 Events: `graft:status` (check/build outcomes), `graft:dirty` (post-edit, repo-relative path + optional `staleCountEstimate`), `graft:loaded` (mode + cliKind metadata).
@@ -92,12 +109,15 @@ await kernel.load([
     packageRoot: "./vendor/graft-checkout",
     mode: "both",
     quietStartup: true,
+    deepModel: { provider: "anthropic", model: "claude-sonnet-4-5", apiKey: process.env.ANTHROPIC_API_KEY! },
+    initAgents: ["codex"],
     appendEntry: async (entry, options) => store.append(entry, options),
     getEntries: async () => store.list("s1"),
   }),
 ]);
 // Pull: dispatch graft_ask/… tools. Push: runs assemble the skill-carried
 // provider + graft-orient injector. Edits: middleware emits graft:dirty.
+// /graft-build-deep runs graft's own LLM pass; /graft-init wires codex, --no-global.
 ```
 
 ## Extension and configuration notes
@@ -110,7 +130,9 @@ await kernel.load([
 
 ## Security and performance notes
 
-- Telemetry default-off: children always get `DO_NOT_TRACK=1` unless `allowUpstreamTelemetry` is true; child env is fixed-base — host env vars are never inherited, and only explicit `GRAFT_*` keys from `providerEnv` pass through. Route secrets like `GRAFT_API_KEY` through the host's credential resolution when populating `providerEnv`.
+- Telemetry default-off: children always get `DO_NOT_TRACK=1` unless `allowUpstreamTelemetry` is true; child env is fixed-base — host env vars are never inherited, and only explicit `GRAFT_*` keys from `providerEnv`/`deepModel` pass through. Route secrets like `GRAFT_API_KEY` through the host's credential resolution when populating `deepModel`/`providerEnv`. `deepModel`'s API key reaches the child via env only — never on argv (no `--api-key` flag exists in the surface), so it cannot leak through `ps` or logs.
+- Build/init commands are budgeted separately from retrieval (`buildBudgetMs`, `deepBuildBudgetMs`, `buildMaxResultBytes`); deep builds fail closed without a configured model instead of spawning unconfigured.
+- `graft-init` always passes `--no-global` — it never writes user-level agent state; MCP/hook/statusline wiring stays off unless the host opts in via `initWireMcp`.
 - Upstream output is untrusted: stdout capped (`maxResultBytes`), prompts capped (`maxPromptChars`), injected packs bounded (32 KiB), orientation cut byte-capped (8 KiB); error paths are logged redacted (absolute paths/home dirs).
 - Every CLI call is wall-clock-budgeted (`retrievalBudgetMs`, minus fixed overhead for the timeout math) and every failure degrades silently: pull tools return structured errors, the push pack contributes nothing, edit-watch passes the tool result through untouched.
 - No background workers; state persists through two CAS appends per turn at most (freshness patch, seen-set/saved-tokens update).

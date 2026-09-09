@@ -32,6 +32,32 @@ switch (sub) {
   case "viz":
     send({ args: process.argv.slice(2) });
     break;
+  case "init": {
+    // Plain text (not JSON) to exercise runGraftExit; echoes argv + GRAFT_* key NAMES (never values).
+    const envKeys = Object.keys(process.env)
+      .filter((k) => k.startsWith("GRAFT_"))
+      .sort();
+    process.stdout.write(`init ok\nargv: ${process.argv.slice(2).join(" ")}\nenv: ${envKeys.join(",")}\n`);
+    break;
+  }
+  case "build": {
+    const rest = process.argv.slice(3);
+    if (rest.includes("--deep")) {
+      if (!process.env.GRAFT_API_KEY || !process.env.GRAFT_PROVIDER || !process.env.GRAFT_MODEL) {
+        process.stderr.write("error: deep build requires GRAFT_PROVIDER/GRAFT_MODEL/GRAFT_API_KEY\n");
+        process.exit(3);
+        break;
+      }
+      const envKeys = Object.keys(process.env)
+        .filter((k) => k.startsWith("GRAFT_"))
+        .sort();
+      process.stdout.write(`deep build ok\nargv: ${process.argv.slice(2).join(" ")}\nenv: ${envKeys.join(",")}\n`);
+    } else {
+      // Structural build prints human-readable text — runGraftExit must not JSON.parse this.
+      process.stdout.write("structural build ok — plain text, not JSON");
+    }
+    break;
+  }
   case "ask":
   case "grep":
   case "callers":

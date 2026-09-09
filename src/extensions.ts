@@ -257,6 +257,34 @@ export function createExtensionKernel(options: ExtensionKernelOptions = {}): Ext
   };
 }
 
+/** Host-owned activation: copy contributed entries into the `createAgent()`
+ *  fields that accept plain arrays. Contributions stay inert until the host
+ *  passes the returned fields into runtime config. Array slots only —
+ *  single-slot builders (`inputBuilder`/`promptBuilder`), `compaction`,
+ *  `retry`, provider/model selection, and skill activation remain host-owned
+ *  decisions; `commands` are for host RPC surfaces, not an `AgentConfig` field. */
+export interface ActivatedKernelConfig {
+  readonly tools: readonly ToolDefinition[];
+  readonly skills: readonly Skill[];
+  readonly instructionInjectors: readonly InstructionInjector[];
+  readonly context: readonly ContextProvider[];
+  /** For host command surfaces (CLI/RPC/UI); not part of `AgentConfig`. */
+  readonly commands: readonly CommandDefinition[];
+  /** The kernel middleware registry itself; runs only when passed to runtime config. */
+  readonly middleware: MiddlewareRegistry;
+}
+
+export function activateKernel(kernel: ExtensionKernel): ActivatedKernelConfig {
+  return {
+    tools: kernel.registries.tools.list(),
+    skills: kernel.registries.skills.list(),
+    instructionInjectors: kernel.registries.instructionInjectors.list(),
+    context: kernel.registries.contextProviders.list(),
+    commands: kernel.registries.commands.list(),
+    middleware: kernel.middleware,
+  };
+}
+
 async function assertExtensionLoadPolicy(policy: ExtensionLoadPolicy | undefined, extension: Extension): Promise<void> {
   if (!policy) return;
   if (policy.allowList && !policy.allowList.includes(extension.name)) {

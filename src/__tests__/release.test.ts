@@ -190,7 +190,7 @@ test("release workflow publishes the lockstep cut once and package tags independ
   const workflow = readFileSync(join(process.cwd(), ".github/workflows/release.yml"), "utf8");
   assert.match(
     workflow,
-    /tags:\s*\["v0\.3\.0", "v0\.4\.0", "v0\.5\.0", "v0\.5\.1", "v0\.5\.2", "v0\.5\.3", "v0\.5\.4", "v0\.5\.5", "@arnilo\/\*@\*"\]/,
+    /tags:\s*\["v0\.3\.0", "v0\.4\.0", "v0\.5\.0", "v0\.5\.1", "v0\.5\.2", "v0\.5\.3", "v0\.5\.4", "v0\.5\.5", "v0\.5\.6", "@arnilo\/\*@\*"\]/,
   );
   assert.match(workflow, /id-token:\s*write/);
   assert.match(workflow, /release:publish -- --lockstep --version /);

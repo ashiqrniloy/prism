@@ -1,3 +1,12 @@
+## [0.5.6] - 2026-09-09 (plan 069)
+
+### Added
+- **Trusted extension activation**: `activateKernel(kernel)` / `ActivatedKernelConfig` turn a loaded extension kernel into ready-to-spread `AgentConfig` contributions (tools, skills, context, middleware, commands, instruction injectors). No auto-picked single-slot builders/providers.
+- **CLI `--extension`**: repeatable flag loads trusted extension packages — cwd-relative paths (realpath-contained) or `PRISM_EXTENSION_ALLOWLIST` specifiers — and merges their contributions into the run. Modules must export `createExtension()`, a default function, or a default `{name, setup}` object; `--config`/`--resource`/`--tool` stay rejected.
+- **Wiki ingest**: `ingestWikiSource`, `/wiki-ingest` command, `wiki_ingest` tool, and `prism-wiki ingest` stage one external source (text, file, image, PDF; URL via a host `fetchUrl` hook with `assertSsrfAllowedUrl` first) into `raw/ingest/<utc>-<slug>/` as an immutable `source.*` + UTF-8 `extract.md`, then return a Karpathy/OKF filing brief (`metadata.trust: "untrusted_external"`). Compressed PDF/DOCX ride an optional host `extractDocument` hook. Caps: 32 MiB input / 2 MiB extract.
+- **Ingest filing protocol**: `wiki-maintainer` skill + scaffolded `SCHEMA.md` gained the ten-step ingest procedure (catalog-first, integrate-don't-duplicate, OKF v0.2 frontmatter with `sources[].id` footnotes, index/log sync, raw layer read-only, one source per ingest).
+- **Graft graph commands**: `/graft-init` (non-interactive `graft init --no-global`, host `initAgents`/`initYes`), `/graft-build-deep` (`build --deep` with host-configured `deepModel` — provider/model/base-url on argv, `GRAFT_API_KEY` env-only, never on argv, fails closed unconfigured) alongside the keyless `/graft-build`. New `runGraftExit` exit-code runner (build/init are plain text, not JSON) with separate `buildBudgetMs` (120s) / `deepBuildBudgetMs` (600s) / `buildMaxResultBytes` (2 MiB) budgets.
+
 ## [0.5.5] - 2026-09-08
 
 ### Fixed

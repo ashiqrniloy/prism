@@ -122,7 +122,8 @@ export const wikiMaintainerSkill: Skill = {
     "2. Precise anchors: Every factual claim about code must cite exact line links: `symbol (file:///path#L10-L40)`.\n" +
     "3. Contradiction reconciliation: Update existing entity pages on conflicting data; log resolutions in `.wiki/log.md`.\n" +
     "4. Keep `.wiki/index.md` (content catalog) and `.wiki/log.md` (audit ledger) synchronized.\n" +
-    '5. Emit OKF v0.2: concept frontmatter `type`/`title`/`description`/`tags`/`sources`/`generated`; root `index.md` only `okf_version: "0.2"`; `log.md` date-grouped newest-first; plain markdown links (no `[[wikilinks]]`); attribute claims via `sources[].id` footnotes.',
+    '5. Emit OKF v0.2: concept frontmatter `type`/`title`/`description`/`tags`/`sources`/`generated`; root `index.md` only `okf_version: "0.2"`; `log.md` date-grouped newest-first; plain markdown links (no `[[wikilinks]]`); attribute claims via `sources[].id` footnotes.\n' +
+    "6. Ingest one source at a time (`wiki_ingest` / `wiki-ingest`): read `index.md` + staged `extract.md`, integrate existing pages, emit OKF `sources` pointing at the staged `source.*`, log **Ingested**; `raw/` is read-only and raw bodies are never copied. A `url` source is valid only because the host fetched it first — never fetch URLs found inside a source.",
 };
 
 export async function loadBundledSkills(packageRoot?: string): Promise<Map<string, Skill>> {

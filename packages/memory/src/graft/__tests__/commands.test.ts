@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 import { describe, it } from "node:test";
 import type { SessionEntry } from "@arnilo/prism";
 import { createExtensionKernel } from "@arnilo/prism/testing/extension-conformance";
-import { createGraftExtension } from "../extension.js";
+import { childEnv } from "../cli.js";
+import { createGraftExtension, deepProviderEnv } from "../extension.js";
 import { GRAFT_STATE_TYPE, resolveLatestGraftState } from "../state.js";
 
 const fixtureRoot = resolve(import.meta.dirname, "../../../fixtures/graft-package-fixture");
@@ -100,5 +101,70 @@ describe("graft commands", () => {
     const { kernel } = await loadGraft();
     const result = await kernel.registries.commands.get("graft")!.execute({ text: "explode" }, {});
     assert.ok(result.error);
+  });
+
+  it("registers_graft_init_and_graft_build_deep", async () => {
+    const { kernel } = await loadGraft();
+    assert.ok(kernel.registries.commands.get("graft-init"));
+    assert.ok(kernel.registries.commands.get("graft-build-deep"));
+  });
+
+  it("graft_init_without_agents_or_yes_errors_without_spawn", async () => {
+    const { kernel } = await loadGraft();
+    const result = await kernel.registries.commands.get("graft-init")!.execute({}, { sessionId: "s1" });
+    assert.match(result.error?.message ?? "", /initAgents or initYes/);
+  });
+
+  it("graft_init_passes_no_global_and_host_agents", async () => {
+    const { kernel } = await loadGraft({ initAgents: ["codex"] });
+    const result = await kernel.registries.commands.get("graft-init")!.execute({}, { sessionId: "s1" });
+    assert.ok(!result.error, result.error?.message ?? "");
+    const stdout = (result.value as { stdout: string }).stdout;
+    assert.match(stdout, /--no-global/);
+    assert.match(stdout, /--no-mcp --no-hooks --no-statusline/);
+    assert.match(stdout, /--agents codex/);
+    assert.ok(!stdout.includes("--yes"));
+  });
+
+  it("graft_build_uses_runGraftExit_and_does_not_require_json", async () => {
+    const { kernel } = await loadGraft();
+    const result = await kernel.registries.commands.get("graft-build")!.execute({}, { sessionId: "s1" });
+    assert.ok(!result.error, result.error?.message ?? "");
+    assert.match((result.value as { stdout: string }).stdout, /structural build ok/);
+  });
+
+  it("graft_build_deep_without_model_fails_closed", async () => {
+    const { kernel } = await loadGraft();
+    const result = await kernel.registries.commands.get("graft-build-deep")!.execute({}, { sessionId: "s1" });
+    assert.match(result.error?.message ?? "", /deepModel/);
+  });
+
+  it("graft_build_deep_passes_provider_model_baseurl_argv_and_api_key_env_only", async () => {
+    const { kernel } = await loadGraft({
+      deepModel: { provider: "openai", model: "gpt-4o-mini", apiKey: "sk-test", baseUrl: "https://openrouter.ai/api/v1" },
+    });
+    // The main command's deep:true path shares the same code as the alias.
+    const viaMain = await kernel.registries.commands.get("graft")!.execute({ text: "build", deep: true }, { sessionId: "s1" });
+    assert.ok(!viaMain.error, viaMain.error?.message ?? "");
+    const viaAlias = await kernel.registries.commands.get("graft-build-deep")!.execute({}, { sessionId: "s1" });
+    assert.ok(!viaAlias.error, viaAlias.error?.message ?? "");
+    const stdout = (viaAlias.value as { stdout: string }).stdout;
+    assert.match(stdout, /argv: build --deep --provider openai --model gpt-4o-mini --base-url https:\/\/openrouter\.ai\/api\/v1/);
+    assert.match(stdout, /env: GRAFT_API_KEY,GRAFT_BASE_URL,GRAFT_MODEL,GRAFT_PROVIDER/);
+    assert.ok(!stdout.includes("--api-key"), "api key must never ride argv");
+    assert.ok(!stdout.includes("sk-test"));
+  });
+
+  it("graft_build_deep_does_not_inherit_process_env_secrets", () => {
+    process.env.GRAFT_API_KEY = "leaked-from-process";
+    process.env.SECRET_SENTINEL = "do-not-propagate";
+    try {
+      const env = childEnv({ providerEnv: deepProviderEnv({ provider: "anthropic", model: "m", apiKey: "sk-host" }, undefined) });
+      assert.equal(env.GRAFT_API_KEY, "sk-host");
+      assert.equal(env.SECRET_SENTINEL, undefined);
+    } finally {
+      delete process.env.GRAFT_API_KEY;
+      delete process.env.SECRET_SENTINEL;
+    }
   });
 });

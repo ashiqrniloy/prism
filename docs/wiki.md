@@ -17,7 +17,7 @@ It integrates Tobias Lütke's [`qmd`](https://github.com/tobi/qmd) on-device hyb
 
 The Karpathy LLM Wiki pattern is structured into 3 distinct tiers:
 
-1. **Raw Sources (Immutable)**: Source code files, design docs, transcripts, journals, and Markdown notes. Raw sources are strictly read-only and never mutated.
+1. **Raw Sources (Immutable)**: Source code files, design docs, transcripts, journals, and Markdown notes. Raw sources are strictly read-only and never mutated. New external material arrives through the ingest staging area (`raw/ingest/<utc>-<slug>/`): an immutable `source.*` original plus a UTF-8 `extract.md` the maintainer skill files into the wiki.
 2. **Compiled Wiki (`.wiki/`)**: Persistent, cross-linked Markdown documents containing synthesized architecture models, entity descriptions, decision records, and line-anchored claims.
 3. **Schema & Protocols (`SCHEMA.md`)**: Operational guidelines governing OKF v0.2 emission, entity categorization, citation rules (`file:///path#Lxx-Lyy`), catalog indexing (`index.md`), and chronological change logging (`log.md`).
 
@@ -39,12 +39,14 @@ The Karpathy LLM Wiki pattern is structured into 3 distinct tiers:
 - `wiki_search`: `{ query: string, mode?: "search" | "vsearch" | "query", maxResults?: number }`
 - `wiki_read_page`: `{ pagePath: string }` — `pagePath` must resolve inside the wiki root (lexical + `fs.realpath` containment). Traversal (sibling-prefix, `..`, absolute paths) and symlinks pointing outside the wiki throw an access-denied error; a missing contained page returns `found: false`.
 - `wiki_record_insight`: `{ title: string, content: string, category?: "decision" | "concept" | "entity" }` — title and content must be non-empty; titles are capped at 200 characters, content at 65,536 bytes, and control characters/newlines in titles are collapsed to spaces so titles cannot inject Markdown headings, index entries, or log entries.
+- `wiki_ingest`: `{ text?: string, path?: string, url?: string, title?: string }` — stages one raw source and returns a filing brief for the `wiki-maintainer` skill (see `/wiki-ingest` below). Exactly one of `text`/`path`/`url` must be provided; `url` requires a host `fetchUrl` hook.
 
 ### Slash Commands
 
 - `/wiki-init`: Scaffolds `.wiki/`, instantiates `SCHEMA.md`, `index.md`, and `log.md`, deploys skills, and adds the `qmd` collection.
 - `/wiki-refresh`: Detects modified source files via SHA-256 Merkle diffing, compiles updates to affected entity pages, reconciles contradictions in `log.md`, and runs `qmd update`.
 - `/wiki-lint`: Checks OKF frontmatter (`type`, ISO `generated.at`), leftover `[[wikilinks]]`, unresolved relative markdown links, dead line anchors, and orphan pages.
+- `/wiki-ingest`: `{ text?, path?, url?, title? }` — stages one external source into `raw/ingest/<utc>-<slug>/` (`source.*` original + `extract.md`), then returns a brief (staged paths, extract preview, source URL when applicable, Karpathy filing checklist). When the host injects `drivers`, the command calls `drivers.startRun(brief, { activeSkills: ["wiki-maintainer"] })` so the maintainer skill files the source into the wiki; without drivers it stages only and reports `runStarted: false`. Results are labeled `metadata.trust: "untrusted_external"`.
 
 ### Standalone CLI Commands
 
@@ -60,12 +62,49 @@ npx prism-wiki lint
 
 # Search wiki from terminal
 npx prism-wiki search "How does authentication work?" --mode query
+
+# Stage an external source for the wiki
+npx prism-wiki ingest --path notes/paper.pdf --title "Paper"
+
+# `--url` is a usage error in the standalone CLI:
+# the wiki package never fetches — URL ingest needs a host fetchUrl hook
+npx prism-wiki ingest --url https://example.com/rfc.pdf   # → exit 1
 ```
 
 ## Outputs / response / events
 
 - `wiki_search` returns a structured markdown payload containing section breadcrumbs, conceptual summaries, and clickable source line links (`file:///path#Lxx-Lyy`).
 - Lifecycle commands return status objects (`{ status: "initialized" | "refreshed" | "clean", ok: boolean }`).
+- `wiki_ingest` / `/wiki-ingest` return the staged paths, the (capped) extract preview, and a filing brief; `value.runStarted` reports whether a driver run was started.
+
+### `ingestWikiSource(input, options)`
+
+The staging primitive behind `/wiki-ingest`, `wiki_ingest`, and the CLI. Accepts `{ text?, path?, bytes?, url?, filename?, title? }` (precedence `path` > `bytes` > `url` > `text`) and returns `{ id, rawDir, sourcePath, extractPath, mediaType?, extract, truncated, url? }` (`url` present only for URL-staged sources).
+
+| Input | Parse behavior |
+| :--- | :--- |
+| Text-like files and `text` | Decoded as UTF-8 (RAG text/markdown/html parsers) |
+| Uncompressed PDF | Parsed by the RAG PDF parser (bounded pages/bytes) |
+| Compressed PDF / DOCX | Throws a named error unless the host supplies `options.extractDocument` (e.g. wire `createDocumentReader()` from `@arnilo/prism-coding-tools/document-reader`) |
+| `url` | `assertSsrfAllowedUrl` runs first (private/link-local hosts rejected before any fetch); then the host `fetchUrl` hook supplies the bytes/text — missing or empty hook output fails closed. Staged filename comes from the hook, the URL extension (`doc.pdf`), or `source.md` |
+| Images | Staged as-is; stub extract points at the staged `source.*` — no OCR; view the file |
+| Unknown binary | Fails closed unless `extractDocument` claims it |
+
+Caps: 32 MiB per staged input, 2 MiB per extract. `path` must resolve inside the workspace root (realpath containment). `log.md` gains an `**Ingested**` entry only when the wiki root exists.
+
+Wiring a `fetchUrl` hook (the wiki package ships no HTTP client — hosts bring their own, e.g. Obscura):
+
+```ts
+import { runObscuraCli, validateObscuraWebUrl } from "@arnilo/prism-web-tools/obscura";
+
+const wiki = createWikiExtension({
+  fetchUrl: async ({ url }) => {
+    validateObscuraWebUrl(url); // host-side SSRF gate of its own
+    const run = await runObscuraCli({ command: "obscura", args: ["fetch", url, "--dump", "markdown"] });
+    return { text: run.stdout, filename: "source.md" };
+  },
+});
+```
 
 ## Request/response example
 
@@ -135,12 +174,17 @@ Emitted `.wiki/` trees are [OKF v0.2](https://github.com/GoogleCloudPlatform/ope
 
 ## Extension and configuration notes
 
-- The wiki subpath registers tools (`wiki_search`, `wiki_read_page`, `wiki_record_insight`), commands (`wiki-init`, `wiki-refresh`, `wiki-lint`), skills (`wiki-maintainer`, `wiki-searcher`), and instruction injectors (`wiki-guidance`) into Prism registries.
+- The wiki subpath registers tools (`wiki_search`, `wiki_read_page`, `wiki_record_insight`, `wiki_ingest`), commands (`wiki-init`, `wiki-refresh`, `wiki-lint`, `wiki-ingest`), skills (`wiki-maintainer`, `wiki-searcher`), and instruction injectors (`wiki-guidance`) into Prism registries.
 - It operates with zero core modifications and can be used with any `@arnilo/prism` agent.
 - `qmd` is optional but recommended. When `@tobilu/qmd` is not installed, the search engine falls back to catalog matching against `index.md`.
 
+## Ingest filing rules (Karpathy/OKF)
+
+After staging, the `wiki-maintainer` skill files the source: read `.wiki/SCHEMA.md` and `index.md` first, read the staged `extract.md` (and view `source.*` for images/PDFs), integrate claims into existing entity/concept/decision pages — create pages only for genuinely new concepts — then emit OKF v0.2 frontmatter (`type` required; `sources[].resource` pointing at the staged `source.*` — for URL-staged sources the original URL is also legitimate; `generated.by: prism-wiki/ingest`), add per-claim footnotes keyed to `sources[].id` for source-specific claims, update `index.md`, and prepend an `**Ingested**` entry to `log.md`. Never copy raw bodies into wiki pages; one source per ingest; contradictions update the existing page and are logged. The same rules ship in every scaffolded `SCHEMA.md` (`## Ingest Protocol`).
+
 ## Security and performance notes
 
+- **Ingest boundaries**: the wiki package never fetches — `url` inputs require a host `fetchUrl` hook, and `assertSsrfAllowedUrl` rejects private/link-local hosts before the hook runs; the standalone CLI rejects `--url` with a usage error. `path` inputs are contained inside the workspace root via realpath; extracts are untrusted data (`trust: "untrusted_external"`), never instructions; the raw layer stays read-only for the LLM; images get a stub extract (no OCR).
 - **Source Immutability**: Raw source files are read-only and never modified by wiki operations.
 - **Subprocess Safety**: All `qmd` subprocess calls use argument arrays (`execFile`) to prevent shell injection.
 - **Path Containment**: Wiki and raw source paths are confined to the workspace root; directory traversal (`../`) is rejected.

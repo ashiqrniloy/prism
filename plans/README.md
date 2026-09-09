@@ -73,5 +73,6 @@ Active numbered execution plans for Prism roadmap phases.
 | [066-Provider-Request-Construction-And-0-5-1.md](066-Provider-Request-Construction-And-0-5-1.md) | 0.5.1 — kernel constructs provider requests (session correlation, cache defaults, thinkingLevel) + lockstep bump | complete |
 | [067-Run-Limits-Hard-Vs-Host-Policy.md](067-Run-Limits-Hard-Vs-Host-Policy.md) | 0.5.4 — split run-limit HARD (bytes/process safety) from host policy (`null` disables an axis; DEFAULT unchanged) | complete (2026-09-08) |
 | [068-Docs-Progressive-Disclosure-And-Prism-Execution.md](068-Docs-Progressive-Disclosure-And-Prism-Execution.md) | docs/skills — slim index, archive history, freeze=current-line, create-plan planner-only, `prism-execution` router | complete |
+| [069-Trusted-Extension-Activation-And-Wiki-Ingest.md](069-Trusted-Extension-Activation-And-Wiki-Ingest.md) | 0.5.x — `activateKernel` + CLI `--extension`; `/wiki-ingest` (text/file/image/PDF/URL via host `fetchUrl`); `/graft-init` `/graft-build` `/graft-build-deep` | in progress |
 
 Historical immutable plan archives from pre-0.0.18 were intentionally removed; do not restore them to satisfy old docs tests. Docs tests must validate this index and current `NNN-*.md` files only.

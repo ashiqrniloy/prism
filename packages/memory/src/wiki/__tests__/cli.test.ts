@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { runCli } from "../cli.js";
@@ -42,5 +42,36 @@ describe("prism-wiki CLI runner", () => {
 
     const lintCode = await runCli(["node", "prism-wiki", "lint", "--wiki-root", wikiDir, "--workspace-root", TEST_DIR]);
     assert.equal(lintCode, 0);
+  });
+
+  it("cli_ingest_path_exit_0", async () => {
+    await writeFile(join(TEST_DIR, "ingest-note.md"), "# Ingest me", "utf8");
+    const code = await runCli([
+      "node",
+      "prism-wiki",
+      "ingest",
+      "--path",
+      "ingest-note.md",
+      "--title",
+      "Ingest Note",
+      "--wiki-root",
+      join(TEST_DIR, ".wiki"),
+      "--workspace-root",
+      TEST_DIR,
+    ]);
+    assert.equal(code, 0);
+    const ingestDirs = await readdir(join(TEST_DIR, "raw/ingest"));
+    assert.ok(ingestDirs.some((entry) => entry.endsWith("-ingest-note")));
+  });
+
+  it("cli_ingest_no_input_nonzero", async () => {
+    const code = await runCli(["node", "prism-wiki", "ingest", "--workspace-root", TEST_DIR]);
+    assert.equal(code, 1);
+  });
+
+  it("cli_ingest_url_usage_error", async () => {
+    // The standalone CLI ships no fetch client — --url must fail loudly, not fetch.
+    const code = await runCli(["node", "prism-wiki", "ingest", "--url", "https://example.com/paper.md", "--workspace-root", TEST_DIR]);
+    assert.equal(code, 1);
   });
 });

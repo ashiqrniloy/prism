@@ -58,7 +58,7 @@ describe("cli", () => {
   });
 
   it("cli_parser_rejects_known_but_unsupported_flags_loudly", async () => {
-    for (const flag of ["--config", "--resource", "--extension", "--tool"]) {
+    for (const flag of ["--config", "--resource", "--tool"]) {
       assert.throws(() => parseCliArgs([flag, "x"]), new RegExp(`${flag} is not supported in this build`));
     }
   });

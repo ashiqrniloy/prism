@@ -1,5 +1,5 @@
 import type { AIProvider, CredentialValueSource, ProviderRequest } from "@arnilo/prism";
-import { providerError, ProviderRequirementError, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
+import { ProviderRequirementError, providerError, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
 import { httpStatusError, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "../shared/anthropic-messages.js";
 import { applyOpencodeAnthropicCacheControl, opencodeOwnedHeaders, opencodeSessionId } from "./cache.js";

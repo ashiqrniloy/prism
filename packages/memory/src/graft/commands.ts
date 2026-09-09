@@ -1,6 +1,6 @@
 import type { CommandDefinition, JsonObject, SessionEntry } from "@arnilo/prism";
 
-import { runGraftJson } from "./cli.js";
+import { runGraftExit, runGraftJson } from "./cli.js";
 import { persistGraftPatch, resolveLatestGraftState } from "./state.js";
 import type { GraftFreshness, GraftMode } from "./types.js";
 import type { ResolvedGraftCli } from "./upstream.js";
@@ -12,6 +12,14 @@ export interface GraftCommandContext {
   readonly timeoutMs: number;
   readonly maxResultBytes: number;
   readonly childEnv: Readonly<Record<string, string>>;
+  /** Budget for structural `graft build` / `graft init` (default 120s − overhead). */
+  readonly buildTimeoutMs: number;
+  /** Budget for `graft build --deep` (LLM pass; default 600s − overhead). */
+  readonly deepBuildTimeoutMs: number;
+  /** Stdout cap for build/init children (default 2 MiB). */
+  readonly buildMaxResultBytes: number;
+  /** Host `graft init` configuration. Neither agents nor yes → the command refuses to spawn. */
+  readonly init: { readonly agents: readonly string[]; readonly yes: boolean; readonly wireMcp: boolean };
   readonly getEntries: () => readonly SessionEntry[] | Promise<readonly SessionEntry[]>;
   readonly appendEntry: (entry: SessionEntry, options?: { readonly expectedParentId?: string }) => Promise<void>;
   readonly emitStatus: (metadata: Readonly<Record<string, unknown>>) => Promise<void>;
@@ -41,6 +49,15 @@ function runChild<T>(ctx: GraftCommandContext, argv: readonly string[]) {
     cwd: ctx.projectDir,
     timeoutMs: ctx.timeoutMs,
     maxResultBytes: ctx.maxResultBytes,
+    env: ctx.childEnv,
+  });
+}
+
+function runChildExit(ctx: GraftCommandContext, argv: readonly string[], timeoutMs: number) {
+  return runGraftExit(ctx.cli, argv, {
+    cwd: ctx.projectDir,
+    timeoutMs,
+    maxResultBytes: ctx.buildMaxResultBytes,
     env: ctx.childEnv,
   });
 }
@@ -97,11 +114,72 @@ async function handleStatus(name: string, ctx: GraftCommandContext, args: Comman
 }
 
 async function handleBuild(name: string, ctx: GraftCommandContext, args: CommandArgs): Promise<GraftCommandResult> {
-  const argv = ["build", ...(flag(args, "deep") ? ["--deep"] : [])];
-  const result = await runChild(ctx, argv);
-  await ctx.emitStatus({ event: "build", ok: result.ok });
-  const text = result.ok ? "graft graph rebuilt." : `graft build failed (${result.reason ?? "non-zero exit"}).`;
-  return { name, content: [{ type: "text", text }], error: result.ok ? undefined : { message: text } };
+  const deep = flag(args, "deep");
+  let argv = ["build"];
+  let timeoutMs = ctx.buildTimeoutMs;
+  if (deep) {
+    // Graft's own LLM client needs the host-configured model; the key rides in the child env
+    // (never argv — it would leak via ps/logs). Refuse to spawn unconfigured.
+    const provider = ctx.childEnv.GRAFT_PROVIDER;
+    const model = ctx.childEnv.GRAFT_MODEL;
+    const apiKey = ctx.childEnv.GRAFT_API_KEY;
+    if (!provider || !model || !apiKey) {
+      const text =
+        "graft build --deep requires the host to configure deepModel (or providerEnv GRAFT_PROVIDER / GRAFT_MODEL / GRAFT_API_KEY) on createGraftExtension; refusing to spawn without a configured model.";
+      return { name, error: { message: text }, content: [{ type: "text", text }] };
+    }
+    argv = [
+      "build",
+      "--deep",
+      "--provider",
+      provider,
+      "--model",
+      model,
+      ...(ctx.childEnv.GRAFT_BASE_URL ? ["--base-url", ctx.childEnv.GRAFT_BASE_URL] : []),
+    ];
+    timeoutMs = ctx.deepBuildTimeoutMs;
+  }
+  const result = await runChildExit(ctx, argv, timeoutMs);
+  await ctx.emitStatus({ event: "build", ok: result.ok, ...(deep ? { deep } : {}) });
+  const text = result.ok
+    ? `graft graph rebuilt${deep ? " (deep)" : ""}.`
+    : `graft build failed (${result.reason ?? `exit ${result.exitCode}`}).${result.detail ? `\n${result.detail}` : ""}`;
+  return {
+    name,
+    value: { deep, stdout: result.stdout.slice(-2000) },
+    content: [{ type: "text", text }],
+    error: result.ok ? undefined : { message: text },
+  };
+}
+
+async function handleInit(name: string, ctx: GraftCommandContext): Promise<GraftCommandResult> {
+  if (ctx.init.agents.length === 0 && !ctx.init.yes) {
+    const text =
+      "graft init requires initAgents or initYes on createGraftExtension — the child has no TTY and upstream writes nothing without one.";
+    return { name, error: { message: text }, content: [{ type: "text", text }] };
+  }
+  // Host-fixed argv: never write user-level state (--no-global); Prism provides its own
+  // MCP/hook/statusline surfaces, so those stay off unless the host opts in.
+  const argv = [
+    "init",
+    "--no-global",
+    ...(ctx.init.wireMcp ? [] : ["--no-mcp"]),
+    "--no-hooks",
+    "--no-statusline",
+    ...ctx.init.agents.flatMap((agent) => ["--agents", agent]),
+    ...(ctx.init.yes ? ["--yes"] : []),
+  ];
+  const result = await runChildExit(ctx, argv, ctx.buildTimeoutMs);
+  await ctx.emitStatus({ event: "init", ok: result.ok });
+  const text = result.ok
+    ? `graft init complete${ctx.init.agents.length ? ` (agents: ${ctx.init.agents.join(", ")})` : " (--yes)"}.`
+    : `graft init failed (${result.reason ?? `exit ${result.exitCode}`}).${result.detail ? `\n${result.detail}` : ""}`;
+  return {
+    name,
+    value: { agents: [...ctx.init.agents], yes: ctx.init.yes, stdout: result.stdout.slice(-2000) },
+    content: [{ type: "text", text }],
+    error: result.ok ? undefined : { message: text },
+  };
 }
 
 async function handleCheck(name: string, ctx: GraftCommandContext, context: CommandCtx): Promise<GraftCommandResult> {
@@ -127,7 +205,7 @@ export function createGraftCommands(ctx: GraftCommandContext): readonly CommandD
   const main: CommandDefinition = {
     name: "graft",
     description:
-      "graft graph control. Subcommands: status [check:true], build [deep:true], check, viz [open/port/export]. Empty reports status.",
+      "graft graph control. Subcommands: status [check:true], build [deep:true], check, viz [open/port/export], init. Empty reports status.",
     parameters: {
       type: "object",
       properties: {
@@ -150,10 +228,12 @@ export function createGraftCommands(ctx: GraftCommandContext): readonly CommandD
           return handleCheck("graft", ctx, context);
         case "viz":
           return handleViz("graft", ctx, args);
+        case "init":
+          return handleInit("graft", ctx);
         default:
           return {
             name: "graft",
-            error: { message: `Unknown graft subcommand "${primary}". Use status, build, check, or viz.` },
+            error: { message: `Unknown graft subcommand "${primary}". Use status, build, check, viz, or init.` },
             content: [{ type: "text", text: `Unknown graft subcommand "${primary}".` }],
           };
       }
@@ -169,8 +249,18 @@ export function createGraftCommands(ctx: GraftCommandContext): readonly CommandD
 
   return [
     main,
-    alias("graft-build", "Run `graft build`. Pass deep:true for --deep.", (args, _context) =>
+    alias("graft-build", "Run `graft build`. Pass deep:true for --deep (needs the host-configured deepModel).", (args, _context) =>
       handleBuild("graft-build", ctx, { ...args, text: "build" }).then((result) => ({ ...result, name: "graft-build" })),
+    ),
+    alias(
+      "graft-init",
+      "Run `graft init` non-interactively: always --no-global; host opts in via initAgents/initYes; --no-mcp/--no-hooks/--no-statusline by default.",
+      () => handleInit("graft-init", ctx),
+    ),
+    alias(
+      "graft-build-deep",
+      "Run `graft build --deep` with the host-configured model (deepModel). Errors without one; the API key never appears on argv.",
+      (args) => handleBuild("graft-build-deep", ctx, { ...args, deep: true }).then((result) => ({ ...result, name: "graft-build-deep" })),
     ),
     alias("graft-check", "Live graft freshness check.", (_args, context) => handleCheck("graft-check", ctx, context)),
     alias("graft-viz", "Serve the graft viewer (default --no-open). Pass open:true to allow the browser.", (args) =>

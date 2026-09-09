@@ -332,6 +332,7 @@ export { createEventMultiplexer, EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE, EventMu
 export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js";
 export { applyExecutionDecision, assertExecutionAllowed, checkExecution, ExecutionDeniedError } from "./execution-policy.js";
 export type {
+  ActivatedKernelConfig,
   ExtensionErrorPolicy,
   ExtensionEventBus,
   ExtensionEventHandler,
@@ -340,7 +341,7 @@ export type {
   ExtensionLoadPolicy,
   LoadedExtension,
 } from "./extensions.js";
-export { createExtensionEventBus, createExtensionKernel } from "./extensions.js";
+export { activateKernel, createExtensionEventBus, createExtensionKernel } from "./extensions.js";
 export type {
   MemoryRunFeedbackStoreOptions,
   PrepareRunFeedbackOptions,
@@ -702,5 +703,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.5.5";
+export const version = "0.5.6";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

@@ -10,7 +10,7 @@ The `prism` bin is a thin adapter over `AgentSession` plus a tiny project scaffo
 - `prism init <dir>`: create a minimal TypeScript project with one selected provider, `.env.example`, and one offline mock test.
 - `prism dev`: boot the loopback dev inspector over the scaffolded agent (delegates into `@arnilo/prism-coding-tools/dev` when resolvable; plan 040 Task 4).
 
-It does not add a TUI, app tools, provider globals, extension discovery, resource discovery, or credential storage. `init` uses Node standard-library filesystem APIs and checked-in templates only — no interactive prompts or template-engine dependency.
+It does not add a TUI, app tools, provider globals, resource discovery, or credential storage, and it never auto-discovers extension packages — `--extension` loads only explicitly named modules (relative paths inside the working directory, or allow-listed package/absolute specifiers). `init` uses Node standard-library filesystem APIs and checked-in templates only — no interactive prompts or template-engine dependency.
 
 ## Live CLI journey (plans/064 Task 5)
 
@@ -115,6 +115,7 @@ Manifests of the negotiation are simple: the agent is loaded from the scaffold c
 | `--discover` | Opt-in workspace contribution discovery (`SKILL.md`/`manifest.json`). Never auto-activates or imports. |
 | `--discover-kinds <csv>` | Kinds to scan; defaults to `skill`. Accepts `skill,tool,context,instructions`. |
 | `--no-discovery` | Hard-disable discovery even if `--discover` is set. |
+| `--extension <specifier>` | Load a trusted extension module (repeatable). Relative `./`/`../` paths must realpath-contain inside the working directory; package names and absolute paths must exactly match an entry in `PRISM_EXTENSION_ALLOWLIST` (comma-separated), checked before `import()`. See the extension loading section below. |
 | `--agents-config <path>` | App config root holding `agents/<name>/AGENT.md` bundles (opt-in). Envelopes only; the host resolves them via `resolveAgentBundle`. The CLI never defaults to the user's home directory. |
 | `--instruction <name>` | Select a registered/discovered instruction injector (repeatable). `--instruction false` disables injectors for the run. Names resolve fail-closed. |
 | `--injector-file <path>` | Load a markdown file as a static `every_turn` injector (repeatable). |
@@ -123,6 +124,19 @@ Manifests of the negotiation are simple: the agent is loaded from the scaffold c
 | `--agents-md-file <path>` | Read AGENTS.md from `<path>` instead — still `source: "app"`, still trust-gated (Phase 31). |
 | `--system-md-file <path>` | Read SYSTEM.md from `<path>` instead — user-owned, `source: "user"` (Phase 31). |
 | `--help` | Print usage. |
+
+### Extension loading (`--extension`)
+
+```bash
+# cwd-relative trusted module (no allow-list needed)
+prism --provider mock --extension ./my-ext.js -p "hello"
+
+# package name or absolute path requires an exact allow-list entry
+PRISM_EXTENSION_ALLOWLIST=@acme/prism-foo \
+  prism --provider mock --extension @acme/prism-foo -p "hello"
+```
+
+Each module must export `createExtension()`, a default function, or a default `{ name, setup }` extension. Loaded modules are trusted host code (same trust level as the provider factory import) — the gates decide which code may load, not what loaded code may do: relative paths fail closed on realpath escape (symlinks cannot leave the working directory), package/absolute specifiers fail closed without an allow-list entry, and a broken or wrong-shaped module is a usage error, not a silent skip. Registered contributions activate through `activateKernel` into the run's agent (tools, skills, injectors, context, middleware); extension skills follow the normal fail-closed skill activation (`RunOptions.activeSkills`). There is no npm marketplace, no `plugin.json`, and no MCP auto-start.
 
 RPC request envelope:
 

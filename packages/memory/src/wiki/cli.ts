@@ -2,6 +2,7 @@
 import { initWiki } from "./commands/init.js";
 import { lintWiki } from "./commands/lint.js";
 import { refreshWiki } from "./commands/refresh.js";
+import { ingestWikiSource } from "./ingest.js";
 import { Context7Hydrator } from "./search/context7-hydrator.js";
 import { QmdClient } from "./search/qmd-client.js";
 import type { SearchMode, WikiProfileType } from "./types.js";
@@ -14,6 +15,7 @@ Usage:
   prism-wiki init [--wiki-root <dir>] [--profile <codebase|pkm|hybrid|auto>]
   prism-wiki refresh [--wiki-root <dir>]
   prism-wiki lint [--wiki-root <dir>]
+  prism-wiki ingest [--path <file>] [--title <t>] [--wiki-root <dir>] [text...]
   prism-wiki search "<query>" [--mode <search|vsearch|query>] [--wiki-root <dir>]
   prism-wiki help
 
@@ -38,11 +40,24 @@ export async function runCli(argv: readonly string[]): Promise<number> {
   let workspaceRoot = process.cwd();
   let profile: WikiProfileType = "auto";
   let mode: SearchMode = "search";
-  let query = "";
+  const positionals: string[] = [];
+  let ingestPath = "";
+  let ingestTitle = "";
+  let ingestUrl: string | undefined;
 
   for (let i = 1; i < args.length; i++) {
     if (args[i] === "--wiki-root" && args[i + 1]) {
       wikiRoot = args[i + 1];
+      i++;
+    } else if (args[i] === "--path" && args[i + 1]) {
+      ingestPath = args[i + 1];
+      i++;
+    } else if (args[i] === "--title" && args[i + 1]) {
+      ingestTitle = args[i + 1];
+      i++;
+    } else if (args[i] === "--url") {
+      // Consumed only to fail loudly below: the standalone CLI ships no fetch client.
+      ingestUrl = args[i + 1];
       i++;
     } else if (args[i] === "--workspace-root" && args[i + 1]) {
       workspaceRoot = args[i + 1];
@@ -53,10 +68,11 @@ export async function runCli(argv: readonly string[]): Promise<number> {
     } else if (args[i] === "--mode" && args[i + 1]) {
       mode = args[i + 1] as SearchMode;
       i++;
-    } else if (!args[i].startsWith("-") && !query) {
-      query = args[i];
+    } else if (!args[i].startsWith("-")) {
+      positionals.push(args[i]);
     }
   }
+  const query = positionals[0] ?? "";
 
   // If wikiRoot is absolute, default workspaceRoot to its parent directory if not set
   if (wikiRoot.startsWith("/") && workspaceRoot === process.cwd()) {
@@ -96,6 +112,28 @@ export async function runCli(argv: readonly string[]): Promise<number> {
           console.log(`  - Broken link in ${bl.sourceFile}: [[${bl.target}]]`);
         }
         return 1;
+      }
+      case "ingest": {
+        // CLI has no agent, so this is stage-only (honest): paths printed, no LLM filing.
+        if (ingestUrl !== undefined) {
+          console.error("Error: ingest --url requires a host fetchUrl hook — the standalone CLI does not fetch. Use --path or text.");
+          return 1;
+        }
+        if (!ingestPath && positionals.length === 0) {
+          console.error("Error: ingest requires --path <file> or text. Usage: prism-wiki ingest [--path <file>] [--title <t>] [text...]");
+          return 1;
+        }
+        const staged = await ingestWikiSource(
+          {
+            ...(ingestPath ? { path: ingestPath } : { text: positionals.join(" ") }),
+            ...(ingestTitle ? { title: ingestTitle } : {}),
+          },
+          { wikiRoot, workspaceRoot },
+        );
+        console.log(`✅ Ingested ${staged.id}`);
+        console.log(`   Original: ${staged.sourcePath}`);
+        console.log(`   Extract:  ${staged.extractPath}`);
+        return 0;
       }
       case "search": {
         if (!query) {

@@ -1,14 +1,25 @@
 import type { Extension, InstructionInjector } from "@arnilo/prism";
+import { createWikiIngestCommand, WIKI_INGEST_COMMAND_NAME } from "./commands/ingest.js";
 import { createWikiInitCommand, initWiki } from "./commands/init.js";
 import { createWikiLintCommand, lintWiki } from "./commands/lint.js";
 import { createWikiRefreshCommand, refreshWiki } from "./commands/refresh.js";
 import { deployWikiSkills, wikiMaintainerSkill, wikiSearcherSkill } from "./skills.js";
+import { createWikiIngestTool, WIKI_INGEST_TOOL_NAME } from "./tools/ingest.js";
 import { createWikiReadPageTool, WIKI_READ_PAGE_TOOL_NAME } from "./tools/read-page.js";
 import { createWikiRecordInsightTool, WIKI_RECORD_INSIGHT_TOOL_NAME } from "./tools/record-insight.js";
 import { createWikiSearchTool, WIKI_SEARCH_TOOL_NAME } from "./tools/search.js";
 import type { WikiExtensionOptions } from "./types.js";
 
-export { initWiki, lintWiki, refreshWiki, WIKI_READ_PAGE_TOOL_NAME, WIKI_RECORD_INSIGHT_TOOL_NAME, WIKI_SEARCH_TOOL_NAME };
+export {
+  initWiki,
+  lintWiki,
+  refreshWiki,
+  WIKI_INGEST_COMMAND_NAME,
+  WIKI_INGEST_TOOL_NAME,
+  WIKI_READ_PAGE_TOOL_NAME,
+  WIKI_RECORD_INSIGHT_TOOL_NAME,
+  WIKI_SEARCH_TOOL_NAME,
+};
 export const WIKI_INJECTOR_NAME = "wiki-guidance";
 
 export function createWikiExtension(options: WikiExtensionOptions = {}): Extension {
@@ -30,19 +41,23 @@ export function createWikiExtension(options: WikiExtensionOptions = {}): Extensi
       const searchTool = createWikiSearchTool(options);
       const readPageTool = createWikiReadPageTool(options);
       const recordInsightTool = createWikiRecordInsightTool(options);
+      const ingestTool = createWikiIngestTool(options);
 
       api.registerTool(searchTool);
       api.registerTool(readPageTool);
       api.registerTool(recordInsightTool);
+      api.registerTool(ingestTool);
 
-      // Register Commands: /wiki-init, /wiki-refresh, /wiki-lint
+      // Register Commands: /wiki-init, /wiki-refresh, /wiki-lint, /wiki-ingest
       const initCommand = createWikiInitCommand(options);
       const refreshCommand = createWikiRefreshCommand(options);
       const lintCommand = createWikiLintCommand(options);
+      const ingestCommand = createWikiIngestCommand(options);
 
       api.registerCommand(initCommand);
       api.registerCommand(refreshCommand);
       api.registerCommand(lintCommand);
+      api.registerCommand(ingestCommand);
 
       // Register Skills
       api.registerSkill(wikiSearcherSkill);

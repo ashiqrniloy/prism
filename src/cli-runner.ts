@@ -1,7 +1,8 @@
-import { readFile } from "node:fs/promises";
-import { basename, dirname } from "node:path";
+import { readFile, realpath } from "node:fs/promises";
+import { basename, dirname, isAbsolute, resolve, sep } from "node:path";
 import process from "node:process";
 import type { Readable, Writable } from "node:stream";
+import { pathToFileURL } from "node:url";
 import { runPrismDevSubcommand } from "./cli-dev.js";
 import { type InitRuntime, initUsage, loadProvidersCatalog, runInitCommand } from "./cli-init.js";
 import { type ProviderAddRuntime, providerAddUsage, runProviderAddCommand } from "./cli-provider-add.js";
@@ -9,6 +10,7 @@ import type {
   AgentSession,
   AIProvider,
   ContributionFileKind,
+  Extension,
   InstructionInjector,
   ModelConfig,
   RunOptions,
@@ -17,8 +19,11 @@ import type {
 } from "./contracts.js";
 import { createContributionRegistries, registerDiscoveredContributions } from "./contributions.js";
 import {
+  type ActivatedKernelConfig,
+  activateKernel,
   createAgent,
   createContributionRegistry,
+  createExtensionKernel,
   createMockProvider,
   providerDone,
   providerTextDelta,
@@ -67,6 +72,12 @@ export interface CliOptions {
   readonly injectorFiles: readonly string[];
   /** Runtime-populated: `--instruction`/`--injector-file` resolved to live injectors. */
   readonly resolvedInstructionInjectors: readonly InstructionInjector[];
+  /** Parsed flag: `--extension <specifier>` (repeatable). Loaded via {@link loadCliExtensions}
+   *  into {@link CliOptions.activatedExtensions} before session creation. */
+  readonly extensions: readonly string[];
+  /** Runtime-populated (not a parsed flag): activated contributions from `--extension` modules
+   *  (`kernel.load()` → `activateKernel()`). Merged into `createAgent()` by `agentSession`. */
+  readonly activatedExtensions?: ActivatedKernelConfig;
   /** Parsed flag: `--no-agents-md` / `--no-system-md` skip the corresponding auto-load. */
   readonly noAgentsMd: boolean;
   readonly noSystemMd: boolean;
@@ -125,6 +136,9 @@ Options:
   --discover                 Enable workspace contribution discovery (opt-in)
   --discover-kinds <csv>     Kinds to discover (default: skill; skill,tool,context,instructions)
   --no-discovery             Disable discovery even if --discover is set
+  --extension <specifier>    Load a trusted extension module (repeatable). Relative paths load
+                             from the working directory; package names and absolute paths must
+                             be listed in PRISM_EXTENSION_ALLOWLIST (comma-separated).
   --agents-config <path>     App config root holding agents/<name>/AGENT.md bundles (opt-in)
   --no-agents-md             Skip auto-loading <workspaceRoot>/AGENTS.md
   --no-system-md             Skip auto-loading the global SYSTEM.md layer
@@ -149,11 +163,12 @@ const valueFlags = new Set([
   "--agents-md-file",
   "--system-md-file",
   "--agents-config",
+  "--extension",
 ]);
 const boolFlags = new Set(["--discover", "--no-discovery", "--no-agents-md", "--no-system-md"]);
 // Known-but-inert flags: parsed by earlier builds, never wired to any behavior.
 // Rejected loudly (rather than silently ignored) until a CLI-harness plan wires them.
-const unsupportedFlags = new Set(["--config", "--resource", "--extension", "--tool"]);
+const unsupportedFlags = new Set(["--config", "--resource", "--tool"]);
 const ALL_KINDS: readonly ContributionFileKind[] = ["skill", "tool", "context", "instructions"];
 
 export function parseCliArgs(argv: readonly string[]): CliOptions {
@@ -177,6 +192,7 @@ export function parseCliArgs(argv: readonly string[]): CliOptions {
   const context: string[] = [];
   const instructions: string[] = [];
   const injectorFiles: string[] = [];
+  const extensions: string[] = [];
 
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
@@ -254,6 +270,9 @@ export function parseCliArgs(argv: readonly string[]): CliOptions {
       case "--agents-config":
         agentsConfig = value;
         break;
+      case "--extension":
+        extensions.push(value);
+        break;
     }
   }
 
@@ -272,6 +291,7 @@ export function parseCliArgs(argv: readonly string[]): CliOptions {
     discoverKinds,
     noDiscovery,
     agentsConfig,
+    extensions,
     discoveredSkills: [],
     discoveredInjectors: [],
     discoveredAgents: [],
@@ -408,6 +428,13 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
       });
       options = { ...options, systemPromptLayers: layers };
     }
+    // ponytail: 069 — --extension imports trusted modules only (cwd-contained relative paths,
+    // or allow-listed package/absolute specifiers), then activates their array contributions
+    // into the CLI agent. Throw policy: a broken extension is a usage error, not a silent skip.
+    if (options.extensions.length > 0) {
+      const activatedExtensions = await loadCliExtensions(options.extensions);
+      options = { ...options, activatedExtensions };
+    }
     const session = await (runtime.createSession ?? defaultCreateSession)(options);
     await runPromptMode(session, options, runtime.stdout, mode);
     return 0;
@@ -483,6 +510,8 @@ function mockSession(options: CliOptions): AgentSession {
 }
 
 function agentSession(options: Omit<CliOptions, "provider"> & { providerInstance: AIProvider; modelConfig: ModelConfig }): AgentSession {
+  const activated = options.activatedExtensions;
+  const skills = activated ? [...options.discoveredSkills, ...activated.skills] : options.discoveredSkills;
   return createAgent({
     model: options.modelConfig,
     provider: options.providerInstance,
@@ -490,12 +519,14 @@ function agentSession(options: Omit<CliOptions, "provider"> & { providerInstance
     // ponytail: Phase 31 — file layers compose with `instructions` (base) via the existing
     // composeSystemPrompt pipeline; rank order (user<package<app<run) is enforced inside.
     ...(options.systemPromptLayers.length > 0 ? { systemPrompt: options.systemPromptLayers } : {}),
-    // ponytail: discovered skills become selectable via RunOptions.activeSkills (set by runOptions below).
-    ...(options.discoveredSkills.length > 0 ? { skills: createSkillRegistry(options.discoveredSkills) } : {}),
+    // ponytail: discovered/extension skills become selectable via RunOptions.activeSkills (set by runOptions below).
+    ...(skills.length > 0 ? { skills: createSkillRegistry(skills) } : {}),
+    ...(activated ? { tools: activated.tools, context: activated.context, middleware: activated.middleware } : {}),
   }).createSession({ id: options.session });
 }
 
 function runOptions(options: CliOptions): RunOptions {
+  const injectors = [...(options.activatedExtensions?.instructionInjectors ?? []), ...options.resolvedInstructionInjectors];
   return {
     ...(options.maxToolRounds !== undefined ? { limits: { maxToolRounds: options.maxToolRounds } } : {}),
     compaction: options.compact ? { thresholdEntries: options.compact } : undefined,
@@ -503,7 +534,7 @@ function runOptions(options: CliOptions): RunOptions {
     ...(options.discover && !options.noDiscovery && options.discoveredSkills.length > 0
       ? { activeSkills: options.discoveredSkills.map((s) => s.name) }
       : {}),
-    ...(options.resolvedInstructionInjectors.length > 0 ? { instructionInjectors: options.resolvedInstructionInjectors } : {}),
+    ...(injectors.length > 0 ? { instructionInjectors: injectors } : {}),
   };
 }
 
@@ -533,6 +564,79 @@ function positiveInt(value: string, flag: string): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) throw new CliUsageError(`Invalid value for ${flag}: ${value}`);
   return parsed;
+}
+
+/** Load `--extension` specifiers into one kernel and activate it. Trust model:
+ *  the loaded code is trusted host code (same level as the provider factory
+ *  import in `defaultCreateSession`) — the gates decide WHICH code may load,
+ *  not sandbox what loaded code does.
+ *  - Relative `./`/`../` paths: no allow-list needed, but must `realpath`
+ *    contain inside the working directory (symlinks cannot escape).
+ *  - Bare package names and absolute paths: exact match in
+ *    `PRISM_EXTENSION_ALLOWLIST` (comma-separated), evaluated before `import()`.
+ *  Accepted module shapes: `createExtension()` export, a default function, or
+ *  a default `{ name, setup }` Extension object. */
+async function loadCliExtensions(specifiers: readonly string[]): Promise<ActivatedKernelConfig> {
+  const allowList = (process.env.PRISM_EXTENSION_ALLOWLIST ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const kernel = createExtensionKernel({ errorPolicy: "throw" });
+  const extensions: Extension[] = [];
+  for (const specifier of specifiers) {
+    extensions.push(await importTrustedExtension(specifier, allowList));
+  }
+  await kernel.load(extensions);
+  return activateKernel(kernel);
+}
+
+async function importTrustedExtension(specifier: string, allowList: readonly string[]): Promise<Extension> {
+  if (specifier.includes("\0")) throw new CliUsageError(`Invalid value for --extension: ${specifier}`);
+  const relative = specifier.startsWith("./") || specifier.startsWith("../");
+  let moduleSpecifier: string;
+  if (relative) {
+    const real = await realpath(resolve(specifier)).catch(() => {
+      throw new CliUsageError(`--extension "${specifier}" does not exist`);
+    });
+    const realCwd = await realpath(process.cwd());
+    if (real !== realCwd && !real.startsWith(realCwd + sep)) {
+      throw new CliUsageError(`--extension "${specifier}" escapes the working directory`);
+    }
+    moduleSpecifier = pathToFileURL(real).href;
+  } else {
+    if (!allowList.includes(specifier)) {
+      throw new CliUsageError(
+        `--extension "${specifier}" is not in PRISM_EXTENSION_ALLOWLIST (package names and absolute paths require it; relative extension paths need ./ or ../)`,
+      );
+    }
+    moduleSpecifier = isAbsolute(specifier) ? pathToFileURL(specifier).href : specifier;
+  }
+  let mod: unknown;
+  try {
+    mod = await import(moduleSpecifier);
+  } catch (error) {
+    throw new CliUsageError(`--extension "${specifier}" failed to load: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return extensionFromModule(mod, specifier);
+}
+
+function extensionFromModule(mod: unknown, specifier: string): Extension {
+  const record = mod as Record<string, unknown>;
+  if (typeof record.createExtension === "function") return (record.createExtension as () => Extension)();
+  if (typeof record.default === "function") return (record.default as () => Extension)();
+  if (isExtensionObject(record.default)) return record.default;
+  throw new CliUsageError(
+    `--extension "${specifier}" must export createExtension(), a default function, or a default { name, setup } extension`,
+  );
+}
+
+function isExtensionObject(value: unknown): value is Extension {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as Extension).name === "string" &&
+    typeof (value as Extension).setup === "function"
+  );
 }
 
 function write(stream: Writable, text: string): void {

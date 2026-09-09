@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-ag-ui",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "description": "Optional bounded AG-UI event mapper for Prism agent events.",
   "type": "module",
   "main": "./dist/index.js",
@@ -38,9 +38,9 @@
     "@arnilo/prism-coding-tools": "^0.5.5"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.5.5",
+    "@arnilo/prism": "^0.5.6",
     "@arnilo/prism-core": "^0.5.5",
-    "@arnilo/prism-mcp": "^0.5.5",
+    "@arnilo/prism-mcp": "^0.5.6",
     "zod": "^3.25.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {

@@ -3,7 +3,7 @@ name: release
 on:
   push:
     branches: [main, master]
-    tags: ["v0.3.0", "v0.4.0", "v0.5.0", "v0.5.1", "v0.5.2", "v0.5.3", "v0.5.4", "v0.5.5", "@arnilo/*@*"]
+    tags: ["v0.3.0", "v0.4.0", "v0.5.0", "v0.5.1", "v0.5.2", "v0.5.3", "v0.5.4", "v0.5.5", "v0.5.6", "@arnilo/*@*"]
   pull_request:
   workflow_dispatch:
 
@@ -153,7 +153,7 @@ jobs:
 
   codeql-release:
     name: CodeQL release SAST
-    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || github.ref == 'refs/tags/v0.5.4' || github.ref == 'refs/tags/v0.5.5' || startsWith(github.ref, 'refs/tags/@arnilo/')
+    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || github.ref == 'refs/tags/v0.5.4' || github.ref == 'refs/tags/v0.5.5' || github.ref == 'refs/tags/v0.5.6' || startsWith(github.ref, 'refs/tags/@arnilo/')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -212,7 +212,7 @@ jobs:
   publish:
     name: publish (deterministic, resumable, provenance)
     needs: [verify, node20-compat, postgres-integration, office-validation, codeql-release, supply-chain]
-    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || github.ref == 'refs/tags/v0.5.4' || github.ref == 'refs/tags/v0.5.5' || startsWith(github.ref, 'refs/tags/@arnilo/')
+    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || github.ref == 'refs/tags/v0.5.4' || github.ref == 'refs/tags/v0.5.5' || github.ref == 'refs/tags/v0.5.6' || startsWith(github.ref, 'refs/tags/@arnilo/')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -267,7 +267,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          if [ "$GITHUB_REF_NAME" = "v0.3.0" ] || [ "$GITHUB_REF_NAME" = "v0.4.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.1" ] || [ "$GITHUB_REF_NAME" = "v0.5.2" ] || [ "$GITHUB_REF_NAME" = "v0.5.3" ] || [ "$GITHUB_REF_NAME" = "v0.5.4" ] || [ "$GITHUB_REF_NAME" = "v0.5.5" ]; then
+          if [ "$GITHUB_REF_NAME" = "v0.3.0" ] || [ "$GITHUB_REF_NAME" = "v0.4.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.1" ] || [ "$GITHUB_REF_NAME" = "v0.5.2" ] || [ "$GITHUB_REF_NAME" = "v0.5.3" ] || [ "$GITHUB_REF_NAME" = "v0.5.4" ] || [ "$GITHUB_REF_NAME" = "v0.5.5" ] || [ "$GITHUB_REF_NAME" = "v0.5.6" ]; then
             npm run release:publish -- --lockstep --version "${GITHUB_REF_NAME#v}" --resume --report release-artifacts/publish-report.json
           else
             npm run release:publish -- --resume --report release-artifacts/publish-report.json

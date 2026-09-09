@@ -2,7 +2,15 @@ import { join } from "node:path";
 
 import type { Extension } from "@arnilo/prism";
 
-import { childEnv, childTimeoutMs, DEFAULT_MAX_RESULT_BYTES, runGraftJson } from "./cli.js";
+import {
+  childEnv,
+  childTimeoutMs,
+  DEFAULT_BUILD_BUDGET_MS,
+  DEFAULT_BUILD_MAX_RESULT_BYTES,
+  DEFAULT_DEEP_BUILD_BUDGET_MS,
+  DEFAULT_MAX_RESULT_BYTES,
+  runGraftJson,
+} from "./cli.js";
 import type { GraftCommandContext } from "./commands.js";
 import { createGraftCommands } from "./commands.js";
 import { wireEditWatch } from "./edit-watch.js";
@@ -10,10 +18,28 @@ import { createGraftContextProvider, createGraftOrientationInjector, loadOrienta
 import { createGraftSkill } from "./skills.js";
 import { persistGraftPatch, resolveLatestGraftState } from "./state.js";
 import { defineGraftTools, shouldRegisterPullTools } from "./tools.js";
-import type { GraftExtensionOptions, GraftFreshness, GraftMode } from "./types.js";
+import type { GraftDeepModel, GraftExtensionOptions, GraftFreshness, GraftMode } from "./types.js";
 import { resolveGraftCli } from "./upstream.js";
 
 export const GRAFT_EXTENSION_NAME = "@arnilo/prism-memory/graft";
+
+/** `deepModel` merged over `providerEnv` — both filtered to `GRAFT_*`; deepModel wins on conflict. */
+export function deepProviderEnv(
+  deepModel: GraftDeepModel | undefined,
+  providerEnv: Readonly<Record<string, string>> | undefined,
+): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(providerEnv ?? {})) {
+    if (/^GRAFT_[A-Z0-9_]+$/.test(key)) env[key] = value;
+  }
+  if (deepModel) {
+    env.GRAFT_PROVIDER = deepModel.provider;
+    env.GRAFT_MODEL = deepModel.model;
+    env.GRAFT_API_KEY = deepModel.apiKey;
+    if (deepModel.baseUrl) env.GRAFT_BASE_URL = deepModel.baseUrl;
+  }
+  return env;
+}
 
 /** Resolve options to concrete values (single source for setup and tests). */
 export function resolveExtension(options: GraftExtensionOptions) {
@@ -24,7 +50,7 @@ export function resolveExtension(options: GraftExtensionOptions) {
   });
   const childEnvOptions = {
     allowUpstreamTelemetry: options.allowUpstreamTelemetry,
-    providerEnv: options.providerEnv,
+    providerEnv: deepProviderEnv(options.deepModel, options.providerEnv),
   };
   return {
     cli,
@@ -34,6 +60,10 @@ export function resolveExtension(options: GraftExtensionOptions) {
     maxResultBytes: options.maxResultBytes ?? DEFAULT_MAX_RESULT_BYTES,
     env: childEnv(childEnvOptions),
     cliOptions: childEnvOptions,
+    buildTimeoutMs: childTimeoutMs(options.buildBudgetMs, DEFAULT_BUILD_BUDGET_MS),
+    deepBuildTimeoutMs: childTimeoutMs(options.deepBuildBudgetMs, DEFAULT_DEEP_BUILD_BUDGET_MS),
+    buildMaxResultBytes: options.buildMaxResultBytes ?? DEFAULT_BUILD_MAX_RESULT_BYTES,
+    init: { agents: options.initAgents ?? [], yes: options.initYes === true, wireMcp: options.initWireMcp === true },
   };
 }
 
@@ -72,6 +102,10 @@ export function createGraftExtension(options: GraftExtensionOptions): Extension 
         timeoutMs: resolved.timeoutMs,
         maxResultBytes: resolved.maxResultBytes,
         childEnv: resolved.env,
+        buildTimeoutMs: resolved.buildTimeoutMs,
+        deepBuildTimeoutMs: resolved.deepBuildTimeoutMs,
+        buildMaxResultBytes: resolved.buildMaxResultBytes,
+        init: resolved.init,
         getEntries: options.getEntries,
         appendEntry: (entry, appendOptions) => options.appendEntry(entry, { expectedParentId: appendOptions?.expectedParentId }),
         emitStatus,

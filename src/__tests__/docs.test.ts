@@ -647,7 +647,7 @@ describe("docs", () => {
     const roadmap = readFileSync("roadmap.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.5", "root manifest must be at the 0.5.5 lockstep bump version");
+    assert.equal(pkg.version, "0.5.6", "root manifest must be at the 0.5.6 lockstep bump version");
     assert.ok(release.includes("### 0.2.7 publish handoff (plan 027 Task 10)"), "release page missing 0.2.7 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.7 handoff missing rollback notes");
     // Semantic tripwire: the nine 0.2.7 ERP roadmap items are present in the handoff
@@ -684,7 +684,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.5", "root manifest must be at the 0.5.5 lockstep bump version");
+    assert.equal(pkg.version, "0.5.6", "root manifest must be at the 0.5.6 lockstep bump version");
     assert.ok(release.includes("### 0.2.8 publish handoff (plan 028 Task 18)"), "release page missing 0.2.8 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.8 handoff missing rollback notes");
     assert.ok(release.includes("client-neutrality"), "0.2.8 handoff must cover client-neutrality");
@@ -713,7 +713,7 @@ describe("docs", () => {
     const roadmap = readFileSync("roadmap.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.5", "root manifest must be at the 0.5.5 lockstep bump version");
+    assert.equal(pkg.version, "0.5.6", "root manifest must be at the 0.5.6 lockstep bump version");
     assert.ok(release.includes("### 0.2.9 publish handoff (plan 029 Task 10)"), "release page missing 0.2.9 handoff");
     assert.ok(release.includes("SuperGrok"), "0.2.9 handoff must cover SuperGrok");
     assert.ok(release.includes("@arnilo/prism-impeccable"), "0.2.9 handoff must name impeccable");
@@ -740,7 +740,7 @@ describe("docs", () => {
     const roadmap = readFileSync("roadmap.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.5", "root manifest must be at the 0.5.5 lockstep bump version");
+    assert.equal(pkg.version, "0.5.6", "root manifest must be at the 0.5.6 lockstep bump version");
     assert.ok(release.includes("### 0.2.6 publish handoff (plan 026 Task 8)"), "release page missing 0.2.6 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.6 handoff missing rollback notes");
     // Semantic tripwire: the seven 0.2.6 roadmap items are present in the handoff
@@ -912,7 +912,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes(`@arnilo/prism@^${pkg.version}`), `release page peer range must be ^${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.equal(pkg.version, "0.5.5", "root manifest must be at the 0.5.5 lockstep bump version");
+    assert.equal(pkg.version, "0.5.6", "root manifest must be at the 0.5.6 lockstep bump version");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -3878,7 +3878,7 @@ describe("docs", () => {
     const compaction = readFileSync("docs/compaction-llm.md", "utf8");
     const migrate = readFileSync("docs/migrate-to-0.5.md", "utf8");
     const opencode = readFileSync("docs/providers/opencode-go.md", "utf8");
-    assert.ok(index.includes("Current line (0.5.5)"), "docs/index.md current line must be 0.5.5");
+    assert.ok(index.includes("Current line (0.5.6)"), "docs/index.md current line must be 0.5.6");
     assert.ok(packages.includes("never required for success"), "provider-packages.md missing overlay contract");
     assert.ok(
       !packages.includes("api.registerProviderRequestPolicy(createSessionCachePolicy"),
