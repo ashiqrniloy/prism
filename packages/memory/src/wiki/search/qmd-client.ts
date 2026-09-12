@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import type { QmdSearchResult, SearchMode } from "../types.js";
 
@@ -118,7 +118,7 @@ export class QmdClient {
     const lowerQuery = query.toLowerCase();
     const queryTokens = lowerQuery.split(/\s+/).filter(Boolean);
 
-    const entitiesDir = join(this.workspaceRoot, this.wikiRoot, "entities");
+    const entitiesDir = resolve(this.workspaceRoot, this.wikiRoot, "entities");
     let files: string[] = [];
     try {
       files = await readdir(entitiesDir);

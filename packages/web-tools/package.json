@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-web-tools",
-  "version": "0.5.6",
+  "version": "0.6.0",
   "description": "Unified web tools family for Prism: bounded Brave/Exa/Firecrawl web research, Playwright browser automation with egress policy and quarantine, and Obscura browser-engine tools over a host-installed binary.",
   "type": "module",
   "main": "./dist/index.js",
@@ -47,9 +47,9 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.5.6",
-    "@arnilo/prism-mcp": "^0.5.6",
-    "playwright-core": "1.61.0"
+    "@arnilo/prism": "^0.6.0",
+    "@arnilo/prism-mcp": "^0.6.0",
+    "playwright-core": "1.63.0"
   },
   "peerDependenciesMeta": {
     "playwright-core": {
@@ -60,10 +60,10 @@
     "@arnilo/prism": "file:../..",
     "@arnilo/prism-core": "file:../prism-core",
     "@arnilo/prism-mcp": "file:../mcp",
-    "playwright-core": "1.61.0"
+    "playwright-core": "1.63.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "license": "MIT",
   "repository": {

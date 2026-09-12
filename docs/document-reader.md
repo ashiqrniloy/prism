@@ -1,5 +1,7 @@
 # Document reader (`@arnilo/prism-coding-tools/document-reader`)
 
+> **Optional peer install:** `pdf-parse` and/or `mammoth` — see [Optional peer dependencies](peer-dependencies.md).
+
 ## What it does
 
 Optional bounded literal-text extraction for PDF and DOCX files, consumed by the coding `read` tool (plan 018 closeout `doc-reader`, 0.1.6). `createDocumentReader()` returns a `DocumentReader` that the host wires into `createReadTool(cwd, { documentReader })`; the read tool then extracts text from supported documents instead of falling back to the raw text page.

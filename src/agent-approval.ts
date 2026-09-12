@@ -59,8 +59,9 @@ export function assertValidAgentRunResume(resume: AgentRunResume): void {
   if (!Number.isSafeInteger(resume.expectedVersion) || resume.expectedVersion <= 0) {
     throw invalid("Resume expectedVersion must be a positive safe integer");
   }
+  const decisions = resume.decisions;
   const hasDecision = resume.decision !== undefined;
-  const hasDecisions = resume.decisions !== undefined;
+  const hasDecisions = decisions !== undefined;
   if (hasDecision && hasDecisions) throw invalid("Resume accepts exactly one of decision or decisions");
   if (!hasDecision && !hasDecisions) throw invalid("Resume requires a decision or decisions");
   if (hasDecision) {
@@ -69,7 +70,6 @@ export function assertValidAgentRunResume(resume: AgentRunResume): void {
     }
     return;
   }
-  const decisions = resume.decisions!;
   if (!Array.isArray(decisions)) throw invalid("Decision batch must be an array");
   if (decisions.length === 0) throw invalid("Decision batch must not be empty");
   if (decisions.length > HARD_MAX_PENDING_DECISIONS) {
@@ -278,14 +278,12 @@ export function decisionScopesEqual(a: DecisionScope, b: DecisionScope): boolean
   if (a.toolName !== b.toolName || a.argumentsHash !== b.argumentsHash || a.effectKind !== b.effectKind || a.identity !== b.identity)
     return false;
   if (a.actionConstraints === undefined || b.actionConstraints === undefined) return a.actionConstraints === b.actionConstraints;
-  const keys = Object.keys(a.actionConstraints);
+  const aConstraints = a.actionConstraints;
+  const bConstraints = b.actionConstraints;
+  const keys = Object.keys(aConstraints);
   return (
-    keys.length === Object.keys(b.actionConstraints).length &&
-    keys.every(
-      (key) =>
-        key in b.actionConstraints! &&
-        canonicalToolEffectJson(a.actionConstraints![key]!) === canonicalToolEffectJson(b.actionConstraints![key]!),
-    )
+    keys.length === Object.keys(bConstraints).length &&
+    keys.every((key) => key in bConstraints && canonicalToolEffectJson(aConstraints[key]) === canonicalToolEffectJson(bConstraints[key]))
   );
 }
 

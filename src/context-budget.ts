@@ -9,11 +9,23 @@ import {
   skillPromptText,
 } from "./skill-disclosure.js";
 
+/**
+ * Host-supplied token estimator. Budget-only: it never reaches billing, provider
+ * usage, or the wire — it decides what the assembler evicts and nothing else.
+ */
+export type TokenEstimator = (text: string) => number;
+
 /** Assembler-time input budget. At least one max required when present. */
 export interface ContextBudget {
   readonly maxInputTokens?: number;
   readonly maxInputBytes?: number;
   readonly reportOmissions?: boolean;
+  /**
+   * Overrides the built-in UTF-16/4 heuristic for eviction accounting. Must return a
+   * non-negative finite token count (a NaN/negative/absent return fails the assembly
+   * closed with a `TypeError`). Byte caps are estimator-independent and always enforced.
+   */
+  readonly tokenEstimator?: TokenEstimator;
 }
 
 export type ContextBudgetOmissionKind =
@@ -79,8 +91,8 @@ export function estimateTextBytes(text: string): number {
   return Buffer.byteLength(text, "utf8");
 }
 
-export function estimateMessageTokens(message: Message): number {
-  return estimateTextTokens(messageText(message));
+export function estimateMessageTokens(message: Message, estimateTokens: TokenEstimator = estimateTextTokens): number {
+  return estimateTokens(messageText(message));
 }
 
 export function estimateMessageBytes(message: Message): number {
@@ -99,6 +111,9 @@ export function resolveContextBudget(budget: ContextBudget): Required<Pick<Conte
   }
   if (hasTokens) assertPositiveCap(budget.maxInputTokens!, "maxInputTokens", HARD_MAX_CONTEXT_BUDGET_TOKENS);
   if (hasBytes) assertPositiveCap(budget.maxInputBytes!, "maxInputBytes", HARD_MAX_CONTEXT_BUDGET_BYTES);
+  if (budget.tokenEstimator !== undefined && typeof budget.tokenEstimator !== "function") {
+    throw new TypeError("contextBudget.tokenEstimator must be a function");
+  }
   return { ...budget, reportOmissions: budget.reportOmissions === true };
 }
 
@@ -125,6 +140,7 @@ export function applyContextBudget(options: {
   readonly report: ContextBudgetReport;
 } {
   const budget = resolveContextBudget(options.budget);
+  const estimateTokens = resolveTokenEstimator(budget);
   const layout = options.layout ?? "cache_aware";
   const groups = {
     instructions: [...options.groups.instructions],
@@ -144,9 +160,9 @@ export function applyContextBudget(options: {
 
   // Measure once, then subtract each dropped item's own estimate (dropNext computes it
   // with the same estimators) — avoids an O(n²) re-scan of the full keep-set per drop.
-  const kept = measureAll(groups, context, skills, tools, skillContext, demotedBodies);
+  const kept = measureAll(groups, context, skills, tools, skillContext, demotedBodies, estimateTokens);
   while (overBudget(kept, budget)) {
-    const drop = dropNext(groups, context, skills, layout, skillContext, demotedBodies, historyCursor);
+    const drop = dropNext(groups, context, skills, layout, skillContext, demotedBodies, historyCursor, estimateTokens);
     if (!drop) {
       throw new ContextBudgetError();
     }
@@ -189,6 +205,7 @@ function dropNext(
   skillContext: SkillRenderContext,
   demotedBodies: Set<string>,
   historyCursor: { index: number },
+  estimateTokens: TokenEstimator,
 ): ContextBudgetOmission | undefined {
   // ponytail: drop droppable groups in layout order; within history, advance a cursor and slice once.
   // cache_aware keeps attachments longer so stable prefix stays intact while budget still allows it.
@@ -200,19 +217,19 @@ function dropNext(
   for (const kind of order) {
     if (kind === "tool_results" && groups.toolResults.length > 0) {
       const message = groups.toolResults.pop()!;
-      return omission("tool_results", message.id ?? toolResultId(message), message);
+      return omission("tool_results", message.id ?? toolResultId(message), message, estimateTokens);
     }
     if (kind === "history" && historyCursor.index < groups.history.length) {
       const message = groups.history[historyCursor.index++]!;
-      return omission("history", message.id, message);
+      return omission("history", message.id, message, estimateTokens);
     }
     if (kind === "summaries" && groups.summaries.length > 0) {
       const message = groups.summaries.pop()!;
-      return omission("summaries", message.id, message);
+      return omission("summaries", message.id, message, estimateTokens);
     }
     if (kind === "attachments" && groups.attachments.length > 0) {
       const message = groups.attachments.pop()!;
-      return omission("attachments", message.id, message);
+      return omission("attachments", message.id, message, estimateTokens);
     }
     if (kind === "context" && context.length > 0) {
       const index = pickVictimIndex(context, (block) => block.priority ?? 0);
@@ -221,7 +238,7 @@ function dropNext(
       return {
         kind: "context",
         id: block.id ?? block.title,
-        tokenEstimate: estimateTextTokens(text),
+        tokenEstimate: estimateTokens(text),
         byteLength: estimateTextBytes(text),
       };
     }
@@ -236,7 +253,7 @@ function dropNext(
         return {
           kind: "skill_body",
           id: skill.name,
-          tokenEstimate: estimateTextTokens(beforeText) - estimateTextTokens(afterText),
+          tokenEstimate: estimateTokens(beforeText) - estimateTokens(afterText),
           byteLength: estimateTextBytes(beforeText) - estimateTextBytes(afterText),
         };
       }
@@ -246,7 +263,7 @@ function dropNext(
       return {
         kind: "skills",
         id: skill.name,
-        tokenEstimate: estimateTextTokens(text),
+        tokenEstimate: estimateTokens(text),
         byteLength: estimateTextBytes(text),
       };
     }
@@ -254,12 +271,35 @@ function dropNext(
   return undefined;
 }
 
-function omission(kind: ContextBudgetOmissionKind, id: string | undefined, message: Message): ContextBudgetOmission {
+function omission(
+  kind: ContextBudgetOmissionKind,
+  id: string | undefined,
+  message: Message,
+  estimateTokens: TokenEstimator,
+): ContextBudgetOmission {
   return {
     kind,
     id,
-    tokenEstimate: estimateMessageTokens(message),
+    tokenEstimate: estimateMessageTokens(message, estimateTokens),
     byteLength: estimateMessageBytes(message),
+  };
+}
+
+/**
+ * Resolves the budget's estimator, validating each return value: a host estimator that
+ * yields NaN/negative/non-finite tokens would make every eviction decision unsound, so it
+ * fails the assembly closed instead of silently keeping or dropping the wrong content.
+ */
+function resolveTokenEstimator(budget: ContextBudget): TokenEstimator {
+  const estimator = budget.tokenEstimator;
+  if (estimator === undefined) return estimateTextTokens;
+  if (typeof estimator !== "function") throw new TypeError("contextBudget.tokenEstimator must be a function");
+  return (text) => {
+    const tokens = estimator(text);
+    if (typeof tokens !== "number" || !Number.isFinite(tokens) || tokens < 0) {
+      throw new TypeError("contextBudget.tokenEstimator must return a non-negative finite number of tokens");
+    }
+    return tokens;
   };
 }
 
@@ -275,12 +315,13 @@ function measureAll(
   tools: readonly ToolDefinition[] | undefined,
   skillContext: SkillRenderContext,
   demotedBodies: ReadonlySet<string>,
+  estimateTokens: TokenEstimator,
 ): { tokens: number; bytes: number } {
   const renderContext = withDemoted(skillContext, demotedBodies);
   let tokens = 0;
   let bytes = 0;
   const addMessage = (message: Message) => {
-    tokens += estimateMessageTokens(message);
+    tokens += estimateMessageTokens(message, estimateTokens);
     bytes += estimateMessageBytes(message);
   };
   for (const message of groups.instructions) addMessage(message);
@@ -291,17 +332,17 @@ function measureAll(
   for (const message of groups.toolResults) addMessage(message);
   for (const block of context) {
     const text = `${block.title ? `${block.title}:\n` : "Context:\n"}${contextBlockText(block)}`;
-    tokens += estimateTextTokens(text);
+    tokens += estimateTokens(text);
     bytes += estimateTextBytes(text);
   }
   for (const skill of skills) {
     const text = skillPromptText(skill, renderContext) ?? "";
-    tokens += estimateTextTokens(text);
+    tokens += estimateTokens(text);
     bytes += estimateTextBytes(text);
   }
   if (tools?.length) {
     const text = `Available tools:\n${tools.map((tool) => `- ${tool.name}${tool.description ? `: ${tool.description}` : ""}`).join("\n")}`;
-    tokens += estimateTextTokens(text);
+    tokens += estimateTokens(text);
     bytes += estimateTextBytes(text);
   }
   return { tokens, bytes };

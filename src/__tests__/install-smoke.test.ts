@@ -103,12 +103,12 @@ before(() => {
   // adapter; the composition leg exercises that adapter, so the host supplies it
   // (exactly like playwright-core for /browser). It is in the root devDeps, so
   // the offline install resolves it from the local cache with no registry hit.
-  const installArgs = ["install", ...tarballs, "@ai-sdk/provider@4.0.10", "--offline", "--no-audit", "--no-fund", "--no-update-notifier"];
+  const installArgs = ["install", ...tarballs, "@ai-sdk/provider@4.0.13", "--offline", "--no-audit", "--no-fund", "--no-update-notifier"];
   let install = run("npm", installArgs, consumer);
   if (install.status !== 0) {
     // Fallback: cold cache or offline-unfriendly environment; no runtime deps
     // means this still makes zero registry fetches.
-    install = run("npm", ["install", ...tarballs, "@ai-sdk/provider@4.0.10", "--no-audit", "--no-fund", "--no-update-notifier"], consumer);
+    install = run("npm", ["install", ...tarballs, "@ai-sdk/provider@4.0.13", "--no-audit", "--no-fund", "--no-update-notifier"], consumer);
   }
   result.installStatus = install.status;
   if (install.status !== 0) {
@@ -837,21 +837,27 @@ describe("peer-version policy (plan 030 Task 9, Decision B: caret ranges)", () =
   const stage = mkdtempSync(join(tmpdir(), "prism-peer-mix-"));
   after(() => rmSync(stage, { recursive: true, force: true }));
 
-  it("a peer range outside the 0.5.x window fails clearly with npm ERESOLVE", () => {
-    // Fake next-minor adapter: coding-tools with version + core peer outside
-    // the current caret window — the only difference from the real tarball.
-    const fakeVersion = "0.6.0";
+  it(`a peer range outside the ${ROOT_VERSION.split(".").slice(0, 2).join(".")}.x window fails clearly with npm ERESOLVE`, () => {
+    // Fake next-minor adapter: coding-tools with version + @arnilo/prism peer
+    // outside the current caret window — the only difference from the real tarball.
+    // The range is derived from the root version: hardcoding the "next minor" let a
+    // release catch up with the fixture (0.6.0 was outside the window until it became
+    // the current version, at which point the peer was satisfiable and the install
+    // failed later with ETARGET on the unpublished @arnilo/prism-core dependency).
+    const [major, minor] = ROOT_VERSION.split(".").map((part: string) => Number(part));
+    const fakeVersion = `${major}.${minor + 1}.0`;
     const fakeDir = join(stage, "fake");
     cpSync(join(repoRoot, "packages", "prism-coding-tools"), fakeDir, { recursive: true });
     const manifestPath = join(fakeDir, "package.json");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     manifest.version = fakeVersion;
-    manifest.peerDependencies["@arnilo/prism"] = "^0.6.0";
+    manifest.peerDependencies["@arnilo/prism"] = `^${fakeVersion}`;
     writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     for (const [cwd, dest] of [
       [fakeDir, stage],
       [repoRoot, stage],
-    ]) {
+      [join(repoRoot, "packages", "prism-core"), stage],
+    ] as const) {
       const pack = run("npm", ["pack", "--pack-destination", dest], cwd);
       assert.equal(pack.status, 0, pack.stdout + pack.stderr);
     }
@@ -873,6 +879,10 @@ describe("peer-version policy (plan 030 Task 9, Decision B: caret ranges)", () =
       [
         "install",
         join(stage, `arnilo-prism-coding-tools-${fakeVersion}.tgz`),
+        // The fake's own `@arnilo/prism-core` dependency: the current line is not on
+        // the registry while a cut is being prepared, so hand npm the packed one and
+        // let the peer conflict be the failure under test.
+        join(stage, `arnilo-prism-core-${ROOT_VERSION}.tgz`),
         "--offline",
         "--no-audit",
         "--no-fund",
@@ -883,8 +893,8 @@ describe("peer-version policy (plan 030 Task 9, Decision B: caret ranges)", () =
     assert.notEqual(mix.status, 0, "an unsupported peer mixture must fail the install");
     assert.ok(mix.stderr.includes("ERESOLVE"), `expected npm ERESOLVE, got:\n${mix.stdout}${mix.stderr}`);
     assert.ok(
-      mix.stderr.includes('@arnilo/prism@"^0.6.0"'),
-      `expected the conflicting ^0.6.0 peer named, got:\n${mix.stdout}${mix.stderr}`,
+      mix.stderr.includes(`@arnilo/prism@"^${fakeVersion}"`),
+      `expected the conflicting ^${fakeVersion} peer named, got:\n${mix.stdout}${mix.stderr}`,
     );
   });
 });

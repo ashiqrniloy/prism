@@ -156,6 +156,18 @@ test("profile closures match manifests", () => {
   }
 });
 
+test("engines floor lockstep: every workspace manifest declares the root engines floor", () => {
+  // Plan 071 Task 2: the support floor is a host-visible contract, so a package
+  // drifting to a looser engines.node (or a stale floor after a raise) fails here.
+  const root = readManifest(join(ROOT, "package.json"));
+  const dirs = expandWorkspaceDirs(ROOT, root.workspaces);
+  assert.ok(dirs.length > 0, "workspace globs must match at least one package");
+  for (const dir of dirs) {
+    const manifest = readManifest(join(dir, "package.json"));
+    assert.equal(manifest.engines?.node, root.engines.node, `${manifest.name} must declare the root engines floor ${root.engines.node}`);
+  }
+});
+
 test("peer policy Decision B: all code packages peer the caret current line", () => {
   const t = computePackageTruth();
   const root = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
@@ -168,7 +180,8 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
   const secondPeers = {};
   for (const p of codeWithPeer) {
     const spec = p.peerDependencies["@arnilo/prism"];
-    assert.equal(spec, "^0.5.6", `${p.name} must peer @arnilo/prism@^0.5.6, got ${spec}`);
+    // Plan 071 Task 1 (plan 070 FA 10): the caret tracks the computed root version.
+    assert.equal(spec, `^${t.root.version}`, `${p.name} must peer @arnilo/prism@^${t.root.version}, got ${spec}`);
     assert.match(spec, /^\^\d+\.\d+\.\d+$/, `${p.name} peer spec must be a 0.x caret range, got ${spec}`);
     const extra = Object.keys(p.peerDependencies).filter((n) => n.startsWith("@arnilo/prism-"));
     if (extra.length > 0) secondPeers[p.name] = extra;

@@ -21,6 +21,8 @@ npm install pg
 npm install @nats-io/jetstream @nats-io/transport-node
 ```
 
+Every peer below is optional and fails closed at first use; the [optional peer dependencies](peer-dependencies.md) matrix lists the exact ranges, pins, and which of them reach the network.
+
 ## Subpaths Map
 
 | Subpath | Description | Optional Peers |

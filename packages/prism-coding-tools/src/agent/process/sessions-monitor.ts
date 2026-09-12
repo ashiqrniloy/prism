@@ -11,7 +11,7 @@ import {
   releaseRecordLease,
   saveProcessRecoveryRecord,
 } from "./recovery.js";
-import { isTerminalState, nowIso, type SessionRecord, type SessionsHost } from "./sessions-host.js";
+import { durableSeams, isTerminalState, nowIso, type SessionRecord, type SessionsHost } from "./sessions-host.js";
 
 // Durable transition write: fire-and-forget CAS (fence/version conflicts mean
 // another replica moved the record first — the newer state wins). The crash
@@ -19,6 +19,7 @@ import { isTerminalState, nowIso, type SessionRecord, type SessionsHost } from "
 // recovery to attach/terminal/unknown, never a duplicate spawn.
 export function persistTransition(host: SessionsHost, record: SessionRecord): void {
   if (!host.durable || record.recoveryVersion === 0) return;
+  const seams = durableSeams(host);
   const next = buildProcessRecoveryRecord({
     id: record.id,
     owner: record.owner,
@@ -41,7 +42,7 @@ export function persistTransition(host: SessionsHost, record: SessionRecord): vo
   const write = async (): Promise<void> => {
     try {
       await saveProcessRecoveryRecord({
-        checkpoints: host.checkpoints!,
+        checkpoints: seams.checkpoints,
         record: next,
         expectedVersion,
         version: record.recoveryVersion,
@@ -59,20 +60,20 @@ export function persistTransition(host: SessionsHost, record: SessionRecord): vo
     if (isTerminalState(record.state)) {
       if (record.recoveryLeaseToken) {
         void releaseRecordLease({
-          leases: host.leases!,
+          leases: seams.leases,
           id: record.id,
-          ownerId: host.ownerId!,
+          ownerId: seams.ownerId,
           token: record.recoveryLeaseToken,
           ownership: host.ownership,
         });
         record.recoveryLeaseToken = undefined;
       }
     } else if (record.recoveryLeaseToken) {
-      void host
-        .leases!.renewLease({
+      void seams.leases
+        .renewLease({
           namespace: PROCESS_RECOVERY_LEASE_NAMESPACE,
           key: `recover:${record.id}`,
-          ownerId: host.ownerId!,
+          ownerId: seams.ownerId,
           token: record.recoveryLeaseToken,
           ttlMs: host.recoveryLimits.leaseTtlMs,
           ...host.ownership,
@@ -93,9 +94,10 @@ export function persistTransition(host: SessionsHost, record: SessionRecord): vo
 // are never evicted). Best effort, bounded work.
 export async function evictRecoveryOverflow(host: SessionsHost): Promise<void> {
   if (!host.durable) return;
+  const seams = durableSeams(host);
   try {
     const page = await loadProcessRecoveryRecords({
-      checkpoints: host.checkpoints!,
+      checkpoints: seams.checkpoints,
       limits: { ...host.recoveryLimits, maxRecords: host.recoveryLimits.maxRecords + 1 },
       ownership: host.ownership,
     });
@@ -105,7 +107,7 @@ export async function evictRecoveryOverflow(host: SessionsHost): Promise<void> {
     for (const { record } of [...page.records].reverse()) {
       if (evicted >= overflow) break;
       if (record.state === "running" || record.state === "starting") continue;
-      await deleteProcessRecoveryRecord({ checkpoints: host.checkpoints!, id: record.id, ownership: host.ownership });
+      await deleteProcessRecoveryRecord({ checkpoints: seams.checkpoints, id: record.id, ownership: host.ownership });
       evicted += 1;
     }
   } catch {
@@ -122,9 +124,10 @@ export async function persistRecoveryUnknown(
   signal?: AbortSignal,
 ): Promise<boolean> {
   const next = buildProcessRecoveryRecord({ ...current, state: "unknown", exitCode: null, updatedAt: nowIso() });
+  const seams = durableSeams(host);
   try {
     await saveProcessRecoveryRecord({
-      checkpoints: host.checkpoints!,
+      checkpoints: seams.checkpoints,
       record: next,
       expectedVersion: version,
       version: version + 1,

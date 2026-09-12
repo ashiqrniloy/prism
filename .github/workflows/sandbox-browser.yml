@@ -34,16 +34,14 @@ jobs:
       - name: build coding/browser packages
         run: |
           npm run build:core
+          npm run build -w @arnilo/prism-core
           npm run build -w @arnilo/prism-ag-ui
-          npm run build -w @arnilo/prism-evals
-          npm run build -w @arnilo/prism-workflows
-          npm run build -w @arnilo/prism-coding-agent
           npm run build -w @arnilo/prism-coding-tools
           npm run build -w @arnilo/prism-web-tools
-          npm run build -w @arnilo/prism-diagrams
+          npm run build -w @arnilo/prism-office
       - name: network-free adversarial eval fixtures
         run: |
-          npm test -w @arnilo/prism-coding-agent -- --test-name-pattern "adversarial"
+          npm test -w @arnilo/prism-coding-tools -- --test-name-pattern "adversarial"
           npm test -w @arnilo/prism-web-tools -- --test-name-pattern "adversarial"
       - name: sandbox isolation + egress denial legs (network-free)
         run: |
@@ -89,10 +87,13 @@ jobs:
           echo "0.2.0 blocker gate: Docker + native capability evidence present"
       - name: cache Playwright chromium
         if: ${{ vars.PRISM_ENABLE_PLAYWRIGHT_GATE == '1' }}
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-chromium-1.61.0
+          # Key follows the playwright-core that `npm ci` actually installed (the
+          # browser build is version-coupled to it), so a dependency bump rotates the
+          # cache without a literal version string to sweep. Plan 071 Task 4.
+          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('node_modules/playwright-core/package.json') }}
       - name: install Playwright chromium (host-pinned)
         if: ${{ vars.PRISM_ENABLE_PLAYWRIGHT_GATE == '1' }}
         run: npx --no-install playwright-core install chromium
@@ -116,7 +117,12 @@ jobs:
         timeout-minutes: 5
         env:
           PRISM_TEST_DRAWIO_URL: ${{ vars.PRISM_TEST_DRAWIO_URL || 'http://localhost:8080' }}
-        run: npm run test:drawio -w @arnilo/prism-diagrams
+          # The draw.io suite lives in @arnilo/prism-office (packages/office, diagrams)
+          # and is owned by the live matrix, which resolves credentials and skips or
+          # fails per its contract; the retired @arnilo/prism-diagrams package's
+          # `test:drawio` script no longer exists. Plan 071 Task 4.
+          PRISM_LIVE_FILTER: office/drawio-live
+        run: node scripts/live-matrix.mjs
       - name: benchmark schema (network-free)
         env:
           PRISM_BENCH_ITERATIONS: "10"

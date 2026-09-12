@@ -71,12 +71,12 @@ ConfigLayer	export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from 
 ConfigLoadContext	export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from "./config.js"
 ConfigProvider	export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from "./config.js"
 ConsumeTenantQuotaInput	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
-ContextBudget	export type { ContextBudget, ContextBudgetMessageGroups, ContextBudgetOmission, ContextBudgetOmissionKind, ContextBudgetReport, } from "./context-budget.js"
+ContextBudget	export type { ContextBudget, ContextBudgetMessageGroups, ContextBudgetOmission, ContextBudgetOmissionKind, ContextBudgetReport, TokenEstimator, } from "./context-budget.js"
 ContextBudgetError	export declare class ContextBudgetError extends Error
-ContextBudgetMessageGroups	export type { ContextBudget, ContextBudgetMessageGroups, ContextBudgetOmission, ContextBudgetOmissionKind, ContextBudgetReport, } from "./context-budget.js"
-ContextBudgetOmission	export type { ContextBudget, ContextBudgetMessageGroups, ContextBudgetOmission, ContextBudgetOmissionKind, ContextBudgetReport, } from "./context-budget.js"
-ContextBudgetOmissionKind	export type { ContextBudget, ContextBudgetMessageGroups, ContextBudgetOmission, ContextBudgetOmissionKind, ContextBudgetReport, } from "./context-budget.js"
-ContextBudgetReport	export type { ContextBudget, ContextBudgetMessageGroups, ContextBudgetOmission, ContextBudgetOmissionKind, ContextBudgetReport, } from "./context-budget.js"
+ContextBudgetMessageGroups	export type { ContextBudget, ContextBudgetMessageGroups, ContextBudgetOmission, ContextBudgetOmissionKind, ContextBudgetReport, TokenEstimator, } from "./context-budget.js"
+ContextBudgetOmission	export type { ContextBudget, ContextBudgetMessageGroups, ContextBudgetOmission, ContextBudgetOmissionKind, ContextBudgetReport, TokenEstimator, } from "./context-budget.js"
+ContextBudgetOmissionKind	export type { ContextBudget, ContextBudgetMessageGroups, ContextBudgetOmission, ContextBudgetOmissionKind, ContextBudgetReport, TokenEstimator, } from "./context-budget.js"
+ContextBudgetReport	export type { ContextBudget, ContextBudgetMessageGroups, ContextBudgetOmission, ContextBudgetOmissionKind, ContextBudgetReport, TokenEstimator, } from "./context-budget.js"
 ContributionRegistries	export type { ContributionRegistries, ContributionRegistriesOptions, ContributionRegistry, ContributionRegistryOptions, } from "./contributions.js"
 ContributionRegistriesOptions	export type { ContributionRegistries, ContributionRegistriesOptions, ContributionRegistry, ContributionRegistryOptions, } from "./contributions.js"
 ContributionRegistry	export type { ContributionRegistries, ContributionRegistriesOptions, ContributionRegistry, ContributionRegistryOptions, } from "./contributions.js"
@@ -141,6 +141,7 @@ DEFAULT_PROVIDER_MEDIA_ITEM_BYTES	export declare const DEFAULT_PROVIDER_MEDIA_IT
 DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES	export declare const DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES = 32
 DEFAULT_RUN_LIMITS	export declare const DEFAULT_RUN_LIMITS: Readonly<
 DEFAULT_SESSION_SEARCH_LIMIT	export declare const DEFAULT_SESSION_SEARCH_LIMIT = 20
+DEFAULT_SNAPSHOT_CACHE_TTL_MS	export declare const DEFAULT_SNAPSHOT_CACHE_TTL_MS = 1000
 DEFAULT_TOOLS_SEARCH_TOP_K	export declare const DEFAULT_TOOLS_SEARCH_TOP_K = 16
 DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 512
 DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS	export declare const DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS = 2
@@ -167,6 +168,7 @@ DocumentContent	export type { AudioContent, DocumentContent, FileContent } from 
 DuplicateRegistrationOptions	export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js"
 DuplicateRegistrationPolicy	export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js"
 EMPTY_SKILL_DESCRIPTION	export declare const EMPTY_SKILL_DESCRIPTION: "(no description)"
+EMPTY_TOOL_RESULT_TEXT	export declare const EMPTY_TOOL_RESULT_TEXT = "(tool completed with no output)"
 EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE	export declare const EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE = "ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER"
 EmbeddingsError	export declare class EmbeddingsError extends Error
 EventMultiplexer	export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js"
@@ -234,6 +236,7 @@ HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES	export declare const HARD_MAX_SESSION_SEAR
 HARD_MAX_SKILL_CATALOG_ENTRIES	export declare const HARD_MAX_SKILL_CATALOG_ENTRIES = 256
 HARD_MAX_SKILL_DESCRIPTION_BYTES	export declare const HARD_MAX_SKILL_DESCRIPTION_BYTES = 4096
 HARD_MAX_SKILL_INSTRUCTION_BYTES	export declare const HARD_MAX_SKILL_INSTRUCTION_BYTES = 262144
+HARD_MAX_SNAPSHOT_CACHE_TTL_MS	export declare const HARD_MAX_SNAPSHOT_CACHE_TTL_MS = 30000
 HARD_MAX_STICKY_DECISIONS	export declare const HARD_MAX_STICKY_DECISIONS = 256
 HARD_MAX_TOOLS_INDEX	export declare const HARD_MAX_TOOLS_INDEX = 1024
 HARD_MAX_TOOLS_SEARCH_QUERY_BYTES	export declare const HARD_MAX_TOOLS_SEARCH_QUERY_BYTES = 65536
@@ -284,8 +287,8 @@ ManifestResourceDeclaration	export type { ManifestContributionDeclaration, Manif
 MediaContentBlock	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
 MediaContentBounds	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
 MediaContentError	export declare class MediaContentError extends Error
-MediaHostAddress	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
-MediaHostnameResolver	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
+MediaHostAddress	export type { MediaHostAddress, MediaHostnameResolver, SsrfPolicy } from "./media-types.js"
+MediaHostnameResolver	export type { MediaHostAddress, MediaHostnameResolver, SsrfPolicy } from "./media-types.js"
 MediaMimePolicy	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
 MediaUrlRequest	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
 MediaUrlRequester	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
@@ -395,7 +398,7 @@ SkillRegistryOptions	export type { ResolveActiveSkillsOptions, SkillRegistryOpti
 SkillRenderContext	export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js"
 SkillsDisclosure	export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js"
 SpeechError	export declare class SpeechError extends Error
-SsrfPolicy	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
+SsrfPolicy	export type { MediaHostAddress, MediaHostnameResolver, SsrfPolicy } from "./media-types.js"
 SteerSoftInterrupt	export declare class SteerSoftInterrupt extends Error
 StickyDecision	export type { ApprovalOutcome, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResumeNestedRun, RunDecision, RunLimitCounters, RunLimitName, SecureAgentOptions, StickyDecision, ToolCallAuthority, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotency, ToolEffectKey, ToolEffectKind, ToolEffectRecord, ToolEffectStatus, T
 StoredAgentRunState	export type { PendingToolCall, StoredAgentRunState } from "./agent-run-state.js"
@@ -406,6 +409,7 @@ TOOL_RESULT_FOLD_TURN_METADATA_KEY	export declare const TOOL_RESULT_FOLD_TURN_ME
 TenantQuota	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 ThinkingCompatFamily	export type { ThinkingCompatFamily, ThinkingLevel } from "./thinking.js"
 ThinkingLevel	export type { ThinkingCompatFamily, ThinkingLevel } from "./thinking.js"
+TokenEstimator	export type { ContextBudget, ContextBudgetMessageGroups, ContextBudgetOmission, ContextBudgetOmissionKind, ContextBudgetReport, TokenEstimator, } from "./context-budget.js"
 ToolArgumentValidationError	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
 ToolArgumentValidationResult	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
 ToolArgumentValidator	export type { DispatchToolCallOptions, ToolArgumentValidationError, ToolArgumentValidationResult, ToolArgumentValidator, ToolFilter, ToolFilterInput, ToolParameterValidatorOptions, ToolRegistryOptions, ToolValidator, } from "./tools.js"
@@ -635,7 +639,7 @@ errorFromInfo	export declare function errorFromInfo(error: ErrorInfo): Error
 errorToErrorInfo	export declare function errorToErrorInfo(error: unknown, secrets?: readonly (string | undefined)[]): ErrorInfo
 estimateAssemblyTokens	export declare function estimateAssemblyTokens(messages: readonly Message[]): number
 estimateMessageBytes	export declare function estimateMessageBytes(message: Message): number
-estimateMessageTokens	export declare function estimateMessageTokens(message: Message): number
+estimateMessageTokens	export declare function estimateMessageTokens(message: Message, estimateTokens?: TokenEstimator): number
 estimateTextBytes	export declare function estimateTextBytes(text: string): number
 estimateTextTokens	export declare function estimateTextTokens(text: string): number
 executeRun	export declare function executeRun(session: SessionHost, input: AgentInput, options: RunOptions, runId: string, resumed?: ActiveDurableRun): Promise<AgentRunResult>
@@ -661,7 +665,9 @@ initialAgentRunState	export declare function initialAgentRunState(input:
 inputMessages	export declare function inputMessages(input: AgentInput): Message[]
 inputToMessages	export declare function inputToMessages(input: AgentInput): Message[]
 isAgentLoopOptions	export declare function isAgentLoopOptions(value: AgentLoopStrategy | AgentLoopOptions | undefined): value is AgentLoopOptions
+isAllowedByCidr	export declare function isAllowedByCidr(hostname: string, allowedCidrs: readonly string[] | undefined): boolean
 isBatchJobTerminal	export declare function isBatchJobTerminal(job: Pick<BatchJob, "state">): boolean
+isBlockedIp	export declare function isBlockedIp(hostname: string): boolean
 isCompactionEntryData	export declare function isCompactionEntryData(value: unknown): value is CompactionEntryData
 isContextBudgetError	export declare function isContextBudgetError(error: unknown): error is ContextBudgetError
 isDurableLoop	export declare function isDurableLoop(loop: import("../contracts.js").AgentLoopStrategy | import("../contracts.js").AgentLoopOptions): boolean
@@ -901,8 +907,7 @@ validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(valu
 validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.5.6"
+version	export declare const version = "0.6.0"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]
-

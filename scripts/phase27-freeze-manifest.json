@@ -239,6 +239,19 @@
     "missingRequiredInfrastructure": "blocked",
     "missingRequiredInfrastructureIsPassingSkip": false,
     "environmentNamesOnly": true,
+    "blockedRecord": {
+      "template": "BLOCKED GATE <id> requires=<names> evidence=<surface> hint=<how to unblock>",
+      "owner": "scripts/blocked-gate.mjs",
+      "gateIds": [
+        "phase12-restart-recovery",
+        "phase22-conformance",
+        "phase26-recovery-conformance",
+        "phase26-pty-protected",
+        "phase27-dr",
+        "phase26-coding-journey"
+      ],
+      "$comment": "One record shape for every protected leg (plan 071 Task 14); scripts/phase27-freeze.test.mjs asserts this template equals the one scripts/blocked-gate.mjs emits. The DR drill printed 'DR DRILL FAILED: missing protected infrastructure —' before the change; the failure path (after the drill started) still reports the drill failure without a gate record."
+    },
     "requiredEnvNames": [
       "PRISM_TEST_POSTGRES_URL",
       "PRISM_TEST_NATS_URL",
@@ -425,5 +438,13 @@
     "drEvidenceFresh": true,
     "evidenceFile": "docs/_evidence/phase27-erp-journey.json",
     "blocker": "0.3.0 live-service matrix not yet recorded"
-  }
+  },
+  "deviations": [
+    {
+      "id": "dev-001",
+      "date": "2026-09-12",
+      "scope": "protectedPolicy blocked-gate message convention (plan 071 Task 14 / plan 070 FA 5)",
+      "change": "the DR drill's blocked path no longer prints 'DR DRILL FAILED: missing protected infrastructure — ...'. It fails closed through scripts/blocked-gate.mjs and prints the canonical single-line record 'BLOCKED GATE phase27-dr requires=PRISM_TEST_POSTGRES_URL,PRISM_DR_TARGET_URL,PRISM_PITR_URL evidence=docs/_evidence/phase27-dr-evidence.json hint=...' (env NAMES only, never values; still exit 1, never a passing skip). The post-start failure path keeps a static, taint-free message for CodeQL js/clear-text-logging (alert 67): 'dr drill failed: inspect the drill output above for the failing step.' The frozen policy claims are unchanged: missingRequiredInfrastructure=blocked and missingRequiredInfrastructureIsPassingSkip=false."
+    }
+  ]
 }

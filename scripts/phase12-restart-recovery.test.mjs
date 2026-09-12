@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { after, describe, it } from "node:test";
 import { Pool } from "pg";
 import { createPostgresPersistence } from "../packages/prism-core/dist/sessions/postgres/index.js";
+import { blockedGate } from "./blocked-gate.mjs";
 
 /**
  * Phase 12 protected restart-recovery evidence (plan 012 Task 4).
@@ -148,11 +149,8 @@ async function waitForListener(database) {
 
 describe("Phase 12 protected restart recovery", () => {
   if (!url) {
-    it("BLOCKED GATE: PRISM_TEST_POSTGRES_URL is required for protected restart-recovery evidence", () => {
-      assert.fail(
-        "BLOCKED GATE: protected multi-replica/restart-recovery evidence cannot be recorded without PRISM_TEST_POSTGRES_URL. " +
-          "Run under `npm run test:postgres` against a disposable PostgreSQL 16 (e.g. pgvector/pgvector:pg16).",
-      );
+    it("records a blocked gate when PRISM_TEST_POSTGRES_URL is absent", () => {
+      blockedGate("phase12-restart-recovery");
     });
     return;
   }

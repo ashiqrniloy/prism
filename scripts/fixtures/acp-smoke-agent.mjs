@@ -8,7 +8,7 @@
 
 import { Readable, Writable } from "node:stream";
 import { ndJsonStream } from "@agentclientprotocol/sdk";
-import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-agent";
+import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-tools/agent";
 import { createPrismAcpAgent } from "../../packages/ag-ui/dist/acp/index.js";
 
 // Host state: session store + mode overlay. The review mode narrows behavior:

@@ -167,7 +167,7 @@ try {
 - Server `command`/`args` are host-config only — never taken from model tool arguments.
 - File URIs must be `file:` and resolve inside `workspaceRoot`; escapes fail with `ERR_PRISM_LSP_WORKSPACE`.
 - LSP payloads are untrusted: Content-Length framing is bounded; oversized/malformed frames fail closed; result lists and diagnostics are capped.
-- Crash loop: unexpected exit increments a per-server restart counter; after the freeze budget (`LSP_RESTARTS_PER_SERVER` = 3) further starts fail with `ERR_PRISM_LSP_SERVER`.
+- Crash loop: unexpected exit increments a per-server restart counter; after the freeze budget (`LSP_RESTARTS_PER_SERVER` = 3) further starts fail with `ERR_PRISM_LSP_SERVER`. A write that loses the server's pipe (the process died mid-write) is classified as that same `ERR_PRISM_LSP_SERVER` — a host never sees a raw `EPIPE`/`ECONNRESET`, and the loss still counts against the restart budget through the exit path.
 - Defaults / hard caps (Phase 9 freeze): message 4 MiB / 32 MiB; diagnostics/file 200 / 1000; pending requests 32 / 128; results/query 500 / 5000; timeout 30 s / 120 s; servers/workspace 4 / 8.
 
 ## Related APIs

@@ -36,8 +36,9 @@ export interface ConnectObscuraCdpOptions
   /** Explicit opt-in for non-loopback CDP endpoints. Off by default; rejected otherwise. */
   readonly allowRemoteEndpoint?: boolean;
   /**
-   * Host-supplied Playwright. When omitted, the optional `playwright-core` peer
-   * (exact 1.61.0) is imported. Prism never launches browsers.
+   * Host-supplied Playwright. When omitted, the optional `playwright-core` peer is
+   * imported (see docs/peer-dependencies.md for the pinned version). Prism never
+   * launches browsers.
    */
   readonly playwright?: ObscuraPlaywright;
   readonly signal?: AbortSignal;
@@ -123,7 +124,7 @@ async function loadPlaywright(): Promise<ObscuraPlaywright> {
     if (error instanceof ObscuraError) throw error;
     throw new ObscuraError(
       "ERR_OBSCURA_INPUT",
-      "optional peer playwright-core@1.61.0 is not installed; install it or supply connectObscuraCdp({ playwright })",
+      "optional peer playwright-core is not installed; install it or supply connectObscuraCdp({ playwright })",
     );
   }
 }

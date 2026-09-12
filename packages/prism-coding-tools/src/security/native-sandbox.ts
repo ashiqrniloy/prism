@@ -48,6 +48,7 @@ import {
   validateSandboxLimit,
 } from "./sandbox-limits.js";
 import { createImportTarStream, summarizeTarStream } from "./sandbox-tar.js";
+import { Semaphore } from "./semaphore.js";
 
 /**
  * Network-free native sandbox backend (plan 018 Task 3).
@@ -314,7 +315,7 @@ class NativeSandboxSession implements DisposableSandbox {
     },
   ) {
     this.id = randomUUID();
-    this.execLock = new Semaphore(opts.limits.maxConcurrentExecs);
+    this.execLock = new Semaphore(opts.limits.maxConcurrentExecs, NativeSandboxError);
     this.redact = createSecretRedactor(opts.secrets);
   }
 
@@ -581,38 +582,6 @@ class NativeSandboxSession implements DisposableSandbox {
       this.state = "removed";
       return metadata;
     })();
-  }
-}
-
-class Semaphore {
-  private active = 0;
-  private readonly waiters: Array<() => void> = [];
-  constructor(private readonly max: number) {}
-  async acquire(signal?: AbortSignal): Promise<() => void> {
-    if (signal?.aborted) throw new NativeSandboxError("sandbox operation aborted");
-    if (this.active < this.max) {
-      this.active += 1;
-      return () => this.release();
-    }
-    await new Promise<void>((resolve, reject) => {
-      const waiter = () => {
-        signal?.removeEventListener("abort", onAbort);
-        resolve();
-      };
-      const onAbort = () => {
-        const idx = this.waiters.indexOf(waiter);
-        if (idx >= 0) this.waiters.splice(idx, 1);
-        reject(new NativeSandboxError("sandbox operation aborted"));
-      };
-      this.waiters.push(waiter);
-      signal?.addEventListener("abort", onAbort, { once: true });
-    });
-    this.active += 1;
-    return () => this.release();
-  }
-  private release(): void {
-    this.active = Math.max(0, this.active - 1);
-    this.waiters.shift()?.();
   }
 }
 

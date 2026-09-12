@@ -4,9 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
+  DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES,
+  DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
   DEFAULT_SESSION_SEARCH_LIMIT,
   HARD_MAX_SESSION_SEARCH_LIMIT,
+  HARD_MAX_SESSION_SEARCH_LINEAR_BYTES,
+  HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
   HARD_MAX_SESSION_SEARCH_QUERY_BYTES,
   isSessionSearchUnsupported,
   resolveSessionSearchQuery,
@@ -132,6 +136,66 @@ describe("SessionIndex contracts", () => {
     }
     const beyond = await capped.searchSessions!({ label: "needle-beyond-cap", limit: 10 });
     assert.equal(beyond.items.length, 0);
+  });
+
+  it("memory search caps are host-overridable, default to the contract caps, and fail closed out of bounds", async () => {
+    const capped = (search?: { maxLinearSessions?: number; maxLinearEntries?: number; maxLinearBytes?: number }) => {
+      const store = createMemorySessionStore([], search ? { search } : {});
+      return store;
+    };
+    const seed = async (store: SessionStore, sessions: number, labels: readonly string[]): Promise<void> => {
+      for (let i = 0; i < sessions; i += 1) {
+        await store.append(
+          createSessionEntry({
+            id: `cap-${i}`,
+            sessionId: `cap-session-${i}`,
+            timestamp: `2026-01-01T00:00:00.000Z`,
+            kind: "label",
+            label: labels[i] ?? "noise",
+          }),
+        );
+      }
+    };
+
+    // Default caps unchanged: the contract defaults are what a store with no `search` uses.
+    assert.equal(DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS, 1_000);
+    assert.equal(DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES, 10_000);
+    assert.equal(DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES, 8 * 1024 * 1024);
+    const defaults = capped();
+    await seed(defaults, 3, ["needle", "noise", "noise"]);
+    assert.equal((await defaults.searchSessions!({ label: "needle", limit: 10 })).items.length, 1);
+
+    // Lowering the session cap excludes a session the default scan would reach.
+    const lowered = capped({ maxLinearSessions: 2 });
+    await seed(lowered, 3, ["noise", "noise", "needle"]);
+    assert.equal((await lowered.searchSessions!({ label: "needle", limit: 10 })).items.length, 0);
+    const raised = capped({ maxLinearSessions: 3 });
+    await seed(raised, 3, ["noise", "noise", "needle"]);
+    assert.equal((await raised.searchSessions!({ label: "needle", limit: 10 })).items.length, 1);
+
+    // Entry/byte caps are enforced by their own overrides.
+    const oneEntry = capped({ maxLinearEntries: 1 });
+    await seed(oneEntry, 1, ["needle"]);
+    await oneEntry.append(createSessionEntry({ id: "second", sessionId: "cap-session-0", kind: "label", label: "second-needle" }));
+    assert.equal((await oneEntry.searchSessions!({ label: "second-needle", limit: 10 })).items.length, 0);
+    // (Each cap is consulted before the entry is read, so the first entry always fits — the
+    // second is what the override excludes.)
+    const oneByte = capped({ maxLinearBytes: 1 });
+    await seed(oneByte, 1, ["noise"]);
+    await oneByte.append(createSessionEntry({ id: "second", sessionId: "cap-session-0", kind: "label", label: "needle" }));
+    assert.equal((await oneByte.searchSessions!({ label: "needle", limit: 10 })).items.length, 0);
+
+    // Out of bounds (below 1, non-integer, or above the hard cap) fails at construction, not at search time.
+    for (const search of [
+      { maxLinearSessions: 0 },
+      { maxLinearSessions: HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS + 1 },
+      { maxLinearSessions: 1.5 },
+      { maxLinearEntries: Number.NaN },
+      { maxLinearEntries: -1 },
+      { maxLinearBytes: HARD_MAX_SESSION_SEARCH_LINEAR_BYTES + 1 },
+    ]) {
+      assert.throws(() => createMemorySessionStore([], { search }), TypeError);
+    }
   });
 
   it("memory unsupported mode throws typed error, not empty page", async () => {

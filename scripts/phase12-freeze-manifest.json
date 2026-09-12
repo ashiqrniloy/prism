@@ -55,23 +55,39 @@
         "date": "2026-09-05",
         "scope": "support.protocolSdks / @arnilo/prism-mcp runtime dependencies (plan 063 Task 1)",
         "change": "monolithic @modelcontextprotocol/sdk 1.30.0 replaced by the modular TypeScript SDK v2 packages @modelcontextprotocol/client 2.0.0 and @modelcontextprotocol/server 2.0.0 (exact pins; @modelcontextprotocol/core 2.0.0 arrives transitively). All @arnilo/prism-mcp sources, tests, examples, and scripts were migrated to v2 modular imports and APIs (method-string handlers, v2 method-keyed request/callTool, ctx.http?.authInfo / ctx.mcpReq.* context) with zero public export changes; npm pack dry-run install size unchanged in magnitude (dependency set swaps one package for two).",
-        "rationale": "plan 063 (Synapta MCP 2026-07-28 adoption) Task 1 mandates the modular v2 migration as its first step and explicitly edits the dependency manifest; the freeze manifest's 'new runtime dependencies' row is deliberately superseded for this planned, documented migration. Existing legacy-era bridge/server tests remain green (64/64) with harness updates only where v2 upstream behavior changed (unknown-tool JSON-RPC errors, RFC 6749 §6 refresh-bypass on strict-superset 403 step-up, SDK-owned issuer echo validation).",
+        "rationale": "plan 063 (Synapta MCP 2026-07-28 adoption) Task 1 mandates the modular v2 migration as its first step and explicitly edits the dependency manifest; the freeze manifest's 'new runtime dependencies' row is deliberately superseded for this planned, documented migration. Existing legacy-era bridge/server tests remain green (64/64) with harness updates only where v2 upstream behavior changed (unknown-tool JSON-RPC errors, RFC 6749 \u00a76 refresh-bypass on strict-superset 403 step-up, SDK-owned issuer echo validation).",
         "task": "plan 063 Task 1"
+      },
+      {
+        "id": "dev-006",
+        "date": "2026-09-12",
+        "scope": "support.node (supported / measuredInCi / enginesRange) plus the CI leg and the unreleased cut that carries it",
+        "change": "the supported Node floor moved from >=20 to >=22 in all ten publishable manifests and in this manifest's support.node block (supported/measuredInCi 20,24 -> 22,24; enginesRange >=20 -> >=22; unsupported[0] 'Node below 20' -> 'Node below 22'). The measured Node 20 CI leg was renamed and retargeted: release.yml job node20-compat -> node22-compat, node-version '20' -> '22'. @types/node (dev) moved ^20.19.0 -> ^22.20.0 in the root and packages/prism-coding-tools, tracking the new declared floor. No source, export, schema, or runtime-dependency change.",
+        "rationale": "Node 20 reached upstream end-of-life on 2026-04-30, so the frozen support row named a line upstream no longer maintains (plan 070 Further Action 1; plan 071 Task 2). Node 22 is maintenance LTS to 2027-04-30 and Node 24 (the CI default) active LTS to 2028-04-30, so >=22 keeps one supported line below the CI default. The change is host-breaking for a Node 20 host, which is exactly why plan 070 deferred it out of the 0.5.7 patch cut into the 0.6.0 minor (docs/migration.md) rather than shipping it as a patch; the 0.5.7 cut was never published. The featureFreeze 'no new runtime dependencies' row is untouched: @types/node is a devDependency and the floor now matches it.",
+        "task": "plan 071 Task 2"
+      },
+      {
+        "id": "dev-007",
+        "date": "2026-09-12",
+        "scope": "capacity.startupImportMsCeiling (250 ms) enforcement in the in-chain `npm test` budget gate",
+        "change": "scripts/budget-gate.test.mjs no longer asserts the absolute 250 ms startup ceiling unconditionally. It asserts a machine-relative ratio instead: cold-process `import('./dist/index.js')` wall time (trimmed mean of 5 spawns, min/max dropped) over the median empty `node -e \"\"` process start, with importRatioCeiling 8 off load and importRatioCeilingUnderLoad 20 when the 1-minute load average per CPU is >= 1.5. The absolute ceiling is still asserted whenever loadavg-per-CPU < 1.5 and remains the evidence-of-record bound measured by scripts/benchmark-0.1.0.mjs into scripts/benchmark-0.1.0.json (39.79 ms) and re-gated by scripts/benchmark-0.1.0.test.mjs; that runner's own absolute comparison is unchanged, as is the frozen 250 ms number. New ceilings live in scripts/budgets.json#startup.",
+        "rationale": "plan 070 Further Action 4, plan 071 Task 3: the fixed 250 ms in-chain check failed on a loaded machine (273 ms at plan 070 Task 11 and 1104.8 ms at Task 13, load average ~25, against 92-113 ms standalone) with the imported code unchanged, so it could not distinguish a busy host from a startup regression. Calibration 2026-09-12 on 16 CPUs: ratio 3.3 idle (import 58-63 ms, process start 17-19 ms), 3.45-4.05 with a full `npm test` running concurrently, and up to 7.18 with 40 competing processes (import 258 ms \u2014 above the absolute ceiling \u2014 while the process start stayed at 33-42 ms). The absolute bound stays evidence-of-record so a fast-machine regression is still caught at capture time, and the ratio still fails any >3x startup inflation (a planted 800 ms import fails it deterministically). Same shape as dev-004 (append contention gate).",
+        "task": "plan 071 Task 3"
       }
     ]
   },
   "support": {
     "node": {
-      "$comment": "Matches engines.node >=20 and release.yml legs: verify on Node 24, node20-compat public import smoke on Node 20. Docs examples need Node >=22.6 for native TypeScript stripping.",
+      "$comment": "Matches engines.node >=22 and release.yml legs: verify on Node 24, node22-compat build/import smoke on Node 22 (plan 071 Task 2 raised the floor from >=20; deviation dev-006). Docs examples need Node >=22.6 for native TypeScript stripping, which the >=22 floor now covers.",
       "supported": [
-        "20",
+        "22",
         "24"
       ],
       "measuredInCi": [
-        "20",
+        "22",
         "24"
       ],
-      "enginesRange": ">=20",
+      "enginesRange": ">=22",
       "docsExamplesMinimum": "22.6"
     },
     "postgres": {
@@ -80,7 +96,7 @@
         16
       ],
       "ciImage": "pgvector/pgvector:pg16",
-      "driver": "pg@^8.22.0",
+      "driver": "pg@^8.23.0",
       "schemaVersion": 9,
       "extensions": [
         "pgvector (required by @arnilo/prism-memory path only)"
@@ -96,7 +112,7 @@
       "$comment": "Exact pins verified against package manifests by scripts/phase12-freeze.test.mjs. plan 063 Task 1 (2026-07-28 adoption): monolithic @modelcontextprotocol/sdk 1.30.0 replaced by modular SDK v2 packages @modelcontextprotocol/client + @modelcontextprotocol/server 2.0.0 (@modelcontextprotocol/core 2.0.0 rides as their transitive dependency). Deviation dev-005.",
       "@modelcontextprotocol/client": "2.0.0",
       "@modelcontextprotocol/server": "2.0.0",
-      "@agentclientprotocol/sdk": "1.3.0",
+      "@agentclientprotocol/sdk": "1.4.0",
       "@ag-ui/core": "0.0.59",
       "@nats-io/jetstream": "^3.4.0",
       "@nats-io/transport-node": "^3.4.0"
@@ -104,7 +120,7 @@
     "providers": "Every published @arnilo/prism-provider-* package plus OpenAI-compatible transport; each carries its own conformance suite. Provider list frozen at the 0.0.28 manifest graph."
   },
   "unsupported": [
-    "Node below 20 (engines floor)",
+    "Node below 22 (engines floor)",
     "PostgreSQL server versions not in support.postgres.supportedMajorVersions",
     "ACP v2 experimental APIs (stable v1 only)",
     "Cedar policy engine (OPA only)",

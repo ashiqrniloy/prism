@@ -1,5 +1,7 @@
 # AI SDK provider adapter
 
+> **Optional peer install:** `@ai-sdk/provider@4.0.13` (exact pin) — see [Optional peer dependencies](../peer-dependencies.md).
+
 ## What it does
 
 `@arnilo/prism-providers/ai-sdk` adapts a host-supplied AI SDK `LanguageModelV4` into a Prism `AIProvider`. It maps Prism messages, tools, and structured-output options into `doStream` call options, then translates stream parts into Prism provider events incrementally.
@@ -12,7 +14,8 @@ Core `@arnilo/prism` does not depend on the AI SDK.
 | --- | --- | --- |
 | `4.0.3` | `LanguageModelV4`, `specificationVersion: "v4"` | Supported and offline-tested |
 | `4.0.4` | `LanguageModelV4`, `specificationVersion: "v4"` | Supported and offline-tested |
-| `4.0.10` | `LanguageModelV4`, `specificationVersion: "v4"` | Current peer; supported and offline-tested |
+| `4.0.10` | `LanguageModelV4`, `specificationVersion: "v4"` | Supported and offline-tested |
+| `4.0.13` | `LanguageModelV4`, `specificationVersion: "v4"` | Current peer; supported and offline-tested |
 
 The peer dependency is intentionally exact. `createAiSdkProvider()` reads its resolved `@ai-sdk/provider/package.json` version during setup and throws typed `AiSdkProviderError { code: "unsupported_version" }` for an unlisted version; it does not infer compatibility from a matching `"v4"` string.
 
@@ -145,7 +148,7 @@ Official evidence: [Custom providers / LanguageModelV4](https://ai-sdk.dev/provi
 
 ## Extension and configuration notes
 
-- Peer dependency: `@ai-sdk/provider@4.0.10` (matrix also lists `4.0.3` and `4.0.4`). Upgrade policy adds a matrix row and offline conformance fixture before accepting any new version.
+- Peer dependency: `@ai-sdk/provider@4.0.13` (matrix also lists `4.0.3`, `4.0.4`, and `4.0.10`). Upgrade policy adds a matrix row and offline conformance fixture before accepting any new version.
 - First-party HTTP providers remain independent; this adapter is available directly or through `@arnilo/prism-providers`. Installation does not select a model or invoke AI SDK.
 - `options.compat` / `options.extra` pass through as AI SDK `providerOptions.prism`.
 - Export helpers `toAiSdkCallOptions`, `toAiSdkPrompt`, and `mapAiSdkStream` for tests and custom hosts.

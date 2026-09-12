@@ -35,9 +35,10 @@ Static scan of root `src/providers/` and `packages/prism-providers/src/*/` befor
 | Runtime retry | `@arnilo/prism` `AgentConfig.retry` / `RunOptions.retry` | Classifies `ErrorInfo.code`; provider packages set numeric HTTP `code` on errors |
 | `ProviderRequestOptions.maxRetries` / `timeoutMs` | Contracts | **Removed in 0.1.5**; use `RunOptions.signal` / `AgentConfig.retry` / `RunOptions.retry` |
 | NeuralWatt `classifyNeuralWattError` | `packages/prism-providers/src/neuralwatt` | Parses `Retry-After`, `error.retry_after`, `retry_strategy`; no extra network calls |
+| Shared retry HTTP plane | `packages/prism-providers/src/shared/retry-http.ts` | **Migrated (plan 070 Task 11)** — `readRetryAfterMs` (header, plus a caller-supplied body field), `parseErrorBody`, the secret-redacting `providerHttpError` builder, and `RETRYABLE_STATUSES`; hyper, NeuralWatt, and Command Code classifiers keep their own status/field decisions |
 | Quota endpoint throttling | `packages/prism-providers/src/neuralwatt/quota.ts` | Documents 1 rps limit; caller-owned cache |
 
-No generic core helper extracts `Retry-After` / `x-request-id` for all providers yet.
+The `Retry-After` HTTP plane is shared inside `@arnilo/prism-providers` (`src/shared/retry-http.ts`, plan 070 Task 11), so the three classifiers cannot drift on header reading or on the redaction of provider error text. `x-request-id` extraction and a *core*-level helper for every provider do not exist yet.
 
 ### Structured output
 

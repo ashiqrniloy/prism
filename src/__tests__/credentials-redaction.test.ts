@@ -215,3 +215,79 @@ describe("redaction", () => {
     assert.ok(typeof info.cause === "string");
   });
 });
+
+// Plan 070 Task 9: `redactSecrets` uses one left-to-right scan (a compiled alternation) for
+// large strings when that is provably equivalent to the ordered split/join loop, and the loop
+// otherwise. The loop is the contract; these tests pin both paths to it.
+describe("redaction single-pass fast path", () => {
+  // Must stay >= SINGLE_PASS_MIN_CHARS (16 KB) so the fast path is actually engaged.
+  const FAST_PATH_CHARS = 16 * 1024;
+  const filler = (chars: number) => "z".repeat(chars);
+  const orderedLoop = (text: string, needles: readonly string[]) =>
+    needles.reduce((current, secret) => current.split(secret).join("[REDACTED]"), text);
+
+  it("keeps ordered split/join semantics wherever a single scan would diverge", () => {
+    // First mention wins over leftmost position: "bc" is replaced first, so the leading "a" survives.
+    assert.equal(redactSecrets("abc", ["bc", "ab"]), "a[REDACTED]");
+    // Containment: the shorter needle is replaced first, leaving the leading "x".
+    assert.equal(redactSecrets("xab", ["ab", "xab"]), "x[REDACTED]");
+    // A needle that occurs inside the placeholder is redacted again by the later pass.
+    assert.equal(redactSecrets("[REDACTED]", ["[REDACTED]", "RED"]), "[[REDACTED]ACTED]");
+  });
+
+  it("treats needles as literals, never as regex patterns", () => {
+    assert.equal(redactSecrets("match .*+? here", [".*+?"]), "match [REDACTED] here");
+    assert.equal(redactSecrets("axb a.b", ["a.b"]), "axb [REDACTED]");
+    assert.equal(redactSecrets("cost $1 and $& now", ["$1", "$&"]), "cost [REDACTED] and [REDACTED] now");
+    assert.equal(redactSecrets("path a\\b", ["a\\b"]), "path [REDACTED]");
+    assert.equal(redactSecrets("brackets [x] (y) {z}", ["[x]", "(y)", "{z}"]), "brackets [REDACTED] [REDACTED] [REDACTED]");
+  });
+
+  it("filters empty needles, keeps whitespace needles, and renumbers colliding keys", () => {
+    assert.equal(redactSecrets("a b", ["", " "]), "a[REDACTED]b");
+    assert.deepEqual(redactSecrets({ "sk-1": "v", "[REDACTED]": "w" }, ["sk-1"]), {
+      "[REDACTED]": "v",
+      "[REDACTED]__2": "w",
+    });
+  });
+
+  it("produces identical output above and below the single-scan threshold", () => {
+    const needles = ["sk-live-alpha-0123456789", "sk-live-beta-9876543210", "token=gamma"];
+    const body = `start ${needles[0]} middle ${needles[1]} ${needles[2]} end`;
+    const small = redactSecrets(body, needles);
+    const large = redactSecrets(`${body}${filler(FAST_PATH_CHARS)}`, needles);
+
+    assert.equal(small, orderedLoop(body, needles));
+    assert.equal(large, `${small as string}${filler(FAST_PATH_CHARS)}`);
+    assert.ok(!(small as string).includes("sk-live"), "no needle survives");
+  });
+
+  it("stays on the ordered loop outside the fast-path needle envelope", () => {
+    const single = ["sk-live-only-0123456789"];
+    const many = Array.from({ length: 40 }, (_, index) => `sk-cap-${index}-${"y".repeat(20)}`);
+
+    for (const needles of [single, many]) {
+      const text = `${needles.join(" ")} ${filler(FAST_PATH_CHARS)}`;
+      assert.equal(redactSecrets(text, needles), orderedLoop(text, needles));
+    }
+  });
+
+  it("matches the ordered loop for adversarial needle sets and texts in one large pass", () => {
+    let seed = 0x2f6e2b1;
+    const next = () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    };
+    const randomText = (alphabet: string, length: number) =>
+      Array.from({ length }, () => alphabet[Math.floor(next() * alphabet.length)]).join("");
+    // "ab[]REDCT]" collides with the placeholder and with itself; "abcdefghijklm" cannot touch
+    // the placeholder, so sets drawn from it usually keep the single-scan path engaged.
+    for (const alphabet of ["ab[]REDCT]", "abcdefghijklm"]) {
+      for (let round = 0; round < 24; round += 1) {
+        const needles = [...new Set(Array.from({ length: 3 }, () => randomText(alphabet, 1 + Math.floor(next() * 4))))];
+        const big = randomText(alphabet, FAST_PATH_CHARS + 512);
+        assert.equal(redactSecrets(big, needles), orderedLoop(big, needles), `alphabet ${alphabet} round ${round}`);
+      }
+    }
+  });
+});

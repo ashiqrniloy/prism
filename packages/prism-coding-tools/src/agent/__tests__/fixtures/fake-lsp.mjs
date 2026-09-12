@@ -4,8 +4,12 @@
  * Env:
  *   FAKE_LSP_CRASH_AFTER_INIT=1 — exit after initialized
  *   FAKE_LSP_DIAG_DIALECT=alt — alternate diagnostic shape (still LSP-valid)
+ *   FAKE_LSP_PID_FILE=/path — write this process pid there (tests that kill the server)
  */
+import { writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+
+if (process.env.FAKE_LSP_PID_FILE) writeFileSync(process.env.FAKE_LSP_PID_FILE, String(process.pid));
 
 let buf = Buffer.alloc(0);
 const rootUri = process.env.FAKE_LSP_ROOT_URI ?? pathToFileURL(process.cwd()).href;

@@ -1,4 +1,4 @@
-import { type JsonObject, type JsonValue, type SecretRedactor } from "@arnilo/prism";
+import { type JsonObject, mergeConfigLayers, type SecretRedactor } from "@arnilo/prism";
 import { MemoryAbortError, MemoryLimitError, MemoryScopeError, MemoryValidationError } from "./errors.js";
 import type { MemoryScope } from "./types.js";
 
@@ -56,17 +56,22 @@ export function cloneJsonObject(value: JsonObject): JsonObject {
   return structuredClone(value);
 }
 
+/**
+ * Deep-merge `patch` over `base`. Delegates to the core config merger (plan 070 Task 11)
+ * so JSON-only traversal, unsafe-key rejection (`__proto__`/`prototype`/`constructor`,
+ * path-qualified at every depth) and cloning live in one implementation: patch values are
+ * cloned, so the result never aliases the caller's patch. Failures are re-wrapped as
+ * `MemoryValidationError` to keep this module's error taxonomy (`code: "validation"`).
+ */
 export function mergeJsonObjects(base: JsonObject, patch: JsonObject): JsonObject {
-  const result: Record<string, JsonValue> = { ...cloneJsonObject(base) };
-  for (const [key, value] of Object.entries(patch)) {
-    assertSafeJsonKey(key);
-    if (isPlainObject(value) && isPlainObject(result[key])) {
-      result[key] = mergeJsonObjects(result[key] as JsonObject, value as JsonObject);
-    } else {
-      result[key] = value as JsonValue;
-    }
+  try {
+    return mergeConfigLayers([
+      { name: "memory value", config: base },
+      { name: "memory patch", config: patch },
+    ]);
+  } catch (error) {
+    throw new MemoryValidationError(error instanceof Error ? error.message : "Invalid memory value");
   }
-  return result;
 }
 
 export function byteLengthOfJson(value: unknown): number {

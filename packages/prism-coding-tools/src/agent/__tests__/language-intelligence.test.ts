@@ -3,9 +3,15 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { LspClient } from "../language/client.js";
 import { encodeLspFrame, LspFrameError, LspFrameReader } from "../language/framing.js";
-import { applyTextEdits, createLanguageIntelligence, LanguageIntelligenceError } from "../language/intelligence.js";
+import {
+  applyTextEdits,
+  createLanguageIntelligence,
+  LanguageIntelligenceError,
+  resolveLanguageIntelligenceLimits,
+} from "../language/intelligence.js";
 
 const FAKE_LSP = fileURLToPath(new URL("./fixtures/fake-lsp.mjs", import.meta.url));
 // Compiled tests live under dist/; fixture stays in src — fall back.
@@ -305,6 +311,65 @@ test("timeout/abort and pending-request limit", async () => {
   }
 });
 
+test("socket loss on the write path is classified, never a raw EPIPE", async () => {
+  const cwd = await tmp();
+  const lsp = await fakeLspPath();
+  try {
+    const pidFile = join(cwd, "lsp.pid");
+    const limits = resolveLanguageIntelligenceLimits({ requestTimeoutMs: 3_000 });
+    const client = new LspClient(
+      {
+        name: "probe",
+        command: process.execPath,
+        args: [lsp],
+        cwd,
+        rootUri: pathToFileURL(cwd).href,
+        env: { FAKE_LSP_PID_FILE: pidFile },
+      },
+      limits,
+    );
+    try {
+      await client.ensureStarted();
+      // Negative control: a typed failure keeps its own classification instead of becoming socket loss.
+      assert.throws(
+        () => client.notify("probe", { blob: "x".repeat(limits.maxMessageBytes + 200) }),
+        (e: unknown) => e instanceof LanguageIntelligenceError && e.code === "ERR_PRISM_LSP_LIMIT",
+      );
+      // Deterministic repro (plan 071 Task 13): SIGKILL the server and spin synchronously until the
+      // kernel has reaped it, so the write below lands on a dead pipe while the socket still reads as
+      // writable and the 'exit' event has not been delivered. Node then reports the failed write as
+      // an async socket 'error'; before the fix that was an uncaught `write EPIPE`, and this test
+      // fails on the uncaught exception rather than on the assertion below.
+      const pid = Number(await readFile(pidFile, "utf8"));
+      process.kill(pid, "SIGKILL");
+      const tick = new Int32Array(new SharedArrayBuffer(4));
+      for (let i = 0; i < 500; i++) {
+        try {
+          process.kill(pid, 0);
+        } catch {
+          break;
+        }
+        Atomics.wait(tick, 0, 0, 2);
+      }
+      const error = await client
+        .request("textDocument/definition", {
+          textDocument: { uri: pathToFileURL(join(cwd, "a.ts")).href },
+          position: { line: 0, character: 0 },
+        })
+        .then(
+          () => undefined,
+          (e: unknown) => e,
+        );
+      assert.ok(error instanceof LanguageIntelligenceError, `expected a typed error, got ${String(error)}`);
+      assert.equal(error.code, "ERR_PRISM_LSP_SERVER");
+    } finally {
+      await client.dispose();
+    }
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 test("server crash after init exhausts restart budget", async () => {
   const cwd = await tmp();
   const lsp = await fakeLspPath();
@@ -323,20 +388,25 @@ test("server crash after init exhausts restart budget", async () => {
       limits: { requestTimeoutMs: 3_000, maxRestartsPerServer: 3 },
     });
     try {
-      // Repeated attempts until restart budget fails closed.
-      let last: unknown;
-      for (let i = 0; i < 6; i++) {
+      // Await the restart-budget transition (plan 071 Task 13): attempts keep failing as typed
+      // transport errors while the budget lasts, and the budget error is the transition under test.
+      // Every attempt's error must be typed — a raw socket error here means the write path leaked.
+      const seen: unknown[] = [];
+      const deadline = Date.now() + 3_000;
+      while (Date.now() < deadline) {
         try {
           await lang.definitions({ file: "a.ts", line: 0, character: 0 });
         } catch (e) {
-          last = e;
+          seen.push(e);
+          if (e instanceof LanguageIntelligenceError && /exceeded restart budget/.test(e.message)) break;
         }
       }
-      assert.ok(last instanceof LanguageIntelligenceError);
-      assert.ok(
-        last.code === "ERR_PRISM_LSP_SERVER" || last.code === "ERR_PRISM_LSP_TIMEOUT",
-        `unexpected code ${(last as LanguageIntelligenceError).code}`,
-      );
+      const last = seen.at(-1);
+      for (const error of seen) {
+        assert.ok(error instanceof LanguageIntelligenceError, `attempt error must be typed, got ${String(error)}`);
+      }
+      assert.ok(last instanceof LanguageIntelligenceError, `expected a typed error, got ${String(last)}`);
+      assert.match(last.message, /exceeded restart budget/);
     } finally {
       await lang.dispose();
     }

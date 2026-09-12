@@ -7,6 +7,12 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
+// Plan 071 Task 1 (plan 070 FA 10): the release version has one source — the root
+// manifest, which the lockstep cut rewrites first — so every claim surface in this
+// suite derives from it instead of hardcoding the cut. `scripts/version-literal-gate.test.mjs`
+// asserts the same surfaces (manifests, caret ranges, lockfile, version constant).
+const releaseVersion = (): string => readPkg(".").version as string;
+
 // ponytail: data-driven guard; one entry per published package, drive every assertion from this list
 const packages: Array<{
   dir: string;
@@ -144,8 +150,8 @@ describe("packaging guard", () => {
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
           assert.equal(
             peers?.["@arnilo/prism"],
-            "^0.5.6",
-            `${pkg.name} @arnilo/prism peer must be ^0.5.6, got ${peers?.["@arnilo/prism"]}`,
+            `^${releaseVersion()}`,
+            `${pkg.name} @arnilo/prism peer must be ^${releaseVersion()}, got ${peers?.["@arnilo/prism"]}`,
           );
           const meta = manifest.peerDependenciesMeta as Readonly<Record<string, { readonly optional?: boolean }>> | undefined;
           assert.ok(!meta?.["@arnilo/prism"]?.optional, `${pkg.name} must not mark the @arnilo/prism peer optional`);
@@ -206,9 +212,9 @@ describe("packaging guard", () => {
     assert.deepEqual(Object.keys(exportsMap).sort(), [".", "./brave", "./browser", "./exa", "./firecrawl", "./obscura"]);
     const peers = webTools.peerDependencies as Record<string, string>;
     const meta = webTools.peerDependenciesMeta as Record<string, { optional?: boolean }>;
-    assert.equal(peers["playwright-core"], "1.61.0", "browser subpath must pin the playwright-core peer");
+    assert.equal(peers["playwright-core"], "1.63.0", "browser subpath must pin the playwright-core peer");
     assert.equal(meta["playwright-core"]?.optional, true, "playwright-core must stay an optional peer");
-    assert.equal(peers["@arnilo/prism-mcp"], "^0.5.6", "obscura subpath must keep the MCP bridge peer");
+    assert.equal(peers["@arnilo/prism-mcp"], `^${releaseVersion()}`, "obscura subpath must keep the MCP bridge peer");
     assert.equal(meta["@arnilo/prism-mcp"]?.optional, undefined, "@arnilo/prism-mcp must stay a required peer where Obscura needs it");
     const files = getPackList("packages/web-tools", "@arnilo/prism-web-tools");
     for (const required of [
@@ -237,7 +243,7 @@ describe("packaging guard", () => {
     ]);
     const peers = memory.peerDependencies as Record<string, string>;
     const meta = memory.peerDependenciesMeta as Record<string, { optional?: boolean }>;
-    assert.equal(peers["@nanonets/graft"], "^0.16.0", "graft subpath must peer @nanonets/graft");
+    assert.equal(peers["@nanonets/graft"], "^0.16.0 || ^0.18.0", "graft subpath must peer @nanonets/graft");
     assert.equal(meta["@nanonets/graft"]?.optional, true, "@nanonets/graft must stay an optional peer");
     assert.equal(
       (memory.bin as Record<string, string>)["prism-wiki"],
@@ -275,10 +281,10 @@ describe("packaging guard", () => {
     );
 
     // Plan 054 Task 8: prism-all is retired; the provider family is the only remaining umbrella.
-    assert.match(
-      (providersManifest.peerDependencies as Record<string, string>)["@arnilo/prism"] ?? "",
-      /^\^0\.5\.6$/,
-      "provider family must peer @arnilo/prism@^0.5.6",
+    assert.equal(
+      (providersManifest.peerDependencies as Record<string, string>)["@arnilo/prism"],
+      `^${releaseVersion()}`,
+      `provider family must peer @arnilo/prism@^${releaseVersion()}`,
     );
   });
 
@@ -411,17 +417,14 @@ describe("packaging guard", () => {
     assert.equal(truth.counts.publishable, 10, "package truth must report 10 active packages");
   });
 
-  it("0.4 package set — 10 manifests, no shims, family roots stay inert", () => {
+  it("0.4 package set — 10 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
-    assert.equal(root.version, "0.5.6");
     const names = packages.map((pkg) => pkg.name).sort();
     assert.equal(names.length, 10, "10 active packages including root");
     for (const pkg of packages) {
-      // Plan 055 Task 6 (Decision B changed-package cut): the provider family
-      // moved 0.4.0 → 0.4.1 for the two new adapters; every other manifest stays 0.4.0.
-      // Plan 066: lockstep 0.5.0 → 0.5.1 for all 10 publishable manifests.
-      const expected = "0.5.6";
-      assert.equal(readPkg(pkg.dir).version, expected, `${pkg.name} at ${expected}`);
+      // Plan 055/066/070 cut history lives in CHANGELOG.md; here the invariant is the
+      // lockstep itself: every active manifest at the root version (plan 071 Task 1).
+      assert.equal(readPkg(pkg.dir).version, root.version, `${pkg.name} must be at the root lockstep version ${root.version}`);
     }
     const retired = [
       "@arnilo/prism-base",

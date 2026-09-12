@@ -1,6 +1,6 @@
 # Migrate Prism 0.4 to 0.5
 
-> **Status: 0.5.4** (run-limit HARD split from host policy, plan 067). 0.5.0 covers plans 055–065. 0.5.1 adds kernel provider-request construction. 0.5.2 coalesces stream tokens. 0.5.3 folds content-only tool results.
+> **Status: 0.5.4 line** (run-limit HARD split from host policy). 0.5.0 covers plans 055–065. 0.5.1 adds kernel provider-request construction. 0.5.2 coalesces stream tokens. 0.5.3 folds content-only tool results. 0.5.4 splits run-limit HARD from host policy; 0.5.5 and 0.5.6 shipped as patches (per-frame byte limits, then trusted extension activation, wiki ingest, and graft commands). The planned 0.5.7 remediation was never published — it ships in 0.6.0, whose guide is [migrate-to-0.6.md](migrate-to-0.6.md).
 
 ## What changes
 
@@ -136,6 +136,10 @@ What to do:
 - **Durable state:** runs with `maxWallTimeMs: null` persist checkpoints without `deadlineAt`; older checkpoints with a deadline still resume under it.
 - **Documented ceiling:** vendors that omit usage charge zero to token counters; a configured `maxCost` stays the fail-closed envelope (missing/mixed-currency cost breaches immediately).
 
+## 10. Later lines
+
+The 0.5.x line ends here: the never-published 0.5.7 remediation and the 0.6.0 Node `>=22` floor are documented in [migrate-to-0.6.md](migrate-to-0.6.md), which also carries the folded 0.5.7 deltas (durable concurrent tool rounds, content-less tool results, host-tunable knobs, third-party peer floors, and the removed `@arnilo/prism-office` `playwright-core` peer).
+
 ## Upgrade steps
 
 1. Bump every `@arnilo/*` dependency/peer to `^0.5.1` (0.5.0 hosts: `^0.5.0` still works until you want construction).
@@ -146,9 +150,10 @@ What to do:
 6. If you set thinking levels: prefer `AgentConfig.thinkingLevel` / `RunOptions.thinkingLevel` (section 8); `applyThinkingLevelForModel` remains for custom generate sites (section 7).
 7. Run your suite. No persisted-data migration exists or is needed.
 8. After 0.5.1: drop host-only `createSessionCachePolicy` if it existed only for OpenCode Go / session headers (section 8).
+9. Beyond 0.5: the never-published 0.5.7 content and the Node 22 floor ship in 0.6.0 — use [migrate-to-0.6.md](migrate-to-0.6.md).
 
 ## Rollback
 
-Pin the previous version: `@arnilo/prism@0.4.x` (exact pins per package). Nothing persisted
+Pin the previous version: `@arnilo/prism@0.4.x` (exact pins per package; the last published 0.5.x is 0.5.6). Nothing persisted
 changes under 0.5, so a pin rollback is safe. The MCP module move (section 5) is the only
 migration that touches host import code — keep a 0.4 pin if you need the monolithic SDK.

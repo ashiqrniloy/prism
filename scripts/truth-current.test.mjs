@@ -18,6 +18,7 @@ import {
   renderInventoryBlock,
   renderProvidersBlock,
 } from "./package-truth.mjs";
+import { effectiveTestChain } from "./run-all-tests.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const stripStamp = ({ generatedAt, ...rest }) => rest;
@@ -138,8 +139,7 @@ test("gate integrity: every scripts/*.mjs referenced by package.json scripts exi
 });
 
 test("gate integrity: release/security gates stay in the npm test run", () => {
-  const root = readManifest(join(ROOT, "package.json"));
-  const testScript = root.scripts.test;
+  const testScript = effectiveTestChain();
   for (const gate of ["release-gate", "tooling-gate", "budget-gate", "phase23-quality-gates", "truth-current", "packaging-current"]) {
     assert.ok(testScript.includes(`scripts/${gate}.test.mjs`), `test script must run scripts/${gate}.test.mjs`);
   }
@@ -152,8 +152,7 @@ test("gate integrity: release/security gates stay in the npm test run", () => {
 });
 
 test("gate integrity: retired historical freeze/release gates stay out of npm test", () => {
-  const root = readManifest(join(ROOT, "package.json"));
-  const testScript = root.scripts.test;
+  const testScript = effectiveTestChain();
   const retired = readdirSync(join(ROOT, "scripts"))
     .filter((f) => /^phase\d+-(freeze|release)\.test\.mjs$/.test(f))
     .sort();

@@ -1,5 +1,7 @@
 # PostgreSQL persistence
 
+> **Optional peer install:** `pg` — see [Optional peer dependencies](peer-dependencies.md).
+
 ## What it does
 
 The optional `@arnilo/prism-core/sessions/postgres` package ships a production-oriented PostgreSQL adapter that implements:
@@ -14,7 +16,7 @@ Factory:
 - `PostgresPersistenceOptions`
 - `PostgresPersistence.close()` (async; ends adapter-owned pools only)
 
-The adapter uses `pg@^8.22.0`, applies versioned migrations from the shared Plan 056 schema model inside a transaction guarded by `pg_advisory_xact_lock`, validates/quotes schema identifiers, and passes the full session-store and run-ledger conformance suites when `PRISM_TEST_POSTGRES_URL` is set.
+The adapter uses `pg@^8.23.0`, applies versioned migrations from the shared Plan 056 schema model inside a transaction guarded by `pg_advisory_xact_lock`, validates/quotes schema identifiers, and passes the full session-store and run-ledger conformance suites when `PRISM_TEST_POSTGRES_URL` is set.
 
 ## When to use it
 

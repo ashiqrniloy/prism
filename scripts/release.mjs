@@ -35,7 +35,11 @@ export function validateRelease(release, version) {
     if (pkg.manifest.publishConfig?.access !== "public") errors.push(`${pkg.manifest.name} must set publishConfig.access to public`);
     for (const field of DEPENDENCY_FIELDS) {
       for (const [name, range] of Object.entries(pkg.manifest[field] ?? {})) {
-        if (release.byName.has(name) && range !== version && !satisfiesInternalRange(range, version))
+        // Lockstep cuts pin every first-party range at the cut version — exact
+        // (`<version>`) or caret (`^<version>`). A range that merely *satisfies*
+        // it (one minor behind at the cut) means two installs of one release line
+        // can resolve different first-party minors, so the gate fails closed instead.
+        if (release.byName.has(name) && range !== version && range !== `^${version}`)
           errors.push(`${pkg.manifest.name} ${field}.${name} is ${range}, expected ${version}`);
       }
     }

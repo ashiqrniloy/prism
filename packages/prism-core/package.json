@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-core",
-  "version": "0.5.6",
+  "version": "0.6.0",
   "description": "Core runtime, sessions, governance, credentials, enterprise state, and work integrations family package for Prism.",
   "type": "module",
   "exports": {
@@ -110,12 +110,12 @@
     "ajv": "^8.17.1"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.5.6",
-    "@arnilo/prism-memory": "^0.5.5",
+    "@arnilo/prism": "^0.6.0",
+    "@arnilo/prism-memory": "^0.6.0",
     "@nats-io/jetstream": "^3.4.0",
     "@nats-io/transport-node": "^3.4.0",
     "better-sqlite3": "^13.0.3",
-    "pg": "^8.22.0"
+    "pg": "^8.23.0"
   },
   "peerDependenciesMeta": {
     "@nats-io/jetstream": {
@@ -141,12 +141,12 @@
     "@nats-io/transport-node": "^3.4.0",
     "@opentelemetry/api": "^1.9.0",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/pg": "^8.11.11",
+    "@types/pg": "^8.23.1",
     "better-sqlite3": "^13.0.3",
-    "pg": "^8.22.0"
+    "pg": "^8.23.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "license": "MIT",
   "repository": {

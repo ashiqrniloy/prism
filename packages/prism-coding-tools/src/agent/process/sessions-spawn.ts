@@ -19,6 +19,7 @@ import {
 import {
   assertNotDisposed,
   commandFingerprint,
+  durableSeams,
   emit,
   isInsideRoot,
   nowIso,
@@ -166,8 +167,10 @@ export function makeHandle(host: SessionsHost, record: SessionRecord): ProcessSe
       if (record.stdinClosed || !record.child?.stdin.writable) {
         throw new ProcessSessionError("ERR_PRISM_PROCESS_STATE", "stdin closed");
       }
+      const child = record.child;
+      if (!child) throw new ProcessSessionError("ERR_PRISM_PROCESS_STATE", "stdin closed");
       await new Promise<void>((resolveWrite, rejectWrite) => {
-        record.child!.stdin.write(buf, (err) => (err ? rejectWrite(err) : resolveWrite()));
+        child.stdin.write(buf, (err) => (err ? rejectWrite(err) : resolveWrite()));
       });
     },
     async wait(waitOptions) {
@@ -255,9 +258,9 @@ export function makeHandle(host: SessionsHost, record: SessionRecord): ProcessSe
           } catch {
             // still marked killed
           }
-        } else {
+        } else if (backendHandle) {
           try {
-            await backendHandle!.kill();
+            await backendHandle.kill();
           } catch {
             // still marked killed
           }
@@ -282,9 +285,9 @@ export function makeHandle(host: SessionsHost, record: SessionRecord): ProcessSe
           } catch {
             // still marked released
           }
-        } else {
+        } else if (backendRelease) {
           try {
-            await backendRelease!.release();
+            await backendRelease.release();
           } catch {
             // still marked released
           }
@@ -310,9 +313,12 @@ export function makeHandle(host: SessionsHost, record: SessionRecord): ProcessSe
       if (!Number.isSafeInteger(rows) || rows < 1 || rows > host.limits.maxTerminalRows) {
         throw new ProcessSessionError("ERR_PRISM_PROCESS_PTY_LIMIT", `rows must be 1..${host.limits.maxTerminalRows}`);
       }
-      if (!record.pty || typeof record.pty.resize !== "function") {
+      const pty = record.pty;
+      if (!pty || typeof pty.resize !== "function") {
         throw new ProcessSessionError("ERR_PRISM_PROCESS_STATE", "session does not support resize");
       }
+      const terminal = record.ptyTerminal;
+      if (!terminal) throw new ProcessSessionError("ERR_PRISM_PROCESS_STATE", "session has no terminal geometry");
       const now = Date.now();
       record.ptyResizeAt = record.ptyResizeAt.filter((t) => now - t < 60_000);
       if (record.ptyResizeAt.length >= host.limits.maxTerminalResizesPerMinute) {
@@ -324,12 +330,12 @@ export function makeHandle(host: SessionsHost, record: SessionRecord): ProcessSe
       await assertPolicy(host, "process_resize", record.command, record.args, record.workspace, record.owner);
       record.ptyResizeAt.push(now);
       try {
-        await record.pty.resize({ columns, rows });
+        await pty.resize({ columns, rows });
       } catch {
         terminateRecord(host, record, "unknown", null);
         throw new ProcessSessionError("ERR_PRISM_PROCESS_PTY_BACKEND", "PTY backend resize failed");
       }
-      record.ptyTerminal = { ...record.ptyTerminal!, columns, rows };
+      record.ptyTerminal = { ...terminal, columns, rows };
     };
   }
   return handle;
@@ -414,10 +420,11 @@ export async function startSession(host: SessionsHost, request: ProcessStartRequ
   // start fails closed (record removed, no half-durable process).
   let recoveryLease: { token: string } | undefined;
   if (host.durable) {
+    const seams = durableSeams(host);
     const lease = await acquireRecordLease({
-      leases: host.leases!,
+      leases: seams.leases,
       id,
-      ownerId: host.ownerId!,
+      ownerId: seams.ownerId,
       ttlMs: host.recoveryLimits.leaseTtlMs,
       ownership: host.ownership,
       signal: request.signal,
@@ -446,7 +453,7 @@ export async function startSession(host: SessionsHost, request: ProcessStartRequ
       fencingToken: lease.fencingToken,
     });
     const saved = await saveProcessRecoveryRecord({
-      checkpoints: host.checkpoints!,
+      checkpoints: seams.checkpoints,
       record: intent,
       expectedVersion: 0,
       version: 1,
@@ -467,16 +474,20 @@ export async function startSession(host: SessionsHost, request: ProcessStartRequ
 
   try {
     if (request.pty) {
+      const startPty = host.ptyBackend?.startPty;
+      if (!startPty || !ptyTerminal) {
+        throw new ProcessSessionError("ERR_PRISM_PROCESS_PTY_UNSUPPORTED", "PTY not supported on this host");
+      }
       try {
         const handle = await withPtyAttachTimeout(
-          host.ptyBackend!.startPty!({
+          startPty({
             file: request.command,
             args,
             cwd,
             env: request.env,
-            columns: ptyTerminal!.columns,
-            rows: ptyTerminal!.rows,
-            term: ptyTerminal!.term,
+            columns: ptyTerminal.columns,
+            rows: ptyTerminal.rows,
+            term: ptyTerminal.term,
             onData,
           }),
           host.limits.maxPtyAttachTimeoutMs,
@@ -562,12 +573,13 @@ export async function startSession(host: SessionsHost, request: ProcessStartRequ
     if (host.durable) {
       // No half-durable process: drop the intent/running record and release
       // the recovery lease. The host store is authoritative.
-      await deleteProcessRecoveryRecord({ checkpoints: host.checkpoints!, id, ownership: host.ownership, signal: request.signal });
+      const seams = durableSeams(host);
+      await deleteProcessRecoveryRecord({ checkpoints: seams.checkpoints, id, ownership: host.ownership, signal: request.signal });
       if (recoveryLease) {
         await releaseRecordLease({
-          leases: host.leases!,
+          leases: seams.leases,
           id,
-          ownerId: host.ownerId!,
+          ownerId: seams.ownerId,
           token: recoveryLease.token,
           ownership: host.ownership,
           signal: request.signal,

@@ -1,7 +1,7 @@
 import {
   type ColumnOptions,
   generateWorkbookSync,
-  parseWorkbook as ooParseWorkbook,
+  parseWorkbookSync as ooParseWorkbook,
   type WorkbookOptions,
   type WorksheetOptions,
 } from "@office-open/xlsx";

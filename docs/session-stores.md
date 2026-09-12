@@ -31,7 +31,7 @@ Public helpers:
 | Helper | Purpose |
 | --- | --- |
 | `createSessionEntry(options)` | Build a `SessionEntry` with generated `id`/`timestamp` when omitted. |
-| `createMemorySessionStore(initialEntries?, options?)` | Built-in in-memory `SessionStore`. `options.sessionSearchMode`: `"linear"` (default) or `"unsupported"` (throws `SessionSearchUnsupportedError`). |
+| `createMemorySessionStore(initialEntries?, options?: CreateMemorySessionStoreOptions)` | Built-in in-memory `SessionStore`. `options.sessionSearchMode`: `"linear"` (default) or `"unsupported"` (throws `SessionSearchUnsupportedError`); `options.search` may override the linear scan caps (`maxLinearSessions` / `maxLinearEntries` / `maxLinearBytes`), each bounded by its `HARD_MAX_SESSION_SEARCH_LINEAR_*` value and validated at construction (`TypeError` below 1 or above the hard cap). |
 | `resolveSessionSearchQuery(query)` | Validate/clamp search limits (page, query bytes, snippet, cursor, linear/FTS caps). |
 | `SessionIndex` | Narrow search seam (`search(query)`); adapters may expose this instead of `SessionStore.searchSessions`. |
 | `getSessionBranchEntries(entries, options)` | Return root-to-leaf entries for a leaf id (sync array path). |
@@ -124,6 +124,8 @@ const page = await store.searchSessions!({
   limit: 20,
 });
 // Opt out: createMemorySessionStore([], { sessionSearchMode: "unsupported" })
+// Raise the in-process scan caps for a small but large-query session set (defaults are the contract caps):
+const wide = createMemorySessionStore([], { search: { maxLinearSessions: 5_000, maxLinearEntries: 50_000 } });
 ```
 
 Finite caps (defaults / hard): page 20/100; query string 4 KiB/16 KiB; snippet 512 B/4 KiB; cursor 1 KiB/4 KiB; memory linear sessions 1000/5000, entries 10000/50000, bytes 8 MiB/64 MiB; DB FTS candidates 1000/5000. Overflow fails closed via `resolveSessionSearchQuery`. See [Phase 6 evidence](_evidence/review-coverage-2026-07-22-phase-6.md).

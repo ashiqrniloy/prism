@@ -6,6 +6,18 @@ const REDACTED = "[REDACTED]";
 // Depth bound matching agent-run-state.ts; hostile deep structures yield a placeholder
 // instead of a stack overflow.
 const MAX_REDACT_DEPTH = 32;
+// Plan 070 Task 9: single-pass fast path. One left-to-right alternation replaces every
+// occurrence of every needle in a single scan, instead of one split/join pass per needle.
+// It is only equivalent to the ordered reduce below when no needle occurrence can overlap
+// another needle's occurrence or a produced placeholder, so `singlePassMatcher` returns
+// null for such sets and the loop stays authoritative. Below this length the set check
+// costs more than the passes it saves (measured crossover ~4 KB, so the fast path only
+// engages with a wide margin).
+const SINGLE_PASS_MIN_CHARS = 16 * 1024;
+// ponytail: bound the fast path to this needle count. The set check is O(k²) and the
+// alternation compile grows with k, so the loop is no slower beyond it. Raise if a host
+// redacts with much larger secret sets.
+const SINGLE_PASS_MAX_NEEDLES = 32;
 
 export interface SecretRedactor {
   redact<T>(value: T): T;
@@ -87,7 +99,16 @@ export function redactSecrets<T>(value: T, secrets: readonly (string | undefined
   const needles = secrets.filter((secret): secret is string => Boolean(secret));
   if (needles.length === 0) return value;
 
-  const redactString = (text: string) => needles.reduce((current, secret) => current.split(secret).join(REDACTED), text);
+  // Decided lazily on the first large string, and only once per call: a redaction of many
+  // small strings never pays the set check and never regresses against the loop.
+  let singlePass: RegExp | null | undefined;
+  const redactString = (text: string) => {
+    if (text.length >= SINGLE_PASS_MIN_CHARS) {
+      if (singlePass === undefined) singlePass = singlePassMatcher(needles);
+      if (singlePass) return text.replace(singlePass, REDACTED);
+    }
+    return needles.reduce((current, secret) => current.split(secret).join(REDACTED), text);
+  };
 
   const redactKey = (key: unknown): string => {
     if (typeof key === "string") return redactString(key);
@@ -132,6 +153,53 @@ export function redactSecrets<T>(value: T, secrets: readonly (string | undefined
   };
 
   return redact(value) as T;
+}
+
+function escapeRegExpLiteral(literal: string): string {
+  return literal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Compiled single-pass matcher for `needles`, or null when the set is not provably
+ * equivalent to the ordered reduce/split/join in `redactSecrets`. Equivalence holds when
+ * no needle occurrence can overlap another needle's occurrence (overlap would make the
+ * result depend on which needle is mentioned first rather than on position) and no needle
+ * can occur inside or across the edges of a produced "[REDACTED]" placeholder (a later
+ * pass would then redact text the single scan never sees). Both checks are conservative:
+ * a false negative only costs the fast path.
+ */
+function singlePassMatcher(needles: readonly string[]): RegExp | null {
+  if (needles.length < 2 || needles.length > SINGLE_PASS_MAX_NEEDLES) return null;
+  for (const needle of needles) {
+    if (needleTouchesPlaceholder(needle)) return null;
+  }
+  for (const left of needles) {
+    for (const right of needles) {
+      if (left !== right && needlesOverlap(left, right)) return null;
+    }
+  }
+  return new RegExp(needles.map(escapeRegExpLiteral).join("|"), "g");
+}
+
+/** A placeholder-relative occurrence: needle inside "[REDACTED]", or a needle prefix equal
+ * to a placeholder suffix / needle suffix equal to a placeholder prefix (a match spanning
+ * the placeholder's edge that the ordered passes would create). */
+function needleTouchesPlaceholder(needle: string): boolean {
+  if (REDACTED.includes(needle)) return true;
+  for (let n = 1; n < needle.length; n += 1) {
+    if (REDACTED.endsWith(needle.slice(0, n)) || REDACTED.startsWith(needle.slice(n))) return true;
+  }
+  return false;
+}
+
+/** One occurrence of `left` overlapping one of `right`: containment either way, or a proper
+ * suffix of `left` equal to a proper prefix of `right` (callers check both directions). */
+function needlesOverlap(left: string, right: string): boolean {
+  if (right.includes(left)) return true;
+  for (let n = 1; n < left.length && n < right.length; n += 1) {
+    if (right.startsWith(left.slice(left.length - n))) return true;
+  }
+  return false;
 }
 
 export function errorToErrorInfo(error: unknown, secrets: readonly (string | undefined)[] = []): ErrorInfo {

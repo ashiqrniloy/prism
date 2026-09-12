@@ -39,7 +39,7 @@ export function expandGlobBraces(pattern: string, options?: BraceExpansionOption
     let depth = 1;
     let close = -1;
     for (let i = open + 1; i < pattern.length; i++) {
-      const ch = pattern[i]!;
+      const ch = pattern[i];
       if (ch === "{") depth++;
       else if (ch === "}") {
         depth--;
@@ -84,7 +84,7 @@ export function validateGlobPattern(pattern: string, maxPatternBytes: number, op
 function matchSegment(pattern: string, segment: string): boolean {
   function go(pi: number, si: number): boolean {
     if (pi === pattern.length) return si === segment.length;
-    const pc = pattern[pi]!;
+    const pc = pattern[pi];
     if (pc === "*") {
       if (pi === pattern.length - 1) return true;
       for (let k = si; k <= segment.length; k++) {
@@ -113,7 +113,7 @@ function splitPattern(pattern: string): string[] {
 
 function matchSegments(patternParts: readonly string[], pathParts: readonly string[], pi: number, pj: number): boolean {
   while (pi < patternParts.length) {
-    const part = patternParts[pi]!;
+    const part = patternParts[pi];
     if (part === "**") {
       pi++;
       if (pi === patternParts.length) return true;
@@ -123,7 +123,7 @@ function matchSegments(patternParts: readonly string[], pathParts: readonly stri
       return false;
     }
     if (pj >= pathParts.length) return false;
-    if (!matchSegment(part, pathParts[pj]!)) return false;
+    if (!matchSegment(part, pathParts[pj])) return false;
     pi++;
     pj++;
   }

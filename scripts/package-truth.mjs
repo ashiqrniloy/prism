@@ -6,8 +6,8 @@
 //
 //   node scripts/package-truth.mjs [--out scripts/package-truth.json] [--root <dir>]
 //   node scripts/package-truth.mjs --emit-docs   (also regenerate the docs tables)
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -71,6 +71,42 @@ export function readManifest(file) {
     throw new Error(`manifest missing name/version: ${file}`);
   }
   return pkg;
+}
+
+// Plan 070 Task 15: the LIVE workspace shape — every `packages/*` directory that
+// has a manifest, plus the provider/prism/capability partition the freeze suites
+// assert their frozen counts against. One readdir, no manifest reads.
+//
+// The historical counts themselves are deliberately NOT derived here: the
+// `hasCodingTools ? -46 : …` deltas in the phase13-21 freeze suites are
+// frozen-lineage release evidence (Task 1), so they stay put. Historical name
+// exclusions (computer-use-linux, prism-wiki, obscura, …) are gone too — those
+// directories no longer exist, and the manifest check already excludes any
+// non-package directory.
+//
+//   const { names, providerDirs, prismDirs, capabilityDirs } = workspaceShape();
+//
+export function workspaceShape(rootDir = DEFAULT_ROOT) {
+  const packagesDir = join(rootDir, "packages");
+  const dirs = readdirSync(packagesDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(join(packagesDir, entry.name, "package.json")))
+    .map((entry) => join(packagesDir, entry.name))
+    .sort();
+  const names = dirs.map((dir) => basename(dir));
+  const providerDirs = names.filter((name) => name.startsWith("provider-"));
+  const prismDirs = names.filter((name) => name.startsWith("prism-"));
+  const capabilityDirs = names.filter((name) => !name.startsWith("provider-") && !name.startsWith("prism-"));
+  return { dirs, names, providerDirs, prismDirs, capabilityDirs };
+}
+
+// Plan 071 Task 1 (plan 070 FA 10): the one source for the release version. The
+// root manifest is what `release.mjs bump` rewrites first, so tests and scripts
+// read it instead of hardcoding the cut version (`scripts/version-literal-gate.test.mjs`
+// then fails any stale literal that a hand sweep would miss).
+//
+//   const version = currentVersion();
+export function currentVersion(rootDir = DEFAULT_ROOT) {
+  return readManifest(join(rootDir, "package.json")).version;
 }
 
 export function computePackageTruth(rootDir = DEFAULT_ROOT) {

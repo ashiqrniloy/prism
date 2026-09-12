@@ -1,7 +1,7 @@
 import {
   type DocumentOptions,
   generateDocumentSync,
-  parseDocument as ooParseDocument,
+  parseDocumentSync as ooParseDocument,
   type ParagraphOptions,
   type SectionChild,
   type TableOptions,

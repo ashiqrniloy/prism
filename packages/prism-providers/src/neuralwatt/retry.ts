@@ -1,4 +1,4 @@
-import { redactSecrets } from "@arnilo/prism";
+import { parseErrorBody, providerHttpError, RETRYABLE_STATUSES, readRetryAfterMs } from "../shared/retry-http.js";
 
 /** NeuralWatt `error.retry_strategy` object documented for 429/503 responses. */
 export interface NeuralWattRetryStrategy {
@@ -32,15 +32,12 @@ export interface NeuralWattRetryDecision {
   readonly strategy?: NeuralWattRetryStrategy;
 }
 
-/** Retryable NeuralWatt server/rate-limit status codes. */
-const RETRYABLE_STATUSES = new Set([429, 500, 502, 503]);
-
 /**
  * Classify a NeuralWatt error response into a retry decision. Status 400/401/402/
  * 403/404 are non-retryable; 429/500/502/503 are retryable. For 429 and 503 the
- * classifier reads `Retry-After` (header or `error.retry_after`) and preserves
- * the safe `retry_strategy` fields. Classification is O(1) over status/headers/
- * body and makes no extra provider calls.
+ * classifier reads `Retry-After` (header or `error.retry_after` — the body fallback
+ * is NeuralWatt-only) and preserves the safe `retry_strategy` fields. Classification
+ * is O(1) over status/headers/body and makes no extra provider calls.
  *
  * The numeric `code` is intended for `ErrorInfo.code` so the Prism default retry
  * policy (`transientCodes` includes 429/500/502/503) can decide retryability
@@ -51,7 +48,7 @@ export function classifyNeuralWattError(input: NeuralWattErrorInput): NeuralWatt
   const { status } = input;
   const retryable = RETRYABLE_STATUSES.has(status);
   const errorBody = parseErrorBody(input.body);
-  const retryAfterMs = readRetryAfterMs(input.headers, errorBody);
+  const retryAfterMs = readRetryAfterMs(input.headers, errorBody?.error?.retry_after);
   return {
     status,
     retryable,
@@ -64,57 +61,11 @@ export function classifyNeuralWattError(input: NeuralWattErrorInput): NeuralWatt
 
 /**
  * Build a redacted `Error` for a failed NeuralWatt response, with `code` set to
- * the numeric HTTP status so the runtime retry policy can classify it. The
- * message is redacted of the provided secrets (API key / bearer token) and
- * includes the status, a safe error code, and retry-after hint when present.
+ * the numeric HTTP status so the runtime retry policy can classify it. The message is
+ * redacted of the provided secrets through the shared HTTP helper.
  */
 export function neuralWattHttpError(decision: NeuralWattRetryDecision, bodyText: string, secrets: readonly (string | undefined)[]): Error {
-  const parts = [`NeuralWatt request failed: ${decision.status}`];
-  if (decision.errorCode) parts.push(`code=${decision.errorCode}`);
-  if (decision.retryAfterMs !== undefined) parts.push(`retry_after_ms=${decision.retryAfterMs}`);
-  const suffix = bodyText ? ` ${redactSecrets(bodyText, secrets)}` : "";
-  const error = new Error(`${parts.join(" ")}${suffix}`);
-  Object.defineProperty(error, "code", { value: decision.code, enumerable: true, writable: false, configurable: false });
-  return error;
-}
-
-function parseErrorBody(body: unknown): { error?: { code?: unknown; retry_after?: unknown; retry_strategy?: unknown } } | undefined {
-  if (!body || typeof body !== "object" || Array.isArray(body)) return undefined;
-  const error = (body as { error?: unknown }).error;
-  if (error && typeof error === "object" && !Array.isArray(error)) {
-    return { error: error as { code?: unknown; retry_after?: unknown; retry_strategy?: unknown } };
-  }
-  return undefined;
-}
-
-function readRetryAfterMs(
-  headers: NeuralWattErrorInput["headers"],
-  body: { error?: { retry_after?: unknown } } | undefined,
-): number | undefined {
-  const raw = readHeader(headers, "retry-after") ?? readNumber(body?.error?.retry_after);
-  if (raw === undefined) return undefined;
-  const seconds = Number(raw);
-  return Number.isFinite(seconds) && seconds >= 0 ? Math.round(seconds * 1000) : undefined;
-}
-
-function readHeader(headers: NeuralWattErrorInput["headers"], name: string): string | undefined {
-  if (!headers) return undefined;
-  if (headers instanceof Headers) {
-    const value = headers.get(name);
-    return value ?? undefined;
-  }
-  const lower = name.toLowerCase();
-  const entry = Object.entries(headers).find(([key]) => key.toLowerCase() === lower);
-  const value = entry?.[1];
-  return typeof value === "string" && value.trim() ? value : undefined;
-}
-
-function readNumber(value: unknown): number | undefined {
-  return typeof value === "number"
-    ? value
-    : typeof value === "string" && value.trim() && Number.isFinite(Number(value))
-      ? Number(value)
-      : undefined;
+  return providerHttpError("NeuralWatt", decision, bodyText, secrets);
 }
 
 function cleanStrategy(value: unknown): NeuralWattRetryStrategy | undefined {

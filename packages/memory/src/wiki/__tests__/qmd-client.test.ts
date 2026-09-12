@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { QmdClient, type QmdCommandRunner } from "../search/qmd-client.js";
 
-const TEST_DIR = join(process.cwd(), "dist/__tests__/scratch-qmd-test");
+const TEST_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-qmd-"));
 
 describe("prism-wiki qmd client & fallback search", () => {
   before(async () => {

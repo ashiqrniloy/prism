@@ -25,26 +25,26 @@ Do not use provider packages as a package manager, credential store, env loader,
 
 | adapter package | version |
 | --- | --- |
-| `@arnilo/prism-providers/ai-sdk` | 0.5.6 |
-| `@arnilo/prism-providers/alibaba` | 0.5.6 |
-| `@arnilo/prism-providers/anthropic` | 0.5.6 |
-| `@arnilo/prism-providers/azure` | 0.5.6 |
-| `@arnilo/prism-providers/bedrock` | 0.5.6 |
-| `@arnilo/prism-providers/clinepass` | 0.5.6 |
-| `@arnilo/prism-providers/commandcode` | 0.5.6 |
-| `@arnilo/prism-providers/deepseek` | 0.5.6 |
-| `@arnilo/prism-providers/google` | 0.5.6 |
-| `@arnilo/prism-providers/hyper` | 0.5.6 |
-| `@arnilo/prism-providers/kimi` | 0.5.6 |
-| `@arnilo/prism-providers/model-discovery` | 0.5.6 |
-| `@arnilo/prism-providers/neuralwatt` | 0.5.6 |
-| `@arnilo/prism-providers/ollama` | 0.5.6 |
-| `@arnilo/prism-providers/openai` | 0.5.6 |
-| `@arnilo/prism-providers/opencode-go` | 0.5.6 |
-| `@arnilo/prism-providers/openrouter` | 0.5.6 |
-| `@arnilo/prism-providers/vertex` | 0.5.6 |
-| `@arnilo/prism-providers/xai` | 0.5.6 |
-| `@arnilo/prism-providers/zai` | 0.5.6 |
+| `@arnilo/prism-providers/ai-sdk` | 0.6.0 |
+| `@arnilo/prism-providers/alibaba` | 0.6.0 |
+| `@arnilo/prism-providers/anthropic` | 0.6.0 |
+| `@arnilo/prism-providers/azure` | 0.6.0 |
+| `@arnilo/prism-providers/bedrock` | 0.6.0 |
+| `@arnilo/prism-providers/clinepass` | 0.6.0 |
+| `@arnilo/prism-providers/commandcode` | 0.6.0 |
+| `@arnilo/prism-providers/deepseek` | 0.6.0 |
+| `@arnilo/prism-providers/google` | 0.6.0 |
+| `@arnilo/prism-providers/hyper` | 0.6.0 |
+| `@arnilo/prism-providers/kimi` | 0.6.0 |
+| `@arnilo/prism-providers/model-discovery` | 0.6.0 |
+| `@arnilo/prism-providers/neuralwatt` | 0.6.0 |
+| `@arnilo/prism-providers/ollama` | 0.6.0 |
+| `@arnilo/prism-providers/openai` | 0.6.0 |
+| `@arnilo/prism-providers/opencode-go` | 0.6.0 |
+| `@arnilo/prism-providers/openrouter` | 0.6.0 |
+| `@arnilo/prism-providers/vertex` | 0.6.0 |
+| `@arnilo/prism-providers/xai` | 0.6.0 |
+| `@arnilo/prism-providers/zai` | 0.6.0 |
 <!-- generated:package-truth:providers end -->
 
 
@@ -123,7 +123,7 @@ Every package remains explicit, setup-zero-fetch, and late-credential-bound. `Mo
 | Package | Protocol / model source | Content mapping | Stream, tools, and reasoning | Cache / canary |
 | --- | --- | --- | --- | --- |
 | OpenAI | Responses; featured or caller-gated `listOpenAIModels` | text, image, audio, file, document | Host and provider-hosted tools; 8-hop continuation; Realtime seam; Responses reasoning | `openai_key`; checked-in standard smoke + protected hosted/Realtime probe |
-| AI SDK | Host `LanguageModelV4`; no Prism catalog | declared text/image/audio/file/document prompt parts (role-limited) | v4 mapping; provider-executed tool authority; host-owned reasoning | host-owned; exact 4.0.10 matrix (`4.0.3` and `4.0.4` also listed); protected host integration |
+| AI SDK | Host `LanguageModelV4`; no Prism catalog | declared text/image/audio/file/document prompt parts (role-limited) | v4 mapping; provider-executed tool authority; host-owned reasoning | host-owned; exact 4.0.13 matrix (`4.0.3`, `4.0.4`, `4.0.10` also listed); protected host integration |
 | Anthropic | Messages; caller-gated list | text, image, PDF document/file | tool deltas, thinking | `cache_control`; protected API-key smoke |
 | Google | Gemini `generateContent`; caller-gated list | text, image, audio, document/file | complete tool calls, thinking | no Prism cache marker; protected API-key smoke |
 | Kimi | Coding Messages or opt-in Moonshot; caller-gated list | text, image, PDF document/file by route/model | tool deltas, route-native thinking replay | implicit / optional Anthropic markers; protected API-key smoke |

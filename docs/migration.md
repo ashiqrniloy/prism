@@ -1,5 +1,35 @@
 # Migration guide
 
+## 0.5.6 → 0.6.0 (Node 22 floor; folds the never-published 0.5.7)
+
+**Prism 0.6.0 requires Node `>=22`.** Every publishable package declares `"engines": { "node": ">=22" }`; a Node 20 host gets an `EBADENGINE` warning from npm (a hard failure under `engine-strict`) and an unsupported runtime. Node 20 reached upstream end-of-life on 2026-04-30, so the 0.6.0 line moves to Node 22 (maintenance LTS to 2027-04-30) while Node 24 stays the CI default (active LTS to 2028-04-30). The full 0.5.6 → 0.6.0 guide — third-party floors, the removed office peer, the additive host knobs, and upgrade/rollback steps — lives in [migrate-to-0.6.md](migrate-to-0.6.md).
+
+What a 0.5.x host must check before upgrading:
+
+- **Runtime.** Move the host process and any container image to Node 22.6+ (the docs/test harness strips TypeScript natively from 22.6; Node 22 LTS or later is the supported answer). `engines.node` is now `>=22`, so `npm install` fails closed on older runtimes with `engine-strict` enabled.
+- **CI legs.** The release workflow's compatibility leg is renamed `node20-compat` → `node22-compat` and runs on `node-version: "22"`; branch-protection required-check lists that name the old job id must be updated.
+- **Development types.** `@types/node` (dev) moves `^20.19.0` → `^22.20.0` in the root and `@arnilo/prism-coding-tools`, tracking the declared floor. Hosts building Prism from source should not pin their own `@types/node` below 22 while the floor is `>=22`.
+- **No migration step for Prism itself.** No import path, store schema, event shape, or public signature changed for the floor; it is one of the two host-visible deltas in this cut (`scripts/phase12-freeze-manifest.json` deviation `dev-006`), the other being the third-party peer floors and the removed `@arnilo/prism-office` `playwright-core` peer listed in [migrate-to-0.6.md](migrate-to-0.6.md#3-arniloprim-office-is-peer-free).
+
+### Folded 0.5.7 content (no import, store, or event-shape break)
+
+The 0.5.7 cut was never published, so its content ships in 0.6.0. Third-party ranges moved; hosts that pin these themselves must move with them:
+
+- `pg` **`^8.22.0` → `^8.23.0`** — driver dependency of `@arnilo/prism-core/sessions/postgres` and `@arnilo/prism-memory`, and its optional peer in core. Hosts on 8.22 see a peer warning until they upgrade.
+- `playwright-core` optional exact peer **`1.61.0` → `1.63.0`** in `@arnilo/prism-web-tools` (the exact pin is deliberate — browser control is version-sensitive, and the host still owns the browser binary/image). `@arnilo/prism-office` **drops** its optional `playwright-core` peer: no office subpath ever imported it at runtime (the diagrams embed takes a host-supplied iframe), so it becomes a devDependency behind the gated live draw.io test. Hosts that installed it for office can remove it.
+- `@ai-sdk/provider` exact peer **`4.0.10` → `4.0.13`** in `@arnilo/prism-providers/ai-sdk`. The supported-version matrix gained a `4.0.13` row; `4.0.3`, `4.0.4`, and `4.0.10` stay listed. Unlisted versions still fail closed with `AiSdkProviderError { code: "unsupported_version" }`.
+- `@nanonets/graft` optional peer **`^0.16.0` → `^0.16.0 || ^0.18.0`** in `@arnilo/prism-memory/graft` (upstream published no 0.17; both listed floors pass the offline peer-contract smoke).
+- `@agentclientprotocol/sdk` exact pin **`1.3.0` → `1.4.0`** in `@arnilo/prism-ag-ui/acp` and `@arnilo/prism-acp-agent`. Wire protocol stays v1 (`PROTOCOL_VERSION === 1`); 1.4.0 stabilizes elicitation (the SDK's `unstable_createElicitation`/`unstable_completeElicitation` helpers become `createElicitation`/`completeElicitation`, wire method names unchanged — Prism never called the unstable helpers) and adds `compaction` session-update kinds, which Prism does not advertise or map.
+- `@office-open/*` **`0.13.1` → `0.14.5`** in `@arnilo/prism-office`. Upstream made `parseDocument`/`parsePresentation`/`parseWorkbook` async; Prism's synchronous document adapters now call the new `parse*Sync` variants, so no Prism signature changed — but the office package requires the 0.14.5 line.
+- `zod` **`^4.4.3` → `^4.6.2`** in `@arnilo/prism-mcp` (AG-UI's `^3.25.0 || ^4.0.0` peer range is unchanged and still admits it).
+- `@biomejs/biome` dev **`2.5.11` → `2.5.13`** (lint/format only; 0 findings on the repo).
+
+Dev-tooling and release-gate changes in the same cut (no host action required):
+
+- **`@types/node` dev `^26.1.1` → `^20.19.0` at the 0.5.7 cut, then `^22.20.0` here.** Development types track the declared runtime floor, so a Node-22+-only API fails the build instead of compiling clean against a newer type surface. `docs/release-and-install.md` records the policy: the types package tracks the floor, and raising the floor is a support-matrix change (freeze manifest + CI legs), not a dependency bump. The `^20.19.0` pin immediately caught four runnable examples using `import.meta.main` (Node ≥22.18/≥24.2) on a Node-20 floor — they now use the house `import.meta.url === \`file://${process.argv[1]}\`` guard, so they no longer silently no-op below Node 22.18.
+- **Node 20 floor removed in 0.6.0.** The never-published 0.5.7 deliberately kept `engines.node >=20` because dropping a supported line is a host-breaking support-matrix change that does not belong in a patch release; the 0.6.0 minor is the right vehicle (Node 22 is maintenance LTS to 2027-04-30, Node 24 active LTS to 2028-04-30).
+- **Internal first-party ranges are gated at the cut version exactly.** `release.mjs validateRelease` (lockstep mode, which `release.mjs gate --lockstep --version` and the publish path both use) requires every `@arnilo/*` range to be the cut version (exact `0.6.0` or caret `^0.6.0`). A range that merely *satisfies* it — `^0.5.5` alongside `^0.5.6`, which is what the pre-cut tree carried — now fails the gate closed, because it lets two installs of the same release line resolve different first-party minors.
+
 ## 0.5.3 → 0.5.4 (export-shape break in `@arnilo/prism`)
 
 

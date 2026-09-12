@@ -11,13 +11,15 @@
  * 0.1.x support matrix stays frozen at scripts/phase12-freeze-manifest.json.
  */
 import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
+import { workspaceShape } from "./package-truth.mjs";
 
 const url = (path) => new URL(path, import.meta.url);
 const manifest = JSON.parse(readFileSync(url("./phase13-freeze-manifest.json"), "utf8"));
 const baseline = JSON.parse(readFileSync(url("./phase13-baseline.json"), "utf8"));
 const rootPkg = JSON.parse(readFileSync(url("../package.json"), "utf8"));
+const freezeManifest = JSON.parse(readFileSync(url("./phase12-freeze-manifest.json"), "utf8"));
 
 test("manifest targets release 0.1.1 on the 0.1.x hardening-patch line off the 0.1.0 baseline", () => {
   assert.equal(manifest.release, "0.1.1");
@@ -139,26 +141,11 @@ test("baseline release gate is green at 0.1.0 with 49 packages and zero breaking
 
 test("baseline manifest count is coherent with the real filesystem", () => {
   const mc = baseline.manifestCount;
-  const workspaceDirs = readdirSync(url("../packages"), { withFileTypes: true })
-    .filter((e) => e.isDirectory())
-    .filter((e) => existsSync(url(`../packages/${e.name}/package.json`)))
-    .filter(
-      (e) =>
-        e.name !== "computer-use-linux" &&
-        e.name !== "prism-wiki" &&
-        e.name !== "obscura" &&
-        e.name !== "prism-dev" &&
-        e.name !== "prompts" &&
-        e.name !== "documents" &&
-        e.name !== "sheets" &&
-        e.name !== "diagrams",
-    );
-  const providerDirs = workspaceDirs.filter((d) => d.name.startsWith("provider-"));
-  const prismDirs = workspaceDirs.filter((d) => d.name.startsWith("prism-"));
-  const hasCodingTools = workspaceDirs.some((d) => d.name === "prism-coding-tools");
-  const hasCore = workspaceDirs.some((d) => d.name === "prism-core");
+  const { names: workspaceNames, providerDirs, prismDirs } = workspaceShape();
+  const hasCodingTools = workspaceNames.includes("prism-coding-tools");
+  const hasCore = workspaceNames.includes("prism-core");
   const delta = hasCodingTools ? -46 : hasCore ? -14 : 0; // plan 054 Tasks 2-8: providers family + office family + profile deletions
-  assert.equal(mc.workspacePackages + delta, workspaceDirs.length, "workspacePackages matches packages/*/package.json count");
+  assert.equal(mc.workspacePackages + delta, workspaceNames.length, "workspacePackages matches packages/*/package.json count");
   const hasProviderFamily = existsSync(url("../packages/prism-providers/src")); // plan 054 Task 6: adapters moved inside the family
   assert.equal(
     mc.categories.provider + (hasProviderFamily ? -17 : 0),
@@ -172,7 +159,7 @@ test("baseline manifest count is coherent with the real filesystem", () => {
   );
   assert.equal(
     mc.categories.capability + (hasCodingTools ? -21 : hasCore ? -15 : 0),
-    workspaceDirs.length - providerDirs.length - prismDirs.length,
+    workspaceNames.length - providerDirs.length - prismDirs.length,
     "capability = remainder",
   );
   assert.equal(mc.publishable + delta, mc.workspacePackages + delta + 1, "publishable = root + workspace");
@@ -187,9 +174,17 @@ test("baseline releaseCheck records the dirty-tree block (clean v0.1.0 passes pe
   assert.ok(check.status.includes("plan 012"), "points at the plan 012 clean-tree green evidence");
 });
 
-test("phase 13 baseline file is newer than the phase 12 freeze manifest (captured at Task 0)", () => {
+test("phase 13 baseline was captured at or after the phase 12 freeze (content dates, not mtime)", () => {
+  // Plan 070 Further Action 8: the mtime form failed on any tree whose file timestamps
+  // were not written in commit order (fresh clone, partial checkout, single-file
+  // `git checkout`). The freeze manifest records its own amendment floor in
+  // `featureFreeze.deviations[].date` — append-only, earliest = the Task 0 freeze day —
+  // and the baseline records `captured`; compare those content dates instead.
+  const freezeFloor = freezeManifest.featureFreeze.deviations.map((d) => d.date).sort()[0];
+  assert.match(freezeFloor ?? "", /^\d{4}-\d{2}-\d{2}$/, `phase 12 freeze manifest records a freeze date, got: ${freezeFloor}`);
+  assert.match(baseline.captured ?? "", /^\d{4}-\d{2}-\d{2}$/, `phase 13 baseline records a capture date, got: ${baseline.captured}`);
   assert.ok(
-    statSync(url("./phase13-baseline.json")).mtimeMs >= statSync(url("./phase12-freeze-manifest.json")).mtimeMs,
-    "baseline captured at or after the phase 12 freeze",
+    baseline.captured >= freezeFloor,
+    `phase 13 baseline captured ${baseline.captured} predates the phase 12 freeze ${freezeFloor}`,
   );
 });

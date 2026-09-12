@@ -4,7 +4,7 @@
  * The host supplies a PTY module through PRISM_TEST_PTY_BACKEND (absolute path
  * to an ESM/CJS module). The module exports `createPtyBackend()` (named or
  * default) returning an object structurally conforming to
- * `ProcessPtyBackend` from @arnilo/prism-coding-agent — it may wrap any PTY
+ * `ProcessPtyBackend` from @arnilo/prism-coding-tools/agent — it may wrap any PTY
  * engine (e.g. node-pty); Prism never depends on that engine.
  *
  * This leg proves, against a real pseudoterminal:
@@ -25,16 +25,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
 import { pathToFileURL } from "node:url";
-import { createProcessSessions } from "../packages/coding-agent/dist/index.js";
+import { createProcessSessions } from "../packages/prism-coding-tools/dist/agent/index.js";
+import { blockedGate } from "./blocked-gate.mjs";
 
 const backendModule = process.env.PRISM_TEST_PTY_BACKEND;
 const shell = process.env.PRISM_TEST_PTY_SHELL ?? "sh";
 
 if (!backendModule) {
-  console.error(
-    "BLOCKED GATE: PRISM_TEST_PTY_BACKEND is required (absolute path to a module exporting createPtyBackend()); the phase26 PTY protected leg cannot run without a host PTY engine.",
-  );
-  process.exit(1);
+  blockedGate("phase26-pty-protected");
 }
 
 let root;

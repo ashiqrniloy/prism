@@ -7,6 +7,7 @@ import { rm } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import type { Readable } from "node:stream";
 import type { ExecutionPolicy, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import { Semaphore } from "../security/semaphore.js";
 import { CODING_UNSUPPORTED_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import {
@@ -42,25 +43,6 @@ export interface CodingCheckToolOptions {
   readonly maxDiagnosticLines?: number;
   readonly maxOutputBytes?: number;
   readonly defaultTimeoutMs?: number;
-}
-
-class Semaphore {
-  private active = 0;
-  private readonly waiters: Array<() => void> = [];
-  constructor(private readonly max: number) {}
-  async acquire(): Promise<void> {
-    if (this.active < this.max) {
-      this.active++;
-      return;
-    }
-    await new Promise<void>((resolve) => this.waiters.push(resolve));
-    this.active++;
-  }
-  release(): void {
-    this.active--;
-    const next = this.waiters.shift();
-    if (next) next();
-  }
 }
 
 function errorResult(toolCallId: string, message: string): ToolResult {

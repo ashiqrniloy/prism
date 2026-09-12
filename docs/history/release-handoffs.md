@@ -2,6 +2,39 @@
 
 Operator publish handoffs per release line, kept verbatim. Not read on the hot path.
 
+### 0.6.0 publish handoff (plan 071 Task 16)
+
+
+**Decision: GO when the operator prerequisites below are recorded.** Release **0.6.0** is the first published cut after **0.5.6**: the 0.5.7 cut was never published and is **superseded** by this one (registry preflight `node scripts/release.mjs check --lockstep --version 0.6.0` reports all **10/10 packages available**, so there is no published 0.5.7 to replace or deprecate). The graph is **10 publishable manifests** at exact **0.6.0** with internal ranges `^0.6.0`: root `@arnilo/prism` plus 9 workspace packages (3 `prism-*` family packages, 6 capability packages, 19 provider adapter subpaths inside the providers family).
+
+Host-visible delta (full detail in [migrate-to-0.6.md](../../docs/migrate-to-0.6.md)): the runtime floor moves to **Node `>=22`** (Node 20 is upstream EOL since 2026-04-30) and the never-published 0.5.7 content ships here — third-party floors (`pg ^8.23`, `playwright-core 1.63.0`, `@ai-sdk/provider 4.0.13`, `@agentclientprotocol/sdk` exact `1.4.0`, `@office-open/* 0.14.5`, `zod ^4.6.2`), the removed `@arnilo/prism-office` `playwright-core` peer, five additive host knobs, and the durable-tool-round / strict-provider tool-result fixes. No import path, store schema, event shape, or public signature was removed: the compat baselines were regenerated and reviewed as **+70 public names, zero removals** (32 declaration-site moves from the module splits).
+
+Evidence recorded for the tree under publication: `scripts/release-evidence.json` — **42 surfaces, 11 pass, 31 protected with reasons, `blocked: false`** (`test:postgres durable conformance` is a real pass, count 91, env **name** only); `npm test` 5/5 stages (core count 3716, skip 33); combined coverage core 92.13% lines against the 60/70/75 gate with all nine workspace suites above their lines thresholds; `security:threat-suites` 83/83; `npm audit --audit-level=moderate` 0; SBOM regenerated (`npm sbom --sbom-format spdx > security-artifacts/sbom.spdx.json`, 172 packages, 10 licenses, `verify-sbom` clean); tracked-source secret scan 2166 files, 0 findings.
+
+```bash
+# Operator prerequisites (each a named blocked gate — none may be skipped):
+#  1. protected live-canary matrix green (live-canaries.yml, canary-report.json retained)
+#  2. PostgreSQL protected suite green (test:postgres) and CodeQL SAST green on the release commit
+#  3. npm OIDC trusted publishing identity authenticated (NPM_TOKEN with id-token, provenance)
+#  4. branch protection: the compatibility leg is named node22-compat (renamed from node20-compat)
+
+git diff --check
+npm ci
+# sdk:ready phases, as .github/workflows/release.yml runs them (env scoped to release:gate only):
+npm run typecheck && npm run lint && npm run format:check
+npm test && npm run test:coverage && npm run pack:dry-run
+PRISM_TEST_POSTGRES_URL=... npm run release:gate
+npm run security:threat-suites
+
+# Sign the release on the clean tagged tree (operator GPG key):
+git tag -s v0.6.0 -m "0.6.0"
+node scripts/release.mjs publish --lockstep --version 0.6.0
+
+# First-party package tags: push in batches of <=3 per push (tag-push storms; VENT 26-08-29).
+```
+
+Rollback pins the previous published line — `@arnilo/prism@0.5.6` and its siblings, exact pins per package. **Never pin 0.5.7: it does not exist on the registry.** Persisted shapes are unchanged across 0.5.6 → 0.6.0, so a pin rollback loses only the Node floor, the peer floors, and the new knobs.
+
 ### 0.3.2 independent workflow patch (plan 045)
 
 

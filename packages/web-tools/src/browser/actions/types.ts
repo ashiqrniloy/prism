@@ -52,6 +52,8 @@ export interface RunSession {
   crashed: boolean;
   queue: Promise<unknown>;
   queued: number;
+  /** Last activity timestamp — read by the idle-run reaper (`idleRunTtlMs`). */
+  lastUsedAt: number;
   readonly cleanup: Array<() => void>;
   readonly networkBudget: NetworkBudget;
   readonly uploadBudget: UploadBudget;

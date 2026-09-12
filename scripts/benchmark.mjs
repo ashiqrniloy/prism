@@ -36,6 +36,7 @@ export const SCENARIOS = {
   "phase11-auth": { module: "benchmark-scenarios/phase11-auth.mjs", phase: 11, protected: false },
   "multi-agent-runtime": { module: "benchmark-scenarios/multi-agent-runtime.mjs", phase: 35, protected: false },
   "tool-search": { module: "benchmark-scenarios/tool-search.mjs", phase: 41, protected: false },
+  redaction: { module: "benchmark-scenarios/redaction.mjs", phase: 70, protected: false },
 };
 
 function main() {

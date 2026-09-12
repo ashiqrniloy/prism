@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { RuntimeAgentSession } from "../agent-session/session.js";
 import {
   type AgentDefinition,
   type AgentEvent,
@@ -18,7 +19,9 @@ import {
   createSecretRedactor,
   createSessionCachePolicy,
   createSkillRegistry,
+  DEFAULT_SNAPSHOT_CACHE_TTL_MS,
   getSessionBranchEntries,
+  HARD_MAX_SNAPSHOT_CACHE_TTL_MS,
   type InputBuilder,
   type InstructionInjector,
   type Message,
@@ -2619,5 +2622,56 @@ describe("agent session runtime", () => {
     const msg = blocked?.type === "tool_execution_blocked" ? blocked.error.message : undefined;
     assert.equal(msg?.includes(secret), false);
     assert.equal(msg?.includes("[REDACTED]"), true);
+  });
+
+  it("session snapshot cache TTL is host-tunable and defaults to the 1000ms contract value", async () => {
+    const agent = createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
+    });
+    // Counting store: every snapshot cache miss lands as one list() read.
+    const reads = (): { store: SessionStore; count: () => number } => {
+      const inner = createMemorySessionStore([
+        { id: "e1", sessionId: "ttl", timestamp: "2026-01-01T00:00:00.000Z", kind: "label", label: "one" },
+      ]);
+      let count = 0;
+      return {
+        store: {
+          ...inner,
+          async list(sessionId) {
+            count += 1;
+            return inner.list(sessionId);
+          },
+        },
+        count: () => count,
+      };
+    };
+
+    assert.equal(DEFAULT_SNAPSHOT_CACHE_TTL_MS, 1_000);
+    assert.equal(HARD_MAX_SNAPSHOT_CACHE_TTL_MS, 30_000);
+
+    const defaultTtl = reads();
+    const cached = new RuntimeAgentSession({ agent, id: "ttl", store: defaultTtl.store });
+    await cached.snapshot();
+    await cached.snapshot();
+    assert.equal(defaultTtl.count(), 1, "default TTL reuses the cached snapshot");
+
+    // TTL 0 disables the cache: every read rebuilds from the store (byte-identical values).
+    const disabled = reads();
+    const uncached = new RuntimeAgentSession({ agent, id: "ttl", store: disabled.store, snapshotCacheTtlMs: 0 });
+    const first = await uncached.snapshot();
+    const second = await uncached.snapshot();
+    assert.equal(disabled.count(), 2, "snapshotCacheTtlMs: 0 disables reuse");
+    assert.deepEqual(second, first);
+
+    // A raised TTL keeps one read; bounded by the hard cap and fail-closed below 0.
+    const raised = reads();
+    const longTtl = new RuntimeAgentSession({ agent, id: "ttl", store: raised.store, snapshotCacheTtlMs: HARD_MAX_SNAPSHOT_CACHE_TTL_MS });
+    await longTtl.snapshot();
+    await longTtl.snapshot();
+    assert.equal(raised.count(), 1);
+    for (const bad of [-1, 1.5, Number.NaN, HARD_MAX_SNAPSHOT_CACHE_TTL_MS + 1]) {
+      assert.throws(() => new RuntimeAgentSession({ agent, id: "ttl", store: reads().store, snapshotCacheTtlMs: bad }), TypeError);
+    }
   });
 });

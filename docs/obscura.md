@@ -1,5 +1,7 @@
 # Obscura browser engine
 
+> **Optional peer install:** `playwright-core@1.63.0` (exact pin) for the CDP leg — see [Optional peer dependencies](peer-dependencies.md).
+
 Optional `@arnilo/prism-web-tools/obscura` support for a host-installed
 [Obscura](https://github.com/h4ckf0r0day/obscura) headless browser. Obscura is never
 bundled — install the binary (or use the `h4ckf0r0day/obscura` Docker image) and point
@@ -99,7 +101,7 @@ await session.close(); // browser first, then the owned process
 - Endpoints are loopback-only unless `allowRemoteEndpoint` is set; credentials in the
   URL are always rejected; remote plain `ws:`/`http:` is refused (no authentication —
   require an authenticated `wss:`/`https:` tunnel).
-- The Playwright import is an optional exact `playwright-core@1.61.0` peer; supply
+- The Playwright import is an optional exact `playwright-core@1.63.0` peer; supply
   `connectObscuraCdp({ playwright })` to inject a host-selected build.
 - The returned browser composes with `createBrowserManager`/`createBrowserTools`:
   snapshots, actions, policy, checkpoints, and artifacts are Prism-owned. Raw CDP

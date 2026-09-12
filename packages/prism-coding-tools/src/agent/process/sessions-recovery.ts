@@ -15,7 +15,7 @@ import {
   releaseRecordLease,
   saveProcessRecoveryRecord,
 } from "./recovery.js";
-import { assertNotDisposed, isTerminalState, nowIso, type SessionRecord, type SessionsHost } from "./sessions-host.js";
+import { assertNotDisposed, durableSeams, isTerminalState, nowIso, type SessionRecord, type SessionsHost } from "./sessions-host.js";
 import { persistRecoveryUnknown } from "./sessions-monitor.js";
 import { makeHandle } from "./sessions-spawn.js";
 import { sweepExpired, terminateRecord } from "./sessions-teardown.js";
@@ -84,9 +84,10 @@ export async function recoverSessions(host: SessionsHost, recoverOptions?: { sig
   if (!host.durable) {
     throw new ProcessRecoveryError("ERR_PRISM_RECOVERY_UNSUPPORTED", "durable process recovery is not configured on this host");
   }
+  const seams = durableSeams(host);
   sweepExpired(host);
   const { records } = await loadProcessRecoveryRecords({
-    checkpoints: host.checkpoints!,
+    checkpoints: seams.checkpoints,
     limits: host.recoveryLimits,
     ownership: host.ownership,
     signal: recoverOptions?.signal,
@@ -118,9 +119,9 @@ export async function recoverSessions(host: SessionsHost, recoverOptions?: { sig
     // starting | running durable record without a live handle: attach-if-
     // attested, else atomic unknown. Never fabricate an exit code.
     const lease = await acquireRecordLease({
-      leases: host.leases!,
+      leases: seams.leases,
       id: record.id,
-      ownerId: host.ownerId!,
+      ownerId: seams.ownerId,
       ttlMs: host.recoveryLimits.leaseTtlMs,
       ownership: host.ownership,
       signal: recoverOptions?.signal,
@@ -134,7 +135,7 @@ export async function recoverSessions(host: SessionsHost, recoverOptions?: { sig
     try {
       // Fresh CAS read under the lease: another replica may have moved the record.
       const fresh = await loadProcessRecoveryRecord({
-        checkpoints: host.checkpoints!,
+        checkpoints: seams.checkpoints,
         id: record.id,
         limits: host.recoveryLimits,
         ownership: host.ownership,
@@ -166,7 +167,7 @@ export async function recoverSessions(host: SessionsHost, recoverOptions?: { sig
           updatedAt: nowIso(),
         });
         await saveProcessRecoveryRecord({
-          checkpoints: host.checkpoints!,
+          checkpoints: seams.checkpoints,
           record: expired,
           expectedVersion: fresh.version,
           version: fresh.version + 1,
@@ -204,7 +205,7 @@ export async function recoverSessions(host: SessionsHost, recoverOptions?: { sig
       if (!saved) {
         // CAS/fence conflict: another replica moved the record; re-report its state.
         const again = await loadProcessRecoveryRecord({
-          checkpoints: host.checkpoints!,
+          checkpoints: seams.checkpoints,
           id: current.id,
           limits: host.recoveryLimits,
           ownership: host.ownership,
@@ -226,9 +227,9 @@ export async function recoverSessions(host: SessionsHost, recoverOptions?: { sig
       unknown += 1;
     } finally {
       await releaseRecordLease({
-        leases: host.leases!,
+        leases: seams.leases,
         id: record.id,
-        ownerId: host.ownerId!,
+        ownerId: seams.ownerId,
         token: lease.token,
         ownership: host.ownership,
         signal: recoverOptions?.signal,

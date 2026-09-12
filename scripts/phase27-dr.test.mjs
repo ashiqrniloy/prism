@@ -45,6 +45,7 @@ import {
   buildEnterpriseMigration003Ddl,
 } from "../packages/prism-core/dist/enterprise/postgres/ddl.js";
 import { applyEnterpriseMigrations } from "../packages/prism-core/dist/enterprise/postgres/migrations.js";
+import { blockedGate } from "./blocked-gate.mjs";
 
 /* ------------------------------------------------------------------------- *
  * Argument parsing, guards, docker helpers
@@ -68,10 +69,12 @@ const ARTIFACT_DIR = flag("artifact-dir") ?? mkdtempSync(join(tmpdir(), "prism-d
 const TTL_MS = 3 * 60 * 1000;
 
 if (!SOURCE || !TARGET || !CONFIRM || !PITR) {
-  console.error(
-    "DR DRILL FAILED: missing protected infrastructure — PRISM_TEST_POSTGRES_URL (source), --target, --confirm-target, and PRISM_PITR_URL are all required; this drill fails rather than skips",
-  );
-  process.exit(1);
+  const missing = [];
+  if (!SOURCE) missing.push("PRISM_TEST_POSTGRES_URL (source) is required");
+  if (!TARGET) missing.push("PRISM_DR_TARGET_URL or --target is required");
+  if (!CONFIRM) missing.push("--confirm-target is required (the drill refuses an unconfirmed target)");
+  if (!PITR) missing.push("PRISM_PITR_URL is required");
+  blockedGate("phase27-dr", { missing });
 }
 
 function parseUrl(url) {
@@ -844,6 +847,6 @@ await drill().catch(() => {
   // Fully static message: no error field is logged, so no password/URL taint can
   // reach the console (CodeQL js/clear-text-logging, alert 67). The drill's own
   // redaction checks are the only secret-tainted surface.
-  console.error("DR DRILL FAILED: inspect the drill output above for the failing step.");
+  console.error("dr drill failed: inspect the drill output above for the failing step.");
   process.exit(1);
 });

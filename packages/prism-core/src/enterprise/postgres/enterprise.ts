@@ -6,7 +6,7 @@ import { asEnterprisePostgresError, EnterprisePostgresError } from "./errors.js"
 import { createPostgresEvaluationStore } from "./evaluations.js";
 import { validateIdentifier } from "./identifiers.js";
 import { applyEnterpriseMigrations } from "./migrations.js";
-import { createPostgresModelRouterStateStore } from "./model-router.js";
+import { createPostgresModelRouterStateStore } from "./model-router/index.js";
 import { createPostgresPolicyDecisionStore } from "./policy.js";
 import { createPostgresToolEffectStore } from "./tool-effects.js";
 import {

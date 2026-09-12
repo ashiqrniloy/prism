@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { createServer, request as httpRequest, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { connect as netConnect, type Socket } from "node:net";
 import type { Readable, Writable } from "node:stream";
+import { Semaphore } from "../semaphore.js";
 import { type AddressResolver, assertPinned, isPrivateAddress, resolvePinned } from "./dns-pin.js";
 import { type EgressLimitOptions, type ResolvedEgressLimits, resolveEgressLimits } from "./limits.js";
 import type { EgressPolicy } from "./policy.js";
@@ -136,25 +137,6 @@ function pipeBounded(src: Readable, dest: Writable, maxBytes: number, onExceed: 
   src.on("end", () => dest.end());
   src.on("error", () => dest.destroy());
   dest.on("error", () => src.destroy());
-}
-
-class Semaphore {
-  private active = 0;
-  private readonly waiters: Array<() => void> = [];
-  constructor(private readonly max: number) {}
-  async acquire(): Promise<() => void> {
-    if (this.active < this.max) {
-      this.active += 1;
-      return () => this.release();
-    }
-    await new Promise<void>((resolve) => this.waiters.push(resolve));
-    this.active += 1;
-    return () => this.release();
-  }
-  private release(): void {
-    this.active = Math.max(0, this.active - 1);
-    this.waiters.shift()?.();
-  }
 }
 
 export function createAllowListEgressProxy(options: CreateAllowListEgressProxyOptions): EgressProxy {

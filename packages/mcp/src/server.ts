@@ -21,19 +21,21 @@ import {
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import * as z from "zod/v4";
 import { measureBoundedJson } from "./json-bounds.js";
-import { isLoopbackHostname } from "./transport.js";
+import {
+  normalizeProtectedResource,
+  protectedResourceMetadata,
+  unauthorizedResponse,
+  WELL_KNOWN_OAUTH_PROTECTED_RESOURCE,
+} from "./oauth-metadata.js";
 import type {
   CreatePrismMcpServerOptions,
   CreatePrismMcpWebHandlerOptions,
-  McpProtectedResource,
   PrismMcpAuthorization,
   PrismMcpStdioHandle,
   PrismMcpWebHandler,
   ServePrismMcpStdioOptions,
 } from "./types.js";
 import { McpBridgeError } from "./types.js";
-
-const WELL_KNOWN_OAUTH_PROTECTED_RESOURCE = "/.well-known/oauth-protected-resource";
 
 const DEFAULT_MAX_SERVER_RESULT_BYTES = 1024 * 1024;
 const HARD_MAX_SERVER_RESULT_BYTES = 8 * 1024 * 1024;
@@ -482,24 +484,19 @@ export async function createPrismMcpWebHandler(
         const pathname = new URL(request.url).pathname;
         if (pathname === WELL_KNOWN_OAUTH_PROTECTED_RESOURCE) {
           if (request.method !== "GET") return httpError(405, "Method not allowed");
-          return Response.json(
-            {
-              authorization_servers: protectedResource.authorizationServers,
-              resource: protectedResource.resource,
-              ...(protectedResource.scopesSupported !== undefined ? { scopes_supported: protectedResource.scopesSupported } : {}),
-            },
-            { headers: { "content-type": "application/json", "cache-control": "no-store" } },
-          );
+          return Response.json(protectedResourceMetadata(protectedResource), {
+            headers: { "content-type": "application/json", "cache-control": "no-store" },
+          });
         }
       }
       const authInfo = await awaitWithSignal(Promise.resolve(options.resolveAuthInfo?.(request)), controller.signal);
       const identity = options.resolveIdentity
         ? await awaitWithSignal(Promise.resolve(options.resolveIdentity(request, authInfo)), controller.signal)
         : undefined;
-      if (options.resolveIdentity && !identity) return unauthorized(protectedResource, request);
+      if (options.resolveIdentity && !identity) return unauthorizedResponse(protectedResource, request);
       const identityId = identity ? identity.id : undefined;
       if (identityId !== undefined && (!validCapabilityId(identityId) || Buffer.byteLength(identityId, "utf8") > 256))
-        return unauthorized(protectedResource, request);
+        return unauthorizedResponse(protectedResource, request);
       const requestedSession = request.headers.get("mcp-session-id") ?? undefined;
       if (requestedSession && sessions.get(requestedSession) !== identityId) return httpError(404, "MCP session not found");
       // Bounded body parsing; the raw bytes feed the rebuilt request and the
@@ -793,73 +790,6 @@ function bounded(value: number | undefined, fallback: number, cap: number, name:
 
 function httpError(status: number, message: string): Response {
   return Response.json({ error: { message } }, { status });
-}
-
-/** 401 challenge: RFC 9728 resource metadata pointer (and scope when declared). */
-function unauthorized(protectedResource: ReturnType<typeof normalizeProtectedResource> | undefined, request: Request): Response {
-  if (!protectedResource) return httpError(401, "Unauthorized");
-  const origin = new URL(request.url).origin;
-  const scope = protectedResource.scopesSupported?.length ? `, scope="${protectedResource.scopesSupported.join(" ")}"` : "";
-  const challenge = `Bearer resource_metadata="${origin}${WELL_KNOWN_OAUTH_PROTECTED_RESOURCE}"${scope}`;
-  return Response.json(
-    { error: { message: "Unauthorized" } },
-    { status: 401, headers: { "content-type": "application/json", "www-authenticate": challenge } },
-  );
-}
-
-function normalizeProtectedResource(input: McpProtectedResource): {
-  readonly authorizationServers: readonly string[];
-  readonly resource: string;
-  readonly scopesSupported?: readonly string[];
-} {
-  if (!Array.isArray(input.authorizationServers) || input.authorizationServers.length < 1 || input.authorizationServers.length > 8) {
-    throw new McpBridgeError("protectedResource.authorizationServers must contain 1..8 URLs");
-  }
-  const authorizationServers = input.authorizationServers.map((value) => validateProtectedResourceUrl(value, "authorization server"));
-  if (typeof input.resource !== "string") {
-    throw new McpBridgeError("protectedResource.resource is required (RFC 9728)");
-  }
-  const resource = validateProtectedResourceUrl(input.resource, "protected resource");
-  let scopesSupported: readonly string[] | undefined;
-  if (input.scopesSupported !== undefined) {
-    if (!Array.isArray(input.scopesSupported) || input.scopesSupported.length < 1 || input.scopesSupported.length > 64) {
-      throw new McpBridgeError("protectedResource.scopesSupported must contain 1..64 scopes");
-    }
-    for (const scope of input.scopesSupported) {
-      if (typeof scope !== "string" || !scope.trim() || Buffer.byteLength(scope, "utf8") > 128) {
-        throw new McpBridgeError("protectedResource.scopesSupported contains an invalid scope");
-      }
-      // RFC 7235 quoted-string safety: scope values reach the WWW-Authenticate
-      // challenge, so reject anything outside the RFC 6749 scope-token charset
-      // (no quotes, backslashes, or control characters).
-      if (!/^[\x21\x23-\x5B\x5D-\x7E]+$/.test(scope)) {
-        throw new McpBridgeError("protectedResource.scopesSupported contains an invalid scope");
-      }
-    }
-    if (Buffer.byteLength(JSON.stringify(input.scopesSupported), "utf8") > 8 * 1024) {
-      throw new McpBridgeError("protectedResource.scopesSupported exceeds 8 KiB");
-    }
-    scopesSupported = [...input.scopesSupported];
-  }
-  return {
-    authorizationServers,
-    resource,
-    ...(scopesSupported !== undefined ? { scopesSupported } : {}),
-  };
-}
-
-function validateProtectedResourceUrl(value: string, label: string): string {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new McpBridgeError(`${label} URL is invalid`);
-  }
-  if (url.username || url.password || url.hash) throw new McpBridgeError(`${label} URL must not embed credentials or fragments`);
-  if (url.protocol !== "https:" && !(url.protocol === "http:" && isLoopbackHostname(url.hostname))) {
-    throw new McpBridgeError(`${label} URL must use https: (plaintext loopback is allowed)`);
-  }
-  return url.href;
 }
 
 class McpHttpError extends Error {

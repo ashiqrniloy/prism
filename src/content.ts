@@ -1,8 +1,25 @@
 import { lookup as dnsLookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import type { ContentBlock, ImageContent, Message, ModelConfig, ResourceLoadContext, ResourceLoader, VideoContent } from "./contracts.js";
+import {
+  assertSsrfAllowedUrl,
+  isAllowedByCidr,
+  isBlockedIp,
+  MediaContentError,
+  type MediaHostAddress,
+  type MediaHostnameResolver,
+  normalizeHostname,
+  type SsrfPolicy,
+} from "./media-types.js";
 import { pinnedFetch } from "./pinned-fetch.js";
 import { assertPermission } from "./security.js";
+
+export type { MediaHostAddress, MediaHostnameResolver, SsrfPolicy } from "./media-types.js";
+// SSRF policy, host/address types, `MediaContentError`, and the URL gate live in the leaf
+// module shared with `pinned-fetch.ts` (plan 070 Task 10); re-exported here so the
+// `@arnilo/prism` surface and the error-class identity are unchanged. `normalizeHostname`
+// is imported for internal use only — it is public through `pinned-fetch.ts`, not here.
+export { assertSsrfAllowedUrl, MediaContentError } from "./media-types.js";
 
 /** Known model input capability tags for `ModelCapabilities.input`. */
 export const MODEL_INPUT_CAPABILITIES = ["text", "image", "audio", "file", "document", "video"] as const;
@@ -65,24 +82,10 @@ export interface MediaContentBounds {
   readonly fetchTimeoutMs?: number;
 }
 
-export interface SsrfPolicy {
-  /** When true (default), deny private/link-local/metadata hostnames and IPs. */
-  readonly denyPrivateHosts?: boolean;
-  /** Optional hostname allow-list. When set, only listed hosts are permitted. */
-  readonly allowedHostnames?: readonly string[];
-}
-
 export interface MediaMimePolicy {
   /** Reject when magic bytes disagree with declared media type. Default `true`. */
   readonly strictMagicValidation?: boolean;
 }
-
-export interface MediaHostAddress {
-  readonly address: string;
-  readonly family: 4 | 6;
-}
-
-export type MediaHostnameResolver = (hostname: string, signal: AbortSignal) => Promise<readonly MediaHostAddress[]>;
 
 export interface MediaUrlRequest {
   readonly url: URL;
@@ -128,30 +131,6 @@ export class UnsupportedModalityError extends Error {
     this.modality = modality;
     this.provider = model.provider;
     this.model = model.model;
-  }
-}
-
-export class MediaContentError extends Error {
-  readonly code:
-    | "ambiguous_source"
-    | "missing_source"
-    | "item_too_large"
-    | "request_too_large"
-    | "too_many_items"
-    | "audio_too_long"
-    | "invalid_base64"
-    | "ssrf_denied"
-    | "redirect"
-    | "fetch_failed"
-    | "fetch_timeout"
-    | "resource_required"
-    | "mime_mismatch"
-    | "unsupported_url_scheme";
-
-  constructor(code: MediaContentError["code"], message: string, options?: ErrorOptions) {
-    super(message, options);
-    this.name = "MediaContentError";
-    this.code = code;
   }
 }
 
@@ -214,46 +193,6 @@ export function assertMediaBlocksWithinBounds(blocks: readonly MediaContentBlock
     if (block.type === "audio" && block.durationMs !== undefined && block.durationMs > maxAudioDurationMs) {
       throw new MediaContentError("audio_too_long", `Audio duration ${block.durationMs}ms exceeded ${maxAudioDurationMs}ms`);
     }
-  }
-}
-
-export function assertSsrfAllowedUrl(url: string, policy: SsrfPolicy = {}): void {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    throw new MediaContentError("ssrf_denied", "Media URL is not a valid absolute URL");
-  }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new MediaContentError("unsupported_url_scheme", `Media URL scheme ${parsed.protocol} is not allowed`);
-  }
-  if (parsed.username || parsed.password) {
-    throw new MediaContentError("ssrf_denied", "Media URL must not embed credentials");
-  }
-
-  const hostname = normalizeHostname(parsed.hostname);
-  if (policy.allowedHostnames?.length) {
-    if (!policy.allowedHostnames.some((allowed) => hostname === normalizeHostname(allowed))) {
-      throw new MediaContentError("ssrf_denied", `Media URL host ${hostname} is not allow-listed`);
-    }
-    return;
-  }
-
-  if (policy.denyPrivateHosts === false) return;
-
-  if (
-    hostname === "localhost" ||
-    hostname.endsWith(".localhost") ||
-    hostname.endsWith(".local") ||
-    hostname === "metadata" ||
-    hostname === "metadata.google.internal" ||
-    hostname === "instance-data"
-  ) {
-    throw new MediaContentError("ssrf_denied", `Media URL host ${hostname} is not allowed`);
-  }
-
-  if (isBlockedIp(hostname)) {
-    throw new MediaContentError("ssrf_denied", `Media URL host ${hostname} is not allowed`);
   }
 }
 
@@ -524,7 +463,11 @@ async function resolvePublicAddress(
   if (addresses.length === 0) throw new MediaContentError("fetch_failed", "Media hostname resolved to no addresses");
   if (addresses.length > 32) throw new MediaContentError("fetch_failed", "Media hostname resolved to too many addresses");
   if (policy?.denyPrivateHosts !== false && !policy?.allowedHostnames?.length) {
-    if (addresses.some(({ address }) => isBlockedIp(normalizeHostname(address)))) {
+    // An allow-listed CIDR covers resolved answers too, but only the private-IP block.
+    const blocked = addresses.some(
+      ({ address }) => isBlockedIp(normalizeHostname(address)) && !isAllowedByCidr(address, policy?.allowedCidrs),
+    );
+    if (blocked) {
       throw new MediaContentError("ssrf_denied", `Media URL host ${hostname} resolved to a private address`);
     }
   }
@@ -603,58 +546,6 @@ function mediaTypesCompatible(declared: string, sniffed: string): boolean {
   if (normalizedDeclared === "audio/mp3" && normalizedSniffed === "audio/mpeg") return true;
   if (normalizedDeclared === "application/zip" && normalizedSniffed === "application/zip") return true;
   return false;
-}
-
-function normalizeHostname(hostname: string): string {
-  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  return normalized.endsWith(".") ? normalized.slice(0, -1) : normalized;
-}
-
-function isBlockedIp(hostname: string): boolean {
-  const normalized = normalizeHostname(hostname);
-  const family = isIP(normalized);
-  if (family === 4) return isBlockedIpv4(normalized);
-  if (family === 6) return isBlockedIpv6(normalized);
-  return false;
-}
-
-function isBlockedIpv4(address: string): boolean {
-  const [a, b] = address.split(".").map(Number) as [number, number, number, number];
-  return (
-    a === 0 ||
-    a === 10 ||
-    a === 127 ||
-    (a === 100 && b >= 64 && b <= 127) ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && (b === 0 || b === 168)) ||
-    (a === 198 && (b === 18 || b === 19 || b === 51)) ||
-    (a === 203 && b === 0) ||
-    a >= 224
-  );
-}
-
-function isBlockedIpv6(address: string): boolean {
-  const words = parseIpv6Words(address);
-  if (!words) return true;
-  if (words.every((word) => word === 0) || (words.slice(0, 7).every((word) => word === 0) && words[7] === 1)) return true;
-  if ((words[0]! & 0xfe00) === 0xfc00) return true;
-  if ((words[0]! & 0xffc0) === 0xfe80 || (words[0]! & 0xffc0) === 0xfec0) return true;
-  if ((words[0]! & 0xff00) === 0xff00) return true;
-  if (words[0] === 0x2001 && words[1] === 0x0db8) return true;
-  const mapped = words.slice(0, 5).every((word) => word === 0) && (words[5] === 0 || words[5] === 0xffff);
-  return mapped && isBlockedIpv4(`${words[6]! >> 8}.${words[6]! & 0xff}.${words[7]! >> 8}.${words[7]! & 0xff}`);
-}
-
-function parseIpv6Words(address: string): number[] | undefined {
-  const parts = address.split("::");
-  if (parts.length > 2) return undefined;
-  const left = parts[0] ? parts[0].split(":") : [];
-  const right = parts[1] ? parts[1].split(":") : [];
-  const missing = 8 - left.length - right.length;
-  if (missing < 0 || (parts.length === 1 && missing !== 0)) return undefined;
-  const words = [...left, ...Array.from({ length: missing }, () => "0"), ...right].map((part) => Number.parseInt(part, 16));
-  return words.length === 8 && words.every((word) => Number.isInteger(word) && word >= 0 && word <= 0xffff) ? words : undefined;
 }
 
 function startsWith(bytes: Uint8Array, prefix: readonly number[]): boolean {

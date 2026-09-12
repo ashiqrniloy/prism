@@ -344,4 +344,89 @@ describe("context budget", () => {
     assert.doesNotMatch(text, new RegExp(body.slice(0, 40)));
     assert.ok(loaded.has("big"), "session loaded set unchanged; demotion is projection-only");
   });
+
+  it("tokenEstimator defaults to the built-in heuristic, and a host estimator drives eviction", () => {
+    const groups = () => ({
+      instructions: [{ role: "system" as const, content: [{ type: "text" as const, text: "sys" }] }],
+      summaries: [],
+      history: [user("first", "hist-old"), assistant("second", "hist-mid")],
+      input: [user("current")],
+      attachments: [],
+      toolResults: [],
+    });
+    const budgetFor = (extra: Record<string, unknown> = {}) => ({
+      maxInputTokens: estimateTextTokens("sys") + estimateTextTokens("current") + estimateTextTokens("second"),
+      reportOmissions: true,
+      ...extra,
+    });
+
+    // Default: no estimator ⇒ byte-identical to the pre-option behavior.
+    const withoutOption = applyContextBudget({ groups: groups(), budget: budgetFor() });
+    const withDefault = applyContextBudget({ groups: groups(), budget: budgetFor({ tokenEstimator: estimateTextTokens }) });
+    assert.deepEqual(withDefault.report, withoutOption.report);
+    assert.deepEqual(withDefault.groups, withoutOption.groups);
+
+    // Custom: 10x the heuristic evicts more history than the same token cap would under the default.
+    const tenX = applyContextBudget({
+      groups: groups(),
+      budget: {
+        // Room for the mandatory prefix (sys + current) at 10x, but not for any history.
+        maxInputTokens: (estimateTextTokens("sys") + estimateTextTokens("current")) * 10 + 5,
+        reportOmissions: true,
+        tokenEstimator: (text: string) => estimateTextTokens(text) * 10,
+      },
+    });
+    assert.equal(tenX.report.truncated, true);
+    assert.deepEqual(
+      tenX.report.omitted.map((row) => row.id),
+      ["hist-old", "hist-mid"],
+    );
+    assert.deepEqual(
+      tenX.report.omitted.map((row) => row.tokenEstimate),
+      [estimateTextTokens("first") * 10, estimateTextTokens("second") * 10],
+      "omission ledger is reported in estimator units",
+    );
+
+    // Byte caps stay estimator-independent: a zero-token estimator cannot defeat maxInputBytes.
+    assert.throws(
+      () =>
+        applyContextBudget({
+          groups: {
+            instructions: [],
+            summaries: [],
+            history: [],
+            input: [{ role: "user", content: [{ type: "text", text: "x".repeat(4096) }] }],
+            attachments: [],
+            toolResults: [],
+          },
+          budget: { maxInputBytes: 64, tokenEstimator: () => 0 },
+        }),
+      ContextBudgetError,
+    );
+  });
+
+  it("tokenEstimator fails closed on non-function and non-finite returns", () => {
+    const groups = {
+      instructions: [{ role: "system" as const, content: [{ type: "text" as const, text: "sys" }] }],
+      summaries: [],
+      history: [],
+      input: [user("current")],
+      attachments: [],
+      toolResults: [],
+    };
+    const budget = { maxInputTokens: 10 };
+    assert.equal(resolveContextBudget({ ...budget, tokenEstimator: estimateTextTokens }).tokenEstimator, estimateTextTokens);
+    assert.throws(() => resolveContextBudget({ ...budget, tokenEstimator: "nope" as unknown as (text: string) => number }), TypeError);
+    for (const output of [Number.NaN, Number.POSITIVE_INFINITY, -1]) {
+      assert.throws(
+        () => applyContextBudget({ groups, budget: { ...budget, tokenEstimator: () => output } }),
+        (error: unknown) => error instanceof TypeError && /non-negative finite number of tokens/.test(error.message),
+      );
+    }
+    // A non-function estimator is rejected at the budget seam too, before any assembly work.
+    assert.throws(
+      () => applyContextBudget({ groups, budget: { ...budget, tokenEstimator: 42 as unknown as (text: string) => number } }),
+      TypeError,
+    );
+  });
 });

@@ -6,6 +6,14 @@ import { describe, it } from "node:test";
 
 const docsDir = "docs";
 
+// Plan 071 Task 1 (plan 070 FA 10): the generated package truth mirrors the root
+// manifest version (`scripts/truth-current.test.mjs` asserts that edge). Handoff
+// checks assert manifest ↔ generated-truth agreement instead of hardcoding the
+// cut version here, so a release no longer edits this file.
+function releaseVersion(): string {
+  return (JSON.parse(readFileSync("scripts/package-truth.json", "utf8")) as { root: { version: string } }).root.version;
+}
+
 // Plan 068: freeze = current-line contract, not changelog. Historical phrases live
 // in freezeCorpus() (migration/release/readiness/performance + docs/history/).
 // index.md is asserted only for the current package version, live hrefs, and
@@ -168,9 +176,22 @@ function isArchivedDoc(relative: string): boolean {
 }
 
 function freezeCorpus(): string {
-  const roots = ["docs/migration.md", "docs/release-and-install.md", "docs/performance.md", "docs/migrate-to-0.5.md"];
+  const roots = [
+    "docs/migration.md",
+    "docs/release-and-install.md",
+    "docs/performance.md",
+    "docs/migrate-to-0.5.md",
+    "docs/migrate-to-0.6.md",
+  ];
   const history = existsSync("docs/history") ? markdownFiles("docs/history") : [];
   return [...roots.filter((f) => existsSync(f)), ...history].map((f) => readFileSync(f, "utf8")).join("\n");
+}
+
+// Plan 070 Task 15: the root `npm test` entry is a one-line delegate to
+// scripts/run-all-tests.mjs, so "is this gate wired into npm test?" must read the
+// runner's stage list too — `package.json` alone no longer names any gate file.
+function npmTestChain(): string {
+  return `${readFileSync("package.json", "utf8")}\n${readFileSync("scripts/run-all-tests.mjs", "utf8")}`;
 }
 
 // Plan 068 Task 3: the live page keeps the current-line contract; per-era records
@@ -187,6 +208,16 @@ function withHistory(live: string, match: (file: string) => boolean): string {
 }
 const migrationDoc = () => withHistory("docs/migration.md", (f) => /migration-0\.[0-4]\.md$/.test(f));
 const releaseDoc = () => withHistory("docs/release-and-install.md", (f) => /release-handoffs\.md$/.test(f));
+
+// Plan 071 Task 2: the Node compatibility leg is named after the declared engines
+// floor (`node22-compat` for `>=22`), so raising the floor edits the manifest —
+// not these assertions.
+function declaredEngines(): string {
+  return (JSON.parse(readFileSync("package.json", "utf8")) as { engines: { node: string } }).engines.node;
+}
+function enginesFloorMajor(): string {
+  return declaredEngines().replace(/\D+/g, "");
+}
 const readinessDoc = () => withHistory("docs/history/0.1.0-readiness.md", () => false);
 
 function tsFiles(dir: string): string[] {
@@ -647,7 +678,7 @@ describe("docs", () => {
     const roadmap = readFileSync("roadmap.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.6", "root manifest must be at the 0.5.6 lockstep bump version");
+    assert.equal(pkg.version, releaseVersion(), "root manifest must match the generated package truth (lockstep bump)");
     assert.ok(release.includes("### 0.2.7 publish handoff (plan 027 Task 10)"), "release page missing 0.2.7 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.7 handoff missing rollback notes");
     // Semantic tripwire: the nine 0.2.7 ERP roadmap items are present in the handoff
@@ -684,7 +715,7 @@ describe("docs", () => {
     const index = readFileSync("docs/index.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.6", "root manifest must be at the 0.5.6 lockstep bump version");
+    assert.equal(pkg.version, releaseVersion(), "root manifest must match the generated package truth (lockstep bump)");
     assert.ok(release.includes("### 0.2.8 publish handoff (plan 028 Task 18)"), "release page missing 0.2.8 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.8 handoff missing rollback notes");
     assert.ok(release.includes("client-neutrality"), "0.2.8 handoff must cover client-neutrality");
@@ -713,7 +744,7 @@ describe("docs", () => {
     const roadmap = readFileSync("roadmap.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.6", "root manifest must be at the 0.5.6 lockstep bump version");
+    assert.equal(pkg.version, releaseVersion(), "root manifest must match the generated package truth (lockstep bump)");
     assert.ok(release.includes("### 0.2.9 publish handoff (plan 029 Task 10)"), "release page missing 0.2.9 handoff");
     assert.ok(release.includes("SuperGrok"), "0.2.9 handoff must cover SuperGrok");
     assert.ok(release.includes("@arnilo/prism-impeccable"), "0.2.9 handoff must name impeccable");
@@ -740,7 +771,7 @@ describe("docs", () => {
     const roadmap = readFileSync("roadmap.md", "utf8");
     const plansReadme = readFileSync("plans/README.md", "utf8");
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
-    assert.equal(pkg.version, "0.5.6", "root manifest must be at the 0.5.6 lockstep bump version");
+    assert.equal(pkg.version, releaseVersion(), "root manifest must match the generated package truth (lockstep bump)");
     assert.ok(release.includes("### 0.2.6 publish handoff (plan 026 Task 8)"), "release page missing 0.2.6 handoff");
     assert.ok(release.includes("**Rollback notes.**"), "0.2.6 handoff missing rollback notes");
     // Semantic tripwire: the seven 0.2.6 roadmap items are present in the handoff
@@ -912,7 +943,7 @@ describe("docs", () => {
     assert.ok(release.includes("**Rollback notes.**"), "0.1.0 handoff missing rollback notes");
     assert.ok(release.includes(`@arnilo/prism@^${pkg.version}`), `release page peer range must be ^${pkg.version}`);
     assert.ok(release.includes(`arnilo-prism-${pkg.version}.tgz`), `release page tarball names must be ${pkg.version}`);
-    assert.equal(pkg.version, "0.5.6", "root manifest must be at the 0.5.6 lockstep bump version");
+    assert.equal(pkg.version, releaseVersion(), "root manifest must match the generated package truth (lockstep bump)");
     assert.ok(readFileSync("CHANGELOG.md", "utf8").includes("## [0.1.0] - 2026-08-09"), "root changelog missing 0.1.0 entry");
   });
 
@@ -942,7 +973,6 @@ describe("docs", () => {
   it("phase 12 capacity envelope is documented and wired", () => {
     const performance = readFileSync("docs/performance.md", "utf8");
     const readiness = readinessDoc();
-    const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.ok(
       performance.includes("## Release 0.1.0 capacity envelopes (frozen performance contract)"),
       "performance.md missing 0.1.0 envelope section",
@@ -957,7 +987,7 @@ describe("docs", () => {
     ])
       assert.ok(performance.includes(token), `performance.md missing ${token}`);
     assert.ok(readiness.includes("0.1.0 capacity envelope (frozen performance contract)"), "readiness missing envelope gate row");
-    assert.ok(pkg.scripts.test.includes("scripts/benchmark-0.1.0.test.mjs"), "npm test missing envelope regression gate");
+    assert.ok(npmTestChain().includes("scripts/benchmark-0.1.0.test.mjs"), "npm test missing envelope regression gate");
     assert.ok(existsSync("scripts/benchmark-0.1.0.json"), "missing checked-in envelope evidence");
     assert.ok(freezeCorpus().includes("0.1.0 capacity envelopes"), "freeze corpus missing envelope entry");
   });
@@ -978,13 +1008,12 @@ describe("docs", () => {
   it("phase 12 packed-install e2e journey evidence is documented and wired", () => {
     const release = releaseDoc();
     const readiness = readinessDoc();
-    const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.ok(release.includes("Packed-install e2e journeys (plan 012 Task 3)"), "release-and-install missing journey evidence");
     assert.ok(readiness.includes("## Packed-install e2e journeys (plan 012 Task 3)"), "readiness missing journey section");
     for (const token of ["ENTERPRISE JOURNEY OK", "CODING JOURNEY OK", "e2eJourneyFixtureMsCeiling"])
       assert.ok(readiness.includes(token), `readiness missing ${token}`);
     for (const file of ["scripts/e2e-enterprise-journey.test.mjs", "scripts/e2e-coding-journey.test.mjs"])
-      assert.ok(pkg.scripts.test.includes(file), `npm test missing ${file}`);
+      assert.ok(npmTestChain().includes(file), `npm test missing ${file}`);
     assert.ok(existsSync("scripts/fixtures/e2e-enterprise-journey.mjs"), "missing enterprise journey fixture");
     assert.ok(existsSync("scripts/fixtures/e2e-coding-journey.mjs"), "missing coding journey fixture");
   });
@@ -1499,7 +1528,7 @@ describe("docs", () => {
     for (const file of ["scripts/budgets.json", "scripts/budget-gates.mjs", "scripts/budget-gate.test.mjs", "scripts/benchmark.mjs"]) {
       assert.ok(existsSync(file), `missing ${file}`);
     }
-    const testScript = JSON.parse(readFileSync("package.json", "utf8")).scripts.test as string;
+    const testScript = npmTestChain();
     assert.ok(testScript.includes("scripts/budget-gate.test.mjs"), "npm test does not run the budget gate");
   });
 
@@ -1722,7 +1751,7 @@ describe("docs", () => {
     for (const token of [
       "@arnilo/prism-ag-ui/acp",
       "@ag-ui/core` **0.0.59**",
-      "@agentclientprotocol/sdk` **1.3.0**",
+      "@agentclientprotocol/sdk` **1.4.0**",
       "createAgUiHandler()",
       "createPersistenceAgUiReplay()",
       "resumeAgentRunStream()",
@@ -2335,14 +2364,16 @@ describe("docs", () => {
     assert.match(workflow, /actions\/checkout@[a-f0-9]{40}/, "checkout action must use an immutable revision");
     assert.match(workflow, /actions\/setup-node@[a-f0-9]{40}/, "setup-node action must use an immutable revision");
     assert.ok(!workflow.includes("run: npm test\n"), "release workflow verify must not skip typecheck by running npm test directly");
-    assert.ok(workflow.includes('node-version: "20"'), "release workflow must include Node 20 compatibility coverage");
-    assert.ok(workflow.includes("node20-compat"), "release workflow must name the Node 20 compatibility job");
-    assert.ok(workflow.includes("Object.values(pkg.exports)"), "Node 20 compatibility job must import public exports");
+    const floor = enginesFloorMajor();
+    const compatJob = `node${floor}-compat`;
+    assert.ok(workflow.includes(`node-version: "${floor}"`), `release workflow must include Node ${floor} compatibility coverage`);
+    assert.ok(workflow.includes(compatJob), `release workflow must name the Node ${floor} compatibility job`);
+    assert.ok(workflow.includes("Object.values(pkg.exports)"), `Node ${floor} compatibility job must import public exports`);
     assert.ok(workflow.includes("postgres-integration"), "release workflow must include PostgreSQL live adapter job");
     assert.ok(workflow.includes("PRISM_TEST_POSTGRES_URL"), "postgres-integration must set PRISM_TEST_POSTGRES_URL");
     assert.ok(workflow.includes("npm run test:postgres"), "postgres-integration must run test:postgres");
     assert.ok(
-      workflow.includes("needs: [verify, node20-compat, postgres-integration, office-validation, codeql-release, supply-chain]"),
+      workflow.includes(`needs: [verify, ${compatJob}, postgres-integration, office-validation, codeql-release, supply-chain]`),
       "publish must wait for compatibility, PostgreSQL, and supply-chain coverage",
     );
     assert.equal(
@@ -2366,13 +2397,13 @@ describe("docs", () => {
       "Local release dry-run mirrors the GitHub Actions `verify` job and delegates to the SDK readiness gate",
       "`npm run release:dry-run` is an alias for the same gate",
       "The GitHub Actions `verify` job runs `npm ci` and `npm run sdk:ready`",
-      "node20-compat",
+      compatJob,
       "postgres-integration",
       "PRISM_TEST_POSTGRES_URL",
       "imports every public root `exports` default target",
-      "declared `engines.node >=20`",
+      `declared \`engines.node ${declaredEngines()}\``,
       "Node >=22.6 native TypeScript stripping",
-      "public export imports on Node 20",
+      `public export imports on Node ${floor}`,
     ]) {
       assert.ok(docs.includes(phrase), `release-and-install.md missing ${phrase}`);
     }
@@ -3878,7 +3909,7 @@ describe("docs", () => {
     const compaction = readFileSync("docs/compaction-llm.md", "utf8");
     const migrate = readFileSync("docs/migrate-to-0.5.md", "utf8");
     const opencode = readFileSync("docs/providers/opencode-go.md", "utf8");
-    assert.ok(index.includes("Current line (0.5.6)"), "docs/index.md current line must be 0.5.6");
+    assert.ok(index.includes(`Current line (${releaseVersion()})`), `docs/index.md current line must be ${releaseVersion()}`);
     assert.ok(packages.includes("never required for success"), "provider-packages.md missing overlay contract");
     assert.ok(
       !packages.includes("api.registerProviderRequestPolicy(createSessionCachePolicy"),
@@ -3922,6 +3953,41 @@ describe("docs", () => {
       assert.ok(page.includes("Mandatory"), `${name}.md missing Mandatory row`);
       assert.ok(page.includes("P2 default cache"), `${name}.md missing P2 default cache`);
     }
+  });
+
+  it("071_release_0_6_0_contract_is_documented", () => {
+    // Plan 071 Task 16: the 0.6.0 cut supersedes the never-published 0.5.7 cut.
+    // The guide exists, is reachable from the index navigation, states the Node
+    // floor and the folded delta, and the 0.5.x guide no longer claims 0.5.7 as
+    // its own status.
+    const index = readFileSync("docs/index.md", "utf8");
+    const guide = readFileSync("docs/migrate-to-0.6.md", "utf8");
+    const previous = readFileSync("docs/migrate-to-0.5.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const changelog = readFileSync("CHANGELOG.md", "utf8");
+    assert.ok(index.includes("(migrate-to-0.6.md)"), "docs/index.md missing the 0.6.0 migration navigation entry");
+    assert.ok(index.includes("Current line (0.6.0)"), "docs/index.md current line must be 0.6.0");
+    for (const phrase of [
+      "Node `>=22`",
+      'engines": { "node": ">=22"',
+      "@arnilo/prism-office",
+      "playwright-core",
+      "snapshotCacheTtlMs",
+      "idleRunTtlMs",
+      "allowedCidrs",
+      "## Upgrade steps",
+      "## Rollback",
+    ]) {
+      assert.ok(guide.includes(phrase), `migrate-to-0.6.md missing ${phrase}`);
+    }
+    assert.ok(previous.includes("never published"), "migrate-to-0.5.md must record that 0.5.7 was never published");
+    assert.ok(!previous.includes("## 10. Host-tunable knobs"), "migrate-to-0.5.md must not keep the 0.5.7-era section");
+    assert.ok(!previous.includes("On 0.5.7:"), "migrate-to-0.5.md upgrade steps must not claim a 0.5.7 release");
+    assert.ok(migration.includes("## 0.5.6 → 0.6.0"), "migration.md must carry the 0.5.6 → 0.6.0 entry");
+    assert.ok(migration.includes("(migrate-to-0.6.md)"), "migration.md must link the 0.6.0 guide");
+    assert.ok(!migration.includes("## 0.5.6 → 0.5.7"), "migration.md must fold the never-published 0.5.7 section");
+    assert.ok(changelog.includes(`## [${releaseVersion()}] - 2026-09-12`), `CHANGELOG.md must carry the ${releaseVersion()} entry`);
+    assert.ok(changelog.includes("0.5.7 was never published"), "CHANGELOG.md must record the superseded 0.5.7 cut");
   });
 
   it("use_case_model_selection_contract_is_documented", () => {

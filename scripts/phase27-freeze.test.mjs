@@ -6,8 +6,9 @@
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
+import { BLOCKED_RECORD_TEMPLATE, blockedRecord, PROTECTED_GATES } from "./blocked-gate.mjs";
 
 const manifest = JSON.parse(readFileSync("scripts/phase27-freeze-manifest.json", "utf8"));
 const plan = readFileSync("plans/027-Release-0-2-7-Enterprise-ERP-Production-Readiness.md", "utf8");
@@ -110,6 +111,31 @@ test("Task 0/1/2/3/4/5/6/7/8/9/10 freeze: protected policy records names, not va
   assert.equal(manifest.frozenCaps.leaseTtlMsDefault, 30_000);
   assert.equal(manifest.frozenCaps.leaseTtlMsHard, 300_000);
   assert.ok(manifest.protectedPolicy.currentBackupRestore.startsWith("measured"), "backup/restore must be measured, not pending");
+});
+
+test("Task 7 freeze: the blocked-gate record convention is frozen with the registry", () => {
+  const frozen = manifest.protectedPolicy.blockedRecord;
+  assert.equal(frozen.template, BLOCKED_RECORD_TEMPLATE, "frozen record template must equal the one scripts/blocked-gate.mjs emits");
+  assert.ok(existsSync(frozen.owner), "the frozen record owner must exist (scripts/blocked-gate.mjs)");
+  assert.deepEqual(
+    frozen.gateIds,
+    PROTECTED_GATES.map((row) => row.id),
+    "the frozen gate list must match the registry (additions belong in both)",
+  );
+  // The frozen template is the shape the registry actually renders for the DR gate.
+  const dr = PROTECTED_GATES.find((row) => row.id === "phase27-dr");
+  assert.ok(dr, "the DR gate must stay in the registry");
+  assert.equal(dr.requires.join(","), "PRISM_TEST_POSTGRES_URL,PRISM_DR_TARGET_URL,PRISM_PITR_URL");
+  assert.equal(dr.evidence, "docs/_evidence/phase27-dr-evidence.json");
+  const record = blockedRecord(dr);
+  const parsed = /^BLOCKED GATE (\S+) requires=(\S+) evidence=(\S+) hint=(.+)$/.exec(record);
+  assert.ok(parsed, `the DR record must match the frozen template: ${record}`);
+  assert.equal(parsed[1], "phase27-dr");
+  // The prefix change is recorded as a deviation (the old text is gone from the gate).
+  const deviation = (manifest.deviations ?? []).find((entry) => entry.scope.includes("blocked-gate message convention"));
+  assert.ok(deviation, "the message-convention change must be recorded as a deviation");
+  assert.ok(deviation.change.includes("DR DRILL FAILED"), "the deviation must name the replaced prefix");
+  assert.ok(!readFileSync("scripts/phase27-dr.test.mjs", "utf8").includes("DR DRILL FAILED"), "the DR gate must not keep the old prefix");
 });
 
 test("Task 0/1/2/3/4/5/6/7/8/9/10 freeze: measured backup/restore/PITR numbers are recorded", () => {

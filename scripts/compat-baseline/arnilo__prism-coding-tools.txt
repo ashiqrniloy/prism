@@ -579,6 +579,7 @@ SandboxStatus	export type { DisposableSandbox, SandboxAdapter, SandboxCapabiliti
 SandboxStatusState	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxTarError	export declare class SandboxTarError extends Error
 SearchToolOptions	export type { SearchToolOptions } from "./search.js"
+Semaphore	export declare class Semaphore
 ShellConfig	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
 ShellToolOptions	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
 SuspendAskUserDecisionOptions	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
@@ -623,6 +624,7 @@ assertPathInsideRoots	export declare function assertPathInsideRoots(roots: reado
 assertPinned	export declare function assertPinned(host: string, remoteAddress: string | undefined, pinned: readonly string[]): void
 assertPolicy	export declare function assertPolicy(host: SessionsHost, operation: string, command: string, args: readonly string[], cwd: string, owner: string): Promise<string>
 assertSandboxPath	export declare function assertSandboxPath(workspaceRoot: string, absolutePath: string): string
+assertSkillsMarker	export declare function assertSkillsMarker(root: string): void
 atomicWriteUtf8File	export declare function atomicWriteUtf8File(targetPath: string, content: string, options?:
 attachRecoveredHandle	export declare function attachRecoveredHandle(host: SessionsHost, current: ProcessRecoveryRecord, handle: ProcessPtyHandle | ProcessSandboxHandle, version: number): void
 attachWithTimeout	export declare function attachWithTimeout(backend: ProcessRecoveryBackend, ref: string, timeoutMs: number): Promise<ProcessPtyHandle | ProcessSandboxHandle | null>
@@ -725,6 +727,7 @@ diagnosticDelta	export declare function diagnosticDelta(request: DiagnosticDelta
 diagnosticIdentity	export declare function diagnosticIdentity(diagnostic: NormalizedDiagnostic): string
 disposeSessions	export declare function disposeSessions(host: SessionsHost): Promise<void>
 dockerOutputText	export declare function dockerOutputText(runner: DockerRunner, request: Omit<DockerCliRequest, "collectStdout">): Promise<string>
+durableSeams	export declare function durableSeams(host: SessionsHost):
 emit	export declare function emit(host: SessionsHost, event: CodingProcessEvent): void
 encodeLspFrame	export declare function encodeLspFrame(message: unknown): Buffer
 enforceExecutionPolicy	export declare function enforceExecutionPolicy(policy: ExecutionPolicy | undefined, action: ExecutionAction, toolCallId: string, toolName: string, /** Called once on policy denial so one site emits lifecycle permission_denied for every tool. */ onDenied?: (input:
@@ -827,6 +830,7 @@ resolveLevelFromEntries	export declare function resolveLevelFromEntries(entries:
 resolveModeFromEntries	export declare function resolveModeFromEntries(entries: readonly SessionEntry[]): PonytailMode | undefined
 resolveNativeSandboxLimits	export declare function resolveNativeSandboxLimits(input?: NativeSandboxLimitOptions): ResolvedNativeSandboxLimits
 resolveOpenApiLimits	export declare function resolveOpenApiLimits(input?: OpenApiLimits): ResolvedOpenApiLimits
+resolvePeerPackageRoot	export declare function resolvePeerPackageRoot(packageName: string): string
 resolvePinned	export declare function resolvePinned(host: string, resolve?: AddressResolver): Promise<readonly string[]>
 resolveProcessRecoveryLimits	export declare function resolveProcessRecoveryLimits(limits?: ProcessRecoveryLimits): ResolvedProcessRecoveryLimits
 resolveProcessSessionLimits	export declare function resolveProcessSessionLimits(limits?: ProcessSessionLimits): ResolvedProcessSessionLimits

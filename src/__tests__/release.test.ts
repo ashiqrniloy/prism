@@ -18,6 +18,12 @@ import {
 
 const VERSION = "0.0.13";
 
+// Plan 071 Task 1 (plan 070 FA 10): the version the repo claims today, read from the
+// root manifest — fixture graphs above keep their own synthetic VERSION.
+function releaseVersion(): string {
+  return (JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as { version: string }).version;
+}
+
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), "prism-release-"));
   const manifests = [
@@ -188,10 +194,17 @@ test("registry failures stay attributable without leaking environment tokens", a
 
 test("release workflow publishes the lockstep cut once and package tags independently", () => {
   const workflow = readFileSync(join(process.cwd(), ".github/workflows/release.yml"), "utf8");
-  assert.match(
-    workflow,
-    /tags:\s*\["v0\.3\.0", "v0\.4\.0", "v0\.5\.0", "v0\.5\.1", "v0\.5\.2", "v0\.5\.3", "v0\.5\.4", "v0\.5\.5", "v0\.5\.6", "@arnilo\/\*@\*"\]/,
-  );
+  // Plan 071 Task 1 (plan 070 FA 10): the cumulative tag list is history, but the
+  // current cut's tag is a claim — derive it from the root manifest, then assert the
+  // package-tag glob still closes the list. This is the assertion the escaped-literal
+  // sweep missed at the 0.5.7 cut.
+  const tags = /tags:\s*\[([^\]]*)\]/
+    .exec(workflow)?.[1]
+    ?.split(",")
+    .map((tag) => tag.trim());
+  assert.ok(tags, "release workflow must declare a tag list");
+  assert.ok(tags.includes(`"v${releaseVersion()}"`), `release workflow must trigger on v${releaseVersion()}: ${tags.join(", ")}`);
+  assert.equal(tags.at(-1), '"@arnilo/*@*"', "package-tag glob must stay the last release tag entry");
   assert.match(workflow, /id-token:\s*write/);
   assert.match(workflow, /release:publish -- --lockstep --version /);
   assert.match(workflow, /release:publish -- --resume/);

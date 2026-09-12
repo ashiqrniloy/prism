@@ -19,6 +19,7 @@ import {
 } from "@arnilo/prism-core/governance/evals";
 import { BrowserError, classifyBrowserUrl, createBrowserManager, createBrowserTools, normalizeTarget } from "../index.js";
 import { FakeBrowser, FakeDownload, ONE_PX_PNG } from "./fake-playwright.js";
+import { waitFor } from "./wait-for.js";
 
 const openNetwork = {
   requireContainedProxy: false as const,
@@ -222,11 +223,16 @@ describe("browser adversarial eval fixtures", () => {
         });
         const context = browser.contexts[0]!;
         await context.emitDownload(new FakeDownload("https://example.com/a.bin", "a.bin", Buffer.from("abc123")));
-        // allow quarantine to settle
-        await new Promise((r) => setTimeout(r, 20));
-        const items = manager.listDownloads("run-1");
-        if (items[0]) {
-          await manager.act("run-1", { action: "download_release", downloadId: items[0]!.downloadId });
+        // Quarantine runs on a fire-and-forget listener promise; poll for the artifact
+        // instead of sleeping a fixed 20 ms (which lost the race under load).
+        const items = await waitFor(
+          () => manager.listDownloads("run-1"),
+          (list) => list.length >= 1,
+          "download quarantine on run-1",
+        );
+        const download = items[0];
+        if (download) {
+          await manager.act("run-1", { action: "download_release", downloadId: download.downloadId });
         }
         const observed = {
           pass: Boolean(shot.image) && shot.screenshotBytes === ONE_PX_PNG.length && items.length >= 1 && released,

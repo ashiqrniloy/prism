@@ -12,8 +12,8 @@ describe("@arnilo/prism-providers/zai skeleton", () => {
   it("provider_packages_do_not_add_runtime_dependencies", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.deepEqual(pkg.dependencies ?? {}, {});
-    // ponytail: peer follows the package's Decision B window (^0.3.1 since the plan 039 cut).
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.5.6");
+    // ponytail: peer follows the package's own version (Decision B lockstep).
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], `^${pkg.version}`);
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 });

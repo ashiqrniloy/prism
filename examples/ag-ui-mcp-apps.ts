@@ -41,4 +41,4 @@ export async function demo() {
   return { status: response.status, html: resource.result.contents[0]?.text.includes("demo"), sandbox: sandbox.sandbox };
 }
 
-if (import.meta.main) console.log(JSON.stringify(await demo()));
+if (import.meta.url === `file://${process.argv[1]}`) console.log(JSON.stringify(await demo()));

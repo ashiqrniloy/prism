@@ -71,9 +71,10 @@ export async function validateElicitationPayload(
   // Tool-declared answer-shape validation, re-derived from the current registry (never persisted).
   const call = state.pendingCalls?.find((entry) => entry.call.id === target.toolCallId)?.call;
   const tool = call ? activeTools(agent.config.tools).registry.get(call.name) : undefined;
+  const elicitation = tool?.elicitation;
   const validate =
-    tool?.elicitation && call
-      ? safeToolElicitationValidate(tool, call.arguments, {
+    elicitation && call
+      ? safeToolElicitationValidate(elicitation, call.arguments, {
           sessionId: state.sessionId,
           runId: state.runId,
           toolCallId: target.toolCallId ?? "elicitation",
@@ -90,12 +91,12 @@ export async function validateElicitationPayload(
 }
 
 function safeToolElicitationValidate(
-  tool: ToolDefinition,
+  elicitation: NonNullable<ToolDefinition["elicitation"]>,
   args: JsonObject,
   context: ToolExecutionContext,
 ): ((payload: JsonObject) => void) | undefined {
   try {
-    return tool.elicitation!(args, context)?.validate;
+    return elicitation(args, context)?.validate;
   } catch {
     return undefined;
   }

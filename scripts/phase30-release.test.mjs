@@ -252,7 +252,22 @@ describe("phase30 release: Task 9 independent default", () => {
 
   it("workflow publishes v0.3.0 once and package tags independently", () => {
     const workflow = readFileSync(join(import.meta.dirname, "..", ".github/workflows/release.yml"), "utf8");
-    assert.match(workflow, /tags: \["v0\.3\.0", "v0\.4\.0", "v0\.5\.0", "@arnilo\/\*@\*"\]/);
+    // Plan 070 Further Action 5: assert the *shape* of the trigger list (append-only
+    // lockstep cuts + the independent package-tag glob) instead of pinning the three
+    // tags that existed at 0.3.0 — every later cut appends one, so the equality form
+    // failed on all of them. The current release tag is asserted against the root
+    // manifest by scripts/version-literal-gate.test.mjs.
+    const tags = JSON.parse(/^\s*tags: (\[[^\]]*\])/m.exec(workflow)[1]);
+    for (const tag of ["v0.3.0", "v0.4.0", "v0.5.0"]) {
+      assert.ok(tags.includes(tag), `historical lockstep trigger ${tag} stays listed (append-only trigger list)`);
+    }
+    assert.equal(tags.at(-1), "@arnilo/*@*", "per-package tags stay the independent trigger");
+    assert.deepEqual(
+      tags.filter((tag) => !/^v\d+\.\d+\.\d+$/.test(tag)),
+      ["@arnilo/*@*"],
+      "triggers are lockstep v-tags plus the package-tag glob",
+    );
+    assert.equal(new Set(tags).size, tags.length, "trigger tags are unique");
     assert.match(workflow, /release:publish -- --lockstep --version /);
     assert.match(workflow, /release:publish -- --resume --report/);
     assert.doesNotMatch(workflow, /publish[\s\S]*startsWith\(github\.ref, 'refs\/tags\/v'\)/);

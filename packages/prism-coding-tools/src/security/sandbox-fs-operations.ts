@@ -152,7 +152,7 @@ function paginateText(buffer: Buffer, options: ReadTextOptions): ReadTextResult 
   let firstLineExceedsLimit = false;
 
   for (let i = startIndex; i < lines.length; i++) {
-    const line = lines[i]!;
+    const line = lines[i];
     const lineBytes = Buffer.byteLength(line, "utf8") + 1;
     if (outputLines === 0 && Buffer.byteLength(line, "utf8") > options.maxBytes) {
       firstLineExceedsLimit = true;
@@ -548,7 +548,7 @@ export function createSandboxRepositoryOperations(
         const lines = text.split("\n");
         if (text.endsWith("\n") && lines[lines.length - 1] === "") lines.pop();
         for (let i = 0; i < lines.length; i++) {
-          const line = lines[i]!;
+          const line = lines[i];
           if (Buffer.byteLength(line, "utf8") > limits.maxLineBytes) continue;
           const hit = testLine(line);
           if (!hit) continue;

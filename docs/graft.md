@@ -1,5 +1,7 @@
 # Graft context-graph integration
 
+> **Optional peer install:** `@nanonets/graft` — see [Optional peer dependencies](peer-dependencies.md).
+
 ## What it does
 
 `@arnilo/prism-memory/graft` is an optional subpath that wires [nanonets/graft](https://github.com/nanonets/graft) — a repository context-graph CLI (`graft/` directory, INDEX.md orientation, symbol-level wiring graph) — into Prism contribution contracts.
@@ -14,7 +16,7 @@ Use it when a host wants agents to locate code by architecture, callers, and cou
 - `"push"` — per-turn retrieval pack (pointers only) + first-turn orientation, injected automatically.
 - `"both"` — everything.
 
-Install optional peer `@nanonets/graft@^0.16.0` **or** pass `packageRoot`/`cliPath` explicitly. Pair with progressive disclosure: the `graft` skill body stays small; tool schemas carry the details. Graft complements indexed code search (`repository_search`): graph/semantic locators vs literal search — neither replaces the other.
+Install optional peer `@nanonets/graft@^0.16.0 || ^0.18.0` **or** pass `packageRoot`/`cliPath` explicitly. Both floors are smoke-tested by the offline peer-contract suite (`resolveGraftCli` bin discovery + packaged manifest); the range lists exactly the two released lines Prism validates, and `0.17` is absent because upstream never published one. Pair with progressive disclosure: the `graft` skill body stays small; tool schemas carry the details. Graft complements indexed code search (`repository_search`): graph/semantic locators vs literal search — neither replaces the other.
 
 Zero-code alternative (L0): hosts can skip this package entirely and let agents call `graft <command> --json` through their shell tool, optionally seeding context with graft's own generated instruction files. This package exists for native-tool ergonomics, budgeted subprocesses, session persistence, and push mode.
 

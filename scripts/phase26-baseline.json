@@ -78,7 +78,9 @@
     },
     "docs/0.1.0-readiness.md": {
       "sha256": "96a72e8c7dc9a4337b77c48beb79215ea1816856319ff07e6a0fd40dcd1f57cf",
-      "status": "present"
+      "status": "retired",
+      "retiredTo": "docs/history/0.1.0-readiness.md",
+      "retiredBy": "plan 068 (readiness page moved into the docs/history archive; the archived copy was also edited during the move, so the frozen sha256 is kept as history and not re-derived — plan 071 Task 10, deviation D-T8-1)"
     },
     "docs/_evidence/phase26-primitive-review.md": {
       "sha256": "6708f24136569bdbfec938ab4c88e1150837463b2b51c01b64cfe7dfbe7ff641",

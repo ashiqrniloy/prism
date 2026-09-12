@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import {
@@ -14,7 +16,7 @@ import {
 } from "../manifest.js";
 import type { WikiEntityMetadata, WikiManifest, WikiSourceAnchor } from "../types.js";
 
-const TEST_DIR = join(process.cwd(), "dist/__tests__/scratch-manifest-test");
+const TEST_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-manifest-"));
 
 describe("prism-wiki manifest & drift engine", () => {
   before(async () => {

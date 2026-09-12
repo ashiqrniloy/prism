@@ -25,6 +25,23 @@ type Pending = {
   readonly signal?: AbortSignal;
 };
 
+/** Socket-loss codes Node reports when the peer dies between the writable check and the write. */
+const SOCKET_LOSS_CODES = new Set(["EPIPE", "ECONNRESET", "ERR_STREAM_DESTROYED", "ERR_STREAM_WRITE_AFTER_END"]);
+
+/**
+ * A write to a server that died is a server error, not an unknown transport crash: hosts switch on
+ * LanguageIntelligenceError codes, and an unclassified socket error escapes as an uncaught `write
+ * EPIPE` (plan 071 Task 13). Typed errors and unrelated failures pass through unchanged.
+ */
+function classifySocketLoss(error: unknown, serverName: string): Error {
+  if (error instanceof LanguageIntelligenceError) return error;
+  const code = typeof error === "object" && error !== null && "code" in error ? error.code : undefined;
+  if (typeof code === "string" && SOCKET_LOSS_CODES.has(code)) {
+    return new LanguageIntelligenceError("ERR_PRISM_LSP_SERVER", `LSP server ${serverName} stdin write failed (${code})`);
+  }
+  return error instanceof Error ? error : new Error(String(error));
+}
+
 export class LspClient {
   private child: ChildProcessWithoutNullStreams | undefined;
   private reader: LspFrameReader;
@@ -224,7 +241,13 @@ export class LspClient {
       // header overhead small; body already sized by JSON
       throw new LanguageIntelligenceError("ERR_PRISM_LSP_LIMIT", "Outgoing LSP frame exceeds message byte cap");
     }
-    this.child.stdin.write(frame);
+    try {
+      this.child.stdin.write(frame);
+    } catch (error) {
+      // Some platforms throw the socket loss synchronously instead of emitting it; both shapes are
+      // the same server error to a host.
+      throw classifySocketLoss(error, this.spec.name);
+    }
   }
 
   private async spawnAndInitialize(signal?: AbortSignal): Promise<void> {
@@ -246,6 +269,13 @@ export class LspClient {
       } catch (error) {
         this.failTransport(error);
       }
+    });
+    child.stdin.on("error", (error) => {
+      // The peer's death lands here, not in the write's call stack: Node reports the failed pipe
+      // write asynchronously on the socket (which still reads as `writable`). Reject pending
+      // requests with the typed server error and let the exit handler do the restart accounting —
+      // disposing here would skip onUnexpectedExit and the restart budget would never trip.
+      this.rejectAll(classifySocketLoss(error, this.spec.name));
     });
     child.stderr.on("data", () => {
       /* discard; hosts can redirect via env if needed */

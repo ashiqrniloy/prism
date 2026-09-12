@@ -47,6 +47,12 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
   const limits = resolveAgUiLimits(options.limits);
   validateModeSeam(options.modes, limits);
   validateConfigOptionsSeam(options.configOptions, limits);
+  // Captured once so the seam closures below narrow without non-null assertions
+  // (the request guards are runtime-checked at registration, not statically correlated).
+  const sessionStore = options.sessionStore;
+  const sessionsSeam = options.sessions;
+  const modesSeam = options.modes;
+  const configOptionsSeam = options.configOptions;
 
   // F2: bounded, redacted transcript replay for session/load and session/resume.
   // Text blocks of message entries with user/assistant roles map to the matching
@@ -146,9 +152,10 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
     restoredIds.add(entry.sessionId);
   }
   async function save(entry: PersistedAcpSession, _signal: AbortSignal): Promise<void> {
+    if (!sessionStore) return; // callers guard the seam; a storeless host has nothing to persist
     const safe = options.redactor?.redact(entry) ?? entry; // T2: redaction at the store boundary
     validatePersistedSession(safe);
-    await options.sessionStore!.save(safe); // store failure fails the request (host sees it)
+    await sessionStore.save(safe); // store failure fails the request (host sees it)
   }
   // Phase 26 Task 5: durable run recovery. Partial recovery configuration fails
   // closed at construction (no implicit activation, no half-durable state).
@@ -445,7 +452,8 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       sessions.delete(context.params.sessionId);
     });
 
-  if (options.sessions?.load) {
+  if (sessionsSeam?.load) {
+    const load = sessionsSeam.load;
     app = app.onRequest(methods.agent.session.load, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
@@ -456,7 +464,7 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
         await emitAvailableCommands(context.client, existing.session.id, context.signal);
         return sessionState(existing, options, clientCapabilities); // already restored by the durability seam (plan 018 Task 2)
       }
-      const binding = await options.sessions!.load!({
+      const binding = await load({
         sessionId: context.params.sessionId,
         cwd: context.params.cwd,
         signal: context.signal,
@@ -473,7 +481,8 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       return sessionState(active, options, clientCapabilities);
     });
   }
-  if (options.sessions?.resume) {
+  if (sessionsSeam?.resume) {
+    const resume = sessionsSeam.resume;
     app = app.onRequest(methods.agent.session.resume, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
@@ -484,7 +493,7 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
         await emitAvailableCommands(context.client, existing.session.id, context.signal);
         return sessionState(existing, options, clientCapabilities); // already restored by the durability seam (plan 018 Task 2)
       }
-      const binding = await options.sessions!.resume!({
+      const binding = await resume({
         sessionId: context.params.sessionId,
         cwd: context.params.cwd,
         signal: context.signal,
@@ -501,11 +510,12 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       return sessionState(active, options, clientCapabilities);
     });
   }
-  if (options.sessions?.list) {
+  if (sessionsSeam?.list) {
+    const list = sessionsSeam.list;
     app = app.onRequest(methods.agent.session.list, async (context) => {
       const authorization = await options.authorize({ signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
-      const all = await options.sessions!.list!({ cwd: context.params.cwd ?? undefined, signal: context.signal });
+      const all = await list({ cwd: context.params.cwd ?? undefined, signal: context.signal });
       const offset = parseCursor(context.params.cursor);
       if (Number.isNaN(offset) || offset < 0) throw new AcpError("ERR_PRISM_ACP_INPUT", "invalid list cursor");
       const page = all.slice(offset, offset + limits.acpSessionListPage);
@@ -513,24 +523,25 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       return { sessions: page.map(toSessionInfo), nextCursor };
     });
   }
-  if (options.sessions?.delete) {
+  if (sessionsSeam?.delete) {
+    const remove = sessionsSeam.delete;
     app = app.onRequest(methods.agent.session.delete, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
       await restore(authorization, context.signal);
       if (options.sessionStore) await options.sessionStore.evict(context.params.sessionId, context.signal);
-      await options.sessions!.delete!({ sessionId: context.params.sessionId, signal: context.signal });
+      await remove({ sessionId: context.params.sessionId, signal: context.signal });
       sessions.delete(context.params.sessionId);
       return {};
     });
   }
-  if (options.modes) {
+  if (modesSeam) {
     app = app.onRequest(methods.agent.session.setMode, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
       await restore(authorization, context.signal);
       const current = session(sessions, context.params.sessionId);
-      const mode = options.modes!.modes.find((candidate) => candidate.id === context.params.modeId);
+      const mode = modesSeam.modes.find((candidate) => candidate.id === context.params.modeId);
       if (!mode) throw new AcpError("ERR_PRISM_ACP_INPUT", `unknown mode '${context.params.modeId}'`);
       await mode.apply?.({ sessionId: context.params.sessionId, fromModeId: current.modeId, modeId: mode.id, signal: context.signal });
       current.modeId = mode.id;
@@ -545,13 +556,13 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
       return {};
     });
   }
-  if (options.configOptions) {
+  if (configOptionsSeam) {
     app = app.onRequest(methods.agent.session.setConfigOption, async (context) => {
       const authorization = await options.authorize({ sessionId: context.params.sessionId, signal: context.signal });
       if (!authorization) throw new Error("Unauthorized ACP session");
       await restore(authorization, context.signal);
       const current = session(sessions, context.params.sessionId);
-      const option = options.configOptions!.options.find((candidate) => candidate.id === context.params.configId);
+      const option = configOptionsSeam.options.find((candidate) => candidate.id === context.params.configId);
       if (!option) throw new AcpError("ERR_PRISM_ACP_INPUT", `unknown config option '${context.params.configId}'`);
       // B3: per-type capability gate — select is never settable until the ACP
       // spec defines a select capability; boolean requires the advertisement.
@@ -562,10 +573,10 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
         throw new AcpError("ERR_PRISM_ACP_CAPABILITY", "client did not advertise session.configOptions.boolean");
       }
       const value = validateConfigOptionValue(option, context.params.value);
-      await options.configOptions!.onChange?.({ sessionId: context.params.sessionId, configId: option.id, value, signal: context.signal });
+      await configOptionsSeam.onChange?.({ sessionId: context.params.sessionId, configId: option.id, value, signal: context.signal });
       current.configValues.set(option.id, value);
       if (options.sessionStore) await persist(context.params.sessionId, current, context.signal);
-      const configOptions = toSessionConfigOptions(options.configOptions!, current.configValues);
+      const configOptions = toSessionConfigOptions(configOptionsSeam, current.configValues);
       await notify(
         context.client,
         context.params.sessionId,

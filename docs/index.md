@@ -2,8 +2,16 @@
 
 Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credentials, storage, and behavior; Prism supplies contracts, registries, events, and replaceable runtime primitives.
 
-## Current line (0.5.6)
+## Current line (0.6.0)
 
+- **Node 22 floor**: `engines.node` is `>=22` in all ten publishable packages, the `node20-compat` CI leg becomes `node22-compat`, and `@types/node` moves to `^22.20.0` (plan 071; Node 20 is upstream EOL since 2026-04-30).
+- **Folded 0.5.7 content**: the 0.5.7 cut was never published — its durable-tool-round and strict-tool-result fixes, host knobs, peer/options truth, and dependency floors ship in 0.6.0 (migration guide below).
+- **Release-truth gates**: one forward-claim version-literal gate (manifests, internal ranges, lockfile, version constant, index banner, workflow tags), a workflow-liveness gate (every script target and action reference resolves, actions SHA-pinned), and a load-tolerant startup budget ratio (plan 071).
+- **Self-describing coverage failures**: a failing coverage child prints its redacted output tail and records `status`/`exitCode`/`tail` on its artifact row (plan 071).
+- **Durable tool rounds**: concurrent tool dispatch persists successful sibling results — plus synthetic errors for failed and never-dispatched calls — before a round fails or aborts, so no `tool_use` is left unanswered (plan 070).
+- **Strict-provider tool results**: a content-less `ToolResult` folds to the non-empty `(tool completed with no output)` payload instead of an empty one (plan 070).
+- **Host-tunable knobs**: context-budget `tokenEstimator`, `snapshotCacheTtlMs`, memory-session search caps, `SsrfPolicy.allowedCidrs`, and browser `idleRunTtlMs` (plan 070).
+- **Peer and options truth**: the optional peer-dependency matrix and the configuration options index (both linked below) cover every third-party peer and public option surface (plan 070).
 - **Trusted extension activation**: `activateKernel(kernel)` returns ready-to-spread `AgentConfig` contributions; CLI loads allow-listed `--extension` packages (plan 069).
 - **Wiki ingest**: `/wiki-ingest` + `ingestWikiSource` stage text/file/image/PDF (and URLs via a host `fetchUrl` hook) into `raw/ingest/` with an OKF filing brief (plan 069).
 - **Graft graph commands**: `/graft-init`, `/graft-build`, `/graft-build-deep` (host-configured `deepModel`, key env-only) (plan 069).
@@ -11,13 +19,14 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 - **Tool-result fold**: content-only `ToolResult`s fold into `tool_result.result` (0.5.3).
 - **Stream token coalesce**: adjacent text/thinking deltas merge on persist (0.5.2).
 - **Provider request construction**: kernel session/cache/thinking defaults; hosts overlay (0.5.1).
-- **10 publishable packages** at current **0.5.6** lockstep — inventory below.
+- **10 publishable packages** at current **0.6.0** lockstep — inventory below.
 
 ## Public contracts
 
 - [Public contracts](public-contracts.md): canonical message, agent, tool, store, resource, credential, and event shapes.
 - [Coding tools, sandboxing, and personas](coding-tools.md): `@arnilo/prism-coding-tools` family subpaths — agent, security, document-reader, openapi, computer-use-linux, dev, personas.
 - [Core runtime, sessions, and governance](core.md): `@arnilo/prism-core` family subpaths — runtime, sessions, governance, credentials, enterprise, work, validation.
+- [Configuration options index](options-index.md): every public `*Options`/`*Limits`/`*Config` surface mapped to the doc page that owns its fields.
 
 ## Identity and governance
 
@@ -56,7 +65,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 - [SQLite persistence](sqlite-persistence.md): optional `better-sqlite3` adapter with FTS search and verified migrations.
 - [PostgreSQL persistence](postgres-persistence.md): optional pooled `pg` adapter with advisory-locked migrations and live conformance.
 - [Enterprise PostgreSQL state](enterprise-postgres-state.md): durable governance/router/ERP state, outbox/inbox messaging, approval records.
-- [Migration guide](migration.md): current 0.5.x migration cuts with replacement tables and rollback notes.
+- [Migration guide](migration.md): the era index of migration cuts with replacement tables and rollback notes.
 - [Node JSONL session store](node-jsonl-session-store.md): development-only JSONL adapter, single-process, no cross-process safety.
 
 ## Provider and model connection
@@ -135,6 +144,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 - [Configuration and manifests](configuration-and-manifests.md): layered JSON config merge with data-only manifest validation.
 - [Node filesystem config loader](node-filesystem-config.md): explicitly read caller-named JSON config files in Node.
 - [Resource loading](resource-loading.md): decode text/JSON/binary through caller-provided loaders; RAG bridge.
+- [Optional peer dependencies](peer-dependencies.md): every third-party peer a package declares, the subpath it unlocks, its install line, pin rationale, and which peers touch the network.
 
 ## Server/API
 
@@ -165,6 +175,8 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 
 ## Testing and examples
 
+- [Test layout and isolation](testing.md): the five `npm test` stages, scratch-root rule, and the tracked-fixture isolation gate.
+- [Contribution quality budgets](contributing.md): the non-null assertion allowance, export-surface ceilings, and the rule that keeps them shrinking.
 - [Live and end-to-end testing](live-testing.md): opt-in live matrix with skip-not-fail contract and credential scoping table.
 - Provider test doubles: `createMockProvider()` and provider event helpers are documented on the canonical Provider layer page above.
 - [Provider conformance](provider-conformance.md): network-free adapter assertions from `@arnilo/prism/testing/provider-conformance`.
@@ -185,6 +197,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 ## Release and install
 
 - [Release and install](release-and-install.md): install rules, package graph, and deterministic resumable publication.
+- [Migrate 0.5 → 0.6](migrate-to-0.6.md): Node 22 floor, folded 0.5.7 host delta, third-party floors, and upgrade/rollback steps.
 - [Migrate 0.5](migrate-to-0.5.md): 0.4 → 0.5 migration guide with per-release sections and rollback.
 - [Documentation archive](history/README.md): frozen migration/history records — not read on the hot path.
 - [Review coverage archive](_evidence/): per-phase evidence freezes — audit trail, excluded from tarballs.
@@ -198,14 +211,14 @@ The generated inventory below derives from [`scripts/package-truth.json`](../scr
 
 | package | version | notes |
 | --- | --- | --- |
-| `@arnilo/prism` | 0.5.6 | core — runtime, CLI/RPC, templates, docs |
-| `@arnilo/prism-coding-tools` | 0.5.6 | family — /agent, /security, /document-reader, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths |
-| `@arnilo/prism-core` | 0.5.6 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /work, /validation subpaths |
-| `@arnilo/prism-providers` | 0.5.6 | family — all provider adapters as `/<adapter>` subpaths |
-| `@arnilo/prism-acp-agent` | 0.5.6 | capability — ACP adapter |
-| `@arnilo/prism-ag-ui` | 0.5.6 | capability — AG-UI/A2A/A2UI adapter |
-| `@arnilo/prism-mcp` | 0.5.6 | capability — MCP client/server/OAuth interop |
-| `@arnilo/prism-memory` | 0.5.6 | capability — memory plus /rag, /compaction/*, /graft, /wiki subpaths |
-| `@arnilo/prism-office` | 0.5.6 | capability — /documents, /sheets, /diagrams subpaths |
-| `@arnilo/prism-web-tools` | 0.5.6 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
+| `@arnilo/prism` | 0.6.0 | core — runtime, CLI/RPC, templates, docs |
+| `@arnilo/prism-coding-tools` | 0.6.0 | family — /agent, /security, /document-reader, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths |
+| `@arnilo/prism-core` | 0.6.0 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /work, /validation subpaths |
+| `@arnilo/prism-providers` | 0.6.0 | family — all provider adapters as `/<adapter>` subpaths |
+| `@arnilo/prism-acp-agent` | 0.6.0 | capability — ACP adapter |
+| `@arnilo/prism-ag-ui` | 0.6.0 | capability — AG-UI/A2A/A2UI adapter |
+| `@arnilo/prism-mcp` | 0.6.0 | capability — MCP client/server/OAuth interop |
+| `@arnilo/prism-memory` | 0.6.0 | capability — memory plus /rag, /compaction/*, /graft, /wiki subpaths |
+| `@arnilo/prism-office` | 0.6.0 | capability — /documents, /sheets, /diagrams subpaths |
+| `@arnilo/prism-web-tools` | 0.6.0 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
 <!-- generated:package-truth:inventory end -->

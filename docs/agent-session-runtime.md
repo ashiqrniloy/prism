@@ -45,7 +45,7 @@ createAgentSession(config: AgentSessionConfig & { agent: Agent }): AgentSession
 string | Message | readonly Message[]
 ```
 
-`AgentSessionConfig.store` overrides `AgentConfig.store`; otherwise the session gets a private memory store. `AgentSessionConfig.leafId` selects the branch leaf to resume from.
+`AgentSessionConfig.store` overrides `AgentConfig.store`; otherwise the session gets a private memory store. `AgentSessionConfig.leafId` selects the branch leaf to resume from. `AgentSessionConfig.snapshotCacheTtlMs` tunes the in-memory branch cache behind `session.snapshot()`: default `DEFAULT_SNAPSHOT_CACHE_TTL_MS` (1000 ms), `0` disables caching so every read rebuilds from the store, maximum `HARD_MAX_SNAPSHOT_CACHE_TTL_MS` (30 s); values outside `0..hard` fail session construction with `TypeError`. The cache is invalidated by any new leaf or mutation, so the TTL only bounds reuse of an unchanged branch.
 
 `AgentConfig.limits` sets run ceilings; `RunOptions.limits` may only narrow configured agent values (`null` counts as no cap, so a configured finite ceiling still wins). Limits cover turns, provider attempts, tool rounds/calls, wall time, request/response bytes, tokens, and optional single-currency cost. Policy axes accept `null` (0.5.4) to disable the axis; request/response bytes reject `null` and stay process-hard at 64 MiB. A breach emits one `run_limit_exceeded` event and throws `AgentRunError` with `result.limit`; see [Runs and usage ledger](runs-and-usage.md#run-limits).
 
@@ -54,6 +54,8 @@ string | Message | readonly Message[]
 `RunOptions.activeSkills` selects named skills from a configured `SkillRegistry`; `RunOptions.skills` replaces a plain `Skill[]` config for one run. When `AgentConfig.skills` is a registry and neither is set, **no skills activate** unless `activateAllSkills: true` (run or agent). `skillsDisclosure` (`"progressive"` default, `"eager"` opt-in; run wins) controls catalog vs full instruction bodies; the session-owned `LoadedSkillSet` is populated by `load_skill` when the host registers `createLoadSkillTool`. `toolResultFold` (off unless the host supplies `summarize`) optionally folds aged large tool results in provider input only. See [Context and skills](context-and-skills.md).
 
 ## Outputs / response / events
+
+`session.fork(options?)` / `session.clone(options?)` take `AgentSessionForkOptions` / `AgentSessionCloneOptions` (leaf id, new session id, metadata, and store overrides), and `session.steer(input, options?)` takes `SteerOptions`. See [Public contracts](public-contracts.md) for the field tables, and the [options index](options-index.md) for every session option surface.
 
 `session.run()` / `session.prompt()` resolve to an `AgentRunResult` with `sessionId`, `runId`, `status`, `text`, `content`, optional `message`/`usage`/`leafId`, and terminal `error`/`abortReason` when applicable. Callers may ignore the return value. Failed and aborted runs still emit their terminal events, then reject with `AgentRunError` whose `.result` carries the same shape.
 

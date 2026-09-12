@@ -79,7 +79,7 @@ export function parsePorcelainV2(stdout: Buffer, options?: { maxEntries?: number
   let i = 0;
 
   while (i < records.length) {
-    const record = records[i]!;
+    const record = records[i];
     i++;
 
     if (record.startsWith("# ")) {
@@ -127,7 +127,7 @@ export function parsePorcelainV2(stdout: Buffer, options?: { maxEntries?: number
       // 1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
       const parts = record.split(" ");
       if (parts.length < 9) throw new GitError(`malformed ordinary status record: ${record}`);
-      const xy = parts[1]!;
+      const xy = parts[1];
       const path = parts.slice(8).join(" ");
       entries.push({ kind: "ordinary", xy, path });
       continue;
@@ -136,8 +136,8 @@ export function parsePorcelainV2(stdout: Buffer, options?: { maxEntries?: number
       // 2 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <X><score> <path>\0<origPath>
       const parts = record.split(" ");
       if (parts.length < 10) throw new GitError(`malformed rename/copy status record: ${record}`);
-      const xy = parts[1]!;
-      const scoreToken = parts[8]!;
+      const xy = parts[1];
+      const scoreToken = parts[8];
       const path = parts.slice(9).join(" ");
       const origPath = records[i];
       if (origPath === undefined) throw new GitError("rename/copy status missing origPath");
@@ -150,7 +150,7 @@ export function parsePorcelainV2(stdout: Buffer, options?: { maxEntries?: number
       // u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>
       const parts = record.split(" ");
       if (parts.length < 11) throw new GitError(`malformed unmerged status record: ${record}`);
-      const xy = parts[1]!;
+      const xy = parts[1];
       const path = parts.slice(10).join(" ");
       entries.push({ kind: "unmerged", xy, path });
       continue;

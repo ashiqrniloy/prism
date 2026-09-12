@@ -36,11 +36,19 @@ test("node support agrees with engines and CI legs", () => {
   const node = manifest.support.node;
   assert.ok(node.supported.length >= 2, "at least two supported Node lines");
   assert.equal(node.enginesRange, rootPkg.engines.node, "enginesRange matches package.json engines.node");
+  // Plan 071 Task 2: the floor is derived from the manifest's own enginesRange so a
+  // floor change touches the manifest, not this assertion.
+  const floor = Number(node.enginesRange.match(/\d+/)?.[0]);
+  assert.ok(Number.isInteger(floor), `enginesRange names a numeric floor: ${node.enginesRange}`);
   for (const major of node.supported) {
-    assert.ok(Number(major) >= 20, `${major} honors engines floor >=20`);
+    assert.ok(Number(major) >= floor, `${major} honors engines floor ${node.enginesRange}`);
     assert.ok(node.measuredInCi.includes(major), `${major} has a CI leg`);
   }
-  assert.ok(Number(node.docsExamplesMinimum) >= 20, "docsExamplesMinimum above engines floor");
+  assert.ok(Number(node.docsExamplesMinimum) >= floor, `docsExamplesMinimum ${node.docsExamplesMinimum} is at or above the engines floor`);
+  assert.ok(
+    manifest.unsupported[0].includes(`below ${floor}`),
+    `unsupported statement names the engines floor: ${manifest.unsupported[0]}`,
+  );
 });
 
 test("postgres support is non-empty and matches the CI image", () => {

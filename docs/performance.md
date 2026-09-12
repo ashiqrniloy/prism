@@ -85,6 +85,16 @@ Recorded 2026-08-31 on Node v24.19.0 / Linux x64: 5 warmups + 20 measured runs, 
 node scripts/benchmark.mjs --scenario workflow-loop --out /tmp/prism-workflow-loop.json
 ```
 
+## Secret redaction (plan 070)
+
+`node scripts/benchmark.mjs --scenario redaction` is network-free (in-memory, no credentials). It builds one transcript-scale string (≥ 1 MiB) and one small entry-shaped object, both carrying 16 realistic secret-shaped needles, and measures `redactSecrets` against a local copy of the ordered `needles.reduce(split/join)` loop it replaced for large strings: the two must stay byte-identical and no needle may survive either path. Caps live in `scripts/budgets.json#redaction` (same-process speedup floor 5, transcript p95 ceiling 250 ms, small-entry p95 ceiling 25 ms — sanity bounds, machine-dependent). Schema/caps/network-free gating in `npm test`: `scripts/benchmark-redaction.test.mjs`.
+
+```bash
+node scripts/benchmark.mjs --scenario redaction --out /tmp/prism-redaction.json
+```
+
+Recorded 2026-09-11, Node v24.19.0 / Linux x64: 1 MiB transcript × 16 needles **9.39 ms → 0.69 ms p50 (13.7×, floor 5×)**, small entry 0.15 ms p50 / 0.22 ms p95. Strings below 16 KB keep the ordered loop (`src/redaction.ts`): the equivalence check that guards the single scan costs more than the passes it saves below ~4 KB.
+
 ## Current-line root artifact diet
 
 `npm pack --dry-run --json` on `@arnilo/prism` is gated by `scripts/budget-gate.test.mjs` against `scripts/budgets.json#root` (±5%). Repository-only history stays out of the tarball: `docs/_evidence/**`, `docs/release-*-evidence.md`, `docs/api-page-template.md`, `dist/__tests__`, and `*.map`. Every page linked from shipped `docs/index.md` must be in the pack. Recorded 2026-08-27: **923,045 packed / 3,149,665 unpacked / 375 files** (226 `dist` js+d.ts, 124 index-linked docs, 25 other). 0.1.0 freeze 713,454 / 293 stays historical.
@@ -102,9 +112,31 @@ demand gate.
 **Pass/fail thresholds.** Network-free rows fail above the frozen ceiling in
 the table below; protected PostgreSQL rows fail above their per-phase
 budgets.json ceilings (50/100 ms per the approved budget contract); startup
-import fails above `startupImportMsCeiling` (250 ms); root packed bytes and
+import fails above `startupImportMsCeiling` (250 ms) on a quiet machine — see the
+startup-gate note below for how the in-chain check stays load-tolerant; root
+packed bytes and
 file count fail above baseline × 1.05. Labels: **network-free** = runs in
 `npm test` evidence, no network; **protected** = requires live PostgreSQL.
+
+**Startup gate (plan 071 Task 3).** The in-`npm test` check in
+`scripts/budget-gate.test.mjs` asserts a *machine-relative ratio* rather than a raw
+millisecond bound: cold-process `import('./dist/index.js')` wall time (trimmed mean
+of five spawns, min/max dropped) over the median empty `node -e ''` process start
+measured in the same run. External CPU load inflates both numbers, so the ratio held
+at 3.3 idle, 3.5–4.1 with a full `npm test` running concurrently, and up to 7.2 with
+40 competing processes, while the absolute import alone moved 60 ms → 258 ms — the
+same contention that failed the old fixed 250 ms check (273 ms at plan 070 Task 11,
+1104.8 ms at Task 13, both at load average ~25). Off load
+(loadavg-per-CPU < 1.5) the tight ratio ceiling (`importRatioCeiling` 8) and the
+absolute ceiling (250 ms) are both asserted; under load the ratio ceiling widens to
+`importRatioCeilingUnderLoad` (20) and the absolute bound becomes
+evidence-of-record, still measured by `scripts/benchmark-0.1.0.mjs` (39.79 ms in
+`scripts/benchmark-0.1.0.json`) and re-gated by `scripts/benchmark-0.1.0.test.mjs`;
+the current-line scenario runner `scripts/benchmark.mjs` carries the six scenario
+medians and no startup row. Both ceilings live in
+`scripts/budgets.json#startup` with the calibration recorded in their `$comment`;
+freeze deviation `dev-007` records the enforcement change (the frozen 250 ms number
+itself is unchanged).
 
 | Envelope | Recorded p95 ms | Ceiling ms | Source leg | Label |
 | --- | ---: | ---: | --- | --- |
@@ -543,7 +575,7 @@ The ledger percentage overhead is intentionally not a threshold: its no-ledger b
 
 ### 0.0.5 Phase 0 baseline (2026-07-15)
 
-Scope froze at commit `f5128a816ae204c52f3e2f089de71c99bd5de6d4`. Measurement host: Node v24.18.0, npm 11.16.0, Linux 7.1.3 x86_64, AMD Ryzen 9 PRO 7940HS (16 logical CPUs). Supported package runtime remains Node >=20. These are dated local comparison points, not portable CI wall-clock assertions.
+Scope froze at commit `f5128a816ae204c52f3e2f089de71c99bd5de6d4`. Measurement host: Node v24.18.0, npm 11.16.0, Linux 7.1.3 x86_64, AMD Ryzen 9 PRO 7940HS (16 logical CPUs). Supported package runtime is Node >=22 (>=20 at the time of this baseline; raised in 0.6.0) and the host measured above is Node 24. These are dated local comparison points, not portable CI wall-clock assertions.
 
 | Surface | Workload | Result |
 | --- | --- | --- |

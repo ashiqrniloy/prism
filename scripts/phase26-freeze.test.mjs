@@ -27,13 +27,13 @@
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { test } from "node:test";
+import { effectiveTestChain } from "./run-all-tests.mjs";
 
 const url = (path) => new URL(path, import.meta.url);
 const manifest = JSON.parse(readFileSync(url("./phase26-freeze-manifest.json"), "utf8"));
 const baseline = JSON.parse(readFileSync(url("./phase26-baseline.json"), "utf8"));
-const rootPkg = JSON.parse(readFileSync(url("../package.json"), "utf8"));
 const plan = readFileSync(url("../plans/026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md"), "utf8");
 
 const TASKS = ["task0", "task1", "task2", "task3", "task4", "task5", "task6", "task7", "task8"];
@@ -49,8 +49,9 @@ const ITEM_IDS = [
   "docs-bump-exit",
 ];
 
-function resolveFile(file) {
-  if (existsSync(url(`../${file}`))) return url(`../${file}`);
+function resolveLive(file) {
+  const direct = url(`../${file}`);
+  if (existsSync(direct)) return direct;
   const coreMap = {
     "packages/server/": "packages/prism-core/src/runtime/server/",
     "packages/supervisor/": "packages/prism-core/src/runtime/supervisor/",
@@ -101,7 +102,113 @@ function resolveFile(file) {
       }
     }
   }
-  return url(`../${file}`);
+  return direct;
+}
+
+/**
+ * Content resolver: the live path, else the recorded retirement target
+ * (plan 071 Task 10 / dev-008). A path retired since the freeze (e.g. the
+ * plan-068 archive move) keeps its frozen seam record and resolves to the
+ * archived copy, so marker checks stay checkable without re-deriving the
+ * frozen baseline.
+ */
+function resolveFile(file) {
+  const live = resolveLive(file);
+  if (existsSync(live)) return live;
+  const retiredTo = baseline.seams?.[file]?.retiredTo;
+  return retiredTo && existsSync(url(`../${retiredTo}`)) ? url(`../${retiredTo}`) : live;
+}
+
+/** A retired seam records where the file went and why, and the target must be a real non-empty file. */
+function assertRetirement(seam, file) {
+  assert.ok(typeof seam.retiredTo === "string" && seam.retiredTo.length > 0, `retired seam ${file} records retiredTo`);
+  assert.ok(typeof seam.retiredBy === "string" && seam.retiredBy.length > 0, `retired seam ${file} records retiredBy`);
+  const target = url(`../${seam.retiredTo}`);
+  assert.ok(existsSync(target), `retired seam ${file} target ${seam.retiredTo} exists`);
+  assert.ok(readFileSync(target, "utf8").length > 0, `retired seam ${file} target ${seam.retiredTo} is non-empty`);
+}
+
+/** Current release version — the rot-guard for transition markers below. */
+const ROOT_VERSION = JSON.parse(readFileSync(resolveFile("scripts/package-truth.json"), "utf8")).root.version;
+
+/**
+ * Frozen lineage for markers on living files (plan 071 Task 10): the phase plan of
+ * record plus every page in the docs/history archive. docs/index.md and
+ * docs/migration.md are rewritten by every release, so an era content claim is
+ * only checkable against the record the cut left behind — the same rule plan 071
+ * Task 5 applied to the other retired gates.
+ */
+let lineageCache;
+function lineageContent() {
+  if (!lineageCache) {
+    const historyDir = url("../docs/history/");
+    lineageCache = [
+      readFileSync(url("../plans/026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md"), "utf8"),
+      ...readdirSync(historyDir)
+        .filter((name) => name.endsWith(".md"))
+        .map((name) => readFileSync(new URL(name, historyDir), "utf8")),
+    ];
+  }
+  return lineageCache;
+}
+
+/** Plain x.y.z comparison — a transition marker must name a version the repo has already passed. */
+function isOlderVersion(a, b) {
+  const left = a.split(".").map(Number);
+  const right = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    const x = left[i] ?? 0;
+    const y = right[i] ?? 0;
+    if (x !== y) return x < y;
+  }
+  return false;
+}
+
+/** How every marker was satisfied, asserted non-vacuous by the marker test below. */
+const markerKinds = { live: 0, lineage: 0, transition: 0 };
+
+/**
+ * Assert one content marker and return how it was satisfied.
+ *
+ * - a "!"-prefixed marker is a transition claim: the text must be ABSENT. Version
+ *   literals need this form — a release cut overwrites them, so "equals the era
+ *   literal" can only be true in the cut that wrote it (plan 071 Task 10, D-T8-1).
+ *   A transition that names a version the repo has not passed yet is rejected, so
+ *   the marker cannot become vacuous.
+ * - a positive marker on a file listed in manifest.lineageCheckedFiles may be
+ *   satisfied by the frozen lineage when the live file has moved on.
+ */
+function assertMarker({ file, marker, content, label }) {
+  if (marker.startsWith("!")) {
+    const text = marker.slice(1);
+    const version = text.match(/\d+\.\d+\.\d+/)?.[0];
+    if (version) {
+      assert.ok(
+        isOlderVersion(version, ROOT_VERSION),
+        `transition marker ${JSON.stringify(text)} names a passed version (${version} < ${ROOT_VERSION})`,
+      );
+    }
+    assert.ok(!content.includes(text), `${file} drops transition marker ${JSON.stringify(text)} (${label})`);
+    markerKinds.transition++;
+    return "transition";
+  }
+  if (content.includes(marker)) {
+    markerKinds.live++;
+    return "live";
+  }
+  const reason = manifest.lineageCheckedFiles?.[file];
+  if (reason) {
+    const lineage = lineageContent();
+    assert.ok(lineage.length >= 2, "the frozen lineage holds the plan of record and the docs/history archive");
+    if (lineage.some((source) => source.includes(marker))) {
+      markerKinds.lineage++;
+      return "lineage";
+    }
+    assert.fail(
+      `${file} contains marker ${JSON.stringify(marker)} (${label}); absent from the live file and the frozen lineage (${reason})`,
+    );
+  }
+  assert.fail(`${file} contains marker ${JSON.stringify(marker)} (${label})`);
 }
 
 function sha256(file) {
@@ -131,6 +238,24 @@ test("manifest shape: release/line/type, items, tasks, threats, demand, policies
   assert.deepEqual(Object.keys(manifest.tasks), TASKS);
   for (const token of Object.values(manifest.tasks)) assert.ok(["done", "pending"].includes(token));
   assert.ok(Array.isArray(manifest.deviations), "deviations log exists");
+  // Every marker key must be reachable: a file the item may edit or a declared shared
+  // file. A key that matches nothing is a dead marker that asserts nothing (D-T8-1:
+  // the durable-recovery item keyed its recovery-test markers on a path never created,
+  // and forge-breadth carried two empty negative-marker keys).
+  const sharedFiles = new Set(Object.keys(manifest.sharedFiles));
+  for (const item of manifest.items) {
+    for (const [kind, markers] of [
+      ["markers", item.markers ?? {}],
+      ["negativeMarkers", item.negativeMarkers ?? {}],
+    ]) {
+      for (const file of Object.keys(markers)) {
+        assert.ok(
+          item.allowedFiles.includes(file) || sharedFiles.has(file),
+          `item ${item.id} ${kind} file ${file} is allowedFile or declared shared file`,
+        );
+      }
+    }
+  }
   assert.ok(manifest.compatPolicy.additiveOnly, "additive-only compat");
   assert.equal(manifest.compatPolicy.removedOrChanged, 0);
   assert.equal(manifest.compatPolicy.allowBreakUsed, false);
@@ -196,19 +321,20 @@ test("pending items are byte-identical to the Task 0 baseline (single-editor fil
       assert.ok(seam, `baseline records seam ${file} (item ${item.id})`);
       const regenerated = file in (manifest.regeneratedFiles ?? {});
       if (token === "pending") {
-        if (seam.status === "absent") assert.ok(!existsSync(resolveFile(file)), `${file} must stay absent while ${item.task} is pending`);
+        if (seam.status === "retired") assert.fail(`${file} is retired to ${seam.retiredTo} while ${item.task} is still pending`);
+        else if (seam.status === "absent")
+          assert.ok(!existsSync(resolveFile(file)), `${file} must stay absent while ${item.task} is pending`);
         else if (regenerated) {
           assert.ok(existsSync(resolveFile(file)), `${file} present (chain-regenerated, hash not locked)`);
         } else if (file === "roadmap.md" && isRoadmapExempted()) {
           // coordination exemption: working tree is exactly a recorded user-authored roadmap edit
         } else assert.equal(sha256(file), seam.sha256, `${file} byte-identical while ${item.task} is pending (task0 baseline)`);
       } else {
-        for (const marker of item.markers[file] ?? []) {
-          assert.ok(readFileSync(resolveFile(file), "utf8").includes(marker), `${file} contains marker ${marker} (${item.task} done)`);
-        }
+        const content = readFileSync(resolveFile(file), "utf8");
+        for (const marker of item.markers[file] ?? []) assertMarker({ file, marker, content, label: `${item.task} done` });
         for (const negative of item.negativeMarkers?.[file] ?? []) {
           if (!negative) continue;
-          assert.ok(!readFileSync(resolveFile(file), "utf8").includes(negative), `${file} avoids negative marker ${negative}`);
+          assert.ok(!content.includes(negative), `${file} avoids negative marker ${negative}`);
         }
       }
     }
@@ -255,9 +381,14 @@ test("shared coordination markers: done tasks' markers present, pending tasks' p
           ? // gate-wiring markers for retired freeze tests (plan 057): absence is asserted by the dedicated wiring test
             markers.filter((m) => !(m.endsWith(".test.mjs") && !content.includes(m)))
           : markers;
-      for (const marker of effective) assert.ok(content.includes(marker), `${file} contains marker ${marker} (${task} done)`);
+      for (const marker of effective) assertMarker({ file, marker, content, label: `${task} done` });
     }
   }
+  // Non-vacuity: every marker form is exercised, and the lineage fallback is real
+  // rather than dead code (plan 071 Task 10).
+  assert.ok(markerKinds.live > 0, "markers are satisfied by live files");
+  assert.ok(markerKinds.transition > 0, "transition markers are exercised");
+  assert.ok(markerKinds.lineage > 0, "the lineage fallback resolves at least one living-doc marker");
   for (const task of TASKS) {
     const n = task.slice(4);
     if (manifest.tasks[task] === "pending") {
@@ -309,7 +440,7 @@ test("threat model T1-T8 maps to task tests; mapped tests exist for done tasks",
 });
 
 test("phase26-freeze.test.mjs is retired from npm test (plan 057) but stays runnable standalone", () => {
-  const testScript = rootPkg.scripts.test;
+  const testScript = effectiveTestChain();
   assert.ok(
     !testScript.includes("scripts/phase26-freeze.test.mjs"),
     "retired freeze gate must not run in npm test (plan 057); run standalone for audits",
@@ -326,11 +457,23 @@ test("baseline seam coverage matches the manifest (every single-editor allowed f
   }
   const seamKeys = Object.keys(baseline.seams);
   assert.deepEqual(seamKeys.sort(), [...singleEditor].sort(), "baseline.seams covers exactly the single-editor allowed files");
+  let retired = 0;
   for (const [file, seam] of Object.entries(baseline.seams)) {
-    const present = existsSync(resolveFile(file));
+    assert.ok(["present", "absent", "retired"].includes(seam.status), `seam ${file} records a known status`);
+    if (seam.status === "retired") {
+      // retired (plan 071 Task 10 / dev-008): the live path is gone to the recorded
+      // archive; the frozen sha256 is history and must never be re-derived.
+      assert.ok(!existsSync(resolveLive(file)), `${file} live path stays absent while retired`);
+      assertRetirement(seam, file);
+      assert.match(seam.sha256 ?? "", /^[0-9a-f]{64}$/, `frozen sha256 kept for retired ${file} (history, not re-derived)`);
+      retired++;
+      continue;
+    }
+    const present = existsSync(resolveLive(file));
     assert.equal(seam.status, present ? "present" : "absent", `seam status matches filesystem for ${file}`);
     if (present) assert.equal(typeof seam.sha256, "string", `sha256 recorded for ${file}`);
   }
+  assert.ok(retired >= 1, "the retirement state is exercised (docs/0.1.0-readiness.md, plan 068 archive move)");
 });
 
 test("compat and migration tokens recorded; deviations never weaken the compat promise", () => {

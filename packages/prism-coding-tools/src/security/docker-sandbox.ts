@@ -24,6 +24,7 @@ import type {
 } from "./sandbox.js";
 import { type DockerSandboxLimitOptions, type ResolvedDockerSandboxLimits, resolveDockerSandboxLimits } from "./sandbox-limits.js";
 import { createImportTarStream, SandboxTarError, summarizeTarStream } from "./sandbox-tar.js";
+import { Semaphore } from "./semaphore.js";
 
 const IMAGE_DIGEST_RE = /@sha256:[a-f0-9]{64}$/i;
 const ENV_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -294,38 +295,6 @@ function buildCreateArgs(input: {
   return args;
 }
 
-class Semaphore {
-  private active = 0;
-  private readonly waiters: Array<() => void> = [];
-  constructor(private readonly max: number) {}
-  async acquire(signal?: AbortSignal): Promise<() => void> {
-    if (signal?.aborted) throw new DockerSandboxError("sandbox operation aborted");
-    if (this.active < this.max) {
-      this.active += 1;
-      return () => this.release();
-    }
-    await new Promise<void>((resolve, reject) => {
-      const waiter = () => {
-        signal?.removeEventListener("abort", onAbort);
-        resolve();
-      };
-      const onAbort = () => {
-        const idx = this.waiters.indexOf(waiter);
-        if (idx >= 0) this.waiters.splice(idx, 1);
-        reject(new DockerSandboxError("sandbox operation aborted"));
-      };
-      this.waiters.push(waiter);
-      signal?.addEventListener("abort", onAbort, { once: true });
-    });
-    this.active += 1;
-    return () => this.release();
-  }
-  private release(): void {
-    this.active = Math.max(0, this.active - 1);
-    this.waiters.shift()?.();
-  }
-}
-
 async function preflightDocker(docker: string, runner: DockerRunner, redact: (text: string) => string, timeoutMs: number): Promise<void> {
   await dockerOutputText(runner, {
     docker,
@@ -412,7 +381,7 @@ class DockerSandboxSession implements DisposableSandbox {
     this.id = opts.containerId;
     this.capabilities = opts.capabilities;
     this.importIdentity = opts.importIdentity;
-    this.execLock = new Semaphore(opts.limits.maxConcurrentExecs);
+    this.execLock = new Semaphore(opts.limits.maxConcurrentExecs, DockerSandboxError);
     this.redact = createSecretRedactor(opts.secrets);
   }
 

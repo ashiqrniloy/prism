@@ -11,15 +11,25 @@
  * for 3xx). Error messages are parameterized by `errorPrefix` so each caller
  * (MCP, OIDC, OPA, content) keeps its own taxonomy and message text.
  *
- * NOTE: imports from ./content.js and is imported by it (content's default
- * media fetch routes through here) — a deliberate ESM cycle; both modules only
- * reference the other's exports inside function bodies, never at module scope.
+ * The SSRF gate, `MediaContentError`, and the host/address types come from the leaf
+ * module `./media-types.js` — shared with `content.ts`, which routes its default media
+ * fetch through here. This module transitively imports nothing from `content.ts` (plan
+ * 070 Task 10 broke the deliberate ESM cycle that used to sit between the two).
  */
 import { lookup as dnsLookup } from "node:dns/promises";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { isIP, type LookupFunction } from "node:net";
-import { assertSsrfAllowedUrl, MediaContentError, type MediaHostAddress, type MediaHostnameResolver, type SsrfPolicy } from "./content.js";
+import {
+  assertSsrfAllowedUrl,
+  MediaContentError,
+  type MediaHostAddress,
+  type MediaHostnameResolver,
+  normalizeHostname,
+  type SsrfPolicy,
+} from "./media-types.js";
+
+export { normalizeHostname };
 
 export interface PinnedFetchOptions {
   /** Prefix for request-level error messages ("redirects are not allowed", "response exceeds", ...). Default "Request". */
@@ -99,8 +109,11 @@ export async function resolvePinnedAddress(
     }
     const literal = candidate.family === 6 ? `[${normalized}]` : normalized;
     // Fail closed on resolved candidates: an explicit hostname allow-list is honored
-    // for the URL itself, but every resolved address is still private-checked.
-    const candidatePolicy = ssrf?.allowedHostnames?.length ? { denyPrivateHosts: ssrf.denyPrivateHosts } : ssrf;
+    // for the URL itself, but every resolved address is still private-checked. An
+    // allowed CIDR is a range rule, so it does apply to resolved addresses.
+    const candidatePolicy = ssrf?.allowedHostnames?.length
+      ? { denyPrivateHosts: ssrf.denyPrivateHosts, ...(ssrf.allowedCidrs ? { allowedCidrs: ssrf.allowedCidrs } : {}) }
+      : ssrf;
     try {
       assertSsrfAllowedUrl(`${url.protocol}//${literal}`, candidatePolicy);
     } catch (error) {
@@ -275,13 +288,6 @@ export async function raceAbort<T>(promise: Promise<T>, signal: AbortSignal | nu
     signal.addEventListener("abort", abort, { once: true });
     promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
   });
-}
-
-export function normalizeHostname(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/^\[|\]$/g, "")
-    .replace(/\.$/, "");
 }
 
 export function isLoopbackHostname(value: string): boolean {

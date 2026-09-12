@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
 import { mkdir, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { createSkillRegistry } from "@arnilo/prism";
 import { deployWikiSkills, loadBundledSkills, parseSkillMarkdown, wikiMaintainerSkill } from "../skills.js";
 
-const TEST_DIR = join(process.cwd(), "dist/__tests__/scratch-skills-test");
+const TEST_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-skills-"));
 
 describe("prism-wiki skills & workspace deployment", () => {
   before(async () => {

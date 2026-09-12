@@ -32,7 +32,7 @@ function encodeOctal(value: number, length: number): Buffer {
 
 function checksumHeader(header: Buffer): number {
   let sum = 0;
-  for (let i = 0; i < header.length; i++) sum += header[i]!;
+  for (let i = 0; i < header.length; i++) sum += header[i];
   return sum;
 }
 
@@ -190,7 +190,7 @@ export async function summarizeTarStream(stream: AsyncIterable<Buffer>, bounds: 
     let off = acc.offset;
     let skip = start;
     while (skip > 0) {
-      const c = acc.chunks[i]!;
+      const c = acc.chunks[i];
       const avail = c.length - off;
       if (skip >= avail) {
         skip -= avail;
@@ -202,7 +202,7 @@ export async function summarizeTarStream(stream: AsyncIterable<Buffer>, bounds: 
       }
     }
     while (written < n) {
-      const c = acc.chunks[i]!;
+      const c = acc.chunks[i];
       const take = Math.min(c.length - off, n - written);
       c.copy(out, written, off, off + take);
       written += take;
@@ -214,7 +214,7 @@ export async function summarizeTarStream(stream: AsyncIterable<Buffer>, bounds: 
   const drop = (n: number): void => {
     let remaining = n;
     while (remaining > 0 && acc.chunks.length > 0) {
-      const first = acc.chunks[0]!;
+      const first = acc.chunks[0];
       const avail = first.length - acc.offset;
       if (remaining >= avail) {
         remaining -= avail;

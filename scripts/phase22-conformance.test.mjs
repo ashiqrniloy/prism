@@ -21,6 +21,7 @@ import { createMemoryAgentEventSource, createMemoryCheckpointStore } from "../di
 import { assertStateConcurrencyConforms } from "../dist/testing/state-concurrency-conformance.js";
 import { createPostgresEnterpriseState } from "../packages/prism-core/dist/enterprise/postgres/index.js";
 import { createPostgresPersistence } from "../packages/prism-core/dist/sessions/postgres/index.js";
+import { blockedGate } from "./blocked-gate.mjs";
 
 const url = process.env.PRISM_TEST_POSTGRES_URL;
 const root = new URL("..", import.meta.url).pathname;
@@ -58,12 +59,9 @@ describe("phase 22 state concurrency conformance", () => {
   });
 
   if (!url) {
-    it("BLOCKED GATE: PRISM_TEST_POSTGRES_URL is required for the durable state-concurrency leg", () => {
-      assert.fail(
-        "BLOCKED GATE: durable state-concurrency conformance evidence cannot be recorded without " +
-          "PRISM_TEST_POSTGRES_URL. The memory leg passed; the durable PostgreSQL leg (session-store + " +
-          "enterprise router/idempotency) requires the protected environment.",
-      );
+    it("records a blocked gate when PRISM_TEST_POSTGRES_URL is absent", () => {
+      // The memory leg already passed above; only the durable leg is blocked.
+      blockedGate("phase22-conformance");
     });
     return;
   }

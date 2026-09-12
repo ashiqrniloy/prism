@@ -22,6 +22,9 @@ export const DEFAULT_WAIT_TIMEOUT_MS = 30_000;
 export const HARD_WAIT_TIMEOUT_MS = 120_000;
 export const DEFAULT_RUN_WALL_TIME_MS = 20 * 60_000;
 export const HARD_RUN_WALL_TIME_MS = 30 * 60_000;
+/** Idle-run reaper TTL; 0 (default) means no reaper. Hard cap = the run wall-time cap. */
+export const DEFAULT_IDLE_RUN_TTL_MS = 0;
+export const HARD_IDLE_RUN_TTL_MS = 30 * 60_000;
 
 export const DEFAULT_MAX_POPUPS = 4;
 export const HARD_MAX_POPUPS = 16;
@@ -89,6 +92,7 @@ export interface BrowserLimitOptions {
   readonly actionTimeoutMs?: number;
   readonly waitTimeoutMs?: number;
   readonly runWallTimeMs?: number;
+  readonly idleRunTtlMs?: number;
   readonly maxPopups?: number;
   readonly maxDialogs?: number;
   readonly maxListeners?: number;
@@ -122,6 +126,7 @@ export interface ResolvedBrowserLimits {
   readonly actionTimeoutMs: number;
   readonly waitTimeoutMs: number;
   readonly runWallTimeMs: number;
+  readonly idleRunTtlMs: number;
   readonly maxPopups: number;
   readonly maxDialogs: number;
   readonly maxListeners: number;
@@ -155,6 +160,7 @@ const DEFAULTS: ResolvedBrowserLimits = {
   actionTimeoutMs: DEFAULT_ACTION_TIMEOUT_MS,
   waitTimeoutMs: DEFAULT_WAIT_TIMEOUT_MS,
   runWallTimeMs: DEFAULT_RUN_WALL_TIME_MS,
+  idleRunTtlMs: DEFAULT_IDLE_RUN_TTL_MS,
   maxPopups: DEFAULT_MAX_POPUPS,
   maxDialogs: DEFAULT_MAX_DIALOGS,
   maxListeners: DEFAULT_MAX_LISTENERS,
@@ -188,6 +194,7 @@ const HARD: ResolvedBrowserLimits = {
   actionTimeoutMs: HARD_ACTION_TIMEOUT_MS,
   waitTimeoutMs: HARD_WAIT_TIMEOUT_MS,
   runWallTimeMs: HARD_RUN_WALL_TIME_MS,
+  idleRunTtlMs: HARD_IDLE_RUN_TTL_MS,
   maxPopups: HARD_MAX_POPUPS,
   maxDialogs: HARD_MAX_DIALOGS,
   maxListeners: HARD_MAX_LISTENERS,
@@ -215,8 +222,14 @@ export const HARD_BROWSER_LIMITS = HARD;
 
 function validate(name: keyof ResolvedBrowserLimits, value: number): number {
   const hard = HARD[name];
-  if (!Number.isSafeInteger(value) || value < 1 || value > hard) {
-    throw new RangeError(`${name} must be a positive safe integer at most ${hard}`);
+  // `idleRunTtlMs` is the one cap where 0 is meaningful ("reaper off").
+  const floor = name === "idleRunTtlMs" ? 0 : 1;
+  if (!Number.isSafeInteger(value) || value < floor || value > hard) {
+    throw new RangeError(
+      floor === 0
+        ? `${name} must be a safe integer in 0..${hard} (0 disables the reaper)`
+        : `${name} must be a positive safe integer at most ${hard}`,
+    );
   }
   return value;
 }
@@ -233,6 +246,7 @@ export function resolveBrowserLimits(input: BrowserLimitOptions = {}): ResolvedB
     actionTimeoutMs: validate("actionTimeoutMs", input.actionTimeoutMs ?? DEFAULTS.actionTimeoutMs),
     waitTimeoutMs: validate("waitTimeoutMs", input.waitTimeoutMs ?? DEFAULTS.waitTimeoutMs),
     runWallTimeMs: validate("runWallTimeMs", input.runWallTimeMs ?? DEFAULTS.runWallTimeMs),
+    idleRunTtlMs: validate("idleRunTtlMs", input.idleRunTtlMs ?? DEFAULTS.idleRunTtlMs),
     maxPopups: validate("maxPopups", input.maxPopups ?? DEFAULTS.maxPopups),
     maxDialogs: validate("maxDialogs", input.maxDialogs ?? DEFAULTS.maxDialogs),
     maxListeners: validate("maxListeners", input.maxListeners ?? DEFAULTS.maxListeners),

@@ -1,152 +1,50 @@
 {
-  "captured": "2026-09-06",
+  "captured": "2026-09-11",
   "marginPp": 3,
   "packages": {
+    "@arnilo/prism-acp-agent": {
+      "lines": 91.87,
+      "branches": 79.8,
+      "functions": 94.74
+    },
     "@arnilo/prism-ag-ui": {
       "lines": 87.46,
       "branches": 78.39,
       "functions": 94.46
     },
-    "@arnilo/prism-coding-agent": {
-      "lines": 84.22,
-      "branches": 75.56,
-      "functions": 90.2
+    "@arnilo/prism-coding-tools": {
+      "lines": 83.11,
+      "branches": 76.8,
+      "functions": 90.32
     },
-    "@arnilo/prism-computer-use-linux": {
-      "lines": 95.81,
-      "branches": 85.96,
-      "functions": 100
-    },
-    "@arnilo/prism-prompts": {
-      "lines": 63.77,
-      "branches": 72.09,
-      "functions": 74.68
-    },
-    "@arnilo/prism-credentials-node": {
-      "lines": 86.02,
-      "branches": 81.27,
-      "functions": 80
-    },
-    "@arnilo/prism-document-reader": {
-      "lines": 92.24,
-      "branches": 81.25,
-      "functions": 100
-    },
-    "@arnilo/prism-evals": {
-      "lines": 87.63,
-      "branches": 63.37,
-      "functions": 89.74
+    "@arnilo/prism-core": {
+      "protectedException": "requires PRISM_TEST_POSTGRES_URL / PRISM_TEST_NATS_URL (enterprise and durable session store legs)"
     },
     "@arnilo/prism-mcp": {
-      "lines": 88.9,
-      "branches": 78.03,
+      "lines": 88.83,
+      "branches": 78.06,
       "functions": 90.71
     },
-    "@arnilo/prism-model-router": {
-      "lines": 85.29,
-      "branches": 81.67,
-      "functions": 91.67
+    "@arnilo/prism-memory": {
+      "lines": 86.63,
+      "branches": 81.99,
+      "functions": 91.04
     },
-    "@arnilo/prism-observability-opentelemetry": {
-      "lines": 94.8,
-      "branches": 83.43,
-      "functions": 87.88
+    "@arnilo/prism-office": {
+      "lines": 83.55,
+      "branches": 79.9,
+      "functions": 84.96
     },
-    "@arnilo/prism-policy": {
-      "lines": 90.78,
-      "branches": 74.55,
-      "functions": 96.23
-    },
-    "@arnilo/prism-caveman": {
-      "lines": 87.39,
-      "branches": 68.47,
-      "functions": 85.37
-    },
-    "@arnilo/prism-impeccable": {
-      "lines": 95.21,
-      "branches": 86.67,
-      "functions": 100
-    },
-    "@arnilo/prism-openapi-tools": {
-      "lines": 88.85,
-      "branches": 81.3,
-      "functions": 93.75
-    },
-    "@arnilo/prism-ponytail": {
-      "lines": 87.18,
-      "branches": 69.64,
-      "functions": 94.59
-    },
-    "@arnilo/prism-server": {
-      "lines": 85.66,
-      "branches": 71.5,
-      "functions": 91.19
-    },
-    "@arnilo/prism-session-store-sqlite": {
-      "lines": 77.69,
-      "branches": 66.91,
-      "functions": 79.34
-    },
-    "@arnilo/prism-supervisor": {
-      "lines": 89.08,
-      "branches": 66.67,
-      "functions": 86.24
-    },
-    "@arnilo/prism-tool-validator-json-schema": {
-      "lines": 90.24,
-      "branches": 81.72,
-      "functions": 100
+    "@arnilo/prism-providers": {
+      "lines": 92.04,
+      "branches": 83.99,
+      "functions": 94.03
     },
     "@arnilo/prism-web-tools": {
       "lines": 83.67,
       "branches": 72.73,
       "functions": 89.55
-    },
-    "@arnilo/prism-work-tools": {
-      "lines": 73.79,
-      "branches": 66.13,
-      "functions": 72.52
-    },
-    "@arnilo/prism-workflows": {
-      "lines": 85.56,
-      "branches": 78.24,
-      "functions": 86.9
-    },
-    "@arnilo/prism-session-store-postgres": {
-      "protectedException": "requires PRISM_TEST_POSTGRES_URL (durable postgres legs)"
-    },
-    "@arnilo/prism-coding-security": {
-      "protectedException": "native network-namespace sandbox legs skip on CI runners (unshare NETNS probe fails in containers; host runs exercise them)"
-    },
-    "@arnilo/prism-enterprise-postgres": {
-      "protectedException": "requires PRISM_TEST_POSTGRES_URL (durable postgres legs)"
-    },
-    "@arnilo/prism-session-store-nats": {
-      "protectedException": "requires a real NATS server (real-jetstream legs; offline fake-jetstream seam only in default runs)"
-    },
-    "@arnilo/prism-coding-tools": {
-      "lines": 83.04,
-      "branches": 76.6,
-      "functions": 90.21
-    },
-    "@arnilo/prism-core": {
-      "protectedException": "requires PRISM_TEST_POSTGRES_URL / PRISM_TEST_NATS_URL (enterprise and durable session store legs)"
-    },
-    "@arnilo/prism-memory": {
-      "lines": 86.1,
-      "branches": 81.96,
-      "functions": 90.8
-    },
-    "@arnilo/prism-providers": {
-      "lines": 91.9,
-      "branches": 83.64,
-      "functions": 93.89
-    },
-    "@arnilo/prism-office": {
-      "lines": 75,
-      "branches": 70,
-      "functions": 75
     }
   },
-  "note": "Freeze 2026-08-14: two back-to-back post-fix runs were byte-identical (max lines delta 0.000pp). Threshold = min(run1,run2) - 3pp on lines; branches/functions recorded from the freeze runs, not gated. Protected packages (durable legs needing PRISM_TEST_POSTGRES_URL, real NATS, or OS-capability legs that skip in the measuring environment) are exempt and shown separately. CI remediation 2026-08-14: @arnilo/prism-coding-security moved to protectedException \u2014 its native-sandbox legs probe `unshare --net` (NETNS) at load and skip on GitHub Actions runners (measured 72.80 lines there vs 80.18 on a host with NETNS; the 77.18 freeze threshold was host-captured). [2026-09-06] plan 064 Task 12 re-capture after plan-064 live-suite additions (repairs @arnilo/prism-providers missing branches/functions; dormant packages keep frozen thresholds)."
+  "note": "Freeze 2026-08-14: two back-to-back post-fix runs were byte-identical (max lines delta 0.000pp). Threshold = min(run1,run2) - 3pp on lines; branches/functions recorded from the freeze runs, not gated. Protected packages (durable legs needing PRISM_TEST_POSTGRES_URL, real NATS, or OS-capability legs that skip in the measuring environment) are exempt and shown separately. CI remediation 2026-08-14: @arnilo/prism-coding-security moved to protectedException — its native-sandbox legs probe `unshare --net` (NETNS) at load and skip on GitHub Actions runners (measured 72.80 lines there vs 80.18 on a host with NETNS; the 77.18 freeze threshold was host-captured). [2026-09-06] plan 064 Task 12 re-capture after plan-064 live-suite additions (repairs @arnilo/prism-providers missing branches/functions; dormant packages keep frozen thresholds). [2026-09-11] plan 070 Task 7: pruned 23 retired package rows; coverage-summary now discovers workspaces by dist test files (nested dist/src/__tests__ and dist/<area>/__tests__ included), so @arnilo/prism-acp-agent is measured (row added) and the @arnilo/prism-office placeholder (75/70/75) is replaced by measured evidence. Threshold = min(two back-to-back runs 2026-09-11) - 3pp; the two runs differed by <= 0.02pp on lines. Rows sorted by name."
 }

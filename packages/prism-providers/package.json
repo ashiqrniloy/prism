@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-providers",
-  "version": "0.5.6",
+  "version": "0.6.0",
   "description": "Unified provider family: all 19 first-party Prism provider adapters as explicit subpaths (openai, anthropic, google, azure, bedrock, vertex, deepseek, xai, zai, alibaba, kimi, clinepass, neuralwatt, ollama, opencode-go, openrouter, ai-sdk, hyper, commandcode). Importing one adapter never evaluates another.",
   "license": "MIT",
   "type": "module",
@@ -101,8 +101,8 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@ai-sdk/provider": "4.0.10",
-    "@arnilo/prism": "^0.5.6"
+    "@ai-sdk/provider": "4.0.13",
+    "@arnilo/prism": "^0.6.0"
   },
   "peerDependenciesMeta": {
     "@ai-sdk/provider": {
@@ -110,12 +110,12 @@
     }
   },
   "devDependencies": {
-    "@ai-sdk/openai": "4.0.59",
-    "@ai-sdk/provider": "4.0.10",
+    "@ai-sdk/openai": "4.0.65",
+    "@ai-sdk/provider": "4.0.13",
     "@arnilo/prism": "file:../.."
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "repository": {
     "type": "git",

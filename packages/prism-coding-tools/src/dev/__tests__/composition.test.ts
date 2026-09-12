@@ -59,11 +59,11 @@ describe("composition (plan 040 Task 1)", () => {
     );
   });
 
-  it("manifest: peers ^0.5.6, diff dependency declared", () => {
+  it("manifest: peer pinned to the package version, diff dependency declared", () => {
     const manifest = readManifest("package.json");
     assert.equal(manifest.name, "@arnilo/prism-coding-tools");
-    assert.equal(manifest.version, "0.5.6");
-    assert.equal(manifest.peerDependencies?.["@arnilo/prism"], "^0.5.6");
+    // Plan 071 Task 1 (plan 070 FA 10): derive from the manifest, never hardcode the cut.
+    assert.equal(manifest.peerDependencies?.["@arnilo/prism"], `^${manifest.version}`);
     assert.ok(manifest.dependencies?.diff, "diff dependency declared");
     assert.equal(manifest.private, undefined, "must be publishable");
   });

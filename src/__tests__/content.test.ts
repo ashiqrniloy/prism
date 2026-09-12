@@ -173,6 +173,51 @@ describe("multimodal content contracts", () => {
     assert.doesNotThrow(() => assertSsrfAllowedUrl("http://[::1]/file", { allowedHostnames: ["::1"] }));
   });
 
+  it("admits allow-listed private CIDRs and keeps every other denial intact", () => {
+    const cidrs = ["10.0.0.0/8", "192.168.0.0/16", "fc00::/7"];
+    assert.doesNotThrow(() => assertSsrfAllowedUrl("http://10.0.0.5/file", { allowedCidrs: cidrs }));
+    assert.doesNotThrow(() => assertSsrfAllowedUrl("http://192.168.1.10/file", { allowedCidrs: cidrs }));
+    assert.doesNotThrow(() => assertSsrfAllowedUrl("http://[fd00::1]/file", { allowedCidrs: cidrs }));
+    // Only the private-IP block is bypassed: a single /8 never widens to neighbours,
+    // link-local/metadata literals stay denied, and metadata hostnames stay denied
+    // even when the list covers their address space.
+    for (const url of [
+      "http://169.254.169.254/latest/meta-data",
+      "http://172.16.0.1/file",
+      "http://[fe80::1]/file",
+      // An IPv4-mapped literal is an IPv6 address: a v4 range must not cover it.
+      "http://[::ffff:10.0.0.1]/file",
+    ]) {
+      assert.throws(
+        () => assertSsrfAllowedUrl(url, { allowedCidrs: cidrs }),
+        (error: unknown) => error instanceof MediaContentError && error.code === "ssrf_denied",
+        url,
+      );
+    }
+    for (const hostname of ["http://metadata.google.internal/x", "http://localhost/x", "http://instance-data/x"]) {
+      assert.throws(
+        () => assertSsrfAllowedUrl(hostname, { allowedCidrs: ["0.0.0.0/0", "::/0"] }),
+        (error: unknown) => error instanceof MediaContentError && error.code === "ssrf_denied",
+        hostname,
+      );
+    }
+    // An unparseable entry fails the whole policy closed — even for an otherwise
+    // public URL, and even alongside a hostname allow-list.
+    for (const bad of [["10.0.0.0/33"], ["10.0.0.256/8"], ["not-a-cidr"], ["10.0.0.0"], ["::/129"], ["10.0.0.0/8", "oops/8"]]) {
+      for (const url of ["https://93.184.216.34/file.pdf", "http://10.0.0.5/file", "https://cdn.example.test/file.pdf"]) {
+        assert.throws(
+          () => assertSsrfAllowedUrl(url, { allowedCidrs: bad }),
+          (error: unknown) => error instanceof MediaContentError && error.code === "ssrf_denied",
+          `${url} with ${bad.join()}`,
+        );
+      }
+    }
+    assert.throws(
+      () => assertSsrfAllowedUrl("https://93.184.216.34/file.pdf", { allowedCidrs: ["bad/8"], allowedHostnames: ["x"] }),
+      /not a valid range/,
+    );
+  });
+
   it("rejects private DNS answers and pins one validated public address", async () => {
     const block: FileContent = {
       type: "file",
@@ -209,6 +254,41 @@ describe("multimodal content contracts", () => {
             resolveHostname: async () => answers,
             requestUrl: async () => {
               assert.fail("request must not run for private DNS answers");
+            },
+          }),
+        (error: unknown) => error instanceof MediaContentError && error.code === "ssrf_denied",
+      );
+    }
+  });
+
+  it("admits a resolved address inside an allow-listed CIDR but keeps the resolution guard", async () => {
+    const block: FileContent = {
+      type: "file",
+      mediaType: "application/pdf",
+      url: "https://media.example.test/report.pdf",
+    };
+    const resolved = await resolveMediaContentBlock(block, {
+      ssrf: { allowedCidrs: ["10.0.0.0/8"] },
+      resolveHostname: async () => [{ address: "10.0.0.5", family: 4 }],
+      requestUrl: async ({ address }) => {
+        assert.deepEqual(address, { address: "10.0.0.5", family: 4 });
+        return tinyPdf;
+      },
+    });
+    assert.deepEqual(resolved.bytes, tinyPdf);
+    // The same CIDR never admits a link-local/metadata answer, and an invalid entry
+    // fails closed before any request.
+    for (const options of [
+      { ssrf: { allowedCidrs: ["10.0.0.0/8"] }, answers: [{ address: "169.254.169.254", family: 4 as const }] },
+      { ssrf: { allowedCidrs: ["10.0.0.0/33"] }, answers: [{ address: "10.0.0.5", family: 4 as const }] },
+    ]) {
+      await assert.rejects(
+        () =>
+          resolveMediaContentBlock(block, {
+            ssrf: options.ssrf,
+            resolveHostname: async () => options.answers,
+            requestUrl: async () => {
+              assert.fail("request must not run when the CIDR check denies");
             },
           }),
         (error: unknown) => error instanceof MediaContentError && error.code === "ssrf_denied",

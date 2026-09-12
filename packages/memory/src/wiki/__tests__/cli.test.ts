@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { runCli } from "../cli.js";
 
-const TEST_DIR = join(process.cwd(), "dist/__tests__/scratch-cli-test");
+const TEST_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-cli-"));
 
 describe("prism-wiki CLI runner", () => {
   before(async () => {

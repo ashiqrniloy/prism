@@ -1,5 +1,7 @@
 # Browser automation
 
+> **Optional peer install:** `playwright-core@1.63.0` (exact pin) — see [Optional peer dependencies](peer-dependencies.md).
+
 ## What it does
 
 The `@arnilo/prism-web-tools/browser` subpath exposes six exclusive model-facing tools—`browser_open`, `browser_snapshot`, `browser_act`, `browser_close`, `browser_evaluate`, and `browser_observe`—over a host-supplied Playwright `Browser`. Prism creates one non-persistent `BrowserContext` per run, serializes actions, returns bounded AI-mode accessibility snapshots with snapshot-scoped refs, enforces egress/side-effect/upload/download/screenshot policy, and closes context/pages/listeners/quarantined downloads on close, abort, or manager disposal. Since 0.1.4 the package also rides playwright-core's existing CDP transport for bounded page evaluation, console/network observation, and network/emulation control on Chromium hosts — zero new dependencies, Prism still never launches or downloads browsers.
@@ -100,8 +102,9 @@ await browser.close();
 
 ## Extension and configuration notes
 
-- Compatibility line: `playwright-core@1.61.0` optional peer. Hosts pin browser binaries/images; Prism package install downloads nothing.
-- Default/hard caps: pages 4/16; actions 100/256; queued actions 16/64; snapshot refs 2k/10k; depth 30/100; snapshot bytes 256 KiB/2 MiB; navigation 30s/120s; action 10s/60s; wait 30s/120s; run wall 20min/30min; popups 4/16; dialogs 16/64; close grace 5s/30s; network requests 1k/10k; redirects/request 10/32; WebSockets 8/32; screenshots 16/64 with 16/64 megapixels and 10 MiB/32 MiB encoded; uploads 8/32 files, 16 MiB/64 MiB each, 64 MiB/256 MiB aggregate; downloads 8/32 files, 32 MiB/256 MiB each, 64 MiB/512 MiB aggregate.
+- Compatibility line: `playwright-core@1.63.0` optional peer. Hosts pin browser binaries/images; Prism package install downloads nothing.
+- Default/hard caps: pages 4/16; actions 100/256; queued actions 16/64; snapshot refs 2k/10k; depth 30/100; snapshot bytes 256 KiB/2 MiB; navigation 30s/120s; action 10s/60s; wait 30s/120s; run wall 20min/30min; idle run TTL 0 (off)/30min; popups 4/16; dialogs 16/64; close grace 5s/30s; network requests 1k/10k; redirects/request 10/32; WebSockets 8/32; screenshots 16/64 with 16/64 megapixels and 10 MiB/32 MiB encoded; uploads 8/32 files, 16 MiB/64 MiB each, 64 MiB/256 MiB aggregate; downloads 8/32 files, 32 MiB/256 MiB each, 64 MiB/512 MiB aggregate.
+- Optional `idleRunTtlMs` (default `0` = off, hard-capped at the run wall-time cap) arms one unref'd manager-scoped sweep interval. A run with no queued action and no activity for the TTL is disposed exactly like `manager.closeRun(runId)` — context and pages closed — so later calls fail with `ERR_PRISM_BROWSER_STATE` and the host can `open()` it again. Any operation (open/snapshot/act/evaluate/observe) resets the clock, in-flight work is never reaped mid-action, and the reaper is cleared by `manager.close()`. Hosts that already close runs explicitly can leave it off; enabling it bounds contexts leaked by abandoned runs.
 - Contexts use `serviceWorkers: "block"` and install `BrowserContext.route()` for every visible HTTP(S)/WebSocket request. `acceptDownloads` is enabled only when `downloads` is configured.
 - `networkPolicy` defaults to `requireContainedProxy: true` (fail closed). Hosts must supply `containedProxyAttestation: { proxyEndpoint, denyDirectEgress: true }`. Private/loopback/link-local, `file`/`data`/`blob`/`javascript`/`devtools` schemes are denied by default. Playwright routing is defense in depth — production DNS/private egress is a host firewall/proxy.
 - Uploads require absolute paths under `uploads.roots` (realpath-contained; symlink escapes rejected). Downloads stream into `downloads.quarantine` with SHA-256/MIME/name metadata; `download_release` requires host `approveRelease`. Screenshots return bounded `ImageContent`.

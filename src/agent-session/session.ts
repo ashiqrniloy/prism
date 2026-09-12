@@ -37,7 +37,12 @@ import type {
   ToolEffectStore,
   Usage,
 } from "../contracts.js";
-import { DEFAULT_MAX_PENDING_STEER_BYTES, DEFAULT_MAX_PENDING_STEERS } from "../contracts.js";
+import {
+  DEFAULT_MAX_PENDING_STEER_BYTES,
+  DEFAULT_MAX_PENDING_STEERS,
+  DEFAULT_SNAPSHOT_CACHE_TTL_MS,
+  HARD_MAX_SNAPSHOT_CACHE_TTL_MS,
+} from "../contracts.js";
 import { GuardrailError, runGuardrails } from "../guardrails.js";
 import type { AgentIdentity } from "../identity.js";
 import type { AgentInput } from "../input.js";
@@ -141,6 +146,7 @@ export class RuntimeAgentSession implements AgentSession {
     readonly expiresAt: number;
     readonly value: SessionContextSnapshot;
   };
+  private readonly snapshotCacheTtlMs: number;
 
   constructor(config: AgentSessionConfig & { readonly agent: Agent }) {
     this.id = config.id ?? randomId("session");
@@ -148,6 +154,7 @@ export class RuntimeAgentSession implements AgentSession {
     this.metadata = config.metadata;
     this.store = config.store ?? config.agent.config.store ?? createMemorySessionStore();
     this.currentLeafId = config.leafId;
+    this.snapshotCacheTtlMs = resolveSnapshotCacheTtlMs(config.snapshotCacheTtlMs);
   }
 
   get leafId(): string | undefined {
@@ -581,7 +588,24 @@ export class RuntimeAgentSession implements AgentSession {
     const value = reader
       ? await rebuildSessionContext(reader, { sessionId: this.id, leafId: this.currentLeafId })
       : rebuildSessionContext(await this.store.list(this.id), { leafId: this.currentLeafId });
-    this.snapshotCache = { leafId: this.currentLeafId, generation: this.snapshotGeneration, expiresAt: now + 1_000, value };
+    this.snapshotCache = {
+      leafId: this.currentLeafId,
+      generation: this.snapshotGeneration,
+      expiresAt: now + this.snapshotCacheTtlMs,
+      value,
+    };
     return value;
   }
+}
+
+/**
+ * `snapshotCacheTtlMs` resolution: `0` disables the branch cache (a host that needs a
+ * fresh store read per snapshot), otherwise a safe integer up to the hard cap.
+ */
+function resolveSnapshotCacheTtlMs(value: number | undefined): number {
+  const ttl = value ?? DEFAULT_SNAPSHOT_CACHE_TTL_MS;
+  if (!Number.isSafeInteger(ttl) || ttl < 0 || ttl > HARD_MAX_SNAPSHOT_CACHE_TTL_MS) {
+    throw new TypeError(`AgentSessionConfig.snapshotCacheTtlMs must be a safe integer from 0 to ${HARD_MAX_SNAPSHOT_CACHE_TTL_MS}`);
+  }
+  return ttl;
 }

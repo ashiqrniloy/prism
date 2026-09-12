@@ -83,6 +83,7 @@ PrismMcpStdioHandle	export type { AttachMcpToolBridgeOptions, ConnectMcpCapabili
 PrismMcpWebHandler	export type { AttachMcpToolBridgeOptions, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreatePrismMcpServerOptions, CreatePrismMcpWebHandlerOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpAgentRunExposure, PrismMcpAuthorization, PrismMcpAuthorization
 ResolvedMcpClientLimits	export type { McpClientLimitsInput, ResolvedMcpClientLimits } from "./limits.js"
 ServePrismMcpStdioOptions	export type { AttachMcpToolBridgeOptions, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreatePrismMcpServerOptions, CreatePrismMcpWebHandlerOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpAgentRunExposure, PrismMcpAuthorization, PrismMcpAuthorization
+WELL_KNOWN_OAUTH_PROTECTED_RESOURCE	export declare const WELL_KNOWN_OAUTH_PROTECTED_RESOURCE = "/.well-known/oauth-protected-resource"
 assertMcpContentWithinLimit	export declare function assertMcpContentWithinLimit(content: readonly McpContentBlock[] | undefined, maxResultBytes: number): void
 assertValidServerId	export declare function assertValidServerId(serverId: string): void
 attachMcpCapabilities	export declare function attachMcpCapabilities(client: Client, transport: Transport, options: AttachMcpToolBridgeOptions & Pick<ConnectMcpCapabilitiesOptions, "maxCapabilityBytes">): Promise<McpCapabilityBridge>
@@ -112,7 +113,9 @@ mcpElicitationDecision	export declare function mcpElicitationDecision(approvalId
 mcpElicitationResultFromDecision	export declare function mcpElicitationResultFromDecision(decision: RunDecision, options?:
 measureBoundedJson	export declare function measureBoundedJson(value: unknown, bounds: JsonBounds): JsonMeasurement
 normalizeHostname	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
+normalizeProtectedResource	export declare function normalizeProtectedResource(input: McpProtectedResource): NormalizedProtectedResource
 packageName	export declare const packageName = "@arnilo/prism-mcp"
+protectedResourceMetadata	export declare function protectedResourceMetadata(resource: NormalizedProtectedResource):
 raceAbort	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
 requestPinned	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
 resolveMcpClientLimits	export declare function resolveMcpClientLimits(input: McpClientLimitsInput, defaults:
@@ -120,4 +123,5 @@ resolveMcpOAuthLimits	export declare function resolveMcpOAuthLimits(input?: McpO
 resolvePinnedAddress	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
 servePrismMcpStdio	export declare function servePrismMcpStdio(server: McpServer | (() => McpServer | Promise<McpServer>), options?: ServePrismMcpStdioOptions): PrismMcpStdioHandle
 summarizeMcpContent	export declare function summarizeMcpContent(content: readonly McpContentBlock[] | undefined, maxBytes?: number): string
+unauthorizedResponse	export declare function unauthorizedResponse(protectedResource: NormalizedProtectedResource | undefined, request: Request): Response
 validateMcpLimit	export declare function validateMcpLimit(name: string, value: number, hardCap: number): number

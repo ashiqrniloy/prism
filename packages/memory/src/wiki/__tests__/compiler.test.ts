@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { WikiCompiler } from "../engine/compiler.js";
 import { scaffoldWiki } from "../engine/scaffolder.js";
 
-const TEST_DIR = join(process.cwd(), "dist/__tests__/scratch-compiler-test");
+const TEST_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-compiler-"));
 
 describe("prism-wiki compiler & scaffolder engine", () => {
   before(async () => {

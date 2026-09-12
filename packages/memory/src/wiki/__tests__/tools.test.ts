@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
 import { mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { createWikiIngestTool } from "../tools/ingest.js";
@@ -7,7 +9,7 @@ import { createWikiReadPageTool } from "../tools/read-page.js";
 import { createWikiRecordInsightTool } from "../tools/record-insight.js";
 import { createWikiSearchTool } from "../tools/search.js";
 
-const TEST_DIR = join(process.cwd(), "dist/__tests__/scratch-tools-test");
+const TEST_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-tools-"));
 
 describe("prism-wiki tools suite", () => {
   before(async () => {

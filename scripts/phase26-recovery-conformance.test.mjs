@@ -22,16 +22,14 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
+import { blockedGate } from "./blocked-gate.mjs";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;
 const blocked = !postgresUrl;
 
 /** PRISM_TEST_POSTGRES_URL is required: the protected recovery leg cannot run without Postgres. */
 if (blocked) {
-  console.error(
-    "BLOCKED GATE: PRISM_TEST_POSTGRES_URL is required (postgres://...); the phase26 recovery conformance leg cannot run without the durable Postgres store.",
-  );
-  process.exit(1);
+  blockedGate("phase26-recovery-conformance");
 }
 
 // Load the store adapters (Postgres from the session-store-postgres package, same as the 0.2.5 test:postgres profile).
@@ -39,12 +37,11 @@ let createPostgresPersistence;
 try {
   ({ createPostgresPersistence } = await import("@arnilo/prism-core/sessions/postgres"));
 } catch (error) {
-  console.error("BLOCKED GATE: @arnilo/prism-session-store-postgres did not load:", String(error));
-  process.exit(1);
+  blockedGate("phase26-recovery-conformance", { missing: [`@arnilo/prism-core/sessions/postgres did not load: ${String(error)}`] });
 }
 
 const { createMemoryCheckpointStore, createMemoryLeaseStore } = await import("@arnilo/prism");
-const { createProcessSessions } = await import("@arnilo/prism-coding-agent");
+const { createProcessSessions } = await import("@arnilo/prism-coding-tools/agent");
 
 function makePtyBackend(refPrefix) {
   return {

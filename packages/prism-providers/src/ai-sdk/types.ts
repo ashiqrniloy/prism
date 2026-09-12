@@ -6,6 +6,7 @@ export const SUPPORTED_AI_SDK_VERSION_MATRIX = [
   { providerVersion: "4.0.3", specificationVersion: "v4" },
   { providerVersion: "4.0.4", specificationVersion: "v4" },
   { providerVersion: "4.0.10", specificationVersion: "v4" },
+  { providerVersion: "4.0.13", specificationVersion: "v4" },
 ] as const;
 
 export const SUPPORTED_AI_SDK_SPECIFICATION = "v4" as const;

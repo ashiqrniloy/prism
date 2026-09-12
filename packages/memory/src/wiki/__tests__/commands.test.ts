@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { createExtensionKernel } from "@arnilo/prism";
 import { createWikiExtension, createWikiIngestCommand, initWiki, lintWiki, refreshWiki } from "../index.js";
 
-const TEST_DIR = join(process.cwd(), "dist/__tests__/scratch-commands-test");
+const TEST_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-commands-"));
 
 describe("prism-wiki commands & lifecycle hooks", () => {
   before(async () => {

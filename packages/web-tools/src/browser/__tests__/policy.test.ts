@@ -24,6 +24,7 @@ import {
   sanitizeDownloadName,
 } from "../index.js";
 import { FakeBrowser, FakeDownload, ONE_PX_PNG } from "./fake-playwright.js";
+import { waitFor } from "./wait-for.js";
 
 const openNetwork = {
   requireContainedProxy: false as const,
@@ -288,14 +289,19 @@ describe("browser Task 6 policy", () => {
       assert.equal(browser.contexts[0]!.createdWith.acceptDownloads, true);
       const download = new FakeDownload("https://example.com/r.bin", "report.bin", Buffer.from("report"));
       await browser.contexts[0]!.emitDownload(download);
-      await new Promise((r) => setTimeout(r, 20));
       // Queue still works while download settles.
       await manager.act("run-1", { action: "click", target: { role: "button", name: "Go" } });
-      const listed = manager.listDownloads("run-1");
+      const listed = await waitFor(
+        () => manager.listDownloads("run-1"),
+        (items) => items.length >= 1,
+        "download quarantine on run-1",
+      );
       assert.equal(listed.length, 1);
+      const [first] = listed;
+      assert.ok(first, "expected a quarantined download");
       const out = await manager.act("run-1", {
         action: "download_release",
-        downloadId: listed[0]!.downloadId,
+        downloadId: first.downloadId,
       });
       assert.equal(out.download?.released, true);
       assert.equal(released, true);

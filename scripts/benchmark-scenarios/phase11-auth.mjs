@@ -13,11 +13,11 @@
 import { createHash, subtle } from "node:crypto";
 import { createServer } from "node:http";
 import { performance } from "node:perf_hooks";
+import { createOpenApiTools } from "@arnilo/prism-coding-tools/openapi";
 import { createOidcIdentityVerifier } from "@arnilo/prism-core/credentials/node/oidc";
 import { createOpaPolicyEvaluator } from "@arnilo/prism-core/governance/policy";
+import { createS3ArtifactBodyStore } from "@arnilo/prism-core/runtime/server/artifact-bodies";
 import { createMcpOAuthTransport, createPrismMcpServer, createPrismMcpWebHandler } from "@arnilo/prism-mcp";
-import { createOpenApiTools } from "@arnilo/prism-openapi-tools";
-import { createS3ArtifactBodyStore } from "@arnilo/prism-server/artifact-bodies";
 import { Client } from "@modelcontextprotocol/client";
 
 const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 20);

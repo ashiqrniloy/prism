@@ -21,6 +21,11 @@ const PEERS_OK = await (async () => {
 })();
 
 const envelope = JSON.parse((await readFile(new URL("../../../../../scripts/budgets.json", import.meta.url))).toString()).docReader;
+// ponytail: the envelope is a hang/regex-blowup sanity bound, not a benchmark. V8
+// coverage instrumentation inflates the pdf-parse path ~20x (162ms idle vs a 3441ms
+// measurement under --experimental-test-coverage on a loaded host), which turned the
+// coverage gate flaky. Scale the ceiling when instrumented; 20s still catches a hang.
+const extractMsCeiling = process.env.NODE_V8_COVERAGE ? envelope.extractMsCeiling * 10 : envelope.extractMsCeiling;
 
 async function withCwd(run: (cwd: string) => Promise<void>): Promise<void> {
   const cwd = await mkdtemp(join(tmpdir(), "prism-docreader-"));
@@ -183,7 +188,7 @@ test("envelope: a max-page document completes within the recorded budget or refu
   const result = await reader.extract({ buffer: await read("thousand-page.pdf"), path: "t.pdf" });
   const elapsed = performance.now() - started;
   assert.equal(result?.pages, envelope.maxPagesBaseline);
-  assert.ok(elapsed <= envelope.extractMsCeiling, `extract ${elapsed.toFixed(0)}ms exceeds ${envelope.extractMsCeiling}ms ceiling`);
+  assert.ok(elapsed <= extractMsCeiling, `extract ${elapsed.toFixed(0)}ms exceeds ${extractMsCeiling}ms ceiling`);
 });
 
 test("fuzz: a %PDF- magic buffer with a malformed body rejects promptly, never hangs", { skip: !PEERS_OK }, async () => {
@@ -192,5 +197,5 @@ test("fuzz: a %PDF- magic buffer with a malformed body rejects promptly, never h
   const sizeable = Buffer.concat([Buffer.from("%PDF-1.7", "latin1"), Buffer.alloc(256 * 1024, 0x42)]);
   const started = performance.now();
   await assert.rejects(reader.extract({ buffer: sizeable, path: "broken.pdf" }));
-  assert.ok(performance.now() - started < envelope.extractMsCeiling, "malformed parse must fail within the same ceiling");
+  assert.ok(performance.now() - started < extractMsCeiling, "malformed parse must fail within the same ceiling");
 });

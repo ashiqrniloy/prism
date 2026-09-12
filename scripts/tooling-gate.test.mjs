@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -74,8 +74,21 @@ describe("tooling gates fail on violations", () => {
     const basePath = existsSync("packages/prism-core/src/enterprise/postgres")
       ? "packages/prism-core/src/enterprise/postgres"
       : "packages/enterprise-postgres/src";
-    const requestSources = ["policy", "evaluations", "work-idempotency", "tool-effects", "model-router", "cleanup"]
+    // The router is a module directory (plan 070 Task 14); scan every file in it so the
+    // DDL check cannot go vacuous when sources move between modules.
+    const routerSources = (() => {
+      const dir = `${basePath}/model-router`;
+      if (!existsSync(dir)) return [readFileSync(`${basePath}/model-router.ts`, "utf8")];
+      const walk = (d) =>
+        readdirSync(d, { withFileTypes: true }).flatMap((e) =>
+          e.isDirectory() ? walk(`${d}/${e.name}`) : e.name.endsWith(".ts") ? [readFileSync(`${d}/${e.name}`, "utf8")] : [],
+        );
+      return walk(dir);
+    })();
+    assert.match(routerSources.join("\n"), /prism_model_router_/, "router source scan must cover the router modules");
+    const requestSources = ["policy", "evaluations", "work-idempotency", "tool-effects", "cleanup"]
       .map((name) => readFileSync(`${basePath}/${name}.ts`, "utf8"))
+      .concat(routerSources)
       .join("\n");
     assert.doesNotMatch(requestSources, /\b(?:CREATE|ALTER|DROP|TRUNCATE|GRANT)\s+(?:SCHEMA|TABLE|INDEX)\b/);
     assert.match(readFileSync(`${basePath}/ddl.ts`, "utf8"), /CREATE SCHEMA/);

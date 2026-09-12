@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { BrowserError, createBrowserManager, normalizeTarget, type PlaywrightBrowser } from "../index.js";
+import { waitFor } from "./wait-for.js";
 
 const enabled = process.env.PRISM_LIVE_PLAYWRIGHT === "1" || process.env.PRISM_TEST_PLAYWRIGHT === "1";
 
@@ -216,16 +217,17 @@ describe("protected Playwright browser matrix", { skip: !enabled }, () => {
         target: { role: "link", name: "Download" },
       });
       // Quarantine is async via download event.
-      const deadline = Date.now() + 5_000;
-      let listed = manager.listDownloads("live-art");
-      while (listed.length === 0 && Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 50));
-        listed = manager.listDownloads("live-art");
-      }
-      assert.ok(listed.length >= 1, "expected quarantined download");
+      const listed = await waitFor(
+        () => manager.listDownloads("live-art"),
+        (items) => items.length >= 1,
+        "quarantined download",
+        { timeoutMs: 5_000 },
+      );
+      const [first] = listed;
+      assert.ok(first, "expected quarantined download");
       const releasedInfo = await manager.act("live-art", {
         action: "download_release",
-        downloadId: listed[0]!.downloadId,
+        downloadId: first.downloadId,
       });
       assert.equal(releasedInfo.download?.released, true);
       assert.equal(released, true);

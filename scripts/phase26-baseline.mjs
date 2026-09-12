@@ -7,6 +7,13 @@
  * Usage: node scripts/phase26-baseline.mjs
  * Re-run at Task 8 to record the exit gate (the script preserves an existing non-null
  * exitGate only if --keep-exit-gate is passed; otherwise exitGate resets to null).
+ *
+ * DO NOT re-run against the shipped tree: this is the Task 0 evidence-of-record, and a
+ * regeneration re-derives every seam status from the working tree, which erases the
+ * recorded retirement of docs/0.1.0-readiness.md (status "retired" + retiredTo/retiredBy,
+ * plan 071 Task 10 / deviation D-T8-1) and re-hashes files that later plans legitimately
+ * changed. The freeze test fails closed if that happens, so the recovery is to restore
+ * this file from git, not to re-run the generator.
  */
 
 import { execFileSync } from "node:child_process";

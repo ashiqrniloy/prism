@@ -34,4 +34,4 @@ export async function demo() {
   return { status: response.status, events: (await response.text()).trim().split("\n\n").length };
 }
 
-if (import.meta.main) console.log(JSON.stringify(await demo()));
+if (import.meta.url === `file://${process.argv[1]}`) console.log(JSON.stringify(await demo()));

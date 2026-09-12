@@ -129,6 +129,7 @@ export type {
   ContextBudgetOmission,
   ContextBudgetOmissionKind,
   ContextBudgetReport,
+  TokenEstimator,
 } from "./context-budget.js";
 export {
   applyContextBudget,
@@ -208,6 +209,7 @@ export {
   DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
   DEFAULT_MAX_STICKY_DECISIONS,
   DEFAULT_SESSION_SEARCH_LIMIT,
+  DEFAULT_SNAPSHOT_CACHE_TTL_MS,
   EmbeddingsError,
   HARD_MAX_ACTION_CONSTRAINT_BYTES,
   HARD_MAX_ACTION_CONSTRAINTS,
@@ -224,6 +226,7 @@ export {
   HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
   HARD_MAX_SESSION_SEARCH_QUERY_BYTES,
   HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES,
+  HARD_MAX_SNAPSHOT_CACHE_TTL_MS,
   HARD_MAX_STICKY_DECISIONS,
   ImageGenerationError,
   isBatchJobTerminal,
@@ -417,6 +420,7 @@ export {
   assembleProviderInput,
   createDefaultInputBuilder,
   createDefaultPromptBuilder,
+  EMPTY_TOOL_RESULT_TEXT,
   renderPromptTemplate,
   resolveContextProviders,
 } from "./input.js";
@@ -703,5 +707,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.5.6";
+export const version = "0.6.0";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

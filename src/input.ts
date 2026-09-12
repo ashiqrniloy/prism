@@ -35,6 +35,13 @@ import { selectDisclosedTools, type ToolsDisclosure, type ToolsSearchOptions } f
 
 export type AgentInput = string | Message | readonly Message[];
 
+/**
+ * Wire payload for a tool result that carries no `value`, no `type:text` content, and no error.
+ * Every provider route serializes a tool result from this block, so the empty case must be a
+ * constant non-empty string instead of an absent payload (strict providers reject empty results).
+ */
+export const EMPTY_TOOL_RESULT_TEXT = "(tool completed with no output)";
+
 export interface PromptInstruction {
   readonly text: string;
   readonly label?: string;
@@ -455,7 +462,11 @@ function toolResultPayload(result: ToolResult): unknown {
     .map((block) => block.text)
     .filter(Boolean)
     .join("\n");
-  return text.length > 0 ? text : undefined;
+  if (text.length > 0) return text;
+  // An error already carries the outcome; without one, send the constant sentinel so no route
+  // (JSON string content, a content string, a function response, or a typed output part) emits
+  // an empty or absent payload.
+  return result.error === undefined || result.error === null ? EMPTY_TOOL_RESULT_TEXT : undefined;
 }
 
 function toolResultMessages(results: readonly ToolResult[] | undefined): Message[] {

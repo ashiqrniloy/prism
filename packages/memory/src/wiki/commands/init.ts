@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import type { CommandDefinition } from "@arnilo/prism";
 import { WikiCompiler } from "../engine/compiler.js";
 import { scaffoldWiki } from "../engine/scaffolder.js";
@@ -15,8 +16,12 @@ export interface InitWikiResult {
 }
 
 export async function initWiki(options: WikiExtensionOptions = {}): Promise<InitWikiResult> {
-  const wikiRoot = options.wikiRoot ?? ".wiki";
   const workspaceRoot = options.workspaceRoot ?? process.cwd();
+  // Resolve once, here: every downstream consumer (scaffolder, qmd, compiler) must
+  // agree on where the wiki lives. A raw relative `wikiRoot` used to scaffold
+  // against `process.cwd()` while compiling against `workspaceRoot`, so a host
+  // passing both got `SCHEMA.md`/`log.md` in the cwd and entities in the workspace.
+  const wikiRoot = resolve(workspaceRoot, options.wikiRoot ?? ".wiki");
   const profile = options.profile ?? "auto";
 
   // 1. Deploy skills to .agents/skills/ if requested

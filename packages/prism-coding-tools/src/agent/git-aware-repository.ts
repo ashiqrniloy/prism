@@ -109,7 +109,7 @@ async function* walkGitFiles(
     const parts = relativePath.split("/");
     let acc = "";
     for (let i = 0; i < parts.length - 1; i++) {
-      acc = acc ? `${acc}/${parts[i]}` : parts[i]!;
+      acc = acc ? `${acc}/${parts[i]}` : parts[i];
       if (!isUnderStart(acc, startRel)) continue;
       if (pathHasSkippedComponent(acc, limits.includeHidden, limits.exclude)) break;
       const dirDepth = depthFromStart(acc, startRel);

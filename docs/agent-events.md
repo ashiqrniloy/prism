@@ -1,5 +1,7 @@
 # Agent events
 
+> **Optional peer install:** `@nats-io/jetstream` + `@nats-io/transport-node` for the JetStream event source — see [Optional peer dependencies](peer-dependencies.md).
+
 ## What it does
 
 `AgentEvent` is the single observable stream every `AgentSession` run emits. Subscribers receive normalized, redacted, in-order events covering agent lifecycle, assistant message streaming, delegated-agent activity, tool execution, queue updates, subscriber overflow, compaction, retry, artifact validation/refinement, and terminal errors. The stream is in-memory, live-only, and bounded per subscriber by `SubscribeOptions`; there is no durable queue, no background work, and no extra dependency.

@@ -68,7 +68,7 @@ export class LspFrameReader {
     let off = this.offset;
     let skip = start;
     while (skip > 0) {
-      const c = this.chunks[i]!;
+      const c = this.chunks[i];
       const avail = c.length - off;
       if (skip >= avail) {
         skip -= avail;
@@ -80,7 +80,7 @@ export class LspFrameReader {
       }
     }
     while (written < n) {
-      const c = this.chunks[i]!;
+      const c = this.chunks[i];
       const take = Math.min(c.length - off, n - written);
       c.copy(out, written, off, off + take);
       written += take;
@@ -94,7 +94,7 @@ export class LspFrameReader {
   private drop(n: number): void {
     let remaining = n;
     while (remaining > 0 && this.chunks.length > 0) {
-      const first = this.chunks[0]!;
+      const first = this.chunks[0];
       const avail = first.length - this.offset;
       if (remaining >= avail) {
         remaining -= avail;

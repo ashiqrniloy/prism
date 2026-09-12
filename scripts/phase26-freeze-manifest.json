@@ -159,10 +159,7 @@
       "title": "Demand-gated forge breadth (GitLab or Bitbucket only)",
       "allowedFiles": [],
       "markers": {},
-      "negativeMarkers": {
-        "packages/coding-agent/src/forge/gitlab.ts": [],
-        "packages/coding-agent/src/forge/bitbucket.ts": []
-      },
+      "negativeMarkers": {},
       "demandFiles": {
         "gitlab": [
           "packages/coding-agent/src/forge/gitlab.ts",
@@ -205,7 +202,7 @@
         "packages/ag-ui/src/acp/terminal-client.ts": [
           "unknown"
         ],
-        "packages/ag-ui/src/acp/__tests__/acp-recovery.test.ts": [
+        "packages/ag-ui/src/__tests__/acp-recovery.test.ts": [
           "unknown",
           "activeRun"
         ],
@@ -339,13 +336,13 @@
           "0.2.7"
         ],
         "docs/0.1.0-readiness.md": [
-          "0.4.0"
+          "!0.4.0"
         ],
         "roadmap.md": [
           "- [x] **Host-selected PTY/interactive terminal backend.**"
         ],
         "scripts/package-truth.json": [
-          "0.4.0"
+          "!0.4.0"
         ]
       },
       "securityTests": [
@@ -362,7 +359,7 @@
         "phase26-freeze.test.mjs"
       ],
       "task8": [
-        "\"version\": \"0.4.0\""
+        "!\"version\": \"0.2.5\""
       ]
     },
     "plans/026-Release-0-2-6-Fully-Featured-Coding-Agent-Readiness.md": {
@@ -423,7 +420,7 @@
         "protected coding journey"
       ],
       "task8": [
-        "**0.2.8**"
+        "!**0.2.8**"
       ]
     },
     "packages/coding-agent/README.md": {
@@ -522,9 +519,6 @@
       ]
     },
     "packages/coding-agent/src/process/sessions.ts": {
-      "task1": [
-        "ptyBackend"
-      ],
       "task5": [
         "recover"
       ]
@@ -870,6 +864,11 @@
       "id": "D-T7-1",
       "what": "Task 7's packed journey integration exposed a shape mismatch in the Task 6 review helper: the server ArtifactRecord carries the artifact id as `id` (src/artifacts.ts), while assertCodingPatchAccepted compared `artifact.artifactId` which never exists on the real record, throwing ERR_PRISM_REVIEW_OWNERSHIP for every real attach. Fixed review.ts to read `artifact.id` (CodingReviewArtifactRecord.id, documented against ArtifactRecord.id) and updated review.test.ts recordFor/ownership mocks to the real shape; no cap/state-machine/API change to the manifest surface. review.ts + review.test.ts are outside Task 7's frozen allowedFiles, so this deviation records the amendment.",
       "review": "Real-record integration proof: the patch-review journey leg (server createArtifactService over Postgres + assertCodingPatchAccepted) now derives pending -> accepted -> superseded against the actual ArtifactRecord shape; unit suite 13/13."
+    },
+    {
+      "id": "D-T8-1",
+      "what": "Era-locked markers in the frozen Task 8 evidence set (plan 070 Further Action 12, plan 071 Task 10). Measured 2026-09-12: seven markers could no longer hold, in four shapes. (1) Version literals pinned as equality: `package.json` asserted `\"version\": \"0.4.0\"` (re-pointed by a later cut) and is now the transition `!\"version\": \"0.2.5\"` — the manifest's own frozen baseline release, i.e. the pre-cut literal the Task 8 bump actually removed; `docs/0.1.0-readiness.md` and `scripts/package-truth.json` asserted `0.4.0`, and `docs/index.md` asserted the `**0.2.8**` banner (re-pointed at its own release by the 0.2.8 cut). A release sweep necessarily invalidates every one of them, so they are now transition markers (`!` prefix, text must be absent) and the test rejects a transition that names a version the repo has not passed. (2) Living-doc content: `docs/index.md`'s 0.2.6-era highlights (`host-selected PTY`, `protected coding journey`) and `docs/migration.md`'s `0.2.5 -> 0.2.6` section were rewritten/carried forward by later releases and then archived, so those two files are now declared in `lineageCheckedFiles` and their markers resolve against the frozen lineage (the phase plan of record + docs/history/*.md) when the live file has moved on. (3) The seam record for `docs/0.1.0-readiness.md` still said status \"present\" with the Task 0 sha256 while the file had moved to docs/history/ (plan 068), so the seam-status test and the marker read failed with ENOENT; the seam is now `status: \"retired\"` with retiredTo/retiredBy recorded and the frozen sha256 kept as history (the archived bytes were edited during the move, so byte-identity is deliberately not re-asserted) and the test resolves a retired path to its archive. (4) The shared-marker loop could not express absence, which is why (1) needed a JSON-invisible workaround before; it now supports the `!` form and asserts the marker forms are non-vacuous (live > 0, transition > 0, lineage > 0). (5) Two markers were dead or duplicated after the plan-070 splits: `packages/coding-agent/src/process/sessions.ts` kept a `ptyBackend` claim the file no longer holds once the sessions module was split (the same claim is already asserted on its successor `packages/coding-agent/src/process/types.ts`, so the duplicate row was dropped), and the `durable-recovery` item keyed `unknown`/`activeRun` on `packages/ag-ui/src/acp/__tests__/acp-recovery.test.ts` — a path recorded in `allowedFiles` as `packages/ag-ui/src/__tests__/acp-recovery.test.ts` and never created (D-T5-1 recorded the move), so the marker key matched nothing and the assertions never ran; the key now matches the real file and both markers are checked live.",
+      "review": "No cap, state machine, compat, or API surface change; the sealed Task 0 hashes of every other seam are untouched and every retired path keeps its frozen sha256 as history. The retirement is recorded, not skipped (live path absent + archive present/non-empty + retiredBy named), the lineage fallback is bounded to the two declared living files and fails closed when a marker is absent from both the live file and the archive, and a transition marker naming an unreleased version is rejected so a stale marker cannot silently pass."
     }
   ],
   "regeneratedFiles": {
@@ -877,6 +876,11 @@
     "scripts/package-truth.json": {
       "by": "scripts/package-truth.mjs (generatedAt timestamp)"
     }
+  },
+  "lineageCheckedFiles": {
+    "$comment": "Living files rewritten by every release, so a Task-N-era content marker is checked against the live file first and then against the frozen lineage (the phase plan of record + docs/history/*.md) when the live file has moved on. Added by plan 071 Task 10 / deviation D-T8-1: the 0.2.6 highlight bullets and the 0.2.5 -> 0.2.6 migration section were carried forward and then archived (docs/history/release-handoffs.md, docs/history/migration-0.2.md), so a live-only assertion fails for a reason the era record already answers. Every other file stays live-only.",
+    "docs/index.md": "0.2.6-era feature highlights and the current-line banner live in docs/history/release-handoffs.md",
+    "docs/migration.md": "0.2.5 -> 0.2.6 section archived to docs/history/migration-0.2.md (plan 068 era split)"
   },
   "coordination": {
     "$comment": "Coordination exemptions recorded outside task work. roadmap.md is task8's single-editor file (byte-identical while task8 is pending) unless the working-tree state is exactly a recorded user-authored exemption sha; any other roadmap.md change fails the freeze test.",

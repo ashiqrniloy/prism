@@ -167,7 +167,7 @@ from `@arnilo/prism/testing/provider-conformance`.
 ## Security and performance notes
 
 - SSRF deny-by-default blocks IPv4/IPv6 loopback, private/unique-local, link-local, unspecified, multicast, IPv4-mapped private, and cloud metadata targets. DNS answers are all classified before one public address is pinned; mixed public/private answers fail closed.
-- `allowedHostnames` is an explicit trust override and may permit a private destination. `denyPrivateHosts: false` is broader and should be reserved for hosts that intentionally own private-network access.
+- `allowedHostnames` is an explicit trust override and may permit a private destination. `allowedCidrs` is the range equivalent (`"10.0.0.0/8"`, `"fd00::/8"`; IPv4 + IPv6): it is checked after the hostname allow-list and the denied-name list, applies to both URL literals and resolved DNS answers, and bypasses **only** the private-IP block — `metadata.google.internal`/localhost-class names, credentials, and every literal outside the listed ranges stay denied, and a malformed entry fails the policy closed. `denyPrivateHosts: false` is broader and should be reserved for hosts that intentionally own private-network access.
 - DNS lookup, connection, and body streaming share `fetchTimeoutMs` and caller abort; more than 32 resolved addresses, redirects, and oversized response bodies are rejected.
 - Media URL fetches (0.2.1) route through the core `pinnedFetch` primitive — DNS-pinned resolution with per-answer SSRF checks (rebinding defense) and outright 3xx rejection — while keeping the `fetch`/`resolveHostname`/`requestUrl` host seams and the existing byte budgets.
 - MIME validation rejects common magic-byte spoofing; extensions alone are never trusted.

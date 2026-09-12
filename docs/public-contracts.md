@@ -131,7 +131,7 @@ Important request shapes:
 | `SkillRegistry` | Host active skill registry shape: `register()`, `get()`, `resolve()`, and `list()`. |
 | `CredentialRequest` | Credential lookup request: credential `name`, optional provider id, and metadata. |
 | `OAuthProvider` | Host/package OAuth callbacks for login, optional refresh, and conversion to a `Credential`. |
-| `AgentSessionConfig` | Session creation input: optional id, agent, store, leaf id, and metadata. |
+| `AgentSessionConfig` | Session creation input: optional id, agent, store, leaf id, metadata, and `snapshotCacheTtlMs` (branch-cache TTL; `0` disables). |
 | `RunOptions` | Per-run overrides: optional abort signal, model, input layout, run limits (incl. `limits.maxToolRounds`), provider options/request policies, system prompt layers, compaction, retry, metadata, skill selection, validate, redactor, and loop. |
 | `SubscribeOptions` / `SubscriberOverflowPolicy` | Live `AgentEvent` subscriber queue limit and overflow policy: `maxQueuedEvents`, `overflow: "close" \| "drop_oldest" \| "drop_newest"`. |
 | `resumeAgentRunStream` / `AgentRunResumeStreamOptions` | One durable-run event stream: existing checkpoint/resume options plus `signal` and bounded subscriber options. `AgentRunLifecycle.resumeStream()` adds host capability resolution; no protocol types enter core. Runtime resume validation (0.2.0): every resume entrypoint validates the full input in core before any checkpoint write, tool call, or event — unknown legacy decisions and malformed batches fail closed with `AgentDecisionError` and no side effect; see [Agent/session runtime § Durable interruption](agent-session-runtime.md#durable-interruption). |
@@ -157,7 +157,7 @@ Important request shapes:
 | `SessionIndex` / `SessionSearchQuery` / `SessionSearchHit` | Bounded optional session search seam (`search` / `SessionStore.searchSessions?`). Filters: workspace (`metadata.workspaceRoot`), time, provider/model, label/summary, optional FTS `query`, ownership. Hits return `sessionId` + optional `leafId` for resume; never credentials. Caps via `resolveSessionSearchQuery` / `DEFAULT_*` / `HARD_MAX_*` session-search constants. |
 | `contextBudget` / `getContextBudgetReport` / `ContextBudgetError` | Opt-in assembler budget on `AssembleProviderInputOptions`; deterministic eviction; omission report in `ProviderRequest.metadata` (kinds/ids/sizes only). |
 | `AgentSession.steer` / `SteerOptions` / pending-steer caps | Mid-run enqueue into active run; optional `softInterrupt`; default 8 msgs / 64 KiB UTF-8. |
-| `SessionSearchUnsupportedError` / `sessionSearchMode` | Memory opt-out + JSONL; typed throw (not empty success). |
+| `SessionSearchUnsupportedError` / `sessionSearchMode` | Memory opt-out + JSONL; typed throw (not empty success). Memory linear caps are host-overridable via `CreateMemorySessionStoreOptions.search`. |
 | `BranchRecord` / `BranchQuery` | Branch handle/leaf pointer and query filters (session, name, parent branch, leaf presence). |
 | `SessionEntryQuery` | Paginated entry filters: `sessionId`, `runId`, `parentId`, `leafId`, `kind`, timestamp range, ownership. |
 | `RunRecord` / `RunQuery` | Stored run and filters: session, branch, status, timestamps, ownership. |

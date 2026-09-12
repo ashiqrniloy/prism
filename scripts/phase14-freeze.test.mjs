@@ -12,8 +12,9 @@
  * scripts/phase12-freeze-manifest.json.
  */
 import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
+import { workspaceShape } from "./package-truth.mjs";
 
 const url = (path) => new URL(path, import.meta.url);
 const manifest = JSON.parse(readFileSync(url("./phase14-freeze-manifest.json"), "utf8"));
@@ -151,26 +152,11 @@ test("baseline release gate is green at 0.1.1 with 49 packages and zero breaking
 
 test("baseline manifest count is coherent with the real filesystem", () => {
   const mc = baseline.manifestCount;
-  const workspaceDirs = readdirSync(url("../packages"), { withFileTypes: true })
-    .filter((e) => e.isDirectory())
-    .filter((e) => existsSync(url(`../packages/${e.name}/package.json`)))
-    .filter(
-      (e) =>
-        e.name !== "computer-use-linux" &&
-        e.name !== "prism-wiki" &&
-        e.name !== "obscura" &&
-        e.name !== "prism-dev" &&
-        e.name !== "prompts" &&
-        e.name !== "documents" &&
-        e.name !== "sheets" &&
-        e.name !== "diagrams",
-    );
-  const providerDirs = workspaceDirs.filter((d) => d.name.startsWith("provider-"));
-  const prismDirs = workspaceDirs.filter((d) => d.name.startsWith("prism-"));
-  const hasCodingTools = workspaceDirs.some((d) => d.name === "prism-coding-tools");
-  const hasCore = workspaceDirs.some((d) => d.name === "prism-core");
+  const { names: workspaceNames, providerDirs, prismDirs } = workspaceShape();
+  const hasCodingTools = workspaceNames.includes("prism-coding-tools");
+  const hasCore = workspaceNames.includes("prism-core");
   const delta = hasCodingTools ? -46 : hasCore ? -14 : 0; // plan 054 Tasks 2-8: providers family + office family + profile deletions
-  assert.equal(mc.workspacePackages + delta, workspaceDirs.length, "workspacePackages matches packages/*/package.json count");
+  assert.equal(mc.workspacePackages + delta, workspaceNames.length, "workspacePackages matches packages/*/package.json count");
   const hasProviderFamily = existsSync(url("../packages/prism-providers/src")); // plan 054 Task 6: adapters moved inside the family
   assert.equal(
     mc.categories.provider + (hasProviderFamily ? -17 : 0),
@@ -184,7 +170,7 @@ test("baseline manifest count is coherent with the real filesystem", () => {
   );
   assert.equal(
     mc.categories.capability + (hasCodingTools ? -21 : hasCore ? -15 : 0),
-    workspaceDirs.length - providerDirs.length - prismDirs.length,
+    workspaceNames.length - providerDirs.length - prismDirs.length,
     "capability = remainder",
   );
   assert.equal(mc.publishable + delta, mc.workspacePackages + delta + 1, "publishable = root + workspace");
@@ -205,9 +191,17 @@ test("baseline releaseCheck records the dirty-tree block (clean v0.1.1 passes pe
   assert.ok(check.status.includes("plan 013"), "points at the plan 013 clean-tree green evidence");
 });
 
-test("phase 14 baseline file is newer than the phase 13 freeze manifest (captured at Task 0)", () => {
+test("phase 14 baseline was captured at or after the phase 13 baseline (content dates, not mtime)", () => {
+  // Plan 070 Further Action 8: mtimes depend on checkout order (fresh clone, single-file
+  // `git checkout`, restored artifacts), so the capture-ordering guard compares the
+  // baselines' recorded `captured` dates instead.
+  const previous = JSON.parse(readFileSync(url("./phase13-baseline.json"), "utf8")).captured;
   assert.ok(
-    statSync(url("./phase14-baseline.json")).mtimeMs >= statSync(url("./phase13-freeze-manifest.json")).mtimeMs,
-    "baseline captured at or after the phase 13 freeze",
+    Number.isFinite(Date.parse(previous ?? "")) && Number.isFinite(Date.parse(baseline.captured ?? "")),
+    `both baselines record a capture date, got: ${previous} / ${baseline.captured}`,
+  );
+  assert.ok(
+    Date.parse(baseline.captured) >= Date.parse(previous),
+    `phase 14 baseline captured ${baseline.captured} predates the phase 13 baseline ${previous}`,
   );
 });

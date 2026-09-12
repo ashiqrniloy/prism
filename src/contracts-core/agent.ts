@@ -138,7 +138,19 @@ export interface AgentSessionConfig {
   readonly store?: SessionStore;
   readonly leafId?: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  /**
+   * TTL of the in-memory `session.snapshot()` branch cache in milliseconds.
+   * Default `DEFAULT_SNAPSHOT_CACHE_TTL_MS`; `0` disables the cache (every snapshot read
+   * rebuilds from the store); at most `HARD_MAX_SNAPSHOT_CACHE_TTL_MS`. The cache is always
+   * invalidated by a new leaf or a mutation, so the TTL only bounds staleness-free reuse.
+   */
+  readonly snapshotCacheTtlMs?: number;
 }
+
+/** Default `session.snapshot()` branch-cache TTL (milliseconds). */
+export const DEFAULT_SNAPSHOT_CACHE_TTL_MS = 1_000;
+/** Upper bound for `AgentSessionConfig.snapshotCacheTtlMs` (milliseconds). */
+export const HARD_MAX_SNAPSHOT_CACHE_TTL_MS = 30_000;
 
 export interface AgentSessionForkOptions {
   readonly leafId?: string;

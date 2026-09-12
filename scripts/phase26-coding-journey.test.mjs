@@ -35,6 +35,7 @@ import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
+import { blockedGate } from "./blocked-gate.mjs";
 import { createPackedConsumer, installedVersion, repoRoot, resolveFromConsumer } from "./fixtures/packed-consumer.mjs";
 
 const freeze = JSON.parse(readFileSync(join(repoRoot, "scripts/phase26-freeze-manifest.json"), "utf8"));
@@ -54,8 +55,7 @@ const REQUIRED_ENVS = [
 
 const packages = [
   { dir: ".", name: "@arnilo/prism" },
-  { dir: "packages/coding-agent", name: "@arnilo/prism-coding-agent" },
-  { dir: "packages/coding-security", name: "@arnilo/prism-coding-security" },
+  { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools" },
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
   { dir: "packages/web-tools", name: "@arnilo/prism-web-tools" },
   { dir: "packages/prism-core", name: "@arnilo/prism-core" },
@@ -80,10 +80,7 @@ if (process.env.PRISM_TEST_DOCKER_IMAGE && !process.env.PRISM_TEST_DOCKER_IMAGE.
   gateFailures.push("PRISM_TEST_DOCKER_IMAGE must be digest-pinned (name@sha256:...)");
 }
 if (gateFailures.length > 0) {
-  console.error(`BLOCKED GATE: the phase26 protected coding journey cannot run without every frozen env/service:
-  ${gateFailures.join("\n  ")}
-The protected release profile requires all of them; missing infrastructure is blocked, never a passing skip.`);
-  process.exit(1);
+  blockedGate("phase26-coding-journey", { missing: gateFailures });
 }
 
 // Leak-scan canaries: every credential-looking env VALUE (names only are
@@ -107,7 +104,7 @@ before(() => {
   consumer = packed;
   if (packed.installStatus !== 0) return;
   if (process.env.PRISM_LIVE_PLAYWRIGHT === "1") {
-    playwrightInstall = spawnSync("npm", ["install", "--no-save", "--no-audit", "--no-fund", "playwright-core@1.61.0"], {
+    playwrightInstall = spawnSync("npm", ["install", "--no-save", "--no-audit", "--no-fund", "playwright-core@1.63.0"], {
       cwd: packed.consumer,
       encoding: "utf8",
       timeout: 300_000,
@@ -148,13 +145,13 @@ describe("protected real coding-agent journey", () => {
         `${pkg.name} installed version must match the packed manifest`,
       );
     }
-    assert.ok(resolveFromConsumer(consumer.consumer, "@arnilo/prism-coding-agent").startsWith(`file://${consumer.consumer}`));
+    assert.ok(resolveFromConsumer(consumer.consumer, "@arnilo/prism-coding-tools").startsWith(`file://${consumer.consumer}`));
   });
 
   it("installs the pinned host browser into the consumer for the browser leg", () => {
     if (process.env.PRISM_LIVE_PLAYWRIGHT !== "1") return;
     assert.equal(playwrightInstall.status, 0, playwrightInstall.stdout + playwrightInstall.stderr);
-    assert.equal(installedVersion(consumer.consumer, "playwright-core"), "1.61.0");
+    assert.equal(installedVersion(consumer.consumer, "playwright-core"), "1.63.0");
   });
 
   it("completes the full real journey within the frozen wall ceiling", () => {

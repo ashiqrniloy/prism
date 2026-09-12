@@ -45,6 +45,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { workspaceShape } from "./package-truth.mjs";
+import { effectiveTestChain } from "./run-all-tests.mjs";
 
 const url = (path) => new URL(path, import.meta.url);
 // Task 1 (0.2.5) split contracts-core.ts + agent-session.ts into a barrel + a sibling
@@ -213,26 +215,11 @@ test("baseline release gate is green at 0.1.3 with 49 packages and zero breaking
 
 test("baseline manifest count is coherent with the real filesystem", () => {
   const mc = baseline.manifestCount;
-  const workspaceDirs = readdirSync(url("../packages"), { withFileTypes: true })
-    .filter((e) => e.isDirectory())
-    .filter((e) => existsSync(url(`../packages/${e.name}/package.json`)))
-    .filter(
-      (e) =>
-        e.name !== "computer-use-linux" &&
-        e.name !== "prism-wiki" &&
-        e.name !== "obscura" &&
-        e.name !== "prism-dev" &&
-        e.name !== "prompts" &&
-        e.name !== "documents" &&
-        e.name !== "sheets" &&
-        e.name !== "diagrams",
-    );
-  const providerDirs = workspaceDirs.filter((d) => d.name.startsWith("provider-"));
-  const prismDirs = workspaceDirs.filter((d) => d.name.startsWith("prism-"));
-  const hasCodingTools = workspaceDirs.some((d) => d.name === "prism-coding-tools");
-  const hasCore = workspaceDirs.some((d) => d.name === "prism-core");
+  const { names: workspaceNames, providerDirs, prismDirs } = workspaceShape();
+  const hasCodingTools = workspaceNames.includes("prism-coding-tools");
+  const hasCore = workspaceNames.includes("prism-core");
   const delta = hasCodingTools ? -46 : hasCore ? -14 : 0; // plan 054 Tasks 2-8: providers family + office family + profile deletions
-  assert.equal(mc.workspacePackages + delta, workspaceDirs.length, "workspacePackages matches packages/*/package.json count");
+  assert.equal(mc.workspacePackages + delta, workspaceNames.length, "workspacePackages matches packages/*/package.json count");
   const hasProviderFamily = existsSync(url("../packages/prism-providers/src")); // plan 054 Task 6: adapters moved inside the family
   assert.equal(
     mc.categories.provider + (hasProviderFamily ? -17 : 0),
@@ -246,7 +233,7 @@ test("baseline manifest count is coherent with the real filesystem", () => {
   );
   assert.equal(
     mc.categories.capability + (hasCodingTools ? -21 : hasCore ? -15 : 0),
-    workspaceDirs.length - providerDirs.length - prismDirs.length,
+    workspaceNames.length - providerDirs.length - prismDirs.length,
     "capability = remainder",
   );
   assert.equal(mc.publishable + delta, mc.workspacePackages + delta + 1, "publishable = root + workspace");
@@ -446,15 +433,23 @@ test("exit gate (Task 6): lockfile gained no dependencies (name-set unchanged vs
 
 test("phase16-freeze.test.mjs is retired from npm test (plan 057) but stays runnable standalone", () => {
   assert.ok(
-    !rootPkg.scripts.test.includes("scripts/phase16-freeze.test.mjs"),
+    !effectiveTestChain().includes("scripts/phase16-freeze.test.mjs"),
     "retired freeze gate must not run in npm test (plan 057); run standalone for audits",
   );
-  assert.ok(!rootPkg.scripts.test.includes("scripts/phase15-freeze.test.mjs"), "phase15 freeze test retired too (plan 057)");
+  assert.ok(!effectiveTestChain().includes("scripts/phase15-freeze.test.mjs"), "phase15 freeze test retired too (plan 057)");
 });
 
-test("phase 16 baseline file is newer than the phase 15 freeze manifest (captured at Task 0)", () => {
+test("phase 16 baseline was captured at or after the phase 15 baseline (content dates, not mtime)", () => {
+  // Plan 070 Further Action 8: mtimes depend on checkout order (fresh clone, single-file
+  // `git checkout`, restored artifacts), so the capture-ordering guard compares the
+  // baselines' recorded `captured` dates instead.
+  const previous = JSON.parse(readFileSync(url("./phase15-baseline.json"), "utf8")).captured;
   assert.ok(
-    statSync(url("./phase16-baseline.json")).mtimeMs >= statSync(url("./phase15-freeze-manifest.json")).mtimeMs,
-    "baseline captured at or after the phase 15 freeze",
+    Number.isFinite(Date.parse(previous ?? "")) && Number.isFinite(Date.parse(baseline.captured ?? "")),
+    `both baselines record a capture date, got: ${previous} / ${baseline.captured}`,
+  );
+  assert.ok(
+    Date.parse(baseline.captured) >= Date.parse(previous),
+    `phase 16 baseline captured ${baseline.captured} predates the phase 15 baseline ${previous}`,
   );
 });

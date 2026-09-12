@@ -145,6 +145,26 @@ export function createSessionsHost(options: CreateProcessSessionsOptions): Sessi
   };
 }
 
+/**
+ * Durable recovery seams. `createSessionsHost` already fails closed when a durable host
+ * is missing any of the three, so callers under a `host.durable` guard can take them here
+ * without non-null assertions — and a host that somehow lost one fails closed again.
+ */
+export function durableSeams(host: SessionsHost): {
+  readonly checkpoints: NonNullable<SessionsHost["checkpoints"]>;
+  readonly leases: NonNullable<SessionsHost["leases"]>;
+  readonly ownerId: NonNullable<SessionsHost["ownerId"]>;
+} {
+  const { checkpoints, leases, ownerId } = host;
+  if (!checkpoints || !leases || !ownerId) {
+    throw new ProcessRecoveryError(
+      "ERR_PRISM_RECOVERY_UNSUPPORTED",
+      "durable process recovery requires checkpoints, leases, and ownerId together",
+    );
+  }
+  return { checkpoints, leases, ownerId };
+}
+
 export function emit(host: SessionsHost, event: CodingProcessEvent): void {
   host.onEvent?.(event);
 }

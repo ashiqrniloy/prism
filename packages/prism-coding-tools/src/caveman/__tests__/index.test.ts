@@ -8,7 +8,7 @@ describe("caveman package scaffold", () => {
     assert.equal(pkg.name, "@arnilo/prism-coding-tools");
     assert.deepEqual(pkg.exports["./caveman"], { types: "./dist/caveman/index.d.ts", default: "./dist/caveman/index.js" });
     assert.equal(pkg.sideEffects, false);
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.5.6");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], `^${pkg.version}`);
     assert.equal(pkg.scripts.postinstall, undefined);
   });
 });

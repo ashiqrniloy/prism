@@ -9,7 +9,7 @@ import {
   providerTextDelta,
   toolCallContent,
 } from "../index.js";
-import { toToolResultMessage } from "../input.js";
+import { EMPTY_TOOL_RESULT_TEXT, toToolResultMessage } from "../input.js";
 import { serializeOpenAIChatMessage } from "../providers/openai-primitives.js";
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
@@ -82,5 +82,29 @@ describe("tool result content on provider wire", () => {
       message.content.some((part) => part.type === "text"),
       false,
     );
+  });
+
+  it("serializes an all-empty tool result as the non-empty sentinel", () => {
+    const message = toToolResultMessage({ toolCallId: "c1", name: "shell" });
+    const block = message.content.find((part) => part.type === "tool_result");
+    assert.equal(block?.type === "tool_result" ? block.result : undefined, EMPTY_TOOL_RESULT_TEXT);
+    assert.equal(serializeOpenAIChatMessage(message).content, JSON.stringify(EMPTY_TOOL_RESULT_TEXT));
+    assert.notEqual(serializeOpenAIChatMessage(message).content, "null");
+    assert.notEqual(serializeOpenAIChatMessage(message).content, '""');
+  });
+
+  it("treats an empty text content block like an absent one", () => {
+    const message = toToolResultMessage({ toolCallId: "c1", name: "shell", content: [{ type: "text", text: "" }] });
+    const block = message.content.find((part) => part.type === "tool_result");
+    assert.equal(block?.type === "tool_result" ? block.result : undefined, EMPTY_TOOL_RESULT_TEXT);
+  });
+
+  it("keeps error-only tool results unchanged", () => {
+    const error = { name: "Error", message: "boom", code: "E_BOOM" };
+    const message = toToolResultMessage({ toolCallId: "c1", name: "shell", error });
+    const block = message.content.find((part) => part.type === "tool_result");
+    assert.equal(block?.type === "tool_result" ? block.result : undefined, undefined);
+    assert.deepEqual(block?.type === "tool_result" ? block.error : undefined, error);
+    assert.equal(serializeOpenAIChatMessage(message).content, JSON.stringify(error));
   });
 });

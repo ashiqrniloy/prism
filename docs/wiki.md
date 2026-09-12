@@ -27,7 +27,7 @@ The Karpathy LLM Wiki pattern is structured into 3 distinct tiers:
 
 | Field | Type | Required | Default | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `wikiRoot` | `string` | No | `".wiki"` | Path to the compiled wiki directory. |
+| `wikiRoot` | `string` | No | `".wiki"` | Path to the compiled wiki directory; a relative path is resolved against `workspaceRoot`, an absolute path is used as-is. |
 | `rawRoots` | `readonly string[]` | No | `["."]` | Directories containing raw source files (code, notes, docs). |
 | `profile` | `"codebase" \| "pkm" \| "hybrid" \| "auto"` | No | `"auto"` | Operating strategy for parsing and symbol indexing. |
 | `qmdPath` | `string` | No | `"qmd"` | Path or executable name for the `qmd` CLI binary. |

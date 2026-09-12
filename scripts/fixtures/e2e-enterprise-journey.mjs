@@ -7,7 +7,8 @@
  * Composed journey using only public exports:
  *   OIDC identity → OPA policy decision (durable ledger) → agent run with
  *   durable events (memory event source, or PostgreSQL when
- *   PRISM_TEST_POSTGRES_URL is set) → batched approval → OpenAPI side effect
+ *   PRISM_TEST_POSTGRES_URL is set AND the `pg` peer resolves in this consumer)
+ *   → batched approval → OpenAPI side effect
  *   with idempotency → artifact upload + signed delivery.
  * Failure injections: policy deny and artifact hash mismatch fail closed.
  *
@@ -296,14 +297,33 @@ assert.equal(denyRecord.outcome, "deny");
 assert.ok(!String(JSON.stringify(record)).includes(SECRET), "policy records redact secrets");
 
 // 3. Agent run with durable events + 4. batched approval.
+// `pg` is a peer of @arnilo/prism-core, not a dependency of the tarballs installed
+// here, so this consumer has no driver unless the host added one. Probe for it
+// instead of trusting the env alone: an unconditional `await import("pg")` dies
+// with ERR_MODULE_NOT_FOUND and takes the whole journey with it, while the env is
+// set by the harness (release:gate scopes it to the postgres phase) and an
+// ambient export must not turn a peer-less consumer into a hard failure.
+const pgDriverAvailable = (() => {
+  try {
+    return Boolean(import.meta.resolve("pg"));
+  } catch {
+    return false;
+  }
+})();
+const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;
+if (postgresUrl !== undefined && !pgDriverAvailable) {
+  console.log(
+    'SKIP durable postgres leg: PRISM_TEST_POSTGRES_URL is set but "pg" is not installed in this consumer (peer of @arnilo/prism-core); running the memory event source',
+  );
+}
 const eventSource = await (async () => {
-  if (process.env.PRISM_TEST_POSTGRES_URL !== undefined) {
+  if (postgresUrl !== undefined && pgDriverAvailable) {
     // createPostgresPersistence applies the migration contract then exposes
     // the durable event source; the protected leg runs against real pg16.
     const { Pool } = await import("pg");
     const { createPostgresPersistence } = await import("@arnilo/prism-core/sessions/postgres");
     const pool = new Pool({
-      connectionString: process.env.PRISM_TEST_POSTGRES_URL,
+      connectionString: postgresUrl,
     });
     const persistence = await createPostgresPersistence({
       pool,

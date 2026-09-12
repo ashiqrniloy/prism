@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import { publishArgs } from "./release.mjs";
+import { loadRelease, publishArgs, satisfiesInternalRange } from "./release.mjs";
 import {
   assertTarballAllowDeny,
   baselineName,
@@ -12,6 +12,7 @@ import {
   extractDeclaredSurface,
   parseDeclarationFile,
   parseSurface,
+  runGates,
   serializeSurface,
 } from "./release-gates.mjs";
 
@@ -19,6 +20,34 @@ function fixture() {
   const dir = mkdtempSync(join(tmpdir(), "prism-gate-"));
   mkdirSync(join(dir, "dist"), { recursive: true });
   return dir;
+}
+
+// Minimal release graph: root + two workspaces whose only internal ranges are the
+// ones under test. The packages declare no `types`/`main`/`exports` and ship no
+// dist/, so the compat-surface gate skips them and the range gate is isolated.
+function lockstepFixture({ range = "^0.5.7" } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), "prism-lockstep-"));
+  const manifests = [
+    { path: ".", name: "@arnilo/prism", peerDependencies: { "@arnilo/prism-core": range } },
+    { path: "packages/core", name: "@arnilo/prism-core" },
+    { path: "packages/memory", name: "@arnilo/prism-memory", peerDependencies: { "@arnilo/prism": range } },
+  ];
+  for (const { path, name, peerDependencies } of manifests) {
+    mkdirSync(join(dir, path), { recursive: true });
+    const manifest = {
+      name,
+      version: "0.5.7",
+      publishConfig: { access: "public" },
+      ...(peerDependencies ? { peerDependencies } : {}),
+    };
+    writeFileSync(join(dir, path, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  }
+  const lock = {
+    lockfileVersion: 3,
+    packages: Object.fromEntries(manifests.map(({ path }) => [path === "." ? "" : path, { version: "0.5.7" }])),
+  };
+  writeFileSync(join(dir, "package-lock.json"), `${JSON.stringify(lock, null, 2)}\n`);
+  return { dir, release: loadRelease(dir) };
 }
 
 describe("release gates", () => {
@@ -113,6 +142,32 @@ export * as ns from "./mod.js";
     writeFileSync(file, "export declare function multi(\n  a: string,\n  b: number\n): Promise<void>;\n");
     const { locals } = parseDeclarationFile(file);
     assert.match(locals.get("multi"), /multi\( a: string, b: number \): Promise<void>/);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("lockstep range gate accepts exact and caret pins at the cut version", () => {
+    const exact = lockstepFixture({ range: "0.5.7" });
+    assert.deepEqual(runGates({ release: exact.release, version: "0.5.7", skipTarball: true }), {
+      version: "0.5.7",
+      updated: false,
+      packages: 3,
+    });
+    rmSync(exact.dir, { recursive: true, force: true });
+
+    const caret = lockstepFixture({ range: "^0.5.7" });
+    assert.equal(runGates({ release: caret.release, version: "0.5.7", skipTarball: true }).packages, 3);
+    rmSync(caret.dir, { recursive: true, force: true });
+  });
+
+  it("lockstep range gate rejects a skewed range that still satisfies semver", () => {
+    const { dir, release } = lockstepFixture({ range: "^0.5.5" });
+    // Positive control: the old satisfaction check accepts the skew, so a
+    // rejection here can only come from the exact-pin lockstep gate.
+    assert.ok(satisfiesInternalRange("^0.5.5", "0.5.7"), "lax check would have accepted ^0.5.5");
+    assert.throws(
+      () => runGates({ release, version: "0.5.7", skipTarball: true }),
+      /ranges: @arnilo\/prism peerDependencies\.@arnilo\/prism-core is \^0\.5\.5, expected 0\.5\.7[\s\S]*@arnilo\/prism-memory peerDependencies\.@arnilo\/prism is \^0\.5\.5, expected 0\.5\.7/,
+    );
     rmSync(dir, { recursive: true, force: true });
   });
 });

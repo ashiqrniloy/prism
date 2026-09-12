@@ -5,6 +5,10 @@
  * suite once with the frozen core gate thresholds and every workspace test
  * suite once with --experimental-test-coverage and a package-local
  * --test-coverage-include=dist/**, then prints one labeled row per package.
+ * Workspaces are discovered by "has *.test.js under dist/" (recursive), not by
+ * a top-level dist/__tests__ directory: @arnilo/prism-acp-agent builds its
+ * tests to dist/src/__tests__ and @arnilo/prism-office to dist/<area>/__tests__
+ * (plan 070 Task 7 — those two were previously skipped entirely).
  * The include filter keeps the symlinked root core dist (resolved via
  * node_modules/@arnilo/prism -> ../..) out of each workspace denominator.
  * The core gate (lines>=60, functions>=70, branches>=75) is the only hard
@@ -13,7 +17,10 @@
  * captured at freeze = recompute - 3pp). Protected-integration packages
  * (durable legs requiring PRISM_TEST_POSTGRES_URL or a real NATS server)
  * are exempt from the gate and reported separately. Emits
- * scripts/coverage-summary.json (machine-readable, CI-retained).
+ * scripts/coverage-summary.json (machine-readable, CI-retained): a failing row
+ * carries `status`, `exitCode`, and a redacted `tail` of the child's output
+ * (scripts/coverage-failure.mjs), so a bare `suite failed` is never the whole
+ * story (plan 071 Task 15).
  * Requires `npm run build` first. No third-party coverage tooling; reuses
  * Node's built-in coverage.
  *
@@ -23,7 +30,8 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { failureRow, TAIL_LINES, tailOf } from "./coverage-failure.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const packagesDir = join(root, "packages");
@@ -42,6 +50,30 @@ const ALL_FILES = /all files\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)/;
 const THRESHOLDS_PATH = process.env.PRISM_COVERAGE_THRESHOLDS ?? join(root, "scripts", "coverage-thresholds.json");
 const ARTIFACT_PATH = process.env.PRISM_COVERAGE_ARTIFACT ?? join(root, "scripts", "coverage-summary.json");
 
+// A failing child's tail is diagnostic evidence, so it is scrubbed before it is
+// printed or written: the repo root and home become placeholders, and the values
+// of credential-shaped env vars (names only are ever reported by the manifest
+// tooling) are redacted through the public createSecretRedactor helper. Values
+// shorter than 4 chars are skipped — redacting a one-character needle would
+// shred the output it is meant to explain.
+const SECRET_ENV_NAME = /(?:TOKEN|SECRET|PASSWORD|PASS|KEY|CREDENTIAL|AUTH|DSN|URL|PRISM_)/i;
+const HOME = process.env.HOME || "\u0000";
+function redactTail(tail) {
+  return tail ? redactor.redact(tail.split(root).join("<repo>").split(HOME).join("<home>")) : tail;
+}
+
+const coreTests = join(root, "dist/__tests__");
+if (!existsSync(coreTests)) {
+  console.error("coverage-summary: no dist/__tests__ — run `npm run build` first");
+  process.exit(1);
+}
+const { createSecretRedactor } = await import(pathToFileURL(join(root, "dist", "index.js")).href);
+const redactor = createSecretRedactor(
+  Object.entries(process.env)
+    .filter(([name, value]) => SECRET_ENV_NAME.test(name) && typeof value === "string" && value.length >= 4)
+    .map(([, value]) => value),
+);
+
 function runCoverage(fileArgs, cwd = root) {
   // NODE_TEST_* env inherited from a test-worker parent makes nested `node --test`
   // runs skip everything; strip it so coverage children really run the suites.
@@ -56,10 +88,19 @@ function runCoverage(fileArgs, cwd = root) {
   const ok = result.status === 0;
   return {
     ok,
+    exitCode: result.status,
     lines: ok && match ? Number(match[1]) : undefined,
     branches: ok && match ? Number(match[2]) : undefined,
     functions: ok && match ? Number(match[3]) : undefined,
+    // Only a failing run keeps a tail: a green row must stay byte-identical.
+    tail: ok && match ? "" : redactTail(tailOf(output)),
   };
+}
+
+function printTail(run) {
+  if ((run.ok && run.lines !== undefined) || !run.tail) return;
+  console.log(`    ── child output (last ${TAIL_LINES} lines of stdout+stderr, redacted) ──`);
+  for (const line of run.tail.split("\n")) console.log(`    ${line}`);
 }
 
 function format(name, run, note) {
@@ -117,21 +158,23 @@ try {
 let anyFailed = false;
 const artifact = { captured: new Date().toISOString(), core: {}, packages: {}, belowThreshold: [] };
 
-const coreTests = join(root, "dist/__tests__");
-if (!existsSync(coreTests)) {
-  console.error("coverage-summary: no dist/__tests__ — run `npm run build` first");
-  process.exit(1);
-}
 console.log("Combined coverage summary (core gate 60/70/75 + per-package lines thresholds; protected packages exempt)");
 console.log("  (core row: lines>=60 functions>=70 branches>=75)");
 const core = runCoverage([...CORE_GATE, ...CORE_EXCLUDES.map((e) => `--test-coverage-exclude=${e}`), "dist/__tests__/*.test.js"]);
 console.log(format("@arnilo/prism (core)", core, "[gate 60/70/75]"));
-artifact.core = { lines: core.lines ?? null, branches: core.branches ?? null, functions: core.functions ?? null, gate: "60/70/75" };
+printTail(core);
+artifact.core = {
+  lines: core.lines ?? null,
+  branches: core.branches ?? null,
+  functions: core.functions ?? null,
+  gate: "60/70/75",
+  ...failureRow(core),
+};
 if (!core.ok) anyFailed = true;
 
 const workspaceNames = readdirSync(packagesDir)
   .filter((name) => existsSync(join(packagesDir, name, "package.json")))
-  .filter((name) => existsSync(join(packagesDir, name, "dist/__tests__")))
+  .filter((name) => findTestFiles(join(packagesDir, name)).length > 0)
   .sort();
 for (const name of workspaceNames) {
   const pkg = JSON.parse(readFileSync(join(packagesDir, name, "package.json"), "utf8"));
@@ -149,6 +192,7 @@ for (const name of workspaceNames) {
     // Fail-closed: a workspace with no evidence-based threshold is a config gap.
     console.error(`coverage-summary: ${pkgName} has no threshold entry in ${THRESHOLDS_PATH}`);
     console.log(format(pkgName, run, "NO THRESHOLD ENTRY"));
+    printTail(run);
     artifact.packages[pkgName] = {
       lines: run.lines ?? null,
       branches: run.branches ?? null,
@@ -157,6 +201,7 @@ for (const name of workspaceNames) {
       threshold: null,
       pass: false,
       protectedException: null,
+      ...failureRow(run),
     };
     anyFailed = true;
     continue;
@@ -180,6 +225,7 @@ for (const name of workspaceNames) {
     note = `[>=${threshold.toFixed(2)}]`;
   }
   console.log(format(pkgName, run, note));
+  printTail(run);
   artifact.packages[pkgName] = {
     lines: run.lines ?? null,
     branches: run.branches ?? null,
@@ -188,6 +234,7 @@ for (const name of workspaceNames) {
     threshold,
     pass,
     protectedException,
+    ...failureRow(run),
   };
   if (!run.ok) anyFailed = true;
 }

@@ -834,7 +834,7 @@ export function redactRemoteUrl(url: string): string {
   let scheme = "";
   const schemeMatch = /^([a-z][a-z0-9+.-]*:\/\/)/i.exec(url);
   if (schemeMatch) {
-    scheme = schemeMatch[1]!;
+    scheme = schemeMatch[1];
     rest = url.slice(scheme.length);
   }
   const at = rest.lastIndexOf("@");

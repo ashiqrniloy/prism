@@ -5,6 +5,7 @@
 // (the manifest is retained and uploaded by CI).
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { auditBlockedGates, protectedGateSurfaces } from "./blocked-gate.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const MANIFEST_PATH = process.env.PRISM_RELEASE_EVIDENCE ?? join(ROOT, "scripts", "release-evidence.json");
@@ -295,6 +296,11 @@ function buildSurfaces({ baseline, artifact, thresholds, packages }) {
     });
   }
 
+  // Protected: the documented-gap legs from the blocked-gate registry
+  // (scripts/blocked-gate.mjs) — one row per leg, so the manifest and
+  // `node scripts/blocked-gate.mjs` can never disagree about what is blocked.
+  surfaces.push(...protectedGateSurfaces());
+
   return surfaces;
 }
 
@@ -329,5 +335,10 @@ export function buildManifest({ artifactPath = COVERAGE_ARTIFACT, thresholdsPath
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
   const manifest = buildManifest();
   console.log(`release evidence: ${manifest.surfaces.length} surfaces, blocked=${manifest.blocked}`);
+  const blocked = auditBlockedGates();
+  const profile = blocked.filter((row) => row.manifestClass === "required").map((row) => row.id);
+  console.log(
+    `protected legs not runnable here: ${blocked.length} (release-profile: ${profile.length ? profile.join(", ") : "none"}); audit: node scripts/blocked-gate.mjs`,
+  );
   console.log(`manifest: ${MANIFEST_PATH}`);
 }

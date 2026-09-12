@@ -22,23 +22,26 @@ function loadManifests() {
   return pkgs;
 }
 
-test("phase34 freeze (plan 054 Task 9): every active manifest is 0.5.6 (lockstep bump)", () => {
+// Plan 071 Task 1 (plan 070 FA 10): derive the expected version from the root
+// manifest instead of pinning the cut era here — the per-cut history (0.3.1, 0.4.1,
+// 0.5.x, …) lives in CHANGELOG.md, where the changelog assertions below still read it.
+const rootVersion = () => loadManifests().find((pkg) => pkg.path === ".").version;
+
+test("phase34 freeze (plan 054 Task 9): every active manifest matches the root lockstep version", () => {
+  const expected = rootVersion();
   for (const pkg of loadManifests()) {
-    // Plan 055 Task 6 (Decision B changed-package cut): the provider family moved to
-    // 0.4.1 for the two new adapters; every other manifest stays 0.4.0.
-    // Plan 066: lockstep 0.5.0 → 0.5.1 for all 10 publishable manifests.
-    const expected = "0.5.6";
     assert.equal(pkg.version, expected, `${pkg.name} expected ${expected}, got ${pkg.version}`);
   }
 });
 
-test("phase34 freeze (plan 054 Task 9): internal @arnilo ranges are ^0.5.6", () => {
+test("phase34 freeze (plan 054 Task 9): internal @arnilo ranges are caret-pinned to the root version", () => {
+  const expected = `^${rootVersion()}`;
   for (const pkg of loadManifests()) {
     for (const field of ["dependencies", "peerDependencies", "optionalDependencies"]) {
       for (const [name, range] of Object.entries(pkg[field] ?? {})) {
         if (!name.startsWith("@arnilo/")) continue;
         if (String(range).startsWith("file:")) continue;
-        assert.equal(range, "^0.5.6", `${pkg.name} ${field}.${name} is ${range}`);
+        assert.equal(range, expected, `${pkg.name} ${field}.${name} is ${range}`);
       }
     }
   }

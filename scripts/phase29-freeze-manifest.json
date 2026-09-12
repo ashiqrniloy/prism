@@ -59,6 +59,11 @@
       "task": "task1",
       "change": "Caveman 2 engine deferred",
       "rationale": "separate proxy product; register extra SKILL.md only"
+    },
+    {
+      "task": "task10",
+      "change": "Package-budget criterion is the frozen 0.2.9 transition plus the recorded supersession map, not the era's absolute counts (the former publishable 17 / provider 19 / 55 + added + delta branch)",
+      "rationale": "Plan 054 consolidated 62 manifests into 10 and plans 055/062 added three provider subpaths, so the era's absolute counts can never hold again; the branch that guessed them by counting live capability packages failed on every consolidation. Frozen arithmetic stays (51 + 4 = 55, 50 + 4 = 54, 14 + 3 = 17, 9 + 1 = 10, 0 new runtime dependency names) and the live graph is checked through the map, so an unrecorded package or provider addition fails instead of being papered over (plan 071 Task 11)"
     }
   ],
   "packageBudget": {
@@ -71,7 +76,108 @@
     "targetProvider": 17,
     "targetFamily": 10,
     "newPackages": 4,
-    "newRuntimeDependencyNames": 0
+    "newRuntimeDependencyNames": 0,
+    "$comment": "Frozen 0.2.9 transition. The four new manifests over 0.2.8 are prism-impeccable, provider-clinepass, provider-deepseek and provider-xai (`git diff --name-only v0.2.8 v0.2.9 -- 'packages/*/package.json'`); 14 -> 17 counts the three provider adapters and 9 -> 10 the office family. These numbers are never re-derived from the live tree (plan 054 consolidated 62 manifests into 10): the live graph is checked through `supersession` + `lateAdditions`, and an unrecorded package or provider addition fails (plan 071 Task 11). Full 55-name era map: docs/_evidence/phase54-package-map.md section 3.",
+    "supersession": [
+      {
+        "name": "@arnilo/prism",
+        "live": "@arnilo/prism"
+      },
+      {
+        "name": "@arnilo/prism-providers",
+        "live": "@arnilo/prism-providers"
+      },
+      {
+        "name": "@arnilo/prism-web-tools",
+        "live": "@arnilo/prism-web-tools"
+      },
+      {
+        "name": "@arnilo/prism-memory",
+        "live": "@arnilo/prism-memory"
+      },
+      {
+        "name": "@arnilo/prism-mcp",
+        "live": "@arnilo/prism-mcp"
+      },
+      {
+        "name": "@arnilo/prism-acp-agent",
+        "live": "@arnilo/prism-acp-agent"
+      },
+      {
+        "name": "@arnilo/prism-ag-ui",
+        "live": "@arnilo/prism-ag-ui"
+      },
+      {
+        "name": "@arnilo/prism-impeccable",
+        "foldedInto": "@arnilo/prism-coding-tools",
+        "by": "plan 054"
+      },
+      {
+        "name": "@arnilo/prism-provider-clinepass",
+        "foldedInto": "@arnilo/prism-providers/clinepass",
+        "by": "plan 054"
+      },
+      {
+        "name": "@arnilo/prism-provider-deepseek",
+        "foldedInto": "@arnilo/prism-providers/deepseek",
+        "by": "plan 054"
+      },
+      {
+        "name": "@arnilo/prism-provider-xai",
+        "foldedInto": "@arnilo/prism-providers/xai",
+        "by": "plan 054"
+      },
+      {
+        "name": "@arnilo/prism-browser",
+        "foldedInto": "@arnilo/prism-web-tools",
+        "by": "plan 054"
+      },
+      {
+        "name": "@arnilo/prism-obscura",
+        "foldedInto": "@arnilo/prism-web-tools",
+        "by": "plan 054"
+      },
+      {
+        "name": "@arnilo/prism-wiki",
+        "foldedInto": "@arnilo/prism-memory",
+        "by": "plan 054"
+      },
+      {
+        "name": "@arnilo/prism-graft",
+        "foldedInto": "@arnilo/prism-memory",
+        "by": "plan 054"
+      },
+      {
+        "name": "@arnilo/prism-dev",
+        "foldedInto": "@arnilo/prism-coding-tools",
+        "by": "plan 054"
+      },
+      {
+        "name": "@arnilo/prism-prompts",
+        "foldedInto": "@arnilo/prism-core",
+        "by": "plan 054"
+      },
+      {
+        "name": "@arnilo/prism-documents",
+        "foldedInto": "@arnilo/prism-office",
+        "by": "plan 054"
+      },
+      {
+        "name": "@arnilo/prism-sheets",
+        "foldedInto": "@arnilo/prism-office",
+        "by": "plan 054"
+      },
+      {
+        "name": "@arnilo/prism-diagrams",
+        "foldedInto": "@arnilo/prism-office",
+        "by": "plan 054"
+      }
+    ],
+    "lateAdditions": {
+      "@arnilo/prism-providers/hyper": "plan 055",
+      "@arnilo/prism-providers/commandcode": "plan 055",
+      "@arnilo/prism-providers/model-discovery": "plan 062"
+    }
   },
   "compat": {
     "additiveOnly": true,

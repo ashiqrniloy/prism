@@ -5,6 +5,9 @@ import {
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
   DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
+  HARD_MAX_SESSION_SEARCH_LINEAR_BYTES,
+  HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
+  HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
   type Message,
   type PersistencePage,
   resolveSessionSearchQuery,
@@ -166,6 +169,55 @@ export type MemorySessionSearchMode = "linear" | "unsupported";
 export interface CreateMemorySessionStoreOptions {
   /** Default `"linear"`: capped in-process scan. `"unsupported"`: typed throw. */
   readonly sessionSearchMode?: MemorySessionSearchMode;
+  /**
+   * Optional overrides for the capped in-process scan. Hosts with a small session set can
+   * raise the caps (bounded by the contract `HARD_MAX_SESSION_SEARCH_LINEAR_*` values);
+   * defaults are the contract `DEFAULT_MAX_SESSION_SEARCH_LINEAR_*` caps. Values below 1
+   * or above the hard cap fail store construction closed with a `TypeError`.
+   */
+  readonly search?: {
+    readonly maxLinearSessions?: number;
+    readonly maxLinearEntries?: number;
+    readonly maxLinearBytes?: number;
+  };
+}
+
+/** Resolved bounds for the capped linear session scan. */
+interface LinearSearchCaps {
+  readonly sessions: number;
+  readonly entries: number;
+  readonly bytes: number;
+}
+
+function resolveLinearSearchCaps(search: CreateMemorySessionStoreOptions["search"]): LinearSearchCaps {
+  return {
+    sessions: assertLinearCap(
+      search?.maxLinearSessions,
+      "maxLinearSessions",
+      DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
+      HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
+    ),
+    entries: assertLinearCap(
+      search?.maxLinearEntries,
+      "maxLinearEntries",
+      DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
+      HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
+    ),
+    bytes: assertLinearCap(
+      search?.maxLinearBytes,
+      "maxLinearBytes",
+      DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES,
+      HARD_MAX_SESSION_SEARCH_LINEAR_BYTES,
+    ),
+  };
+}
+
+function assertLinearCap(value: number | undefined, name: string, fallback: number, hardMax: number): number {
+  const cap = value ?? fallback;
+  if (!Number.isSafeInteger(cap) || cap < 1 || cap > hardMax) {
+    throw new TypeError(`CreateMemorySessionStoreOptions.search.${name} must be a safe integer from 1 to ${hardMax}`);
+  }
+  return cap;
 }
 
 export function createMemorySessionStore(
@@ -177,6 +229,7 @@ export function createMemorySessionStore(
   const leafBySession = new Map<string, string>();
   const idempotencySeen = new Set<string>();
   const mode = options.sessionSearchMode ?? "linear";
+  const searchCaps = resolveLinearSearchCaps(options.search);
 
   for (const entry of initialEntries) add(entry);
 
@@ -193,7 +246,7 @@ export function createMemorySessionStore(
     },
     async searchSessions(query) {
       if (mode === "unsupported") throw new SessionSearchUnsupportedError();
-      return searchMemorySessionsLinear(bySession, leafBySession, query);
+      return searchMemorySessionsLinear(bySession, leafBySession, query, searchCaps);
     },
   };
 
@@ -239,6 +292,7 @@ function searchMemorySessionsLinear(
   bySession: Map<string, SessionEntry[]>,
   leafBySession: Map<string, string>,
   query: SessionSearchQuery,
+  caps: LinearSearchCaps,
 ): PersistencePage<SessionSearchHit> {
   const q = resolveSessionSearchQuery(query);
   q.signal?.throwIfAborted();
@@ -249,9 +303,9 @@ function searchMemorySessionsLinear(
   const matches: SessionSearchHit[] = [];
 
   for (const [sessionId, entries] of bySession) {
-    if (sessionsScanned >= DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS) break;
-    if (entriesScanned >= DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES) break;
-    if (bytesScanned >= DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES) break;
+    if (sessionsScanned >= caps.sessions) break;
+    if (entriesScanned >= caps.entries) break;
+    if (bytesScanned >= caps.bytes) break;
     q.signal?.throwIfAborted();
     sessionsScanned += 1;
 
@@ -270,8 +324,8 @@ function searchMemorySessionsLinear(
     let snippetSource: string | undefined;
 
     for (const entry of entries) {
-      if (entriesScanned >= DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES) break;
-      if (bytesScanned >= DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES) break;
+      if (entriesScanned >= caps.entries) break;
+      if (bytesScanned >= caps.bytes) break;
       entriesScanned += 1;
       const text = entrySearchText(entry);
       bytesScanned += utf8Bytes(text) + utf8Bytes(entry.label) + utf8Bytes(entry.summary);

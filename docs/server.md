@@ -8,7 +8,7 @@ No listener starts on import. Empty `agents`/`workflows` maps expose nothing. Au
 
 ## When to use it
 
-Use it when a Node 20, serverless, worker, or framework host already speaks Web `Request`/`Response` and needs a small Prism API boundary. Wrap it in the platform's native adapter rather than adding Express, Fastify, Hono, Koa, Nest, or Next to Prism.
+Use it when a Node 22, serverless, worker, or framework host already speaks Web `Request`/`Response` and needs a small Prism API boundary. Wrap it in the platform's native adapter rather than adding Express, Fastify, Hono, Koa, Nest, or Next to Prism.
 
 Use `AgentSession` or workflow APIs directly for in-process applications. Do not treat this package as an auth provider, user database, firewall, durable agent-result store, or public listener.
 

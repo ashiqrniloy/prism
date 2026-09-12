@@ -1,11 +1,13 @@
 # Frontend interoperability (AG-UI and ACP)
 
+> **Required peer install:** `zod` (the pinned ACP SDK peers it) — see [Optional peer dependencies](peer-dependencies.md).
+
 ## What it does
 
 `@arnilo/prism-ag-ui` is an optional, framework-free protocol adapter over Prism's existing redacted `AgentEvent`, session, durable-run, and persistence seams.
 
 - Root export maps Prism events to AG-UI `@ag-ui/core` **0.0.59** events and offers `createAgUiHandler()` (`Request` → SSE `Response`), compatible `createPersistenceAgUiReplay()` pages, distributed `createAgentEventSourceAgUiReplay()` follow, and explicit `createAgUiMcpAdapter()` / `createAgUiMcpAppHandler()` / `createAgUiA2AAdapter()` protocol handshakes.
-- `@arnilo/prism-ag-ui/acp` is the stable ACP **v1** sibling: `createAcpEventMapper()` and `createPrismAcpAgent()` over `@agentclientprotocol/sdk` **1.3.0** root exports. ACP is a protocol adapter — sessions, modes, MCP, fs/terminal, lifecycle mapping, and caps live on the host seams. See [ACP coding-host interop](acp.md) for the full reference; this page covers AG-UI only.
+- `@arnilo/prism-ag-ui/acp` is the stable ACP **v1** sibling: `createAcpEventMapper()` and `createPrismAcpAgent()` over `@agentclientprotocol/sdk` **1.4.0** root exports. ACP is a protocol adapter — sessions, modes, MCP, fs/terminal, lifecycle mapping, and caps live on the host seams. See [ACP coding-host interop](acp.md) for the full reference; this page covers AG-UI only.
 - Core remains protocol-free. `resumeAgentRunStream()` / `AgentRunLifecycle.resumeStream()` are generic durable-resume streams shared by adapters.
 
 ## When to use it
@@ -38,7 +40,7 @@ npm install @arnilo/prism @arnilo/prism-ag-ui
 | `projection` | Explicit safe tool/state/messages/activity/reasoning/raw/custom/interrupt projection. Omit each callback for default deny. Prefer `composeAgUiProjections(createMessagesFromSessionProjection(...), createStateFromStoreProjection(...), createActivityFromToolProgressProjection(), host)` for standard families. |
 | `a2ui` | Opt-in A2UI painting middleware (`{ catalogId, mode, renderToolName?, allowedCatalogIds?, limits? }`). Detects `a2ui_operations` tool results and/or streams from `render_a2ui` args; paints `a2ui-surface` activity events. Absent = inert. |
 | `capabilities` | Optional host declaration narrowed to implemented SSE/projector/lifecycle features; read `handler.capabilities`. |
-| `redactor`, `limits` | Host redaction and narrowing-only finite caps. |
+| `redactor`, `limits` | Host redaction and narrowing-only finite caps (`AgUiLimitOptions`, with its A2UI variant). |
 
 The handler accepts only `POST` JSON validated with official AG-UI `RunAgentInputSchema`. Every aggregate is bounded before a callback runs. With no `input.project`, it preserves compatibility: final text user message only; non-empty state or frontend tools fail before authorization/session lookup. With a projector, all current roles/history, context, state, forwarded props, multimodal parts, parent lineage, and tool-result continuations are available as untrusted input. The projector must apply Prism media URL/SSRF/MIME policy before forwarding media. Start a run with no `resume` and no `?cursor=`; replay supplies `?cursor=`.
 

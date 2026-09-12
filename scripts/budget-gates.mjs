@@ -1,6 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { cpus, loadavg } from "node:os";
+import { basename, dirname, join } from "node:path";
 
 // Shared performance-budget helpers (plan 079, Task 8). Used by
 // scripts/budget-gate.test.mjs (fast gate) and scripts/benchmark.mjs
@@ -39,20 +40,76 @@ export function measureRootPack(cwd = process.cwd()) {
   return { packedBytes: entry.size, unpackedBytes: entry.unpackedSize, fileCount: entry.files.length };
 }
 
-// Median cold-process import wall time over `runs` spawns.
-export function measureStartupMs(cwd = process.cwd(), runs = 3) {
+// Trimmed mean (min and max dropped) of the finite samples; 1–2 samples average
+// as-is since there is nothing to trim. Plan 071 Task 3: the startup gate needs a
+// statistic that ignores a single straggler sample without the variance of a
+// median over an odd, small sample.
+export function trimmedMean(samples) {
+  const sorted = samples.filter(Number.isFinite).sort((a, b) => a - b);
+  const kept = sorted.length > 2 ? sorted.slice(1, -1) : sorted;
+  return kept.length ? kept.reduce((sum, value) => sum + value, 0) / kept.length : Number.NaN;
+}
+
+// One cold-process import of `./dist/index.js` per run; each spawned process
+// prints its own import wall time. `spawn` is injectable so the trimming logic is
+// unit-testable without timing real processes.
+export function sampleStartupMs(cwd = process.cwd(), runs = 5, spawn = spawnSync) {
   const samples = [];
   for (let i = 0; i < runs; i += 1) {
-    const result = spawnSync(
+    const result = spawn(
       process.execPath,
       ["-e", "const t=process.hrtime.bigint();import('./dist/index.js').then(()=>{console.log(Number(process.hrtime.bigint()-t)/1e6)})"],
       { cwd, stdio: ["pipe", "pipe", "pipe"] },
     );
-    const ms = Number(result.stdout.toString().trim());
-    if (Number.isFinite(ms)) samples.push(ms);
+    samples.push(Number(String(result.stdout).trim()));
+  }
+  return samples;
+}
+
+// Trimmed-mean cold-process import wall time over `runs` spawns.
+export function measureStartupMs(cwd = process.cwd(), runs = 5, spawn = spawnSync) {
+  return trimmedMean(sampleStartupMs(cwd, runs, spawn));
+}
+
+// Median wall time of an empty `node -e ""` process start: the same-machine,
+// same-run denominator for the startup ratio (plan 071 Task 3). Machine load and
+// CPU generation scale both numbers, so import/process-start cancels most of the
+// machine out of the measurement while a genuinely slower import still stands out.
+export function measureProcessStartupMs(runs = 3, spawn = spawnSync) {
+  const samples = [];
+  for (let i = 0; i < runs; i += 1) {
+    const started = process.hrtime.bigint();
+    spawn(process.execPath, ["-e", ""], { stdio: ["pipe", "pipe", "pipe"] });
+    samples.push(Number(process.hrtime.bigint() - started) / 1e6);
   }
   samples.sort((a, b) => a - b);
   return samples.length ? samples[Math.floor(samples.length / 2)] : Number.NaN;
+}
+
+// Plan 071 Task 3: a 1-minute load average per CPU at or above this means the
+// machine is busy with something else, so the absolute startup ceiling becomes
+// evidence-of-record (scripts/benchmark.mjs) instead of an in-chain assertion. The
+// machine-relative ratio gate is always on. loadavg() reports zeros on Windows,
+// which reads as "unloaded" and keeps the absolute check active there.
+export const LOADED_LOADAVG_PER_CPU = 1.5;
+
+export function loadPerCpu() {
+  const [oneMinute] = loadavg();
+  return oneMinute / Math.max(cpus().length, 1);
+}
+
+export function isMachineLoaded(threshold = LOADED_LOADAVG_PER_CPU) {
+  return loadPerCpu() >= threshold;
+}
+
+// Plan 071 Task 3: which ratio ceiling applies. Off-load the tight ceiling catches
+// a ~2.4x startup regression; under load a wider ceiling tolerates the observed
+// contention spikes (import alone spiked to 258ms while a process start stayed at
+// 33ms, and plan 070 recorded a 1104.8ms import) while still catching a >3x
+// regression. The absolute importMs ceiling in budgets.json is the tight bound off
+// load and evidence-of-record in scripts/benchmark.mjs.
+export function selectStartupRatioCeiling(startup, loaded = isMachineLoaded()) {
+  return loaded ? startup.importRatioCeilingUnderLoad : startup.importRatioCeiling;
 }
 
 export function assertAll(checks) {
@@ -118,3 +175,124 @@ export function checkExportBudget(name, measured, ceiling) {
 }
 
 export const budgetFile = join(new URL(".", import.meta.url).pathname, "budgets.json");
+
+// --- non-null assertion allowance (plan 071 Task 9, plan 070 FA 2) ------------
+//
+// `style/noNonNullAssertion` is an error repo-wide in biome.json and switched back
+// off per directory through `overrides`; the directories that still carry sites are
+// recorded in budgets.json under `nonNullAssertions`. One biome pass measures
+// everything — `--only` reports the rule inside allowlisted directories too
+// (verified against Biome 2.5.13) and the JSON summary is the true total regardless
+// of `--max-diagnostics`, while the diagnostics array is what gets grouped.
+
+const NON_NULL_DIAGNOSTIC_LIMIT = 10000;
+
+function runBiomeJson(rootDir, args) {
+  const bin = join(rootDir, "node_modules", ".bin", "biome");
+  const options = { cwd: rootDir, encoding: "utf8", maxBuffer: 256 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] };
+  let stdout;
+  try {
+    stdout = execFileSync(bin, args, options);
+  } catch (error) {
+    // Non-zero is expected while sites remain outside the allowlist (the rule is an
+    // error there); the JSON report is still on stdout.
+    stdout = typeof error.stdout === "string" ? error.stdout : (error.stdout ?? "").toString();
+    if (!stdout.trim()) throw new Error(`biome ${args.join(" ")} failed without a report: ${error.message}`);
+  }
+  return JSON.parse(stdout);
+}
+
+/** biome.json `overrides` that switch `style/noNonNullAssertion` off / back on. */
+export function loadNonNullPolicy(rootDir = process.cwd()) {
+  const config = JSON.parse(readFileSync(join(rootDir, "biome.json"), "utf8"));
+  const allowlisted = [];
+  const enforced = [];
+  for (const override of config.overrides ?? []) {
+    const rule = override.linter?.rules?.style?.noNonNullAssertion;
+    if (rule === "off") allowlisted.push(...(override.includes ?? []));
+    else if (rule === "error") enforced.push(...(override.includes ?? []));
+  }
+  return { allowlisted, enforced };
+}
+
+/** 1 for an existing path, else the number of files matching a single-`*` glob. */
+function matchingFileCount(rootDir, pattern) {
+  if (!pattern.includes("*")) return existsSync(join(rootDir, pattern)) ? 1 : 0;
+  const dir = join(rootDir, dirname(pattern));
+  if (!existsSync(dir)) return 0;
+  const escaped = basename(pattern)
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/\\\*/g, "[^/]*");
+  const matcher = new RegExp(`^${escaped}$`);
+  return readdirSync(dir).filter((name) => matcher.test(name)).length;
+}
+
+/** Sites per allowlisted directory, sites outside the allowlist, enforced-file counts. */
+export function measureNonNullAssertions(rootDir = process.cwd()) {
+  const report = runBiomeJson(rootDir, [
+    "lint",
+    "--only=style/noNonNullAssertion",
+    `--max-diagnostics=${NON_NULL_DIAGNOSTIC_LIMIT}`,
+    "--reporter=json",
+    ".",
+  ]);
+  const { allowlisted, enforced } = loadNonNullPolicy(rootDir);
+  const expected = report.summary.errors + report.summary.warnings;
+  if (report.diagnostics.length !== expected) {
+    throw new Error(
+      `non-null assertion measurement truncated: ${report.diagnostics.length} of ${expected} diagnostics reported — raise NON_NULL_DIAGNOSTIC_LIMIT`,
+    );
+  }
+  const dirs = allowlisted
+    .map((glob) => ({ key: glob.replace(/\/\*\*$/, ""), prefix: `${glob.replace(/\/\*\*$/, "")}/` }))
+    .sort((a, b) => b.prefix.length - a.prefix.length);
+  const byPath = Object.fromEntries(dirs.map((dir) => [dir.key, 0]));
+  const outside = [];
+  for (const diagnostic of report.diagnostics) {
+    const path = diagnostic.location.path;
+    const match = dirs.find((dir) => path.startsWith(dir.prefix));
+    if (match) byPath[match.key] += 1;
+    else outside.push(path);
+  }
+  return {
+    total: expected,
+    byPath,
+    outside,
+    enforced: enforced.map((pattern) => ({
+      pattern,
+      files: matchingFileCount(rootDir, pattern),
+      sites: report.diagnostics.filter((diagnostic) => diagnostic.location.path === pattern).length,
+    })),
+  };
+}
+
+/** Pure comparison so every failure mode is unit-testable without re-running biome. */
+export function evaluateNonNullBudget({ budget, measured }) {
+  const checks = [];
+  const recorded = budget.byPath ?? {};
+  for (const [dir, sites] of Object.entries(measured.byPath)) {
+    const ceiling = recorded[dir];
+    if (ceiling === undefined) {
+      checks.push({ ok: false, message: `${dir}: allowlisted in biome.json but missing from budgets.json nonNullAssertions.byPath` });
+      continue;
+    }
+    checks.push({ ok: sites <= ceiling, message: `${dir}: measured ${sites} non-null assertion(s) vs recorded ${ceiling}` });
+    checks.push({ ok: sites > 0, message: `${dir}: no sites left — drop the biome.json allowlist entry and the budget row` });
+  }
+  for (const dir of Object.keys(recorded)) {
+    checks.push({ ok: dir in measured.byPath, message: `budgets.json records ${dir} but biome.json does not allowlist it` });
+  }
+  checks.push({ ok: measured.total <= budget.ceiling, message: `total: measured ${measured.total} vs ceiling ${budget.ceiling}` });
+  checks.push({
+    ok: measured.outside.length === 0,
+    message: `${measured.outside.length} non-null assertion site(s) outside the allowlist: ${[...new Set(measured.outside)].slice(0, 5).join(", ")}`,
+  });
+  for (const entry of measured.enforced) {
+    checks.push({ ok: entry.files > 0, message: `${entry.pattern}: no file matches this enforced path — fix the biome.json override` });
+    checks.push({
+      ok: entry.sites === 0,
+      message: `${entry.pattern}: ${entry.sites} non-null assertion(s) in a path that must stay clean`,
+    });
+  }
+  return checks;
+}

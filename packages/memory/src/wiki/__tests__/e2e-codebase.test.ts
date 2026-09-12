@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { createExtensionKernel } from "@arnilo/prism";
 import { createWikiExtension, initWiki, lintWiki, refreshWiki } from "../index.js";
 
-const FIXTURE_DIR = join(process.cwd(), "dist/__tests__/fixture-e2e-codebase");
+const FIXTURE_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-e2e-codebase-"));
 
 describe("prism-wiki E2E codebase lifecycle fixture", () => {
   before(async () => {

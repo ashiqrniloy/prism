@@ -103,6 +103,14 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
   const runs = new Map<string, RunSession>();
   const creating = new Map<string, Promise<RunSession>>();
   let closed = false;
+  // Opt-in idle-run reaper (idleRunTtlMs > 0): one unref'd interval for the manager's
+  // lifetime. A run with nothing queued and no activity for the TTL is disposed exactly
+  // like closeRun(), so later calls fail closed with ERR_PRISM_BROWSER_STATE. The
+  // sweep runs at half the TTL, so a stale run is released within 1.0-1.5 x TTL.
+  let sweeping = false;
+  const reaper =
+    limits.idleRunTtlMs > 0 ? setInterval(() => void sweepIdleRuns(), Math.max(1, Math.floor(limits.idleRunTtlMs / 2))) : undefined;
+  reaper?.unref();
 
   const manager: BrowserManager = {
     limits,
@@ -211,6 +219,7 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
 
     async close() {
       closed = true;
+      if (reaper) clearInterval(reaper);
       const sessions = [...runs.values()];
       runs.clear();
       await Promise.all(sessions.map((session) => disposeSession(session)));
@@ -228,6 +237,22 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
   };
 
   return manager;
+
+  /** Closes runs idle for `idleRunTtlMs` with nothing queued. Never rejects. */
+  async function sweepIdleRuns(): Promise<void> {
+    if (sweeping || closed) return;
+    sweeping = true;
+    try {
+      const cutoff = Date.now() - limits.idleRunTtlMs;
+      for (const session of [...runs.values()]) {
+        if (session.closed || session.queued > 0 || session.lastUsedAt > cutoff) continue;
+        runs.delete(session.runId);
+        await disposeSession(session).catch(() => undefined);
+      }
+    } finally {
+      sweeping = false;
+    }
+  }
 
   function assertManagerOpen(): void {
     if (closed) throw new BrowserError("ERR_PRISM_BROWSER_CLOSED", "Browser manager is closed");
@@ -287,6 +312,7 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
       crashed: false,
       queue: Promise.resolve(),
       queued: 0,
+      lastUsedAt: Date.now(),
       cleanup: [],
       networkBudget: createNetworkBudget(),
       uploadBudget: createUploadBudget(),
@@ -417,6 +443,7 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
       throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `maxQueuedActions ${limits.maxQueuedActions} exceeded`);
     }
     session.queued += 1;
+    session.lastUsedAt = Date.now();
     const run = session.queue.then(async () => {
       throwIfAborted(signal);
       return work();
@@ -429,6 +456,7 @@ export function createBrowserManager(options: CreateBrowserManagerOptions): Brow
       return await run;
     } finally {
       session.queued = Math.max(0, session.queued - 1);
+      session.lastUsedAt = Date.now();
     }
   }
 

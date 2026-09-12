@@ -311,7 +311,7 @@ describe("agent loop strategies", () => {
       assert.equal(maxActive, 2);
     });
 
-    it("waits for in-flight parallel dispatches before surfacing abort", async () => {
+    it("waits for in-flight parallel dispatches, persists completed rows, then surfaces abort", async () => {
       const controller = new AbortController();
       let started = 0;
       let release!: () => void;
@@ -364,10 +364,21 @@ describe("agent loop strategies", () => {
       await assert.rejects(run, /aborted run/);
       await observed;
       assert.equal(firstSettled, true);
-      assert.equal(ctx.history.filter((message) => message.role === "tool").length, 0);
+      assert.deepEqual(
+        ctx.history
+          .filter((message) => message.role === "tool")
+          .map((message) => {
+            const block = message.content[0];
+            return block?.type === "tool_result" ? [block.toolCallId, block.error?.code] : undefined;
+          }),
+        [
+          ["c1", undefined],
+          ["c2", "tool_call_not_dispatched"],
+        ],
+      );
     });
 
-    it("waits for in-flight workers and stops unclaimed calls after the first failure", async () => {
+    it("waits for in-flight workers, persists answered rows, and stops unclaimed calls after the first failure", async () => {
       let releaseSecond!: () => void;
       const secondDone = new Promise<void>((resolve) => {
         releaseSecond = resolve;
@@ -420,7 +431,42 @@ describe("agent loop strategies", () => {
       await observed;
       assert.equal(secondSettled, true);
       assert.deepEqual(started, ["c1", "c2"]);
-      assert.deepEqual(appended, []);
+      assert.deepEqual(
+        appended.map((message) => {
+          const block = message.content[0];
+          return block?.type === "tool_result" ? [block.toolCallId, block.error?.message] : undefined;
+        }),
+        [
+          ["c1", "first failure"],
+          ["c2", undefined],
+          ["c3", "Tool call was not dispatched: the batch stopped after an earlier call failed or the run was aborted."],
+        ],
+      );
+    });
+
+    it("appends no synthetic row for a suspended call the resume machinery will answer", async () => {
+      const appended: Message[] = [];
+      const suspended = Object.assign(new Error("delegated run suspended"), { code: "ERR_PRISM_DELEGATION_SUSPENDED" });
+      const ctx = stubCtx({
+        toolConcurrency: 2,
+        generate: async () => ({ content: [], calls: [], started: true }),
+        dispatchToolCall: async (call) => {
+          if (call.id === "c1") throw suspended;
+          return { toolCallId: call.id, name: call.name, value: call.id };
+        },
+        appendMessage: async (message) => {
+          appended.push(message);
+        },
+      });
+
+      await assert.rejects(
+        dispatchToolCallsInOrder([toolCallContent("c1", "agent", {}), toolCallContent("c2", "read", {})], ctx),
+        /delegated run suspended/,
+      );
+      assert.deepEqual(
+        appended.map((message) => (message.content[0]?.type === "tool_result" ? message.content[0].toolCallId : undefined)),
+        ["c2"],
+      );
     });
 
     it("resolveToolConcurrency reads single-shot loop options with RunOptions precedence", () => {
@@ -527,6 +573,47 @@ describe("agent loop strategies", () => {
 
       await agent.createSession().run("work", { limits: { maxToolRounds: 1 } });
       assert.equal(maxActive, 1);
+    });
+
+    it("persists one tool_result per tool_call id when a parallel dispatch fails", async () => {
+      const provider: AIProvider = {
+        id: "mock",
+        async *generate() {
+          yield { type: "tool_call", call: toolCallContent("c1", "echo", {}) };
+          yield { type: "tool_call", call: toolCallContent("c2", "echo", {}) };
+          yield providerDone();
+        },
+      };
+      const agent = createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        tools: [
+          {
+            name: "echo",
+            execute: async (_args, context) => {
+              await new Promise((resolve) => setTimeout(resolve, 5));
+              return { toolCallId: context.toolCallId, name: "echo", value: "ok" };
+            },
+          },
+        ],
+        loop: { strategy: "single-shot", toolConcurrency: 2 },
+      });
+      const session = agent.createSession({ id: "s-parallel-failure" });
+
+      // maxToolCalls=1 makes the second dispatch throw; the first call has already run.
+      await assert.rejects(session.run("work", { limits: { maxToolRounds: 1, maxToolCalls: 1 } }), /maxToolCalls/);
+
+      const blocks = (await session.entries()).flatMap((entry) => entry.message?.content ?? []);
+      const callIds = blocks.filter((block) => block.type === "tool_call").map((block) => block.id);
+      const results = blocks.filter((block) => block.type === "tool_result");
+      assert.deepEqual(callIds, ["c1", "c2"]);
+      assert.deepEqual(
+        results.map((block) => [block.toolCallId, block.error?.code]),
+        [
+          ["c1", undefined],
+          ["c2", "ERR_PRISM_RUN_LIMIT"],
+        ],
+      );
     });
 
     it("RunOptions.loop overrides AgentConfig.loop", async () => {

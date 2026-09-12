@@ -29,23 +29,23 @@ ApprovalRevokeInput	export type { ApprovalAction, ApprovalActorRef, ApprovalAuth
 ApprovalRoleGrant	export type { ApprovalAction, ApprovalActorRef, ApprovalAuthority, ApprovalConsumeInput, ApprovalCreateInput, ApprovalDecideInput, ApprovalDecision, ApprovalDecisionValue, ApprovalGetInput, ApprovalQuery, ApprovalQueryClient, ApprovalRecord, ApprovalRequest, ApprovalRequirement, ApprovalRevokeInput, ApprovalRoleGrant, ApprovalStatus, ApprovalStore, MemoryApprovalStoreOptions, PreparedApprovalCreate, PreparedApprovalDecision, PreparedApprovalTransition, } from "./approvals.js"
 ApprovalStatus	export type { ApprovalAction, ApprovalActorRef, ApprovalAuthority, ApprovalConsumeInput, ApprovalCreateInput, ApprovalDecideInput, ApprovalDecision, ApprovalDecisionValue, ApprovalGetInput, ApprovalQuery, ApprovalQueryClient, ApprovalRecord, ApprovalRequest, ApprovalRequirement, ApprovalRevokeInput, ApprovalRoleGrant, ApprovalStatus, ApprovalStore, MemoryApprovalStoreOptions, PreparedApprovalCreate, PreparedApprovalDecision, PreparedApprovalTransition, } from "./approvals.js"
 ApprovalStore	export type { ApprovalAction, ApprovalActorRef, ApprovalAuthority, ApprovalConsumeInput, ApprovalCreateInput, ApprovalDecideInput, ApprovalDecision, ApprovalDecisionValue, ApprovalGetInput, ApprovalQuery, ApprovalQueryClient, ApprovalRecord, ApprovalRequest, ApprovalRequirement, ApprovalRevokeInput, ApprovalRoleGrant, ApprovalStatus, ApprovalStore, MemoryApprovalStoreOptions, PreparedApprovalCreate, PreparedApprovalDecision, PreparedApprovalTransition, } from "./approvals.js"
-ArtifactAttachInput	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactAuthorizationInput	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactAuthorizer	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
+ArtifactAttachInput	export type { ArtifactAttachInput, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactListInput, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactServiceOptions, } from "./artifacts-service.js"
+ArtifactAuthorizationInput	export type { ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactOperation, CreateArtifactHandlerOptions, } from "./artifacts-handler.js"
+ArtifactAuthorizer	export type { ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactOperation, CreateArtifactHandlerOptions, } from "./artifacts-handler.js"
 ArtifactBodyLimits	export type { ArtifactBodyLimits, ResolvedArtifactBodyLimits, S3ArtifactBodyErrorCode, S3ArtifactBodyStoreOptions, S3Credentials, } from "./artifact-bodies.js"
-ArtifactCompareInput	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactCompareResult	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactDecisionEvent	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactDecisionInput	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactDeliveryInput	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactDeliveryResult	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactLimits	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactListInput	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactOperation	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactRefInput	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactReviseInput	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactService	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-ArtifactServiceInput	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
+ArtifactCompareInput	export type { ArtifactAttachInput, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactListInput, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactServiceOptions, } from "./artifacts-service.js"
+ArtifactCompareResult	export type { ArtifactAttachInput, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactListInput, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactServiceOptions, } from "./artifacts-service.js"
+ArtifactDecisionEvent	export type { ArtifactAttachInput, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactListInput, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactServiceOptions, } from "./artifacts-service.js"
+ArtifactDecisionInput	export type { ArtifactAttachInput, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactListInput, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactServiceOptions, } from "./artifacts-service.js"
+ArtifactDeliveryInput	export type { ArtifactAttachInput, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactListInput, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactServiceOptions, } from "./artifacts-service.js"
+ArtifactDeliveryResult	export type { ArtifactAttachInput, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactListInput, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactServiceOptions, } from "./artifacts-service.js"
+ArtifactLimits	export type { ArtifactLimits, ResolvedArtifactLimits, } from "./artifacts-limits.js"
+ArtifactListInput	export type { ArtifactAttachInput, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactListInput, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactServiceOptions, } from "./artifacts-service.js"
+ArtifactOperation	export type { ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactOperation, CreateArtifactHandlerOptions, } from "./artifacts-handler.js"
+ArtifactRefInput	export type { ArtifactAttachInput, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactListInput, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactServiceOptions, } from "./artifacts-service.js"
+ArtifactReviseInput	export type { ArtifactAttachInput, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactListInput, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactServiceOptions, } from "./artifacts-service.js"
+ArtifactService	export type { ArtifactAttachInput, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactListInput, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactServiceOptions, } from "./artifacts-service.js"
+ArtifactServiceInput	export type { ArtifactAttachInput, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactListInput, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactServiceOptions, } from "./artifacts-service.js"
 AssertPromptPromotionOptions	export type { AssertPromptPromotionOptions, PromptPromotionScorerStats, PromptPromotionVerdict, } from "./promotion.js"
 AuditCursor	export type { AuditCursor, AuditCursorSaveInput, AuditCursorStore, AuditExportBatchInput, AuditExportBatchResult, AuditExporter, AuditExporterOptions, AuditExportItem, AuditPage, AuditPageSource, AuditPublicKey, AuditRedaction, AuditRedactionPolicy, AuditSiemPending, AuditSiemSink, AuditSiemStatus, AuditSiemWrite, AuditSigner, AuditWormAck, AuditWormSink, AuditWormWrite, VerifyAuditBatchInput, VerifyAuditBatchResult, } from "./audit-export.js"
 AuditCursorSaveInput	export type { AuditCursor, AuditCursorSaveInput, AuditCursorStore, AuditExportBatchInput, AuditExportBatchResult, AuditExporter, AuditExporterOptions, AuditExportItem, AuditPage, AuditPageSource, AuditPublicKey, AuditRedaction, AuditRedactionPolicy, AuditSiemPending, AuditSiemSink, AuditSiemStatus, AuditSiemWrite, AuditSigner, AuditWormAck, AuditWormSink, AuditWormWrite, VerifyAuditBatchInput, VerifyAuditBatchResult, } from "./audit-export.js"
@@ -92,8 +92,8 @@ ConversationServiceInput	export type { ConversationAuthorizationInput, Conversat
 ConversationServiceStore	export type { ConversationAuthorizationInput, ConversationAuthorizer, ConversationBranchInput, ConversationContinueInput, ConversationCreateInput, ConversationExportInput, ConversationExportPage, ConversationLimits, ConversationListInput, ConversationOperation, ConversationRefInput, ConversationReplayInput, ConversationReplayPage, ConversationService, ConversationServiceInput, ConversationServiceStore, ConversationSessionFactoryInput, CreateConversationHandlerOptions, CreateConversationServiceOp
 ConversationSessionFactoryInput	export type { ConversationAuthorizationInput, ConversationAuthorizer, ConversationBranchInput, ConversationContinueInput, ConversationCreateInput, ConversationExportInput, ConversationExportPage, ConversationLimits, ConversationListInput, ConversationOperation, ConversationRefInput, ConversationReplayInput, ConversationReplayPage, ConversationService, ConversationServiceInput, ConversationServiceStore, ConversationSessionFactoryInput, CreateConversationHandlerOptions, CreateConversationServiceOp
 CostLatencySelectionOptions	export type { CostLatencySelectionOptions, CreateModelRouterOptions, ModelRouteCandidate, ModelRouter, ModelRouterAllowList, ModelRouterAttempt, ModelRouterBudgets, ModelRouterCircuitOptions, ModelRouterDenyReason, ModelRouterDiagnostics, ModelRouterLimits, ModelRouterRateLimit, ModelRouterResolveRequest, ModelRouterResolveResult, ModelRouterSelectionPolicy, ModelRouterStateKey, ModelRouterStateOwner, ModelRouterStateStore, ResolvedModelRouterLimits, } from "./types.js"
-CreateArtifactHandlerOptions	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
-CreateArtifactServiceOptions	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
+CreateArtifactHandlerOptions	export type { ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactOperation, CreateArtifactHandlerOptions, } from "./artifacts-handler.js"
+CreateArtifactServiceOptions	export type { ArtifactAttachInput, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactListInput, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactServiceOptions, } from "./artifacts-service.js"
 CreateConversationHandlerOptions	export type { ConversationAuthorizationInput, ConversationAuthorizer, ConversationBranchInput, ConversationContinueInput, ConversationCreateInput, ConversationExportInput, ConversationExportPage, ConversationLimits, ConversationListInput, ConversationOperation, ConversationRefInput, ConversationReplayInput, ConversationReplayPage, ConversationService, ConversationServiceInput, ConversationServiceStore, ConversationSessionFactoryInput, CreateConversationHandlerOptions, CreateConversationServiceOp
 CreateConversationServiceOptions	export type { ConversationAuthorizationInput, ConversationAuthorizer, ConversationBranchInput, ConversationContinueInput, ConversationCreateInput, ConversationExportInput, ConversationExportPage, ConversationLimits, ConversationListInput, ConversationOperation, ConversationRefInput, ConversationReplayInput, ConversationReplayPage, ConversationService, ConversationServiceInput, ConversationServiceStore, ConversationSessionFactoryInput, CreateConversationHandlerOptions, CreateConversationServiceOp
 CreateModelRouterOptions	export type { CostLatencySelectionOptions, CreateModelRouterOptions, ModelRouteCandidate, ModelRouter, ModelRouterAllowList, ModelRouterAttempt, ModelRouterBudgets, ModelRouterCircuitOptions, ModelRouterDenyReason, ModelRouterDiagnostics, ModelRouterLimits, ModelRouterRateLimit, ModelRouterResolveRequest, ModelRouterResolveResult, ModelRouterSelectionPolicy, ModelRouterStateKey, ModelRouterStateOwner, ModelRouterStateStore, ResolvedModelRouterLimits, } from "./types.js"
@@ -386,6 +386,7 @@ HARD_TRACE_PAGE_SIZE	export declare const HARD_TRACE_PAGE_SIZE = 1000
 HARD_WORK_LIMITS	export declare const HARD_WORK_LIMITS: ResolvedWorkLimits
 HostKms	export type { HostKms, HostKmsCryptoOptions, KmsEnvelope } from "./kms.js"
 HostKmsCryptoOptions	export type { HostKms, HostKmsCryptoOptions, KmsEnvelope } from "./kms.js"
+ID_PATTERN	export declare const ID_PATTERN: RegExp
 IdempotencyStore	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkFileItem, WorkLimits, WorkMailMessage, WorkMutationBeginInput, WorkMutationFailure, WorkMutationKey, WorkMutationRecord, WorkMutationResult, WorkMutationStatus, WorkMutationTransitionInput, Wo
 InMemoryTelemetry	export type { DelegationTelemetry, EvaluationTelemetry, InMemoryTelemetry, OpenTelemetryContextApi, OpenTelemetryInstrumentation, OpenTelemetryInstrumentationOptions, OpenTelemetryTraceApi, PrismContext, PrismCounter, PrismHistogram, PrismMeter, PrismSpan, PrismSpanKind, PrismSpanStatus, PrismTracer, RecordedMetric, RecordedSpan, RunFeedbackTelemetry, TraceReference, } from "./instrumentation.js"
 JSON_HEADERS	export declare const JSON_HEADERS:
@@ -401,9 +402,11 @@ LoopNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition,
 MAX_ACTIVE_WORKFLOW_RUNS	export declare const MAX_ACTIVE_WORKFLOW_RUNS = 512
 MAX_ERROR_BYTES	export declare const MAX_ERROR_BYTES: number
 MAX_ID_BYTES	export declare const MAX_ID_BYTES = 256
+MAX_INTEGER	export declare const MAX_INTEGER = 2147483647
 MAX_REASON_BYTES	export declare const MAX_REASON_BYTES: number
 MAX_REVISION_BYTES	export declare const MAX_REVISION_BYTES = 256
 MAX_SAGA_STEPS	export declare const MAX_SAGA_STEPS = 100
+MAX_WINDOW_MS	export declare const MAX_WINDOW_MS: number
 MICROSOFT365_BASE_SCOPES	export declare const MICROSOFT365_BASE_SCOPES: readonly ["openid", "profile", "offline_access", "User.Read"]
 MICROSOFT365_SCOPE_BUNDLES	export declare const MICROSOFT365_SCOPE_BUNDLES: Readonly<Record<string, WorkloadScopeBundle>>
 MIGRATION_001_INIT	export declare const MIGRATION_001_INIT = "\nCREATE TABLE IF NOT EXISTS prism_tenants (\n id TEXT NOT NULL PRIMARY KEY,\n name TEXT NOT NULL,\n created_at TEXT NOT NULL,\n metadata TEXT\n)
@@ -541,7 +544,7 @@ PutPromptInput	export type { PromptDiff, PromptDiffInput, PromptDiffLine, Prompt
 RecordedMetric	export type { DelegationTelemetry, EvaluationTelemetry, InMemoryTelemetry, OpenTelemetryContextApi, OpenTelemetryInstrumentation, OpenTelemetryInstrumentationOptions, OpenTelemetryTraceApi, PrismContext, PrismCounter, PrismHistogram, PrismMeter, PrismSpan, PrismSpanKind, PrismSpanStatus, PrismTracer, RecordedMetric, RecordedSpan, RunFeedbackTelemetry, TraceReference, } from "./instrumentation.js"
 RecordedSpan	export type { DelegationTelemetry, EvaluationTelemetry, InMemoryTelemetry, OpenTelemetryContextApi, OpenTelemetryInstrumentation, OpenTelemetryInstrumentationOptions, OpenTelemetryTraceApi, PrismContext, PrismCounter, PrismHistogram, PrismMeter, PrismSpan, PrismSpanKind, PrismSpanStatus, PrismTracer, RecordedMetric, RecordedSpan, RunFeedbackTelemetry, TraceReference, } from "./instrumentation.js"
 ResolvedArtifactBodyLimits	export type { ArtifactBodyLimits, ResolvedArtifactBodyLimits, S3ArtifactBodyErrorCode, S3ArtifactBodyStoreOptions, S3Credentials, } from "./artifact-bodies.js"
-ResolvedArtifactLimits	export type { ArtifactAttachInput, ArtifactAuthorizationInput, ArtifactAuthorizer, ArtifactCompareInput, ArtifactCompareResult, ArtifactDecisionEvent, ArtifactDecisionInput, ArtifactDeliveryInput, ArtifactDeliveryResult, ArtifactLimits, ArtifactListInput, ArtifactOperation, ArtifactRefInput, ArtifactReviseInput, ArtifactService, ArtifactServiceInput, CreateArtifactHandlerOptions, CreateArtifactServiceOptions, ResolvedArtifactLimits, } from "./artifacts.js"
+ResolvedArtifactLimits	export type { ArtifactLimits, ResolvedArtifactLimits, } from "./artifacts-limits.js"
 ResolvedConversationLimits	export type { ConversationAuthorizationInput, ConversationAuthorizer, ConversationBranchInput, ConversationContinueInput, ConversationCreateInput, ConversationExportInput, ConversationExportPage, ConversationLimits, ConversationListInput, ConversationOperation, ConversationRefInput, ConversationReplayInput, ConversationReplayPage, ConversationService, ConversationServiceInput, ConversationServiceStore, ConversationSessionFactoryInput, CreateConversationHandlerOptions, CreateConversationServiceOp
 ResolvedModelRouterLimits	export type { CostLatencySelectionOptions, CreateModelRouterOptions, ModelRouteCandidate, ModelRouter, ModelRouterAllowList, ModelRouterAttempt, ModelRouterBudgets, ModelRouterCircuitOptions, ModelRouterDenyReason, ModelRouterDiagnostics, ModelRouterLimits, ModelRouterRateLimit, ModelRouterResolveRequest, ModelRouterResolveResult, ModelRouterSelectionPolicy, ModelRouterStateKey, ModelRouterStateOwner, ModelRouterStateStore, ResolvedModelRouterLimits, } from "./types.js"
 ResolvedPolicyLimits	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
@@ -670,6 +673,8 @@ WorkflowToolApproval	export type { AgentNodeDefinition, ConditionalNodeDefinitio
 abortActiveWorkflowRun	export declare function abortActiveWorkflowRun(workflowId: string, runId: string, ownership: OwnershipScope | undefined, definitionHash: string, reason?: unknown): boolean
 adapterByteLimits	export declare function adapterByteLimits(options?: WorkflowCheckpointAdapterOptions):
 addHeaders	export declare function addHeaders(response: Response, extra?: Readonly<Record<string, string>>): Response
+addMs	export declare function addMs(date: Date, ms: number): Date
+addUsage	export declare function addUsage(pool: Pool, table: string, input: Parameters<ModelRouterStateStore["addUsage"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["addUsage"]>>>
 agentNode	export declare function agentNode(config: Omit<AgentNodeDefinition, "kind">): AgentNodeDefinition
 appendEvaluationFeedback	export declare function appendEvaluationFeedback(input: AppendEvaluationFeedbackInput): Promise<RunFeedbackRecord>
 applyConditionalSkip	export declare function applyConditionalSkip(state: SchedulerState, nodeId: string, passed: boolean, emit: (event: WorkflowEventInput) => void): void
@@ -724,6 +729,8 @@ bounded	export declare function bounded<T>(value: T, maxBytes: number, label: st
 boundedJson	export declare function boundedJson(value: unknown, options: NormalizedOptions, label: string): unknown
 boundedText	export declare function boundedText(value: unknown, label: string, maxBytes: number): string
 boundsError	export declare function boundsError(message: string): never
+budgetRowValue	export declare function budgetRowValue(row: Record<string, unknown>): BudgetRow
+budgetValue	export declare function budgetValue(row: Record<string, unknown> | undefined):
 buildEnterpriseMigration001Ddl	export declare function buildEnterpriseMigration001Ddl(schema: string): string
 buildEnterpriseMigration002Ddl	export declare function buildEnterpriseMigration002Ddl(schema: string): string
 buildEnterpriseMigration003Ddl	export declare function buildEnterpriseMigration003Ddl(schema: string): string
@@ -751,15 +758,21 @@ canonicalJsonBytes	export declare function canonicalJsonBytes(value: unknown): B
 canonicalQueryString	export declare function canonicalQueryString(query: Readonly<Record<string, string>>): string
 canonicalizeA2AAgentCard	export declare function canonicalizeA2AAgentCard(card: A2AAgentCard): string
 checkpointKey	export declare function checkpointKey(tenantId: string, sagaId: string, runId: string): string
+circuitValue	export declare function circuitValue(row: Record<string, unknown>): CircuitRow
+claimCircuitProbe	export declare function claimCircuitProbe(pool: Pool, table: string, input: Parameters<ModelRouterStateStore["claimCircuitProbe"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["claimCircuitProbe"]>>>
+cleanup	export declare function cleanup(pool: Pool, tables: RouterTables, input: Parameters<ModelRouterStateStore["cleanup"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["cleanup"]>>>
 cleanupExpiredPostgresToolEffects	export declare function cleanupExpiredPostgresToolEffects(pool: Pool, schema: string, input: CleanupScope): Promise<
+cleanupLimit	export declare function cleanupLimit(value: unknown): number
 clipSearchSnippet	export declare function clipSearchSnippet(value: string | undefined): string | undefined
 cloneState	export declare function cloneState(value: JsonObject): JsonObject
 combineSignals	export declare function combineSignals(signals: readonly (AbortSignal | undefined)[]): AbortSignal | undefined
+commitBudget	export declare function commitBudget(pool: Pool, table: string, input: Parameters<ModelRouterStateStore["commitBudget"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["commitBudget"]>>>
 comparePromptPosition	export declare function comparePromptPosition(name: string, version: number, cursor: PromptCursor | undefined, order: "asc" | "desc"): number
 compensationContext	export declare function compensationContext(runtime: Runtime, step: SagaStepRecord): SagaCompensationContext
 computeOAuth2S256Challenge	export declare function computeOAuth2S256Challenge(verifier: string): string
 conditionalNode	export declare function conditionalNode(config: Omit<ConditionalNodeDefinition, "kind">): ConditionalNodeDefinition
 configureSqliteDatabase	export declare function configureSqliteDatabase(db: Database.Database, options: Pick<SqlitePersistenceOptions, "wal" | "busyTimeoutMs">): void
+consumeRate	export declare function consumeRate(pool: Pool, table: string, input: Parameters<ModelRouterStateStore["consumeRate"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["consumeRate"]>>>
 createA2AAgentCard	export declare function createA2AAgentCard(card: A2AAgentCard): A2AAgentCard
 createA2AAgentEventSource	export declare function createA2AAgentEventSource(options: A2AAgentEventSourceOptions): A2AAgentEventSource
 createA2AClient	export declare function createA2AClient(options: A2AClientOptions): A2AClient
@@ -850,6 +863,7 @@ createWorkflowCoordinator	export declare function createWorkflowCoordinator(opti
 createWorkflowEventBus	export declare function createWorkflowEventBus(options: WorkflowEventMergeOptions): WorkflowEventBus
 createWorkflowSchedules	export declare function createWorkflowSchedules(options: CreateWorkflowSchedulesOptions): WorkflowSchedules
 credentialKey	export declare function credentialKey(name: string, provider?: string): string
+databaseNow	export declare function databaseNow(client: PoolClient): Promise<Date>
 datasetFromRuns	export declare function datasetFromRuns<TInput = unknown, TExpected = unknown>(input: DatasetFromRunsInput<TInput, TExpected>): Promise<CurateResult<TInput, TExpected>>
 decodeBoundedJson	export declare function decodeBoundedJson(value: unknown, maxBytes: number, label: string): unknown
 decodeBranchCursor	export declare function decodeBranchCursor(cursor: string): number
@@ -866,6 +880,7 @@ defineSaga	export declare function defineSaga(input: SagaDefinition): SagaDefini
 defineScorer	export declare function defineScorer<TInput = unknown, TExpected = unknown>(input: DefineScorerInput<TInput, TExpected>): Scorer<TInput, TExpected>
 defineWorkflow	export declare function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition
 deleteCredentialEntry	export declare function deleteCredentialEntry(vault: CredentialVault, name: string, provider?: string):
+deleteExpiredRouterRows	export declare function deleteExpiredRouterRows(pool: Pool, table: string, owner: Pick<RouterContext, "owner" | "principalId">, limit: number, order: string, extra?: string): Promise<number>
 deleteOAuthEntry	export declare function deleteOAuthEntry(vault: CredentialVault, provider: string, accountId?: string):
 deliverA2APushEvent	export declare function deliverA2APushEvent(delivery: A2APushDelivery, config: A2APushConfig, event: A2ATaskEvent, options?: DeliverA2APushEventOptions): Promise<
 deriveKey	export declare function deriveKey(passphrase: string, salt: Buffer, params: ScryptParameters, maxMemoryBytes: number): Promise<Buffer>
@@ -878,7 +893,10 @@ encodePromptCursor	export declare function encodePromptCursor(scope: NormalizedO
 encodeRecordCursor	export declare function encodeRecordCursor(createdAt: string, id: string, owner: StoreOwner, order: "asc" | "desc"): string
 encryptBytes	export declare function encryptBytes(plaintext: Buffer, passphrase: string, scryptOptions?: Partial<ScryptParameters>, limitOptions?: EncryptedCredentialStoreLimits): Promise<EncryptedEnvelope>
 encryptWithHostKms	export declare function encryptWithHostKms(plaintext: Uint8Array, kms: HostKms, options?: HostKmsCryptoOptions): Promise<KmsEnvelope>
+enforceBudgetCapacity	export declare function enforceBudgetCapacity(pool: Pool, table: string, maxKeys: number | undefined, exclude: RouterContext, windowMs: number): Promise<void>
+enforceRateCapacity	export declare function enforceRateCapacity(pool: Pool, table: string, maxKeys: number | undefined, exclude: RouterContext, windowMs: number): Promise<void>
 enqueueWorkflow	export declare function enqueueWorkflow(workflow: WorkflowDefinition, input: unknown, options: EnqueueWorkflowOptions): Promise<
+ensureCircuitCapacity	export declare function ensureCircuitCapacity(client: PoolClient, table: string, maxKeys: number, now: Date): Promise<void>
 enterManual	export declare function enterManual(runtime: Runtime, stepId: string | undefined, phase: SagaPhase, error: SagaErrorRecord): Promise<void>
 entrySearchFields	export declare function entrySearchFields(entry: SessionEntry):
 erpInvariantDataset	export declare const erpInvariantDataset: Dataset<unknown, unknown>
@@ -894,6 +912,8 @@ executeScheduler	export declare function executeScheduler(state: SchedulerState,
 exportPolicyDecisions	export declare function exportPolicyDecisions(options: ExportPolicyDecisionsOptions): AsyncGenerator<PersistencePage<PolicyDecisionRecord>, void, unknown>
 extractSagaState	export declare function extractSagaState(record: WorkflowCheckpointRecord, options: NormalizedOptions, definition?: SagaDefinition): SagaCheckpointValue
 fanOutNode	export declare function fanOutNode(config: Omit<FanOutNodeDefinition, "kind">): FanOutNodeDefinition
+findReservation	export declare function findReservation(row: BudgetRow, reservationId: string, fencingToken: string): Reservation
+finiteNumber	export declare function finiteNumber(value: unknown, label: string): number
 forwardContext	export declare function forwardContext(runtime: Runtime, operationId: string): SagaForwardContext
 functionNode	export declare function functionNode(config: Omit<FunctionNodeDefinition, "kind">): FunctionNodeDefinition
 getActiveWorkflowRun	export declare function getActiveWorkflowRun(workflowId: string, runId: string, ownership?: OwnershipScope): ActiveWorkflowRun | undefined
@@ -903,6 +923,8 @@ getWorkflowRun	export declare function getWorkflowRun(checkpoints: WorkflowCheck
 hashPromptBody	export declare function hashPromptBody(body: string): string
 hashWorkflowDefinition	export declare function hashWorkflowDefinition(workflow: WorkflowDefinition): string
 identityKey	export declare function identityKey(identity: Pick<AgentIdentity, "tenantId" | "accountId" | "userId" | "principal">): string
+insertCircuit	export declare function insertCircuit(client: PoolClient, table: string, context: RouterContext, row: Omit<CircuitRow, "probeToken" | "probeExpiresAt"> & Pick<Partial<CircuitRow>, "probeToken" | "probeExpiresAt">): Promise<void>
+integer	export declare function integer(value: unknown, label: string, min: number, max: number): number
 isAbortError	export declare function isAbortError(error: unknown): boolean
 isAdmitOperation	export declare function isAdmitOperation(operation: string): boolean
 isCredentialDecryptError	export declare function isCredentialDecryptError(error: unknown): error is CredentialDecryptError
@@ -978,6 +1000,7 @@ parseVault	export declare function parseVault(bytes: Buffer, maxBytes?: number):
 persist	export declare function persist(runtime: Runtime, value: SagaCheckpointValue, stepId: string | undefined, phase: SagaPhase | "manual"): Promise<void>
 persistCheckpoint	export declare function persistCheckpoint(state: SchedulerState, options: RunWorkflowOptions, emit: (event: WorkflowEventInput) => void): Promise<void>
 positiveBoundedInteger	export declare function positiveBoundedInteger(value: unknown, hardCap: number, label: string): number
+positiveInteger	export declare function positiveInteger(value: unknown, label: string, max: number): number
 prepareApprovalConsume	export declare function prepareApprovalConsume(current: ApprovalRecord, input: ApprovalConsumeInput, context: ApprovalTransitionContext): PreparedApprovalTransition
 prepareApprovalCreate	export declare function prepareApprovalCreate(input: ApprovalCreateInput, context: ApprovalTransitionContext, id: string): PreparedApprovalCreate
 prepareApprovalDecision	export declare function prepareApprovalDecision(current: ApprovalRecord, input: ApprovalDecideInput, context: ApprovalTransitionContext): Promise<PreparedApprovalDecision>
@@ -987,14 +1010,17 @@ preparePolicyDecision	export declare function preparePolicyDecision(input: Appen
 preparePrompt	export declare function preparePrompt(input: PutPromptInput, version: number, scope: NormalizedOwnership, limits: PromptLimits, now: () => number): PromptRecord
 presignV4	export declare function presignV4(input: SigV4PresignInput): Promise<string>
 promptMigrationContract	export declare function promptMigrationContract(schema?: string): readonly AppliedPromptMigration[]
+pruneExpiredReservations	export declare function pruneExpiredReservations(pool: Pool, table: string, owner: Pick<RouterContext, "owner" | "principalId">, limit: number): Promise<number>
 publicOwnership	export declare function publicOwnership(scope: NormalizedOwnership): PromptOwnership
 qualifyPromptTable	export declare function qualifyPromptTable(schema: string, table: string): string
 qualifyTable	export declare function qualifyTable(schema: string, table: string): string
 quoteIdentifier	export declare function quoteIdentifier(name: string): string
 quotePromptIdentifier	export declare function quotePromptIdentifier(value: string): string
 randomId	export declare function randomId(prefix: string): string
+rateParams	export declare function rateParams(context: RouterContext, windowMs: number): [string, string, string, string, string, string, number]
 readAgentInput	export declare function readAgentInput(value: unknown): string | Message | readonly Message[]
 readAgentResume	export declare function readAgentResume(body: JsonObject):
+readBudget	export declare function readBudget(pool: Pool, table: string, input: Parameters<ModelRouterStateStore["readBudget"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["readBudget"]>>>
 readFileIfExists	export declare function readFileIfExists(path: string, maxBytes: number): Buffer | undefined
 readJsonObject	export declare function readJsonObject(request: Request, maxBytes: number, signal: AbortSignal): Promise<JsonObject>
 readOptionalId	export declare function readOptionalId(value: unknown, name: string): string | undefined
@@ -1007,6 +1033,7 @@ readScheduleStatus	export declare function readScheduleStatus(value: string | nu
 reconcileCompensation	export declare function reconcileCompensation(runtime: Runtime, step: SagaStep): Promise<void>
 reconcileForward	export declare function reconcileForward(runtime: Runtime, step: SagaStep): Promise<void>
 record	export declare function record(value: unknown): value is Record<string, unknown>
+recordCircuitOutcome	export declare function recordCircuitOutcome(pool: Pool, table: string, input: Parameters<ModelRouterStateStore["recordCircuitOutcome"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["recordCircuitOutcome"]>>>
 recordGuardrailDecision	export declare function recordGuardrailDecision(input:
 recordPermissionDecision	export declare function recordPermissionDecision(input:
 recordToolApprovalDecision	export declare function recordToolApprovalDecision(input:
@@ -1014,8 +1041,10 @@ redactCheckpointOutputs	export declare function redactCheckpointOutputs(value: W
 redactEvaluationRecord	export declare function redactEvaluationRecord(record: EvaluationRecord, redactor?: SecretRedactor, secrets?: readonly (string | undefined)[]): EvaluationRecord
 redactValue	export declare function redactValue<T>(value: T, redactor?: SecretRedactor): T
 registerActiveWorkflowRun	export declare function registerActiveWorkflowRun(input:
+releaseBudget	export declare function releaseBudget(pool: Pool, table: string, input: Parameters<ModelRouterStateStore["releaseBudget"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["releaseBudget"]>>>
 releaseSuccessors	export declare function releaseSuccessors(state: SchedulerState, nodeId: string, emit: (event: WorkflowEventInput) => void): void
 removeFileIfExists	export declare function removeFileIfExists(path: string): void
+reopenExpiredProbes	export declare function reopenExpiredProbes(pool: Pool, table: string, owner: Pick<RouterContext, "owner" | "principalId">, limit: number): Promise<number>
 reopenPostgresPersistence	export declare function reopenPostgresPersistence(options: PostgresPersistenceOptions): Promise<PostgresPersistence>
 reopenSqlitePersistence	export declare function reopenSqlitePersistence(options: SqlitePersistenceOptions): SqlitePersistence
 reopenSqlitePromptStore	export declare function reopenSqlitePromptStore(filename: string, options?: Omit<SqlitePromptStoreOptions, "filename" | "database">): SqlitePromptStore
@@ -1028,6 +1057,10 @@ requireOwnership	export { assertNoUnrestrictedPayload, ownershipMatches, prepare
 requireStoreOwner	export declare function requireStoreOwner(scope: OwnershipScope): StoreOwner
 requireVersion	export declare function requireVersion(value: unknown, label?: string): number
 requiredText	export declare function requiredText(value: unknown, label: string, maxBytes?: number): string
+reservationList	export declare function reservationList(value: unknown): Reservation[]
+reservationRef	export declare function reservationRef(value: unknown, label: string): string
+reservationRetryAfterMs	export declare function reservationRetryAfterMs(pool: Pool, context: RouterContext, table: string, windowMs: number): Promise<number>
+reserveBudget	export declare function reserveBudget(pool: Pool, table: string, input: Parameters<ModelRouterStateStore["reserveBudget"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["reserveBudget"]>>>
 resolveA2ALimits	export declare function resolveA2ALimits(input?: A2ALimits): ResolvedA2ALimits
 resolveArtifactBodyLimits	export declare function resolveArtifactBodyLimits(input?: ArtifactBodyLimits): ResolvedArtifactBodyLimits
 resolveArtifactLimits	export declare function resolveArtifactLimits(input?: ArtifactLimits): ResolvedArtifactLimits
@@ -1050,8 +1083,13 @@ resolveWorkloadScopes	export declare function resolveWorkloadScopes(map: Readonl
 resultFromRecord	export declare function resultFromRecord(workflowId: string, record: WorkflowCheckpointRecord): WorkflowRunResult
 resumeSaga	export declare function resumeSaga(definition: SagaDefinition, options: SagaResumeOptions): Promise<SagaRunResult>
 resumeWorkflow	export declare function resumeWorkflow(workflow: WorkflowDefinition, ref:
+retryDelay	export declare function retryDelay(attempt: number): Promise<void>
 retryWebhookDelivery	export declare function retryWebhookDelivery(attempt: (signal: AbortSignal) => Promise<WebhookRetryAttempt>, limits: WebhookRetryLimits, redactor: SecretRedactor, signal?: AbortSignal): Promise<WebhookDeliveryOutcome>
 rotateEncryptedCredentialStorePassphrase	export declare function rotateEncryptedCredentialStorePassphrase(options: RotateEncryptedCredentialStoreOptions): Promise<void>
+routerContext	export declare function routerContext(key: ModelRouterStateKey): RouterContext
+routerOwner	export declare function routerOwner(owner: ModelRouterStateOwner): Pick<RouterContext, "owner" | "principalId">
+routerParams	export declare function routerParams(context: RouterContext): [string, string, string, string, string, string]
+routerStoreError	export declare function routerStoreError(error: unknown): Error
 rowToRunFeedbackRecord	export declare function rowToRunFeedbackRecord(row: Record<string, unknown>): RunFeedbackRecord
 rowToTenantQuota	export declare function rowToTenantQuota(row: Record<string, unknown>): TenantQuota
 runCheckpointAdapterConformance	export declare function runCheckpointAdapterConformance(label: string, create: () => WorkflowCheckpointAdapter | Promise<WorkflowCheckpointAdapter>): Promise<void>
@@ -1073,6 +1111,9 @@ scopeKey	export declare function scopeKey(scope: NormalizedOwnership, name: stri
 scoreRun	export declare function scoreRun<TInput = unknown, TExpected = unknown>(options: ScoreRunOptions<TInput, TExpected>): Promise<readonly EvaluationRecord[]>
 scoreRunLive	export declare function scoreRunLive<TInput = unknown, TExpected = unknown>(result: AgentRunResult, options: LiveScoreOptions<TInput, TExpected>): Promise<readonly EvaluationRecord[]>
 secureCompare	export declare function secureCompare(left: string, right: string): boolean
+selectBudget	export declare function selectBudget(client: PoolClient, table: string, context: RouterContext, windowMs: number): Promise<BudgetRow>
+selectCircuit	export declare function selectCircuit(client: PoolClient, table: string, context: RouterContext): Promise<CircuitRow | undefined>
+serializationFailure	export declare function serializationFailure(error: unknown): boolean
 serializeEvaluationReport	export declare function serializeEvaluationReport(report: unknown, options?:
 serializeVault	export declare function serializeVault(vault: CredentialVault, maxBytes?: number): Buffer
 sha256Hex	export declare function sha256Hex(data: Uint8Array): Promise<string>
@@ -1094,8 +1135,10 @@ startWorkflowBackground	export declare const startWorkflowBackground: typeof enq
 statusMatches	export declare function statusMatches(expected: EvaluationStatus | readonly EvaluationStatus[] | undefined, actual: EvaluationStatus): boolean
 storageWorkflowId	export declare function storageWorkflowId(key: string): string
 storeError	export declare function storeError(error: unknown): EnterprisePostgresError
+storedUsage	export declare function storedUsage(value: unknown, label: string): number
 suspend	export declare function suspend<ResumeInput = unknown>(input:
 sweepActiveWorkflowRuns	export declare function sweepActiveWorkflowRuns(): number
+text	export declare function text(value: unknown, label: string, maxBytes: number): string
 textId	export declare function textId(value: unknown, label: string): string
 throwIfAborted	export declare function throwIfAborted(signal?: AbortSignal): void
 toErrorInfo	export declare function toErrorInfo(error: unknown): import("@arnilo/prism").ErrorInfo
@@ -1148,16 +1191,20 @@ type WorkflowSchedules	export { type CreateWorkflowScheduleInput, type CreateWor
 type WorkloadScopeAccess	export { resolveWorkloadScopes, type WorkloadScopeAccess, type WorkloadScopeBundle } from "./scopes.js"
 type WorkloadScopeBundle	export { resolveWorkloadScopes, type WorkloadScopeAccess, type WorkloadScopeBundle } from "./scopes.js"
 unregisterActiveWorkflowRun	export declare function unregisterActiveWorkflowRun(workflowId: string, runId: string, ownership?: OwnershipScope): void
+updateBudget	export declare function updateBudget(client: PoolClient, table: string, context: RouterContext, row: BudgetRow): Promise<void>
+updateCircuit	export declare function updateCircuit(client: PoolClient, table: string, context: RouterContext, row: CircuitRow): Promise<CircuitRow>
 updateStep	export declare function updateStep(state: SagaCheckpointValue, id: string, patch: Partial<SagaStepRecord>): SagaCheckpointValue
 updateWorkflowState	export declare function updateWorkflowState(state: SchedulerState, patch: JsonObject, updateOptions: import("../types.js").WorkflowStateUpdateOptions | undefined, options: RunWorkflowOptions): Promise<Readonly<JsonObject>>
 upsertCredentialEntry	export declare function upsertCredentialEntry(vault: CredentialVault, record: CredentialRecord): CredentialVault
 upsertOAuthEntry	export declare function upsertOAuthEntry(vault: CredentialVault, provider: string, credentials: OAuthCredentials, accountId?: string): CredentialVault
+usage	export declare function usage(value: unknown, label: string): number
 utf8ByteLength	export declare function utf8ByteLength(value: string): number
 validId	export declare function validId(value: string): boolean
 validateA2ATask	export declare function validateA2ATask(task: A2ATask, limits: ResolvedA2ALimits, policy?: A2APartPolicy): Promise<A2ATask>
 validateCredentialLimit	export declare function validateCredentialLimit(name: string, value: number, hardCap: number): number
 validateIdentifier	export declare function validateIdentifier(name: string): void
 validatePromptIdentifier	export declare function validatePromptIdentifier(value: string, label: string): string
+validateRateRow	export declare function validateRateRow(row: Record<string, unknown>): void
 validateScoreResult	export declare function validateScoreResult(result: ScoreResult): ScoreResult
 validateState	export declare function validateState(state: SchedulerState, options: RunWorkflowOptions): Promise<void>
 validateWorkflowLimit	export declare function validateWorkflowLimit(name: string, value: number, hardCap: number): number
@@ -1167,6 +1214,8 @@ verifyA2AAgentCard	export declare function verifyA2AAgentCard(card: A2AAgentCard
 verifyArtifactDeliveryLink	export declare function verifyArtifactDeliveryLink(link: string, secret: string, maxBytes?: number): ArtifactDeliveryToken
 verifyAuditBatch	export declare function verifyAuditBatch(input: VerifyAuditBatchInput): VerifyAuditBatchResult
 verifyMigrationIdempotency	export declare function verifyMigrationIdempotency(db: Database.Database): void
+window	export declare function window(value: unknown): number
+withTransaction	export declare function withTransaction<T>(pool: Pool, operation: (client: PoolClient) => Promise<T>): Promise<T>
 workflowLoopIterationId	export declare function workflowLoopIterationId(workflowId: string, runId: string, nodeId: string, iteration: number, tenantId?: string): string
 workflowNode	export declare function workflowNode(config: Omit<NestedWorkflowNodeDefinition, "kind">): NestedWorkflowNodeDefinition
 wrapOpenTelemetryApi	export declare function wrapOpenTelemetryApi(tracer: OpenTelemetryTracer, meter?: OpenTelemetryMeter, api?:

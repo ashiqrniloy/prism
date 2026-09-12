@@ -35,7 +35,7 @@ Do **not** use this package for collaborative real-time editing (OT/CRDT), macro
 | `createPatchHistory` | `(initialModel: DocumentModel) => PatchHistory` | Creates an interactive undo/redo history manager for host editing workflows. |
 | `renderPreviewBlocks` | `(model: DocumentModel, options?: PreviewBlocksOptions) => PreviewBlock[]` | Emits framework-neutral structured blocks (document outlines, bounded sheet grid chunks, slide summaries). |
 | `renderPreviewHtml` | `(model: DocumentModel, options?: PreviewHtmlOptions) => string` | Emits safe, bounded HTML fragments with all entities escaped and external URLs neutralized. |
-| `getDocumentModelSchema`| `(options: GetDocumentModelSchemaOptions) => Record<string, unknown>` | Retrieves full Draft-07 JSON Schema or a self-contained sliced sub-schema with resolved `$defs`. |
+| `documentModelSchema` | `(kind: DocumentKind, slice?: string \| readonly string[]) => JsonSchema` | Retrieves the Draft-07 JSON Schema for a document kind, or a self-contained sliced sub-schema with resolved `$defs` (`docModelSchema` / `sheetModelSchema` / `deckModelSchema` expose the unsliced schemas). |
 | `validateDocumentModel`| `(model: unknown) => asserts model is DocumentModel` | Validates arbitrary JSON objects against Draft-07 document schemas and structural invariants. |
 
 ### Capacity Limits and Defaults

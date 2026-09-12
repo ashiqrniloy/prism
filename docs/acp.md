@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-ag-ui/acp` (stable ACP **v1**, `@agentclientprotocol/sdk@1.3.0` root exports only) exposes two adapters:
+`@arnilo/prism-ag-ui/acp` (stable ACP **v1**, `@agentclientprotocol/sdk@1.4.0` root exports only) exposes two adapters:
 
 - `createPrismAcpAgent(options)` — serves ACP as an **agent**: an editor/AI client connects through the SDK transport and drives host-owned Prism sessions with `session/new`, `session/load`, `session/resume`, `session/prompt`, `session/set_mode`, `session/set_config_option`, `session/list`, `session/delete`, `session/close`, and `session/cancel`. The agent is a thin protocol adapter: every capability, decision, and byte cap is wired from host seams, and there is **no second policy engine** on the agent side.
 - `createAcpEventMapper(options)` — maps a Prism `AgentEvent` stream (or `CoWorkEvent`) to ACP `SessionUpdate`s for hosts that stream through their own transport.

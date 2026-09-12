@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-coding-tools",
-  "version": "0.5.6",
+  "version": "0.6.0",
   "description": "Unified coding agent tools, security sandboxing, document parsing, OpenAPI tools, Linux desktop integration, Dev inspector, and persona extensions for Prism.",
   "type": "module",
   "main": "./dist/agent/index.js",
@@ -66,11 +66,11 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@arnilo/prism-core": "^0.5.5",
+    "@arnilo/prism-core": "^0.6.0",
     "diff": "^9.0.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.5.6",
+    "@arnilo/prism": "^0.6.0",
     "@dietrichgebert/ponytail": "^4.9.0",
     "mammoth": "^1.8.0",
     "pdf-parse": "^2.4.5"
@@ -88,17 +88,18 @@
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
-    "@arnilo/prism-core": "file:../prism-core",
     "@arnilo/prism-ag-ui": "file:../ag-ui",
+    "@arnilo/prism-core": "file:../prism-core",
     "@arnilo/prism-mcp": "file:../mcp",
+    "@dietrichgebert/ponytail": "^4.9.0",
     "@types/diff": "^7.0.2",
-    "@types/node": "^26.1.1",
+    "@types/node": "^22.20.0",
     "mammoth": "^1.8.0",
     "pdf-parse": "^2.4.5",
     "typescript": "^7.0.2"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "license": "MIT",
   "repository": {

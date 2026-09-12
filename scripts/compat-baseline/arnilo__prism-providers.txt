@@ -44,6 +44,7 @@ OPENAI_TRANSCRIPTION_MAX_AUDIO_BYTES	export declare const OPENAI_TRANSCRIPTION_M
 OPENCODE_GO_DEFAULT_BASE_URL	export declare const OPENCODE_GO_DEFAULT_BASE_URL = "https://opencode.ai/zen/go/v1"
 OPENCODE_SESSION_ID_MAX_LENGTH	export declare const OPENCODE_SESSION_ID_MAX_LENGTH = 128
 OPENROUTER_SESSION_ID_MAX_LENGTH	export declare const OPENROUTER_SESSION_ID_MAX_LENGTH = 256
+RETRYABLE_STATUSES	export declare const RETRYABLE_STATUSES: ReadonlySet<number>
 SUPPORTED_AI_SDK_SPECIFICATION	export declare const SUPPORTED_AI_SDK_SPECIFICATION: "v4"
 SUPPORTED_AI_SDK_VERSION_MATRIX	export declare const SUPPORTED_AI_SDK_VERSION_MATRIX: readonly [
 XAI_CONV_ID_MAX_LENGTH	export declare const XAI_CONV_ID_MAX_LENGTH = 128
@@ -300,6 +301,7 @@ openRouterUsage	export declare function openRouterUsage(usage: OpenRouterUsage |
 opencodeAnthropicCacheEnabled	export declare function opencodeAnthropicCacheEnabled(request: ProviderRequest): boolean
 opencodeOwnedHeaders	export declare function opencodeOwnedHeaders(options: ProviderRequestOptions | undefined): Record<string, string>
 opencodeSessionId	export declare function opencodeSessionId(options: ProviderRequestOptions | undefined): string | undefined
+parseErrorBody	export declare function parseErrorBody(body: unknown):
 parseHyperUsageCost	export declare function parseHyperUsageCost(usage: unknown): HyperUsageCost | undefined
 parseNeuralWattComment	export declare function parseNeuralWattComment(text: string): NeuralWattTelemetryEvent | undefined
 parseNeuralWattCost	export declare function parseNeuralWattCost(payload: string): NeuralWattCostTelemetry | undefined
@@ -308,6 +310,8 @@ parseXaiTokenCredentials	export declare function parseXaiTokenCredentials(json: 
 promptCacheKey	export declare function promptCacheKey(options: ProviderRequestOptions | undefined): string | undefined
 promptCacheOptions	export declare function promptCacheOptions(options: ProviderRequestOptions | undefined, model: ModelConfig):
 promptCacheRetention	export declare function promptCacheRetention(options: ProviderRequestOptions | undefined, model: ModelConfig): "24h" | undefined
+providerHttpError	export declare function providerHttpError(providerName: string, decision: RetryDecisionFields, bodyText: string, secrets: readonly (string | undefined)[]): Error
+readRetryAfterMs	export declare function readRetryAfterMs(headers: RetryHeaders, bodyRetryAfter?: unknown): number | undefined
 resolveOpenAIReasoning	export declare function resolveOpenAIReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
 resolveOpenRouterReasoning	export declare function resolveOpenRouterReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
 routeForCommandCodeModel	export declare function routeForCommandCodeModel(modelId: string): CommandCodeRoute

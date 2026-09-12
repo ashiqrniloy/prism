@@ -37,7 +37,7 @@ import { createModelRegistry, type ModelConfig } from "@arnilo/prism";
 | `provider` / `model` | Required registry key. |
 | `displayName` | Human-readable label. |
 | `capabilities` | Input/output modes (`text`, `image`, `audio`, `file`, `document`) plus reasoning/tools/streaming booleans and optional `structuredOutput` (`true` or `"json_schema"`) for native JSON-schema requests. |
-| `limits` | Context and output-token limits. |
+| `limits` | Context and output-token limits (`ModelLimits`). |
 | `cost` | Input/output/cache read/cache write pricing. |
 | `cache` | Generic `ModelCacheCapabilities`. |
 | `compat` | Provider-owned inert JSON escape hatch. |

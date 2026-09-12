@@ -20,6 +20,7 @@ import { AgentLoopStateError } from "./contracts.js";
 import { createId } from "./ids.js";
 import type { AgentInput } from "./input.js";
 import { inputMessages, toToolResultMessage } from "./input.js";
+import { errorToErrorInfo } from "./redaction.js";
 import { artifactStructuredOutputRequest, withoutStructuredOutput } from "./structured-output.js";
 
 function throwIfAborted(signal: AbortSignal): void {
@@ -244,14 +245,14 @@ export function generateValidateReviseLoop(opts: {
 
         // Parse failure consumes revision budget like a validation failure; the
         // repairer receives `undefined` value plus a synthetic parse issue.
-        const parseFailure: ArtifactValidation | undefined =
-          !parsed.ok || parsed.value === undefined
-            ? { ok: false, errors: [{ path: "$", message: parsed.error ?? "artifact parse failed" }], metadata: { reason: "parse_error" } }
-            : undefined;
+        const candidate = parsed.ok && parsed.value !== undefined ? { ok: true as const, value: parsed.value } : undefined;
 
         const attempt = ++attempts;
         ctx.emit({ type: "artifact_validation_started", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt });
-        const result = parseFailure ?? (await opts.validator(parsed.value!, artifactCtx));
+        const result: ArtifactValidation = candidate
+          ? await opts.validator(candidate.value, artifactCtx)
+          : { ok: false, errors: [{ path: "$", message: parsed.error ?? "artifact parse failed" }], metadata: { reason: "parse_error" } };
+        const parseFailure: ArtifactValidation | undefined = candidate ? undefined : result;
         ctx.emit({ type: "artifact_validation_finished", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt, result });
         if (result.ok) {
           ctx.emit({ type: "artifact_finished", sessionId: ctx.sessionId, runId: ctx.runId, turn, attempt, result });
@@ -313,33 +314,73 @@ export async function dispatchToolCallsInOrder(calls: readonly ToolCallContent[]
   let nextIndex = 0;
   let stopped = false;
   let firstFailure: unknown;
-  const recordFailure = (error: unknown): void => {
+  let failureIndex = -1;
+  const recordFailure = (error: unknown, index: number): void => {
     if (stopped) return;
     stopped = true;
     firstFailure = error;
+    failureIndex = index;
   };
   const workers = Array.from({ length: concurrency }, async () => {
     for (;;) {
       if (stopped) return;
+      let index = -1;
       try {
         throwIfAborted(ctx.signal);
-        const index = nextIndex;
+        index = nextIndex;
         nextIndex += 1;
         if (index >= calls.length) return;
-        results[index] = await ctx.dispatchToolCall(calls[index]!);
+        results[index] = await ctx.dispatchToolCall(calls[index]);
       } catch (error) {
-        recordFailure(error);
+        recordFailure(error, index >= 0 && index < calls.length ? index : -1);
         return;
       }
     }
   });
   await Promise.allSettled(workers);
-  if (stopped) throw firstFailure;
-  for (const result of results) {
-    throwIfAborted(ctx.signal);
-    if (!result) continue;
-    await appendToolResultMessage(result, ctx);
+  // Persist before rethrowing: a stopped batch must not leave the branch with `tool_call`
+  // ids that never got a `tool_result` (providers reject that history on the next turn).
+  // ponytail: synthetic rows carry `errorToErrorInfo` output only — no cause chain; the
+  // store redacts entries again at `appendEntry`, and `ctx.history` mirrors the run error.
+  const claimed = Math.min(nextIndex, calls.length);
+  for (let index = 0; index < calls.length; index += 1) {
+    const result = results[index];
+    if (result) {
+      await appendToolResultMessage(result, ctx);
+      continue;
+    }
+    // Suspension/loop-state errors are not tool outcomes: their machinery appends the real
+    // result on resume, so a synthetic row here would duplicate it.
+    if (index === failureIndex && isRunControlError(firstFailure)) continue;
+    const call = calls[index];
+    if (call === undefined) continue;
+    await appendToolResultMessage(syntheticFailureResult(call, index < claimed ? firstFailure : undefined), ctx);
   }
+  if (stopped) throw firstFailure;
+}
+
+/** Run-level control errors rethrown by `dispatchToolCall` (mirrors `src/tools.ts`). */
+function isRunControlError(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return (
+    typeof code === "string" &&
+    (code === "ERR_PRISM_AGENT_RUN_SUSPENDED" || code === "ERR_PRISM_DELEGATION_SUSPENDED" || code.startsWith("ERR_PRISM_LOOP_"))
+  );
+}
+
+function syntheticFailureResult(call: ToolCallContent, failure: unknown): ToolResult {
+  if (failure === undefined) {
+    return {
+      toolCallId: call.id,
+      name: call.name,
+      error: {
+        code: "tool_call_not_dispatched",
+        message: "Tool call was not dispatched: the batch stopped after an earlier call failed or the run was aborted.",
+      },
+    };
+  }
+  const info = errorToErrorInfo(failure);
+  return { toolCallId: call.id, name: call.name, error: { name: info.name, message: info.message, code: info.code } };
 }
 
 async function appendToolResultMessage(result: ToolResult, ctx: LoopContext): Promise<void> {

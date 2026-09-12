@@ -1,5 +1,7 @@
 # SQLite persistence
 
+> **Optional peer install:** `better-sqlite3` — see [Optional peer dependencies](peer-dependencies.md).
+
 ## What it does
 
 The optional `@arnilo/prism-core/sessions/sqlite` package ships a production-oriented SQLite adapter that implements:

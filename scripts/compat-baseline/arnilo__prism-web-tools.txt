@@ -17,6 +17,7 @@ CdpNetworkEntry	export type { BrowserActionName, BrowserActRequest, BrowserActRe
 DEFAULT_ACTION_TIMEOUT_MS	export declare const DEFAULT_ACTION_TIMEOUT_MS = 10000
 DEFAULT_BROWSER_LIMITS	export declare const DEFAULT_BROWSER_LIMITS: ResolvedBrowserLimits
 DEFAULT_CLOSE_GRACE_MS	export declare const DEFAULT_CLOSE_GRACE_MS = 5000
+DEFAULT_IDLE_RUN_TTL_MS	export declare const DEFAULT_IDLE_RUN_TTL_MS = 0
 DEFAULT_MAX_ACTIONS	export declare const DEFAULT_MAX_ACTIONS = 100
 DEFAULT_MAX_ACTION_INPUT_BYTES	export declare const DEFAULT_MAX_ACTION_INPUT_BYTES: number
 DEFAULT_MAX_BLOCKED_URL_PATTERNS	export declare const DEFAULT_MAX_BLOCKED_URL_PATTERNS = 32
@@ -68,6 +69,7 @@ FirecrawlTargetPolicy	export type { FirecrawlExtractOptions, FirecrawlFetchOptio
 HARD_ACTION_TIMEOUT_MS	export declare const HARD_ACTION_TIMEOUT_MS = 60000
 HARD_BROWSER_LIMITS	export declare const HARD_BROWSER_LIMITS: ResolvedBrowserLimits
 HARD_CLOSE_GRACE_MS	export declare const HARD_CLOSE_GRACE_MS = 30000
+HARD_IDLE_RUN_TTL_MS	export declare const HARD_IDLE_RUN_TTL_MS: number
 HARD_MAX_ACTIONS	export declare const HARD_MAX_ACTIONS = 256
 HARD_MAX_ACTION_INPUT_BYTES	export declare const HARD_MAX_ACTION_INPUT_BYTES: number
 HARD_MAX_BLOCKED_URL_PATTERNS	export declare const HARD_MAX_BLOCKED_URL_PATTERNS = 128
@@ -247,7 +249,7 @@ type BrowserCheckpointLimits	export { type BrowserCheckpoint, type BrowserCheckp
 type BrowserDownloadOptions	export { type BrowserDownloadOptions, cleanupDownloads, createDownloadBudget, type DownloadBudget, type DownloadMetadata, quarantineDownload, releaseDownload, sanitizeDownloadName, } from "./downloads.js"
 type BrowserEffectClass	export { type BrowserEffectClass, type BrowserOperationClass, type BrowserRisk, buildBrowserExecutionAction, classifyBrowserOperation, classifyBrowserToolEffect, isSideEffectAction, } from "./policy.js"
 type BrowserErrorCode	export { BrowserError, type BrowserErrorCode } from "./errors.js"
-type BrowserLimitOptions	export { type BrowserLimitOptions, DEFAULT_ACTION_TIMEOUT_MS, DEFAULT_BROWSER_LIMITS, DEFAULT_CLOSE_GRACE_MS, DEFAULT_MAX_ACTION_INPUT_BYTES, DEFAULT_MAX_ACTIONS, DEFAULT_MAX_BLOCKED_URL_PATTERNS, DEFAULT_MAX_CONSOLE_ENTRIES, DEFAULT_MAX_DIALOGS, DEFAULT_MAX_DOWNLOAD_AGGREGATE_BYTES, DEFAULT_MAX_DOWNLOAD_BYTES, DEFAULT_MAX_DOWNLOADS, DEFAULT_MAX_EVALUATE_RESULT_BYTES, DEFAULT_MAX_LISTENERS, DEFAULT_MAX_NETWORK_REQUESTS, DEFAULT_MAX_PAGES, DEFAULT_MAX_POPUPS, DEFAULT_MAX_QUEUED_ACTIONS, DEFAULT_M
+type BrowserLimitOptions	export { type BrowserLimitOptions, DEFAULT_ACTION_TIMEOUT_MS, DEFAULT_BROWSER_LIMITS, DEFAULT_CLOSE_GRACE_MS, DEFAULT_IDLE_RUN_TTL_MS, DEFAULT_MAX_ACTION_INPUT_BYTES, DEFAULT_MAX_ACTIONS, DEFAULT_MAX_BLOCKED_URL_PATTERNS, DEFAULT_MAX_CONSOLE_ENTRIES, DEFAULT_MAX_DIALOGS, DEFAULT_MAX_DOWNLOAD_AGGREGATE_BYTES, DEFAULT_MAX_DOWNLOAD_BYTES, DEFAULT_MAX_DOWNLOADS, DEFAULT_MAX_EVALUATE_RESULT_BYTES, DEFAULT_MAX_LISTENERS, DEFAULT_MAX_NETWORK_REQUESTS, DEFAULT_MAX_PAGES, DEFAULT_MAX_POPUPS, DEFAULT_MAX_
 type BrowserManager	export { type BrowserManager, type CreateBrowserManagerOptions, createBrowserManager } from "./manager.js"
 type BrowserNetworkPolicy	export { assertBrowserUrlAllowed, type BrowserNetworkPolicy, type BrowserUrlDecision, classifyBrowserUrl, classifyHost, createNetworkBudget, installNetworkRouting, type NetworkBudget, } from "./network.js"
 type BrowserOperationClass	export { type BrowserEffectClass, type BrowserOperationClass, type BrowserRisk, buildBrowserExecutionAction, classifyBrowserOperation, classifyBrowserToolEffect, isSideEffectAction, } from "./policy.js"
@@ -275,7 +277,7 @@ type ObscuraWebLimits	export { DEFAULT_OBSCURA_PROCESS_LIMITS, DEFAULT_OBSCURA_W
 type ObscuraWebTools	export { createObscuraWebTools, type ObscuraWebTools, type ObscuraWebToolsOptions } from "./web.js"
 type ObscuraWebToolsOptions	export { createObscuraWebTools, type ObscuraWebTools, type ObscuraWebToolsOptions } from "./web.js"
 type ObservationRing	export { createObservationRing, installCdpObservation, type ObservationRing } from "./observe.js"
-type ResolvedBrowserLimits	export { type BrowserLimitOptions, DEFAULT_ACTION_TIMEOUT_MS, DEFAULT_BROWSER_LIMITS, DEFAULT_CLOSE_GRACE_MS, DEFAULT_MAX_ACTION_INPUT_BYTES, DEFAULT_MAX_ACTIONS, DEFAULT_MAX_BLOCKED_URL_PATTERNS, DEFAULT_MAX_CONSOLE_ENTRIES, DEFAULT_MAX_DIALOGS, DEFAULT_MAX_DOWNLOAD_AGGREGATE_BYTES, DEFAULT_MAX_DOWNLOAD_BYTES, DEFAULT_MAX_DOWNLOADS, DEFAULT_MAX_EVALUATE_RESULT_BYTES, DEFAULT_MAX_LISTENERS, DEFAULT_MAX_NETWORK_REQUESTS, DEFAULT_MAX_PAGES, DEFAULT_MAX_POPUPS, DEFAULT_MAX_QUEUED_ACTIONS, DEFAULT_M
+type ResolvedBrowserLimits	export { type BrowserLimitOptions, DEFAULT_ACTION_TIMEOUT_MS, DEFAULT_BROWSER_LIMITS, DEFAULT_CLOSE_GRACE_MS, DEFAULT_IDLE_RUN_TTL_MS, DEFAULT_MAX_ACTION_INPUT_BYTES, DEFAULT_MAX_ACTIONS, DEFAULT_MAX_BLOCKED_URL_PATTERNS, DEFAULT_MAX_CONSOLE_ENTRIES, DEFAULT_MAX_DIALOGS, DEFAULT_MAX_DOWNLOAD_AGGREGATE_BYTES, DEFAULT_MAX_DOWNLOAD_BYTES, DEFAULT_MAX_DOWNLOADS, DEFAULT_MAX_EVALUATE_RESULT_BYTES, DEFAULT_MAX_LISTENERS, DEFAULT_MAX_NETWORK_REQUESTS, DEFAULT_MAX_PAGES, DEFAULT_MAX_POPUPS, DEFAULT_MAX_
 type ScreenshotBudget	export { type CaptureScreenshotOptions, captureBoundedScreenshot, createScreenshotBudget, type ScreenshotBudget, type ScreenshotResult, } from "./screenshot.js"
 type ScreenshotResult	export { type CaptureScreenshotOptions, captureBoundedScreenshot, createScreenshotBudget, type ScreenshotBudget, type ScreenshotResult, } from "./screenshot.js"
 type SharedSandboxBrowserAlignment	export { createSharedSandboxBrowserOptions, type SharedSandboxBrowserAlignment, type SharedSandboxBrowserOptions, } from "./shared-sandbox.js"
@@ -288,3 +290,4 @@ validateObscuraCommand	export declare function validateObscuraCommand(options: O
 validateObscuraEndpoint	export declare function validateObscuraEndpoint(raw: string, allowRemote: boolean): URL
 validateObscuraWebUrl	export declare function validateObscuraWebUrl(input: string, allowedHostnames?: readonly string[]): string
 wait	export declare function wait(ctx: ActionContext, session: RunSession, request: BrowserActRequest, signal: AbortSignal | undefined): Promise<BrowserActResult>
+waitFor	export declare function waitFor<T>(read: () => T, ok: (value: T) => boolean, label: string, options?: WaitForOptions): Promise<T>

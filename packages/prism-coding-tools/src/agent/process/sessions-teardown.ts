@@ -3,7 +3,16 @@
  */
 import { killProcessTree } from "../shell.js";
 import { acquireRecordLease, loadProcessRecoveryRecords, releaseRecordLease } from "./recovery.js";
-import { assertNotDisposed, emit, isTerminalState, nowIso, type SessionRecord, type SessionsHost, settleWaiters } from "./sessions-host.js";
+import {
+  assertNotDisposed,
+  durableSeams,
+  emit,
+  isTerminalState,
+  nowIso,
+  type SessionRecord,
+  type SessionsHost,
+  settleWaiters,
+} from "./sessions-host.js";
 import { persistRecoveryUnknown, persistTransition } from "./sessions-monitor.js";
 import { ProcessSessionError, type ProcessSessionState } from "./types.js";
 
@@ -153,9 +162,9 @@ export async function cancelOwned(host: SessionsHost, owner: string, cancelOptio
           } catch {
             // continue
           }
-        } else {
+        } else if (cancelBackend) {
           try {
-            await cancelBackend!.release();
+            await cancelBackend.release();
           } catch {
             // continue
           }
@@ -172,9 +181,9 @@ export async function cancelOwned(host: SessionsHost, owner: string, cancelOptio
           } catch {
             // continue
           }
-        } else {
+        } else if (cancelBackend) {
           try {
-            await cancelBackend!.kill();
+            await cancelBackend.kill();
           } catch {
             // continue
           }
@@ -189,8 +198,9 @@ export async function cancelOwned(host: SessionsHost, owner: string, cancelOptio
   // never a fabricated exit. Lease + CAS guard every mutation so two replicas
   // cannot cancel the same record into different outcomes.
   if (host.durable) {
+    const seams = durableSeams(host);
     const { records } = await loadProcessRecoveryRecords({
-      checkpoints: host.checkpoints!,
+      checkpoints: seams.checkpoints,
       limits: host.recoveryLimits,
       ownership: host.ownership,
     });
@@ -199,9 +209,9 @@ export async function cancelOwned(host: SessionsHost, owner: string, cancelOptio
       if (isTerminalState(record.state)) continue;
       if (host.sessions.has(record.id)) continue; // handled by the live pass above
       const lease = await acquireRecordLease({
-        leases: host.leases!,
+        leases: seams.leases,
         id: record.id,
-        ownerId: host.ownerId!,
+        ownerId: seams.ownerId,
         ttlMs: host.recoveryLimits.leaseTtlMs,
         ownership: host.ownership,
       });
@@ -210,9 +220,9 @@ export async function cancelOwned(host: SessionsHost, owner: string, cancelOptio
         await persistRecoveryUnknown(host, record, version);
       } finally {
         await releaseRecordLease({
-          leases: host.leases!,
+          leases: seams.leases,
           id: record.id,
-          ownerId: host.ownerId!,
+          ownerId: seams.ownerId,
           token: lease.token,
           ownership: host.ownership,
         });
@@ -255,10 +265,12 @@ export async function disposeSessions(host: SessionsHost): Promise<void> {
       // best effort
     }
     if (record.recoveryLeaseToken) {
+      // A lease token only exists on durable hosts (createSessionsHost validates the seams).
+      const seams = durableSeams(host);
       void releaseRecordLease({
-        leases: host.leases!,
+        leases: seams.leases,
         id: record.id,
-        ownerId: host.ownerId!,
+        ownerId: seams.ownerId,
         token: record.recoveryLeaseToken,
         ownership: host.ownership,
       });

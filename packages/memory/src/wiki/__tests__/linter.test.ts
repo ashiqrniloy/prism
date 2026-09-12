@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { WikiLinter } from "../engine/linter.js";
 import { scaffoldWiki } from "../engine/scaffolder.js";
 import { hashContent, updateManifestWithEntities } from "../manifest.js";
 
-const TEST_DIR = join(process.cwd(), "dist/__tests__/scratch-linter-test");
+const TEST_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-linter-"));
 
 describe("prism-wiki anti-drift linter", () => {
   before(async () => {

@@ -1,20 +1,20 @@
 {
-  "generatedAt": "2026-09-08T16:57:53.429Z",
+  "generatedAt": "2026-09-12T18:32:16.077Z",
   "root": {
     "name": "@arnilo/prism",
-    "version": "0.5.6"
+    "version": "0.6.0"
   },
   "versions": {
-    "@arnilo/prism": "0.5.6",
-    "@arnilo/prism-mcp": "0.5.6",
-    "@arnilo/prism-providers": "0.5.6",
-    "@arnilo/prism-memory": "0.5.6",
-    "@arnilo/prism-core": "0.5.6",
-    "@arnilo/prism-coding-tools": "0.5.6",
-    "@arnilo/prism-office": "0.5.6",
-    "@arnilo/prism-ag-ui": "0.5.6",
-    "@arnilo/prism-web-tools": "0.5.6",
-    "@arnilo/prism-acp-agent": "0.5.6"
+    "@arnilo/prism": "0.6.0",
+    "@arnilo/prism-mcp": "0.6.0",
+    "@arnilo/prism-providers": "0.6.0",
+    "@arnilo/prism-memory": "0.6.0",
+    "@arnilo/prism-core": "0.6.0",
+    "@arnilo/prism-coding-tools": "0.6.0",
+    "@arnilo/prism-office": "0.6.0",
+    "@arnilo/prism-ag-ui": "0.6.0",
+    "@arnilo/prism-web-tools": "0.6.0",
+    "@arnilo/prism-acp-agent": "0.6.0"
   },
   "counts": {
     "publishable": 10,
@@ -91,7 +91,7 @@
   "profiles": {},
   "peerPolicy": {
     "decision": "B",
-    "spec": "^0.5.6",
+    "spec": "^0.6.0",
     "atomicUpgrade": false
   }
 }

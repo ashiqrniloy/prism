@@ -185,7 +185,9 @@ export function createDeleteTool(cwd: string, options?: DeleteToolOptions): Tool
               if (context.signal?.aborted) {
                 return errorResult(toolCallId, `Operation aborted after deleting ${count} entries`);
               }
-              const { dir } = stack.pop()!;
+              const frame = stack.pop();
+              if (frame === undefined) break;
+              const { dir } = frame;
               const children = await ops.readdir(dir, { signal: context.signal });
               for (const child of children) {
                 count++;
@@ -211,8 +213,8 @@ export function createDeleteTool(cwd: string, options?: DeleteToolOptions): Tool
               if (context.signal?.aborted) {
                 return errorResult(toolCallId, `Operation aborted after deleting ${count} entries`);
               }
-              await ops.rmdir(dirs[i]!, { signal: context.signal });
-              options?.onEvent?.({ type: "file_changed", path: dirs[i]!, op: "delete", toolCallId });
+              await ops.rmdir(dirs[i], { signal: context.signal });
+              options?.onEvent?.({ type: "file_changed", path: dirs[i], op: "delete", toolCallId });
             }
             return {
               toolCallId,

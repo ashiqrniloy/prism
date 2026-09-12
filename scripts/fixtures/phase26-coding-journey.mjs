@@ -59,8 +59,8 @@ import {
   createWriteTool,
   diagnosticDelta,
   normalizeDiagnostics,
-} from "@arnilo/prism-coding-agent";
-import { createCodingApprovalPolicy, createDockerSandbox } from "@arnilo/prism-coding-security";
+} from "@arnilo/prism-coding-tools/agent";
+import { createCodingApprovalPolicy, createDockerSandbox } from "@arnilo/prism-coding-tools/security";
 import { createArtifactService } from "@arnilo/prism-core/runtime/server";
 import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
 import { createBrowserManager, createBrowserTools } from "@arnilo/prism-web-tools/browser";

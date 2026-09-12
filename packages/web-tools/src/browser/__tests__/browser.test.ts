@@ -1,16 +1,20 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { setTimeout as sleep } from "node:timers/promises";
 import type { ExecutionPolicy, ToolExecutionContext } from "@arnilo/prism";
 import {
   BrowserError,
   createBrowserManager,
   createBrowserTools,
+  DEFAULT_IDLE_RUN_TTL_MS,
+  HARD_IDLE_RUN_TTL_MS,
   normalizeTarget,
   packageName,
   parseSnapshotRefs,
   resolveBrowserLimits,
 } from "../index.js";
 import { FakeBrowser, FakeDialog } from "./fake-playwright.js";
+import { waitFor } from "./wait-for.js";
 
 /** Unit tests disable contained-proxy requirement; production defaults remain fail-closed. */
 const testNetwork = { requireContainedProxy: false as const };
@@ -95,6 +99,62 @@ describe("@arnilo/prism-web-tools/browser", () => {
     assert.equal(browser.contexts[0]!.closed, true);
     await manager.close();
     assert.equal(browser.contexts[1]!.closed, true);
+  });
+
+  it("idleRunTtlMs reaps untouched runs, disposes the context, and fails later calls closed", async () => {
+    const browser = new FakeBrowser();
+    const manager = createBrowserManager({
+      browser,
+      limits: { idleRunTtlMs: 200, closeGraceMs: 1 },
+      networkPolicy: testNetwork,
+    });
+    try {
+      await manager.open("run-idle");
+      const context = browser.contexts[0]!;
+      const startedAt = Date.now();
+      // Activity resets the idle clock: reads spaced under the TTL keep the run alive past it.
+      for (let index = 0; index < 4; index += 1) {
+        await sleep(60);
+        await manager.snapshot("run-idle");
+        assert.equal(manager.hasRun("run-idle"), true, "an active run must never be reaped");
+      }
+      // Guards against a vacuous pass: the activity loop must outlast the TTL itself.
+      assert.ok(Date.now() - startedAt > 200, "activity loop must exceed the TTL");
+      assert.equal(context.closed, false);
+      await waitFor(
+        () => manager.hasRun("run-idle"),
+        (open) => !open,
+        "idle run to be reaped",
+      );
+      assert.equal(context.closed, true, "the reaper disposes the run context");
+      await assert.rejects(
+        () => manager.snapshot("run-idle"),
+        (error: unknown) => error instanceof BrowserError && error.code === "ERR_PRISM_BROWSER_STATE",
+      );
+      // Manager-scoped, not run-scoped: the next run starts clean and is not reaped on sight.
+      await manager.open("run-2");
+      assert.equal(manager.hasRun("run-2"), true);
+    } finally {
+      await manager.close();
+    }
+  });
+
+  it("idle reaper is off by default and idleRunTtlMs validates its bounds", async () => {
+    assert.equal(resolveBrowserLimits().idleRunTtlMs, DEFAULT_IDLE_RUN_TTL_MS);
+    assert.equal(resolveBrowserLimits({ idleRunTtlMs: 0 }).idleRunTtlMs, 0);
+    for (const invalid of [-1, 1.5, Number.NaN, HARD_IDLE_RUN_TTL_MS + 1]) {
+      assert.throws(() => resolveBrowserLimits({ idleRunTtlMs: invalid }), /idleRunTtlMs/);
+    }
+    const browser = new FakeBrowser();
+    const manager = createBrowserManager({ browser, limits: { closeGraceMs: 1 }, networkPolicy: testNetwork });
+    try {
+      await manager.open("run-off");
+      await sleep(500);
+      assert.equal(manager.hasRun("run-off"), true, "no reaper when idleRunTtlMs is 0");
+      assert.equal(browser.contexts[0]!.closed, false);
+    } finally {
+      await manager.close();
+    }
   });
 
   it("snapshot returns AI refs and stale refs fail after mutation", async () => {

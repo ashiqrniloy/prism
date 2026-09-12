@@ -1,5 +1,7 @@
 # Ponytail behavior integration
 
+> **Optional peer install:** `@dietrichgebert/ponytail` — see [Optional peer dependencies](peer-dependencies.md).
+
 ## What it does
 
 `@arnilo/prism-coding-tools/ponytail` is an optional package that wires [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) into Prism contribution contracts.

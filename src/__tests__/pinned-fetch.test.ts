@@ -171,6 +171,46 @@ describe("pinned fetch (DNS pinning)", () => {
     }
   });
 
+  it("admits allow-listed CIDR answers without letting a hostname allow-list in", async () => {
+    const url = new URL("https://media.example.test/file");
+    const answers = async () => [{ address: "10.0.0.5", family: 4 as const }];
+    assert.deepEqual(await resolvePinnedAddress(url, answers, undefined, false, { allowedCidrs: ["10.0.0.0/8"] }), {
+      address: "10.0.0.5",
+      family: 4,
+    });
+    // Denied without the range, for an uncovered address, and for link-local/metadata.
+    await assert.rejects(() => resolvePinnedAddress(url, answers, undefined, false, undefined), ssrfDenied);
+    for (const [answer, range] of [
+      ["10.1.2.3", "10.0.0.0/16"],
+      ["10.0.0.5", "192.168.0.0/16"],
+      ["169.254.169.254", "10.0.0.0/8"],
+    ] as const) {
+      await assert.rejects(
+        () =>
+          resolvePinnedAddress(url, async () => [{ address: answer, family: 4 as const }], undefined, false, {
+            allowedCidrs: [range],
+          }),
+        ssrfDenied,
+      );
+    }
+    // A hostname allow-list must not whitelist a private resolved address (unchanged rule).
+    await assert.rejects(
+      () => resolvePinnedAddress(url, answers, undefined, false, { allowedHostnames: ["media.example.test"] }),
+      ssrfDenied,
+    );
+    // IPv6 ranges work the same way, and a malformed entry fails closed.
+    assert.deepEqual(
+      await resolvePinnedAddress(url, async () => [{ address: "fd00::1", family: 6 as const }], undefined, false, {
+        allowedCidrs: ["fc00::/7"],
+      }),
+      {
+        address: "fd00::1",
+        family: 6,
+      },
+    );
+    await assert.rejects(() => resolvePinnedAddress(url, answers, undefined, false, { allowedCidrs: ["10.0.0.0/8", "bad"] }), ssrfDenied);
+  });
+
   it("aborts in-flight pinned requests", async () => {
     const { origin, server } = await listen((_request, response) => {
       setTimeout(() => response.end("late"), 200);

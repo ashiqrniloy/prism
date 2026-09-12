@@ -24,8 +24,10 @@ import { parseCsv } from "@arnilo/prism-office/sheets";
 
 - The `@office-open/{docx,xlsx,pptx,xml}` internals are exact-pinned regular dependencies
   of this manifest; bytes/JSON in and out, no filesystem, no network, no `process.env`.
-- `/diagrams` requires the optional `playwright-core` peer (and a host-provided browser)
-  only when you use the live embed bridge; the XML/canonicalization API is peer-free.
+- `/diagrams` is peer-free at runtime: `createDrawioEmbed` drives a host-supplied
+  iframe (`DrawioEmbedFrame`), and the XML/canonicalization API needs nothing else.
+  `playwright-core` is only a devDependency for the gated live draw.io conformance
+  test (`PRISM_LIVE_DRAWIO_URL`), never a host install requirement.
 - The document parser peers (`mammoth`, `pdf-parse`) belong to
   `@arnilo/prism-coding-tools/document-reader`, not to this package.
 - Caps are enforced before any bytes are produced: oversize models fail closed with

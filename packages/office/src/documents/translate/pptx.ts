@@ -1,6 +1,6 @@
 import {
   generatePresentationSync,
-  parsePresentation as ooParsePresentation,
+  parsePresentationSync as ooParsePresentation,
   type PresentationOptions,
   type SlideChild,
   type SlideOptions,
