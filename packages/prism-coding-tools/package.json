@@ -92,8 +92,8 @@
     "@arnilo/prism-core": "file:../prism-core",
     "@arnilo/prism-mcp": "file:../mcp",
     "@dietrichgebert/ponytail": "^4.9.0",
-    "@types/diff": "^7.0.2",
-    "@types/node": "^22.20.0",
+    "@types/diff": "^8.0.0",
+    "@types/node": "^26.5.1",
     "mammoth": "^1.8.0",
     "pdf-parse": "^2.4.5",
     "typescript": "^7.0.2"
