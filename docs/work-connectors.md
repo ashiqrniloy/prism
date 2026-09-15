@@ -6,7 +6,7 @@ Least-privilege Microsoft 365 and Google Workspace connectors live in `@arnilo/p
 
 1. **Host-pinned binary** — Prism never downloads or shells an untrusted CLI path.
 2. **Hard-coded argv templates** — models choose typed tool args; they never supply command strings.
-3. **Draft-then-approve** — mutations create a draft; side effects run only after host approval.
+3. **Draft-then-approve & durable resumption** — mutations create a draft with tracked revisions and payload digests; side effects run only after host approval binds to that exact revision; durable checkpoint persistence survives process restart.
 4. **Idempotent retries** — `IdempotencyStore` keyed by identity + operation key.
 5. **Isolated config** — per-identity `configDir` (CLI `HOME`); no credential argv.
 6. **Shared result shapes** — mail/calendar/file/task list/get tools normalize onto `WorkMailMessage` / `WorkCalendarEvent` / `WorkFileItem` / `WorkTaskItem` without hiding provider-specific ops.
@@ -22,6 +22,8 @@ Uses [@pnp/cli-microsoft365](https://pnp.github.io/cli-microsoft365/) commands s
 See [Work tools](work-tools.md). Adapter: `createGoogleWorkspaceCliAdapter` / subpath `@arnilo/prism-core/integrations/work/google-workspace`.
 
 Uses [`@googleworkspace/cli` (`gws`)](https://github.com/googleworkspace/cli): `gmail users messages list|get`, `gmail +send`, `calendar events list|insert`, `drive files list|create`, `drive permissions create`, `tasks tasks *`. Docs/Sheets/Slides create remain capability-gated. Discovery `schema` and `auth`/`login`/`setup` are forbidden from Prism argv.
+
+Drive **knowledge synchronization** (RAG import of file text + host-mapped ACL via `changes.list`) is not this CLI adapter. Use `createGoogleDriveConnector` / `syncKnowledge` from `@arnilo/prism-memory/rag` — see [Knowledge synchronization](knowledge-sync.md).
 
 ## Scoped OAuth establishment (0.0.14)
 

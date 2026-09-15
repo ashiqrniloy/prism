@@ -132,7 +132,7 @@ test("real repo: manifest covers every exports surface in baseline mode", () => 
   assert.equal(coverage.mode, "baseline", "flip to full after plans/064 Tasks 4-9 land");
   const { errors, summary } = computeCoverage(REPO_ROOT, coverage, { mode: coverage.mode });
   assert.deepEqual(errors, [], errors.join("\n"));
-  assert.equal(summary.total, 98);
+  assert.equal(summary.total, 101);
   assert.equal(summary.pending, 0, "Tasks 4-9 will re-introduce pending entries as planned suites register");
 });
 

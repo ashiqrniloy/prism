@@ -73,6 +73,8 @@ button:disabled { opacity: .5; cursor: default; }
 .decision button { margin: 0; }
 .decision button.error { color: crimson; }
 .side h2 { margin-top: 0; }
+.compare { margin: .5rem 0; font-size: .85rem; color: gray; }
+.compare h2 { margin: 0 0 .25rem; }
 .runs { list-style: none; margin: 0 0 .5rem; padding: 0; max-height: 40vh; overflow-y: auto; }
 .runs li { padding: .2rem .4rem; border-radius: 4px; cursor: pointer; }
 .runs li.selected { background: color-mix(in srgb, highlight 30%, transparent); }

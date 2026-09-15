@@ -48,6 +48,41 @@ CREATE TABLE IF NOT EXISTS ${q}.${quoteIdentifier(`${table}_rag_scope_generation
   current_generation INTEGER NOT NULL,
   PRIMARY KEY (tenant_id, resource_id, thread_id)
 );
+CREATE TABLE IF NOT EXISTS ${q}.${quoteIdentifier(`${table}_rag_source_acl`)} (
+  tenant_id TEXT NOT NULL,
+  resource_id TEXT NOT NULL,
+  thread_id TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  principal_id TEXT NOT NULL DEFAULT '',
+  group_id TEXT NOT NULL DEFAULT '',
+  access_version INTEGER NOT NULL,
+  PRIMARY KEY (tenant_id, resource_id, thread_id, source_id, principal_id, group_id)
+);
+CREATE INDEX IF NOT EXISTS ${table}_rag_source_acl_principal_idx
+  ON ${q}.${quoteIdentifier(`${table}_rag_source_acl`)} (tenant_id, resource_id, thread_id, principal_id);
+CREATE INDEX IF NOT EXISTS ${table}_rag_source_acl_group_idx
+  ON ${q}.${quoteIdentifier(`${table}_rag_source_acl`)} (tenant_id, resource_id, thread_id, group_id);
+CREATE TABLE IF NOT EXISTS ${q}.${quoteIdentifier(`${table}_invalidation`)} (
+  tenant_id TEXT NOT NULL,
+  resource_id TEXT NOT NULL,
+  thread_id TEXT NOT NULL,
+  id TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  at TIMESTAMPTZ NOT NULL,
+  hold BOOLEAN NOT NULL DEFAULT FALSE,
+  supersedes_id TEXT,
+  PRIMARY KEY (tenant_id, resource_id, thread_id, id)
+);
+CREATE INDEX IF NOT EXISTS ${table}_invalidation_reason_idx
+  ON ${q}.${quoteIdentifier(`${table}_invalidation`)} (tenant_id, resource_id, thread_id, reason);
+CREATE TABLE IF NOT EXISTS ${q}.${quoteIdentifier(`${table}_share_grant`)} (
+  tenant_id TEXT NOT NULL,
+  parent_thread_id TEXT NOT NULL,
+  child_thread_id TEXT NOT NULL,
+  source_ids JSONB NOT NULL,
+  expires_at TIMESTAMPTZ,
+  PRIMARY KEY (tenant_id, parent_thread_id, child_thread_id)
+);
 `;
 }
 
@@ -74,5 +109,6 @@ ${
 `
 }ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS text_tsv TSVECTOR GENERATED ALWAYS AS (to_tsvector('english', text)) STORED;
 CREATE INDEX IF NOT EXISTS ${table}_text_tsv_idx ON ${t} USING gin (text_tsv);
+CREATE INDEX IF NOT EXISTS ${table}_lineage_source_idx ON ${t} USING gin ((metadata -> '_lineage' -> 'sourceIds'));
 `;
 }

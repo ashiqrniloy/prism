@@ -513,7 +513,7 @@ OAuth client behavior is 2026-07-28 conformant: `finishAuth` now takes the full 
 
 ### Monolithic SDK 1.x → modular SDK v2 migration table
 
-| v1 (`@modelcontextprotocol/sdk` 1.30.0) | v2 / current Synapta API | Notes |
+| v1 (`@modelcontextprotocol/sdk` 1.30.0) | v2 / current Prism MCP API | Notes |
 | --- | --- | --- |
 | `new Client(...)` from `sdk/client/index.js` | same name from `@modelcontextprotocol/client` | `ClientOptions` gains `versionNegotiation`, `listChanged`, `inputRequired`, `cachePartition`, `listMaxPages` |
 | `InMemoryTransport` / `StdioClientTransport` / `StreamableHTTPClientTransport` | `InMemoryTransport`/`StreamableHTTPClientTransport` from `@modelcontextprotocol/client`; `StdioClientTransport` from `@modelcontextprotocol/client/stdio` | subpath moves only |
@@ -529,7 +529,7 @@ OAuth client behavior is 2026-07-28 conformant: `finishAuth` now takes the full 
 
 - **Now (default):** `createPrismMcpWebHandler(factory)` without `sessionIdGenerator` is stateless dual-era — modern 2026-07-28 serving plus the SDK stateless fallback for 2025 clients. No `Mcp-Session-Id`, no sticky routing, `Last-Event-ID` replay not enabled.
 - **Now (opt-in):** configuring `sessionIdGenerator` keeps identity-bound legacy sessions (POST/GET/DELETE/SSE beside the strict modern handler) for hosts that still need them; the pairing requires exact `allowedOrigins` and host `resolveIdentity`.
-- **Planned removal:** the legacy session leg is deprecated once Synapta's clients and documented hosts are modern-era; removal lands as a breaking 0.x cut with a migration note here (the `sessionIdGenerator` option disappears and legacy traffic gets the SDK stateless fallback, which 2025 clients already work against). No date is committed in this release.
+- **Planned removal:** the legacy session leg is deprecated once the package's clients and documented hosts are modern-era; removal lands as a breaking 0.x cut with a migration note here (the `sessionIdGenerator` option disappears and legacy traffic gets the SDK stateless fallback, which 2025 clients already work against). No date is committed in this release.
 
 ## 0.0.7 → 0.0.8 OpenTelemetry adapter
 

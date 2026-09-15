@@ -2,6 +2,8 @@ import type {
   AgentSession,
   AIProvider,
   CompactionStrategy,
+  CompactionTrigger,
+  CompactionTriggerContext,
   ContextProvider,
   CredentialRequest,
   CredentialValueSource,
@@ -10,7 +12,9 @@ import type {
   SessionEntry,
   SettingsProvider,
 } from "@arnilo/prism";
-import { resumeAgentRun, resumeAgentRunStream } from "@arnilo/prism";
+import { assertCompactionTrigger, resolveInputCap, resolveShouldCompact, resumeAgentRun, resumeAgentRunStream } from "@arnilo/prism";
+import type { ObservationalMemoryAppendOptions } from "./append-custom.js";
+export type { ObservationalMemoryAppendOptions } from "./append-custom.js";
 import { buildObservationalMemoryContextBlocks } from "./recent-messages.js";
 import type { ObservationalMemoryFlushOptions, ObservationalMemoryRuntime, ObservationalMemoryWorkerRuntimeConfig } from "./runtime.js";
 import { createObservationalMemoryRuntime } from "./runtime.js";
@@ -25,10 +29,6 @@ import {
 } from "./settings.js";
 import { createObservationalMemoryCompactionStrategy, type ObservationalMemoryCompactionStrategyOptions } from "./strategy.js";
 import { estimateEntryTokens } from "./tokens.js";
-
-export interface ObservationalMemoryAppendOptions {
-  readonly expectedParentId?: string;
-}
 
 export interface ObservationalMemoryWorkerConfig {
   readonly provider?: AIProvider;
@@ -71,6 +71,10 @@ export interface CreateObservationalMemoryOptions {
   readonly requireExplicitModel?: boolean;
   readonly secrets?: readonly (string | undefined)[];
   readonly compaction?: ObservationalMemoryCompactionStrategyOptions;
+  /** Compact-when gate (plan 074 C11); replaces `context.compactAfterTokens` when set. Takes precedence over `shouldCompact`. */
+  readonly trigger?: CompactionTrigger;
+  /** Shorthand for `trigger: { type: "custom", shouldCompact }`. */
+  readonly shouldCompact?: (context: CompactionTriggerContext) => boolean | Promise<boolean>;
   readonly maxWorkerTurns?: number;
   readonly maxWorkerToolCallsPerTurn?: number;
   readonly maxWorkerToolCalls?: number;
@@ -117,6 +121,13 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
     );
   }
   assertNoRemovedFlatKeys(options.overrides);
+  if (options.trigger !== undefined) assertCompactionTrigger(options.trigger);
+  if (options.shouldCompact !== undefined && typeof options.shouldCompact !== "function") {
+    throw new TypeError("observational memory shouldCompact must be a function");
+  }
+  const compactionTrigger =
+    options.trigger ??
+    (options.shouldCompact === undefined ? undefined : { type: "custom" as const, shouldCompact: options.shouldCompact });
   const lifecycles = new Map<string, () => Promise<void>>();
   const runtimeWorkers = resolveRuntimeWorkers(options);
   const settingsOverrides = composeSettingsOverrides(options);
@@ -177,14 +188,23 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
         if (settingsHolder.value.passive) return;
         await runtime.flush(flushOptions);
         const entries = await session.entries();
-        const tokens = entries.reduce((sum, entry) => sum + estimateEntryTokens(entry), 0);
-        if (tokens >= settingsHolder.value.context.compactAfterTokens) {
-          await session.compact({
-            strategy: compactionStrategy,
-            keepRecentEntries: settingsHolder.value.context.recentMessages,
+        const shouldCompact = await resolveShouldCompact(
+          { trigger: compactionTrigger, compactAfterTokens: settingsHolder.value.context.compactAfterTokens },
+          {
+            sessionId: session.id,
+            entryCount: entries.length,
+            estimateInputTokens: () => entries.reduce((sum, entry) => sum + estimateEntryTokens(entry), 0),
+            resolveInputCapTokens: () => resolveInputCap(undefined, attachOptions.sessionModel),
             signal: attachOptions.signal,
-          });
-        }
+            onError: (error) => options.debug?.("observational-memory:compaction-trigger-error", error),
+          },
+        );
+        if (!shouldCompact) return;
+        await session.compact({
+          strategy: compactionStrategy,
+          keepRecentEntries: settingsHolder.value.context.recentMessages,
+          signal: attachOptions.signal,
+        });
       };
 
       lifecycles.set(session.id, sync);

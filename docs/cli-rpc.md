@@ -40,7 +40,7 @@ prism init <dir> [--template <name>] [--list-templates] [--provider <name>] [--w
 | Flag / arg | Purpose |
 | --- | --- |
 | `<dir>` | Destination directory (created if missing). Required unless `--list-templates` is specified. |
-| `--template <name>` | Template starter name (`init` [default], `deep-research`). |
+| `--template <name>` | Template starter name (`init` [default], `deep-research`, `personal-assistant`, `business-worker`). |
 | `--list-templates` | List available starter templates from the templates gallery. |
 | `--provider <name>` | `mock` (default), `openai`, `openrouter`, `kimi`, `zai`, `opencode-go`, or `neuralwatt`. |
 | `--with-workflows` | Add `@arnilo/prism-core/runtime/workflows` and `src/workflows-example.ts`. |
@@ -48,7 +48,7 @@ prism init <dir> [--template <name>] [--list-templates] [--provider <name>] [--w
 | `--force` | Overwrite generated files when the destination already exists. |
 | `-h`, `--help` | Print init usage. |
 
-Default generation (`init` template) installs only `@arnilo/prism` (mock provider). Selecting a real provider adds exactly one dependency: the `@arnilo/prism-providers` family package (the selected adapter imports from `@arnilo/prism-providers/<id>`). Specifying `--template deep-research` scaffolds a flagship deep research agent pipeline (`@arnilo/prism`, `@arnilo/prism-web-tools`, `@arnilo/prism-memory/rag`, `@arnilo/prism-core/runtime/workflows`) with planning, attributable citations, bounded refine loops, and HITL decision clarification. Rerunning without `--force` refuses non-empty destinations and existing generated files. `.env.example` contains placeholders only; `.gitignore` excludes `.env` and local stores.
+Default generation (`init` template) installs only `@arnilo/prism` (mock provider). Selecting a real provider adds exactly one dependency: the `@arnilo/prism-providers` family package (the selected adapter imports from `@arnilo/prism-providers/<id>`). Specifying `--template deep-research` scaffolds a flagship deep research agent pipeline (`@arnilo/prism`, `@arnilo/prism-web-tools`, `@arnilo/prism-memory/rag`, `@arnilo/prism-core/runtime/workflows`) with planning, attributable citations, bounded refine loops, and HITL decision clarification. Specifying `--template personal-assistant` scaffolds a single-user personal assistant host composition with local status tools and secret redaction. Specifying `--template business-worker` scaffolds a multi-tenant enterprise worker host composition with verified tenant identity, durable storage contracts, and strict tenant boundaries. Rerunning without `--force` refuses non-empty destinations and existing generated files. `.env.example` contains placeholders only; `.gitignore` excludes `.env` and local stores.
 
 
 ### `prism providers add` (0.1.7)
@@ -224,6 +224,8 @@ prism init my-agent
 prism init my-agent --provider openai
 prism init my-agent --provider openrouter --with-workflows --with-evals
 prism init my-research --template deep-research
+prism init my-assistant --template personal-assistant
+prism init my-worker --template business-worker
 prism init --list-templates
 cd my-agent && npm install && npm test
 

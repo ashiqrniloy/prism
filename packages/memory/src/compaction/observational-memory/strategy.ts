@@ -1,9 +1,18 @@
-import { type CompactionEntryData, type CompactionResult, type CompactionStrategy, createSessionEntry, redactSecrets } from "@arnilo/prism";
-import { activeObservations } from "./ledger.js";
+import {
+  type CompactionEntryData,
+  type CompactionResult,
+  type CompactionStrategy,
+  createSessionEntry,
+  redactSecrets,
+  type SessionEntry,
+} from "@arnilo/prism";
+import { activeObservations, type ObservationalMemoryLedger } from "./ledger.js";
 import { boundMemoryPayload, HARD_MAX_FOLDED_PAYLOAD_BYTES } from "./memory-bounds.js";
 import { buildObservationalMemoryProjection, createFoldedMemoryDetails } from "./projection.js";
 import { DEFAULT_KEEP_RECENT_ENTRIES, selectRecentMessageEntryIds } from "./recent-messages.js";
 import { renderObservationalMemory } from "./render.js";
+import { foldWorkScopeMap, SESSION_WORK_SCOPE_ID } from "./scopes.js";
+import { projectWorkMemory, type WorkScopeOutline } from "./scopes-project.js";
 import type { MemoryObservation, MemoryReflection } from "./types.js";
 
 export interface ObservationalMemoryCompactionStrategyOptions {
@@ -60,7 +69,11 @@ export function createObservationalMemoryCompactionStrategy(
         droppedObservationIds: bounded.droppedObservationIds,
       };
       const secrets = [...(options.secrets ?? []), ...(context.secrets ?? [])];
-      const summary = renderObservationalMemory(memory.reflections, memory.observations, { secrets });
+      const scoped = projectScopedMemory(context.entries, memory);
+      const summary = renderObservationalMemory(scoped.reflections, scoped.observations, {
+        secrets,
+        ...(scoped.outline.length ? { outline: scoped.outline } : {}),
+      });
       const data: CompactionEntryData & { readonly memory: unknown } = {
         throughEntryId,
         keepEntryIds,
@@ -75,6 +88,28 @@ export function createObservationalMemoryCompactionStrategy(
       } satisfies CompactionResult;
     },
   };
+}
+
+/**
+ * The compaction entry is what the next pack carries, so its summary renders the current working
+ * set (leaf scope + ancestors) when the host opened work scopes. The folded payload keeps every
+ * observation, so a later projection into another scope can still see what this summary hid.
+ */
+function projectScopedMemory(
+  entries: readonly SessionEntry[],
+  memory: ObservationalMemoryLedger,
+): {
+  readonly observations: readonly MemoryObservation[];
+  readonly reflections: readonly MemoryReflection[];
+  readonly outline: readonly WorkScopeOutline[];
+} {
+  const workScopes = foldWorkScopeMap(entries);
+  if (workScopes.scopes.size === 1) return { observations: memory.observations, reflections: memory.reflections, outline: [] };
+  return projectWorkMemory(memory, workScopes, {
+    from: workScopes.stack.at(-1) ?? SESSION_WORK_SCOPE_ID,
+    include: "self+ancestors",
+    closed: "hide",
+  });
 }
 
 function redactMemory(

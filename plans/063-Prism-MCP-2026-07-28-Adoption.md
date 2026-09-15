@@ -1,19 +1,19 @@
-# Synapta MCP 2026-07-28 Adoption Blueprint
+# Prism MCP 2026-07-28 Adoption Blueprint
 
-> Repository note: Synapta's MCP implementation is published here as `@arnilo/prism-mcp` under `packages/mcp/`. This blueprint uses current repository/package names when naming files and APIs.
+> Repository note: this blueprint covers the MCP implementation published here as `@arnilo/prism-mcp` under `packages/mcp/`. It uses current repository/package names when naming files and APIs.
 
 ## Objectives
 
-- Move Synapta from `@modelcontextprotocol/sdk` 1.30.0 to TypeScript SDK 2.0.0 and explicitly support MCP protocol revision `2026-07-28`.
+- Move `@arnilo/prism-mcp` from `@modelcontextprotocol/sdk` 1.30.0 to TypeScript SDK 2.0.0 and explicitly support MCP protocol revision `2026-07-28`.
 - Serve modern stateless MCP over Streamable HTTP and stdio while retaining a bounded legacy-2025 compatibility path.
-- Preserve Synapta's existing authorization, SSRF, DNS-pinning, byte, pagination, concurrency, timeout, effect, and human-consent controls.
+- Preserve the package's existing authorization, SSRF, DNS-pinning, byte, pagination, concurrency, timeout, effect, and human-consent controls.
 - Adopt modern version discovery, per-request capability envelopes, MRTR, subscriptions, cache hints, routing headers, and OAuth hardening without reimplementing SDK wire logic.
-- Deprecate obsolete Synapta surfaces deliberately; do not build optional Tasks support until official TypeScript support is conformant enough to replace Synapta's existing durable lifecycle tools.
+- Deprecate obsolete surfaces deliberately; do not build optional Tasks support until official TypeScript support is conformant enough to replace the existing durable lifecycle tools.
 
 ## Expected Outcome
 
 - `@arnilo/prism-mcp` depends on modular SDK v2 packages and can negotiate either legacy (`2024-10-07` through `2025-11-25`) or modern (`2026-07-28`) protocol eras.
-- HTTP servers use `createMcpHandler()` and stdio servers use `serveStdio()` through Synapta wrappers; modern requests require no handshake, transport session, sticky routing, or shared session store.
+- HTTP servers use `createMcpHandler()` and stdio servers use `serveStdio()` through Prism MCP wrappers; modern requests require no handshake, transport session, sticky routing, or shared session store.
 - Existing roots/sampling support remains compatibility-only and deprecated; elicitation works through SDK MRTR auto-fulfilment with current explicit-human-interaction checks.
 - Modern list changes arrive through `subscriptions/listen`; cache hints and `Mcp-Method`/`Mcp-Name`/`Mcp-Param-*` behavior are SDK-owned.
 - OAuth callback issuer validation, issuer-bound credential storage, scope step-up, and Client ID Metadata Documents are supported.
@@ -21,13 +21,13 @@
 
 ## Current-State Gap Analysis
 
-| Area | Current Synapta state | 2026-07-28 / SDK v2 requirement | Required change |
+| Area | Current state | 2026-07-28 / SDK v2 requirement | Required change |
 | --- | --- | --- | --- |
 | SDK packages | `packages/mcp/package.json` pins monolithic `@modelcontextprotocol/sdk` 1.30.0 | SDK v2 is split into `@modelcontextprotocol/client`, `@modelcontextprotocol/server`, and schema/framework packages | Replace dependency and all 38 imports; keep `zod` because current `^4.4.3` satisfies SDK v2's Zod 4 requirement |
-| Client negotiation | `Client` uses default 2025 `initialize` flow | Direct SDK v2 clients still default to legacy; modern requires `versionNegotiation` | Add explicit `legacy` / `auto` / `2026-07-28` selection; make Synapta bridge helpers default to `auto`, expose negotiated era |
-| HTTP server | Custom per-request v1 `WebStandardStreamableHTTPServerTransport`; optional `Mcp-Session-Id` sessions | Modern HTTP must use stateless per-request serving, `server/discover`, request envelopes, and no protocol session | Put SDK `createMcpHandler(factory)` behind existing Synapta request/auth/bounds wrapper; retain sessionful path only for classified legacy requests |
-| Stdio server | Consumers are told to call `server.connect()` directly | Direct `McpServer.connect()` remains legacy; modern stdio requires `serveStdio(factory)` | Add/export a small Synapta stdio serving wrapper |
-| Tool listing/calls | Raw schema-based `client.request()` calls and schema notification handler | v2 method APIs own modern result codecs, `x-mcp-header`, cache, and subscriptions | Use `listTools({cursor})`, `callTool(..., {toolDefinition})`, method-string handlers, and `ClientOptions.listChanged` while retaining Synapta bounds |
+| Client negotiation | `Client` uses default 2025 `initialize` flow | Direct SDK v2 clients still default to legacy; modern requires `versionNegotiation` | Add explicit `legacy` / `auto` / `2026-07-28` selection; make Prism MCP bridge helpers default to `auto`, expose negotiated era |
+| HTTP server | Custom per-request v1 `WebStandardStreamableHTTPServerTransport`; optional `Mcp-Session-Id` sessions | Modern HTTP must use stateless per-request serving, `server/discover`, request envelopes, and no protocol session | Put SDK `createMcpHandler(factory)` behind the existing Prism MCP request/auth/bounds wrapper; retain sessionful path only for classified legacy requests |
+| Stdio server | Consumers are told to call `server.connect()` directly | Direct `McpServer.connect()` remains legacy; modern stdio requires `serveStdio(factory)` | Add/export a small Prism MCP stdio serving wrapper |
+| Tool listing/calls | Raw schema-based `client.request()` calls and schema notification handler | v2 method APIs own modern result codecs, `x-mcp-header`, cache, and subscriptions | Use `listTools({cursor})`, `callTool(..., {toolDefinition})`, method-string handlers, and `ClientOptions.listChanged` while retaining Prism MCP bounds |
 | Notifications | `notifications/tools/list_changed` invalidates local TTL | Modern servers send opted-in changes only through `subscriptions/listen` | Let SDK `listChanged` open/maintain subscription; expose server `notify`/`close` handles |
 | Caching | Local fixed 30-second list timestamp; server hints ignored | Cacheable results carry `ttlMs` and `cacheScope`; private caches must not cross auth contexts | Use SDK per-client response cache and server cache hints; preserve configured TTL as local ceiling/fallback and avoid shared stores by default |
 | MRTR | Roots/sampling/elicitation use server-to-client request handlers | Modern clients receive `input_required`, fulfil inputs, and retry; state is untrusted | Register same callbacks with v2 method strings and SDK auto-fulfilment; cap rounds; do not add custom MRTR wire/state machinery |
@@ -41,11 +41,11 @@
 
 ## Recommended Adoption Profile
 
-1. **Client default:** `auto` for Synapta's long-lived bridge helpers; explicit `legacy` escape hatch and exact `2026-07-28` pin for conformance/deploy gates. Document that stdio auto mode performs one disposable probe process and can wait for probe timeout against silent legacy servers.
+1. **Client default:** `auto` for Prism MCP's long-lived bridge helpers; explicit `legacy` escape hatch and exact `2026-07-28` pin for conformance/deploy gates. Document that stdio auto mode performs one disposable probe process and can wait for probe timeout against silent legacy servers.
 2. **Server default:** one factory, modern plus SDK's stateless legacy fallback. When `sessionIdGenerator` is configured, route only legacy-classified requests to existing sessionful transport and modern requests to strict `createMcpHandler({ legacy: "reject" })`.
-3. **Wire ownership:** use SDK APIs for era negotiation, envelopes, `resultType`, MRTR retries, standard/custom headers, cancellation, subscriptions, and cache semantics. Keep Synapta code around trust boundaries and Prism mapping only.
+3. **Wire ownership:** use SDK APIs for era negotiation, envelopes, `resultType`, MRTR retries, standard/custom headers, cancellation, subscriptions, and cache semantics. Keep Prism MCP code around trust boundaries and Prism mapping only.
 4. **Deprecations:** retain roots, sampling, DCR, and legacy sessions until usage/release policy permits removal; add nothing new on those surfaces. Earliest spec removal for roots/sampling/DCR is a revision released on or after 2027-07-28.
-5. **Tasks:** no implementation in this adoption. Existing `agent.<id>.status` / `agent.<id>.resume` tools remain the durable interoperability path. Revisit when an official extension package/codec passes Synapta's target conformance scenarios.
+5. **Tasks:** no implementation in this adoption. Existing `agent.<id>.status` / `agent.<id>.resume` tools remain the durable interoperability path. Revisit when an official extension package/codec passes the target conformance scenarios.
 
 ## Tasks
 
@@ -61,7 +61,7 @@
     - Deprecation note recorded for task 5/7: legacy `toolResult` (pre-`structuredContent` draft wire shape) is no longer decoded — v2's `callTool` owns result codecs. Roots/sampling/elicitation continue through deprecated v2 method-string handlers as required by task 3.
   - Acceptance Criteria:
     - Functional: all production, test, example, and script imports resolve from SDK v2 packages; no source or manifest references `@modelcontextprotocol/sdk`; existing legacy-era bridge/server tests still pass before modern behavior is enabled.
-    - Performance: package install and bundle size are measured; no framework adapter is added to the runtime dependency graph because Synapta exposes Web Standard `Request`/`Response`.
+    - Performance: package install and bundle size are measured; no framework adapter is added to the runtime dependency graph because the package exposes Web Standard `Request`/`Response`.
     - Code Quality: use SDK v2 high-level methods and method-string handlers; remove v1-only schemas, double casts, and transport plumbing where v2 owns behavior; no imports from private `@modelcontextprotocol/core-internal`.
     - Security: Zod stays at `>=4.2.0`; migration does not bypass current schema/result/transport bounds; dependency versions and lockfile are pinned consistently.
   - Approach:
@@ -115,7 +115,7 @@
   - Gates green: mcp 76/76 (incl. 12 modern legacy/header/cache/subscription tests), root dist suite (docs gate now agrees with the manifest), pinned-fetch 8/8, packaging/truth/budget/dead-export/import-hygiene/phase54 (evidence regenerated), phase12-freeze 11/11, phase11-conformance, obscura-host-conformance, phase24-truth, install-smoke 10/10. Pre-existing unrelated failures unchanged (phase23 coverage/security gate drift on prism-providers; phase11-auth benchmark references a package absent from this checkout).
   - Acceptance Criteria:
     - Functional: `connectMcpTools()` and `connectMcpCapabilities()` support `legacy`, `auto`, and exact `2026-07-28` pinning; bridge exposes negotiated `protocolEra`; modern tool calls emit SDK-managed standard headers and valid `Mcp-Param-*` mirrors; legacy fallback remains operational.
-    - Performance: auto negotiation adds one bounded discovery probe per connection; list pagination remains capped; list caching honors server hints without exceeding Synapta's configured TTL ceiling; no cache is shared across principals by default.
+    - Performance: auto negotiation adds one bounded discovery probe per connection; list pagination remains capped; list caching honors server hints without exceeding Prism MCP's configured TTL ceiling; no cache is shared across principals by default.
     - Code Quality: SDK `ClientOptions.listChanged`, explicit-cursor list APIs, and `callTool(..., { toolDefinition })` replace custom wire handling; atomic refresh and existing immutable tool-array semantics remain.
     - Security: tool definitions are byte/depth/property bounded before retention; malformed `x-mcp-header` tools are excluded; private cache entries cannot cross bridge/auth contexts; existing SSRF/DNS/origin/redirect response caps still wrap every HTTP probe and request.
   - Approach:
@@ -126,11 +126,11 @@
       - Tools and `x-mcp-header`: https://modelcontextprotocol.io/specification/2026-07-28/server/tools
     - Options Considered:
       - Keep raw `client.request()` and manually implement headers/cache/subscriptions: rejected; duplicates protocol and misses SDK correction behavior.
-      - Use no-argument auto-aggregating lists: rejected because Synapta's tighter page/item/schema limits and atomic refresh are public security behavior.
+      - Use no-argument auto-aggregating lists: rejected because Prism MCP's tighter page/item/schema limits and atomic refresh are public security behavior.
       - Use explicit-cursor SDK list calls plus high-level tool calls: chosen.
     - Chosen Approach:
-      - Add a small Synapta `protocolVersion` option mapped to SDK `versionNegotiation`; default bridge-owned clients to `auto`.
-      - Configure `listChanged.tools.onChanged` to invalidate/refresh Synapta's mapped list in both eras.
+      - Add a small Prism MCP `protocolVersion` option mapped to SDK `versionNegotiation`; default bridge-owned clients to `auto`.
+      - Configure `listChanged.tools.onChanged` to invalidate/refresh Prism MCP's mapped list in both eras.
       - Preserve explicit pagination loop, but call SDK v2 methods; pass retained remote definition to `callTool` so output validation and header mirroring use the same schema.
     - API Notes and Examples:
       ```ts
@@ -176,7 +176,7 @@
     - ✔ Decline/cancel (propagated, fail-closed), missing capability (server refuses against a non-declaring client), malformed/oversized response (rejected pre-retry), round cap (typed `INPUT_REQUIRED_ROUNDS_EXCEEDED` "still required input after N rounds"), abort, URL mode without automatic navigation — all covered.
     - ✔ Legacy elicitation/sampling/roots behavior remains compatible (pre-existing `capabilities.test.ts`/`elicitation.test.ts` suites unchanged and green; full package suite 84/84).
   - Gates green: mcp 84/84 (incl. 7 new MRTR tests), root dist suite 1639/1639 (docs gate included), budget/perf 20/20 (rebaselined), compat-baseline, packaging/truth/dead-export/import-hygiene, phase54 (evidence regenerated), phase12-freeze 11/11, phase11-conformance, obscura-host-conformance, phase24-truth, install-smoke 10/10. Pre-existing unrelated failures unchanged (phase23 coverage/security drift on prism-providers; phase11-auth benchmark references a package absent from this checkout).
-  - Notes: server-side MRTR (a Synapta server tool issuing `input_required`, `requestState`, `createRequestStateCodec`) was NOT built — plan says add only if it becomes a concrete requirement; the SDK's `inputRequired()`/`acceptedContent()` surface is available and already exercised by the test fixtures' server side.
+  - Notes: server-side MRTR (a Prism MCP server tool issuing `input_required`, `requestState`, `createRequestStateCodec`) was NOT built — plan says add only if it becomes a concrete requirement; the SDK's `inputRequired()`/`acceptedContent()` surface is available and already exercised by the test fixtures' server side.
 
 - [x] 4. Replace HTTP/stdio server entry points with dual-era SDK v2 serving
   - **Completed 2026-09-05.** HTTP and stdio serving run on the SDK v2 dual-era entries with Prism security gates in front; legacy stateless and session traffic stay compatible.
@@ -265,7 +265,7 @@
   - Notes: discovery caching is unchanged (bounded TTL, single entry per client, issuer/origin-coherence revalidated on save; one discovery per in-flight flow via the existing `inflight` single-flight).
     - Functional: OAuth callback completion accepts full `URLSearchParams`; validates stored `state` before SDK exchange; SDK validates callback `iss`; token/client records are selected and saved by validated issuer; CIMD is preferred, static registration remains supported, and DCR is marked deprecated; insufficient-scope challenges reauthorize or return typed errors by explicit policy.
     - Performance: validated discovery remains cached within current bounded TTL and issuer partition; no duplicate discovery/registration occurs during one in-flight flow.
-    - Code Quality: use SDK v2 `StoredOAuthTokens`, `StoredOAuthClientInformation`, `OAuthDiscoveryState`, and provider context instead of parallel issuer bookkeeping; preserve Synapta error taxonomy only around Synapta policy boundaries.
+    - Code Quality: use SDK v2 `StoredOAuthTokens`, `StoredOAuthClientInformation`, `OAuthDiscoveryState`, and provider context instead of parallel issuer bookkeeping; preserve the package error taxonomy only around its policy boundaries.
     - Security: issuer comparison is exact; callback error fields are not surfaced after issuer mismatch; credentials never cross issuer/resource/origin; token endpoints require TLS except explicit loopback; refresh tokens remain encrypted/keychain-hosted; server challenges include required scope and host token verifier validates audience.
   - Approach:
     - Documentation Reviewed:
@@ -275,12 +275,12 @@
     - Options Considered:
       - Keep code-only callback and origin-only issuer checks: rejected; cannot satisfy RFC 9207 validation.
       - Rewrite OAuth flow locally: rejected; SDK v2 already implements discovery, issuer validation, resource binding, step-up, and typed errors.
-      - Adapt Synapta persistence/policy seams to SDK v2: chosen.
+      - Adapt the package's persistence/policy seams to SDK v2: chosen.
     - Chosen Approach:
       - Change `finishAuth` to accept callback `URLSearchParams`; compare persisted state, then pass params to SDK.
       - Make OAuth state methods issuer-aware and store SDK issuer-stamped records; provide migration handling that refuses ambiguous old records rather than guessing an issuer.
       - Add CIMD strategy via provider `clientMetadataUrl`; preserve static strategy; retain DCR with deprecation annotation and correct `application_type` defaults.
-      - Reuse SDK protected-resource metadata/challenge helpers where they preserve Synapta bounds; keep host-owned token verification.
+      - Reuse SDK protected-resource metadata/challenge helpers where they preserve Prism MCP bounds; keep host-owned token verification.
     - API Notes and Examples:
       ```ts
       const params = new URL(callbackUrl).searchParams;
@@ -368,7 +368,7 @@
   - Security regression coverage (all green): malformed envelope/header, auth mix-up (`ERR_PRISM_MCP_OAUTH_ORIGIN`), SSRF/DNS rebinding (incl. the conformance Host/Origin 4xx check), oversized JSON/schema/result bounds, MRTR round/replay caps, subscription exhaustion (`maxSubscriptions`), cross-principal cache/session isolation, timeouts, cancellation, redaction — package suites (mcp 98/98) plus the root dist suite (1639/1639) and root gates (103/103).
   - Performance record (loopback fixture, single process): legacy connect ~60ms; auto connect ~40ms (one bounded `server/discover` probe — the only added connect cost vs 1.x, plus SDK codec work); pinned modern connect ~20ms; steady-state bridge tool call ~4ms; uncached list walk ~5ms; cached list refresh ~2ms (hit/miss honored via SEP-2549 hints). No regression beyond the probe.
   - Packaging: `npm run pack:dry-run -w @arnilo/prism-mcp` 30 files; install-smoke fresh offline tarball install 10/10 (consumer imports every documented specifier); no stale `@modelcontextprotocol/sdk` import remains in source/manifests/tests.
-  - Release documentation published: `docs/mcp-tools.md` (canonical API, era matrix, auth, MRTR, cache/subscription, extension boundaries + conformance/performance record), `docs/migration.md` (monolithic SDK 1.x → Synapta v2 migration table + legacy-session timeline with the deprecation path for `sessionIdGenerator`), `docs/index.md` (MCP entry updated off SDK 1.30.0 wording), `packages/mcp/CHANGELOG.md` + root `CHANGELOG.md` (Unreleased 2026-07-28 adoption entry), `packages/mcp/README.md`/`examples/README.md` verified current from tasks 4–6.
+  - Release documentation published: `docs/mcp-tools.md` (canonical API, era matrix, auth, MRTR, cache/subscription, extension boundaries + conformance/performance record), `docs/migration.md` (monolithic SDK 1.x → Prism MCP v2 migration table + legacy-session timeline with the deprecation path for `sessionIdGenerator`), `docs/index.md` (MCP entry updated off SDK 1.30.0 wording), `packages/mcp/CHANGELOG.md` + root `CHANGELOG.md` (Unreleased 2026-07-28 adoption entry), `packages/mcp/README.md`/`examples/README.md` verified current from tasks 4–6.
   - Notes: fixed an unrelated pre-existing docs-gate break (plans/README.md missing the 064 plan link) to keep the docs gate green.
   - Gates green: mcp 98/98, root dist suite 1639/1639, root gates 103/103, docs gate 149/149, install-smoke 10/10, conformance runner exit 0, `tsc --noEmit` clean (mcp + ag-ui). No new exports, budget stays at 129.
 
@@ -394,7 +394,7 @@
       - 2026-07-28 specification changelog: https://modelcontextprotocol.io/specification/2026-07-28/changelog
       - Prism documentation structure: `.agents/skills/create-plan/references/prism-wiki.md`.
     - Options Considered:
-      - Treat SDK unit tests as protocol proof: rejected; Synapta wrappers alter transport, auth, bounds, and mapping behavior.
+      - Treat SDK unit tests as protocol proof: rejected; Prism MCP wrappers alter transport, auth, bounds, and mapping behavior.
       - Run official suite plus focused repository regressions: chosen.
     - Chosen Approach:
       - Add deterministic local conformance fixtures; run 2026 suite separately from legacy tests.
@@ -411,10 +411,10 @@
       - `packages/mcp/src/__tests__/*.test.ts`: final dual-era/security coverage.
       - `scripts/mcp-conformance-2026.mjs` and package/root scripts: deterministic conformance runner only if direct commands cannot express required fixture lifecycle.
       - `docs/mcp-tools.md`: canonical API, era matrix, auth, MRTR, cache/subscription, extension boundaries.
-      - `docs/migration.md`: v1 SDK/current Synapta API migration table and legacy-session timeline.
+      - `docs/migration.md`: v1 SDK/current Prism MCP API migration table and legacy-session timeline.
       - `packages/mcp/README.md`, `examples/mcp-server.ts`, `examples/README.md`, `CHANGELOG.md`: public release guidance.
       - `docs/index.md`: verify existing MCP entry remains accurate; edit description only if needed.
-      - `plans/063-Synapta-MCP-2026-07-28-Adoption.md`: mark completed tasks and record actual deviations/follow-ups.
+      - `plans/063-Prism-MCP-2026-07-28-Adoption.md`: mark completed tasks and record actual deviations/follow-ups.
     - References:
       - Existing tests: `packages/mcp/src/__tests__/{auth,bridge,capabilities,content,elicitation,server,sse-relay,transport}.test.ts`.
       - Existing canonical docs: `docs/mcp-tools.md`, `packages/mcp/README.md`.

@@ -108,12 +108,17 @@ function readAgentDecisions(value: unknown): readonly RunDecision[] {
   });
 }
 
-export function readAgentResume(
-  body: JsonObject,
-):
-  | { readonly decision: "approve" | "deny"; readonly expectedVersion: number }
+export function readAgentResume(body: JsonObject):
+  | {
+      readonly decision: "approve" | "deny";
+      readonly expectedVersion: number;
+      readonly modifiedArguments?: JsonObject;
+      readonly approvalId?: string;
+      readonly reason?: string;
+    }
   | { readonly decisions: readonly RunDecision[]; readonly expectedVersion: number } {
-  if (Object.keys(body).some((key) => key !== "decision" && key !== "decisions" && key !== "expectedVersion")) {
+  const allowedKeys = new Set(["decision", "decisions", "expectedVersion", "modifiedArguments", "approvalId", "reason"]);
+  if (Object.keys(body).some((key) => !allowedKeys.has(key))) {
     throw new PrismServerError("Invalid agent resume body", 400, "ERR_PRISM_SERVER_RESUME");
   }
   if (!Number.isSafeInteger(body.expectedVersion) || Number(body.expectedVersion) < 1) {
@@ -122,16 +127,69 @@ export function readAgentResume(
   if (body.decision !== undefined && body.decisions !== undefined) {
     throw new PrismServerError("provide exactly one of decision or decisions", 400, "ERR_PRISM_SERVER_RESUME");
   }
-  if (body.decision !== undefined) {
-    if (body.decision !== "approve" && body.decision !== "deny") {
-      throw new PrismServerError("decision must be approve or deny", 400, "ERR_PRISM_SERVER_RESUME");
+  if (body.decisions !== undefined) {
+    if (body.modifiedArguments !== undefined || body.approvalId !== undefined) {
+      throw new PrismServerError("provide exactly one of decision or decisions", 400, "ERR_PRISM_SERVER_RESUME");
     }
-    return { decision: body.decision, expectedVersion: Number(body.expectedVersion) };
+    return { decisions: readAgentDecisions(body.decisions), expectedVersion: Number(body.expectedVersion) };
   }
-  if (body.decisions === undefined) {
+  if (body.decision === undefined) {
     throw new PrismServerError("provide decision or decisions", 400, "ERR_PRISM_SERVER_RESUME");
   }
-  return { decisions: readAgentDecisions(body.decisions), expectedVersion: Number(body.expectedVersion) };
+  if (body.decision !== "approve" && body.decision !== "deny") {
+    throw new PrismServerError("decision must be approve or deny", 400, "ERR_PRISM_SERVER_RESUME");
+  }
+  if (body.decision === "deny") {
+    if (body.modifiedArguments !== undefined || body.approvalId !== undefined) {
+      throw new PrismServerError("deny decision cannot include modifiedArguments or approvalId", 400, "ERR_PRISM_SERVER_RESUME");
+    }
+    return { decision: "deny", expectedVersion: Number(body.expectedVersion) };
+  }
+
+  if (body.modifiedArguments !== undefined) {
+    if (!body.modifiedArguments || typeof body.modifiedArguments !== "object" || Array.isArray(body.modifiedArguments)) {
+      throw new PrismServerError("modifiedArguments must be an object", 400, "ERR_PRISM_SERVER_RESUME");
+    }
+    const text = JSON.stringify(body.modifiedArguments);
+    if (text === undefined || Buffer.byteLength(text, "utf8") > HARD_MAX_ELICITATION_BYTES) {
+      throw new PrismServerError("modifiedArguments exceeds limits", 400, "ERR_PRISM_SERVER_RESUME");
+    }
+  }
+  if (body.approvalId !== undefined) {
+    if (typeof body.approvalId !== "string" || body.approvalId.length === 0 || body.approvalId.length > 128) {
+      throw new PrismServerError("approvalId is invalid", 400, "ERR_PRISM_SERVER_RESUME");
+    }
+  }
+  if (body.reason !== undefined) {
+    if (typeof body.reason !== "string" || Buffer.byteLength(body.reason, "utf8") > HARD_MAX_DECISION_REASON_BYTES) {
+      throw new PrismServerError("decision reason exceeds limits", 400, "ERR_PRISM_SERVER_RESUME");
+    }
+  }
+  if (body.approvalId !== undefined && body.modifiedArguments === undefined) {
+    throw new PrismServerError("approvalId without modifiedArguments should use decisions batch", 400, "ERR_PRISM_SERVER_RESUME");
+  }
+  if (body.approvalId !== undefined && body.modifiedArguments !== undefined) {
+    return {
+      decisions: [
+        {
+          approvalId: body.approvalId as string,
+          outcome: "allow_once",
+          modifiedArguments: body.modifiedArguments as JsonObject,
+          ...(body.reason ? { reason: body.reason as string } : {}),
+        },
+      ],
+      expectedVersion: Number(body.expectedVersion),
+    };
+  }
+  if (body.modifiedArguments !== undefined) {
+    return {
+      decision: "approve",
+      modifiedArguments: body.modifiedArguments as JsonObject,
+      ...(body.reason ? { reason: body.reason as string } : {}),
+      expectedVersion: Number(body.expectedVersion),
+    };
+  }
+  return { decision: "approve", expectedVersion: Number(body.expectedVersion) };
 }
 
 export function readResume(body: JsonObject): WorkflowResumeRequest {

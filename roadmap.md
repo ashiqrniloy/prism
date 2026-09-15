@@ -1,469 +1,433 @@
-# Prism Roadmap
-
-Updated: 2026-08-20
-Baseline: `@arnilo/prism` **0.3.0** (plans 001–030 implemented; 0.3.0 is the current release cut).
-Scope: a forward-looking roadmap beginning at **0.2.0** with security, correctness, release-integrity, maintainability, coding-agent, and Enterprise ERP readiness work from the 2026-08-12 comprehensive review. **Resequencing (2026-08-12):** every item previously scheduled for 0.2.x moves unchanged to **0.3.x**; 0.2.x is reserved for review remediation and production-readiness work. Completed evidence remains in `plans/001`–`plans/030`, `CHANGELOG.md`, and `docs/review-coverage-*`.
+# Prism Roadmap — Release 0.7.0
 
-## Objectives
+Updated: **2026-09-15**  
+Released baseline: **0.6.0** — root plus nine first-party npm packages, Node `>=22`.  
+Current release: **0.7.0 — shipped 2026-09-15** as a **six-plan cut** ([072](plans/072-Host-Eval-And-Observability-Cockpit.md), [073](plans/073-Release-0-7-0-Host-Completeness.md), [074](plans/074-Attention-Compiler.md), [075](plans/075-Memory-Fabric.md), [077](plans/077-Work-Scope-Memory-Index.md), [078](plans/078-Host-Owned-Subagent-Spawn-And-Parallel-Agents.md)) carrying every P0–P2 recommendation below, the three integration fixes, R15 host-consumable timeline/graph/cockpit primitives, R16 work-scope memory index, R17 cache-stable attention compiler, the [Memory Fabric](plans/075-Memory-Fabric.md) (reassigned from 0.8.0 on 2026-09-14) and [host-owned subagent spawn](plans/078-Host-Owned-Subagent-Spawn-And-Parallel-Agents.md). There was no 0.6.1 cut and no interim cut inside the line.  
+Status: **implemented and cut**; [073 Tasks 28–29](plans/073-Release-0-7-0-Host-Completeness.md) ran on 2026-09-15 against the six closed plans.  
+Next release: **0.8.0** — [messaging channels](plans/079-Prism-Messaging-Channels-Telegram-Signal.md) (Telegram/Signal adapters), **moved off the 0.7.0 line on 2026-09-15 by user request** so the cut stopped waiting on it; R09 delegated coding runtimes, R12 native Vertex and R13 remote clients/channels remain later-release items if demand returns.
 
-- Close fail-open durable-resume, subprocess-secret, and sandbox-containment defects before expanding Prism's capability catalog.
-- Make provider completion, outbound network access, response parsing, state updates, budgets, builds, and coverage measurement fail closed and concurrency-safe.
-- Bring coding-agent and Enterprise ERP paths to production readiness with explicit durability, recovery, audit, approval, and release evidence.
-- Reduce maintenance cost by consolidating repeated bounded transports/persistence codecs and splitting only proven god-modules along cohesive state-machine boundaries.
-- Defer the former 0.2.x provider/delegated-agent/enterprise-adapter expansion to 0.3.x; do not grow catalog breadth before 0.2.x foundations pass.
-- Preserve Prism as a dependency-light, host-owned harness: no hosted product, control plane, second runtime, or implicit activation.
+This roadmap replaces the previous historical roadmap in full. It preserves the rationale and priorities from the 2026-09-13 review for future reference. Historical implementation evidence remains in [plans](plans/README.md), [CHANGELOG](CHANGELOG.md), and [documentation history](docs/history/README.md); it is not repeated here.
 
-## Expected Outcome
+**P0, P1 and P2 mean execution priority within 0.7.0—not separate release dates or permission to defer scope.** Earlier demand-gated recommendations are now part of this release request. The plan fixes reference integrations and requires their verification.
 
-- 0.2.x removes all confirmed review blockers, records direct adversarial regressions, and makes every security-sensitive core function validate independently of HTTP/TypeScript adapters.
-- Provider/network boundaries stream bounded bodies, pin approved network destinations, reject incomplete streams, and preserve credential/signature correctness.
-- Durable conversations, budgets, approvals, registries, and ERP side effects have explicit atomicity, recovery, and multi-replica semantics.
-- Coverage reports measure each package correctly; emit builds cannot expose partial `dist`; protected skips are visible release evidence rather than unexplained green runs.
-- Coding-agent and ERP readiness gaps ship only behind host-owned seams with threat models and operational owners.
-- Former 0.2.x catalog expansion begins at 0.3.0 after 0.2.x exit gates pass; Cursor and Antigravity remain delegated agents, never model providers.
-- Core remains dependency-free; default and protected release gates, audit, secret scan, compatibility, package budgets, and clean packed-install journeys stay green.
+## 1. Direction and objectives
 
-## Previous Baseline and Review Findings (2026-08-09)
+**Prism needs less feature breadth and more end-to-end completeness.**
 
-The codebase was reviewed end to end after the 0.1.0 cut. Findings below explain the completed 0.1.x work and historical deferrals; the 2026-08-12 evidence and 0.2.x milestones later in this document supersede their old routing.
+Prism already implements most underlying capabilities advertised by major agent frameworks. Its largest opportunity is making those capabilities work together reliably so hosts do not rebuild authorization, accounting, review, recovery, and operational glue.
 
-### Existing strengths to preserve
+Positioning:
 
-- **Dependency-free core** with explicit activation: no provider, tool, credential, MCP server, LSP, process, network proxy, OIDC, policy, or object-store service starts by import or discovery.
-- **Neutral seams** that make adapters cheap: `AIProvider.generate(): AsyncIterable<ProviderEvent>`, `RealtimeSession`, `AgentEventSource`, `ToolEffectStore`, `PolicyEvaluator`, `IdentityVerifier`, `ArtifactBodyStore`, `AgentLoopStrategy` snapshot/restore, pending-decision/approval contract, `SkillRegistry` + progressive disclosure.
-- **OpenAI-compatible base reused** by alibaba, opencode-go, openrouter, zai, kimi, neuralwatt; **`@arnilo/prism-provider-ai-sdk`** wraps the Vercel AI SDK `LanguageModelV4` *model interface only* and ignores its agent harness — the proof that model-only adapters are possible when an SDK separates model from loop.
-- **Conformance-helper packages** (`testing/*-conformance`) keep adapter tests dependency-free and runner-agnostic; per-package suites own their coverage.
-- **Security posture**: deny-by-default sandbox/egress, atomic same-filesystem write/edit, literal-only repository search (no ReDoS), redaction at every boundary, audience-bound OAuth tokens with SSRF-checked discovery, hand-rolled SigV4 over native fetch (no `@aws-sdk/client-s3` bloat), supply-chain negative fixtures, `npm audit` clean (0 vulns, 317 locked deps at 0.1.0), CodeQL/SAST, npm provenance.
-- **Deliberate minimalism** is disciplined: `ponytail:` comments consistently name the ceiling and upgrade path of each shortcut; no speculative abstractions or single-implementation interfaces were introduced.
-- **Budget/benchmark gates** per release with frozen p95 ceilings and a single 0.1.0 envelope (`scripts/benchmark-0.1.0.mjs`/`.json`).
-- 50-package publish graph at 0.1.7 (root + 49 workspaces), including 14 model-provider adapters and manifest-only profiles.
+> A provider-neutral agent runtime that hosts can own, govern, inspect, and recover—across personal assistants, coding agents, and business workflows.
 
-### Architectural problems needing fixing
+Objectives for 0.7.0:
 
-1. **Umbrella membership and claims are inconsistent.** `@arnilo/prism-providers` ships 11 providers while Azure/Bedrock/Vertex are added separately by `prism-all`; `prism-all` also omits document-reader, OpenAPI tools, NATS, Caveman, and Ponytail despite “every package” wording. → 0.2.4: make docs truthful/generated; 0.3.0: decide and enforce actual membership.
-2. **`src/agents.ts` (2,565 lines) and `src/contracts.ts` (2,541 lines, ~250 exports) are god-modules.** They are cohesive but hard to navigate and limit tree-shaking. → 0.1.4: split by concern (run lifecycle / approval / dispatch / fingerprint; contracts vs run-state vs protocol payloads) behind **barrel re-exports that preserve the public import surface** so the compat baseline stays green.
-3. **Build clean race was only partially fixed.** 0.1.1 removed destructive `clean`, but the 2026-08-12 review reproduced import of partially emitted `dist` during concurrent compilers. → 0.2.3: lock emitters or atomically publish staged output.
-4. **Workspace coverage summary has the wrong denominator.** 0.1.1 added reporting, but workspace rows include imported core `dist`, materially understating package coverage. → 0.2.3: package-local include filters, correct artifacts, and evidence-based thresholds.
-5. **ACP sessions are not durable.** Modes/config report table defaults; the live task registry is in-memory (cap 512, FIFO), not persisted across restart (plans 010/012). → 0.1.6 (demand-gated): durable ACP session store behind a host-owned seam.
-6. **Delegated-agent seams exist but are protocol-specific (A2A/ACP) with no generic "delegated coding host" contract.** Adding Cursor/Antigravity/Aider/Claude-Code-SDK as one-offs would duplicate the mapping. → deferred to 0.3.1: one generic delegated-agent contract + thin per-SDK adapters (see SDK evaluation).
-7. **Observational-memory residual gaps.** Loaded-skill bodies and `ReadPathSet` are session-scoped in-memory only — checkpoint resume does not restore them (plans 003/004). `wrapResumeRun`/`attach` use a `sessionId` registry with no core lifecycle hook (plan 002). → 0.1.3/0.1.6: checkpoint persistence for loaded-skill names + read-path set (demand-gated).
-8. **Live canary matrix is not recorded.** Real OIDC IdP + JWKS rotation, real OPA bundle pinning, real MCP OAuth AS (DCR + refresh/revoke), real S3-compatible store incl. KMS, and real NATS JetStream are documented as blocked protected gates, but CI runs only fakes (plans 009/011/012). → deferred to later 0.3.x as a named, env-gated, fail-loud gate (not 0.3.0).
+- Make personal, coding and multi-tenant business hosts easier to assemble correctly.
+- Bind every paid call, privileged action, approval and retrieved source to current host authority and attributable evidence.
+- Distinguish completed, failed, denied, unsupported and uncertain outcomes consistently across packages.
+- Support durable human review and safe restart without silently repeating external effects.
+- Deliver useful reference integrations without creating another runtime, hosted platform or broad abstraction framework.
 
-### Elegance of implementation
+Expected outcome: the three host journeys in Section 8 pass against freshly built and packed 0.7.0 artifacts, every recommendation has implementation/tests/docs/evidence, and the existing ten npm packages remain a coherent release. Optional installation must not become optional verification of a capability claimed to ship.
 
-- High. Discriminated-union events (`ProviderEvent`, `RealtimeEvent`, `CodingLifecycleEvent`), per-provider cache-control factoring, the `createOpenAICompatibleProvider` reuse pattern, and the model-only `provider-ai-sdk` are textbook clean seams.
-- The `ponytail:` shortcut discipline (single-level scans, hand-rolled minimal glob, dependency-free conformance helpers, SigV4 over native fetch) is consistent and documented with ceilings — not accidental minimalism.
-- Minor: a few providers hand-roll small `upstream.ts`/cache modules; plan 005 deliberately deferred a shared internal package until a third behavior package appears (YAGNI) — keep as-is.
+## 2. Existing strengths to extend—not rebuild
 
-### Performance opportunities
+| Surface | Already available | Direction for 0.7.0 |
+| --- | --- | --- |
+| `@arnilo/prism` | Agent/session runtime, streaming, loops, guardrails, tools/skills, identity, limits and durable interruptions | Consistent run-local authority and evidence; preserve one runtime |
+| `prism-core` | Workflows/schedules/sagas, server, persistence, policy/quorum approvals, audit, routing, evals, credentials and work connectors | Complete invocation, review and operating paths across these components |
+| `prism-providers` | Native and compatible model adapters, workload identity, caching/reasoning and modality contracts | Govern all calls and deepen native Bedrock/Vertex fidelity |
+| `prism-coding-tools` | Files/shell/Git, workspaces, LSP, checks, process sessions, Docker/native sandbox contracts, inspector | Coherent contained processes, recovery and external coding-runtime delegation |
+| `prism-memory` | Working/semantic/observational memory, consent, hybrid RAG, generations, provenance, Wiki/Graft | Document ACLs, source synchronization and cross-layer memory lifecycle |
+| `prism-mcp` | Client/server bridge, OAuth, bounded tools/resources/prompts, MCP Apps | Invalidate changed/revoked capabilities and preserve authority through integration |
+| `prism-ag-ui` | AG-UI, A2UI, ACP, A2A, replay and approval projections | Match core's durable edited-approval capabilities |
+| `prism-acp-agent` | Spawnable stdio agent, validated local config, coding tools and persistence wiring | Real-provider onboarding with truthful config, authority and recovery |
+| `prism-office` | Typed Office models, parsing/generation, patches/previews and decimal-safe spreadsheets | Semantic diffs, evidence-bound review and import fidelity |
+| `prism-web-tools` | Search/fetch/extract/browser tools, citations and untrusted-content boundaries | Reviewable research evidence, not more interchangeable search wrappers |
 
-- The per-version benchmark runners (0.0.8–0.0.28) and the consolidated 0.1.0 runner are good; no regression risk identified at 0.1.0 budgets.
-- Opportunities: (a) prompt-cache hit/miss telemetry surface per provider so hosts can tune `cache_aware` layout; (b) model-router cost/latency-aware routing and fallback chains (router state is durable since Phase 6 but selection policy is host-supplied); (c) tree-shaking gains from the `agents.ts`/`contracts.ts` split (0.1.4); (d) async `AgUiProjection` hooks so `messagesFromSession` can call `session.entries()` without a sync `getMessages` callback (plan 008, low priority). (a), (b), and (d) are 0.1.7.
+Do not schedule generic “add memory,” “add HITL,” “add tracing,” “add workflows,” or “add multi-agent support.” Those foundations already exist. Current API navigation: [docs/index.md](docs/index.md).
 
-### Setup and structure improvements
+## 3. First fix three concrete integration traps
 
-- **Prune superseded evidence runners.** `scripts/benchmark-0.0.{8,9,10,11,12,13,14,15,16}.mjs` and `scripts/benchmark-0.0.{23,24,25,26,27,28}.mjs` plus their `*.test.mjs` are mostly no longer wired into `npm test` (which runs only `benchmark-0.1.0.test.mjs` and the phase/e2e gates). Some are still referenced by `budget-gates.mjs`/`budgets.json`/`phase10-freeze-manifest.json`/`benchmark-0.1.0.mjs`. → 0.1.3: audit which are still imported, drop the rest, keep the checked-in `*.json` evidence; replace per-version runners with one parameterized runner + versioned evidence JSON.
-- **Archive `docs/review-coverage-2026-07-*.md`** (12 phase-review files) into a single `docs/review-coverage-archive.md` or a `docs/_evidence/` folder; they are already excluded from the tarball but clutter `docs/`. → 0.1.3 (doc hygiene, low risk).
-- **README/manifest-count narrative** still references "48 publishable vs 49 graph entries incl. root" in places; keep one canonical count in `docs/release-and-install.md` and have everything else link to it (plan 011 further action). → done in 0.1.1 (plan 013 Task 4).
-- **DX: `prism providers add <name>` scaffold** that generates an OpenAI-compatible provider package from a template (manifest, `provider.ts`, `models.ts`, `cache.ts`, conformance test, `docs/providers/<name>.md`). → 0.1.7.
+These are review findings to reproduce from a fresh build and fix before feature expansion. They are not claims that the entire repository received an exhaustive security audit. The review's 25 ACP/router tests used existing build output; they do not substitute for release verification.
 
-### Tools for coding agents and enterprise customers
+### A. ACP MCP allow-list uses unsafe URL prefixes
 
-- **Coding agent** (strong): repository ops, `repo_search` output modes, bounded `glob`, `delete`/`move`, optional `requireReadBeforeWrite`, `ProcessSession`, language intelligence (LSP), GitHub forge, allow-list egress, ACP interop.
-- **0.1.6 coding closeouts shipped**: document reader, recursive delete, brace glob, native sandbox, durable ACP store, and checkpoint bodies/read paths. Current production gaps are PTY, scalable indexed search, multi-worktree/repository lifecycle, durable process/live-task recovery, patch-review workflow, and real protected coding journeys → 0.2.6.
-- **Enterprise** (strong): OIDC/JWKS verifier, OPA policy adapter, MCP OAuth (RFC 9728/8414/7009, PKCE, audience-bound), OpenAPI tools, S3 artifact body store, durable `AgentEventSource` (Postgres LISTEN/NOTIFY + NATS JetStream), durable approvals, idempotency, retention/legal hold, audit.
-- **Enterprise adapter breadth deferred**: Cedar policy adapter, second artifact body adapter, OpenAPI pagination beyond cursor, and the full live-canary matrix move to 0.3.x. MCP SSE relay coverage shipped in 0.1.1; ERP transaction/recovery readiness is new 0.2.7 work.
+`selectMcpServers()` currently compares URLs using `startsWith`. Allowing `https://mcp.example.com` also admits `https://mcp.example.com.attacker.invalid/mcp`.
 
-### Dead code and deprecations
+**Fix:** parsed scheme/host/effective-port matching, with explicit path-segment boundaries. Reject malformed/ambiguous policy entries. Keep downstream SSRF, DNS and redirect checks; origin matching alone is not network containment.
 
-- **Documented `@deprecated` surface** (candidates for the 0.1.5 breaking cut with migration notes): `ProviderRequestOptions.timeoutMs`/`maxRetries`/`maxRetryDelayMs` (inert in first-party providers), `AgentConfig` `maxToolRounds` alias (use `limits.maxToolRounds`), `compaction-observational-memory` pre-0.0.19 flat keys, `read.ts` `transformImage` flag, `cli-init` `listInitProviders` (retained only for tests).
-- **Orphaned benchmark runners** (see Setup): audit-and-prune in 0.1.3.
-- **Unused-export sweep shipped in 0.1.3.** The 2026-08-12 run reports 30 unused-code diagnostics and 61 heuristic dead-export candidates; confirmed internals route to 0.2.5, while public removals require migration evidence.
-- `ponytail:` comments are intentional shortcuts, not dead code; keep.
+**Host value:** the configured allow-list reflects intended destinations rather than similar strings.
 
-### Refactoring needs
+Location: `packages/acp-agent/src/index.ts:41–49`. **073 Task 2.**
 
-- `agents.ts` and `contracts.ts` became compat-preserving barrels in 0.1.4; split remaining implementation god-modules in 0.2.5.
-- Make umbrella docs truthful in 0.2.4; defer actual membership expansion to 0.3.0.
-- Consolidate benchmark scripts to one parameterized runner (0.1.3).
-- Remove inert deprecated provider options in the 0.1.5 breaking cut with `docs/migration.md`.
-- Extract a shared delegated-agent adapter base only when ≥2 delegated adapters ship (0.3.1); do not pre-extract.
+### B. Synchronous router facade does not enforce complete governance
 
-### Security review
+`providerSource()` checks allow-list/residency but does not perform async budget/rate/circuit admission. A zero-budget probe selected a provider through this facade while `resolve()` denied it correctly.
 
-- **No active vulnerabilities.** `npm audit --audit-level=moderate` = 0; tree locked at 317 deps; CodeQL/SAST, provenance, SBOM/license, secret scan, and supply-chain negative fixtures are wired into `release.yml`.
-- **Residual controls to harden (not flaws, deferred gates)**:
-  - Live canary matrix (real IdP/OPA/S3/MCP-AS/NATS) untested in CI — fakes only. → later 0.3.x (not 0.3.0).
-  - No real NATS JetStream server test suite (fake of the narrow seam only). → later 0.3.x (not 0.3.0).
-  - No automated test holds an MCP SSE stream open (long-lived teardown rejected for CI); production relays but the path is untested. → shipped in 0.1.1 (plan 013 Task 2, bounded relay asserted).
-  - Hand-rolled SigV4 is single-chunk only (no multipart/accelerate) — upload size ceiling; upgrade path documented. → 0.3.2 (demand-gated).
-  - ACP modes/config are not persisted by the agent — a naive host could leak cross-session/cross-tenant mode state if it persists without ownership scoping. → guidance note + ownership-scoped persistence example shipped in 0.1.1 (plan 013 Task 5); durable ACP session store → 0.1.6.
-  - `requireReadBeforeWrite` state is session-scoped in-memory only — resume can overwrite unread files. Documented soft guard. → 0.1.3/0.1.6: checkpoint persistence.
-- **Delegated-agent streams (Cursor/Antigravity) emit tool args/results that may contain secrets.** Any adapter MUST route through Prism's `SecretRedactor` and treat SDK tool payloads as untrusted. → 0.3.1 (with the adapters).
+**Fix:** fail loudly when a synchronous facade is used with governance it cannot enforce. Preserve explicitly supported narrow use. Then provide the complete governed invocation adapter in R01.
 
-## SDK Evaluation: Models-Only vs. Full Harness
+**Host value:** “router configured” no longer implies protections that are absent from the chosen call path.
 
-The user asked whether the Cursor and Antigravity SDKs can be used **for models only** (consuming their model/streaming interface) instead of also adopting their agent harness. The reference proof that model-only is possible in principle is `@arnilo/prism-provider-ai-sdk`, which wraps the Vercel AI SDK's `LanguageModelV4` (model interface) and maps its stream to `ProviderEvent`, ignoring the AI SDK's `Agent`/`tool`/`streamText` harness. That works **only because** the AI SDK cleanly separates the model interface from its agent loop.
+Location: `packages/prism-core/src/governance/model-router/router.ts:435–485`. **073 Task 3.**
 
-### Cursor SDK (`@cursor/sdk`, TypeScript) — model-only: NOT possible
+### C. ACP provider override still pairs with a mock model
 
-- Cursor's own docs state: *"The Cursor SDK is an agent SDK, not a standalone model-inference or chat-completions API. Router picks models for Cursor agent runs that can reason over a workspace, call tools, run commands, and edit files. Cursor does not currently document a raw Router endpoint for arbitrary model calls."*
-- The only entry point is `Agent.create()` → `agent.send(prompt)` → `run.stream()` yielding `SDKMessage`/`InteractionUpdate` events (assistant text, `tool_call`, `thinking`, `usage`, `status`, `task`, `request`). That stream runs Cursor's full agent loop — tools, file edits, shell commands — either inline in Node (local) or in a Cursor-hosted VM (cloud).
-- There is no `LanguageModelV4`-equivalent pluggable model seam and no raw model endpoint to wrap as a Prism `AIProvider`.
-- **Integration path:** treat Cursor as a **delegated coding agent**, not a model provider. Wrap `Agent.create()`/`send()`/`stream()` in a 0.3.1 package that maps `SDKMessage`/`InteractionUpdate` → Prism `AgentEvent` through a generic delegated-agent contract, redacts tool payloads, and exposes it via the supervisor/delegated-agent seam (prompt in, structured events out). Use it for "let Cursor do this coding task and report back," never as the model behind Prism's own loop.
+The spawnable launcher accepts a provider override but constructs `{ provider: "mock", model: "mock" }` as its model.
 
-### Antigravity SDK (Python) — model-only: NOT possible
+**Fix:** explicit matching model/provider configuration, scoped credential references, real-provider tests and deliberate mock mode. Preserve configuration through editor-backed sessions and durable reconstruction.
 
-- Antigravity is a **Python** framework whose model layer is bound to **Gemini** (`GeminiAPIEndpoint` for the Gemini Developer API, `VertexEndpoint` for Vertex AI; default `gemini-3.6-flash`). There is no pluggable custom-language-model seam.
-- The agent loop runs in a **Go `localharness` binary** the Python SDK talks to over WebSocket + protobuf. The `Connection.send(prompt)`/`receive_steps()` interface is the **agent loop**, not a model API.
-- Prism **already ships** `@arnilo/prism-provider-google` (Gemini) and `@arnilo/prism-provider-vertex` — those *are* the models Antigravity uses. If the goal is only "use Antigravity's models in Prism," the SDK adds nothing; the providers already cover it.
-- **Integration path:** use Antigravity as a **delegated coding agent** (0.3.1), mirroring the existing `provider-opencode-go` Go-binary-bridge pattern: spawn the Python sidecar (or the Go `localharness` directly), map `Step` events → Prism `AgentEvent`, expose via the delegated-agent seam. Do not adopt the Antigravity harness as Prism's runtime.
+**Host value:** editors launch useful Prism agents without replacing launcher internals.
 
-### Alibaba Cloud — already implemented; enrich, do not reimplement
+Location: `packages/acp-agent/src/index.ts:34–38,75–86`. **073 Task 4.**
 
-- `@arnilo/prism-provider-alibaba` already exists and ships OpenAI-compatible Chat Completions against Model Studio / DashScope (pay-as-you-go regional, workspace-dedicated, and Coding Plan endpoints), with `enable_thinking`, cache-control markers, multimodal image, and structured output.
-- **0.1.2 work** = gap-fill within the existing provider: Bailian (Model Studio) endpoints for embeddings/rerank/text-to-SQL where OpenAI-compatible, document/video input where supported, and conformance coverage. These stay provider-side, not new modules.
-- **0.3.2** = broader Alibaba Cloud platform adapters (Bailian rerank/embeddings into `@arnilo/prism-rag`, OSS as a second `ArtifactBodyStore`) as optional, demand-gated packages.
+## 4. Complete recommendation set for 0.7.0
 
-### Conclusion
+### P0 — R01. Governed invocation and aggregate task accounting
 
-The model-only pattern is **available for SDKs that separate model from loop** (AI SDK ✓). It is **not available** for Cursor or Antigravity, whose only public surface is the bundled agent loop. The honest integration is delegated-agent adapters (0.3.1), not model providers. Alibaba is enrichment on the 0.1.x provider line.
+**Existing foundation:** atomic router reservations, usage records, per-run limits, circuit state and candidate selection.
 
-## Product Boundaries
+**Deliver:** an opt-in provider-edge adapter that selects, reserves, applies request policy, invokes, settles usage and records outcome. Extend accounting across retries, model switches, child agents, compaction, observational-memory work, embeddings and paid tools. Support shared task/tenant budgets rather than separate model buckets being mistaken for aggregate limits. Bind deployment/residency to host-verified metadata.
 
-- **Harness, not hosted platform.** Hosts own UI, auth UX, user directory, deployment, provider selection, business policy, and storage topology.
-- **One runtime.** New durability, events, approval, coding, protocol, and delegated-agent capabilities extend current sessions/ledgers/checkpoints/leases/workflows/tools/events — no second runtime.
-- **Core stays dependency-free.** DB drivers, OIDC/JWT libs, policy engines, LSP clients, forge clients, PTY impls, proxies, object-store SDKs, and delegated-agent SDKs stay in optional packages.
-- **One reference implementation first.** Postgres before Redis/Kafka; one forge before a catalog; one policy engine (OPA) before Cedar; one object store (S3) before a second; one delegated-agent base before a catalog.
-- **Explicit activation.** No listener, worker, provider, credential resolver, indexer, LSP server, process session, network proxy, delegated agent, or remote service starts by import or discovery.
-- **No exactly-once claim.** Side effects are at-least-once with idempotency and explicit unknown-outcome recovery.
-- **No regex-as-containment.** Repository search stays literal-only; any regex support is host-supplied and terminable.
-- **No automatic capability escalation.** ACP, MCP, OpenAPI, forge, network, policy, and delegated-agent integrations expose only host-selected capabilities and recheck identity/policy at execution.
-- **No speculative product layer.** Studio, visual workflows, hosted cloud, managed observability, broad channels/devices, desktop control, and remote-browser vendors stay demand-gated.
+**Why:** manual bridging lets hosts omit accounting or enforce policy on only the visible chat path. One task can spend across many providers and background jobs.
 
-## Priority and Dependency Rules
+**Hosts gain:** dependable spending controls, chargeback, governed non-session calls and safer failover.
 
-1. 0.2.0 security blockers precede provider/network hardening, concurrency fixes, release tooling, package/docs cleanup, refactoring, and consumer-specific additions.
-2. Each 0.2.x milestone gets a numbered plan with primitive review where public capabilities change, threat model, tests, measurable acceptance criteria, and operational owner.
-3. Bug fixes live at the shared root-cause boundary and carry one direct runnable regression; protocol adapters are never the sole validator for core security invariants.
-4. Deletion/consolidation beats new abstraction. Extract shared code only for repeated bounded transports, persistence codecs, or state machines already proven in multiple implementations.
-5. No new provider/delegated-agent/enterprise-adapter catalog work starts before the 0.2.x release-integrity gate is green; former 0.2.x work is sequenced under 0.3.x.
-6. Breaking 0.2.x changes require `docs/migration.md`, compatibility-baseline evidence, and fail-loud handling of removed or changed fields.
-7. Every release records protected evidence (Postgres, NATS, identity/policy, providers, sandbox/browser, benchmarks) as blocked when required infrastructure is absent—never as an unexplained skip.
+**Done means:** concurrent cross-model/child work cannot oversubscribe admission; every attempt settles or remains explicitly unknown. Strict budgets reject unbounded or unpriced work. No fallback replays effects or partially delivered output. Missing usage is never zero usage.
 
-## Versioning Policy
+**073 Tasks 6–7.** References: [model routing](docs/model-routing.md), [runs and usage](docs/runs-and-usage.md).
 
-- **0.1.x:** complete at 0.1.7. Historical tasks below remain as implementation record; no new work is added to this line.
-- **0.2.x:** comprehensive-review remediation and production readiness. 0.2.0 may make documented security-motivated contract changes (notably sandbox capability metadata); later 0.2.x releases prefer additive fixes. Every breaking delta gets migration and refusal tests.
-- **0.3.x:** all work formerly scheduled for 0.2.x: protected live-service matrix, provider catalog expansion, delegated coding-agent adapters, enterprise adapter breadth, and delegated-agent observability. These remain demand-gated and start only after 0.2.x foundations are green.
-- **1.0:** operator-gated, not automatic; requires the full protected matrix (supported Node versions, multi-Postgres, NATS, live identity/policy/provider/object-store canaries, browser/sandbox, and protocol pins) plus stable 0.2/0.3 contracts through at least one patch cycle.
+### P0 — R02. Complete durable business-action review
 
-## Roadmap — 0.1.x Line
+**Existing foundation:** pending decisions, quorum/SoD approval, artifact review, connector drafts and idempotency.
 
-Historical implementation record: plans 013–019 completed releases 0.1.1–0.1.7. Checkboxes reflect implemented state; remaining expansion deferrals are routed to 0.3.x by the 2026-08-12 resequencing.
+**Deliver:** stable persisted draft/revision identity for M365/GWS; approval bound to exact operation, recipients, payload digest, reviewer authority and policy revision; explicit resume of that revision after restart. Edits invalidate prior approval. Expose edited approvals through AG-UI/server using core validation rather than a second UI policy.
 
-### 0.1.1 — Post-release hardening and tooling fixes
+**Why:** an approval callback and an in-memory draft Map do not provide “review this exact email tomorrow after a restart.”
 
-- [x] **Build single-flight / clean removal.** Remove `clean` from `npm run build`; rely on `tsc --build` incrementality + a dedicated `clean` script (or add a single-flight lockfile). Eliminates the concurrent-test/build `dist/` deletion race (plans 007/008).
-  - Acceptance: concurrent `npm run build` + `npm test` cannot corrupt `dist/`; `npm run clean` still exists; `sdk:ready` green.
-  - **Shipped (plan 013 Task 1).** `npm run build` drops the clean prefix (`build:core && build --workspaces --if-present`), `npm run clean` stays standalone; race reproduced pre-fix and re-probed post-fix; orphaned dist fails loud on next `node --test`; docs build notes added.
-- [x] **MCP SSE relay automated test.** Add a deterministic stateful SSE relay test through `createPrismMcpWebHandler` now that SSE is relayed unbuffered (plan 011 further action, medium). No long-lived stream held open in CI; bounded relay asserted.
-  - Acceptance: SSE relay path covered; no flaky teardown; `npm test` green.
-  - **Shipped (plan 013 Task 2).** `relayStatelessBody` extracted (internal export, not in the package entry surface) + 4 tests (chunk order/done-close, cancel-close, null-body, E2E stateless POST close-on-completion); cancel path unit-only by SDK design.
-- [x] **Combined coverage summary.** Surface a core+packages coverage summary in `npm run test:coverage` without weakening the core gate (plan 010 compromise).
-  - Acceptance: summary reports core + per-package coverage; gate thresholds unchanged.
-  - **Shipped (plan 013 Task 3).** `scripts/coverage-summary.mjs` (zero deps) — core gate (60/70/75) the only hard threshold + 41 workspace suites reported; ~25s workspace pass, ~70s total `test:coverage` on Node 24.
-- [x] **Manifest-count narrative consolidation.** One canonical manifest count in `docs/release-and-install.md`; README/docs link to it (plan 011 further action).
-  - Acceptance: no contradictory counts; docs tripwires green.
-  - **Shipped (plan 013 Task 4).** Canonical "49 publishable manifests = root + 48 workspace (14 provider + 9 prism-* + 25 capability)" with regenerate note; all reconciliations (incl. 0.0.27 kept at 48 as historically correct); tripwire; stale tarball-diet baselines corrected to the published artifact sizes.
-- [x] **ACP mode/config ownership guidance.** Add a `docs/acp.md` note + ownership-scoped persistence example so hosts do not leak cross-session/cross-tenant mode state when persisting (security review).
-  - Acceptance: guidance + example present; ownership-scoping asserted in a test fixture.
-  - **Shipped (plan 013 Task 5).** `docs/acp.md` "Persistence and ownership" subsection (agent never persists; host stores MUST key by `sessions.ownership`; cross-tenant restore rejects `ERR_PRISM_ACP_INPUT`); 3 new tests (host-store refusal, agent-stays-thin, authorize-seam refusal); host-security + index cross-links.
+**Hosts gain:** reliable mail/calendar/file review, reviewer edits, restart survival and fewer duplicate or mismatched actions.
 
-**0.1.1 shipped (plan 013 complete).** Docs freeze (tripwires 123/123), scripted bump to 0.1.1 (49 manifests + lockfile), compat baseline regenerated (version literal + one additive internal export, 0 breaking deltas), `npm test` 1418/1418 + 94/94 gates, audit 0 moderate, `sdk:ready` rc=0, publish dry-run 49/49 twice byte-identical; exit-gate evidence in `scripts/phase13-baseline.json` (`exitGate`). Publication (commit, `release:check`, `git tag -s v0.1.1`, npm OIDC) is the operator handoff documented in `docs/release-and-install.md` (plan 013 Task 6).
+**Done means:** draft → edit → reapprove → restart → execute is consistent across replicas; expired/revoked/stale approvals reject; ambiguous external results enter reconciliation rather than replay.
 
-### 0.1.2 — Alibaba Cloud provider enrichment
+**073 Tasks 8–9.** References: [work tools](docs/work-tools.md), [artifact review](docs/work-artifacts-and-review.md), [AG-UI](docs/ag-ui.md).
 
-- [x] **Alibaba provider gap-fill.** Extend `@arnilo/prism-provider-alibaba` with Bailian (Model Studio) endpoints where OpenAI-compatible (embeddings via `POST {base}/embeddings`; rerank only if a documented OpenAI-compatible route exists; text-to-SQL only if exposed via chat), document/video input where supported (compatible-mode `video_url`/document content parts), and expanded conformance. Native-only surfaces (async task polling via `X-DashScope-Async`, native rerank) are documented deferrals, not new runtime. Keep the OpenAI-compatible base; no new runtime deps.
-  - Acceptance: new endpoints covered by conformance; `docs/providers/alibaba.md` updated; cache-control + `enable_thinking` regression green; budget gate green.
-- [x] **Defer Alibaba Cloud platform adapters** (Bailian rerank/embeddings into RAG, OSS artifact store) to 0.3.2 as demand-gated optional packages.
+### P0 — R03. Finish portable sandbox execution
 
-### 0.1.3 — Dead-code and deprecation hygiene
+**Existing foundation:** Docker sandbox, capability attestations, workspace import/export, process sessions and durable recovery contracts.
 
-- [x] **Prune superseded benchmark runners.** Audit `scripts/benchmark-0.0.*.mjs`/`*.test.mjs` references; drop the orphaned ones, keep the checked-in `*.json` evidence; introduce one parameterized benchmark runner + versioned evidence JSON (setup).
-  - Acceptance: `npm test` references only current runners; removed files listed in the release changelog; benchmark evidence preserved.
-- [x] **Archive phase-review docs.** Move `docs/review-coverage-2026-07-*.md` into `docs/_evidence/` (excluded from tarball, linked from `docs/0.1.0-readiness.md`).
-  - Acceptance: `docs/` root cleaned; evidence links intact; docs tripwires green.
-- [x] **Unused-export sweep (non-blocking).** Add a `tsc --noUnusedLocals`/`--noUnusedParameters` scan or an `knip`-style CI step that reports dead exports without failing the build.
-  - Acceptance: report produced; obvious dead exports removed or marked `ponytail:` intentional.
-- [x] **Checkpoint persistence for loaded-skill names + ReadPathSet** (plans 003/004 further actions, demand-gated). If a host needs resume-without-model-reload, persist loaded-skill names and the read-path set in the checkpoint; bodies reload on resume via `load_skill`.
-  - Acceptance: resume restores loaded-skill catalog + read-before-write state; cross-branch non-leak test; opt-in to avoid size growth.
+**Deliver:** Docker `startProcess`, contained input/output/wait/signal/kill/release, attested reconnect, coherent shell/filesystem/LSP/browser workspace, explicit snapshot lifecycle, and an optional E2B reference adapter.
 
-### 0.1.4 — God-module split (compat-preserving)
-
-- [x] **Split `src/agents.ts`** into run-lifecycle, approval/pending-decisions, tool dispatch, and fingerprint modules behind barrel re-exports in `src/agents.ts` so public imports are unchanged. Split `src/contracts.ts` into core contracts, run-state, and protocol-payload modules behind `src/contracts.ts` barrel.
-  - Acceptance: public import surface unchanged (compat baseline green); `agents.ts`/`contracts.ts` files become barrels; tree-shaking improves (measured); `sdk:ready` green.
-
-### 0.1.5 — Deprecated-option removal (breaking, documented)
-
-- [x] Remove inert `ProviderRequestOptions.timeoutMs`/`maxRetries`/`maxRetryDelayMs`, `AgentConfig.maxToolRounds` alias, `compaction-observational-memory` pre-0.0.19 flat keys, `read.ts` `transformImage` flag, `cli-init` `listInitProviders`. Add `docs/migration.md` 0.1.4 → 0.1.5 section with the removed symbols and replacements.
-  - Acceptance: removed symbols absent from `.d.ts`; migration notes present; compat baseline updated (intentional breaks recorded); `sdk:ready` green.
-
-### 0.1.6 — Coding-agent capability closeouts (demand-gated)
-
-- [x] **Durable ACP session store** + **native sandbox backend** (network-free) — host-owned seams revisited on demand with a threat model (plan 012 further action).
-- [x] **PDF/Office document reader** as a bounded host-selected parser adapter (plans 004/roadmap non-goals).
-- [x] **Recursive `delete`** and **brace-expanding `glob`** if pattern/usage demand justifies it (plan 004 further actions).
-- [x] **Checkpoint persistence** for `ReadPathSet` + loaded-skill bodies if 0.1.3's names-only persistence is insufficient.
-  - Acceptance: each closeout behind its own plan with primitive review + threat model; budget/security gates green.
-
-### 0.1.7 — Performance and DX
-
-- [x] **Prompt-cache telemetry surface** per provider (hit/miss, cache tokens) so hosts tune `cache_aware` layout.
-- [x] **Model-router cost/latency-aware routing + fallback chains** (router state is durable; selection policy becomes host-configurable with a reference policy).
-- [x] **Async `AgUiProjection` hooks** so `messagesFromSession` can call `session.entries()` without a sync `getMessages` callback (plan 008, low priority).
-- [x] **`prism providers add <name>` scaffold** (DX) generating an OpenAI-compatible provider package from a template with conformance + docs.
-  - Acceptance: telemetry/redaction/budget gates green; DX scaffold produces a passing provider package; no core deps added.
-
-## 2026-08-12 Review Evidence and Release Order
-
-Clean sequential verification passed core and all workspace suites: **3,334 tests total, 3,301 passed, 33 protected/live skips, 0 failures**. Core coverage was **91.92% lines / 84.19% branches / 91.35% functions**; package-only recomputation exposed an incorrect workspace denominator in `scripts/coverage-summary.mjs`. Typecheck, format, audit, secret scan, and dependency checks passed. A concurrent build/coverage run reproduced partial `dist/` imports, and direct runtime probes confirmed the resume-decision and subprocess-environment defects.
-
-Release order is mandatory: **security blockers → provider/network trust → state concurrency → build/test integrity → packaging/docs → maintainability → coding-agent readiness → ERP readiness**. New catalog breadth waits for 0.3.x.
-
-## Roadmap — 0.2.x Review Remediation and Production Readiness
-
-Each milestone requires its own numbered plan. Plans that add or change a public capability must begin with primitive review and include a threat model, operational owner, migration impact, package budget, task-specific documentation assessment, and measurable exit gate.
-
-### 0.2.0 — Fail-closed runtime and sandbox security
-
-- [x] **Reject unknown durable-resume decisions in core.** Validate single and batched decision discriminants inside `prepareAgentRunResume`/`resumeAgentRun` before state claim, transition, or tool execution; HTTP/server validation remains defense in depth, not the security boundary.
-  - Acceptance: `decision: "sideways"`, malformed batches, and JavaScript/untyped callers fail with a stable Prism error; no CAS write or tool call occurs; approve/deny and legacy migration paths remain green.
-- [x] **Isolate work-tool subprocess environments.** Replace `{...process.env}` in `packages/work-tools/src/cli.ts` with a minimal base (`PATH` plus required locale/platform keys), explicit host allow-list, fixed CLI controls, and late-bound per-identity credentials. Require absolute host-pinned executable and config paths; accumulate bounded stdout/stderr chunks without repeated `Buffer.concat`.
-  - Acceptance: unrelated `process.env` canaries never reach `exec`; token stays out of argv/errors/output; NUL, path, abort, timeout, and byte limits stay fail closed.
-- [x] **Replace ambiguous sandbox containment boolean with explicit capabilities.** Distinguish workspace wiring/coherence from filesystem, network, process, and privilege isolation. Native sandbox must report filesystem isolation false; unknown/custom adapters cannot claim capabilities they do not attest. Keep a deprecated compatibility projection only if migration evidence requires it.
-  - Acceptance: native/custom composition cannot claim filesystem containment; Docker reports only verified controls; mixed wiring remains warned and uncontained; `docs/coding-security.md` and `docs/migration.md` define the threat model.
-- [x] **Security regression and release gate.** Add direct public-API adversarial tests for all three blockers and a packed-JavaScript consumer test so TypeScript types cannot hide runtime validation gaps.
-  - Acceptance: focused regressions, `security:threat-suites`, `sdk:ready`, packed install, compatibility baseline, audit, and secret scan pass; 0.2.0 does not ship while any blocker is skipped.
-
-### 0.2.1 — Provider completion and outbound trust boundaries
-
-- [x] **Require completion evidence for every streaming provider.** Make strict completion the shared default, or enable it explicitly for Azure, Bedrock, Vertex, OpenRouter, ZAI, NeuralWatt, and every other OpenAI-compatible adapter. EOF without required done marker/finish reason must emit provider error, never successful `providerDone`.
-  - Acceptance: shared truncated-stream conformance covers every first-party streaming adapter; valid provider-specific terminal variants remain supported and documented.
-- [x] **Bound all upstream success bodies while streaming.** Add/reuse one dependency-free bounded response reader for provider model discovery, OpenAI uploads, OAuth device/token flows, NeuralWatt quota, Alibaba embeddings, and other non-stream JSON endpoints. Replace unbounded `response.json()`/`response.text()`; enforce UTF-8 bytes, JSON depth/property/aggregate caps, schema checks, aborts, and redacted errors.
-  - Acceptance: oversized chunked bodies terminate before full buffering; ten model-discovery implementations and all credential/upload paths pass shared bounds tests; normal payload behavior is unchanged.
-- [x] **Pin outbound DNS/address decisions.** Reuse the strongest existing MCP transport resolution/pinning primitive for OIDC JWKS, OPA, content fetches, and equivalent SSRF-sensitive calls; redirects must be disabled or independently revalidated and repinned.
-  - Acceptance: private resolution, mixed public/private answers, metadata targets, redirects, DNS rebinding, IPv4/IPv6 edge cases, and aborts fail closed.
-- [x] **Consolidate duplicated OAuth and provider parsing.** Share bounded device-code/token polling and error mapping between core OpenAI OAuth and `credentials-node`; keep provider-specific fields at adapters. Do not create a generic transport framework beyond repeated behavior.
-  - Acceptance: authorization-pending, slow-down, expiry, cancellation, malformed JSON, oversized body, secret redaction, and token-shape tests run once against both adapters.
-- [x] **Fix credential, signing, upload, and cache edge cases.** Resolve Azure/Vertex credentials once per request; canonicalize Bedrock duplicate header casing and repeated query parameters; retain failed OpenAI upload cleanup IDs for retry; keep overflow cache telemetry from applying one model's cost to mixed-model tokens.
-  - Acceptance: rotating/single-use credentials, SigV4 duplicate-case/query fixtures, cleanup retry, and mixed-model overflow produce deterministic correct results.
-
-### 0.2.2 — Concurrent state and durability integrity
-
-- [x] **Add atomic model-budget reservation.** Extend memory and durable router state stores with reserve/commit/release semantics so concurrent admissions cannot collectively exceed budget; define crash/lease expiry and unknown-usage reconciliation. Cap and evict rate/budget maps as well as circuit maps.
-  - Acceptance: parallel admission cannot oversubscribe; abandoned reservations expire deterministically; PostgreSQL and memory conformance agree; diagnostics stay bounded/redacted.
-- [x] **Make conversation metadata updates atomic.** Add version/CAS updates or append-only branch records for create, branch, archive, and delete metadata. Preserve ownership and branch caps without lost updates or stale archive resurrection.
-  - Acceptance: concurrent branch+branch, branch+archive, duplicate create, and delete/retention/legal-hold races preserve all valid state or return an explicit conflict.
-- [x] **Enforce single-consumer and resumable-registry semantics.** `createEventMultiplexer` must reject a second subscriber or deliberately support broadcast; NATS subscriptions must use restart-stable durable identity when durable recovery is claimed; in-process active-run registries need bounded lifecycle cleanup and explicit non-durable documentation.
-  - Acceptance: duplicate subscribers, restart/resume, terminal cleanup, leaked registration, abort, cursor, and cross-tenant cases are deterministic.
-- [x] **Add multi-process state conformance.** Run approval, cursor, checkpoint CAS, idempotency, router reservation, conversation metadata, and unknown-outcome recovery against memory and durable implementations.
-  - Acceptance: stale versions/fences reject, ownership never crosses tenants, retries are idempotent, and no test relies on timing-only sleeps.
-
-### 0.2.3 — Build, coverage, and release evidence integrity
-
-- [x] **Prevent partial live `dist/` imports.** Serialize emit-producing commands with a portable lock or compile core/workspaces into staging directories and atomically publish outputs. Keep explicit clean for branch/deletion hygiene; do not assume concurrent `tsc` writes are transactional.
-  - Acceptance: repeated concurrent build+test, two builds, typecheck+test, and coverage+test stress runs never produce missing exports or partial modules; stale outputs are detected.
-- [x] **Correct workspace coverage denominators.** Add package-local `--test-coverage-include=dist/**` (or equivalent resolved package path), preserve core gate, and introduce evidence-based package thresholds with protected-integration exceptions shown separately.
-  - Acceptance: reports exclude imported core files; known recomputed package percentages are reproduced; security/persistence branch gaps cannot silently regress; JSON artifact records skips and denominator.
-- [x] **Make skipped protection visible.** Default local tests may skip unavailable infrastructure, but release summaries must name every skipped live/protected suite and mark required environments blocked. Keep full live-service expansion scheduled for 0.3.0.
-  - Acceptance: clean release report accounts for all tests, including the current 33 protected/live skips; required release profiles cannot convert missing credentials/services into green.
-- [x] **Stabilize quality gates.** Resolve current Biome warnings/infos, migrate deprecated Biome configuration, quarantine or replace load-sensitive timing assertions, and make lint/format/unused reports machine-readable.
-  - Acceptance: zero unexplained lint diagnostics; document-reader performance checks use deterministic envelopes; quality artifacts are retained by CI.
-
-### 0.2.4 — Package, documentation, and compatibility truth
-
-^- [x] **Make package claims match manifests.** Correct README/profile wording for `prism-providers` and `prism-all`; explicitly list current omissions (`document-reader`, `openapi-tools`, `session-store-nats`, Caveman, Ponytail) without changing umbrella membership in 0.2.x. Actual catalog/membership expansion remains deferred to later 0.3.x (0.3.0 omits desktop from umbrellas).
-  - Acceptance: no page claims “every” or “all” unless dependency closure proves it; packed-install tests assert documented contents.
-^- [x] **Generate package/version/profile tables.** Use manifests as the single source for package count, provider membership, version, profile closure, and release status. Refresh `docs/0.1.0-readiness.md`, `docs/index.md`, `docs/release-and-install.md`, root/package READMEs, roadmap completion status, and changelogs for the 0.1.7 baseline.
-  - Acceptance: generated checks catch drift; stale 0.1.1/0.0.23 “current line” text and contradictory provider counts are gone.
-^- [x] **Define peer-version policy.** Decide whether exact `@arnilo/prism: 0.1.7` peers remain required until compatibility stabilizes or move to a tested compatible range; document atomic-upgrade expectations and verify mixed supported patches in packed installs.
-  - Acceptance: policy is explicit, third-party adapters have a supported range story, unsupported mixtures fail clearly, and release automation enforces internal consistency.
-^- [x] **Keep docs semantic, not phrase-only.** Add structural tests for generated navigation/package data and remove stray/truncated roadmap text; do not add brittle prose snapshots.
-  - Acceptance: docs tests fail on wrong package closure/version/navigation while permitting editorial changes.
-
-### 0.2.5 — Maintainability and bounded performance
-
-- [x] **Split remaining god-modules by cohesive state machine.** Prioritize `src/agent-session.ts` (run setup, provider turn, durable suspension, tool round, persistence/ledger), then `contracts-core`, workflow run, server handler, repository, and ACP agent. Preserve public barrels and avoid one-implementation interfaces/factories.
-  - Acceptance: behavior/exports remain compatible or migrated; complexity and file-size reductions are measured; hot-path benchmarks and tree-shaking do not regress.
-- [x] **Deduplicate PostgreSQL/SQLite persistence mechanics.** Move proven shared ownership filters, cursor codecs, schema/migration checks, lifecycle/checkpoint shapes, metadata parsing, and search clipping into `session-store-codecs`; leave SQL dialect/query execution in each adapter.
-  - Acceptance: cross-store conformance proves identical semantics; no generic ORM/query builder or new runtime dependency is added.
-- [x] **Remove quadratic bounded accumulation.** Replace repeated `Buffer.concat` in language framing, tar parsing, and CLI capture with chunk arrays or bounded ring/stream processing; retain byte caps and abort behavior.
-  - Acceptance: near-limit benchmarks show linear copying and bounded peak memory; overflow remains fail closed.
-- [x] **Finish dead-code cleanup.** Remove stale `agent-session` imports/constants, `cache-telemetry` locals, `skill-load` map/scans, and confirmed dead exports; preserve intentionally public exports and documented `ponytail:` ceilings.
-  - Acceptance: unused sweep is clean or has explicit reviewed allow-list; no package API disappears without migration evidence.
-- [x] **Close low-coverage core behavior.** Add focused tests for conversations, artifacts, approval, compaction, and weak conformance-helper branches; test behavior rather than line count.
-  - Acceptance: every new branch/loop/parser/security path leaves one runnable regression; package and core thresholds stay above recorded baselines.
+**Why:** coding agents need watchers, development servers and interactive processes. Business document/data processing also needs contained execution. A one-shot sandbox is not a complete process environment.
 
-### 0.2.6 — Fully featured coding-agent readiness
+**Hosts gain:** portable execution with fewer host-process workarounds, recoverable workspaces and clear cleanup ownership.
 
-- [x] **Host-selected PTY/interactive terminal backend.** Add a process-session adapter only after primitive review; keep non-interactive execution as default and unsupported hosts fail closed.
-- [x] **Scalable indexed code-search seam.** Preserve bounded literal search as default; add an optional incremental index/semantic backend contract for large monorepos with explicit resource, trust, and stale-index semantics.
-- [x] **Multi-worktree and multi-repository lifecycle.** Define ownership, cleanup, branch isolation, checkpoint identity, and artifact correlation across repositories/worktrees.
-- [x] **Forge breadth on demand.** Add GitLab/Bitbucket only for named consumers, behind existing forge primitives; no broad catalog. (Deferred by the demand gate at 0.2.6: no named consumer recorded; the demand registry in `scripts/phase26-freeze-manifest.json` records activation requirements.)
-- [x] **Durable coding-session recovery.** Make ACP/live tasks and managed process metadata recoverable across restart/replicas or explicitly return unknown/unsupported; preserve cancellation and approval/effect correlation.
-- [x] **Patch/review and diagnostics workflow.** Add bounded review artifacts, incremental LSP/check diagnostics, and clear accepted/rejected patch state without a second agent runtime.
-- [x] **Coding release journey.** Gate a real Docker/browser/provider/forge coding task covering edit, shell, approval, restart, recovery, review, and cancellation.
-  - Acceptance: each capability has a threat model, limits, ownership tests, no implicit activation, package budget, docs/index entry, and protected end-to-end evidence; sandbox fixes from 0.2.0 are prerequisite.
-
-### 0.2.7 — Enterprise ERP production readiness
+**Done means:** restart attaches only to attested owned resources, never spawns a duplicate to conceal uncertainty. Filesystem snapshots are not advertised as process-memory checkpoints. Vendor egress/isolation and retained-resource cleanup remain explicit. No Prism cloud compute platform is built.
 
-State management and Eval framework. Subagents.
-
-- [x] **Transactional outbox/inbox.** Provide host-owned primitives for committing ERP mutation intent with application state and idempotently dispatching/consuming effects; retain at-least-once semantics and explicit unknown outcome.
-- [x] **Saga compensation and reconciliation.** Add durable compensation plans, forward/rollback status, retry policy, manual intervention, and immutable evidence for multi-step business workflows.
-- [x] **Multi-party and separation-of-duties approvals.** Support role/quorum rules, requester/approver separation, expiry, revocation, delegated authority, and complete audit provenance.
-- [x] **Tamper-evident audit export.** Add signed/hash-chained export with WORM/object-store and SIEM sink seams; preserve redaction, legal hold, retention, and tenant boundaries.
-- [x] **Secret-manager adapters.** Add Vault/AWS/Azure/GCP adapters only behind one credential-source contract and named deployment demand; never read ambient environment implicitly.
-- [x] **HA registries and recovery.** Remove process-local correctness dependencies from enterprise ACP/conversation/workflow paths; define lease, failover, cursor, and split-brain behavior.
-- [x] **Backup, restore, and migration rollback evidence.** Document and test PostgreSQL/session/artifact recovery, schema rollback/refusal, point-in-time objectives, and disaster-recovery drills.
-- [x] **Field-level data classification and redaction.** Apply policy-driven classification to prompts, tool args/results, artifacts, audit, telemetry, and exports with fail-closed defaults.
-- [x] **ERP release journey.** Exercise identity, policy, budget reservation, SoD approval, outbox mutation, compensation, audit export, legal hold, replica failover, and restore.
-  - Acceptance: atomicity/recovery invariants are documented and tested; no exactly-once claim; security/performance/storage budgets pass. “ERP production ready” remains blocked until the 0.3.0 live-service matrix is recorded.
-  
-### 0.2.8 — ACP adoption fixes
-
-- [x] **Client-neutrality.** Scrub client names from the tree; `scripts/check-client-neutrality.mjs` is wired into `release:gate`.
-- [x] **ACP wire truth (B1–B5).** Host `usage.contextWindow` seam (omit when unknown); run-level `error` rejects `session/prompt` with `ERR_PRISM_ACP_RUN`; boolean-only `set_config_option`; explicit `ToolDefinition.kind`; permission docs match SDK wire kinds.
-- [x] **ACP surface (F1–F9).** `agent_thought_chunk`; transcript replay; spawnable `@arnilo/prism-acp-agent`; `StopReason` fidelity; UNSTABLE-gated plan updates; session titles; coding-tool projection; image tool-result content; slash-command updates.
-- [x] **Windows sandbox policy (F10).** Docs only: `createNativeSandbox` fails closed off Linux; Docker fallback; Job objects/AppContainer tracked, not scheduled.
-  - Acceptance: client-neutral tree, deny-by-default seams, additive-only compat, 51-package graph, `sdk:ready` + `release:check` green.
-
-### 0.2.9 — Provider adoption and behavior packages
-
-- [x] DeepSeek API provider (`@arnilo/prism-provider-deepseek`) with implicit prefix cache and thinking replay.
-- [x] xAI Grok provider (`@arnilo/prism-provider-xai`) with sticky `x-grok-conv-id`.
-- [x] xAI SuperGrok / X Premium OAuth (RFC 8628 device-code at `auth.x.ai`, host-invoked).
-- [x] ClinePass provider (`@arnilo/prism-provider-clinepass`) via `CLINE_API_KEY`.
-- [x] Cache-hit mapping for the three new providers.
-- [x] `@arnilo/prism-impeccable` upstream-skill package.
-- [x] Ponytail `^4.9.0` (bare `/ponytail` reports status).
-- [x] Caveman v2.1.0 extra `SKILL.md` registration.
-  - Acceptance: 55-package graph at exact 0.2.9; SuperGrok login works without `XAI_API_KEY`; additive-only compat; `sdk:ready` + `release:check` green.
-
-Not in 0.2.9 (later 0.2.x / 0.3.x): Muse/Cordis harness, Cline WorkOS, DeepSeek Anthropic route, grok-cli file scan, Vent, Karpathy wiki, enterprise RAG, debug workflow, Caveman 2 engine, Impeccable live detector. **0.3.0 (plan 030):** computer-use Linux, coding-tool audit, independent package versions.
-
-### Mandatory 0.2.x regression matrix
-
-Before 0.2.x closes, automated tests must prove:
-
-1. Unknown durable-resume decisions fail before CAS/tool execution.
-2. Work CLI receives no unrelated host environment variables.
-3. Native/custom sandbox metadata cannot claim unverified filesystem isolation.
-4. Concurrent emit builds plus an importer never observe partial `dist`.
-5. Truncated streams fail for every first-party provider.
-6. Oversized chunked JWKS/JSON responses stop while streaming.
-7. Private DNS resolution, redirect repinning, and rebinding are rejected.
-8. Concurrent conversation branch/archive/create operations preserve valid state.
-9. Parallel router admissions cannot exceed reserved budget.
-10. Cache overflow cannot report mixed-model savings under one model's cost.
-11. Bedrock signing handles case-insensitive duplicate headers and repeated query keys.
-12. Workspace coverage excludes imported core files and records protected skips.
-
-## Roadmap — 0.3.x
-
-0.2.x foundations are green and the original 0.3.0 cut is complete (plan 030). Unpublished 0.3.0 is reopened only for the demand-approved Antigravity CLI + Prism MCP amendment (plan 031); remaining catalog work stays demand-gated under later 0.3.x.
-
-### 0.3.0 — Linux desktop, coding/ACP tools, independent versions, Antigravity CLI delegation
-
-Plan 030 is complete and the final lockstep cut is closed. Plan 031 adds one delegated-agent package (`@arnilo/prism-antigravity-agent`) before publication without reopening other later-0.3.x work.
-
-- [x] `@arnilo/prism-computer-use-linux` — wraps host-owned `computer-use-linux` MCP; DeviceAdapter admission; setup tools off; omitted from umbrellas.
-- [x] Coding/ACP closeouts — `read.findText`, loud fuzzy/`edit` misses, `createAcpFilesystemOperations`, spawnable-agent client-fs wiring, `delete`/`move` projection.
-- [x] Last lockstep to **0.3.0**, then per-package semver with `^0.3.0` peers (Decision B). No Changesets.
-- [x] `@arnilo/prism-antigravity-agent` amendment — official host-owned `agy` headless CLI, CLI-owned Google AI Pro authentication, selected Prism capabilities through loopback MCP, delegated execution projected into Prism/AG-UI, omitted from provider catalogs and umbrellas (plan 031).
-
-**0.3.0 closeout baseline.** The graph contains 57 publishable manifests (17 providers, 10 family/profile packages, 29 capability packages), all at `0.3.0`; internal first-party ranges use `^0.3.0`; package-truth records Decision B; and release publication defaults to changed-package tags. Offline verification remains green.
-
-Out of 0.3.0: live canary matrix, delegated Cursor adapter, Cedar / second object store, macOS/Windows desktop, `apply_patch`/notebooks/trash, Caveman 2, Impeccable live detector.
-
-### 0.3.1 — Review
-
-Code review fixes. Delegated Cursor adapter stays here only if demanded.
-
-### 0.3.2 - Evaluation framework
-
-Live canary matrix (real IdP/OPA/S3/MCP-AS/NATS) stays demand-gated here, not in 0.3.0.
-
-
-## Consolidated Compromises (from plans 001–012)
-
-These design ceilings are inherited from the 0.0.x phase plans and remain in force unless a 0.2.x remediation or 0.3.x expansion plan explicitly lifts them. Each lists the ceiling and the upgrade path.
-
-- **001 (0.0.18):** `repo_search` is literal-only (regex removed, not worker-isolated) — hosts needing regex supply a bounded backend. Atomic write/edit is same-filesystem temp+`rename` only — custom ops hosts must match durability. Default `inputLayout` flip to `cache_aware` is breaking — `legacy` is the explicit opt-in. Readiness evidence table still carries the 0.0.16 historical floor; operator refreshes at 1.0.
-- **002 (0.0.19):** Empty-pass coverage markers append only when the worker runs; the dropper runs only after a reflection records ≥1 fact. `wrapResumeRun`/`attach` use a `sessionId` registry — no core lifecycle hook added.
-- **003 (0.0.20):** Loaded-skill name/read-path persistence shipped opt-in in 0.1.3 and body persistence in 0.1.6. Remaining ceilings: `toolResultFold` stays off by default; registry empty-default + progressive catalog still use explicit `activateAllSkills` / `skillsDisclosure: "eager"` migration.
-- **004 (0.0.21):** PDF/Office reading, ProcessSession, LSP, recursive delete, brace glob, and read-path checkpoint persistence are closed through 0.1.6. Remaining ceilings: no trash daemon or PTY; fuzzy edit may silently accept one normalized match while multi-match fails closed; glob remains hand-rolled and bounded.
-- **005 (0.0.22):** Each package duplicates a small `upstream.ts` (no shared internal package) — extract only if a third behavior package appears. `caveman-stats` dispatches skill metadata only (no Claude session-log hook). `caveman-init` returns guidance text (does not run `caveman-init.js`). `ponytail-subagent` hook is host metadata only (not wired). No TUI statusline shell scripts (Prism is a harness).
-- **006 (0.0.23):** Release preflight used `--allow-dirty --allow-untagged` on an implementation checkout (not a tagged publish). Protected PostgreSQL evidence recorded on disposable `postgres:16-alpine` / Node v24.18.0 Linux x64.
-- **007 (0.0.24):** Root tarball budget baselines remain +5% gated; protected PostgreSQL evidence remains authoritative. The destructive clean race closed in 0.1.1, but concurrent emitters can still expose partial live `dist` → 0.2.3.
-- **008 (0.0.25):** A2UI remains in `docs/ag-ui.md`; hashed nested approval IDs stay under the 128-character cap. FR-3/FR-4/FR-5 shipped by 0.0.26; full release evidence follows the current checklist.
-- **009 (0.0.26):** NATS tests are network-free over a fake of the narrow seam (no real server — see 0.3.0). NATS `append` idempotency is bounded by the stream dedupe window (not a permanent unique constraint); `cleanup` is O(limit) delete calls; `subscribe` resumes via cursors not durable-name reuse; stream provisioning is host-owned; `reconnectInitialMs`/`reconnectMaxMs` accepted but unused (the official client owns reconnection). A2A server-side exposure is non-generic: single in-memory stream consumer per live task; live task registry in-memory (cap 512, FIFO, no persistence); A2A parts `raw`/`data`/`url` disabled unless the host `parts` policy selects them.
-- **010 (0.0.27):** Experimental ACP SDK fields remain excluded; elicitation remains client-consumed only; unsupported lifecycle events remain unshipped. Durable ownership-scoped ACP state shipped in 0.1.6. Lifecycle delivery is stream-scoped. Workspace coverage reporting shipped in 0.1.1 but its denominator needs correction in 0.2.3.
-- **011 (0.0.28):** Fake-server gate; live endpoints deferred (see 0.3.0). OPA only (no Cedar) and one object-store adapter (S3-compatible) — seams stay swappable. Hand-rolled SigV4 single-chunk presign/put/get (no `@aws-sdk/client-s3`, ~1 MB saved); multipart/accelerate/non-path-style out of scope (see 0.3.2). OpenAPI mutation idempotency is core-managed, not a per-adapter store. Test harnesses 405 on standalone GET SSE rather than relaying a long-lived stream (see 0.1.1). Discovery cache is single-entry with a TTL cap per provider instance.
-- **012 (0.1.0):** Signed `v0.1.0` tag is an operator action (no GPG key in the build env); dry-run + refusal paths are machine-verified, the signature is not. Clean-checkout `sdk:ready` verified against a local clone of HEAD + the working diff, not a pushed CI run. Compat baseline regenerated for the `0.1.0` version literal. `security:threat-suites` runs Phase 8–11 conformance as one named leg (Phase 7 tenant suite stays under `test:postgres`). Live canaries keep an env-gate silent-skip for local runs (protected workflows set the env — see 0.3.0).
-
-## Consolidated Further Actions (from plans 001–012, status reconciled)
-
-Closed items are marked **done**; open historical expansion items are routed to 0.3.x, while review remediation is routed to 0.2.x.
-
-- **001:** Phase 2 plan created — **done**. Operator publish of `v0.0.18` — **done** (tag exists). Phase 4 coding gaps — **done** (Phase 4 shipped 0.0.21).
-- **002:** Phase 3 execute — **done** (0.0.20).
-- **003:** Phase 4 next — **done**. Phase 5 Caveman/Ponytail consuming Phase 3 — **done** (0.0.22). Future 0.0.x checkpoint persistence for loaded-skill names — **→ 0.1.3**. Release handoff 0.0.20 — **done**.
-- **004:** Tag/publish 0.0.21 — **done**. Phase 5 next — **done**. Checkpoint persistence for `ReadPathSet`/loaded-skill names — **→ 0.1.3 / 0.1.6**. Recursive delete / brace glob if demand — **→ 0.1.6**.
-- **005:** Tag/publish 0.0.22 — **done**.
-- **006:** Commit, tag `v0.0.23`, clean preflight — **done**. Phase 7 next — **done** (0.0.24).
-- **007:** Cut signed `v0.0.24` + protected Postgres + publish dry-run — **done**. Non-destructive workspace rebuild path (concurrent cleans) — **→ 0.1.1**. Public `deriveToolEffectKey` export if hosts need offline key derivation — **demand-gated (0.3.x)**. Phase 8 builds on frozen seams — **done** (0.0.25).
-- **008:** Cut signed `v0.0.25` + `sdk:ready` + publish dry-run — **done**. FR-3 reasoning encrypted-value helper — **done** (0.0.26). FR-4 MCP Apps UI-initiated mutation retry — **done** (0.0.26). FR-5 NATS JetStream `AgentEventSource` — **done** (0.0.26, fake-seam; **live suite → later 0.3.x**). Async `AgUiProjection` hooks — **→ 0.1.7**.
-- **009:** Live NATS integration suite — **→ later 0.3.x**. FR-3/4/5/6/7 shipped 0.0.26 — **done**. Tasks 13–15 (A2A server-side exposure, frontend renderer, async `AgUiProjection`) — **done** in 0.0.26. Phase 10 ACP mapping — **done** (0.0.27). Operator handoff (48 manifests) — **done**.
-- **010:** (Plan left "to be filled after task completion.") Material deferred items recorded above: deferred lifecycle events, modes/config persistence, durable ACP session store — **→ 0.1.6**; MCP SSE relay test — **→ 0.1.1**; coverage summary — **→ 0.1.1**.
-- **011:** Record protected live-canary matrix — **→ later 0.3.x**. MCP SSE coverage — **→ 0.1.1**. Cedar, second artifact adapter, OpenAPI pagination — **→ 0.3.2 (demand-gated)**. Manifest-count narrative — **→ 0.1.1**.
-- **012:** Operator publication of 0.1.0 (signed tag + npm OIDC) — **tag exists; npm publish remains operator action**. Phase 13 demand evidence — **this roadmap's 0.3.x demand gates**. Node 22 CI leg + multi-Postgres CI legs on-demand — **demand-gated**. Durable ACP session store + native sandbox backend — **→ 0.1.6 (demand-gated)**.
-
-## Proposed New Features (summary)
-
-- **0.1.x — complete:** Alibaba enrichment; hygiene; module split; breaking-option cleanup; coding closeouts; cache telemetry; cost/latency routing; async AG-UI projection; provider scaffold.
-- **0.2.x — review remediation:** fail-closed resume/subprocess/sandbox behavior; provider/network bounds and completion; atomic budgets/conversations; build/coverage integrity; package/docs truth; focused refactors; production coding-agent capabilities; ERP transactions, recovery, approvals, audit, secrets, and DR.
-- **0.3.0 — demand cut (plan 030):** Linux desktop wrap, coding/ACP tool closeouts, independent package versions.
-- **Later 0.3.x — still deferred:** protected live-service/NATS matrix, provider catalog and umbrella membership, Cursor/Antigravity delegated-agent adapters, Cedar/object-store/OpenAPI adapter breadth, and delegated-agent telemetry.
-- **Demand-gated beyond 0.3.x:** Studio/control plane and visual workflow editor; hosted cloud and managed observability; Slack/Teams/channel catalogs, voice/device; remote-browser/sandbox vendors; further forges/queues/policy engines/object stores/databases/vector stores/providers; advanced GraphRAG/semantic chunking; cron/calendar/event triggers. Each needs a named user, operational owner, threat model, measurable acceptance, and numbered plan. Desktop OS control for **Linux** is 0.3.0; macOS/Windows stay here.
-
-## Release Validation Checklist
-
-Every 0.2.x and 0.3.x release must satisfy:
-
-- [ ] Active milestone acceptance criteria and focused adversarial tests pass.
-- [ ] `npm run sdk:ready` passes with zero unexplained failures/skips.
-- [ ] Node 20 and a current-supported Node build and public packed imports pass.
-- [ ] Relevant observational-memory, skills progressive-disclosure, coding-tool, PostgreSQL, keychain, provider, MCP, A2A, ACP, OIDC, policy, browser, sandbox, egress, forge, object-store, delegated-agent, and work-connector protected suites pass where affected.
-- [ ] Multi-process restart, failover, cursor, approval, idempotency, and unknown-outcome tests pass where affected.
-- [ ] `npm audit` policy, dependency tree, CodeQL/SAST, dependency review, secret scan, SBOM/license, provenance, and tarball-content checks pass.
-- [ ] Performance, storage growth, package size, startup, and install-size changes are measured against frozen budgets.
-- [ ] Public docs, examples, migration notes, package READMEs/changelogs, package counts, and `docs/index.md` match behavior.
-- [ ] Public declarations/exports, internal versions/ranges, lockfile, migrations, and profile contents are consistent.
-- [ ] Fresh packed-install and cross-package enterprise/coding journeys pass.
-- [ ] Release dry-run is deterministic; clean protected CI, signed tag, and npm OIDC publication evidence are recorded.
-- [ ] No blocker is converted into a skip or deferred only to preserve a release number/date.
-
-## Non-Goals (carried forward)
-
-- Prism Studio, visual workflow builder, hosted cloud, or managed telemetry backend.
-- Built-in user database, login UI, SAML identity provider, or SCIM server.
-- Mandatory Kubernetes, Helm, Terraform, Redis, Kafka, SQS, or vendor control plane.
-- Automatic provider, credential, MCP server, OpenAPI operation, LSP server, forge, delegated agent, or network discovery.
-- Broad Slack/Teams/channel, voice/device, desktop-control vendor, remote-browser, vector-store, object-store, policy-engine, forge, or delegated-agent catalogs beyond the one-reference-first rule. The Linux desktop wrapper is the single 0.3.0 reference adapter; macOS/Windows remain deferred.
-- Built-in Caveman or Ponytail prompt content, skill bodies, hook scripts, or rule text (integration packages only wire upstream).
-- Exactly-once execution claims for arbitrary external side effects.
-- Model-only usage of Cursor or Antigravity SDKs — neither exposes a model-only seam; they integrate as delegated agents, not providers.
-- A second agent runtime; all new capabilities extend the current sessions/ledgers/checkpoints/leases/workflows/tools/events.
-- Browser/edge/worker deployment profiles (plan 062 decision, [evidence](docs/_evidence/edge-profile-decision-2026-09-04.md)): native addons (better-sqlite3, @napi-rs/keyring) and `node:` built-ins across the core barrel make an edge subpath a porting project, not a build flag; revisit only on concrete demand plus a `node:`-free core loop.
+**073 Tasks 10 and 13.** References: [process sessions](docs/process-sessions.md), [coding security](docs/coding-security.md).
+
+### P0 — R04. Permission-aware, synchronized enterprise retrieval
+
+**Existing foundation:** exact corpus scopes, hybrid lexical/vector retrieval, source replacement, generations, reranking and citations.
+
+**Deliver:** document ACL constraints inside both query legs, authorization/version rechecks before reranker and model exposure, revocation-aware caching, source freshness, and durable incremental Google Drive synchronization for content/deletion/ACL changes.
+
+**Why:** tenant/corpus isolation does not authorize individual documents in a shared knowledge base. Filtering after top-K also reduces useful recall and is not an adequate authorization contract.
+
+**Hosts gain:** permission-trimmed answers, prompt revocation, fresher sources and better retrieval under selective access.
+
+**Done means:** unauthorized text, titles and citations never leave the authorized boundary; revoked sources are withheld; synchronization survives page replay/crash without skipping committed changes. Unknown group/access facts are not inferred as permission.
+
+**073 Tasks 11–12.** Reference: [RAG](docs/rag.md).
+
+### P0 — R05. Validated host compositions and onboarding
+
+**Existing foundation:** `createSecureAgent`, templates, explicit extension activation, persistence adapters, ACP binary and inspector.
+
+**Deliver:** maintained personal-assistant and multi-tenant-business-worker compositions; working real-provider ACP; inspection of effective tools, credential references, ownership, durability, sandbox capabilities and governance coverage; readiness refusals for unsupported combinations; fresh packed-install tests of documentation.
+
+**Why:** host ownership should not require every host to rediscover all wiring rules. Powerful primitives can still create an error-prone first hour.
+
+**Hosts gain:** faster onboarding and clearer production-readiness boundaries.
+
+**Done means:** compositions run without source-tree dependencies; inspection is bounded/redacted/inert by default; memory-only stores or mixed uncontained workspaces are never labeled production-durable/isolated. Reuse existing templates and inspector, not a new profile framework.
+
+**073 Tasks 4–5 and 27.** References: [host security](docs/host-security.md), [CLI](docs/cli-rpc.md), [inspector](docs/dev-inspector.md).
+
+### P1 — R06. Operational controls for background execution
+
+**Existing foundation:** coordinator, checkpoints, leases/fences, schedules, durable cancellation, server health and drain.
+
+**Deliver:** fair tenant/workload admission, queue age/deadline visibility, starvation protection, inspection of suspended approvals/unknown effects/recovery failures, separately authorized operator intervention, and a deployable reference worker.
+
+**Why:** exclusive claiming is not fair scheduling, and a recoverable workflow is not automatically an operable service.
+
+**Hosts gain:** predictable background throughput, noisy-neighbor protection and actionable incident response.
+
+**Done means:** a saturated tenant cannot indefinitely hide other eligible work; drain completes or reaches an explicit deadline; operators cannot unlock leases or replay unknown effects without supported reconciliation.
+
+**073 Task 14.** References: [workflows](docs/workflows.md), [operations](docs/operations.md), [server](docs/server.md).
+
+### P1 — R07. Agent-behavior evaluation and reproducible evidence
+
+**Existing foundation:** immutable datasets, scorers, trace resolvers, judges, comparisons, production-run curation and prompt promotion.
+
+**Deliver:** a shared `ExecutionTimeline` projection; multi-turn scenarios including clarification/refusal; required/forbidden/ordered tool trajectories; approval-before-effect checks; outcome/environment scorers; workflow experiments; failure injection; repeated trials with uncertainty; release manifests binding prompt/tools/skills/model/policy/runtime/dataset; inspector quality/cost/latency comparison.
+
+**Why:** a correct answer can follow a forbidden action. Final-answer grading misses the failure that matters to a business host.
+
+**Hosts gain:** safer releases, reproducible regressions and evidence for model/prompt/tool changes.
+
+**Done means:** hard safety/business invariants fail independently of average answer quality; simulations cannot mutate production; trial count and uncertainty are visible; missing traces or skipped required cases cannot become passing evidence.
+
+**Plan 072 Tasks 1–7** (primitives, scorers, scenarios, manifests); **plan 073 Task 15** (inspector comparison and host-journey gates). References: [evaluations](docs/evaluations.md), [prompt registry](docs/prompt-registry.md).
+
+### P1 — R15. Host-consumable execution timeline, workflow graph, and cockpit aggregations
+
+**Existing foundation:** `AgentEvent` / `WorkflowEvent`, `EvaluationTrace`, checkpoints, OTel `invoke_agent`/`chat`/`execute_tool`, provider capture, `buildGraph` Maps, loopback `prism dev`.
+
+**Deliver:** frozen `ExecutionTimeline` and `WorkflowGraphView` JSON; live and persistence projectors; content-capture policy (`metadata` / `redacted_io` / `full_io`); Mermaid and Graphviz DOT exporters; run overlay; `summarizeTimeline` / `summarizeSession`; explicit workflow OTel `invoke_workflow` + node spans. Hosts render these in their own applications. No React cockpit, no Studio, no draw.io.
+
+**Why:** raw event unions are complete but hostile. Every host otherwise re-parses 20 event variants and re-derives DAG graphics. Trajectory evals and ops waterfalls need the same document.
+
+**Hosts gain:** cockpit waterfall, DAG graphics in-product, CI path match, cost/latency cards, APM correlation — without a hosted observability product.
+
+**Done means:** default payload is metadata-only; I/O is opt-in and redacted; graph overlay has status not payloads; disabled OTel remains zero-alloc; mermaid/DOT are deterministic and escaped.
+
+**Plan 072 Tasks 1–7.** References: [evaluations](docs/evaluations.md) (after 072), plan 072 `docs/execution-timeline.md` (to be added).
+
+### P1 — R16. Work-scope session memory index
+
+**Existing foundation:** observational-memory ledger (observations/reflections, exact-id recall, opt-in attach), session custom entries, coding `taskId` / workflow `nodeId` as *optional* host ids.
+
+**Deliver:** host-named `WorkScope` tree, bind table to OM ids, active stack, `projectWorkMemory` as the working set, leaf-only auto-bind on flush, `withWorkScope` helper. Dropper skipped when any host scope exists; unscoped attach keeps today’s dropper. No baked phase/plan/task enum. No resource-scoped OM.
+
+**Why:** a token-budget dropper cannot keep task-1 constraints alive for task 15, or promote phase-1 invariants into phase 2, without either dumping the log or deleting too early. Hosts need an index, not a second memory model.
+
+**Hosts gain:** roadmap → plan → execute loops can attach episodes to *their* scopes and query `self+ancestors`. Prism does not own the ontology.
+
+**Done means:** no `om.scope.*` → 0.6.0 OM byte-for-byte; projection is a filter (recall-by-id still full ledger); close ≠ delete; helper is not inside `runWorkflow`.
+
+**Plan 077 Tasks 1–7.** References: [observational memory](docs/compaction-observational-memory.md).
+
+### P1 — R17. Cache-stable attention compiler
+
+**Existing foundation:** `assembleProviderInput`, `cache_aware` layout, `toolResultFold` (host `summarize` required), `applyContextBudget`, `session.compact` at task boundary (`thresholdEntries`), OM `compactAfterTokens` after post-run flush.
+
+**Deliver:** opt-in compiler that **measures every provider turn** and **mutates nothing** until `used / inputCap ≥ triggerRatio` (default 0.75 of `contextWindow - maxOutputTokens - reserve`). Over ratio: sticky in-place thinking strip, then deterministic old tool-result stubs. Frozen prefix (system / `AGENTS.md` / skill catalog / tools) never touched. Compiler does not rewrite OM mid-run. Host-programmable compaction trigger (`threshold_entries` | `input_ratio` | `custom shouldCompact`). Compact still task-boundary. Still-over throws `AttentionBudgetError` rather than silently dropping constitution.
+
+**Why:** rewriting the prompt every turn destroys prefix cache. A token-budget dropper that deletes history rows breaks tool pairing and cache. Hosts need a gate, not a mixer, and they need to program *when* OM compact fires without Prism inventing their ontology.
+
+**Hosts gain:** long tool loops keep cache hits until they are actually fat; then thinking and grep dumps shrink first; OM summary lands only at compact, as a new stable prefix.
+
+**Done means:** omitted field → 0.6.0 assembly byte-for-byte; under ratio → golden identical request; stubbed ids stay stubbed; `session.compact()` still throws in-flight; OM `compactAfterTokens` unchanged unless host passes `shouldCompact` / `trigger`.
+
+**Plan 074 Tasks 1–6** (complete: primitive review, frozen contracts, input-cap resolution, the ratio gate with sticky thinking/tool-result stages, one host-programmable compaction trigger shared by `autoCompact` and observational-memory attach, opt-in wiring through `AgentConfig`/`AgentDefinition`/`RunOptions` with a session-owned sticky frontier, `attention_compiled` telemetry folding into an `attention` timeline step, the hermetic measurement scenario behind `docs/_evidence/phase74-attention-measurements.md`, the sticky frontier riding `persistSessionState` checkpoints, and the `truncated` → compact-once trigger, with a network-free example). References: [attention compiler](docs/attention-compiler.md), [input assembly](docs/input-and-prompt-assembly.md), [compaction](docs/compaction-and-retry.md), [provider caching](docs/provider-caching.md).
+
+### P1 — R08. Cross-layer memory correction and deletion
+
+**Existing foundation:** semantic memory consent/correction/deletion/retention and source-backed observations/reflections.
+
+**Deliver:** lineage from messages through semantic memories, observations, reflections and summaries; corrections that supersede derived conflicts; revocation/deletion that blocks derived injection; explainable recall; explicit revocable parent-child sharing grants.
+
+**Why:** deleting one vector row does not remove the same fact from a reflection or compacted summary.
+
+**Hosts gain:** trustworthy personalization, less stale memory and meaningful user control.
+
+**Done means:** invalidation takes effect before background cleanup; legacy lineage is handled conservatively; legal hold/audit retention are explicit exceptions, not silent promises of erasure. Retained held material stays out of model context; prior disclosure cannot be undone.
+
+**073 Task 16.** References: [working/semantic memory](docs/working-and-semantic-memory.md), [observational memory](docs/compaction-observational-memory.md).
+
+### P1 — R09. Delegate to complete external coding runtimes
+
+**Existing foundation:** supervisor, ACP/A2A/MCP interoperability and model providers.
+
+**Deliver:** Codex and Claude Agent SDK adapters first; Copilot, Gemini CLI and Cursor adapters follow within 0.7.0. Normalize task status/cancellation, approval requests, artifacts, usage and provenance; advertise actual visibility, enforcement and recovery support.
+
+**Why:** model access is not a coding harness. `createOpenAICodexProvider()` does not embed Codex's complete runtime. Hosts may want Prism to govern the outer business workflow while delegating specialized coding work.
+
+**Hosts gain:** best-of-breed coding execution without replacing surrounding orchestration.
+
+**Done means:** each runtime has a tested capability matrix and live journey; unobservable actions/usage remain unobservable/unknown, not falsely approved/accounted. SDKs are lazy and version-pinned. Use supported Codex SDK/app-server, not the removed MCP-server interface. Local execution does not imply local inference.
+
+**073 Tasks 17–18.** References: [supervisors](docs/supervisors.md), [A2A](docs/a2a.md).
+
+### P1 — R10. Evidence-backed artifact and research review
+
+**Existing foundation:** Office AST/patches, artifact revisions/approval, web citations and RAG provenance.
+
+**Deliver:** paragraph/table/cell/slide diffs; approval bound to artifact and evidence revisions; source excerpts/snapshots with hashes/timestamps; citation integrity and claim-support checks; imported-document fidelity/loss reports; optional Mistral OCR/layout adapter for scanned documents.
+
+**Why:** a changed hash says nothing about whether an amount, paragraph or factual claim changed correctly. Generated business artifacts need reviewable evidence.
+
+**Hosts gain:** traceable reports, safer spreadsheet/document changes and less manual fact-checking.
+
+**Done means:** reviewers can identify semantic changes and exact evidence; stale/revoked evidence invalidates acceptance. Source existence is distinguished from claim support, and model support verdicts retain uncertainty. OCR requires explicit data-upload authorization; default parsers remain local/no-network. No full Office editor or custom OCR engine.
+
+**073 Tasks 19–20.** References: [documents](docs/documents.md), [artifact review](docs/work-artifacts-and-review.md), [document reader](docs/document-reader.md).
+
+### P1 — R11. Per-run tool narrowing and remote capability invalidation
+
+**Existing foundation:** registries, filters, dispatch permission checks, progressive discovery and skill dependencies.
+
+**Deliver:** an immutable run-local subset of already registered/authorized tools applied to model schemas, discovery and dispatch; preserve it through checkpoints and recheck current permission on resume; invalidate loaded MCP definitions after schema/effect/authorization changes.
+
+**Why:** exposing irrelevant tools increases prompt cost and selection errors. Dispatch-only denial protects effects but does not improve the model's choice set.
+
+**Hosts gain:** one continuing assistant can switch safely between research, coding and business tasks without discarding session context.
+
+**Done means:** no middleware, skill, client or subagent can broaden authority; concurrent runs do not mutate a shared registry; stale remote definitions reject before execution. No additional registry or hidden global tool state.
+
+**073 Task 21.** References: [tools](docs/tools.md), [MCP](docs/mcp-tools.md).
+
+### P1 — R12. Native enterprise-cloud provider fidelity
+
+**Existing foundation:** Bedrock/Vertex/Azure endpoint and workload identity support; the Bedrock adapter now ships both a compatible route and a native Converse/ConverseStream route (plan 073 Task 22, completed 2026-09-14), while Vertex still uses its compatible route.
+
+**Deliver:** native Vertex Gemini with workload credentials (Bedrock Converse/ConverseStream delivered in 0.7.0); explicit matrices for native tools, grounding, multimodal input, caching, reasoning, structured output and usage. Preserve compatible routes as explicit alternatives.
+
+**Why:** enterprise hosts choose a cloud boundary for identity, network and data governance, not only model availability. Compatible APIs are not the entire native feature surface.
+
+**Hosts gain:** native cloud functionality without custom provider adapters or leaving approved deployment boundaries.
+
+**Done means:** native conformance and live tool/stream journeys pass; region/inference-profile policy is verified; hosted actions are attributed without pretending they pass through host tool approval. Unsupported capabilities fail explicitly.
+
+**073 Task 22 (Bedrock, complete) and Task 23 (Vertex, out of 0.7.0).** References: [Bedrock](docs/providers/bedrock.md), [Vertex](docs/providers/vertex.md).
+
+### P2 — R13. Channels and non-TypeScript hosts
+
+**Existing foundation:** authorized HTTP/SSE, RPC, MCP, ACP, AG-UI, webhooks and durable decisions.
+
+**Deliver:** thin Python and .NET remote clients plus maintained Slack and Teams approval/notification recipes. Cover streaming/reconnect/status/resume/cancellation, conversation binding, event deduplication and authenticated reviewer identity.
+
+**Why:** hosts are not always TypeScript services, and users often review business actions where they already communicate.
+
+**Hosts gain:** adoption without porting Prism, and approvals outside a custom web application.
+
+**Done means:** both clients interoperate against packed server artifacts; both channels reject forged/replayed/cross-owner approvals and survive restart. Authentication is separate from reviewer authorization. Client source/build artifacts ship with 0.7.0; PyPI/NuGet publication requires separate operator approval. No multi-language runtime or channel framework.
+
+**073 Tasks 24–25.** References: [server](docs/server.md), [agent events](docs/agent-events.md).
+
+### P2 — R14. Complete realtime voice orchestration
+
+**Existing foundation:** speech/transcription contracts, DeviceAdapter admission and OpenAI Realtime transport.
+
+**Deliver:** realtime audio connected to ordinary agent tools, approvals and accounting; turn-taking/interruption/barge-in; non-replaying reconnect; transcript/privacy controls; one tested accessible host integration with text fallback.
+
+**Why:** voice enables hands-free assistance, accessibility and business support. A transport alone is not a complete voice-agent harness.
+
+**Hosts gain:** voice agents using the same governance and capabilities as text agents.
+
+**Done means:** microphone consent never becomes blanket tool approval; revoked consent stops processing; reconnect reconciles call IDs/outcomes rather than repeating mutations. Audio is bounded and governed explicitly—text redaction cannot sanitize raw audio. Live interruption behavior and deterministic queue checks are recorded.
+
+**073 Task 26.** References: [device adapters](docs/device-adapters.md), [speech](docs/speech.md).
+
+## 5. What I would ship first
+
+**Plan 072 first** (R07/R15): timeline, graph, trajectory/outcome scorers, scenarios, trials, manifests, cockpit aggregations, workflow OTel — complete. Then plan 073 traps and host compositions (Tasks 1–27 also complete). **Plan 077 in parallel** (R16 work scopes) and **plan 074 in parallel** (R17 attention compiler), then **075** (memory fabric), **078** (host-owned spawn) and **079** (messaging channels). 073 Tasks 28–29 are the cut and are deferred until the whole line is closed.
+
+After plan 072 and the three concrete integration traps:
+
+1. **Validated host compositions and real-provider ACP launcher — fastest adoption improvement.** Give hosts two tested starting points, truthful readiness inspection and a useful editor launcher. Start with existing APIs, then integrate the new adapters during final journeys. 073 Tasks 4–5 and 27.
+2. **Governed invocation/accounting adapter — strongest cross-cutting business value.** Put admission and settlement around the actual paid operation, including children and background jobs. 073 Tasks 6–7.
+3. **Durable draft review with editable approvals — turns existing governance into usable business functionality.** Persist the exact proposed action, bind approval to its revision and let reviewers edit without approving stale content. 073 Tasks 8–9.
+4. **Docker process-session support — closes a concrete coding execution gap.** Keep watchers, servers and interactive work inside the same attested workspace as file edits and diagnostics. 073 Task 10.
+5. **Document ACL retrieval — essential next step for enterprise knowledge hosts.** Enforce permission before retrieval/reranking exposure, then maintain it through incremental source changes. 073 Tasks 11–12.
+
+This was the preferred implementation order, not a smaller release scope. All P0 work, all P1 work (including R15, R16, and R17) and the delivered P2 items shipped in 0.7.0, together with the plans absorbed into the line on 2026-09-14. Dependencies and separately checkable tasks are defined in [plan 072](plans/072-Host-Eval-And-Observability-Cockpit.md), [plan 073](plans/073-Release-0-7-0-Host-Completeness.md), [plan 074](plans/074-Attention-Compiler.md), [plan 075](plans/075-Memory-Fabric.md), [plan 077](plans/077-Work-Scope-Memory-Index.md) and [plan 078](plans/078-Host-Owned-Subagent-Spawn-And-Parallel-Agents.md); [plan 079](plans/079-Prism-Messaging-Channels-Telegram-Signal.md) moved to 0.8.0. 073 Tasks 28–29 were the cut and ran once the six shipped plans were closed.
+
+## 6. Audience-specific adjustment
+
+### Personal assistants
+
+Prioritize **memory correction, onboarding and channel delivery**.
+
+The central trust questions are whether the assistant remembers the right facts, can forget or correct them, uses the intended account, and asks before taking consequential action. Emphasize R05, R08 and R13, while keeping R01/R02 protections available. Voice R14 adds accessibility without replacing text approval or privacy controls.
+
+### Coding hosts
+
+Prioritize **sandbox processes, ACP usability and external harness adapters**.
+
+The critical journey is edit → run/watch/test → inspect/review → restart/recover. Shell, file tools, LSP, browser and delegated runtime must agree on workspace identity and authority. Emphasize R03, R05 and R09; R11 reduces irrelevant capabilities without losing session context.
+
+### Business hosts
+
+Prioritize **governed calls, durable review, document authorization and behavioral evaluations**.
+
+A good answer is insufficient if it leaked a restricted document, overspent a shared budget, sent the wrong draft or repeated an uncertain mutation. Emphasize R01, R02, R04 and R07; R06 supplies operations and R10 supplies review evidence.
+
+Audience priority changes staffing and sequencing—not the obligation to complete every item for this requested release.
+
+## 7. Model-side recommendation: evidence and clear capability boundaries
+
+**The most useful improvement is not “more autonomy.” It is better evidence and clearer capability boundaries.**
+
+Agents perform better when they can determine:
+
+| Question | Required answer in Prism | Main recommendations |
+| --- | --- | --- |
+| **What is allowed now?** | Current identity/policy, effective tools, source ACLs, remaining admitted budget and actual sandbox/delegated capabilities—not prompt claims | R01, R03, R04, R05, R09, R11 |
+| **Which source supports this fact?** | Authorized source/revision/excerpt, retrieval time and lineage, with uncertainty where support is not verified | R04, R08, R10 |
+| **What changed since approval?** | Exact action/artifact revision and semantic difference; changed recipients/payload/evidence/policy require renewed authorization | R02, R10 |
+| **Did an action complete, fail, or become uncertain?** | Correlated effect/attempt IDs, observable outcome and durable reconciliation state; no invented success or zero-cost default | R01, R02, R06, R09, R14 |
+| **What can safely resume?** | Checkpoint/version/fence, current authorization, attested resource identity and explicit replay limits | R02, R03, R06, R08, R11, R14 |
+
+Prism already has much of this machinery. Making the answers consistent across packages delivers more host value than another orchestration abstraction, provider wrapper or tool collection.
+
+Evidence remains **data**, never authority by itself: a retrieved instruction cannot grant tools; an authenticated chat button cannot grant reviewer rights; a sandbox label cannot assert unverified isolation; a model judge cannot prove factual truth.
+
+## 8. Release evidence and acceptance
+
+### Three integrated host journeys
+
+1. **Personal:** packed onboarding → scoped provider → remembered fact → correction/revocation across derived memory → authenticated channel notification/review → restart with no leaked stale context.
+2. **Coding:** real-provider ACP → contained edit and long-running test/watch → diagnostics/browser workspace coherence → patch review → restart/reattach → external runtime delegation → cancellation and cleanup.
+3. **Business:** verified identity → authorized synchronized knowledge → governed task budget → exact durable draft → reviewer edits/quorum → restart → external effect → uncertain-outcome reconciliation → evidence-backed artifact and audit.
+
+Cross-cutting journeys cover Python/.NET protocol parity and voice interruption/reconnect without duplicate mutation.
+
+### Required evidence
+
+- Fresh build/offline tests, lint/format/typecheck, coverage, public declarations/compatibility, package truth, supply-chain/security checks and packed-install examples.
+- Node 22 and Node 24 core/package coverage; optional SDKs with stricter engines explicitly refuse unsupported activation rather than raising the root floor silently.
+- Required protected/live checks for PostgreSQL/pgvector, Docker/browser, Drive, E2B, OCR, Bedrock/Vertex, all claimed delegated runtimes, Slack/Teams and voice.
+- Multi-worker reservation/fencing, approval CAS, source revocation, migration/rollback, cleanup and unknown-effect refusal tests.
+- Recorded package/startup/runtime/resource/cost measurements; repeated trial evidence for behavior and declared setup for live latency measurements.
+- Every recommendation linked to code, tests, docs, integration pins, operational ownership and a passing evidence artifact.
+
+### Documentation truth criteria
+
+These five acceptance criteria stay in force for the truth suite (`scripts/phase24-truth.test.mjs`):
+
+- truth: no page claims “every” or “all” unless dependency closure proves it.
+- truth: packed-install tests assert documented contents, not just that a file exists.
+- truth: generated checks catch drift between manifests, docs and evidence.
+- truth: stale 0.1.1/0.0.23 “current line” text and contradictory provider counts are gone.
+- truth: docs tests fail on wrong package closure/version/navigation while permitting editorial changes.
+
+**Missing credentials or infrastructure means blocked—not passed.** No item is silently dropped to preserve a date/version. No claim of exactly-once delivery for arbitrary external effects. No dry-run reported as published. Actual tagging/registry publication remains an operator-authorized action after plan 073 Tasks 28–29, which stay deferred until every plan of the extended line (072, 073, 074, 075, 077, 078, 079) is closed.
+
+## 9. Product and implementation boundaries
+
+- Extend existing sessions, ledgers, checkpoints, leases, workflows, tools, approvals and events. No second runtime.
+- Keep root dependency-free and optional SDKs behind explicit activation and lazy optional dependencies.
+- Hosts own identity, credentials, UI, accounts, infrastructure, retention policy, business rules and operational incident decisions.
+- Reuse native/platform/installed functionality before adding dependencies or abstractions. New shared primitives require proven multiple consumers.
+- Do not build Prism Studio, a visual workflow editor, hosted compute/control plane, identity provider, OCR engine, Office editor or multi-language runtime.
+- Reference breadth is fixed in plan 073: E2B, Drive, Mistral OCR; Codex/Claude/Copilot/Gemini CLI/Cursor; Python/.NET; Slack/Teams; native Bedrock/Vertex; OpenAI Realtime host integration. Additional vendor catalogs are not implied. Plan 072 adds no vendor SDKs.
+- Security tightenings need migration/refusal tests. Broad incompatibilities cannot be hidden under 0.7.0; resolve explicitly before release.
+- Capability support must be truthful: local execution versus local inference; model provider versus complete harness; filesystem snapshot versus process memory; authenticated user versus authorized reviewer; observed usage versus estimated/unknown cost.
+
+## 10. External reference points
+
+These informed the review; they are not a claim that Prism must reproduce every provider's managed infrastructure. Exact integration versions are pinned and rechecked during implementation.
+
+- [OpenAI sandbox agents](https://openai.github.io/openai-agents-js/guides/sandbox-agents/concepts/) and [Codex SDK](https://developers.openai.com/codex/sdk): coherent execution lifecycle and complete coding-runtime delegation.
+- [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview): integrated tools, permissions, sessions and explicit checkpoint limits.
+- [Google ADK evaluation](https://github.com/google/adk-docs/blob/main/docs/evaluate/criteria.md): trajectory checks beyond final answers.
+- [Microsoft Durable Extension](https://learn.microsoft.com/en-us/agent-framework/integrations/durable-extension): operating durable workers and long-lived human review.
+- [GitHub Copilot SDK](https://docs.github.com/en/copilot/how-tos/copilot-sdk), [Gemini CLI SDK](https://github.com/google-gemini/gemini-cli/blob/main/packages/sdk/README.md), [Cursor SDK](https://cursor.com/docs/sdk/typescript): complete coding harnesses and host integration, not interchangeable raw model APIs.
+- [AWS AgentCore identity](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity-authentication.html) and [policy](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/policy-core-concepts.html): explicit delegated access and execution governance.
+- [NVIDIA NeMo Agent Toolkit](https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html) and [Salesforce Testing API](https://developer.salesforce.com/docs/ai/agentforce/guide/testing-api.html): profiling, evaluation and business behavior evidence.
+- [Mistral Agents](https://docs.mistral.ai/studio/agents/agents-api), [AgentScope Runtime](https://github.com/agentscope-ai/agentscope-runtime), [IBM watsonx Orchestrate ADK](https://developer.watson-orchestrate.ibm.com/), [Vercel WorkflowAgent](https://ai-sdk.dev/docs/agents/workflow-agent), and [LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/use-time-travel): connected work, portable execution and durable integration patterns.
+
+Use this roadmap to recover **why** an item matters. Use [plan 072](plans/072-Host-Eval-And-Observability-Cockpit.md), [plan 073](plans/073-Release-0-7-0-Host-Completeness.md), [plan 074](plans/074-Attention-Compiler.md), [plan 075](plans/075-Memory-Fabric.md), [plan 077](plans/077-Work-Scope-Memory-Index.md) and [plan 078](plans/078-Host-Owned-Subagent-Spawn-And-Parallel-Agents.md) to see **what shipped in 0.7.0 and what evidence made it complete**, and [plan 079](plans/079-Prism-Messaging-Channels-Telegram-Signal.md) for the 0.8.0 channel work.

@@ -112,8 +112,9 @@ describe("Plan 027 Task 10 release closeout", () => {
     for (const name of expected) {
       assert.ok(migrationsJs.includes(name), `migration ${name} is registered`);
     }
-    // No 006+ migration exists yet (additive-only; future migrations append).
-    assert.ok(!/006_/.test(migrationsJs), "no speculative 006 migration");
+    // Additive-only: later lines append. 006_aggregate_budgets shipped with 0.7.0
+    // (task-scoped budget rows + attributions); the frozen 0.2.7 names above stay registered.
+    assert.ok(migrationsJs.includes("006_aggregate_budgets"), "append-only migration 006 is registered");
   });
 
   test("all 0.2.7 docs pages are linked exactly once in docs/index.md", () => {

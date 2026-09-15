@@ -3,6 +3,7 @@
  * of `./contracts-core.js` is unchanged (0.1.4 barrel precedent). */
 export type { AudioContent, DocumentContent, FileContent } from "./content.js";
 export * from "./contracts-core/agent.js";
+export * from "./contracts-core/attention.js";
 export * from "./contracts-core/batch.js";
 export * from "./contracts-core/compaction.js";
 export * from "./contracts-core/content.js";

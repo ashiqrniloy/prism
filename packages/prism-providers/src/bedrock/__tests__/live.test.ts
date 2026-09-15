@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
 import { assertAbortIsObserved, assertNoSecretLeak, assertProviderStreamConforms } from "@arnilo/prism/testing/provider-conformance";
-import { createBedrockProvider } from "../index.js";
+import { createBedrockConverseProvider, createBedrockProvider } from "../index.js";
 
 const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
 const ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID;
@@ -18,6 +18,18 @@ const skip: string | false =
 function provider() {
   return createBedrockProvider({
     region: REGION!,
+    credential: () => ({
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
+      sessionToken: process.env.AWS_SESSION_TOKEN,
+    }),
+  });
+}
+
+function converseProvider(options: { readonly stream: boolean }) {
+  return createBedrockConverseProvider({
+    region: REGION!,
+    stream: options.stream,
     credential: () => ({
       accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
@@ -68,6 +80,33 @@ describe("@arnilo/prism-providers/bedrock live tests", () => {
     const events: ProviderEvent[] = [];
     for await (const event of provider().generate({ ...textRequest, messages: [] })) events.push(event);
     assert.ok(events.at(-1), "live error request produced no events");
+    assertNoSecretLeak(events, [ACCESS_KEY!, SECRET_KEY!]);
+  });
+
+  it("live_native_converse_streams_text_tools_and_usage", { skip }, async () => {
+    const text = await assertProviderStreamConforms({ provider: converseProvider({ stream: true }), request: textRequest });
+    const streamed = text
+      .map((event) => (event.type === "content_delta" && event.content.type === "text" ? event.content.text : ""))
+      .join("");
+    assert.ok(streamed.length > 0, "native ConverseStream response was empty");
+    const hasUsage = text.some((event) =>
+      event.type === "usage" ? event.usage.inputTokens !== undefined : event.type === "done" && event.usage !== undefined,
+    );
+    assert.ok(hasUsage, "native ConverseStream returned no usage");
+    const toolEvents = await assertProviderStreamConforms({ provider: converseProvider({ stream: true }), request: toolRequest });
+    assert.ok(
+      toolEvents.some((event: ProviderEvent) => event.type === "tool_call"),
+      "native ConverseStream did not emit a tool call for a tool request",
+    );
+    assertNoSecretLeak([...text, ...toolEvents], [ACCESS_KEY!, SECRET_KEY!]);
+  });
+
+  it("live_native_converse_non_streaming_returns_text", { skip }, async () => {
+    const events = await assertProviderStreamConforms({ provider: converseProvider({ stream: false }), request: textRequest });
+    const text = events
+      .map((event) => (event.type === "content_delta" && event.content.type === "text" ? event.content.text : ""))
+      .join("");
+    assert.ok(text.length > 0, "native Converse response was empty");
     assertNoSecretLeak(events, [ACCESS_KEY!, SECRET_KEY!]);
   });
 });

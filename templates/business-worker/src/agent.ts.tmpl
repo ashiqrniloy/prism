@@ -1,0 +1,92 @@
+import {
+  type Agent,
+  createMemoryCheckpointStore,
+  createMockProvider,
+  createSecretRedactor,
+  createSecureAgent,
+  createStaticPermissionPolicy,
+  createStaticTrustPolicy,
+  providerDone,
+  providerTextDelta,
+} from "@arnilo/prism";
+import { createJsonSchemaArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
+import { createMemoryWorkDraftStore, type SyncWorkDraftStore } from "@arnilo/prism-core/integrations/work";
+import type { AgentIdentity } from "@arnilo/prism";
+
+export interface CreateBusinessWorkerOptions {
+  readonly tenantId?: string;
+  readonly userId?: string;
+  readonly identity?: AgentIdentity;
+  readonly store?: import("@arnilo/prism").CheckpointStore;
+  readonly provider?: import("@arnilo/prism").AIProvider;
+  readonly model?: { readonly provider: string; readonly model: string };
+  readonly workspaceRoot?: string;
+}
+
+export function createAppAgent(options: CreateBusinessWorkerOptions = {}): Agent {
+  const tenantId = options.tenantId ?? "tenant-corp";
+  const userId = options.userId ?? "worker-1";
+
+  const identity: AgentIdentity = options.identity ?? {
+    tenantId,
+    userId,
+    principal: { kind: "user", id: userId },
+    scopes: ["worker:execute"],
+    verified: true,
+    issuedAt: new Date().toISOString(),
+  };
+
+  const redactor = createSecretRedactor(
+    [process.env.BUSINESS_API_KEY].filter((v): v is string => typeof v === "string" && v.length > 0),
+  );
+
+  const provider =
+    options.provider ??
+    createMockProvider([
+      providerTextDelta("Business worker ready for tenant tasks."),
+      providerDone(),
+    ]);
+
+  return createSecureAgent({
+    id: "business-worker",
+    definitionRevision: "1",
+    ownership: { tenantId, userId },
+    identity,
+    redactor,
+    permission: createStaticPermissionPolicy(true),
+    trust: createStaticTrustPolicy(true),
+    toolArgumentValidator: createJsonSchemaArgumentValidator(),
+    limits: { maxToolRounds: 15 },
+    runState: { checkpoints: options.store ?? createMemoryCheckpointStore() },
+    tools: [
+      {
+        name: "process_tenant_record",
+        description: "Processes a verified tenant batch item",
+        parameters: {
+          type: "object",
+          properties: {
+            recordId: { type: "string" },
+            action: { type: "string" },
+          },
+          required: ["recordId", "action"],
+          additionalProperties: false,
+        },
+        execute: async (args, ctx) => ({
+          toolCallId: ctx.toolCallId,
+          name: "process_tenant_record",
+          value: {
+            processed: true,
+            tenantId,
+            recordId: (args as { recordId: string }).recordId,
+          },
+        }),
+      },
+    ],
+    provider,
+    model: options.model ?? { provider: "mock", model: "corp-worker-model" },
+  });
+}
+
+export function createWorkerDraftStore(): SyncWorkDraftStore {
+  return createMemoryWorkDraftStore();
+}

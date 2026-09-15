@@ -284,7 +284,7 @@ export interface DrawioModelSummary {
 
 ## 4. Canonical XML Formatting for Content Hashing
 
-Hosts need deterministic content hashing for diagrams stored in revision controls, artifact stores (e.g. Synapta RustFS/Postgres), and decision ledgers:
+Hosts need deterministic content hashing for diagrams stored in revision controls, artifact stores (e.g. an S3-compatible object store / Postgres), and decision ledgers:
 ```ts
 const contentHash = createHash("sha256").update(canonicalizeDrawioXml(xml)).digest("hex");
 ```

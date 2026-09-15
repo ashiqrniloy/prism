@@ -8,7 +8,9 @@ import type {
   SessionEntry,
   SettingsProvider,
 } from "@arnilo/prism";
-import { createSessionEntry, redactSecrets, resolveCredentialValue, resolveUseCaseModel, useCaseCredentialProviderId } from "@arnilo/prism";
+import { redactSecrets, resolveCredentialValue, resolveUseCaseModel, useCaseCredentialProviderId } from "@arnilo/prism";
+import { appendCustomEntry, type ObservationalMemoryAppendOptions } from "./append-custom.js";
+export type { ObservationalMemoryAppendOptions } from "./append-custom.js";
 import {
   eligibleObservationSources,
   eligibleObservationTokenCount,
@@ -16,6 +18,7 @@ import {
   unscannedEntries,
 } from "./coverage-helpers.js";
 import { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
+import { createWorkScopeController, foldWorkScopeMap, type WorkBindRef } from "./scopes.js";
 import { type MemoryWorkerLimitOptions, type ResolvedMemoryWorkerLimits, resolveMemoryWorkerLimits, truncateWorkerText } from "./limits.js";
 import {
   assertNoRemovedFlatKeys,
@@ -34,10 +37,6 @@ export interface ObservationalMemoryWorkerRuntimeConfig {
   readonly credential?: CredentialValueSource;
   readonly credentialRequest?: CredentialRequest;
   readonly requireExplicitModel?: boolean;
-}
-
-export interface ObservationalMemoryAppendOptions {
-  readonly expectedParentId?: string;
 }
 
 export interface ObservationalMemoryRuntimeOptions {
@@ -142,6 +141,16 @@ async function flush(
   const omSessionId = `om:${options.session.id}`;
   const entries = await options.session.entries();
   const ledger = foldObservationalMemoryLedger(entries);
+  const workScopes = foldWorkScopeMap(entries);
+  const hasHostScopes = workScopes.scopes.size > 1;
+  const knownObservationIds = new Set(ledger.observations.map((observation) => observation.id));
+  const knownReflectionIds = new Set(ledger.reflections.map((reflection) => reflection.id));
+  const autoBindRefs: WorkBindRef[] = [];
+  const bindNewRefs = async () => {
+    if (!hasHostScopes || !autoBindRefs.length) return;
+    const controller = createWorkScopeController(options);
+    await controller.bind(await controller.leaf(), autoBindRefs);
+  };
   const pending = unscannedEntries(entries, ledger.latestObservationCoverageId);
   const eligibleSources = eligibleObservationSources(pending);
   const eligibleTokens = eligibleObservationTokenCount(eligibleSources);
@@ -150,111 +159,123 @@ async function flush(
   let reflectionCount = 0;
   let dropCount = 0;
 
-  if (pending.length && lastScannedId) {
-    if (!eligibleSources.length) {
-      await appendCustom(options, {
-        type: OBSERVATIONS_RECORDED,
-        observations: [],
-        coversUpToId: lastScannedId,
-      });
-    } else if (eligibleTokens >= settings.observation.messageTokens) {
-      const observer = await resolveWorker("observation", options, settings);
-      if (!observer) return { observations: 0, reflections: 0, dropped: 0, skipped: "missing_model" };
-      const secrets = workerSecrets(observer, options);
-      if (observer.missingCredentials) return { observations: 0, reflections: 0, dropped: 0, skipped: "missing_credentials" };
-      const observations = await runObserver({
-        entries: eligibleSources,
-        provider: observer.provider,
-        model: observer.model,
-        ...workerLimits,
-        providerOptions: observer.providerOptions,
-        thinkingLevel: observer.thinkingLevel,
-        sessionId: omSessionId,
-        instruction: settings.observation.instruction,
-        secrets,
-        signal: options.signal,
-      });
-      await appendCustom(options, {
-        type: OBSERVATIONS_RECORDED,
-        observations: JSON.parse(redactSecrets(JSON.stringify(observations), secrets)),
-        coversUpToId: lastScannedId,
-      });
-      observationCount = observations.length;
-    }
-  }
-
-  const afterObservationEntries = await options.session.entries();
-  const afterObservations = foldObservationalMemoryLedger(afterObservationEntries);
-  const uncovered = observationsUncoveredByReflection(
-    afterObservationEntries,
-    afterObservations,
-    flushOptions.fullReflectionRebuild === true,
-  );
-  const uncoveredTokens = uncovered.reduce((sum, item) => sum + item.tokenCount, 0);
-  const active = activeObservations(afterObservations);
-  const activeTokens = active.reduce((sum, item) => sum + item.tokenCount, 0);
-  if (uncovered.length && uncoveredTokens >= settings.reflection.observationTokens) {
-    const reflector = await resolveWorker("reflection", options, settings);
-    if (!reflector) return { observations: observationCount, reflections: 0, dropped: 0, skipped: "missing_model" };
-    const secrets = workerSecrets(reflector, options);
-    if (reflector.missingCredentials) return { observations: observationCount, reflections: 0, dropped: 0, skipped: "missing_credentials" };
-    const reflections = await runReflector({
-      observations: uncovered,
-      provider: reflector.provider,
-      model: reflector.model,
-      ...workerLimits,
-      providerOptions: reflector.providerOptions,
-      thinkingLevel: reflector.thinkingLevel,
-      sessionId: omSessionId,
-      instruction: settings.reflection.instruction,
-      secrets,
-      signal: options.signal,
-    });
-    await appendCustom(options, {
-      type: REFLECTIONS_RECORDED,
-      reflections: JSON.parse(redactSecrets(JSON.stringify(reflections), secrets)),
-      coversUpToId: afterObservations.latestObservationCoverageId,
-    });
-    reflectionCount = reflections.length;
-  }
-
-  if (reflectionCount && activeTokens > settings.dropper.targetTokens) {
-    let dropped: readonly string[] = [];
-    if (settings.dropper.policy === "lowest-relevance") {
-      dropped = dropObservationsToTarget(active, settings.dropper.targetTokens);
-    } else {
-      const dropper = await resolveWorker("dropper", options, settings);
-      if (!dropper) return { observations: observationCount, reflections: reflectionCount, dropped: 0, skipped: "missing_model" };
-      const secrets = workerSecrets(dropper, options);
-      if (dropper.missingCredentials) {
-        return { observations: observationCount, reflections: reflectionCount, dropped: 0, skipped: "missing_credentials" };
+  try {
+    if (pending.length && lastScannedId) {
+      if (!eligibleSources.length) {
+        await appendCustomEntry(options, {
+          type: OBSERVATIONS_RECORDED,
+          observations: [],
+          coversUpToId: lastScannedId,
+        });
+      } else if (eligibleTokens >= settings.observation.messageTokens) {
+        const observer = await resolveWorker("observation", options, settings);
+        if (!observer) return { observations: 0, reflections: 0, dropped: 0, skipped: "missing_model" };
+        const secrets = workerSecrets(observer, options);
+        if (observer.missingCredentials) return { observations: 0, reflections: 0, dropped: 0, skipped: "missing_credentials" };
+        const observations = await runObserver({
+          entries: eligibleSources,
+          observations: activeObservations(ledger),
+          provider: observer.provider,
+          model: observer.model,
+          ...workerLimits,
+          providerOptions: observer.providerOptions,
+          thinkingLevel: observer.thinkingLevel,
+          sessionId: omSessionId,
+          instruction: settings.observation.instruction,
+          secrets,
+          signal: options.signal,
+        });
+        const recordedObservations = JSON.parse(redactSecrets(JSON.stringify(observations), secrets)) as typeof observations;
+        await appendCustomEntry(options, {
+          type: OBSERVATIONS_RECORDED,
+          observations: recordedObservations,
+          coversUpToId: lastScannedId,
+        });
+        for (const observation of recordedObservations)
+          if (!knownObservationIds.has(observation.id)) autoBindRefs.push(`om:${observation.id}`);
+        observationCount = observations.length;
       }
-      dropped = await runDropper({
-        observations: active,
-        targetTokens: settings.dropper.targetTokens,
-        provider: dropper.provider,
-        model: dropper.model,
+    }
+
+    const afterObservationEntries = await options.session.entries();
+    const afterObservations = foldObservationalMemoryLedger(afterObservationEntries);
+    const uncovered = observationsUncoveredByReflection(
+      afterObservationEntries,
+      afterObservations,
+      flushOptions.fullReflectionRebuild === true,
+    );
+    const uncoveredTokens = uncovered.reduce((sum, item) => sum + item.tokenCount, 0);
+    const active = activeObservations(afterObservations);
+    const activeTokens = active.reduce((sum, item) => sum + item.tokenCount, 0);
+    if (uncovered.length && uncoveredTokens >= settings.reflection.observationTokens) {
+      const reflector = await resolveWorker("reflection", options, settings);
+      if (!reflector) return { observations: observationCount, reflections: 0, dropped: 0, skipped: "missing_model" };
+      const secrets = workerSecrets(reflector, options);
+      if (reflector.missingCredentials)
+        return { observations: observationCount, reflections: 0, dropped: 0, skipped: "missing_credentials" };
+      const reflections = await runReflector({
+        observations: uncovered,
+        provider: reflector.provider,
+        model: reflector.model,
         ...workerLimits,
-        providerOptions: dropper.providerOptions,
-        thinkingLevel: dropper.thinkingLevel,
+        providerOptions: reflector.providerOptions,
+        thinkingLevel: reflector.thinkingLevel,
         sessionId: omSessionId,
-        instruction: settings.dropper.instruction,
+        instruction: settings.reflection.instruction,
         secrets,
         signal: options.signal,
       });
-    }
-    if (dropped.length) {
-      await appendCustom(options, {
-        type: OBSERVATIONS_DROPPED,
-        observationIds: dropped,
+      const recordedReflections = JSON.parse(redactSecrets(JSON.stringify(reflections), secrets)) as typeof reflections;
+      await appendCustomEntry(options, {
+        type: REFLECTIONS_RECORDED,
+        reflections: recordedReflections,
         coversUpToId: afterObservations.latestObservationCoverageId,
       });
-      dropCount = dropped.length;
+      for (const reflection of recordedReflections)
+        if (!knownReflectionIds.has(reflection.id)) autoBindRefs.push(`reflection:${reflection.id}`);
+      reflectionCount = reflections.length;
     }
-  }
 
-  options.debug?.("observational-memory:flush", { observations: observationCount, reflections: reflectionCount, dropped: dropCount });
-  return { observations: observationCount, reflections: reflectionCount, dropped: dropCount };
+    if (!hasHostScopes && reflectionCount && activeTokens > settings.dropper.targetTokens) {
+      let dropped: readonly string[] = [];
+      if (settings.dropper.policy === "lowest-relevance") {
+        dropped = dropObservationsToTarget(active, settings.dropper.targetTokens);
+      } else {
+        const dropper = await resolveWorker("dropper", options, settings);
+        if (!dropper) return { observations: observationCount, reflections: reflectionCount, dropped: 0, skipped: "missing_model" };
+        const secrets = workerSecrets(dropper, options);
+        if (dropper.missingCredentials) {
+          return { observations: observationCount, reflections: reflectionCount, dropped: 0, skipped: "missing_credentials" };
+        }
+        dropped = await runDropper({
+          observations: active,
+          targetTokens: settings.dropper.targetTokens,
+          provider: dropper.provider,
+          model: dropper.model,
+          ...workerLimits,
+          providerOptions: dropper.providerOptions,
+          thinkingLevel: dropper.thinkingLevel,
+          sessionId: omSessionId,
+          instruction: settings.dropper.instruction,
+          secrets,
+          signal: options.signal,
+        });
+      }
+      if (dropped.length) {
+        await appendCustomEntry(options, {
+          type: OBSERVATIONS_DROPPED,
+          observationIds: dropped,
+          coversUpToId: afterObservations.latestObservationCoverageId,
+        });
+        dropCount = dropped.length;
+      }
+    }
+
+    options.debug?.("observational-memory:flush", { observations: observationCount, reflections: reflectionCount, dropped: dropCount });
+    return { observations: observationCount, reflections: reflectionCount, dropped: dropCount };
+  } finally {
+    await bindNewRefs();
+  }
 }
 
 interface ResolvedWorker {
@@ -310,19 +331,4 @@ function runtimeLimitOptions(options: ObservationalMemoryRuntimeOptions): Memory
     maxMessageBytes: options.maxWorkerMessageBytes,
     maxErrorBytes: options.maxWorkerErrorBytes,
   };
-}
-
-async function appendCustom(options: ObservationalMemoryRuntimeOptions, data: unknown): Promise<void> {
-  const previousLeafId = options.session.leafId;
-  const expectedParentId = previousLeafId;
-  const entry = createSessionEntry({ sessionId: options.session.id, parentId: expectedParentId, kind: "custom", data });
-  await options.appendEntry(entry, { expectedParentId });
-  try {
-    await options.session.checkout(entry.id);
-    if ((await options.session.entries()).at(-1)?.id === entry.id) return;
-  } catch {
-    // Fall through to the ownership error below.
-  }
-  await options.session.checkout(previousLeafId);
-  throw new Error("Observational memory appendEntry did not append to the owning session branch");
 }

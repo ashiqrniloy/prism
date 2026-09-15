@@ -44,7 +44,7 @@ Offline conformance is mandatory for every package; credentialed probes are not 
 | Ollama | cloud/local preset, reasoning/image mapping, implicit-cache fixture | Protected cloud or host-local authenticated daemon probe; no daemon starts in tests |
 | NeuralWatt | stream/retry/quota/telemetry fixtures, implicit-cache usage, headers/redaction | Protected `NEURALWATT_API_KEY` smoke |
 | Azure | endpoint preservation, Entra/resource-key header and OpenAI-compatible stream fixture | Protected host workload-identity probe |
-| Bedrock | SigV4/region/PrivateLink and OpenAI-compatible stream fixture | Protected host IAM/IRSA probe |
+| Bedrock | SigV4/region/PrivateLink, OpenAI-compatible stream fixture, and native Converse fixtures: body mapping (messages/system/tools/media/reasoning/structured output/cachePoint), canonical event-stream frame bytes with CRC/limit/truncation refusals, capability refusals before network I/O | Protected host IAM/IRSA probe for both routes |
 | Vertex | location/endpoint preservation, ADC header and OpenAI-compatible stream fixture | Protected host ADC/WIF probe |
 
 All rows must retain bounded request/response fixtures, abort propagation, provider-owned-header precedence, and fake-secret leak assertions where the package surfaces those values. A successful fake transport proves Prism mapping, not account entitlement or vendor availability.

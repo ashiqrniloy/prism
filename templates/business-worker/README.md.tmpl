@@ -1,0 +1,19 @@
+# __PROJECT_NAME__
+
+Multi-tenant business worker built with Prism. Features strict tenant isolation, verified identities, durable persistence, and governed invocation boundaries.
+
+## Quickstart
+
+```bash
+npm install
+npm test
+npm start
+```
+
+## Production Readiness Requirements
+
+- **Tenant Isolation**: Non-empty `tenantId` in ownership; tenant-scoped stores and workspaces.
+- **Verified Identity**: Host-verified principal matching tenant ownership; no fabricated identities.
+- **Durable Persistence**: Production readiness strictly rejects in-memory stores; PostgreSQL or SQLite durable stores required.
+- **Workspace Containment**: Execution confined to authorized tenant sandbox directories.
+- **Governed Invocation**: Permission policies, trust verification, parameter validation, and secret redaction enforced.

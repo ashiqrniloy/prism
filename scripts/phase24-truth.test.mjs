@@ -194,7 +194,7 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
   if (hasCodingToolsPackage) {
     // Plan 054 Task 6: the provider family is now a code package with a core peer.
     assert.deepEqual(secondPeers, {
-      "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui"],
+      "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui", "@arnilo/prism-providers"],
       "@arnilo/prism-ag-ui": ["@arnilo/prism-core", "@arnilo/prism-mcp"],
       "@arnilo/prism-core": ["@arnilo/prism-memory"], // type-only optional peer: rag telemetry seam
       "@arnilo/prism-web-tools": ["@arnilo/prism-mcp"],

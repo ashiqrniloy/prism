@@ -1,6 +1,10 @@
+import { type AttentionStickyFrontier, compileAttention, createAttentionCompiler } from "./attention-compiler.js";
 import { assertMessagesSupportModelCapabilities } from "./content.js";
 import { applyContextBudget, CONTEXT_BUDGET_REPORT_METADATA_KEY, type ContextBudget, type ContextBudgetReport } from "./context-budget.js";
 import type {
+  AttentionCompiler,
+  AttentionCompilerOptions,
+  AttentionReport,
   ContentBlock,
   ContextBlock,
   ContextProvider,
@@ -114,6 +118,17 @@ export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
   readonly contextBudget?: ContextBudget;
   /** Resolved tool-result fold; projection-only, store untouched. */
   readonly toolResultFold?: ResolvedToolResultFoldOptions;
+  /**
+   * Opt-in attention compiler: options are validated here (per call) or pass an existing
+   * `AttentionCompiler` to reuse one validation. Mutually exclusive with `contextBudget`,
+   * which would otherwise evict as a silent last resort after the compiler's stages.
+   */
+  readonly attentionCompiler?: AttentionCompilerOptions | AttentionCompiler;
+  /** Per-session-leaf sticky frontier; omit for one-shot assemblies (no cross-turn stickiness). */
+  readonly attentionSticky?: AttentionStickyFrontier;
+  /** Called once per *mutated* turn with the report, so a host can emit telemetry: under-ratio
+   *  turns never call it, and it runs before `input_assembly` middleware. */
+  readonly onAttentionReport?: (report: AttentionReport) => void;
 }
 
 export function createDefaultInputBuilder(): DefaultInputBuilder {
@@ -243,7 +258,40 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
   let demotedSkillBodies: readonly string[] | undefined;
   let budgetReport: ContextBudgetReport | undefined;
 
-  if (options.contextBudget) {
+  if (options.attentionCompiler) {
+    if (options.contextBudget) {
+      throw new TypeError(
+        "attentionCompiler and contextBudget are mutually exclusive: the compiler raises AttentionBudgetError instead of evicting",
+      );
+    }
+    // Same default-groups path as the budget branch: the compiler needs the assembled groups
+    // (and the provider context blocks) to measure one cost for the whole request.
+    const groups = await buildDefaultInputMessageGroups(options.input, buildContext);
+    context = await resolveContextProviders({
+      providers: options.contextProviders,
+      messages: flattenInputGroups(groups, layout),
+      injectedBlocks: injectorContribs.contextBlocks.length ? injectorContribs.contextBlocks : undefined,
+      middleware: options.middleware,
+      ...baseContext,
+    });
+    const compiled = await compileAttention({
+      compiler: resolveAttentionCompiler(options.attentionCompiler, options.model),
+      groups,
+      context,
+      skills,
+      tools,
+      fold: options.toolResultFold,
+      frontier: options.attentionSticky,
+      redactor: options.redactor,
+      signal: options.signal,
+      turn,
+      sessionId: options.sessionId,
+      runId: options.runId,
+    });
+    if (compiled.mutated) options.onAttentionReport?.(compiled.report);
+    messages = flattenInputGroups(compiled.groups, layout);
+    if (buildContext.middleware) messages = await buildContext.middleware.run("input_assembly", messages);
+  } else if (options.contextBudget) {
     // ponytail: budget path always uses default groups so eviction kinds stay deterministic;
     // custom inputBuilder still honored when contextBudget is absent.
     const groups = await buildDefaultInputMessageGroups(options.input, buildContext);
@@ -328,6 +376,11 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     },
     { sessionId: options.sessionId },
   );
+}
+
+/** A resolved handle is reused as-is; raw options are validated for this call only. */
+function resolveAttentionCompiler(value: AttentionCompilerOptions | AttentionCompiler, model: ModelConfig): AttentionCompiler {
+  return "inputCap" in value ? (value as AttentionCompiler) : createAttentionCompiler(value, { model });
 }
 
 async function buildDefaultInputMessageGroups(input: AgentInput, context: DefaultInputBuildContext): Promise<DefaultInputMessageGroups> {

@@ -35,7 +35,7 @@ test("credential matrix keeps the least-privilege scope column populated", () =>
 
 // --- peer matrix ↔ manifests -------------------------------------------------
 
-const PEER_NETWORK = ["pg", "@nats-io/jetstream", "@nats-io/transport-node", "playwright-core"];
+const PEER_NETWORK = ["pg", "@nats-io/jetstream", "@nats-io/transport-node", "playwright-core", "e2b"];
 const unquote = (cell) => cell.trim().replace(/^`|`$/g, "").replace(/\\\|/g, "|");
 
 function workspacePackages() {

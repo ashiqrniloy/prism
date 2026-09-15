@@ -1,3 +1,4 @@
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
 import { access, realpath } from "node:fs/promises";
@@ -10,6 +11,7 @@ import {
   type DockerRunner,
   dockerOutputText,
   runDockerCli,
+  sha256Hex,
 } from "./docker-cli.js";
 import { type EgressAttestation, EgressError } from "./egress/index.js";
 import type {
@@ -19,12 +21,15 @@ import type {
   SandboxExecFileRequest,
   SandboxExecRequest,
   SandboxExportMetadata,
+  SandboxProcessHandle,
   SandboxStatus,
   SandboxStatusState,
 } from "./sandbox.js";
 import { type DockerSandboxLimitOptions, type ResolvedDockerSandboxLimits, resolveDockerSandboxLimits } from "./sandbox-limits.js";
 import { createImportTarStream, SandboxTarError, summarizeTarStream } from "./sandbox-tar.js";
 import { Semaphore } from "./semaphore.js";
+import type { ProcessRecoveryBackend } from "../agent/process/recovery.js";
+import type { ProcessSandboxHandle } from "../agent/process/types.js";
 
 const IMAGE_DIGEST_RE = /@sha256:[a-f0-9]{64}$/i;
 const ENV_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -350,10 +355,206 @@ async function importSource(input: {
   };
 }
 
+export interface DockerProcessRefData {
+  readonly version: 1;
+  readonly containerId: string;
+  readonly processId: string;
+  readonly commandFingerprint: string;
+  readonly workspace: string;
+}
+
+export function encodeDockerProcessRef(data: DockerProcessRefData): string {
+  const json = JSON.stringify({
+    v: 1,
+    cid: data.containerId,
+    pid: data.processId,
+    fp: data.commandFingerprint,
+    ws: data.workspace,
+  });
+  return `prism-docker-proc:${Buffer.from(json, "utf8").toString("base64url")}`;
+}
+
+export function decodeDockerProcessRef(ref: string): DockerProcessRefData | null {
+  if (!ref.startsWith("prism-docker-proc:")) return null;
+  const raw = ref.slice("prism-docker-proc:".length);
+  try {
+    const json = Buffer.from(raw, "base64url").toString("utf8");
+    const parsed = JSON.parse(json);
+    if (
+      parsed.v !== 1 ||
+      typeof parsed.cid !== "string" ||
+      typeof parsed.pid !== "string" ||
+      typeof parsed.fp !== "string" ||
+      typeof parsed.ws !== "string"
+    ) {
+      return null;
+    }
+    return {
+      version: 1,
+      containerId: parsed.cid,
+      processId: parsed.pid,
+      commandFingerprint: parsed.fp,
+      workspace: parsed.ws,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function computeCommandFingerprint(file: string, args: readonly string[] = []): string {
+  return sha256Hex(JSON.stringify([file, ...args]));
+}
+
+class DockerProcessHandle implements SandboxProcessHandle {
+  private childProcess: ChildProcessWithoutNullStreams | undefined;
+  private readonly stdinStream: PassThrough;
+  private readonly abortController: AbortController;
+  private _exited = false;
+  private _exitCode: number | null = null;
+  private _released = false;
+  private readonly waiters: Array<() => void> = [];
+  readonly ref: string;
+  readonly commandFingerprint: string;
+  readonly workspace: string;
+  readonly processId: string;
+  readonly containerId: string;
+
+  constructor(opts: {
+    readonly processId: string;
+    readonly containerId: string;
+    readonly commandFingerprint: string;
+    readonly workspace: string;
+    readonly ref: string;
+    readonly stdinStream: PassThrough;
+    readonly abortController: AbortController;
+  }) {
+    this.processId = opts.processId;
+    this.containerId = opts.containerId;
+    this.commandFingerprint = opts.commandFingerprint;
+    this.workspace = opts.workspace;
+    this.ref = opts.ref;
+    this.stdinStream = opts.stdinStream;
+    this.abortController = opts.abortController;
+  }
+
+  get pid(): number | undefined {
+    return this.childProcess?.pid;
+  }
+
+  setChild(child: ChildProcessWithoutNullStreams): void {
+    this.childProcess = child;
+  }
+
+  markExited(exitCode: number | null): void {
+    if (this._exited) return;
+    this._exited = true;
+    this._exitCode = exitCode;
+    for (const waiter of this.waiters) waiter();
+    this.waiters.length = 0;
+  }
+
+  get isExited(): boolean {
+    return this._exited;
+  }
+
+  async write(data: Uint8Array | string): Promise<void> {
+    if (this._exited || this._released) {
+      throw new DockerSandboxError("process is not running");
+    }
+    const buf = typeof data === "string" ? Buffer.from(data, "utf8") : Buffer.isBuffer(data) ? data : Buffer.from(data);
+    await new Promise<void>((resolve, reject) => {
+      this.stdinStream.write(buf, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  async signal(name: NodeJS.Signals | number | string): Promise<void> {
+    if (this._exited) {
+      throw new DockerSandboxError("process is not running");
+    }
+    if (name === "SIGKILL" || name === 9) {
+      await this.kill();
+      return;
+    }
+    if (this.childProcess) {
+      try {
+        this.childProcess.kill(name as NodeJS.Signals);
+      } catch {
+        // best effort
+      }
+    }
+  }
+
+  async kill(): Promise<void> {
+    if (this._exited) return;
+    this.abortController.abort();
+    try {
+      this.childProcess?.kill("SIGKILL");
+    } catch {
+      // ignore
+    }
+    try {
+      this.stdinStream.end();
+    } catch {
+      // ignore
+    }
+  }
+
+  async release(): Promise<void> {
+    if (this._exited) return;
+    this._released = true;
+    try {
+      this.stdinStream.end();
+    } catch {
+      // ignore
+    }
+    try {
+      this.childProcess?.unref();
+    } catch {
+      // ignore
+    }
+  }
+
+  async wait(waitOptions?: { timeoutMs?: number; signal?: AbortSignal }): Promise<{ exitCode: number | null }> {
+    if (this._exited) return { exitCode: this._exitCode };
+    return await new Promise<{ exitCode: number | null }>((resolve, reject) => {
+      const onExit = () => {
+        cleanup();
+        resolve({ exitCode: this._exitCode });
+      };
+      const onAbort = () => {
+        cleanup();
+        reject(new DockerSandboxError("wait aborted"));
+      };
+      let timer: NodeJS.Timeout | undefined;
+      const cleanup = () => {
+        if (timer) clearTimeout(timer);
+        waitOptions?.signal?.removeEventListener("abort", onAbort);
+        const idx = this.waiters.indexOf(onExit);
+        if (idx >= 0) this.waiters.splice(idx, 1);
+      };
+      this.waiters.push(onExit);
+      if (waitOptions?.timeoutMs !== undefined) {
+        timer = setTimeout(() => {
+          cleanup();
+          reject(new DockerSandboxError(`wait timed out after ${waitOptions.timeoutMs}ms`));
+        }, waitOptions.timeoutMs);
+      }
+      if (waitOptions?.signal) {
+        if (waitOptions.signal.aborted) onAbort();
+        else waitOptions.signal.addEventListener("abort", onAbort, { once: true });
+      }
+    });
+  }
+}
+
 class DockerSandboxSession implements DisposableSandbox {
   readonly id: string;
   readonly capabilities: SandboxCapabilities;
   readonly importIdentity?: SandboxExportMetadata;
+  readonly labels?: Readonly<Record<string, string>>;
   private _lastExportIdentity: SandboxExportMetadata | undefined;
   private state: SandboxStatusState = "running";
   private commandCount = 0;
@@ -363,6 +564,7 @@ class DockerSandboxSession implements DisposableSandbox {
   private closing: Promise<SandboxExportMetadata | undefined> | undefined;
   private readonly execLock: Semaphore;
   private readonly redact: (text: string) => string;
+  private readonly activeProcesses = new Map<string, DockerProcessHandle>();
 
   constructor(
     private readonly opts: {
@@ -376,11 +578,13 @@ class DockerSandboxSession implements DisposableSandbox {
       readonly secrets: readonly string[];
       readonly capabilities: SandboxCapabilities;
       readonly importIdentity?: SandboxExportMetadata;
+      readonly labels?: Readonly<Record<string, string>>;
     },
   ) {
     this.id = opts.containerId;
     this.capabilities = opts.capabilities;
     this.importIdentity = opts.importIdentity;
+    this.labels = opts.labels;
     this.execLock = new Semaphore(opts.limits.maxConcurrentExecs, DockerSandboxError);
     this.redact = createSecretRedactor(opts.secrets);
   }
@@ -490,7 +694,169 @@ class DockerSandboxSession implements DisposableSandbox {
     }
   }
 
+  async startProcess(request: SandboxExecFileRequest): Promise<SandboxProcessHandle> {
+    this.assertActive();
+    const file = request.file ?? (request as unknown as { command?: string }).command;
+    if (!file || file.includes("\0")) {
+      throw new DockerSandboxError("startProcess requires a non-empty file path");
+    }
+    const args = request.args ?? [];
+    if (!Array.isArray(args) || args.some((a) => typeof a !== "string" || a.includes("\0"))) {
+      throw new DockerSandboxError("startProcess args must be a string array without NUL");
+    }
+    if (this.commandCount >= this.opts.limits.maxCommands) {
+      throw new DockerSandboxError(`sandbox exceeded maxCommands (${this.opts.limits.maxCommands})`);
+    }
+
+    const releaseLock = await this.execLock.acquire(request.signal);
+    this.commandCount += 1;
+    this.touch();
+
+    let lockReleased = false;
+    const releaseLockOnce = () => {
+      if (!lockReleased) {
+        lockReleased = true;
+        releaseLock();
+      }
+    };
+
+    try {
+      this.assertActive();
+      const cwd = request.cwd ?? this.opts.workdir;
+      if (!cwd.startsWith("/") || cwd.includes("\0")) {
+        throw new DockerSandboxError("cwd must be an absolute container path");
+      }
+
+      const execArgs = ["exec", "-i", "-u", this.opts.user, "-w", cwd];
+      const extraEnv = validateEnv(request.env, this.opts.limits);
+      for (const [key, value] of Object.entries(extraEnv)) {
+        execArgs.push("-e", `${key}=${value}`);
+      }
+      execArgs.push(this.opts.containerId, file, ...args);
+
+      const processId = randomUUID();
+      const commandFingerprint = computeCommandFingerprint(file, args);
+      const ref = encodeDockerProcessRef({
+        version: 1,
+        containerId: this.opts.containerId,
+        processId,
+        commandFingerprint,
+        workspace: this.opts.workdir,
+      });
+
+      const stdinStream = new PassThrough();
+      const abortController = new AbortController();
+
+      const combinedSignal = request.signal ? AbortSignal.any([request.signal, abortController.signal]) : abortController.signal;
+
+      const handle = new DockerProcessHandle({
+        processId,
+        containerId: this.opts.containerId,
+        commandFingerprint,
+        workspace: this.opts.workdir,
+        ref,
+        stdinStream,
+        abortController,
+      });
+
+      this.activeProcesses.set(processId, handle);
+
+      const timeoutMs = request.timeout !== undefined ? Math.min(request.timeout, this.remainingWallMs()) : this.remainingWallMs();
+
+      let outputBytes = 0;
+      let spawned = false;
+      let resolveSpawn!: () => void;
+      let rejectSpawn!: (err: unknown) => void;
+      const spawnPromise = new Promise<void>((resolve, reject) => {
+        resolveSpawn = () => {
+          if (!spawned) {
+            spawned = true;
+            resolve();
+          }
+        };
+        rejectSpawn = (err) => {
+          if (!spawned) {
+            spawned = true;
+            reject(err);
+          }
+        };
+      });
+
+      const fallbackTimer = setImmediate(() => {
+        resolveSpawn();
+      });
+
+      const runPromise = this.opts.runner({
+        docker: this.opts.docker,
+        args: execArgs,
+        stdin: stdinStream,
+        signal: combinedSignal,
+        timeoutMs,
+        maxOutputBytes: this.opts.limits.maxOutputBytes,
+        collectStdout: false,
+        collectStderr: false,
+        redact: this.redact,
+        onSpawn: (child) => {
+          clearImmediate(fallbackTimer);
+          handle.setChild(child);
+          resolveSpawn();
+        },
+        onData: (chunk) => {
+          outputBytes += chunk.byteLength;
+          if (outputBytes > this.opts.limits.maxOutputBytes) {
+            handle.kill().catch(() => undefined);
+            throw new DockerSandboxError(`command output exceeded maxOutputBytes (${this.opts.limits.maxOutputBytes})`);
+          }
+          request.onData?.(chunk);
+        },
+      });
+
+      runPromise.then(
+        (result) => {
+          clearImmediate(fallbackTimer);
+          resolveSpawn();
+          this.activeProcesses.delete(processId);
+          releaseLockOnce();
+          this.touch();
+          handle.markExited(result.exitCode);
+        },
+        (error) => {
+          clearImmediate(fallbackTimer);
+          rejectSpawn(error);
+          this.activeProcesses.delete(processId);
+          releaseLockOnce();
+          this.touch();
+          const exitCode = handle.isExited ? null : 1;
+          handle.markExited(exitCode);
+        },
+      );
+
+      await spawnPromise;
+      return handle;
+    } catch (error) {
+      releaseLockOnce();
+      const message = error instanceof Error ? error.message : String(error);
+      throw new DockerSandboxError(this.redact(message));
+    }
+  }
+
+  async attachProcess(ref: string): Promise<SandboxProcessHandle | null> {
+    if (this.state !== "running") return null;
+    const decoded = decodeDockerProcessRef(ref);
+    if (!decoded) return null;
+    if (decoded.containerId !== this.opts.containerId) return null;
+    if (decoded.workspace !== this.opts.workdir) return null;
+    const handle = this.activeProcesses.get(decoded.processId);
+    if (!handle || handle.isExited) return null;
+    if (handle.ref !== ref) return null;
+    return handle;
+  }
+
   async stop(options?: { graceMs?: number; signal?: AbortSignal }): Promise<void> {
+    for (const proc of this.activeProcesses.values()) {
+      await proc.kill().catch(() => undefined);
+    }
+    this.activeProcesses.clear();
     if (this.state === "removed" || this.state === "stopped") return;
     const graceMs = Math.min(options?.graceMs ?? this.opts.limits.stopGraceMs, this.opts.limits.stopGraceMs);
     const seconds = Math.max(1, Math.ceil(graceMs / 1000));
@@ -511,6 +877,10 @@ class DockerSandboxSession implements DisposableSandbox {
   }
 
   async kill(options?: { signal?: AbortSignal }): Promise<void> {
+    for (const proc of this.activeProcesses.values()) {
+      await proc.kill().catch(() => undefined);
+    }
+    this.activeProcesses.clear();
     if (this.state === "removed") return;
     const result = await this.opts.runner({
       docker: this.opts.docker,
@@ -753,6 +1123,7 @@ export async function createDockerSandbox(options: CreateDockerSandboxOptions): 
       secrets,
       capabilities: resolveDockerCapabilities(network),
       importIdentity,
+      labels,
     });
   } catch (error) {
     if (containerId) {
@@ -769,6 +1140,45 @@ export async function createDockerSandbox(options: CreateDockerSandboxOptions): 
     const message = error instanceof Error ? error.message : String(error);
     throw new DockerSandboxError(redact(message));
   }
+}
+
+export interface DockerProcessRecoveryBackendOptions {
+  readonly expectedContainerId?: string;
+  readonly expectedWorkspace?: string;
+  readonly expectedLabels?: Readonly<Record<string, string>>;
+}
+
+export function createDockerProcessRecoveryBackend(
+  sandbox: DisposableSandbox,
+  options?: DockerProcessRecoveryBackendOptions,
+): ProcessRecoveryBackend {
+  return {
+    async attach(ref: string): Promise<ProcessSandboxHandle | null> {
+      if (!sandbox || typeof sandbox.attachProcess !== "function") {
+        return null;
+      }
+      const decoded = decodeDockerProcessRef(ref);
+      if (!decoded) {
+        return null;
+      }
+      if (options?.expectedContainerId && decoded.containerId !== options.expectedContainerId) {
+        return null;
+      }
+      if (options?.expectedWorkspace && decoded.workspace !== options.expectedWorkspace) {
+        return null;
+      }
+      if (options?.expectedLabels && sandbox.labels) {
+        const sandboxLabels = sandbox.labels as Record<string, string>;
+        for (const [key, value] of Object.entries(options.expectedLabels)) {
+          if (sandboxLabels[key] !== value) {
+            return null;
+          }
+        }
+      }
+      const handle = await sandbox.attachProcess(ref);
+      return (handle as unknown as ProcessSandboxHandle) ?? null;
+    },
+  };
 }
 
 /** @internal test helper: build create argv without starting Docker. */

@@ -37,6 +37,7 @@ export const ENTERPRISE_INDEX_NAMES = [
   "prism_erp_inbox_created_idx",
   "prism_erp_approvals_status_idx",
   "prism_erp_approvals_created_idx",
+  "prism_model_router_budgets_task_idx",
 ] as const;
 
 /** One canonical enterprise schema migration. Only validated schema identifiers enter this SQL text. */
@@ -303,5 +304,18 @@ CREATE INDEX IF NOT EXISTS prism_erp_approvals_status_idx
   ON ${table("prism_erp_approvals")} (tenant_id, status, created_at, id);
 CREATE INDEX IF NOT EXISTS prism_erp_approvals_created_idx
   ON ${table("prism_erp_approvals")} (tenant_id, created_at, id);
+`;
+}
+
+/** Adds aggregate task/tenant accounting and attribution breakdown without mutating earlier migrations. */
+export function buildEnterpriseMigration006Ddl(schema: string): string {
+  const table = (name: string) => qualifyTable(schema, name);
+  return `
+ALTER TABLE ${table("prism_model_router_budgets")}
+  ADD COLUMN IF NOT EXISTS task_id TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS attributions JSONB NOT NULL DEFAULT '{}'::jsonb;
+CREATE INDEX IF NOT EXISTS prism_model_router_budgets_task_idx
+  ON ${table("prism_model_router_budgets")} (tenant_id, account_key, user_key, principal_id, task_id, window_ms)
+  WHERE task_id <> '';
 `;
 }

@@ -1,5 +1,6 @@
 /** core (0.2.5 plan 025 Task 1 split). Moved verbatim from handler.ts; public surface unchanged behind the barrel. */
 
+import type { AgentRunResume } from "@arnilo/prism";
 import {
   cancelWorkflowRun,
   createWorkflowEventBus,
@@ -231,10 +232,50 @@ export function createPrismHandler(options: CreatePrismHandlerOptions): PrismReq
         const owned = ownedSignal(request, limits.requestTimeoutMs, options.disconnectAborts ?? true);
         try {
           const body = await readJsonObject(request, limits.maxRequestBytes, owned.signal);
+          const resume = readAgentResume(body);
+          let resumePayload: AgentRunResume;
+          if ("decisions" in resume) {
+            resumePayload = resume;
+          } else if (resume.modifiedArguments !== undefined) {
+            const status = await awaitWithSignal(
+              exposure.lifecycle.status(
+                { runId: route.runId },
+                {
+                  ownership: authorization.ownership,
+                  signal: owned.signal,
+                  agentId: route.capabilityId,
+                },
+              ),
+              owned.signal,
+            );
+            const pending =
+              status.state.interruption?.pendingDecisions ??
+              (status.state.interruption?.toolCallId ? [{ approvalId: status.state.interruption.toolCallId }] : []);
+            if (pending.length !== 1) {
+              throw new PrismServerError(
+                "Cannot infer approvalId for modifiedArguments: expected exactly 1 pending decision",
+                400,
+                "ERR_PRISM_SERVER_RESUME",
+              );
+            }
+            resumePayload = {
+              decisions: [
+                {
+                  approvalId: pending[0].approvalId,
+                  outcome: "allow_once",
+                  modifiedArguments: resume.modifiedArguments,
+                  ...(resume.reason ? { reason: resume.reason } : {}),
+                },
+              ],
+              expectedVersion: resume.expectedVersion,
+            };
+          } else {
+            resumePayload = resume;
+          }
           return respond(
             json(
               await awaitWithSignal(
-                exposure.lifecycle.resume({ runId: route.runId }, readAgentResume(body), {
+                exposure.lifecycle.resume({ runId: route.runId }, resumePayload, {
                   ownership: authorization.ownership,
                   signal: owned.signal,
                   agentId: route.capabilityId,

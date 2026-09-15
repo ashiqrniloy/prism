@@ -4,6 +4,8 @@
 
 `@arnilo/prism-memory` is an optional package for schema/template-backed working memory and embedding-based semantic recall. It owns narrow `Embedder` and `VectorStore` contracts reused by the `@arnilo/prism-memory/rag` subpath, plus an in-memory reference path and one PostgreSQL/pgvector production adapter.
 
+The [memory fabric](memory-fabric.md) subpath is a typed-notes layer on top of these same stores: notes are ordinary rows here, so this page's consent, redaction, lineage, and scope rules are the whole rulebook. [Observational memory](compaction-observational-memory.md) is a separate, **episodic** layer — a source-backed ledger for the current session — and is not a store this package owns or replaces.
+
 ## When to use it
 
 Use it when a host needs durable per-tenant profile/state (working memory) or top-K semantic retrieval over prior thread entries. Do not use it as a replacement for observational memory compaction: observational memory compresses source-backed observations; semantic memory retrieves embeddings; working memory stores the current structured profile.
@@ -27,6 +29,7 @@ Ordinary Prism sessions do not require this package or any vector backend.
 | `redactor` / `secrets` | no | Redact text/metadata before persist/inject |
 | `requireConsent` | no | Strict mode: recall/injection excludes entries lacking explicit consent |
 | `importanceFrom` | no | Host-owned hook deriving importance from a redacted reflection payload (write time only; no default, no LLM) |
+| `onInvalidate` | no | After lineage rows land, before body delete (observational drop / RAG delete wiring) |
 
 Semantic indexing (entries carry `MemoryConsent` source/visibility; unset defaults to `{ source: "user", scope: "thread", visible: true }`):
 
@@ -38,13 +41,13 @@ Semantic indexing (entries carry `MemoryConsent` source/visibility; unset defaul
 | `grantedAt` / `revokedAt` | Optional host/audit timestamps; a revocation excludes the record. |
 
 ```ts
-await memory.remember({ entries: [{ id, text, metadata?, consent?, sequence?, importance?, reflection? }] }, { wait?: boolean })
+await memory.remember({ entries: [{ id, text, metadata?, consent?, sequence?, importance?, reflection?, lineage?: { sourceIds, reason? } }] }, { wait?: boolean })
 ```
 
 Semantic recall (honors consent/visibility at assembly time):
 
 ```ts
-await memory.recall(query, { topK?, messageRange?, requireConsent?, scoring?, signal? })
+await memory.recall(query, { topK?, messageRange?, requireConsent?, scoring?, explain?, shareFromParentThreadId?, signal? })
 ```
 
 #### Composite recall scoring (opt-in)
@@ -99,8 +102,10 @@ Consent + lifecycle (real grant/correct/delete/retention on stored entries):
 ```ts
 await memory.setConsent(entryId, { visible?: boolean, source?, scope? }) // grant/revoke; no re-embed
 await memory.correct(entryId, text)                                       // re-embeds, preserves consent
-await memory.forget({ ids? })                                             // real delete (whole thread if no ids)
-await memory.applyRetention({ maxAgeDays?, maxEntries?, batchSize? })     // bounded real-delete sweep
+await memory.forget({ ids?, hold? })                                      // real delete; hold:true = legal_hold, no body delete
+await memory.shareWith(childThreadId, sourceIds, { expiresAt? })          // parent→child allow-list; empty ids revoke
+await memory.revokeShare(childThreadId)
+await memory.applyRetention({ maxAgeDays?, maxEntries?, batchSize? })     // bounded real-delete sweep; skips legal_hold
 
 const page = await memory.exportMemory({
   identity: { tenantId, resourceId, threadId }, // exact host-verified owner
@@ -117,9 +122,10 @@ const rebuilt = await memory.rebuildIndex({ cursor?, batchSize?, maxMs?, signal?
 | --- | --- |
 | `updateWorking` / `getWorking` | Versioned `WorkingMemoryRecord` |
 | `remember` | `{ accepted, pending, done }` — default `wait: false` indexes asynchronously |
-| `recall` | `{ hits, adjacent }` tenant/thread scoped; invisible/revoked entries excluded |
-| `setConsent` / `correct` | Updated `MemoryVectorRecord` with stamped grant/revoke times |
-| `forget` | Removed count (real delete) |
+| `recall` | `{ hits, adjacent, explanations? }` tenant/thread scoped; invisible/revoked/invalidated entries excluded |
+| `setConsent` / `correct` | Updated `MemoryVectorRecord`; revoke/correct marks lineage before dependents can inject |
+| `forget` | Removed count (real delete); `0` when `hold: true` |
+| `shareWith` / `revokeShare` | Parent-child grant; sibling threads cannot use it |
 | `applyRetention` | `{ deleted, scanned }` bounded real-delete sweep |
 | `exportMemory` | `{ entries, bytes, nextCursor? }` redacted, explicitly consented, identity-bound page |
 | `rebuildIndex` | `{ rebuilt, nextCursor? }` re-embedded bounded page; caller owns resume scheduling |
@@ -215,8 +221,10 @@ const store = await createPostgresVectorStore({
   dimension: 32, // optional; pins the embedding column width (HNSW + drift guard)
 }); // PostgresVectorStoreOptions; dimension must match the embedder's dimensions
 // store implements rag's VectorStore/TransactionalVectorStore contract: upsert,
-// query, getBySource, transaction, lexicalQuery (fts, when available), and
-// getCurrentGeneration/setCurrentGeneration. close() ends adapter-owned pools.
+// query, getBySource, transaction, lexicalQuery (fts, when available),
+// getCurrentGeneration/setCurrentGeneration, and document ACL
+// (`authorization: "acl"`, setSourceAccess, checkSourceAccess).
+// close() ends adapter-owned pools.
 ```
 
 `createPostgresVectorStore()` is the production counterpart to `createMemoryVectorStore()` used by the `rag` subpath; `createPostgresMemoryStores()` reuses the same vector implementation internally.
@@ -226,9 +234,9 @@ const store = await createPostgresVectorStore({
 - Hosts wire the context provider into `AgentConfig.context` or `resolveContextProviders()`.
 - The working-memory processor is opt-in and host-invoked; middleware is not required.
 - `createHashEmbedder()` is for tests/demos only; production hosts supply a real `Embedder`.
-- Observational memory (`/compaction/observational-memory`) remains unchanged and composable.
-- Consent is enforced at the single `recall()` gate, so both direct recall and `createContextProvider()` injection honor it; `visible: false` (or a revoked grant) keeps an entry out of prompts, events, exports, and telemetry. `setConsent`/`correct` re-upsert in place (consent change does not re-embed); `forget`/`applyRetention` are real deletes, not tombstones. Retention uses indexed oldest-first pages plus a scoped count, deleting one default-500/hard-5000 batch without reading a corpus into memory. The PostgreSQL adapter persists consent in a `consent JSONB` column added by `buildMemoryDdl`.
-- The PostgreSQL vector path owns its DDL in Prism (`buildMemoryDdl`/`buildVectorSearchDdl` exported): the `<table>_rag_scope_generations` per-scope generation pointer table, `text_tsv` tsvector column + GIN index for the lexical RAG leg, and an HNSW index when the embedding dimension is pinned. DDL runs against the host's **knowledge database** — the host names `schema`/`table` (defaults `prism_memory`/`semantic_memory`), owns backup/retention of that database, and can run migrations manually with `skipMigrations: true`. Identifiers are validated/quoted; values stay parameterized.
+- Observational memory (`/compaction/observational-memory`) is composable. Stamp `lineage.sourceIds` on semantic writes; pass the same ids as `invalidatedIds` into observational projection/recall, or append `om.observations.dropped` from `onInvalidate`. Multi-source facts stay injectable only if none of their sources are invalidated (regenerate from remaining evidence).
+- Consent is enforced at the single `recall()` gate, so both direct recall and `createContextProvider()` injection honor it; `visible: false` (or a revoked grant) keeps an entry out of prompts, events, exports, and telemetry. `setConsent`/`correct` re-upsert in place (consent change does not re-embed) and write invalidation rows first. `forget`/`applyRetention` are real deletes after those rows land; `forget({ hold: true })` keeps the body for legal hold but still excludes injection/export. A revoked grant is not a legal hold: it blocks injection/export but `forget` still purges the body. Legacy records without `_lineage` are self-only: only their own id is excluded. Caps: walk depth 8, 256 edges, 32 source ids, 64-row delete batches — over-cap throws rather than leak. No claim to retract prior disclosures.
+- The PostgreSQL vector path owns its DDL in Prism (`buildMemoryDdl`/`buildVectorSearchDdl` exported): the `<table>_rag_scope_generations` per-scope generation pointer table, `<table>_rag_source_acl` principal/group grants (query-time EXISTS, indexed by principal and group), `<table>_invalidation` tombstones (query-time NOT EXISTS; `corrected` keeps the source), `<table>_share_grant` parent-child allow-lists, GIN on `metadata._lineage.sourceIds`, `text_tsv` tsvector column + GIN index for the lexical RAG leg, and an HNSW index when the embedding dimension is pinned. DDL runs against the host's **knowledge database** — the host names `schema`/`table` (defaults `prism_memory`/`semantic_memory`), owns backup/retention of that database, and can run migrations manually with `skipMigrations: true`. Identifiers are validated/quoted; values stay parameterized.
 - `createPostgresVectorStore({ dimension })` pins the embedding column width before building indexes: pgvector can only build HNSW over `vector(N)` columns, and dimension mismatch fails closed instead of drifting.
 - `exportMemory()` requires an exact `{ tenantId, resourceId, threadId }` identity equal to its `createMemory()` scope. It excludes legacy consent-less, invisible, and revoked records even when normal recall allows legacy entries. It returns a stable sequence cursor page, redacted before response, with defaults/hard caps of 100/200 entries, 4/32 MiB, and 10/60 seconds. `rebuildIndex()` uses the same stable cursor shape to re-embed one 32/128-record page under a 10/60-second cap; save the cursor durably to resume. Both APIs require a store implementing bounded `listByThread()`; retention also requires `countByThread()`. PostgreSQL/pgvector and the in-memory reference adapter conform; SQLite persistence stores sessions, not semantic vectors.
 - Profile bundles do not include this package yet.
@@ -249,7 +257,9 @@ await runMemoryConformance(() => ({
 
 - Every write/query/delete requires `tenantId` + `resourceId`; semantic paths also require `threadId`.
 - Cross-tenant and cross-thread access is denied.
-- Revoked/invisible/non-consented memories never enter prompts, events, exports, or telemetry; `requireConsent: true` additionally drops consent-less (legacy) entries. Consent checks are O(hits) at recall, within the existing injected-token cap.
+- RAG document ACL (`RagAccessConstraint`) is host-verified and applied inside `query`/`lexicalQuery` before ranking when `authorization` is passed. Missing grants and unresolved access versions deny. `filter` is not ACL.
+- Revoked/invisible/non-consented/invalidated memories never enter prompts, events, exports, or telemetry; `requireConsent: true` additionally drops consent-less (legacy) entries. Query-time invalidation is an indexed NOT EXISTS (no full-corpus scan on recall). Parent-child shares are explicit, tenant-bound, expiring, and fail closed when missing. Cross-tenant lineage/grants reject.
+- `revokedIdsAbsent(environment, deniedIds)` is the 072 invariant body (`metadata.invariant: true`, score 0 cannot be averaged away). Hosts wrap it with `defineScorer`.
 - Configure `secrets` / `redactor` so memory text and metadata cannot persist or inject raw canaries.
 - Injected context is inert text — it cannot grant tools or permissions.
 - Hard caps: top-K ≤ 32, messageRange ≤ 4, embed batch ≤ 128, injected tokens ≤ 8000, payload/working-memory byte limits enforced.
@@ -266,6 +276,7 @@ Supervisor child factories receive unique derived `resourceId` and `threadId` va
 - [Supervisor delegation](supervisors.md): package-derived child resource/thread scope.
 - [Retrieval-augmented generation](rag.md): bounded document chunks reuse this package's embed/vector contracts.
 - [Context and skills](context-and-skills.md): `ContextProvider` injection seam.
-- [Observational memory compaction package](compaction-observational-memory.md): source-backed observation/reflection memory distinction.
+- [Observational memory compaction package](compaction-observational-memory.md): source-backed observation/reflection memory distinction; still episodic, owned by that subpath, not by these stores.
 - [PostgreSQL persistence](postgres-persistence.md): session/run persistence; memory vectors live in this optional package instead.
 - [Middleware hooks](middleware-hooks.md): reuse existing `context` hook if hosts transform injected blocks.
+- [Memory fabric](memory-fabric.md): typed notes over these stores, with recall explanations and conversation search.

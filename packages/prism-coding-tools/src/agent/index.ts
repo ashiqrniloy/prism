@@ -204,6 +204,8 @@ export type {
   FileChangeOp,
   PermissionDeniedEvent,
   ResolvedCodingLifecycleLimits,
+  SubagentStartedEvent,
+  SubagentStoppedEvent,
   WorktreeChangedEvent,
 } from "./lifecycle.js";
 export {
@@ -211,6 +213,10 @@ export {
   createCodingLifecycleEmitter,
   resolveCodingLifecycleLimits,
 } from "./lifecycle.js";
+export type { ObserveSupervisorLifecycleOptions } from "./supervisor-lifecycle.js";
+export { observeSupervisorLifecycle } from "./supervisor-lifecycle.js";
+export type { WorktreeChildContext, WorktreeChildFactory, WorktreeChildFactoryOptions } from "./spawn-worktree.js";
+export { createWorktreeChildFactory } from "./spawn-worktree.js";
 export type { ListToolOptions } from "./list.js";
 export { createRepoListTool } from "./list.js";
 export type { MoveOperations, MoveToolOptions } from "./move.js";

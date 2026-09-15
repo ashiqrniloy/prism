@@ -7,7 +7,7 @@ The `@arnilo/prism-office/documents` package provides specification-compliant, A
 It operates on a canonical, typed abstract syntax tree (AST) called the **Prism Document Model** (`DocModel`, `SheetModel`, `DeckModel`):
 - **Pure in-memory doctrine**: Functions accept `Uint8Array` container buffers or typed model objects and emit `Uint8Array` buffers or JSON models. Zero filesystem reads, zero network I/O, zero `process.env` lookups, and zero child process spawns.
 - **Draft-07 JSON Schema validation & slicing**: Full runtime structural validation with transitive closure slicing (`getDocumentModelSchema`) allowing LLM tools and agent prompts to extract minimal, self-contained sub-schemas (e.g. `doc.paragraph`, `doc.table`).
-- **Bidirectional round-trip fidelity**: Prism-generated documents parse back into structurally equivalent models verified against a per-kind equality specification.
+- **Bidirectional round-trip fidelity**: Prism-generated documents parse back into structurally equivalent models verified against a per-kind equality specification. `importDocument` also reports ZIP parts the model drops (macros, comments, media, charts, OLE, pivots) instead of silently omitting them.
 - **Typed model patch engine**: Immutably applies `set`, `insert`, `remove`, and `move` operations to document blocks, worksheet cells, and presentation slides with schema re-validation and an interactive `createPatchHistory` undo/redo stack.
 - **Framework-neutral preview blocks & bounded HTML**: Generates structured snapshots (`PreviewBlock[]`) for native desktop/web UI grids and outline trees, as well as safe, sanitize-by-construction HTML fragments (`renderPreviewHtml`) guaranteed to contain no executable scripts, no active pseudo-protocols, and no external hyperlinks.
 - **Boundary text redaction**: Pluggable `SecretRedactor` hook to sanitize extracted text content (paragraphs, cells, notes, tables) at the parse boundary before models are returned.
@@ -31,7 +31,9 @@ Do **not** use this package for collaborative real-time editing (OT/CRDT), macro
 | --- | --- | --- |
 | `generateDocument` | `(model: DocumentModel, options: GenerateDocumentOptions) => Promise<GenerateDocumentResult>` | Translates a typed model into spec-compliant OOXML binary bytes (PK zip container) with a SHA-256 content hash. |
 | `parseDocument` | `(bytes: Uint8Array, options: ParseDocumentOptions) => Promise<DocumentModel>` | Verifies PK zip signature, enforces caps, translates OOXML parts, applies optional redaction, and returns a validated model. |
+| `importDocument` | `(bytes: Uint8Array, options: ParseDocumentOptions) => Promise<ImportDocumentResult>` | Same parse plus a ZIP-name **fidelity** report of structures the Document Model drops (macros, comments, media, charts, OLE, pivots). `parseDocument` returns `.model` only. |
 | `patchDocument` | `(model: DocumentModel, patches: readonly DocumentPatch[], options?: PatchDocumentOptions) => DocumentModel` | Clones the model, applies typed structural patch operations, and validates the resulting model against Draft-07 schemas. |
+| `diffDocument` | `(from: DocumentModel, to: DocumentModel, options?: DiffDocumentOptions) => DocumentDiff` | Structural paragraph/table/cell/slide diff. Decimal cells compare as canonical strings. Caps report `truncated` instead of unbounded walk. |
 | `createPatchHistory` | `(initialModel: DocumentModel) => PatchHistory` | Creates an interactive undo/redo history manager for host editing workflows. |
 | `renderPreviewBlocks` | `(model: DocumentModel, options?: PreviewBlocksOptions) => PreviewBlock[]` | Emits framework-neutral structured blocks (document outlines, bounded sheet grid chunks, slide summaries). |
 | `renderPreviewHtml` | `(model: DocumentModel, options?: PreviewHtmlOptions) => string` | Emits safe, bounded HTML fragments with all entities escaped and external URLs neutralized. |
@@ -139,6 +141,8 @@ console.log(`Generated DOCX (${bytes.byteLength} bytes, SHA-256: ${contentHash})
 
 // 3. Parse OOXML bytes back to a validated model
 const parsed = await parseDocument(bytes, { kind: "doc" });
+const { model, fidelity } = await importDocument(bytes, { kind: "doc" });
+// fidelity.issues[].code: macros | comments | media | …  lost: dropped | approximated
 
 // 4. Apply typed model patches
 const patched = patchDocument(parsed, [
@@ -151,6 +155,9 @@ const history = createPatchHistory(patched);
 history.apply([{ op: "set", target: { title: true }, value: "Updated Review" }]);
 console.log(history.canUndo()); // true
 const restored = history.undo(); // restored to "Executive Summary" state
+
+import { diffDocument } from "@arnilo/prism-office/documents";
+const diff = diffDocument(parsed, restored, { maxOps: 4096 });
 
 // 6. Generate structured preview blocks & safe HTML
 const blocks = renderPreviewBlocks(restored);
@@ -208,7 +215,8 @@ Financial worksheets often require exact decimal representations that JavaScript
 
 ## Related APIs
 
-- [`@arnilo/prism-coding-tools/document-reader`](./document-reader.md): Bounded literal text extraction from PDF and DOCX documents for coding agent tools.
+- [`@arnilo/prism-coding-tools/document-reader`](./document-reader.md): Bounded literal text extraction from PDF and DOCX documents for coding agent tools; optional host-selected Mistral OCR parser.
 - [`@arnilo/prism-core/integrations/work`](./work-tools.md): Microsoft 365 and Google Workspace identity-scoped connectors.
 - [`@arnilo/prism-coding-tools/agent`](./coding-agent-tools.md): Coding tools and file operations.
 - [`@arnilo/prism-core/governance/observability`](./observability.md): OpenTelemetry instrumentation and trace adapters.
+- [Work artifacts and review](work-artifacts-and-review.md): evidence-bound artifact citations and `evidenceDigest` approvals.

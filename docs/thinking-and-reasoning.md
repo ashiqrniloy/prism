@@ -93,7 +93,8 @@ Core maps only shapes shared by ≥2 packages (or an explicit no-op). Unique kno
 | `@arnilo/prism-providers/commandcode` / `@arnilo/prism-providers/opencode-go` | Gateway level tables (`claude-*` → `output_config_effort`, `gpt-5.6*` → `openai_reasoning`, K3/DeepSeek/GLM → `reasoning_effort`, K2.x/MiniMax/Qwen → `thinking_type`) |
 | `@arnilo/prism-providers/alibaba` | `thinking_type` mapped onto Qwen `enable_thinking` (toggle, no effort levels) |
 | `@arnilo/prism-providers/ollama` | `reasoning_effort`; `gpt-oss*` declares `low/medium/high`; native `think` field never mixed in |
-| `@arnilo/prism-providers/azure` / `.../vertex` / `.../bedrock` | OpenAI-compat sanitized forwarder (`reasoning_effort` / `reasoning` object), snapped to declared levels |
+| `@arnilo/prism-providers/azure` / `.../vertex` / `.../bedrock` (compatible route) | OpenAI-compat sanitized forwarder (`reasoning_effort` / `reasoning` object), snapped to declared levels |
+| `@arnilo/prism-providers/bedrock` (native `converse` route) | Anthropic family: `additionalModelRequestFields.thinking` (`enabled`/`disabled`/`adaptive`, default budget injected); OpenAI family: `reasoning_effort` snapped to declared levels |
 | `@arnilo/prism-providers/ai-sdk` | `noop` — host `LanguageModelV4` owns reasoning settings |
 
 ## Declared levels and snapping
@@ -133,6 +134,7 @@ OpenRouter and Hyper derive their sets from each provider's models API (`support
 - [Provider request policies](provider-request-policies.md) — `mergeProviderRequestOptions`
 - [Use-case model selection](use-case-model-selection.md) — session vs worker/summary model binding (workers take `thinkingLevel`)
 - [Agent/session runtime](agent-session-runtime.md) — prior-reasoning preservation across turns
+- [Attention compiler](attention-compiler.md) — opt-in strip of thinking turns older than `thinkingKeepTurns` once the request crosses a ratio of the input cap
 - [Provider packages](provider-packages.md) — package boundaries and discovery
 - Per-provider pages under [docs/providers](providers/) — declared levels, wire field, and snapping per provider
 - [Thinking coverage evidence matrix](_evidence/thinking-coverage-2026-09-05.md) — per-model legality, source, and test pins

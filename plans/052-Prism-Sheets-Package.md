@@ -4,7 +4,7 @@ Source request: `prism-documents.md` (Package B, P7–P9, plus P13–P15 cross-p
 land in this package). Sibling plans: `051-Prism-Documents-Package.md` (Package A, P1–P6),
 `053-Prism-Diagrams-Package.md` (Package C, P10–P12).
 
-This package is the **safety-critical one** in the request: Synapta stores money as decimal
+This package is the **safety-critical one** in the request: the requesting host stores money as decimal
 strings and floats are forbidden. Decimal-unsafe inference corrupts money. Every parse path
 returns decimal strings for money-like columns — never floats.
 

@@ -45,7 +45,7 @@ At least one non-empty ownership field must come from `authorize()`. Request JSO
 | `POST /prism/agents/:id/runs` | `agent.run` | `{ "input": string | Message | Message[] }` |
 | `POST /prism/agents/:id/stream` | `agent.stream` | same; SSE response |
 | `GET /prism/agents/:id/runs/:runId` | `agent.status` | none; redacted public state/version only |
-| `POST /prism/agents/:id/runs/:runId/resume` | `agent.resume` | `{ "decision": "approve" | "deny", "expectedVersion": number }` |
+| `POST /prism/agents/:id/runs/:runId/resume` | `agent.resume` | `{ "decision": "approve" | "deny", "expectedVersion": number, "modifiedArguments"?, "approvalId"?, "reason"? }` or `{ "decisions": [...], "expectedVersion": number }` |
 | `GET /prism/agents/:id/runs/:runId/events?cursor=` | `agent.events` | none; durable SSE, also accepts `Last-Event-ID` |
 | `POST /prism/workflows/:id/runs` | `workflow.run` | `{ "input": unknown, "runId"?: string }` |
 | `POST /prism/workflows/:id/stream` | `workflow.stream` | same; SSE response |
@@ -109,7 +109,7 @@ const handler = createPrismHandler({
 - Workflow exposure requires its existing `WorkflowCheckpointAdapter`; no server-owned database exists.
 - Schedule exposure is optional and may be one service or an authorization-selected resolver. Returned service ownership must exactly match authorized tenant/account/user scope; otherwise request is forbidden.
 - `PrismWorkflowExposure.runOptions` can supply agent/tool/policy/resume-validator wiring. Server-owned ownership, signal, checkpoint, redactor, run ID, and event bus fields cannot be overridden.
-- The agent resume endpoint (`/prism/agents/{id}/runs/{runId}/resume`) accepts `{ decision: "approve" | "deny" }` or `{ decisions: [{ approvalId, outcome, reason?, modifiedArguments?, elicitation? }] }` next to `expectedVersion` — exactly one of `decision`/`decisions`. Entries are validated at the boundary (count ≤ 128, four outcomes, bounded reason/payloads) and core applies them atomically under the run's CAS; unknown ids, stale versions, and malformed batches fail closed without touching the run.
+- The agent resume endpoint (`/prism/agents/{id}/runs/{runId}/resume`) accepts `{ decision: "approve" | "deny", modifiedArguments?, approvalId?, reason? }` or `{ decisions: [{ approvalId, outcome, reason?, modifiedArguments?, elicitation? }] }` next to `expectedVersion` — exactly one of `decision`/`decisions`. When `modifiedArguments` is passed with `decision: "approve"`, omitting `approvalId` correlates the run's single pending decision (multiple pending decisions without `approvalId` fail closed). Entries are validated at the boundary (count ≤ 128, four outcomes, bounded reason/payloads, schema validation) and core applies them atomically under the run's CAS; unknown ids, stale versions, deny with edits, and malformed batches fail closed without touching the run.
 - Host/origin checks and CORS headers activate only when their allow-lists are configured. Hosts still own reverse-proxy trust and canonical host handling.
 
 Default/hard ceilings:
@@ -224,7 +224,8 @@ Compose beside `createPrismHandler` — Prism starts no listener, container orch
 | Helper | Role |
 | --- | --- |
 | `createPrismHealthHandler` | `GET /health`, `/livez`, `/readyz`. Minimal JSON; `?detail=1` requires `authorizeDetail`. No secrets/tenant payloads by default. Ready fails while draining. |
-| `createPrismDrainController` | `beginDrain()` rejects admit ops (`agent.run`/`stream`/`resume`, workflow run/stream/enqueue/resume/replay, schedule create/trigger) with `503 ERR_PRISM_SERVER_DRAINING`. Status/cancel/list stay open. |
+| `createPrismDrainController` | `beginDrain()` rejects admit ops (`agent.run`/`stream`/`resume`, workflow run/stream/enqueue/resume/replay, schedule create/trigger) with `503 ERR_PRISM_SERVER_DRAINING`. Status/cancel/list stay open. Snapshot includes finite `deadlineAt` / `expired`. |
+| `createPrismOperatorHandler` | Authenticated `/ops/queue`, `/suspended`, `/failed`, `/unknown`, `POST /ops/cancel`, `POST /ops/reconcile`. Ownership-scoped. Reconcile accepts only `completed` / `failed_terminal` plus evidence — never retries unknown effects or unlocks leases. |
 | `rateLimit` on handler | Host adapter after authorize, before session create. Return denial `{ retryAfterMs, code, message }` → `429` + optional `Retry-After`. `createMemoryRateLimiter` is single-process only. |
 | `createPrismAgentEventReplay` | Shared `AgentEventSource` page/follow semantics for exact-owned runs. |
 | `createPrismEventReplay` / `createPrismReplayHandler` | Compatible ownership-scoped legacy `queryEvents` pages (`redacted: true`). Does not re-run work. Unauthorized replay denies. |
@@ -259,6 +260,7 @@ A2A routes are not added to `createPrismHandler()`. Install `@arnilo/prism-core/
 - [Performance](performance.md): capacity notes for concurrent runs and deployment probes.
 - [Agent/session runtime](agent-session-runtime.md): direct result and event stream semantics.
 - [Workflows](workflows.md): durable checkpoints, status, cancellation, exact-once resume, and `createWorkflowCoordinator` workers.
+- [Operations runbook](operations.md): fair admission, drain deadline, operator queue/cancel/reconcile.
 - [MCP client and server exposure](mcp-tools.md): selected MCP capabilities and web-standard MCP transport.
 - [Host security guide](host-security.md): remote-boundary checklist.
 - [A2A interoperability](a2a.md): separately mounted A2A 1.0 handler/client.

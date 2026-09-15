@@ -1,3 +1,42 @@
+## [0.7.0] - 2026-09-15 (extended line: plans 072, 073, 074, 075, 077, 078)
+
+> **Channels are not in this cut.** Plan 079 (Telegram/Signal adapters) was reassigned to **0.8.0** so the 0.7.0 cut stops waiting on it; nothing in this release mentions or ships a channel adapter.
+
+### Added
+- **Execution timeline (plan 072).** `@arnilo/prism-core/governance/observability` ships one frozen, JSON-serializable view-model for what a run did: `projectAgentTimeline` (live `AgentEvent[]`), `projectTraceTimeline` (persisted `EvaluationTrace`), `projectWorkflowTimeline` (workflow events plus optional checkpoint), incremental `createTimelineFolder` / `createWorkflowTimelineFolder` folders for SSE/cockpit updates, and `summarizeTimeline` / `summarizeSession` rollups (tool counts capped at 64, no double counting across runs). See [docs/execution-timeline.md](docs/execution-timeline.md).
+- **Workflow graph view-model (plan 072).** `serializeWorkflowGraph`, `workflowGraphToMermaid`, `workflowGraphToDot`, `projectWorkflowGraphRun`, and `createWorkflowGraphRunFolder` render a workflow DAG and overlay live or checkpoint run state (`WorkflowGraphRunView`) without executing it.
+- **Trajectory and outcome evals (plan 072).** Scorers (`defineScorer`, pairwise preferences, model-judge budgets), `runScenario`, `runExperiment`, `runWorkflowExperiment`, dataset items with expected trajectories, trials, manifests, comparisons, and thresholds — with `runComparison` / `datasetFromRuns` curation over recorded runs.
+- **Eval primitives match their contracts (plan 073 Tasks 30–31).** Injection/timeline holes closed, deterministic `mulberry32` sampling, `collectWhileRunning`, and host-activity eval packs (coding, browser, memory, voice invariants) over the true primitives.
+- **Attention compiler (plan 074, opt-in).** `createAttentionCompiler` / `resolveInputCap` / `compileAttention` / `createAttentionTruncationTrigger`: a per-turn gate that measures the assembled input against a host ratio of the model input cap and, only past the ratio, mutates a **history clone** oldest thinking blocks first, then fold-eligible tool results — keeping cache prefixes, the session store, and the observational-memory ledger untouched, and raising `AttentionBudgetError` rather than silently dropping context. Wired through `AgentConfig`, `AgentDefinition`, and `RunOptions` (run overlay narrows), plus `attention_compiled` telemetry and an `attention` timeline step; sticky frontier persists through `persistSessionState`. See [docs/attention-compiler.md](docs/attention-compiler.md).
+- **Memory fabric subpath (plan 075, opt-in).** `@arnilo/prism-memory/fabric` adds typed notes (`fact`, `procedure`, `file`, `working`, `episode`) with links, validity windows, time/tool recall, conversation search, and opt-in consolidation/linker/evolution workers over the stores a host already configured. Inert until `fabric.attach(session)`; no new package, provider, database, or mandatory dependency. See [docs/memory-fabric.md](docs/memory-fabric.md).
+- **Work-scope memory index (plan 077, opt-in).** `createWorkScopeController` appends `om.scope.*` entries to one observational-memory ledger; `foldWorkScopeMap`, `projectWorkMemory`, and `withWorkScope` project the outline to a host-selected working set (leaf `self+ancestors` by default), auto-bind new observations to the leaf, and skip the observation dropper while any host scope exists. Caps fail closed (256 scopes, depth 8, 4,096 binds, 512-char labels). See [docs/compaction-observational-memory.md](docs/compaction-observational-memory.md).
+- **Host-owned subagent spawn (plan 078, opt-in).** `createSpawnAgentTool` turns the supervisor's host-owned child catalog into a non-exclusive `spawn_agent` whose closed schema exposes only allow-listed child ids, input, an optional thread id, and `mode: "sync" | "async"`; `createWaitAgentTool` / `createCancelAgentTool` join or abort async handles from `delegateAsync()`. Child identity narrows from the parent, results and errors are redacted, child slots are reserved atomically (after a before-hook narrows limits), and parent-run abort cancels running children. `createWorktreeChildFactory` gives each child its own linked git worktree and cleans it up on every terminal outcome (including a suspended child that later resumes), while `observeSupervisorLifecycle` bridges `delegation_*` events to redacted coding `subagent_started` / `subagent_stopped` lifecycle events. See [docs/supervisors.md](docs/supervisors.md).
+- **Governed host completeness (plan 073).** Governed provider invocation with aggregate task/tenant accounting across every paid work kind (enterprise migration `006_aggregate_budgets`); durable business-action drafts with editable approvals; Docker process sessions and coherent workspace recovery; incremental Drive knowledge synchronization; snapshot/reconnect lifecycle with a hosted E2B sandbox; fair worker admission and operator routes; cross-layer memory lineage with correction and revocation; semantic artifact review with evidence-backed citations; import-fidelity reports with optional OCR; monotonic per-run tool narrowing with remote invalidation; native Bedrock `Converse`/`ConverseStream`; and governed realtime voice orchestration. New pages: [docs/execution-timeline.md](docs/execution-timeline.md), [docs/host-compositions.md](docs/host-compositions.md), [docs/hosted-sandboxes.md](docs/hosted-sandboxes.md), [docs/knowledge-sync.md](docs/knowledge-sync.md), [docs/realtime-voice.md](docs/realtime-voice.md), [docs/attention-compiler.md](docs/attention-compiler.md), [docs/memory-fabric.md](docs/memory-fabric.md).
+- **Examples.** Runnable demos for the new surfaces: `examples/execution-timeline.ts`, `examples/behavior-evaluation.ts`, `examples/coding-browser-evaluation.ts`, `examples/attention-compiler.ts`, `examples/memory-fabric.ts`, `examples/work-scopes-coding-loop.ts`, `examples/spawn-agent-tool.ts`, `examples/governed-provider.ts`, `examples/docker-process-session.ts`, `examples/drive-rag-sync.ts`, `examples/hosted-sandbox.ts`, `examples/scanned-document-rag.ts`, and `examples/realtime-voice-host.ts`.
+
+### Changed
+- **Lockstep `0.6.0` → `0.7.0`.** All ten publishable manifests move together with `^0.7.0` internal ranges; the lockfile, the `src/index.ts` version constant, the docs index banner, the release-workflow tag lists, and the generated package-truth artifact agree (enforced by `scripts/version-literal-gate.test.mjs`).
+- **Compat baselines regenerated** (`--update-baseline`): **469 added declarations, zero removals**. The additions are the new subpath APIs above plus members added to existing declaration groups; no export was renamed or dropped.
+- **Release budgets rebaselined with recorded reasons**: root packed/unpacked/fileCount moved for the new dist modules, templates, and docs pages, and per-package export ceilings carry the 0.7.0 addition list. Startup and timing ceilings are unchanged.
+- **Migration guide for 0.6.0 hosts**: [docs/migrate-to-0.7.md](docs/migrate-to-0.7.md) (per-item actions for the ACP/model-router refusals, every tightening, the opt-in activation steps, and rollback), indexed from [docs/migration.md](docs/migration.md) and [docs/index.md](docs/index.md).
+- **Options index and peer matrix** cover the new surfaces: [docs/options-index.md](docs/options-index.md) routes `AttentionCompilerOptions`/`AttentionInputCapOptions`/`AttentionCompileOptions`/`AttentionTruncationTriggerOptions`, the fabric and work-scope option objects, and the supervisor/spawn/worktree/lifecycle options to their owning pages (gated by `scripts/live-doc-check.test.mjs`).
+
+### Fixed
+- **Task-scoped enterprise budgets failed on their first insert.** Migration `006_aggregate_budgets`' insert bound one JavaScript `Date` to both a `timestamptz` column and interval arithmetic, so PostgreSQL refused the statement with `42P08 inconsistent types deduced for parameter $8`; the parameter is now explicitly `::timestamptz` (found by the protected PostgreSQL leg, not by hermetic doubles).
+- **A serialization failure inside the budget upsert was swallowed.** The read-then-insert path caught *every* error from the `SELECT … FOR UPDATE` probe and then issued SQL against an aborted transaction (`25P02`), which defeated the retry loop; only a genuinely missing row is recoverable by inserting now.
+- **Serializable retry policy was too small for concurrent writers.** Budget/rate rewrites on one row now retry up to 12 times with full-jitter exponential backoff (capped at 250 ms), so a 16-client burst converges instead of exhausting three near-instant attempts with `ERR_PRISM_ENTERPRISE_POSTGRES_RETRYABLE`.
+- **Integration tests were stale against migration 006** (expected five migrations) and `scripts/phase27-release.test.mjs` still asserted that no `006_` migration existed; both now check the append-only list including `006_aggregate_budgets`.
+
+### Security
+- **ACP MCP destination matching (Trap A).** `mcp.allow` entries now match by WHATWG origin plus path-segment subtree: origin lookalikes (`mcp.example.com.attacker.invalid`) and sibling path prefixes (`/mcp-other`) no longer match, and allow entries carrying userinfo, query, fragment, or ambiguous encoded path forms fail `ConfigError` at parse time.
+- **Model-router facade fails closed (Trap B).** `router.providerSource(model)` throws `ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED` / `ERR_PRISM_MODEL_ROUTER_ASYNC_STATE` instead of handing back a provider that bypasses budgets, rate limits, circuits, fallbacks, selection policies, or durable state; `isProviderSourceEligible` lets a host check first.
+- **ACP launcher requires a real provider (Trap C/R05).** No silent `createMockProvider()` fallback; mock mode is an explicit opt-in.
+- **Per-run tool narrowing is monotonic (R11)** and remote invalidation is honored; child agents cannot widen the tenant, account, user, or scopes of the parent identity (`narrowIdentity` + `assertIdentityPropagation`).
+
+### Notes
+- **Protected PostgreSQL leg now green on 0.7.0 code**: `PRISM_TEST_POSTGRES_URL=… npm run test:postgres` passes core (72), memory (457), and the phase conformance legs (11) against `pgvector/pgvector:pg16`, the same image the release workflow uses. The three fixes above are what that leg caught.
+- **Node floor is unchanged** at `>=22` (Node 22/24 supported).
+
 ## [0.6.0] - 2026-09-12 (plans 070, 071)
 
 > **0.5.7 was never published.** This release folds that cut's content (durable concurrent tool rounds, strict-provider tool results, host-tunable knobs, peer/options truth, the dependency refresh, and the module splits) together with the 0.6.0 changes below, so a host on 0.5.6 upgrades once. See [docs/migrate-to-0.6.md](docs/migrate-to-0.6.md).
@@ -129,27 +168,27 @@
 ### Added
 - **OKF adoption (`@arnilo/prism-wiki`)**: wiki-init/refresh/lint emit and validate
   OKF v0.2 bundles (Karpathy prompt retained). See `docs/wiki.md`.
-- **DOCS-1 (Clay integration findings)**: three integrator contracts, in place on
+- **DOCS-1 (integration findings)**: three integrator contracts, in place on
   the pages that own them — resume-aware workflow nodes (`ctx.resume` or silent
   re-suspend) in `docs/workflows.md`; supervisor child factories return `Agent`
   not `AgentSession` (`SupervisorError: child "<id>" factory must return an
   Agent, got <type>`) plus durable-store nested approvals in `docs/supervisors.md`;
   task-boundary `session.compact()` fails closed during an active run in
   `docs/compaction-and-retry.md`. Each block links `examples/autonomous-coding-loop.ts`.
-- **FEATURE-2 (Clay integration findings)**: documented bounded iterate-until-done
+- **FEATURE-2 (integration findings)**: documented bounded iterate-until-done
   host-loop pattern in `docs/workflows.md` — one `runWorkflow` per iteration,
   iteration state in workflow inputs, explicit termination predicate and budgets,
   typed `BudgetExhaustedError` (fail-closed, never a hang), `replayWorkflow` per
   iteration run id. Seeded by `examples/autonomous-coding-loop.ts`. Plan 045 `loop`
   node remains the future in-graph primitive; this intake ships the docs+example
   minimum only.
-- **FEATURE-6 (Clay integration findings)**: composite `examples/autonomous-coding-loop.ts`
+- **FEATURE-6 (integration findings)**: composite `examples/autonomous-coding-loop.ts`
   conformance reference — goal → roadmap → per-task supervisor children (per-child
   models) → `runCodingGoalVerify`-style validation → observational-memory attach +
   task-boundary compact + recall → human gate with simulated restart → host-side
   bounded iterate-until-done with deterministic budget exhaustion. Mock providers
   only; no credentials or network.
-- **FEATURE-3 (Clay integration findings)**: host-opt-in command driver hooks.
+- **FEATURE-3 (integration findings)**: host-opt-in command driver hooks.
   `CommandExecutionContext` gains an optional `drivers?: CommandDrivers`
   (`startRun` / `startWorkflow` / `steer` — typed minimal handles returning
   `AgentRunResult`-shaped results / workflow run id + status) so a contributed
@@ -159,7 +198,7 @@
   the context shape unchanged (no key, no allocation). Drivers are
   host-injected capabilities, never package-supplied.
 ### Fixed
-- **FEATURE-1 (Clay integration findings)**: `resolveAgentDefinition` no longer
+- **FEATURE-1 (integration findings)**: `resolveAgentDefinition` no longer
   throws `Agent "<name>" has no model` when the declarative definition omits
   `model` but `context.overrides.model` supplies one — the fallback is a
   single `??` at `buildBaseConfig`, the `create()` path is unchanged, and a

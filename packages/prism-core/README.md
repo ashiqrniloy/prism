@@ -25,6 +25,7 @@ npm install @nats-io/jetstream @nats-io/transport-node
 
 ### Runtime
 - `@arnilo/prism-core/runtime/server`: HTTP server handler, SSE streaming, artifact delivery, replay, webhook delivery.
+- `@arnilo/prism-core/runtime/realtime`: Governed realtime voice bridge (device admit, host tool dispatch, barge-in, reconnect).
 - `@arnilo/prism-core/runtime/supervisor`: Agent-to-Agent (A2A) protocol server, client, event source, and multi-agent supervisor.
 - `@arnilo/prism-core/runtime/workflows`: Multi-step DAG workflow coordinator, saga recovery, checkpoints, and loop nodes.
 

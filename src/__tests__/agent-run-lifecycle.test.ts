@@ -13,10 +13,12 @@ import {
   loadAgentRunState,
   providerDone,
   providerTextDelta,
+  providerToolCall,
   snapshotLoadedSkillBodies,
   toolCallContent,
   validateLoadedSkillBodies,
 } from "../index.js";
+import type { AIProvider, ProviderRequest } from "../contracts.js";
 
 describe("agent run lifecycle", () => {
   it("streams an authorized durable approval through the shared core path", async () => {
@@ -486,6 +488,101 @@ describe("agent run lifecycle", () => {
       .map((b) => (b.type === "text" && b.text ? b.text : ""))
       .join("\n");
     assert.match(resumedText, /Skill brief:\nBe very brief\./, "restored catalog renders the body from the live registry");
+  });
+
+  it("persistSessionState: the sticky attention frontier rides the checkpoint and restores on resume (plan 074 P3)", async () => {
+    const payload = `payload ${"z".repeat(4_000)}`;
+
+    /** Run 1 mutates (4 KB tool result under a 0.2 gate), run 2 suspends on its gated tool call
+     *  and writes the session's frontier into the checkpoint. The resume raises the gate to 0.99,
+     *  so a stub in the resumed request can only come from a restored frontier. */
+    const suspendAndResume = async (persist: boolean) => {
+      const checkpoints = createMemoryCheckpointStore();
+      const store = createMemorySessionStore();
+      const requests: ProviderRequest[] = [];
+      const provider: AIProvider = {
+        id: "mock",
+        async *generate(request) {
+          requests.push(request);
+          if (requests.length === 1) {
+            yield providerToolCall(toolCallContent("call-echo", "echo", {}));
+            yield providerDone();
+            return;
+          }
+          if (requests.length === 3) {
+            yield providerToolCall(toolCallContent("call-write", "write", {}));
+            yield providerDone();
+            return;
+          }
+          yield providerTextDelta("finished");
+          yield providerDone();
+        },
+      };
+      const agentFor = (triggerRatio: number, compactRatio: number) =>
+        createAgent({
+          id: "persist-attention-demo",
+          store,
+          model: { provider: "mock", model: "demo" },
+          provider,
+          attentionCompiler: { maxInputTokens: 2_000, triggerRatio, compactRatio, keepLast: 0 },
+          tools: [
+            {
+              name: "echo",
+              parameters: {},
+              execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: payload }),
+            },
+            { name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: "done" }) },
+          ],
+        });
+      const session = agentFor(0.2, 0.25).createSession({ id: `persist-attention-${persist}` });
+      await session.run("go");
+      const suspended = await session.run("go", {
+        runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true, persistSessionState: persist },
+      });
+      const record = await checkpoints.loadCheckpoint({ namespace: "prism.agent-run", key: suspended.runId });
+      assert.ok(record, "durable suspension must write a checkpoint");
+      const sessionState = (record.value as { sessionState?: { attentionSticky?: { thinking: string[]; toolCallIds: string[] } } })
+        .sessionState;
+      const expectedVersion = suspended.runState?.version;
+      assert.ok(typeof expectedVersion === "number", "suspension must carry a run-state version");
+
+      const lifecycle = createAgentRunLifecycle({
+        checkpoints,
+        resolveAgent: () => ({ agent: agentFor(0.99, 0.995), definitionRevision: "1" }),
+      });
+      const events = [];
+      for await (const event of lifecycle.resumeStream(
+        { runId: suspended.runId, sessionId: suspended.sessionId },
+        { decision: "approve", expectedVersion },
+        { agentId: "persist-attention-demo", maxQueuedEvents: 64, overflow: "close", persistSessionState: persist },
+      )) {
+        events.push(event);
+      }
+      const stubbed = requests.slice(3).some((request) => JSON.stringify(request.messages).includes("omitted "));
+      const reports = events.filter((event) => event.type === "attention_compiled");
+      return { events, sessionState, stubbed, reports };
+    };
+
+    const persisted = await suspendAndResume(true);
+    assert.equal(persisted.events.at(-1)?.type, "agent_finished");
+    const sticky = persisted.sessionState?.attentionSticky;
+    assert.ok(sticky, "checkpoint carries the sticky frontier");
+    assert.equal(sticky.toolCallIds.length, 1, "checkpoint carries the stubbed call id");
+    assert.equal(sticky.toolCallIds[0], "call-echo");
+    assert.equal(persisted.stubbed, true, "the restored frontier keeps the stub on a turn the ratio would not");
+    assert.ok(persisted.reports.length > 0, "sticky re-application still reports a mutation");
+    for (const report of persisted.reports) {
+      assert.ok(
+        report.used < report.triggerRatio * report.inputCap,
+        "every resumed mutation happened below the gate: stickiness, not the ratio, made the decision",
+      );
+    }
+
+    const notPersisted = await suspendAndResume(false);
+    assert.equal(notPersisted.events.at(-1)?.type, "agent_finished");
+    assert.equal(notPersisted.sessionState, undefined, "no session state block without the opt-in");
+    assert.equal(notPersisted.stubbed, false, "without persistSessionState the resume re-decides under the relaxed gate");
+    assert.equal(notPersisted.reports.length, 0);
   });
 
   it("persistSessionState off keeps the checkpoint at the 0.1.2 shape (plan 015 Task 4)", async () => {

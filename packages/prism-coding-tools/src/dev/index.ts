@@ -60,6 +60,26 @@ import {
 } from "@arnilo/prism-core/runtime/server";
 import { AGENT_CAPABILITY_ID, createDevRouter } from "./server.js";
 
+export type {
+  InspectorAggregateSlice,
+  InspectorCompareSide,
+  InspectorCompareWinner,
+  InspectorComparison,
+  InspectorCostSlice,
+  InspectorSummarySlice,
+} from "./compare.js";
+export { compareInspectorRuns, parseInspectorCompareBody } from "./compare.js";
+export {
+  assertHostCompositionReadiness,
+  HostCompositionError,
+  type HostCompositionGovernance,
+  type HostCompositionOptions,
+  type HostCompositionProfile,
+  type HostCompositionReport,
+  type HostCompositionToolReport,
+  inspectDevInspector,
+  inspectHostComposition,
+} from "./composition.js";
 /** Typed request body of the decision endpoint (re-exported for typed hosts). */
 export type { DevDecisionOutcome, DevDecisionRequest } from "./server.js";
 
@@ -222,7 +242,15 @@ export function createPrismDevInspector(options: CreatePrismDevInspectorOptions)
   // Inspector surface: data-defined routes over the server seam (plan 040
   // Task 2). Everything not matched still reaches the raw server surface at
   // /{basePath}/*, so the SSE/status routes stay available on one listener.
-  const handler = createDevRouter({ handler: prismHandler, basePath, agentCapabilityId: capabilityId, replay: replaySeams });
+  const handler = createDevRouter({
+    handler: prismHandler,
+    basePath,
+    agentCapabilityId: capabilityId,
+    replay: replaySeams,
+    agent: options.agent,
+    checkpoints: options.checkpoints,
+    redactor: options.redactor,
+  });
 
   let server: Server | undefined;
 

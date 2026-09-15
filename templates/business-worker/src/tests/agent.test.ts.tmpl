@@ -1,0 +1,77 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { assertHostCompositionReadiness, inspectHostComposition, HostCompositionError } from "@arnilo/prism";
+import { validateApproval } from "@arnilo/prism-core/integrations/work";
+import type { AgentIdentity } from "@arnilo/prism";
+import { createAppAgent, createWorkerDraftStore } from "../agent.js";
+
+describe("business worker template", () => {
+  it("creates agent and processes task with tenant context", async () => {
+    const agent = createAppAgent({ tenantId: "tenant-enterprise", userId: "worker-test" });
+    const session = agent.createSession({ id: "test-biz-session" });
+    const result = await session.run("Run tenant task");
+    assert.ok(result.text.includes("Business worker ready"));
+  });
+
+  it("fails business readiness if memory-only store is configured", () => {
+    const agent = createAppAgent({ tenantId: "tenant-enterprise", userId: "worker-test" });
+    assert.throws(
+      () => {
+        assertHostCompositionReadiness({
+          profile: "business",
+          agent,
+          store: { kind: "memory", durable: false },
+        });
+      },
+      (error) => error instanceof HostCompositionError && error.message.includes("durable storage"),
+    );
+  });
+
+  it("passes business readiness with durable store and isolated workspace", () => {
+    const agent = createAppAgent({ tenantId: "tenant-enterprise", userId: "worker-test" });
+    const report = inspectHostComposition({
+      profile: "business",
+      agent,
+      store: { kind: "postgres", durable: true },
+      workspaceRoot: "/var/tenant-enterprise",
+      sandboxRoots: ["/var/tenant-enterprise/tasks"],
+      credentialRefs: ["BUSINESS_API_KEY"],
+    });
+
+    assert.equal(report.profile, "business");
+    assert.equal(report.ownership.tenantId, "tenant-enterprise");
+    assert.equal(report.storage.durable, true);
+    assert.equal(report.sandbox.isolated, true);
+    assert.equal(report.readiness.ok, true);
+  });
+
+  it("rejects a stale draft revision after edit", () => {
+    const store = createWorkerDraftStore();
+    const identity: AgentIdentity = {
+      tenantId: "tenant-enterprise",
+      userId: "worker-test",
+      principal: { kind: "user", id: "worker-test" },
+      scopes: ["Mail.Send"],
+      issuedAt: new Date().toISOString(),
+      verified: true,
+    };
+    const draft = store.createDraft({
+      provider: "microsoft365",
+      op: "mail.send",
+      identity,
+      payload: { to: "a@contoso.com", subject: "v1" },
+    });
+    const approval = {
+      draftId: draft.draftId,
+      revision: draft.revision,
+      payloadDigest: draft.payloadDigest,
+    };
+    const updated = store.updateDraft({
+      draftId: draft.draftId,
+      identity,
+      payload: { to: "a@contoso.com", subject: "v2" },
+      expectedRevision: 1,
+    });
+    assert.throws(() => validateApproval(updated, approval), /does not match draft revision/);
+  });
+});

@@ -244,7 +244,7 @@ missing Docker + native capability evidence (CI runs observed failing for exactl
   - Test Cases to Write: n/a.
   - Implementation Notes (completed):
     - Check names verified against each workflow's `name:`/job id (GitHub check name = job `name:` if set, else job id — `protected-matrix` has no `name:`, so that is its check name).
-    - `plans/README.md` was missing the `063-Synapta-MCP-2026-07-28-Adoption.md` index row (pre-existing, unrelated); added it so the plans-index docs test passes.
+    - `plans/README.md` was missing the `063-Prism-MCP-2026-07-28-Adoption.md` index row (pre-existing, unrelated); added it so the plans-index docs test passes.
     - `budget-gate` startup ceiling flaked under post-suite machine load (252–285 ms vs 250 ceiling); warm-cache reruns measure 157–244 ms and the suite passes — no product change, noted here so the flake is not misread as a regression.
     - The drill is import-safe for `import-hygiene.test.mjs`: CLI-only guard (`import.meta.url === argv[1]`) gates all side effects, and pg/better-sqlite3 load lazily inside it so importing the file loads node builtins only.
   - Documentation/Wiki Assessment:

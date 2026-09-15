@@ -91,6 +91,7 @@ if (chunk.accepted) emit(redactDeviceTelemetry(createSecretRedactor([token]), fr
 ## Related APIs
 
 - [Browser automation](browser-automation.md): verified-state checkpoints + reload/verify-before-side-effect for browser composition.
+- [Realtime voice](realtime-voice.md): governed OpenAI Realtime orchestration on this admission contract.
 - [Linux desktop control](computer-use-linux.md): first-party host-owned `computer-use-linux` MCP wrapper using this contract.
 - [Conversations](conversations.md): durable threads that own the runs device sessions bind to.
 - [Host security](host-security.md): approval, sandbox, and egress trust boundaries device adapters compose over.

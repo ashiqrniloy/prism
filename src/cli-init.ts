@@ -363,6 +363,7 @@ export async function createInitProject(
       version,
       templateName,
       provider,
+      templateDir,
     });
   } else {
     tokens = buildTokens({
@@ -451,13 +452,27 @@ function buildTokensForTemplate(input: {
   readonly version: string;
   readonly templateName: string;
   readonly provider: ProviderSpec;
+  readonly templateDir?: string;
 }): Record<string, string> {
-  const dependencies: Record<string, string> = {
-    "@arnilo/prism": input.version,
-    "@arnilo/prism-memory": input.version,
-    "@arnilo/prism-web-tools": input.version,
-    "@arnilo/prism-workflows": input.version,
-  };
+  const dependencies: Record<string, string> = {};
+  let packages: readonly string[] = ["@arnilo/prism", "@arnilo/prism-memory", "@arnilo/prism-web-tools", "@arnilo/prism-workflows"];
+  if (input.templateDir) {
+    const manifestPath = join(input.templateDir, "manifest.json");
+    if (existsSync(manifestPath)) {
+      try {
+        const raw = JSON.parse(readFileSync(manifestPath, "utf8"));
+        if (Array.isArray(raw.packages) && raw.packages.length > 0) {
+          packages = raw.packages;
+        }
+      } catch {
+        // fallback
+      }
+    }
+  }
+
+  for (const pkg of packages) {
+    dependencies[pkg] = input.version;
+  }
 
   const dependencyLines = Object.entries(dependencies)
     .sort(([a], [b]) => a.localeCompare(b))

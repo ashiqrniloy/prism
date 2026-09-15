@@ -136,7 +136,8 @@ await sessions.dispose();
 - Host restart: call `reconcile()` on a new registry for in-memory orphans, or listen for `process_unknown` and wire Phase 7 `ToolEffectStore.markUnknown` in the host.
 - Expiry sweep runs on registry/handle access — no timers at import.
 - Command fingerprint is SHA-256 of `[command, ...args]` only (no env).
-- Docker reference adapter does not implement `startProcess` yet — fail closed until a capable runtime is wired.
+- Docker sandbox (`createDockerSandbox`) implements `startProcess` returning a compliant `SandboxProcessHandle` with durable `ref` for attested reconnect. Process operations (`write`, bounded `onData` output, `wait`, `signal`, `kill`, `release`) compose with `ProcessSessions`. The sandbox `attachProcess(ref)` resolves an opaque `prism-docker-proc:` ref to a live in-memory handle with fail-closed validation (container ID, workspace, command fingerprint). `createDockerProcessRecoveryBackend(sandbox, options?)` provides a ready-made `ProcessRecoveryBackend` with optional `expectedContainerId`, `expectedWorkspace`, and `expectedLabels` assertions. When a sandbox is passed to `createProcessSessions` and has `attachProcess`, the recovery backend is wired automatically.
+- Hosted E2B sandbox (`createE2BSandbox`) also implements `startProcess` / `attachProcess` with opaque `prism-e2b-proc:` refs (sandbox id, pid, command fingerprint, workspace). `createE2BProcessRecoveryBackend` mirrors the Docker backend (`expectedSandboxId` / `expectedWorkspace` / `expectedLabels`). Filesystem-only `pause({ keepMemory: false })` reports process loss: `attachProcess` returns null after that snapshot. `connectE2BSandbox` reconnects by sandbox id without auto-resume; call `resume()` explicitly. See [Hosted sandboxes](hosted-sandboxes.md).
 
 ## Durable process recovery (plan 026 Task 5)
 
@@ -199,4 +200,5 @@ optionally `recoveryBackend` + `recoveryLimits`. With durability configured:
 - [Coding agent tools](coding-agent-tools.md): one-shot `shell` vs long-running sessions.
 - [Language intelligence](language-intelligence.md): LSP servers may later register as managed sessions.
 - [Coding security](coding-security.md): `SandboxProcessHandle` / optional `DisposableSandbox.startProcess`.
+- [Hosted sandboxes](hosted-sandboxes.md): E2B `pause`/`resume` and `prism-e2b-proc:` reconnect refs.
 - [Tool effects](tool-effects.md): unknown-outcome vocabulary mirrored by `markUnknown` / `process_unknown` / `reconcile`.

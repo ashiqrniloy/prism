@@ -35,6 +35,7 @@ describe("inspector UI assets (plan 040 Task 3)", () => {
       assert.match(script.headers.get("content-type") ?? "", /^text\/javascript/);
       const js = await script.text();
       assert.match(js, /applyAgentEvent|mountInspector/);
+      assert.match(js, /Compare last 2/);
 
       const config = await fetch(`${root}/config`);
       assert.equal(config.status, 200);

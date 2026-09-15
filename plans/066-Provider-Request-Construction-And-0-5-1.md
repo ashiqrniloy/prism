@@ -15,7 +15,7 @@
 - OM worker requests use `om:{session.id}` (sanitized by existing `sanitizeCacheKey` at the adapter). Compaction requests use `context.sessionId` (agent session).
 - Cache-control / explicit-breakpoint models get default `{ system_prompt, last_stable_message }` breakpoints and `cacheRetention: "short"` unless the host set `cache.mode: "off"`, `cacheRetention: "none"`, or explicit breakpoints. Implicit / host-owned cache providers emit no new markers.
 - `createAgent({ thinkingLevel: "low" })` / `session.run(input, { thinkingLevel: "low" })` calls existing `applyThinkingLevelForModel`; hosts stop hand-merging compat for the portable ladder.
-- `createSessionCachePolicy` remains a host overlay (Clay keep-working). Package-policy auto-activation and `AIProvider.generate` wrapping are **not** built.
+- `createSessionCachePolicy` remains a host overlay and must keep working. Package-policy auto-activation and `AIProvider.generate` wrapping are **not** built.
 - All 10 manifests `0.5.0` → `0.5.1`, internal ranges `^0.5.0` → `^0.5.1`. Docs, CHANGELOG, migrate-to-0.5, index, and export contracts match.
 
 ## Frozen decisions (do not reopen in later tasks)
@@ -113,7 +113,7 @@
       - `src/provider-request-policy.ts`; `src/structured-output.ts` (`StructuredOutputError`); `src/index.ts` export surface; `src/__tests__/public-export-contract.test.ts`.
     - Options Considered:
       - New module `src/provider-request-defaults.ts` (acceptable if policy file stays small; default is extend `provider-request-policy.ts`).
-      - Mutate `createSessionCachePolicy` into the default (rejected — keep overlay semantics for Clay).
+      - Mutate `createSessionCachePolicy` into the default (rejected — keep host overlay semantics).
     - Chosen Approach: add helper + error beside existing merge; export both; tests are node:test asserts, no extra framework.
     - API Notes and Examples:
       ```ts
@@ -414,7 +414,7 @@
       - `docs/use-case-model-selection.md`
       - `docs/providers/openai.md`, `anthropic.md`, `google.md`, `openrouter.md`, `opencode-go.md`, `xai.md`, `alibaba.md`, `kimi.md`, `hyper.md`, `commandcode.md`, `deepseek.md`, `zai.md`, `neuralwatt.md`, `ollama.md`, `clinepass.md`, `azure.md`, `bedrock.md`, `vertex.md`, `ai-sdk.md`, `openai-compatible.md`
       - `docs/_evidence/phase37-provider-matrix.md`
-      - `docs/migrate-to-0.5.md` (new **0.5.1** section: additive construction; Clay may drop host policy; OpenCode Go typed error vs 400)
+      - `docs/migrate-to-0.5.md` (new **0.5.1** section: additive construction; hosts may drop host policy; OpenCode Go typed error vs 400)
       - `docs/migration.md` (pointer)
       - `docs/index.md`
       - `examples/cache-aware-prompt-assembly.ts` (optional sessionId still valid; comment that agent sessions stamp it)

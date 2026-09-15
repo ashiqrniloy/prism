@@ -21,7 +21,7 @@ Documents how the hermetic suite runs, which stage a new suite belongs to, and t
 | build race | `scripts/phase23-build-race.test.mjs` |
 | workspace suites | `npm run test --workspaces --if-present` |
 
-Protected-environment legs (Postgres, PTY, NATS, live credentials) are not part of `npm test`; they fail closed with one canonical `BLOCKED GATE <id> requires=<names> evidence=<surface> hint=<how to unblock>` record and a non-zero exit when their infrastructure is absent (registry and audit: `node scripts/blocked-gate.mjs`). Retired phase freeze/release gates live in `scripts/` for audit but are deliberately kept out of the chain.
+Protected-environment legs (Postgres, PTY, NATS, live credentials) are not part of `npm test`; they fail closed with one canonical `BLOCKED GATE <id> requires=<names> evidence=<surface> hint=<how to unblock>` record and a non-zero exit when their infrastructure is absent (registry and audit: `node scripts/blocked-gate.mjs`). Retired phase freeze/release gates live in `scripts/` for audit but are deliberately kept out of the chain. 0.7.0 host-completeness packed proof is `scripts/fixtures/e2e-070-host-completeness-journey.mjs` (same packed consumer as the full-surface journey) plus `scripts/host-completeness-evidence.test.mjs`; live legs stay skip-not-fail. R16/R17 stay blocked until plans 077/074 ship.
 
 ## Isolation rules
 

@@ -1,8 +1,8 @@
-# Clay Integration Findings — Bug Reports and Feature Requests
+# Integration Findings — Bug Reports and Feature Requests
 
 Status: open change requests against `@arnilo/prism` 0.3.0 (npm dist) and the
-`0.3.1` workspace source. Produced by the Clay coding-agent integration review
-(see Clay `roadmap.md`, "Prism Capability Review"). Every runtime claim below
+`0.3.1` workspace source. Produced by an integration review of a downstream
+coding-agent host; findings forwarded as-is. Every runtime claim below
 was verified by executing code, not by reading docs: a 37-assertion,
 network-free smoke suite (mock providers, memory stores) covering agent loops,
 observational memory, workflows with durable suspend/resume, supervisor
@@ -10,8 +10,8 @@ delegation, declarative agent resolution, and the coding tool set.
 
 Proposed intake: turn BUG-1 into the next patch release (0.3.2); triage the
 FEATURE/DOCS items into a capability-gaps release plan in the style of
-`plans/004`. Clay is happy to contribute the smoke suite as regression tests
-per fix.
+`plans/004`. The reporter is happy to contribute the smoke suite as regression
+tests per fix.
 
 Index:
 
@@ -36,7 +36,7 @@ Index:
   - `packages/coding-agent/src/ask-user-decision.ts:614` — `suspendAskUserDecision` performs no runtime validation of `allowCustom` (only the options-count check).
   - `packages/coding-agent/src/ask-user-decision.ts:657` — `createAskUserDecisionResumeValidator` rejects the persisted suspension with a misleading error.
 - **Reported against:** 0.3.0 npm dist (reproduced at runtime); confirmed still present in `0.3.1` workspace source.
-- **Severity:** blocker for durable human-in-the-loop flows (Clay `st` `/start` suspend/resume). TypeScript marks `allowCustom` required, but that is not a runtime guarantee for JS hosts, generated/serialized data, or records persisted by older versions.
+- **Severity:** blocker for durable human-in-the-loop flows (e.g. a host `/start` suspend/resume path). TypeScript marks `allowCustom` required, but that is not a runtime guarantee for JS hosts, generated/serialized data, or records persisted by older versions.
 
 ### Description
 
@@ -154,7 +154,7 @@ await resolveAgentDefinition({ name: "st", instructions: "You are st." }, {
 ```
 
 Hosts that inject the user's currently selected model at resolution time
-(Clay's case: a third-party package ships a declarative agent, the host
+(e.g. a third-party package ships a declarative agent and the host
 supplies the model) must mutate the definition before resolving, which breaks
 the declarative model for package authors.
 
@@ -180,7 +180,7 @@ that `model` (or `create()`) is mandatory.
 
 Workflows are deliberately acyclic and revision-fingerprinted — good durable
 execution properties. But the most requested agentic shape, "loop until the
-goal is achieved," is cyclic. Clay's autonomous agent needs to re-enter a
+goal is achieved," is cyclic. An autonomous host agent needs to re-enter a
 phase (implement → validate → revise) with updated state until exit criteria
 pass, and today must invent its own host-side loop semantics (one workflow run
 per iteration? state passed via workflow inputs? how to bound and audit?).
@@ -210,7 +210,7 @@ Either is acceptable; the documented pattern is the minimum:
 ### Motivation
 
 `CommandExecutionContext` carries ids/signal/metadata only, so a contributed
-command cannot start a run, steer a session, or launch a workflow. Clay's
+command cannot start a run, steer a session, or launch a workflow. A host
 `/start` command (launch an autonomous workflow) therefore has to be mapped
 host-side, outside Prism's command registry, which splits the mental model:
 the command is declared in a package but implemented in the host.
@@ -237,7 +237,7 @@ don't. Keep the current context shape unchanged when drivers are absent.
 
 `supervisor.subscribe()` emits delegation lifecycle metadata only
 (`delegation_started/finished/rejected/error`). Host UIs rendering nested
-autonomous runs (Clay's sub-agent validation loop) want per-turn child event
+autonomous runs (e.g. a sub-agent validation loop) want per-turn child event
 visibility — at least tool-call milestones — without giving children direct
 store/subscription access.
 
@@ -292,7 +292,7 @@ and unambiguous.
 Each primitive is individually documented, but the intended composition of an
 autonomous build loop — goal → roadmap artifact → per-phase plan →
 task-by-task execution with sub-agent validation and per-task observational
-memory — has to be rediscovered by every host. Clay assembled this
+memory — has to be rediscovered by every host. The reporting host assembled this
 composition from five packages and hit every contract listed under DOCS-1 on
 the way.
 
@@ -342,7 +342,7 @@ them:
 
 - Repro environment: Node ≥ 20, `@arnilo/prism` 0.3.0 npm dist, mock
   providers, memory stores; no network, no external services.
-- The full Clay smoke suite (37 assertions) is available to fold into
+- The full 37-assertion smoke suite is available to fold into
   `src/__tests__/` as regressions for BUG-1, FEATURE-1, and the supervisor
   validation — say the word and it will be contributed as a PR alongside the
   fixes.

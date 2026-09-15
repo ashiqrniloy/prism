@@ -11,7 +11,7 @@ Lists every third-party peer a Prism package declares, what importing that peer 
 - Debugging a "peer not installed" error from a gated subpath.
 - Auditing which of your already-installed packages a Prism surface will reuse.
 
-Internal `@arnilo/*` peers are not listed here: every first-party package declares a required `@arnilo/prism` peer, and the release gate keeps all internal ranges locked to the cut version. This page covers the **11 third-party declarations across 6 packages**.
+Internal `@arnilo/*` peers are not listed here: every first-party package declares a required `@arnilo/prism` peer, and the release gate keeps all internal ranges locked to the cut version. This page covers the **12 third-party declarations across 6 packages**.
 
 ## Matrix
 
@@ -24,6 +24,7 @@ One row per declaration. `Unlocks` names the subpath whose import reaches the pe
 | `@dietrichgebert/ponytail` | `^4.9.0` | yes | `@arnilo/prism-coding-tools` | `./ponytail` | `npm i @dietrichgebert/ponytail` | no |
 | `mammoth` | `^1.8.0` | yes | `@arnilo/prism-coding-tools` | `./document-reader` | `npm i mammoth` | no |
 | `pdf-parse` | `^2.4.5` | yes | `@arnilo/prism-coding-tools` | `./document-reader` | `npm i pdf-parse` | no |
+| `e2b` | `2.49.1` | yes | `@arnilo/prism-coding-tools` | `./security` | `npm i e2b@2.49.1` | yes |
 | `better-sqlite3` | `^13.0.3` | yes | `@arnilo/prism-core` | `./sessions/sqlite`, `./governance/prompts` | `npm i better-sqlite3` | no |
 | `pg` | `^8.23.0` | yes | `@arnilo/prism-core` | `./sessions/postgres`, `./enterprise/postgres`, `./governance/prompts` | `npm i pg` | yes |
 | `@nats-io/jetstream` | `^3.4.0` | yes | `@arnilo/prism-core` | `./sessions/nats` | `npm i @nats-io/jetstream @nats-io/transport-node` | yes |
@@ -37,14 +38,15 @@ Two peers are pinned to an exact version instead of a range, because the pin is 
 
 - **`playwright-core@1.63.0`** (`@arnilo/prism-web-tools/browser`, `/obscura`). Browser automation rides Playwright's CDP transport and accessibility snapshot shapes, which move between minors. Prism never launches, downloads, or bundles a browser: the host supplies the binary, the image, and the cache, and must match the pinned client. See [Browser automation](browser-automation.md).
 - **`@ai-sdk/provider@4.0.13`** (`@arnilo/prism-providers/ai-sdk`). The adapter consumes deterministic specification-versioned types (`LanguageModelV4`) and gates on an exact supported-version matrix at construction, so an unlisted version fails closed instead of silently mis-mapping. See [AI SDK provider](providers/ai-sdk.md).
+- **`e2b@2.49.1`** (`@arnilo/prism-coding-tools/security`). Pause `keepMemory`, `Sandbox.connect` auto-resume, and `ServiceBusyError` 503 semantics are version-specific. Hosts may inject `{ client }` instead of installing the peer. See [Hosted sandboxes](hosted-sandboxes.md).
 
 `zod` is the only **required** third-party peer. `@agentclientprotocol/sdk` — a hard dependency of `@arnilo/prism-ag-ui` — declares `zod: ^3.25.0 || ^4.0.0` as its own peer, so `@arnilo/prism-ag-ui` re-declares the same range to keep the install tree satisfiable; the range is deliberately identical to the SDK's. Nothing in Prism imports zod directly.
 
 ## Peers that touch the network
 
-`pg`, `@nats-io/jetstream`, `@nats-io/transport-node`, and `playwright-core` open sockets. For a supply-chain review of those four:
+`pg`, `@nats-io/jetstream`, `@nats-io/transport-node`, `playwright-core`, and `e2b` open sockets. For a supply-chain review of those five:
 
-- **Connection targets are host-owned.** Every one of them is passed a host-supplied connection string, endpoint list, browser instance, or service URL. Prism holds no default endpoint, and no peer is reachable from the root import.
+- **Connection targets are host-owned.** Every one of them is passed a host-supplied connection string, endpoint list, browser instance, API key, or service URL. Prism holds no default endpoint, and no peer is reachable from the root import.
 - **Bytes stay local otherwise.** `better-sqlite3`, `mammoth`, `pdf-parse`, `@nanonets/graft`, and `@dietrichgebert/ponytail` are filesystem/process peers; the remaining two (`zod`, `@ai-sdk/provider`) are pure types/schemas.
 - **No secrets are read by the peers.** Prism resolves credentials through host providers and redacts them at the boundary; peers only ever receive a resolved connection string or model object. See [Credentials and redaction](credentials-and-redaction.md) and [Host security guide](host-security.md).
 - **Nothing is installed implicitly.** Optional peers are never auto-installed by npm; a missing one fails closed at the call site with a typed error naming the peer and the subpath. Required peers (today only `zod`) are installed by npm with the package.
@@ -84,7 +86,7 @@ const tools = await createBrowserTools({ browser });
 ## Security and performance notes
 
 - Pinned peers must be updated through the release process, not by a host override: an unpinned browser client or AI SDK type surface is a silent behavior change.
-- Peer installs are host-visible supply-chain additions. Prefer one peer per capability, keep them out of the root import, and audit transitive dependencies of the four network-touching peers in your own policy.
+- Peer installs are host-visible supply-chain additions. Prefer one peer per capability, keep them out of the root import, and audit transitive dependencies of the five network-touching peers in your own policy.
 - Prism adds no runtime cost for an uninstalled peer; the failure is a typed error at first use.
 
 ## Related APIs

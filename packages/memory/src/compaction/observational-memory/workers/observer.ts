@@ -1,16 +1,17 @@
 import type { AIProvider, ModelConfig, ProviderRequestOptions, SessionEntry, ToolDefinition } from "@arnilo/prism";
 import { createMemoryId } from "../ids.js";
-import { type MemoryWorkerLimitOptions, resolveMemoryWorkerLimits } from "../limits.js";
+import { joinWorkerText, type MemoryWorkerLimitOptions, resolveMemoryWorkerLimits } from "../limits.js";
 import { serializeSourceEntries } from "../serialize.js";
 import { estimateTextTokens } from "../tokens.js";
 import { isMemoryObservation, type MemoryObservation } from "../types.js";
 import { runMemoryWorkerLoop } from "../worker-loop.js";
 
 export const DEFAULT_OBSERVER_INSTRUCTION =
-  "Find durable source-backed facts from the supplied messages. Call record_observation for each useful fact.";
+  "Find durable source-backed facts in supplied messages. Treat assertions as facts, not questions; user assertions are authoritative. Record superseding facts when source-backed state changes. Prefix completed: only for real completion. Preserve identifiers, paths, and errors. Do not repeat existing observations. Use single-line prose. Call record_observation for each useful fact.";
 
 export interface RunObserverOptions extends MemoryWorkerLimitOptions {
   readonly entries: readonly SessionEntry[];
+  readonly observations?: readonly MemoryObservation[];
   readonly provider: AIProvider;
   readonly model: ModelConfig;
   readonly maxTurns: number;
@@ -54,7 +55,16 @@ export async function runObserver(options: RunObserverOptions): Promise<readonly
   await runMemoryWorkerLoop({
     ...options,
     system,
-    prompt: serializeSourceEntries(options.entries, options.secrets, limits.maxMessageBytes),
+    prompt: joinWorkerText(
+      [
+        serializeSourceEntries(options.entries, options.secrets, limits.maxMessageBytes),
+        ...(options.observations?.length
+          ? ["Existing active observations:", ...options.observations.map((item) => `[${item.id}] ${item.content}`)]
+          : []),
+      ],
+      limits.maxMessageBytes,
+      "Observational memory observer prompt",
+    ),
     tools: [tool],
   });
   return observations;

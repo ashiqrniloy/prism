@@ -1,5 +1,7 @@
 import { type JsonObject, resolveRedactor } from "@arnilo/prism";
-import type { MemoryVectorHit } from "../types.js";
+import { assertAccessConstraint } from "../acl.js";
+import { MemoryLimitError, MemoryValidationError } from "../errors.js";
+import type { MemoryVectorHit, RagAccessConstraint, VectorStore } from "../types.js";
 import { RagError, RagLimitError, RagScopeError, RagValidationError } from "./errors.js";
 import { fuseReciprocalRankLists } from "./fusion.js";
 import { HARD_CHUNK_SIZE_CAP, HARD_RETRIEVE_SCOPE_CAP, resolveRagLimits } from "./limits.js";
@@ -44,6 +46,8 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
     throw new RagValidationError(`embedder dimensions must be an integer in 1..${limits.maxVectorDimensions}`);
   }
   if (options.filter) assertBytes(options.filter, limits.maxMetadataBytes, "metadata filter");
+  const authorization = options.authorization ? requireRetrieveAuthorization(options.authorization, scopes) : undefined;
+  if (authorization) assertStoreAuthorization(options.store);
   const lexical = options.lexical ?? (options.store.lexicalQuery ? "fts" : "off");
   if (lexical !== "fts" && lexical !== "bm25" && lexical !== "off") {
     throw new RagValidationError('lexical must be "fts", "bm25", or "off"');
@@ -66,6 +70,7 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
     "rag.embedder_id": options.embedder.id,
     "rag.top_k": limits.topK,
     "rag.lexical_mode": lexical,
+    ...(authorization ? { "rag.acl": true, "rag.acl.principal_id": authorization.principalId } : {}),
   });
   try {
     const safeQuery = redactor?.redact(query) ?? query;
@@ -105,6 +110,7 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
           embedding,
           topK: limits.queryCandidates,
           signal: options.signal,
+          ...(authorization ? { authorization } : {}),
         });
         const sliced = found.slice(0, limits.queryCandidates);
         vectorLists.push(sliced);
@@ -126,6 +132,7 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
             text: safeQuery,
             topK: limits.queryCandidates,
             signal: options.signal,
+            ...(authorization ? { authorization } : {}),
           });
           const sliced = found.slice(0, limits.queryCandidates);
           lexicalLists.push(sliced);
@@ -162,6 +169,7 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
       }
       const parsed = parseHit(candidate, retrieved.length, retrievedAt, retrieval);
       if (!matchesFilter(parsed.metadata, options.filter)) continue;
+      if (authorization && !(await checkHitAccess(options.store, parsed, authorization, options.signal))) continue;
       retrieved.push(Object.freeze(redactor?.redact(parsed) ?? parsed));
     }
     const reranker = options.reranker;
@@ -188,6 +196,7 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
     let truncated = false;
     const assemblySpan = telemetry?.startSpan("prompt.assembly", undefined, root);
     for (const hit of ranked) {
+      if (authorization && reranker && !(await checkHitAccess(options.store, hit, authorization, options.signal))) continue;
       if (hits.length >= limits.topK) break;
       const prefix = `[${hit.citationId}] `;
       const separator = rendered.length ? "\n\n" : "";
@@ -331,7 +340,7 @@ function resolveRetrieveScopes(options: RetrieveContextOptions): RagScope[] {
   const resolved: RagScope[] = [];
   for (const item of raw) {
     const scope = requireScope(item);
-    const key = `${scope.tenantId} ${scope.resourceId} ${scope.corpusId}`;
+    const key = `${scope.tenantId}\u0000${scope.resourceId}\u0000${scope.corpusId}`;
     if (seen.has(key)) continue;
     seen.add(key);
     resolved.push(scope);
@@ -348,6 +357,36 @@ function assertRequestedScope(scopes: readonly RagScope[], actual: { tenantId: s
     return;
   }
   throw new RagScopeError("vector hit crossed tenant/resource/corpus boundary");
+}
+
+function requireRetrieveAuthorization(authorization: RagAccessConstraint, scopes: readonly RagScope[]): RagAccessConstraint {
+  let normalized: RagAccessConstraint;
+  try {
+    normalized = assertAccessConstraint(authorization);
+  } catch (error) {
+    if (error instanceof MemoryLimitError) throw new RagLimitError(error.message);
+    if (error instanceof MemoryValidationError) throw new RagValidationError(error.message);
+    throw error;
+  }
+  for (const scope of scopes) {
+    if (scope.tenantId !== normalized.tenantId) throw new RagScopeError("authorization tenantId does not match retrieve scope");
+  }
+  return normalized;
+}
+
+function assertStoreAuthorization(store: VectorStore): void {
+  if (store.authorization !== "acl" || typeof store.checkSourceAccess !== "function") {
+    throw new RagValidationError("authorization requested but the store does not declare ACL support");
+  }
+}
+
+async function checkHitAccess(store: VectorStore, hit: RagHit, authorization: RagAccessConstraint, signal?: AbortSignal): Promise<boolean> {
+  return store.checkSourceAccess!(
+    { tenantId: hit.provenance.tenantId, resourceId: hit.provenance.resourceId, threadId: hit.provenance.corpusId },
+    hit.sourceId,
+    authorization,
+    { signal },
+  );
 }
 
 function emptyResult(query: string): RagContextResult {

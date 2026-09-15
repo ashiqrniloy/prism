@@ -35,6 +35,9 @@ export function assertEvaluationThreshold(report: ExperimentReport | ComparisonR
       throw new EvalThresholdError(`minimumCandidateWins.${candidate} must be an integer >= 0`);
     if ((comparison?.wins[candidate] ?? 0) < minimum) failures.push(`${candidate} wins < ${minimum}`);
   }
+  if (experiment?.aggregate.invariantsPassed === false) {
+    failures.push("hard invariant failed");
+  }
   if (failures.length) throw new EvalThresholdError(failures.join("; "));
 }
 

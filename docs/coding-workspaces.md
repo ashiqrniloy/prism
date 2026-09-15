@@ -56,6 +56,28 @@ Cleanup refuses, unless the host policy explicitly allows the documented action:
 
 Partial failure persists state `unknown` with per-repository `unknown`/`removed` legs and remains reconcilable: retrying cleanup converges to `closed`.
 
+## Spawn isolation (supervisor children)
+
+Parallel model-requested children share the host cwd by default. Wrap the catalog factory that needs isolation with `createWorktreeChildFactory(factory, { workspaces, repositoryId, branch? })` from `@arnilo/prism-coding-tools/agent`:
+
+```ts
+import { createWorktreeChildFactory } from "@arnilo/prism-coding-tools/agent";
+
+const isolated = createWorktreeChildFactory((ctx) => createExploreAgent(ctx, ctx.cwd), {
+  workspaces,
+  repositoryId: "app",
+});
+createSupervisor({
+  children: { explore: { createAgent: isolated.createAgent } },
+  hooks: { after: isolated.after },
+});
+```
+
+- `createAgent` runs `workspaces.create({ taskId: delegationId, branch: branch ?? `agent/${delegationId}` })` before the child exists, so missing `worktreeRoots` or an unknown repository fails closed with no spawn, and the child context gains `cwd` = the record's `worktreePath`. Coding tools built from that `cwd` cannot reach the main checkout; keep `worktreeRoots` host-approved.
+- `after` is the supervisor terminal hook: success, failure, abort, and pre-spawn rejection clean up once. A suspended child is deliberately **not** cleaned while it is non-terminal — the hook runs when the resume attempt reaches a terminal outcome instead — and a resumed child re-creates the identical workspace because the task id and default branch derive from `delegationId`.
+- Unwrapped children keep the shared cwd: one `git worktree add` per isolated child, no clone, no second sandbox type. Write-heavy parallel children still need isolation or exclusive tools for the shared-cwd case.
+- Dirty isolated worktrees refuse removal by default; extract artifacts first, allow `policy.allowDirtyCleanup` for forced removal, or reconcile with `list`/`cleanup` — a host restart loses in-process ownership of workspaces it created.
+
 ## Ownership and fencing
 
 Ownership scopes are part of the trust boundary: records are read and written under the configured `tenantId`/`accountId`/`userId`, and lease acquisition under another scope fails closed as `ERR_PRISM_WORKSPACE_OWNERSHIP`. Every mutation runs under a `LeaseStore` lease (`tryAcquireLease`/`releaseLease`, TTL 30 s default / 300 s hard); the lease fencing token is stored in the record and each `CheckpointStore` save is a version CAS plus a monotonic fencing-token check, so a worker whose lease lapsed or was fenced out cannot overwrite newer state. Stale workers reject deterministically with `ERR_PRISM_WORKSPACE_FENCE`.

@@ -171,6 +171,114 @@ describe("createSupervisor", () => {
     await first;
   });
 
+  it("atomically reserves parallel child slots, including hook-narrowed limits", async () => {
+    let created = 0;
+    const direct = createSupervisor({
+      ownership,
+      limits: { maxActiveChildren: 2 },
+      children: {
+        child: {
+          createAgent: () => {
+            created += 1;
+            return doneAgent();
+          },
+        },
+      },
+    });
+    const directResults = await Promise.allSettled(
+      Array.from({ length: 3 }, (_, index) => direct.delegate({ childId: "child", input: String(index) })),
+    );
+    const directRejected = directResults.filter((value): value is PromiseRejectedResult => value.status === "rejected");
+    assert.equal(directResults.filter((value) => value.status === "fulfilled").length, 2);
+    assert.equal(directRejected.length, 1);
+    assert.ok(directRejected[0]?.reason instanceof SupervisorLimitError);
+    assert.equal(created, 2);
+    assert.equal(direct.activeChildren, 0);
+
+    let hookCreated = 0;
+    const narrowed = createSupervisor({
+      ownership,
+      limits: { maxActiveChildren: 3 },
+      hooks: { before: () => ({ limits: { maxActiveChildren: 2 } }) },
+      children: {
+        child: {
+          createAgent: () => {
+            hookCreated += 1;
+            return doneAgent();
+          },
+        },
+      },
+    });
+    const hookResults = await Promise.allSettled(
+      Array.from({ length: 3 }, (_, index) => narrowed.delegate({ childId: "child", input: String(index) })),
+    );
+    const hookRejected = hookResults.filter((value): value is PromiseRejectedResult => value.status === "rejected");
+    assert.equal(hookResults.filter((value) => value.status === "fulfilled").length, 2);
+    assert.equal(hookRejected.length, 1);
+    assert.ok(hookRejected[0]?.reason instanceof SupervisorLimitError);
+    assert.equal(hookCreated, 2);
+    assert.equal(narrowed.activeChildren, 0);
+  });
+
+  it("runs bounded async delegations and releases cancellation/parent-abort slots", async () => {
+    const completed = createSupervisor({
+      ownership,
+      limits: { maxQueuedEvents: 1 },
+      children: { child: { createAgent: () => doneAgent("async") } },
+    });
+    const firstHandle = await completed.delegateAsync({ childId: "child", input: "x" });
+    const first = await completed.wait(firstHandle.delegationId);
+    const repeated = await completed.wait(firstHandle.delegationId);
+    assert.equal(first.status, "succeeded");
+    assert.equal(repeated.status, "succeeded");
+    assert.equal(first.text, "async");
+    const secondHandle = await completed.delegateAsync({ childId: "child", input: "y" });
+    await completed.wait(secondHandle.delegationId);
+    await assert.rejects(completed.wait(firstHandle.delegationId), /Unknown async delegation/);
+
+    let childSignal: AbortSignal | undefined;
+    const stalled = createSupervisor({
+      ownership,
+      children: {
+        child: {
+          createAgent: ({ signal }) => {
+            childSignal = signal;
+            return new Promise<Agent>((_resolve, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }));
+          },
+        },
+      },
+    });
+    const handle = await stalled.delegateAsync({ childId: "child", input: "x" });
+    assert.equal(stalled.cancel(handle.delegationId), true);
+    assert.equal(childSignal?.aborted, true);
+    assert.deepEqual(await stalled.wait(handle.delegationId), { delegationId: handle.delegationId, status: "cancelled" });
+    assert.equal(stalled.cancel(handle.delegationId), false);
+    assert.equal(stalled.activeChildren, 0);
+    await assert.rejects(stalled.wait("foreign-handle"), /Unknown async delegation/);
+    assert.throws(() => stalled.cancel("foreign-handle"), /Unknown async delegation/);
+
+    const parent = new AbortController();
+    const parentHandle = await stalled.delegateAsync({ childId: "child", input: "x", signal: parent.signal });
+    parent.abort(new Error("parent stopped"));
+    await assert.rejects(stalled.wait(parentHandle.delegationId), /parent stopped/);
+    assert.equal(childSignal?.aborted, true);
+    assert.equal(stalled.activeChildren, 0);
+
+    const timedWait = createSupervisor({
+      ownership,
+      limits: { timeoutMs: 5 },
+      children: {
+        child: {
+          createAgent: ({ signal }) =>
+            new Promise<Agent>((_resolve, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true })),
+        },
+      },
+    });
+    const timedHandle = await timedWait.delegateAsync({ childId: "child", input: "x" });
+    await assert.rejects(timedWait.wait(timedHandle.delegationId), /timeout/);
+    assert.equal(timedWait.activeChildren, 0);
+  });
+
   it("enforces input, timeout, token, and tool-call budgets", async () => {
     const oversized = createSupervisor({
       ownership,
@@ -242,10 +350,11 @@ describe("createSupervisor", () => {
     const pending = supervisor.delegate({ childId: "child", input: "canary", signal: controller.signal });
     controller.abort(new Error("canary abort"));
     await assert.rejects(pending);
+    assert.equal(supervisor.activeChildren, 0);
     assert.doesNotMatch(completion, /canary/);
   });
 
-  // BUG-2 regression (Clay integration findings, plan 050 Task 3): a child factory
+  // BUG-2 regression (integration findings, plan 050 Task 3): a child factory
   // returning a session (or any non-Agent) must fail with an actionable error at
   // delegate() time, not a cryptic "reading 'permission'" TypeError.
   it("rejects a child factory returning a non-Agent with an actionable error", async () => {
@@ -285,7 +394,7 @@ describe("createSupervisor", () => {
     }
   });
 
-  // FEATURE-4 (Clay integration findings, plan 050 Task 6): opt-in child event
+  // FEATURE-4 (integration findings, plan 050 Task 6): opt-in child event
   // passthrough. Default off; milestone subset only; redaction + caps when on.
   it("does not project child events onto the supervisor stream by default", async () => {
     const supervisor = createSupervisor({

@@ -10,22 +10,29 @@ Use a supervisor when a host or agent must choose a child dynamically. Use `@arn
 
 ## Inputs / request
 
+**Option surfaces** — `CreateSupervisorOptions` (ownership, child catalog, hooks, `childEvents`, limits), `SupervisorLimits` / `ResolvedSupervisorLimits` (depth, active children, child events, bytes), `DelegationWaitOptions` (`timeoutMs`, `signal`), `CreateSpawnAgentToolOptions` / `CreateDelegationControlToolOptions` (supervisor, tool name, sync/async mode), `WorktreeChildFactoryOptions` (workspace lifecycle, repository, roots), and `ObserveSupervisorLifecycleOptions` (supervisor, emit, redactor, steps).
+
 | API/field | Meaning |
 | --- | --- |
 | `createSupervisor({ ownership, children })` | Creates one ownership-scoped supervisor. |
 | `SupervisorChild.createAgent(context)` | Child-owned factory; receives derived resource/thread IDs, narrowed permission, abort signal, and nested `delegate`. |
 | `delegate({ childId, input, threadId?, limits?, signal? })` | Invokes one allow-listed child. Input is text and byte-bounded. |
+| `delegateAsync({ childId, input, threadId?, limits?, signal? })` | Starts one local child and returns `{ delegationId, status: "running" }` without waiting for its result. |
+| `wait(delegationId)` / `cancel(delegationId)` | Joins one local async child (capped at supervisor timeout) or aborts it. Unknown and foreign IDs share one denial. |
+| `createSpawnAgentTool({ supervisor, name? })` | Returns non-exclusive `spawn_agent` tool for a parent model. Its closed schema exposes only host child IDs, input, optional thread ID, and `mode`. |
+| `createWaitAgentTool` / `createCancelAgentTool` | Return `wait_agent` / `cancel_agent` tools for host-owned async handles. |
+| `Supervisor.childIds` | Frozen advertised child-id list the spawn tool's schema enum is built from; model arguments cannot extend it. |
 | `hooks.before` | May reject, modify redacted input, or narrow limits/policy. |
 | `hooks.after` | Observes redacted terminal summary; failures cannot alter settled result. |
 | `limits` | Depth 4/16, active children 4/32, input 64 KiB/1 MiB, steps 8/64, tools 32/256, tokens 20k/1m, timeout 60s/30m, event queue 128/4096, child events/delegation 256/4096, child-event bytes 32 KiB/256 KiB default/hard. Over-cap `delegate()` throws `SupervisorLimitError` before incrementing `activeChildren`. Hook rejection and timeout decrement the count exactly once (no leaked timers). |
 
 ## Outputs / response / events
 
-`delegate()` returns the child's `AgentRunResult` or throws its `AgentRunError`/a supervisor denial or limit error. `subscribe()` emits bounded `delegation_started`, `delegation_finished`, `delegation_rejected`, and `delegation_error` metadata events. Graceful close drains already-queued terminal events before the iterator completes (same core multiplexer contract). Hosts may project those events through observability `handleDelegation()` using the parent Prism run ID; no OpenTelemetry dependency enters this package.
+`delegate()` returns the child's `AgentRunResult` or throws its `AgentRunError`/a supervisor denial or limit error. `delegateAsync()` returns a local running handle; `wait()` returns its result (or `{ status: "cancelled" }` after `cancel()`), and stays idempotent while its terminal record is retained (bounded by `limits.maxQueuedEvents`; an evicted or foreign id returns the same non-enumerating error). `subscribe()` emits bounded `delegation_started`, `delegation_finished`, `delegation_rejected`, and `delegation_error` metadata events. Graceful close drains already-queued terminal events before the iterator completes (same core multiplexer contract). Hosts may project those events through observability `handleDelegation()` using the parent Prism run ID; no OpenTelemetry dependency enters this package.
 
 ### Child event passthrough (opt-in)
 
-`createSupervisor({ childEvents: true })` projects a redacted, size-capped **milestone** subset of child `AgentEvent`s onto the same stream as `delegation_child_event` (tagged `childId`, `delegationId`, `depth`). v1 covers run start/finish/`suspended`/`denied` and tool-execution started/finished/error/blocked — not per-token `message_delta`. Default off: the stream is byte-identical to today (no subscribe, no allocation). Caps: `limits.maxChildEventsPerDelegation` (256/4096) and `limits.maxChildEventBytes` (32 KiB/256 KiB); exceeding either drops further child events and emits one `delegation_child_events_capped` marker (never throws). Events pass through the supervisor `redactor` before emission. Children never receive supervisor internals or store/subscription access. Resume-path rebuilds (`resumeNestedRun`) do not currently project child events — live passthrough is the initial `delegate()` session only.
+`createSupervisor({ childEvents: true })` projects a redacted, size-capped **milestone** subset of child `AgentEvent`s onto the same stream as `delegation_child_event` (tagged `childId`, `delegationId`, `depth`). v1 covers run start/finish/`suspended`/`denied` and tool-execution started/finished/error/blocked — not per-token `message_delta`. Default off: the stream is byte-identical to today (no subscribe, no allocation). Caps: `limits.maxChildEventsPerDelegation` (256/4096) and `limits.maxChildEventBytes` (32 KiB/256 KiB); exceeding either drops further child events and emits one `delegation_child_events_capped` marker (never throws). Events pass through the supervisor `redactor` before emission. Children never receive supervisor internals or store/subscription access. Resume-path rebuilds (`resumeNestedRun`) attach the same pump to the rebuilt child session, so a delegation that suspended for approval keeps projecting milestones after the root run resumes; counters restart per pump, so each attempt gets the full cap.
 
 ## Request/response example
 
@@ -54,17 +61,36 @@ const supervisor = createSupervisor({
 const result = await supervisor.delegate({ childId: "research", input: "Check sources" });
 ```
 
+## Model-facing spawn tool
+
+`createSpawnAgentTool({ supervisor })` turns the same host-owned child allow-list into non-exclusive `spawn_agent` tool calls, so independent calls use the parent session's `toolConcurrency`. The schema has only `childId`, `input`, optional `threadId`, and `mode: "sync" | "async"` (default `sync`); unknown children fail closed as standard tool errors before delegation. Model arguments cannot supply child tools, identity, scopes, or higher limits. Async returns only a local `{ delegationId, status: "running" }` handle. Install `wait_agent` once per handle for wait-all, or `cancel_agent` to abort it; cancellation is terminally reported by `wait_agent`. Parent-run abort propagates to running children. Handles are in-process, ownership-scoped, and bounded — they do not survive host restart.
+
+```ts
+import { createAgent } from "@arnilo/prism";
+import { createCancelAgentTool, createSpawnAgentTool, createWaitAgentTool } from "@arnilo/prism-core/runtime/supervisor";
+
+const parent = createAgent({
+  /* parent model/provider */
+  tools: [createSpawnAgentTool({ supervisor }), createWaitAgentTool({ supervisor }), createCancelAgentTool({ supervisor })],
+});
+await parent.createSession().run("Research auth and billing", {
+  loop: { strategy: "single-shot", toolConcurrency: 2 },
+});
+```
+
 > **Contract — child factories return `Agent`.** `createAgent` must return an `Agent`, not an `AgentSession` (or a plain object). Wrong type throws `SupervisorError: child "<id>" factory must return an Agent, got <type>` on both initial `delegate()` and nested resume. Nested approvals also need a **stable config** plus a **durable (or rebuild-stable) store** — calling `createSession()` inside the factory and returning that session loses the child's checkpointed leaf. Live demo: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) (`childAgent` returns `createAgent(...)`).
 
 ## Durable child approvals
 
-With `checkpoints` + `definitionRevision`, every child run is durable with `interruptBeforeTool: true`. A child that suspends on pending decisions throws `AgentDelegationSuspendedError` out of `delegate()`; when the delegation runs inside a root agent's tool, core converts it into a root suspension whose `interruption.pendingDecisions` carry hashed root-visible approval ids (`sub_<sha256(runId:childApprovalId)>`) and `attribution.path` (redacted child ids, root first, at most 8 deep). Root decisions route back through the same CAS rules: pass `supervisor.resumeNestedRun` as `resumeNestedRun` in the root run's `runState` and in every `resumeAgentRun` options object. The supervisor rebuilds the child from a bounded delegation mapping stored in the same checkpoint store (child id, delegation/thread ids, redacted input, version), re-runs the `before` hook so its narrowing applies to the resumed run (hooks must be idempotent), and re-attributes re-suspensions recursively, so grandchild decisions surface with the full path. A delegating child's own `interruptBeforeTool` also gates its delegate tool, so hosts approve delegation and the child's own side effects as separate stages. Root `*_for_run` stickies record the attribution path and only match the same delegation path; child stickies live on the child run and expire with it. A root approval never widens the child: the child's narrowed permission re-runs at dispatch. Unknown or foreign nested run ids fail closed with one non-enumerating error. Child factories must return stable configs and a durable (or rebuild-stable) session store for resume to work.
+With `checkpoints` + `definitionRevision`, every child run is durable with `interruptBeforeTool: true`. A child that suspends on pending decisions throws `AgentDelegationSuspendedError` out of `delegate()`; when the delegation runs inside a root agent's tool, core converts it into a root suspension whose `interruption.pendingDecisions` carry hashed root-visible approval ids (`sub_<sha256(runId:childApprovalId)>`) and `attribution.path` (redacted child ids, root first, at most 8 deep). Root decisions route back through the same CAS rules: pass `supervisor.resumeNestedRun` as `resumeNestedRun` in the root run's `runState` and in every `resumeAgentRun` options object. The supervisor rebuilds the child from a bounded delegation mapping stored in the same checkpoint store (child id, delegation/thread ids, redacted input, version), re-runs the `before` hook so its narrowing applies to the resumed run (hooks must be idempotent), and re-attributes re-suspensions recursively, so grandchild decisions surface with the full path. A delegating child's own `interruptBeforeTool` also gates its delegate tool, so hosts approve delegation and the child's own side effects as separate stages. Root `*_for_run` stickies record the attribution path and only match the same delegation path; child stickies live on the child run and expire with it. A root approval never widens the child: the child's narrowed permission re-runs at dispatch. Unknown or foreign nested run ids fail closed with one non-enumerating error. A resumed attempt is terminal-symmetric with live `delegate()`: it publishes `delegation_finished` (`delegation_rejected` when the re-run `before` hook denies) and runs `hooks.after` once with the original `childId`/`delegationId`, which is what lets an isolated child's worktree be cleaned up. A suspended child stays non-terminal — no finish event, no `after` — and a rebuild that throws before the run starts (stale version, fingerprint drift) publishes nothing and runs no terminal hook, so a duplicate resume attempt can never clean up a live suspended child. Child factories must return stable configs and a durable (or rebuild-stable) session store for resume to work.
 
 ## Extension and configuration notes
 
+Parallel isolated children: wrap one catalog factory with `createWorktreeChildFactory` from `@arnilo/prism-coding-tools/agent` and pass its `after` as the supervisor's terminal hook — the supervisor stays git-agnostic, and the child context gains `cwd` pointing at its own linked worktree. See [Coding workspaces](coding-workspaces.md#spawn-isolation-supervisor-children).
+
 Child factories resolve their own providers/credentials and construct context/memory using the supplied IDs. Parent, child, returned-agent, budget, and hook permission policies are AND-composed. Child/request/hook limits can only lower inherited limits. A nested factory can call the supplied `delegate()`; immutable path state rejects cycles and depth overflow.
 
-Supervisors propagate parent `identity` and `effectStore` to every child agent/run so delegated tool effects stay under the same ownership scope.
+Supervisors propagate parent `identity` and `effectStore` to every child agent/run so delegated tool effects stay under the same ownership scope. Set host-authored `SupervisorChild.scopes` to derive a child identity with `narrowIdentity`; `assertIdentityPropagation` rejects scope widening before its factory runs.
 
 ## Security and performance notes
 
@@ -82,7 +108,9 @@ Supervisors propagate parent `identity` and `effectStore` to every child agent/r
 - [Agent identity](agent-identity.md): host-verified identity and narrow delegation.
 - [A2A interoperability](a2a.md): separate remote protocol boundary. `A2ATaskLifecycle` adapts host durable agent/workflow state directly; it does not route A2A execution through local supervisor child planning.
 - [Workflows](workflows.md): preferred deterministic orchestration.
-- Example: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) — per-child models, factory returns `Agent`.
+- [Coding workspaces](coding-workspaces.md): opt-in per-child worktree isolation via `createWorktreeChildFactory`.
+- [Coding agent tools](coding-agent-tools.md): opt-in `observeSupervisorLifecycle` bridges supervisor `delegation_*` events to coding `subagent_started` / `subagent_stopped` for host timelines.
+- Examples: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) — per-child models, factory returns `Agent`; [`examples/spawn-agent-tool.ts`](../examples/spawn-agent-tool.ts) — two model-requested explore children in one tool turn.
 - [Working and semantic memory](working-and-semantic-memory.md): child scope construction.
 - [Host security](host-security.md): permission and credential boundaries.
 - [Obscura browser engine](obscura.md): optional binary-backed generic tools for child agents.

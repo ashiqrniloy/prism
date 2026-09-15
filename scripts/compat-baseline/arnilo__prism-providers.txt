@@ -12,6 +12,9 @@ ANTHROPIC_LEGACY_THINKING_DEFAULT_BUDGET	export declare const ANTHROPIC_LEGACY_T
 AZURE_OPENAI_DEFAULT_API_VERSION	export declare const AZURE_OPENAI_DEFAULT_API_VERSION = "2024-10-21"
 AiSdkProviderError	export declare class AiSdkProviderError extends Error
 AiSdkProviderOptions	export type { AiSdkProviderOptions } from "./types.js"
+AwsEventStreamError	export declare class AwsEventStreamError extends Error
+BEDROCK_CONVERSE_RESPONSE_MAX_BYTES	export declare const BEDROCK_CONVERSE_RESPONSE_MAX_BYTES: number
+BEDROCK_THINKING_DEFAULT_BUDGET	export declare const BEDROCK_THINKING_DEFAULT_BUDGET = 10000
 CLINEPASS_DEFAULT_BASE_URL	export declare const CLINEPASS_DEFAULT_BASE_URL = "https://api.cline.bot/api/v1"
 CLINEPASS_FEATURED_SLUGS	export declare const CLINEPASS_FEATURED_SLUGS: string[]
 CLINEPASS_THINKING_MAPS	export declare const CLINEPASS_THINKING_MAPS:
@@ -21,10 +24,12 @@ DEEPSEEK_DEFAULT_BASE_URL	export declare const DEEPSEEK_DEFAULT_BASE_URL = "http
 DEEPSEEK_THINKING_LEVELS	export declare const DEEPSEEK_THINKING_LEVELS: readonly ["low", "high", "max"]
 DEFAULT_ALIBABA_BASE_URL	export declare const DEFAULT_ALIBABA_BASE_URL: string
 DEFAULT_IMAGE_MAX_BYTES	export declare const DEFAULT_IMAGE_MAX_BYTES: number
+DEFAULT_MAX_FRAME_BYTES	export declare const DEFAULT_MAX_FRAME_BYTES = 1048576
 DEFAULT_MODEL_DISCOVERY_TTL_MS	export declare const DEFAULT_MODEL_DISCOVERY_TTL_MS = 3600000
 DEFAULT_OLLAMA_BASE_URL	export declare const DEFAULT_OLLAMA_BASE_URL: string
 DEFAULT_SPEECH_MAX_AUDIO_BYTES	export declare const DEFAULT_SPEECH_MAX_AUDIO_BYTES: number
 GOOGLE_DEFAULT_BASE_URL	export declare const GOOGLE_DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
+HARD_MAX_FRAME_BYTES	export declare const HARD_MAX_FRAME_BYTES = 25165824
 HYPER_DEFAULT_BASE_URL	export declare const HYPER_DEFAULT_BASE_URL = "https://hyper.charm.land/v1"
 KIMI_K3_THINKING_LEVELS	export declare const KIMI_K3_THINKING_LEVELS: readonly ["low", "high", "max"]
 ModelDiscoveryError	export declare class ModelDiscoveryError extends Error
@@ -89,6 +94,11 @@ applyPromptCacheBreakpoints	export declare function applyPromptCacheBreakpoints(
 assertBatchJobsSupported	export { assertBatchJobsSupported, modelSupportsBatchJobs } from "@arnilo/prism"
 assertSupportedAiSdkVersion	export declare function assertSupportedAiSdkVersion(version: string): void
 azureChatCompletionsUrl	export declare function azureChatCompletionsUrl(input:
+bedrockConverseBody	export declare function bedrockConverseBody(request: ProviderRequest): Promise<JsonObject>
+bedrockConverseResponseEvents	export declare function bedrockConverseResponseEvents(response: unknown): readonly ProviderEvent[]
+bedrockConverseStreamEvents	export declare function bedrockConverseStreamEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+bedrockPreserveThinking	export declare function bedrockPreserveThinking(request: ProviderRequest): boolean
+bedrockReasoningBlocks	export declare function bedrockReasoningBlocks(request: ProviderRequest):
 bedrockRuntimeEndpoint	export declare function bedrockRuntimeEndpoint(region: string, endpoint?: string): string
 canonicalizeDeepSeekTools	export declare function canonicalizeDeepSeekTools(tools: unknown): unknown
 canonicalizeJsonSchema	export { canonicalizeDeepSeekTools, canonicalizeJsonSchema } from "./cache.js"
@@ -115,6 +125,7 @@ commandCodeThinkingFamily	export declare function commandCodeThinkingFamily(mode
 commandCodeThinkingLevels	export declare function commandCodeThinkingLevels(modelId: string): readonly string[] | undefined
 computeS256Challenge	export declare function computeS256Challenge(verifier: string): string
 costFromHyperPricing	export declare function costFromHyperPricing(pricing: HyperModelEntry["pricing"]): ModelCost | undefined
+crc32	export declare function crc32(bytes: Uint8Array): number
 createAiSdkProvider	export declare function createAiSdkProvider(options: AiSdkProviderOptions): AIProvider
 createAlibabaEmbedder	export declare function createAlibabaEmbedder(options: AlibabaEmbedderOptions): AlibabaEmbedder
 createAlibabaEmbeddingsProvider	export declare function createAlibabaEmbeddingsProvider(options: AlibabaEmbeddingsProviderOptions): EmbeddingsProvider
@@ -126,6 +137,7 @@ createAnthropicMessagesProvider	export declare function createAnthropicMessagesP
 createAnthropicProviderPackage	export declare function createAnthropicProviderPackage(options?: AnthropicProviderPackageOptions): ProviderPackage
 createAzureOpenAIProvider	export declare function createAzureOpenAIProvider(options: AzureOpenAIProviderOptions): AIProvider
 createAzureOpenAIProviderPackage	export declare function createAzureOpenAIProviderPackage(options: AzureOpenAIProviderPackageOptions): ProviderPackage
+createBedrockConverseProvider	export declare function createBedrockConverseProvider(options: BedrockConverseProviderOptions): AIProvider
 createBedrockProvider	export declare function createBedrockProvider(options: BedrockProviderOptions): AIProvider
 createBedrockProviderPackage	export declare function createBedrockProviderPackage(options: BedrockProviderPackageOptions): ProviderPackage
 createClinePassProvider	export declare function createClinePassProvider(options?: ClinePassProviderOptions): AIProvider
@@ -172,6 +184,7 @@ createXaiProvider	export declare function createXaiProvider(options?: XaiProvide
 createXaiProviderPackage	export declare function createXaiProviderPackage(options?: XaiProviderPackageOptions): ProviderPackage
 createZaiProvider	export declare function createZaiProvider(options?: ZaiProviderOptions): AIProvider
 createZaiProviderPackage	export declare function createZaiProviderPackage(options?: ZaiProviderPackageOptions): ProviderPackage
+declaredThinkingLevelsFor	export declare function declaredThinkingLevelsFor(request: ProviderRequest): readonly string[] | undefined
 deepseekBody	export declare function deepseekBody(request: ProviderRequest): JsonObject
 deepseekEvents	export declare function deepseekEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 deepseekModels	export declare const deepseekModels: readonly [ModelConfig, ModelConfig]
@@ -193,6 +206,7 @@ defineOpenCodeGoModel	export declare function defineOpenCodeGoModel(config: Open
 defineOpenRouterModel	export declare function defineOpenRouterModel(config: OpenRouterModelConfig): ModelConfig
 defineXaiModel	export declare function defineXaiModel(config: XaiModelConfig): ModelConfig
 defineZaiModel	export declare function defineZaiModel(config: ZaiModelConfig): ModelConfig
+eventStreamHeader	export declare function eventStreamHeader(message: AwsEventStreamMessage, name: string): string | undefined
 getHyperCredits	export declare function getHyperCredits(options: GetHyperCreditsOptions): Promise<HyperCreditsBalance>
 getNeuralWattQuota	export declare function getNeuralWattQuota(options: GetNeuralWattQuotaOptions): Promise<NeuralWattQuota>
 googleGenerateContentBody	export declare function googleGenerateContentBody(request: ProviderRequest): Promise<JsonObject>
@@ -311,6 +325,7 @@ promptCacheKey	export declare function promptCacheKey(options: ProviderRequestOp
 promptCacheOptions	export declare function promptCacheOptions(options: ProviderRequestOptions | undefined, model: ModelConfig):
 promptCacheRetention	export declare function promptCacheRetention(options: ProviderRequestOptions | undefined, model: ModelConfig): "24h" | undefined
 providerHttpError	export declare function providerHttpError(providerName: string, decision: RetryDecisionFields, bodyText: string, secrets: readonly (string | undefined)[]): Error
+readAwsEventStream	export declare function readAwsEventStream(body: ReadableStream<Uint8Array>, options?: ReadAwsEventStreamOptions): AsyncGenerator<AwsEventStreamMessage>
 readRetryAfterMs	export declare function readRetryAfterMs(headers: RetryHeaders, bodyRetryAfter?: unknown): number | undefined
 resolveOpenAIReasoning	export declare function resolveOpenAIReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
 resolveOpenRouterReasoning	export declare function resolveOpenRouterReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
@@ -352,13 +367,18 @@ type AlibabaVideoGenerationOptions	export { ALIBABA_VIDEO_MAX_DURATION_SECONDS, 
 type AnthropicMessagesProviderOptions	export { type AnthropicMessagesProviderOptions, anthropicOwnedHeaders, createAnthropicMessagesProvider, } from "./provider.js"
 type AnthropicModelConfig	export { ANTHROPIC_API_VERSION, ANTHROPIC_DEFAULT_BASE_URL, type AnthropicModelConfig, type AnthropicModelEntry, anthropicModels, defineAnthropicModel, type ListAnthropicModelsOptions, listAnthropicModels, mapAnthropicModel, } from "./models.js"
 type AnthropicModelEntry	export { ANTHROPIC_API_VERSION, ANTHROPIC_DEFAULT_BASE_URL, type AnthropicModelConfig, type AnthropicModelEntry, anthropicModels, defineAnthropicModel, type ListAnthropicModelsOptions, listAnthropicModels, mapAnthropicModel, } from "./models.js"
-type AwsCredentials	export { type AwsCredentials, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, bedrockRuntimeEndpoint, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
+type AwsCredentials	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
+type AwsEventStreamErrorCode	export { type AwsEventStreamErrorCode, AwsEventStreamError, type AwsEventStreamHeaderValue, type AwsEventStreamMessage, crc32, DEFAULT_MAX_FRAME_BYTES, eventStreamHeader, HARD_MAX_FRAME_BYTES, type ReadAwsEventStreamOptions, readAwsEventStream, } from "./eventstream.js"
+type AwsEventStreamHeaderValue	export { type AwsEventStreamErrorCode, AwsEventStreamError, type AwsEventStreamHeaderValue, type AwsEventStreamMessage, crc32, DEFAULT_MAX_FRAME_BYTES, eventStreamHeader, HARD_MAX_FRAME_BYTES, type ReadAwsEventStreamOptions, readAwsEventStream, } from "./eventstream.js"
+type AwsEventStreamMessage	export { type AwsEventStreamErrorCode, AwsEventStreamError, type AwsEventStreamHeaderValue, type AwsEventStreamMessage, crc32, DEFAULT_MAX_FRAME_BYTES, eventStreamHeader, HARD_MAX_FRAME_BYTES, type ReadAwsEventStreamOptions, readAwsEventStream, } from "./eventstream.js"
 type AzureAuthStyle	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, createAzureOpenAIProviderPackage, } from "./provider.js"
 type AzureOpenAIProviderOptions	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, createAzureOpenAIProviderPackage, } from "./provider.js"
 type AzureOpenAIProviderPackageOptions	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, createAzureOpenAIProviderPackage, } from "./provider.js"
-type BedrockCredentialSource	export { type AwsCredentials, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, bedrockRuntimeEndpoint, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
-type BedrockProviderOptions	export { type AwsCredentials, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, bedrockRuntimeEndpoint, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
-type BedrockProviderPackageOptions	export { type AwsCredentials, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, bedrockRuntimeEndpoint, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
+type BedrockConverseProviderOptions	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
+type BedrockCredentialSource	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
+type BedrockProviderOptions	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
+type BedrockProviderPackageOptions	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
+type BedrockRoute	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
 type ClinePassModelConfig	export { CLINEPASS_DEFAULT_BASE_URL, CLINEPASS_FEATURED_SLUGS, type ClinePassModelConfig, clinePassModels, defineClinePassModel, } from "./models.js"
 type ClinePassProviderOptions	export { type ClinePassProviderOptions, clinePassBody, clinePassEvents, createClinePassProvider, } from "./provider.js"
 type ClinePassThinkingLevelMap	export { CLINEPASS_THINKING_MAPS, type ClinePassThinkingLevelMap, type ClinePassThinkingSlot, clinePassDeclaredLevels, clinePassReasoningEffort, clinePassThinkingLevelMap, clinePassThinkingSlot, } from "./thinking.js"
@@ -430,7 +450,8 @@ type OpenAIImageGenerationOptions	export { createOpenAIImageGenerationProvider, 
 type OpenAIModelConfig	export { defineOpenAIModel, type ListOpenAIModelsOptions, listOpenAIModels, mapOpenAIModel, type OpenAIModelConfig, type OpenAIModelEntry, openAICodexModels, openAIDefaultEffort, openAIModels, openAIThinkingLevels, } from "./models.js"
 type OpenAIModelEntry	export { defineOpenAIModel, type ListOpenAIModelsOptions, listOpenAIModels, mapOpenAIModel, type OpenAIModelConfig, type OpenAIModelEntry, openAICodexModels, openAIDefaultEffort, openAIModels, openAIThinkingLevels, } from "./models.js"
 type OpenAIModerationOptions	export { createOpenAIModerationProvider, OPENAI_MODERATION_DEFAULT_MODEL, OPENAI_MODERATION_INPUT_MAX_CHARS, OPENAI_MODERATION_MAX_RESPONSE_BYTES, type OpenAIModerationOptions, } from "./moderation.js"
-type OpenAIRealtimeSessionOptions	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
+type OpenAIRealtimeSessionOptions	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type OpenAIRealtimeTool, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
+type OpenAIRealtimeTool	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type OpenAIRealtimeTool, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
 type OpenAIResponsesProviderOptions	export { createOpenAIResponsesProvider, type OpenAIResponsesProviderOptions, resolveOpenAIReasoning } from "./responses.js"
 type OpenAISpeechOptions	export { createOpenAISpeechProvider, DEFAULT_SPEECH_MAX_AUDIO_BYTES, OPENAI_SPEECH_MAX_INPUT_CHARS, type OpenAISpeechOptions, } from "./speech.js"
 type OpenAITranscriptionOptions	export { createOpenAITranscriptionProvider, OPENAI_TRANSCRIPTION_MAX_AUDIO_BYTES, type OpenAITranscriptionOptions, } from "./transcription.js"
@@ -441,8 +462,9 @@ type OpenCodeGoRoute	export { defineOpenCodeGoModel, type ListOpenCodeGoModelsOp
 type OpenRouterModelConfig	export { defineOpenRouterModel, type OpenRouterModelConfig } from "./model.js"
 type OpenRouterModelEntry	export { type ListOpenRouterModelsOptions, listOpenRouterModels, mapOpenRouterModel, type OpenRouterModelEntry, } from "./models.js"
 type OpenRouterProviderOptions	export { createOpenRouterProvider, type OpenRouterProviderOptions, openRouterBody, openRouterEvents } from "./provider.js"
-type RealtimeTransport	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
-type RealtimeTransportOptions	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
+type ReadAwsEventStreamOptions	export { type AwsEventStreamErrorCode, AwsEventStreamError, type AwsEventStreamHeaderValue, type AwsEventStreamMessage, crc32, DEFAULT_MAX_FRAME_BYTES, eventStreamHeader, HARD_MAX_FRAME_BYTES, type ReadAwsEventStreamOptions, readAwsEventStream, } from "./eventstream.js"
+type RealtimeTransport	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type OpenAIRealtimeTool, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
+type RealtimeTransportOptions	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type OpenAIRealtimeTool, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
 type VertexProviderOptions	export { createVertexProvider, createVertexProviderPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
 type VertexProviderPackageOptions	export { createVertexProvider, createVertexProviderPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
 type XaiModelConfig	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, XAI_DEFAULT_BASE_URL, XAI_THINKING_LEVELS, type XaiModelConfig, type XaiModelEntry, xaiModels, xaiThinkingLevels, } from "./models.js"

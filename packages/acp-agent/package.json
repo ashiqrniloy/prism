@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-acp-agent",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Spawnable ACP agent: serves createPrismAcpAgent over stdio from a config file.",
   "type": "module",
   "main": "./dist/src/index.js",
@@ -29,16 +29,23 @@
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "1.4.0",
-    "@arnilo/prism-coding-tools": "^0.6.0",
-    "@arnilo/prism-core": "^0.6.0"
+    "@arnilo/prism-coding-tools": "^0.7.0",
+    "@arnilo/prism-core": "^0.7.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.6.0",
-    "@arnilo/prism-ag-ui": "^0.6.0"
+    "@arnilo/prism": "^0.7.0",
+    "@arnilo/prism-ag-ui": "^0.7.0",
+    "@arnilo/prism-providers": "^0.7.0"
+  },
+  "peerDependenciesMeta": {
+    "@arnilo/prism-providers": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
-    "@arnilo/prism-ag-ui": "file:../ag-ui"
+    "@arnilo/prism-ag-ui": "file:../ag-ui",
+    "@arnilo/prism-providers": "file:../prism-providers"
   },
   "engines": {
     "node": ">=22"

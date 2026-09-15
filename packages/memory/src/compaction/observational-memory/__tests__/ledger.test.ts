@@ -13,6 +13,7 @@ import {
   OBSERVATIONS_DROPPED,
   OBSERVATIONS_RECORDED,
   REFLECTIONS_RECORDED,
+  recallObservationalMemory,
   renderObservationalMemory,
 } from "../index.js";
 
@@ -77,5 +78,24 @@ describe("observational memory ledger", () => {
     assert.match(rendered, /\[bbbbbbbbbbbb\]/);
     assert.match(rendered, /\[aaaaaaaaaaaa\]/);
     assert.doesNotMatch(rendered, /secret-value/);
+  });
+
+  it("invalidated source ids drop observations, reflections, and recall content", () => {
+    const recorded = entry("o", { type: OBSERVATIONS_RECORDED, observations: [obs] });
+    const reflected = entry("r", { type: REFLECTIONS_RECORDED, reflections: [reflection] });
+    const projection = buildObservationalMemoryProjection([recorded, reflected], undefined, {
+      invalidatedIds: ["m1"],
+    });
+    assert.deepEqual(projection.observations, []);
+    assert.deepEqual(projection.reflections, []);
+    assert.ok(projection.droppedObservationIds.includes(obs.id));
+    const recalled = recallObservationalMemory([recorded, reflected], obs.id, [], { invalidatedIds: ["m1"] });
+    assert.equal(recalled.reason, "revoked");
+    assert.doesNotMatch(recalled.text, /minimal diffs/);
+    const reflectedRecall = recallObservationalMemory([recorded, reflected], reflection.id, [], {
+      invalidatedIds: [obs.id],
+    });
+    assert.equal(reflectedRecall.reason, "revoked");
+    assert.doesNotMatch(reflectedRecall.text, /package-only/);
   });
 });

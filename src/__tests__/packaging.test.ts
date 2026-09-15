@@ -121,6 +121,10 @@ describe("packaging guard", () => {
           assert.ok(files.includes("templates/README.md"), `${pkg.name} missing templates gallery README`);
           assert.ok(files.includes("templates/deep-research/manifest.json"), `${pkg.name} missing deep-research manifest`);
           assert.ok(files.includes("templates/deep-research/package.json.tmpl"), `${pkg.name} missing deep-research template`);
+          assert.ok(files.includes("templates/personal-assistant/manifest.json"), `${pkg.name} missing personal-assistant manifest`);
+          assert.ok(files.includes("templates/personal-assistant/package.json.tmpl"), `${pkg.name} missing personal-assistant template`);
+          assert.ok(files.includes("templates/business-worker/manifest.json"), `${pkg.name} missing business-worker manifest`);
+          assert.ok(files.includes("templates/business-worker/package.json.tmpl"), `${pkg.name} missing business-worker template`);
         });
       }
 
@@ -235,6 +239,7 @@ describe("packaging guard", () => {
       ".",
       "./compaction/llm",
       "./compaction/observational-memory",
+      "./fabric",
       "./graft",
       "./rag",
       "./rag/loaders",

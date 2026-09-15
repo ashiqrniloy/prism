@@ -2,6 +2,16 @@ import { type ContextProvider, type JsonObject, type Message, resolveRedactor } 
 import { embedBatched } from "./embedder.js";
 import { MemoryAbortError, MemoryLimitError, MemoryScopeError, MemoryValidationError } from "./errors.js";
 import { DEFAULT_MEMORY_RETENTION_BATCH, estimateTokens, HARD_MEMORY_RETENTION_BATCH_CAP, resolveMemoryLimits } from "./limits.js";
+import {
+  collectInvalidationIds,
+  explainRecord,
+  HARD_INVALIDATION_BATCH,
+  indexInvalidations,
+  recordBlocked,
+  shareGrantAllows,
+  stampLineage,
+  toInvalidationEvent,
+} from "./lineage.js";
 import { validateAgainstJsonSchema } from "./schema.js";
 import { deriveEntryImportance, RECALL_OVERSAMPLE, rerankRecallHits, resolveRecallScoring } from "./scoring.js";
 import type {
@@ -13,6 +23,8 @@ import type {
   MemoryContextProviderOptions,
   MemoryEntryInput,
   MemoryExportResult,
+  MemoryInvalidationReason,
+  MemoryInvalidationRecord,
   MemoryRetentionPolicy,
   MemoryRetentionResult,
   MemoryScope,
@@ -61,6 +73,39 @@ export function createMemory(options: CreateMemoryOptions): Memory {
   function threadScopeOrThrow(): Required<MemoryScope> {
     if (!scope.threadId) throw new MemoryScopeError("threadId is required for semantic memory operations");
     return scope as Required<MemoryScope>;
+  }
+
+  async function loadInvalidations(thread: Required<MemoryScope>, signal?: AbortSignal) {
+    if (!vectorStore.listInvalidated) return new Map<string, MemoryInvalidationRecord>();
+    return indexInvalidations(await vectorStore.listInvalidated(thread, { signal }));
+  }
+
+  async function markInvalidated(
+    threadScope: Required<MemoryScope>,
+    roots: readonly string[],
+    reason: MemoryInvalidationReason,
+    markOptions: { hold?: boolean; supersedesId?: string; signal?: AbortSignal } = {},
+  ): Promise<readonly string[]> {
+    if (vectorStore.lineage !== "invalidation" || !vectorStore.invalidate) return roots;
+    const records = vectorStore.getByThread ? await vectorStore.getByThread(threadScope) : [];
+    const ids = collectInvalidationIds(records, roots);
+    const at = new Date().toISOString();
+    const hold = markOptions.hold === true || reason === "legal_hold";
+    const markedReason: MemoryInvalidationReason = hold ? "legal_hold" : reason;
+    const entries = ids.map((id) => ({
+      id,
+      reason: markedReason,
+      at,
+      ...(hold ? { hold: true as const } : {}),
+      ...(markOptions.supersedesId ? { supersedesId: markOptions.supersedesId } : {}),
+    }));
+    for (let offset = 0; offset < entries.length; offset += HARD_INVALIDATION_BATCH) {
+      await vectorStore.invalidate(threadScope, entries.slice(offset, offset + HARD_INVALIDATION_BATCH), {
+        signal: markOptions.signal,
+      });
+    }
+    await options.onInvalidate?.(toInvalidationEvent(markedReason, ids, hold));
+    return ids;
   }
 
   async function getWorking(getOptions: { signal?: AbortSignal } = {}): Promise<WorkingMemoryRecord | undefined> {
@@ -114,7 +159,7 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     const records: MemoryVectorRecord[] = entries.map((entry, index) => {
       const sequence = entry.sequence ?? ++sequenceCounter;
       if (entry.sequence !== undefined) sequenceCounter = Math.max(sequenceCounter, entry.sequence);
-      const metadata = entry.metadata ? redactJson(entry.metadata, redactor) : undefined;
+      const metadata = stampLineage(entry.metadata ? redactJson(entry.metadata, redactor) : undefined, entry.lineage);
       const createdAt = entry.createdAt ?? new Date().toISOString();
       const importance = deriveEntryImportance(entry, options.importanceFrom, redactor);
       const record: MemoryVectorRecord = {
@@ -171,27 +216,65 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     // Composite scoring: fetch an oversized candidate batch, blend in-TS, cut to topK.
     // The same pure re-rank serves the postgres path, keeping adapter orderings in parity.
     const scoring = resolveRecallScoring(recallOptions.scoring);
-    const candidates = await vectorStore.query({
-      ...threadScope,
-      embedding: embedding!,
-      topK: scoring ? boundedTopK * RECALL_OVERSAMPLE : boundedTopK,
-      signal: recallOptions.signal,
-    });
-    const hits = scoring ? rerankRecallHits(candidates, scoring).slice(0, boundedTopK) : candidates;
+    const fetchK = scoring ? boundedTopK * RECALL_OVERSAMPLE : boundedTopK;
+    let candidates = [
+      ...(await vectorStore.query({
+        ...threadScope,
+        embedding: embedding!,
+        topK: fetchK,
+        signal: recallOptions.signal,
+      })),
+    ];
+    let parentInv: ReadonlyMap<string, MemoryInvalidationRecord> = new Map();
+    if (recallOptions.shareFromParentThreadId) {
+      if (!vectorStore.getShareGrant) throw new MemoryScopeError("vector store does not support share grants");
+      const parentThreadId = requireNonEmptyString(recallOptions.shareFromParentThreadId, "shareFromParentThreadId");
+      const grant = await vectorStore.getShareGrant({ ...threadScope, threadId: parentThreadId }, threadScope.threadId, {
+        signal: recallOptions.signal,
+      });
+      if (!grant) throw new MemoryScopeError("no share grant for parent thread");
+      if (grant.expiresAt !== undefined && Date.now() >= Date.parse(grant.expiresAt)) {
+        throw new MemoryValidationError("share grant expired");
+      }
+      if (!shareGrantAllows(grant, { tenantId: threadScope.tenantId, childThreadId: threadScope.threadId })) {
+        throw new MemoryScopeError("share grant does not allow this child");
+      }
+      const parentHits = await vectorStore.query({
+        ...threadScope,
+        threadId: parentThreadId,
+        embedding: embedding!,
+        topK: fetchK,
+        ids: [...grant.sourceIds],
+        signal: recallOptions.signal,
+      });
+      parentInv = await loadInvalidations({ ...threadScope, threadId: parentThreadId }, recallOptions.signal);
+      candidates = [...candidates, ...parentHits];
+    }
+    const ranked = scoring ? rerankRecallHits(candidates, scoring).slice(0, boundedTopK) : candidates.slice(0, boundedTopK);
 
     let adjacent: MemoryVectorRecord[] = [];
     if (boundedRange > 0) {
-      const threadRecords = vectorStore.getByThread ? await vectorStore.getByThread(threadScope) : hits;
-      adjacent = selectAdjacentRecords(threadRecords, hits, boundedRange);
+      const threadRecords = vectorStore.getByThread ? await vectorStore.getByThread(threadScope) : ranked;
+      adjacent = selectAdjacentRecords(threadRecords, ranked, boundedRange);
     }
 
     const strict = recallOptions.requireConsent ?? options.requireConsent ?? false;
-    const visibleHits = hits.filter((hit) => isInjectable(hit, strict));
-    const visibleAdjacent = adjacent.filter((record) => isInjectable(record, strict));
-
+    const ownInv = await loadInvalidations(threadScope, recallOptions.signal);
+    const visibleHits = ranked.filter((hit) => {
+      const inv = hit.threadId === threadScope.threadId ? ownInv : parentInv;
+      return !recordBlocked(hit, inv) && isInjectable(hit, strict);
+    });
+    const visibleAdjacent = adjacent.filter((record) => !recordBlocked(record, ownInv) && isInjectable(record, strict));
+    const redactedHits = visibleHits.map((hit) => redactJson(hit, redactor));
+    const redactedAdjacent = visibleAdjacent.map((record) => redactJson(record, redactor));
+    if (!recallOptions.explain) return { hits: redactedHits, adjacent: redactedAdjacent };
     return {
-      hits: visibleHits.map((hit) => redactJson(hit, redactor)),
-      adjacent: visibleAdjacent.map((record) => redactJson(record, redactor)),
+      hits: redactedHits,
+      adjacent: redactedAdjacent,
+      explanations: visibleHits.map((hit) => {
+        const inv = hit.threadId === threadScope.threadId ? ownInv : parentInv;
+        return explainRecord(hit, inv.get(hit.id));
+      }),
     };
   }
 
@@ -218,6 +301,13 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       consent: normalizeConsent(consentInput, existing.consent, new Date().toISOString()),
     };
     await vectorStore.upsert([updated], { signal: consentOptions.signal });
+    if (updated.consent?.visible === false) {
+      // Revocation blocks recall but is not a legal hold: an explicit forget must still be able to purge it.
+      await markInvalidated(threadScope, [id], "revoked", { signal: consentOptions.signal });
+    } else if (existing.consent?.visible === false && vectorStore.clearInvalidation) {
+      // Un-revoke only restores what revocation itself blocked; a corrected/forgotten invalidation must survive.
+      await vectorStore.clearInvalidation(threadScope, [id], { signal: consentOptions.signal });
+    }
     return redactJson(updated, redactor);
   }
 
@@ -240,16 +330,66 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       throw new MemoryLimitError(`memory entry ${id} exceeds payload byte limit`);
     }
     await vectorStore.upsert([updated], { signal: correctOptions.signal });
+    await markInvalidated(threadScope, [id], "corrected", { supersedesId: id, signal: correctOptions.signal });
     return redactJson(updated, redactor);
   }
 
-  async function forget(filter: { ids?: readonly string[] } = {}, forgetOptions: { signal?: AbortSignal } = {}): Promise<number> {
+  async function forget(
+    filter: { ids?: readonly string[]; hold?: boolean } = {},
+    forgetOptions: { signal?: AbortSignal } = {},
+  ): Promise<number> {
     const threadScope = threadScopeOrThrow();
     assertNotAborted(forgetOptions.signal);
-    return vectorStore.delete(
-      { ...threadScope, ...(filter.ids && filter.ids.length > 0 ? { ids: filter.ids } : {}) },
-      { signal: forgetOptions.signal },
+    const hold = filter.hold === true;
+    let roots = filter.ids && filter.ids.length > 0 ? [...filter.ids] : undefined;
+    if (!roots) {
+      if (!vectorStore.getByThread) {
+        return vectorStore.delete({ ...threadScope }, { signal: forgetOptions.signal });
+      }
+      roots = (await vectorStore.getByThread(threadScope)).map((record) => record.id);
+    }
+    if (roots.length === 0) return 0;
+    const marked = await markInvalidated(threadScope, roots, hold ? "legal_hold" : "forgotten", {
+      hold,
+      signal: forgetOptions.signal,
+    });
+    if (hold) return 0;
+    const listed = vectorStore.listInvalidated ? await vectorStore.listInvalidated(threadScope, { signal: forgetOptions.signal }) : [];
+    const held = new Set(listed.filter((entry) => entry.hold === true || entry.reason === "legal_hold").map((entry) => entry.id));
+    const purge = marked.filter((id) => !held.has(id));
+    let deleted = 0;
+    for (let offset = 0; offset < purge.length; offset += HARD_INVALIDATION_BATCH) {
+      deleted += await vectorStore.delete(
+        { ...threadScope, ids: purge.slice(offset, offset + HARD_INVALIDATION_BATCH) },
+        { signal: forgetOptions.signal },
+      );
+    }
+    return deleted;
+  }
+
+  async function shareWith(
+    childThreadId: string,
+    sourceIds: readonly string[],
+    shareOptions: { expiresAt?: string; signal?: AbortSignal } = {},
+  ): Promise<void> {
+    const threadScope = threadScopeOrThrow();
+    assertNotAborted(shareOptions.signal);
+    if (!vectorStore.setShareGrant) throw new MemoryScopeError("vector store does not support share grants");
+    await vectorStore.setShareGrant(
+      threadScope,
+      {
+        tenantId: threadScope.tenantId,
+        parentThreadId: threadScope.threadId,
+        childThreadId,
+        sourceIds,
+        ...(shareOptions.expiresAt ? { expiresAt: shareOptions.expiresAt } : {}),
+      },
+      { signal: shareOptions.signal },
     );
+  }
+
+  async function revokeShare(childThreadId: string, shareOptions: { signal?: AbortSignal } = {}): Promise<void> {
+    await shareWith(childThreadId, [], shareOptions);
   }
 
   async function applyRetention(
@@ -297,6 +437,12 @@ export function createMemory(options: CreateMemoryOptions): Memory {
         for (const record of page.records) expired.add(record.id);
       }
     }
+    if (vectorStore.listInvalidated && expired.size > 0) {
+      const listed = await vectorStore.listInvalidated(threadScope, { signal: retentionOptions.signal });
+      for (const entry of listed) {
+        if (entry.hold === true || entry.reason === "legal_hold") expired.delete(entry.id);
+      }
+    }
     const ids = [...expired];
     const deleted = ids.length > 0 ? await vectorStore.delete({ ...threadScope, ids }, { signal: retentionOptions.signal }) : 0;
     return { deleted, scanned };
@@ -323,8 +469,9 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       "memory export",
     );
     // Exports require explicit visible consent even when recall runs in legacy-compatible mode.
+    const inv = await loadInvalidations(threadScope, exportOptions.signal);
     const entries = page.records
-      .filter((record) => record.consent?.visible === true)
+      .filter((record) => record.consent?.visible === true && !recordBlocked(record, inv))
       .map((record) => {
         assertFiniteVector(record.embedding, "stored embedding", embedder.dimensions);
         return redactJson(record, redactor);
@@ -454,6 +601,8 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     setConsent,
     correct,
     forget,
+    shareWith,
+    revokeShare,
     applyRetention,
     exportMemory,
     rebuildIndex,

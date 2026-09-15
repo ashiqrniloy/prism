@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-core",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Core runtime, sessions, governance, credentials, enterprise state, and work integrations family package for Prism.",
   "type": "module",
   "exports": {
@@ -11,6 +11,10 @@
     "./runtime/server/artifact-bodies": {
       "types": "./dist/runtime/server/artifact-bodies.d.ts",
       "default": "./dist/runtime/server/artifact-bodies.js"
+    },
+    "./runtime/realtime": {
+      "types": "./dist/runtime/realtime.d.ts",
+      "default": "./dist/runtime/realtime.js"
     },
     "./runtime/supervisor": {
       "types": "./dist/runtime/supervisor/index.d.ts",
@@ -84,6 +88,10 @@
       "types": "./dist/integrations/work/google-workspace.d.ts",
       "default": "./dist/integrations/work/google-workspace.js"
     },
+    "./integrations/work/drafts": {
+      "types": "./dist/integrations/work/drafts.d.ts",
+      "default": "./dist/integrations/work/drafts.js"
+    },
     "./validation/json-schema": {
       "types": "./dist/validation/json-schema/index.d.ts",
       "default": "./dist/validation/json-schema/index.js"
@@ -110,8 +118,8 @@
     "ajv": "^8.17.1"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.6.0",
-    "@arnilo/prism-memory": "^0.6.0",
+    "@arnilo/prism": "^0.7.0",
+    "@arnilo/prism-memory": "^0.7.0",
     "@nats-io/jetstream": "^3.4.0",
     "@nats-io/transport-node": "^3.4.0",
     "better-sqlite3": "^13.0.3",

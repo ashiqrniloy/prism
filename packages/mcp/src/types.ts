@@ -324,12 +324,12 @@ export interface PrismMcpElicitationResult extends Readonly<Record<string, unkno
 export interface ConnectMcpCapabilitiesOptions extends ConnectMcpToolsOptions {
   /**
    * Host-approved filesystem roots for server-to-client `roots/list`.
-   * @deprecated Deprecated in MCP 2026-07-28 (SEP-2577) and retained only for existing legacy callers; prefer explicit tool arguments. Synapta adds nothing on this surface.
+   * @deprecated Deprecated in MCP 2026-07-28 (SEP-2577) and retained only for existing legacy callers; prefer explicit tool arguments. Prism MCP adds nothing on this surface.
    */
   readonly roots?: () => readonly McpRoot[] | Promise<readonly McpRoot[]>;
   /**
    * Host-owned sampling (model/credentials stay with the host) for server-to-client `sampling/createMessage`.
-   * @deprecated Deprecated in MCP 2026-07-28 (SEP-2577) and retained only for existing legacy callers; prefer host-side model calls exposed as tools. Synapta adds nothing on this surface.
+   * @deprecated Deprecated in MCP 2026-07-28 (SEP-2577) and retained only for existing legacy callers; prefer host-side model calls exposed as tools. Prism MCP adds nothing on this surface.
    */
   readonly sampling?: (request: PrismMcpSamplingRequest) => unknown | Promise<unknown>;
   /** Active capability: form/URL elicitation, fulfilled through SDK MRTR auto-fulfilment on the modern era and direct server-to-client dispatch on legacy. */

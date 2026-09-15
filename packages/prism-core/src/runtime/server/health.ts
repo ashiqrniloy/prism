@@ -76,6 +76,7 @@ export function createPrismHealthHandler(options: CreatePrismHealthHandlerOption
         body.drain = {
           status: drainSnap.status,
           draining: drainSnap.draining,
+          expired: drainSnap.expired,
           ...(drainSnap.deadlineAt === undefined ? {} : { deadlineAt: drainSnap.deadlineAt }),
         };
       }

@@ -15,9 +15,10 @@ confirmation, and the pre-existing issues surfaced by the verification run.
 | Format | `biome format .` | clean | 6 unformatted files fixed (3 pre-existing, 3 plan-touched) — §5 |
 
 Environment note: `/tmp` (tmpfs, `usrquota`) was quota-exhausted by an
-unrelated parallel workload (`/tmp/synapta-01a-final/target`, 24 GB Rust
-build). All verification runs therefore used `TMPDIR=/home/arn/.cache/prism-tmp`
-(a project-external dir), which also proved the suites are TMPDIR-independent.
+unrelated parallel workload (a 24 GB Rust build outside the
+project). All verification runs therefore used
+`TMPDIR=/home/arn/.cache/prism-tmp` (a project-external dir), which also
+proved the suites are TMPDIR-independent.
 A transient `Unable to deserialize cloned data` IPC failure in
 `packages/memory/dist/wiki/__tests__/cli.test.js` occurred once under full-suite
 load (passes standalone 2/2 and in both adjacent full runs) — node test-runner

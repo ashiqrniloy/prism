@@ -7,6 +7,7 @@ import {
   createFirecrawlExtractor,
   createFirecrawlFetch,
   createWebTools,
+  snapshotWebEvidence,
   WebToolError,
 } from "../index.js";
 
@@ -228,5 +229,20 @@ describe("Firecrawl adapters and tools", () => {
       fetch: async () => json({ success: true, data: { markdown: "123456789", metadata: {} } }),
     });
     await assert.rejects(() => fetcher.fetch("https://example.com"), /Markdown exceeds/);
+  });
+});
+
+describe("snapshotWebEvidence", () => {
+  it("hashes the provided body and refuses userinfo URLs", () => {
+    const evidence = snapshotWebEvidence({
+      provider: "brave",
+      url: "https://example.com/doc",
+      body: "hello",
+      retrievedAt: "2026-01-01T00:00:00.000Z",
+    });
+    assert.equal(evidence.kind, "web");
+    assert.equal(evidence.contentHash, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
+    assert.equal(evidence.uri.includes("@"), false);
+    assert.throws(() => snapshotWebEvidence({ provider: "brave", url: "https://user:pass@example.com/", body: "x" }));
   });
 });

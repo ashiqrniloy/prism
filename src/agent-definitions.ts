@@ -48,6 +48,7 @@ function buildBaseConfig(def: AgentDefinition, context: AgentDefinitionResolutio
     ...(def.context !== undefined && { context: resolveContextProviders(def.name, def.context, context) }),
     ...(def.systemPrompt !== undefined && { systemPrompt: def.systemPrompt }),
     ...(def.instructions !== undefined && { instructions: def.instructions }),
+    ...(def.attentionCompiler !== undefined && { attentionCompiler: def.attentionCompiler }),
     ...(def.loop !== undefined && { loop: def.loop }),
     ...(def.metadata !== undefined && { metadata: def.metadata }),
   };

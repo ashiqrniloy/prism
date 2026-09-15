@@ -57,6 +57,9 @@ Data-defined route table over the server seam — each route either rewrites the
 | `GET /events?runId=<id>` | Durable SSE stream of normalized events. `Last-Event-ID` header reconnect and `?cursor=` are honored by the server seam; missing `runId` → `400 ERR_PRISM_DEV_ROUTE`. |
 | `GET /runs/:id/replay?cursor=…` | Paged replay of a stored run from the durable `AgentEventSource` — **no session, no provider, no re-execution** (`createPrismAgentEventReplay` page). Returns `{ items, nextCursor?, terminal }`; unknown/foreign run ids → `404`. |
 | `POST /runs/:runId/decisions/:decisionId` | Resumes/denies one suspended approval. Body `{ outcome: "allow_once" \| "allow_always" \| "deny", expectedVersion? }` → forwarded as a single-entry core decision batch; unknown discriminants and stale versions fail closed (`400`) at the core boundary **before any state write**. |
+| `GET /inspect` | Returns the host composition report (`HostCompositionReport`) detailing profile, effective tools, redacted credentials, ownership, storage durability, sandbox capabilities, and governance coverage. | dev composition inspection (`inspectDevInspector`). |
+| `GET /runs/:id/summary` | Projects durable replay events with `projectAgentTimeline({ content: "metadata" })` and returns `summarizeTimeline` (latency, cost, tool counts). No step I/O. Requires `eventSource`. Unknown run → `404`. |
+| `POST /compare` | Body `{ left, right }` each `{ summary, aggregate?, manifest? }` — existing TimelineSummary / ExperimentAggregate fields only. Returns quality/cost/latency winners. `invariantsPassed: false` on either side sets `qualityWinner: "invariant_blocked"`. Bounded 64KiB. |
 
 Reconnect semantics: every SSE frame carries `id: <cursor>`; a reconnecting client sends `Last-Event-ID: <cursor>` and receives exactly the post-cursor events — no duplicates, no loss (server conformance-tested). Replay pages are bounded by the deployment limits (`maxReplayEvents`, `maxReplayCursorBytes`) and ownership-scoped by the source seam itself.
 
@@ -71,6 +74,7 @@ Panels:
 - **Usage** — per-run totals summed from `provider_turn_finished.usage` and the terminal `agent_finished.usage` (input/output/total tokens, cost when the model reports it).
 - **Decisions** — `agent_suspended` renders one card per pending decision (`PendingDecision.approvalId`, tool name, redacted reason, `expectedVersion` from the event's run version). Buttons post `POST /runs/:runId/decisions/:approvalId` ({ outcome: `allow_once` | `allow_always` | `deny`, expectedVersion }); rejections show the seam's fail-closed error verbatim, and a remaining-multi-decision suspension re-renders from the response's `runState.interruption`.
 - **Run selector** — session runs (live + loaded) with status; a durable view of any past run loads via `GET {basePath}/events?runId=…` over `EventSource` — the seam's own `Last-Event-ID` reconnect applies. Without a durable event source wired, loading by runId surfaces that fact instead of pretending to replay.
+- **Compare** — `Compare last 2` loads `/runs/:id/summary` for the two most recent runs and `POST /compare`. Renders quality/cost/latency winners from those artifacts. A high mean score cannot beat a failed invariant. Without durable events the panel says so instead of inventing numbers.
 
 ## Request/response example
 

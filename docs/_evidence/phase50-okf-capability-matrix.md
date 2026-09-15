@@ -1,9 +1,9 @@
-# Phase 50 — Clay integration findings + OKF adoption: capability matrix and primitive review
+# Phase 50 — Integration findings + OKF adoption: capability matrix and primitive review
 
 Evidence file for plan 050 Task 1. Reviewed 2026-08-29. Inputs pinned:
 
-- Findings: `docs/_evidence/clay-integration-findings.md` — BUG-1, BUG-2,
-  FEATURE-1..6, DOCS-1, each runtime-verified by the Clay review against
+- Findings: `docs/_evidence/integration-findings.md` — BUG-1, BUG-2,
+  FEATURE-1..6, DOCS-1, each runtime-verified by the reporting host against
   `@arnilo/prism@0.3.0` (npm dist).
 - OKF spec: `GoogleCloudPlatform/open-knowledge-format` `SPEC.md` **v0.2**
   — §3 bundle structure, §4 concept frontmatter, §5.1 `sources`, §5.2
@@ -14,7 +14,7 @@ Evidence file for plan 050 Task 1. Reviewed 2026-08-29. Inputs pinned:
 - Repo baseline: `edb4fcf` (workspace `0.3.1`).
 
 Every span below was re-verified against current source on 2026-08-29;
-Clay's original 0.3.0-era line numbers are superseded where noted.
+the report's original 0.3.0-era line numbers are superseded where noted.
 
 ## 1. Verified change-site spans
 
@@ -163,10 +163,10 @@ Clay's original 0.3.0-era line numbers are superseded where noted.
 
 ### DOCS-1 — three behavioral contracts
 
-- Verified as true runtime behavior (Clay review + current source):
+- Verified as true runtime behavior (report + current source):
   1. Resume-aware nodes — `workflows.md:77` mechanics confirmed; failure
      mode (unconditional re-suspend starves downstream nodes) verified by
-     Clay; pattern `ctx.resume ? handle(ctx.resume) : suspend(...)` exists
+     the report; pattern `ctx.resume ? handle(ctx.resume) : suspend(...)` exists
      at `workflows.md:182-183` without the warning box.
   2. Supervisor factory returns — BUG-2 guard (Task 3) makes the failure
      signature actionable; durable store requirement for nested approval
@@ -222,7 +222,7 @@ are expected to be reading-side only.
 
 ## 4. Global rejections (enforced across Tasks 2-12)
 
-- **No Clay-specific branches** in any shared runtime — every fix is at
+- **No consumer-specific branches** in any shared runtime — every fix is at
   the shared choke point all callers route through.
 - **No new runtime machinery** for FEATURE-2 and FEATURE-5 (docs +
   example only); the `loop` node stays in plan 045.

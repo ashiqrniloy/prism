@@ -61,7 +61,7 @@ When `t` is omitted and the cell contains a numeric serial (e.g. `45200`), the s
 
 ## 2. Decimal-Safe Value Path & Anti-Corruption Invariant
 
-This package represents the **safety-critical data ingestion boundary** for business data and money in Synapta and Prism applications. Synapta strictly requires money to be stored as decimal strings; IEEE-754 floating-point coercion produces irreversible precision loss (e.g. `0.1 + 0.2 !== 0.3`, `1234.56` becoming `1234.5599999999999`).
+This package represents the **safety-critical data ingestion boundary** for business data and money in Prism host applications. Money must be stored as decimal strings; IEEE-754 floating-point coercion produces irreversible precision loss (e.g. `0.1 + 0.2 !== 0.3`, `1234.56` becoming `1234.5599999999999`).
 
 ```
                               ┌───────────────────────────────────┐

@@ -25,26 +25,26 @@ Do not use provider packages as a package manager, credential store, env loader,
 
 | adapter package | version |
 | --- | --- |
-| `@arnilo/prism-providers/ai-sdk` | 0.6.0 |
-| `@arnilo/prism-providers/alibaba` | 0.6.0 |
-| `@arnilo/prism-providers/anthropic` | 0.6.0 |
-| `@arnilo/prism-providers/azure` | 0.6.0 |
-| `@arnilo/prism-providers/bedrock` | 0.6.0 |
-| `@arnilo/prism-providers/clinepass` | 0.6.0 |
-| `@arnilo/prism-providers/commandcode` | 0.6.0 |
-| `@arnilo/prism-providers/deepseek` | 0.6.0 |
-| `@arnilo/prism-providers/google` | 0.6.0 |
-| `@arnilo/prism-providers/hyper` | 0.6.0 |
-| `@arnilo/prism-providers/kimi` | 0.6.0 |
-| `@arnilo/prism-providers/model-discovery` | 0.6.0 |
-| `@arnilo/prism-providers/neuralwatt` | 0.6.0 |
-| `@arnilo/prism-providers/ollama` | 0.6.0 |
-| `@arnilo/prism-providers/openai` | 0.6.0 |
-| `@arnilo/prism-providers/opencode-go` | 0.6.0 |
-| `@arnilo/prism-providers/openrouter` | 0.6.0 |
-| `@arnilo/prism-providers/vertex` | 0.6.0 |
-| `@arnilo/prism-providers/xai` | 0.6.0 |
-| `@arnilo/prism-providers/zai` | 0.6.0 |
+| `@arnilo/prism-providers/ai-sdk` | 0.7.0 |
+| `@arnilo/prism-providers/alibaba` | 0.7.0 |
+| `@arnilo/prism-providers/anthropic` | 0.7.0 |
+| `@arnilo/prism-providers/azure` | 0.7.0 |
+| `@arnilo/prism-providers/bedrock` | 0.7.0 |
+| `@arnilo/prism-providers/clinepass` | 0.7.0 |
+| `@arnilo/prism-providers/commandcode` | 0.7.0 |
+| `@arnilo/prism-providers/deepseek` | 0.7.0 |
+| `@arnilo/prism-providers/google` | 0.7.0 |
+| `@arnilo/prism-providers/hyper` | 0.7.0 |
+| `@arnilo/prism-providers/kimi` | 0.7.0 |
+| `@arnilo/prism-providers/model-discovery` | 0.7.0 |
+| `@arnilo/prism-providers/neuralwatt` | 0.7.0 |
+| `@arnilo/prism-providers/ollama` | 0.7.0 |
+| `@arnilo/prism-providers/openai` | 0.7.0 |
+| `@arnilo/prism-providers/opencode-go` | 0.7.0 |
+| `@arnilo/prism-providers/openrouter` | 0.7.0 |
+| `@arnilo/prism-providers/vertex` | 0.7.0 |
+| `@arnilo/prism-providers/xai` | 0.7.0 |
+| `@arnilo/prism-providers/zai` | 0.7.0 |
 <!-- generated:package-truth:providers end -->
 
 
@@ -61,7 +61,7 @@ Do not use provider packages as a package manager, credential store, env loader,
 | `@arnilo/prism-providers/hyper` | `api_key` only | No subscription OAuth — Charm Hyper is pay-per-use Hypercredits; host supplies `HYPER_API_KEY` (keys start `sk-hyper-`). |
 | `@arnilo/prism-providers/commandcode` | `api_key` only | No subscription OAuth — Command Code Go/GOAT/Pro/Max coding plans and the Provider plan all authenticate with the same Studio API key; host supplies `COMMAND_CODE_API_KEY`. |
 | `@arnilo/prism-providers/azure` | host Entra token or Azure resource key | Workload identity via `credential` callback; endpoint host preserved ([docs](providers/azure.md)). |
-| `@arnilo/prism-providers/bedrock` | host IAM/IRSA credentials | SigV4 over OpenAI-compatible Bedrock Runtime; region/PrivateLink preserved ([docs](providers/bedrock.md)). |
+| `@arnilo/prism-providers/bedrock` | host IAM/IRSA credentials | SigV4 over either the OpenAI-compatible Bedrock Runtime route (default) or the native model-agnostic Converse/ConverseStream route (`api: "converse"`); region/PrivateLink preserved ([docs](providers/bedrock.md)). |
 | `@arnilo/prism-providers/vertex` | host ADC / workload token | OpenAPI-compatible Vertex endpoint; separate from consumer Google package ([docs](providers/vertex.md)). |
 
 A future provider-local OAuth package must first have explicit third-party permission and documented authorize/token/refresh flow. Before it registers an OAuth descriptor, it must add bounded request/response, abort, PKCE/state where required, expiry/refresh, secret-redaction, durable-store round-trip, and offline protocol tests. Do not add a generic OAuth framework, CLI credential scanner, automatic refresh timer, or success stub.
@@ -139,7 +139,7 @@ Every package remains explicit, setup-zero-fetch, and late-credential-bound. `Mo
 | xAI | OpenAI-compatible Completions; caller-gated list | text, image | tool deltas, `reasoning_content` replay | implicit + `x-grok-conv-id`; protected API-key smoke; SuperGrok login operator-only |
 | ClinePass | OpenAI-compatible stream-only; static `cline-pass/*` catalog | text | tool deltas, per-model `reasoning_effort` | implicit; protected API-key smoke |
 | Azure | Azure/Foundry OpenAI-compatible; host models | selected endpoint/model capability | normalized OpenAI-compatible tools | no Prism cache mapping; protected host workload-identity probe |
-| Bedrock | Bedrock OpenAI-compatible; host models | selected endpoint/model capability | normalized OpenAI-compatible tools | no Prism cache mapping; protected host IAM/IRSA probe |
+| Bedrock | Bedrock OpenAI-compatible (default) or native Converse/ConverseStream; host models | selected endpoint/model capability; native route refuses denied/unknown capabilities before request | normalized OpenAI-compatible tools or Converse `toolSpec`/`toolUse` deltas | compatible route: no Prism cache mapping; native route maps `cachePoint` breakpoints; protected host IAM/IRSA probe |
 | Vertex | Vertex OpenAPI-compatible; host models | selected endpoint/model capability | normalized OpenAI-compatible tools | no Prism cache mapping; protected host ADC/WIF probe |
 
 ### First-party cache behavior

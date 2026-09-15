@@ -41,7 +41,7 @@ Field-level detail (defaults, bounds, failure modes) lives on the owning page �
 `AgentLoopOptions`
 
 **Agent/session runtime** — [`agent-session-runtime.md`](agent-session-runtime.md)  
-`AgentConfig`, `AgentRunResumeStreamOptions`, `AgentSessionCloneOptions`, `AgentSessionConfig`, `AgentSessionForkOptions`, `RunOptions`, `SteerOptions`
+`AgentConfig`, `AgentRunResumeOptions`, `AgentRunResumeStreamOptions`, `AgentSessionCloneOptions`, `AgentSessionConfig`, `AgentSessionForkOptions`, `RunOptions`, `SteerOptions`
 
 **Evaluations** — [`evaluations.md`](evaluations.md)  
 `ScoreRunOptions`
@@ -77,6 +77,12 @@ Field-level detail (defaults, bounds, failure modes) lives on the owning page �
 
 **Working and semantic memory** — [`working-and-semantic-memory.md`](working-and-semantic-memory.md)  
 `PostgresVectorStoreOptions`, `RecallScoringOptions`
+
+**Memory fabric** — [`memory-fabric.md`](memory-fabric.md)  
+`CreateMemoryFabricOptions`, `MemoryFabricAttachOptions`, `MemoryFabricToolsOptions`, `MemoryFabricWriteOptions`, `MemoryFabricRecallOptions`, `MemoryFabricConsolidationOptions`, `MemoryFabricLinkerOptions`, `MemoryFabricEvolutionOptions`, `MemoryFabricConversationSearchOptions`, `CreateFabricFileJailOptions`
+
+**Observational memory** — [`compaction-observational-memory.md`](compaction-observational-memory.md)  
+`ObservationalMemoryAppendOptions`, `WorkScopeControllerOptions`
 
 ## Provider and model connection
 
@@ -141,6 +147,9 @@ Field-level detail (defaults, bounds, failure modes) lives on the owning page �
 
 **Context and skills** — [`context-and-skills.md`](context-and-skills.md)  
 `ResolveActiveSkillsOptions`, `ResolveContextOptions`
+
+**Attention compiler** — [`attention-compiler.md`](attention-compiler.md)  
+`AttentionCompilerOptions`, `AttentionInputCapOptions`, `AttentionCompileOptions`, `AttentionTruncationTriggerOptions`
 
 **Input and prompt assembly** — [`input-and-prompt-assembly.md`](input-and-prompt-assembly.md)  
 `AssembleProviderInputOptions`, `PromptTemplateOptions`
@@ -222,6 +231,9 @@ Field-level detail (defaults, bounds, failure modes) lives on the owning page �
 
 **Frontend interoperability (AG-UI and ACP)** — [`ag-ui.md`](ag-ui.md)  
 `AgUiLimitOptions`
+
+**Supervisors and subagents** — [`supervisors.md`](supervisors.md)  
+`CreateSupervisorOptions`, `SupervisorLimits`, `ResolvedSupervisorLimits`, `DelegationWaitOptions`, `CreateSpawnAgentToolOptions`, `CreateDelegationControlToolOptions`, `WorktreeChildFactoryOptions`, `ObserveSupervisorLifecycleOptions`
 
 ## CLI/RPC
 

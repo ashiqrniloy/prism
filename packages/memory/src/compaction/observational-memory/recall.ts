@@ -23,7 +23,7 @@ export interface MemoryRecallResult {
   readonly missingSourceEntryIds?: readonly string[];
   readonly dropped?: boolean;
   readonly text: string;
-  readonly reason?: "invalid_id" | "not_found";
+  readonly reason?: "invalid_id" | "not_found" | "revoked";
 }
 
 export interface RecallBranchPageRequest {
@@ -49,17 +49,49 @@ export function recallObservationalMemory(
   entries: readonly SessionEntry[],
   id: string,
   secrets: readonly (string | undefined)[] = [],
+  options?: { readonly invalidatedIds?: readonly string[] },
 ): MemoryRecallResult {
   if (!isMemoryId(id)) return { found: false, id, reason: "invalid_id", text: "Invalid memory id; expected 12 lowercase hex characters." };
   const ledger = foldObservationalMemoryLedger(entries);
   const entryById = new Map(entries.map((entry) => [entry.id, entry]));
   const dropped = new Set(ledger.droppedObservationIds);
+  const invalidated = new Set(options?.invalidatedIds ?? []);
   const observation = ledger.observations.find((item) => item.id === id);
-  if (observation) return recallObservation(id, observation, entryById, dropped.has(id), secrets);
+  if (observation) {
+    const revoked = invalidated.has(id) || observation.sourceEntryIds.some((sourceId) => invalidated.has(sourceId));
+    if (revoked) {
+      return {
+        found: true,
+        id,
+        kind: "observation",
+        dropped: true,
+        reason: "revoked",
+        text: `Observation [${id}] withheld (revoked). sources: ${observation.sourceEntryIds.join(", ") || "none"}; time: ${observation.timestamp}.`,
+      };
+    }
+    return recallObservation(id, observation, entryById, dropped.has(id), secrets);
+  }
 
   const reflection = ledger.reflections.find((item) => item.id === id);
   if (reflection) {
     const observationById = new Map(ledger.observations.map((item) => [item.id, item]));
+    // Invalidation always wins over a compaction drop: a dropped observation whose source was revoked still withholds the reflection.
+    const revoked =
+      invalidated.has(id) ||
+      reflection.supportingObservationIds.some(
+        (obsId) =>
+          invalidated.has(obsId) || (observationById.get(obsId)?.sourceEntryIds.some((sourceId) => invalidated.has(sourceId)) ?? false),
+      );
+    if (revoked) {
+      return {
+        found: true,
+        id,
+        kind: "reflection",
+        dropped: true,
+        reason: "revoked",
+        text: `Reflection [${id}] withheld (revoked). supporting: ${reflection.supportingObservationIds.join(", ") || "none"}.`,
+      };
+    }
     const supportingObservations = reflection.supportingObservationIds.flatMap((obsId) => {
       const item = observationById.get(obsId);
       return item ? [item] : [];

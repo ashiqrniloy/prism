@@ -1,6 +1,6 @@
 # Work tools
 
-Optional `@arnilo/prism-core/integrations/work` package: identity-scoped Microsoft 365 and Google Workspace connectors. Host-pinned CLI binaries only; hard-coded `execFile` argv templates; draft-then-approve mutations; side-effect idempotency; shared mail/calendar/file/task result shapes.
+Optional `@arnilo/prism-core/integrations/work` subpath: identity-scoped Microsoft 365 and Google Workspace connectors. Host-pinned CLI binaries only; hard-coded `execFile` argv templates; draft-then-approve mutations; side-effect idempotency; shared mail/calendar/file/task result shapes.
 
 ## When to use
 
@@ -9,7 +9,7 @@ Use when agents must read or mutate tenant mail/calendar/files/tasks through the
 ## Install
 
 ```bash
-npm install @arnilo/prism-core/integrations/work
+npm install @arnilo/prism-core
 # host separately:
 #   npm i -g @pnp/cli-microsoft365
 #   npm i -g @googleworkspace/cli
@@ -87,9 +87,19 @@ Verified against [`@googleworkspace/cli` / `gws`](https://github.com/googleworks
 
 Startup: M365 `version --output json`; GWS `--version`. Forbidden: `login`, `setup`, `auth`, `schema`, `doctor`, `--debug`, `--verbose`, credentials in argv, anonymous share, model-supplied command strings / free-form Discovery.
 
-### Draft → approve → execute
+### Draft → approve → execute (0.7.0, R02)
 
-Mutation tools (`*_mail_draft_send`, `*_draft_*`) create an in-adapter draft and return `{ status: "pending_approval", draftId }` until `approval.isApproved` is true.
+Mutation tools (`*_mail_draft_send`, `*_draft_*`) create an in-adapter draft and return `{ status: "pending_approval", draftId, revision, payloadDigest }` until the host approval gate grants permission.
+
+In Prism 0.7.0, draft lifecycles are durably managed:
+
+- **Exact revision binding**: Every draft carries an integer `revision` (starts at 1) and a deterministic canonical `payloadDigest` (`sha256:<hex>`). Approvals bind strictly to `{ draftId, revision, payloadDigest, identityKey, approvedAt, expiresAt, policyRevision }`.
+- **Durable persistence across restarts**: When adapters are configured with `checkpoints: CheckpointStore` (e.g. `createPostgresEnterpriseState({ pool }).checkpoints` or `createMemoryCheckpointStore()`), drafts are stored under namespace `prism.work.draft`. Drafts survive process restarts; a worker process can resume an exact draft revision approved in a prior process or via a delayed human-in-the-loop review.
+- **Edits invalidate approval**: Any mutation or update to a draft increments `revision`, recalculates `payloadDigest`, clears any previous `approval`, and resets `status` to `pending_approval`. Prior approvals cannot execute a modified draft.
+- **Resuming approved drafts**: Mutation tools accept `{ draftId, revision }` without requiring callers to re-supply the full payload. The tool loads the stored draft, validates approval status and digest, reauthorizes immediately before execution, and executes the effect.
+- **Idempotent duplicate approvals**: Re-approving an approved draft with the same approval object is idempotent. Submitting an approval with a mismatched revision or payload digest is rejected with `ERR_PRISM_WORK_DRAFT_STALE` or `ERR_PRISM_WORK_DRAFT_DIGEST`.
+- **Ambiguous failure handling**: If a connector call fails ambiguously after dispatch, both the idempotency record and the draft are marked `unknown`. Re-running with that draft ID or idempotency key fails closed (`ERR_PRISM_WORK_IDEMPOTENCY_UNKNOWN`) and never auto-replays without explicit operator reconciliation.
+- **Optional body offloading**: Supplying `bodies: ArtifactBodyStore` automatically stores large draft message/file bodies in the object store with an `ArtifactBodyRef` recorded on the draft metadata.
 
 ### Durable idempotency (0.0.23)
 

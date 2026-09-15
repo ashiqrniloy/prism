@@ -102,12 +102,16 @@
       "ConfigurationChangedEvent",
       "PlanChangedEvent",
       "PlanRemovedEvent",
+      "SubagentStartedEvent",
+      "SubagentStoppedEvent",
       "CodingLifecycleEmitter",
       "createCodingLifecycleEmitter",
       "CodingLifecycleLimits",
       "CodingLifecycleError",
       "resolveCodingLifecycleLimits",
-      "ResolvedCodingLifecycleLimits"
+      "ResolvedCodingLifecycleLimits",
+      "ObserveSupervisorLifecycleOptions",
+      "observeSupervisorLifecycle"
      ],
      "errorCodes": [
       "ERR_PRISM_LIFECYCLE_LIMIT"
@@ -121,7 +125,9 @@
       "permission_denied",
       "configuration_changed",
       "plan_changed",
-      "plan_removed"
+      "plan_removed",
+      "subagent_started",
+      "subagent_stopped"
      ],
      "deferredEvents": [
       "check_started",
@@ -129,11 +135,9 @@
       "task_created",
       "task_completed",
       "compaction_started",
-      "compaction_finished",
-      "subagent_started",
-      "subagent_stopped"
+      "compaction_finished"
      ],
-     "notes": "process_started/process_exited/process_killed reuse the shipped CodingProcessEvent union (no new shape). Deferred events have no consumer in 0.0.27: the ACP SDK at freeze (1.3.0) exposed no update kind for checks, tasks, compaction, or subagents, and no other host requested them. (1.4.0 stabilized elicitation and added `compaction` session updates, plan 070 Task 12; those kinds stay unexported until a plan adopts them.) Deferred kinds MUST NOT be exported."
+     "notes": "process_started/process_exited/process_killed reuse the shipped CodingProcessEvent union (no new shape). Deferred events have no consumer: checks, tasks, and compaction remain unexported until a plan adopts them."
     }
    }
   }
@@ -222,7 +226,9 @@
   "configuration_changed": "session/update config_option_update carrying the full bounded option set (ConfigOptionUpdate verified in SDK 1.3.0); Task 7 verifies wire gating and falls back to agent_message_chunk if the SDK rejects the update kind for a client",
   "plan_changed": "session/update plan_update with plan { type: items, planId = planPath, entries (content/priority/status) } — complete list per update, redacted + byte-capped; only when the client advertised ClientCapabilities.plan (UNSTABLE gate in the agent wiring; mapper stays capability-agnostic); writeCodingPlanFile emits it (plan write/update)",
   "plan_removed": "session/update plan_removed with planId = planPath; same UNSTABLE gate; no coding-agent helper deletes plans today — hosts emit it through their CodingLifecycleEmitter when they remove a plan file",
-  "deferred": "check_started, check_finished, task_created, task_completed, compaction_started, compaction_finished, subagent_started, subagent_stopped -> no ACP update kind, no consumer; not shipped"
+  "subagent_started": "agent_message_chunk with redacted child and delegation ids; emitted by observeSupervisorLifecycle without child input or output",
+  "subagent_stopped": "agent_message_chunk with redacted child and delegation ids plus terminal status; emitted by observeSupervisorLifecycle without child input or output",
+  "deferred": "check_started, check_finished, task_created, task_completed, compaction_started, compaction_finished -> no ACP update kind, no consumer; not shipped"
  },
  "permissionMatrix": {
   "$comment": "Phase 8 shared approval contract is NOT widened. ACP options map onto the existing four outcomes; unrecognized option ids and cancelled requests deny-closed.",

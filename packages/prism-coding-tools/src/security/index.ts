@@ -15,15 +15,45 @@ export { createSecretRedactor, DockerCliError } from "./docker-cli.js";
 export type {
   CreateDockerSandboxOptions,
   DockerNetworkConfig,
+  DockerProcessRecoveryBackendOptions,
+  DockerProcessRefData,
 } from "./docker-sandbox.js";
 export {
   assertBrowserSandboxNetwork,
   assertEgressAttestation,
   composeEgressSandboxNetwork,
+  computeCommandFingerprint,
+  createDockerProcessRecoveryBackend,
   createDockerSandbox,
   DockerSandboxError,
+  decodeDockerProcessRef,
+  encodeDockerProcessRef,
   resolveDockerCapabilities,
 } from "./docker-sandbox.js";
+export type {
+  ConnectE2BSandboxOptions,
+  CreateE2BSandboxOptions,
+  E2BClient,
+  E2BConnectOpts,
+  E2BCreateOpts,
+  E2BProcessRecoveryBackendOptions,
+  E2BProcessRefData,
+  E2BSandboxInfo,
+  E2BSandboxInstance,
+  E2BSandboxStatic,
+} from "./e2b-sandbox.js";
+export {
+  argvCommand,
+  connectE2BSandbox,
+  createE2BProcessRecoveryBackend,
+  createE2BSandbox,
+  decodeE2BProcessRef,
+  E2B_PEER_VERSION,
+  E2BSandboxError,
+  encodeE2BProcessRef,
+  posixQuote,
+  resolveE2BCapabilities,
+} from "./e2b-sandbox.js";
 export type {
   AddressResolver,
   CreateAllowListEgressProxyOptions,
@@ -93,7 +123,9 @@ export type {
   SandboxExecFileRequest,
   SandboxExecRequest,
   SandboxExportMetadata,
+  SandboxPauseResult,
   SandboxProcessHandle,
+  SandboxSnapshotKind,
   SandboxStatus,
   SandboxStatusState,
 } from "./sandbox.js";

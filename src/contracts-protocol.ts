@@ -51,6 +51,7 @@ export type RealtimeEvent =
   | { readonly type: "audio_delta"; readonly audio: Uint8Array }
   | { readonly type: "transcript_delta"; readonly text: string; readonly role: "user" | "assistant" }
   | { readonly type: "tool_call"; readonly call: ToolCallContent }
+  | { readonly type: "usage"; readonly usage: Usage }
   | { readonly type: "interrupted" }
   | { readonly type: "session_closed"; readonly reason?: string }
   | { readonly type: "error"; readonly error: ErrorInfo };
@@ -100,11 +101,22 @@ export interface RunOptions {
   readonly activateAllSkills?: true;
   /** Progressive: catalog (name+description) unless loaded; eager: full instructions every turn. Default progressive. */
   readonly skillsDisclosure?: import("./skill-disclosure.js").SkillsDisclosure;
+  /**
+   * Optional per-run allow-list of registered tool names. Omitted → every registered tool (legacy).
+   * Empty → no tools this run. Unknown names fail closed. Cannot widen the agent registry or a
+   * checkpointed grant; resume intersects this list with current authority.
+   */
+  readonly toolNames?: readonly string[];
   /** Tools disclosure: "all" (default) sends every active tool schema; "search" sends top-k + the generated `search_tools` tool. */
   readonly toolsDisclosure?: import("./tool-search.js").ToolsDisclosure;
   readonly toolsSearch?: import("./tool-search.js").ToolsSearchOptions;
   /** Opt-in projection-only fold for aged large tool results in provider view; store untouched. */
   readonly toolResultFold?: import("./tool-result-fold.js").ToolResultFoldOptions;
+  /** Per-run overlay for `AgentConfig.attentionCompiler` (plan 074 C12): `false` disables the
+   *  compiler for this run, `true` is a no-op, an object may only relax the agent setting
+   *  (gate ratios up, `keepLast`/`thinkingKeepTurns` down, `excludeTools` extended). Enabling
+   *  the compiler where the agent config left it off throws before the first provider turn. */
+  readonly attentionCompiler?: import("./contracts-core/attention.js").AttentionCompilerSetting;
   readonly instructionInjectors?: readonly InstructionInjector[];
   readonly inputLayout?: InputAssemblyLayout;
   readonly loop?: AgentLoopStrategy | AgentLoopOptions;
@@ -277,6 +289,22 @@ export type AgentEvent =
     }
   | { readonly type: "compaction_started"; readonly sessionId: string; readonly runId?: string }
   | { readonly type: "compaction_finished"; readonly sessionId: string; readonly runId?: string; readonly summary: string }
+  | {
+      /** One attention-compiler mutation (plan 074 R15/T6): measured counts only, never message text. */
+      readonly type: "attention_compiled";
+      readonly sessionId: string;
+      readonly runId?: string;
+      readonly used: number;
+      /** Estimated tokens of the same request after this turn's mutation. */
+      readonly usedAfter: number;
+      readonly inputCap: number;
+      readonly triggerRatio: number;
+      readonly droppedThinkingTurns: number;
+      readonly stubbedToolResults: number;
+      /** Payload bytes the tool stubs took out of this request. */
+      readonly stubbedBytes: number;
+      readonly truncated: boolean;
+    }
   | {
       readonly type: "retry_scheduled";
       readonly sessionId: string;

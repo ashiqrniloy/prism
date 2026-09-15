@@ -2,6 +2,7 @@
 
 import type { ActiveDurableRun } from "../../agent-approval.js";
 import type { PendingToolCall } from "../../agent-run-state.js";
+import type { AttentionStickyFrontier, PersistedAttentionStickyFrontier } from "../../attention-compiler.js";
 import type {
   Agent,
   AgentEvent,
@@ -70,6 +71,15 @@ export type SessionHost = {
   readonly activatedTools: ActiveToolSet;
   restoredSkillBodies: readonly LoadedSkillBodiesEntry[];
   activeRunSkills: readonly Skill[];
+  /** Names-only grant for this run; undefined means the full registered set. */
+  activeToolNames?: readonly string[];
+  /** Sticky mutation frontier for this session (plan 074 C10); session-owned so it survives
+   *  across turns, runs, and provider rounds. Lazily created on first use. */
+  attentionStickyFor(): AttentionStickyFrontier;
+  /** Plan 074 P3: bounded frontier snapshot for durable checkpoints (undefined before any mutation). */
+  serializedAttentionSticky(): PersistedAttentionStickyFrontier | undefined;
+  /** Plan 074 P3: restore a frontier that was validated when the checkpoint was loaded. */
+  restoreAttentionSticky(persisted: PersistedAttentionStickyFrontier): void;
   invalidateSnapshot(): void;
   resolveRunProvider(options: RunOptions): void;
   emit(event: AgentEvent): void;

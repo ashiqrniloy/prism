@@ -362,7 +362,7 @@ task below is unchanged.
     - Documentation Reviewed:
       - `scripts/release.mjs` (`validateIndependent`, topological order — new package is a leaf); obscura 0.3.0 initial-cut precedent from `docs/release-and-install.md`.
     - Options Considered:
-      - Initial `0.0.1` independent line (wiki/graft precedent) vs `0.3.0` in-window — chosen: `0.3.0` (host engines on the main line like obscura; Synapta pins exact and expects changelog-disciplined pre-1.0 evolution, which the 0.3.x Decision B window already provides).
+      - Initial `0.0.1` independent line (wiki/graft precedent) vs `0.3.0` in-window — chosen: `0.3.0` (host engines on the main line like obscura; hosts pin exact versions and expect changelog-disciplined pre-1.0 evolution, which the 0.3.x Decision B window already provides).
     - Chosen Approach:
       - Standard changed-package/new-package cut; evidence recorded in `scripts/release-evidence.json`.
     - API Notes and Examples: `npm run release:publish -- --dry-run --allow-dirty --allow-untagged`

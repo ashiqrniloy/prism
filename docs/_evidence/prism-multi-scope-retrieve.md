@@ -1,10 +1,10 @@
 # Prism multi-scope retrieve (one embed, global RRF + rerank)
 
-Status: **requested** — filed against Prism `@arnilo/prism-rag` (published `0.3.0` and the unpublished P1–P8 working tree). Sibling of [`prism-production-rag.md`](prism-production-rag.md) (P1–P8). Synapta Plan 082 cannot implement the architecture query pipeline until a release accepts `RagScope[]` on one `retrieveContext` call. Architecture: `docs/architecture/knowledge-rag.md` § Query pipeline (noted in plan 034 as not present in-repo).
+Status: **requested** — filed against Prism `@arnilo/prism-rag` (published `0.3.0` and the unpublished P1–P8 working tree). Sibling of [`prism-production-rag.md`](prism-production-rag.md) (P1–P8). The requesting application cannot implement the architecture query pipeline until a release accepts `RagScope[]` on one `retrieveContext` call. Architecture: `docs/architecture/knowledge-rag.md` § Query pipeline (noted in plan 034 as not present in-repo).
 
 ## Summary
 
-P1–P8 make one exact `RagScope` production-shaped. Synapta Ask/Do retrieve is **three corpora on every turn**:
+P1–P8 make one exact `RagScope` production-shaped. Ask/Do retrieve is **three corpora on every turn**:
 
 ```text
 allowed = [org if knowledge.view, user, current session]
@@ -17,9 +17,9 @@ allowed = [org if knowledge.view, user, current session]
 - CitationList rank becomes host-invented
 - `retrieveContext` does not return pre-fusion legs, so the host cannot fuse correctly
 
-Synapta will not write a second ranker. Prism should search every allowed exact scope in one call.
+The host will not write a second ranker. Prism should search every allowed exact scope in one call.
 
-## Why Synapta wants it
+## Why the requesting host wants it
 
 Plan 082 / Decision OS plane F: one `retrieve_knowledge` tool, top 8, hybrid + TEI rerank, `CitationList` from that list. Worker builds allowed `RagScope[]` from trusted context and OpenFGA; Prism must not see OpenFGA. Without a multi-scope API the host either:
 
@@ -71,7 +71,7 @@ OTel (P7): same `rag_request` tree. Add `rag.scope_count`. `chunk_retrieved` alr
 - Reranker cannot overwrite provenance / trust / scope.
 - Embedder mismatch still throws `ERR_PRISM_RAG_EMBEDDER_MISMATCH` (any scope).
 - Generation filter still `generation === current` **per scope**. Scopes may have different current generations.
-- `createRagContextProvider` keeps working. If it grows a `scopes` option, fine; Synapta Ask uses a host tool, not auto-inject.
+- `createRagContextProvider` keeps working. If it grows a `scopes` option, fine; Ask mode uses a host tool, not auto-inject.
 - Single-`scope` callers and tests stay green.
 
 ## Out of scope (do not add)
@@ -106,7 +106,7 @@ retrieveContext(query, {
 })
 ```
 
-Exact option names may change; Synapta 082 will pin the shipped names. Do not add a second function (`retrieveContextMulti`) unless `scope` cannot be extended.
+Exact option names may change; the requesting application will pin the shipped names. Do not add a second function (`retrieveContextMulti`) unless `scope` cannot be extended.
 
 ## Reproduction (current gap)
 

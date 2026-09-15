@@ -18,7 +18,7 @@
 
 Use when a host wants IDE-like language intelligence without embedding a parser framework or trusting model-chosen server commands. Wire host-pinned server binaries (for example `typescript-language-server --stdio`) and gate renames with the same `ExecutionPolicy` used for write/edit tools.
 
-Do not use this as a sandbox, tool registry, or process session manager. Optional process-session registration of LSP children can use `createProcessSessions` ([Process sessions](process-sessions.md)).
+Do not use this as a sandbox, tool registry, or process session manager. Optional process-session registration of LSP children can use `createProcessSessions` ([Process sessions](process-sessions.md)). When paired with a container sandbox, language server processes, shell operations, and filesystem tools must agree on the single declared workspace root (typically `/workspace` inside Docker) to maintain workspace coherence and prevent split-brain states.
 
 ```ts
 import { createLanguageIntelligence } from "@arnilo/prism-coding-tools/agent";

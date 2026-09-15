@@ -1,4 +1,6 @@
 export * from "./caps.js";
+export * from "./diff.js";
+export * from "./fidelity.js";
 export * from "./errors.js";
 export * from "./generate.js";
 export * from "./hash.js";

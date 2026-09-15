@@ -1,0 +1,18 @@
+# __PROJECT_NAME__
+
+Personal workstation assistant built with Prism. Features single-user ownership, local tools, credential references, and loopback dev inspection.
+
+## Quickstart
+
+```bash
+npm install
+npm test
+npm run dev    # Boots loopback dev inspector at http://127.0.0.1:4311
+```
+
+## Security Posture
+
+- **Single-User Ownership**: Bounded to the local workstation operator (`userId: process.env.USER`).
+- **Secret Redaction**: Environment secrets are redacted before persistence or logs.
+- **Durable Verification**: Uses memory/local storage; in-memory storage is recognized as non-durable.
+- **Containment**: Tool actions are contained to local workspace roots.

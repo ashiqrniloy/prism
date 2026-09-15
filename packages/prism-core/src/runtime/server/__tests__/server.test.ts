@@ -258,6 +258,233 @@ describe("createPrismHandler", () => {
     }
   });
 
+  it("accepts editable durable approvals with modifiedArguments, validating schemas and CAS", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    const store = createMemorySessionStore();
+    const executed: string[] = [];
+    let turn = 0;
+    const agent = createAgent({
+      id: "editable-support",
+      model: { provider: "mock", model: "offline" },
+      provider: {
+        id: "mock",
+        async *generate() {
+          if (++turn === 1) {
+            yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", { value: "initial" }) };
+            yield providerDone();
+            return;
+          }
+          yield providerTextDelta("finished");
+          yield providerDone();
+        },
+      },
+      store,
+      validator: (_tool: unknown, args: unknown) =>
+        typeof (args as { value?: unknown }).value === "string" ? undefined : "value must be a string",
+      tools: [
+        {
+          name: "write",
+          parameters: {},
+          execute: (args: unknown, context: { toolCallId: string }) => {
+            executed.push(`${context.toolCallId}:${JSON.stringify(args)}`);
+            return { toolCallId: context.toolCallId, name: "write", value: "done" };
+          },
+        },
+      ],
+      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    });
+    const lifecycle = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent, definitionRevision: "1" }) });
+    const handler = createPrismHandler({
+      agents: { "editable-support": agent },
+      agentRuns: { "editable-support": { lifecycle } },
+      authorize: () => authorization,
+    });
+
+    const suspended = await handler(jsonRequest("/prism/agents/editable-support/runs", { input: "go" }));
+    const started = (await suspended.json()) as { status: string; runId: string; runState: { version: number } };
+    assert.equal(started.status, "suspended");
+
+    const statusResp = await handler(new Request(`https://example.test/prism/agents/editable-support/runs/${started.runId}`));
+    const statusData = JSON.parse(await statusResp.text()) as {
+      version: number;
+      state: { interruption?: { pendingDecisions?: readonly { approvalId: string }[] } };
+    };
+    const pendingApprovalId = statusData.state.interruption!.pendingDecisions![0]!.approvalId;
+    const initialVersion = statusData.version;
+
+    // 1. Malformed modifiedArguments fail closed (non-object -> 400)
+    for (const bad of ["not-an-object", 123, true, [1, 2]]) {
+      const badResp = await handler(
+        jsonRequest(`/prism/agents/editable-support/runs/${started.runId}/resume`, {
+          expectedVersion: initialVersion,
+          decision: "approve",
+          modifiedArguments: bad,
+        }),
+      );
+      assert.equal(badResp.status, 400);
+    }
+
+    // 2. Deny cannot carry modifiedArguments -> 400
+    const denyWithEdits = await handler(
+      jsonRequest(`/prism/agents/editable-support/runs/${started.runId}/resume`, {
+        expectedVersion: initialVersion,
+        decision: "deny",
+        modifiedArguments: { value: "rejected" },
+      }),
+    );
+    assert.equal(denyWithEdits.status, 400);
+
+    // 3. Schema rejection fails closed with 400 (rejection before CAS)
+    const invalidArgsResp = await handler(
+      jsonRequest(`/prism/agents/editable-support/runs/${started.runId}/resume`, {
+        expectedVersion: initialVersion,
+        decision: "approve",
+        modifiedArguments: { value: 12345 }, // validator expects string
+      }),
+    );
+    assert.equal(invalidArgsResp.status, 400);
+    assert.equal(executed.length, 0); // nothing executed
+
+    // Verify still suspended at initialVersion
+    const checkState = await lifecycle.status({ runId: started.runId }, { ownership: authorization.ownership });
+    assert.equal(checkState.version, initialVersion);
+    assert.equal(checkState.state.status, "suspended");
+
+    // 4. Foreign approvalId -> 400
+    const foreignResp = await handler(
+      jsonRequest(`/prism/agents/editable-support/runs/${started.runId}/resume`, {
+        expectedVersion: initialVersion,
+        decision: "approve",
+        approvalId: "foreign-id",
+        modifiedArguments: { value: "ok" },
+      }),
+    );
+    assert.equal(foreignResp.status, 400);
+
+    // 5. Successful approve with modifiedArguments (without explicit approvalId - inferred from single pending)
+    const successResp = await handler(
+      jsonRequest(`/prism/agents/editable-support/runs/${started.runId}/resume`, {
+        expectedVersion: initialVersion,
+        decision: "approve",
+        modifiedArguments: { value: "edited-payload" },
+      }),
+    );
+    assert.equal(successResp.status, 200);
+    const successBody = (await successResp.json()) as { status: string };
+    assert.equal(successBody.status, "succeeded");
+    assert.equal(executed.length, 1);
+    assert.equal(executed[0], 'call-1:{"value":"edited-payload"}');
+
+    // 6. Replay of accepted decision / stale expectedVersion fails closed
+    // Without approvalId on completed run: 0 pending decisions -> 400
+    const replayNoIdResp = await handler(
+      jsonRequest(`/prism/agents/editable-support/runs/${started.runId}/resume`, {
+        expectedVersion: initialVersion,
+        decision: "approve",
+        modifiedArguments: { value: "replay" },
+      }),
+    );
+    assert.equal(replayNoIdResp.status, 400);
+
+    // With explicit approvalId on completed run: CAS / state mismatch -> 404
+    const replayWithIdResp = await handler(
+      jsonRequest(`/prism/agents/editable-support/runs/${started.runId}/resume`, {
+        expectedVersion: initialVersion,
+        decision: "approve",
+        approvalId: pendingApprovalId,
+        modifiedArguments: { value: "replay" },
+      }),
+    );
+    assert.equal(replayWithIdResp.status, 404);
+
+    // 7. Multiple pending decisions: omitting approvalId fails closed with 400
+    let multiTurn = 0;
+    const multiExecuted: string[] = [];
+    const multiCheckpoints = createMemoryCheckpointStore();
+    const multiAgent = createAgent({
+      id: "multi-editable",
+      model: { provider: "mock", model: "offline" },
+      provider: {
+        id: "mock",
+        async *generate() {
+          if (++multiTurn === 1) {
+            yield { type: "tool_call" as const, call: toolCallContent("call-a", "write", { value: "a" }) };
+            yield { type: "tool_call" as const, call: toolCallContent("call-b", "write", { value: "b" }) };
+            yield providerDone();
+            return;
+          }
+          yield providerTextDelta("finished");
+          yield providerDone();
+        },
+      },
+      store: createMemorySessionStore(),
+      tools: [
+        {
+          name: "write",
+          parameters: {},
+          execute: (args: unknown, context: { toolCallId: string }) => {
+            multiExecuted.push(`${context.toolCallId}:${JSON.stringify(args)}`);
+            return { toolCallId: context.toolCallId, name: "write", value: "done" };
+          },
+        },
+      ],
+      runState: { checkpoints: multiCheckpoints, definitionRevision: "1", interruptBeforeTool: true },
+    });
+    const multiLifecycle = createAgentRunLifecycle({
+      checkpoints: multiCheckpoints,
+      resolveAgent: () => ({ agent: multiAgent, definitionRevision: "1" }),
+    });
+    const multiHandler = createPrismHandler({
+      agents: { "multi-editable": multiAgent },
+      agentRuns: { "multi-editable": { lifecycle: multiLifecycle } },
+      authorize: () => authorization,
+    });
+    const multiSuspended = await multiHandler(jsonRequest("/prism/agents/multi-editable/runs", { input: "go" }));
+    const multiStarted = (await multiSuspended.json()) as { runId: string; runState: { version: number } };
+
+    // Ambiguous inference on 2 pending decisions -> 400
+    const ambiguousResp = await multiHandler(
+      jsonRequest(`/prism/agents/multi-editable/runs/${multiStarted.runId}/resume`, {
+        expectedVersion: multiStarted.runState.version,
+        decision: "approve",
+        modifiedArguments: { value: "x" },
+      }),
+    );
+    assert.equal(ambiguousResp.status, 400);
+
+    // Providing explicit approvalId for one decision works
+    const multiStatus = await multiLifecycle.status({ runId: multiStarted.runId }, { ownership: authorization.ownership });
+    const p0 = multiStatus.state.interruption!.pendingDecisions![0]!.approvalId;
+    const p1 = multiStatus.state.interruption!.pendingDecisions![1]!.approvalId;
+    const explicitResp = await multiHandler(
+      jsonRequest(`/prism/agents/multi-editable/runs/${multiStarted.runId}/resume`, {
+        expectedVersion: multiStarted.runState.version,
+        decision: "approve",
+        approvalId: p0,
+        modifiedArguments: { value: "explicit-edited" },
+      }),
+    );
+    // Partial decision leaves run suspended
+    assert.equal(explicitResp.status, 200);
+    const explicitBody = (await explicitResp.json()) as { status: string; runState: { version: number } };
+    assert.equal(explicitBody.status, "suspended");
+
+    // Resolve the remaining decision
+    const finishResp = await multiHandler(
+      jsonRequest(`/prism/agents/multi-editable/runs/${multiStarted.runId}/resume`, {
+        expectedVersion: explicitBody.runState.version,
+        decision: "approve",
+        approvalId: p1,
+        modifiedArguments: { value: "b-edited" },
+      }),
+    );
+    assert.equal(finishResp.status, 200);
+    assert.equal(((await finishResp.json()) as { status: string }).status, "succeeded");
+    assert.equal(multiExecuted.length, 2);
+    assert.equal(multiExecuted[0], 'call-a:{"value":"explicit-edited"}');
+    assert.equal(multiExecuted[1], 'call-b:{"value":"b-edited"}');
+  });
+
   it("runs, loads, resumes, and cancels durable workflow checkpoints", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const workflow = defineWorkflow({

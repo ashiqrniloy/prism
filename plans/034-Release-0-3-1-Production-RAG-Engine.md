@@ -1,7 +1,7 @@
 # Release 0.3.1 — Production RAG Engine (hybrid retrieve, transactional store, traces)
 
-Source request: `prism-production-rag.md` (P1–P8, Synapta Plan 080) plus
-`prism-multi-scope-retrieve.md` (one embed / global RRF+rerank, Synapta Plan 082),
+Source request: `prism-production-rag.md` (P1–P8, requesting-host plan 080) plus
+`prism-multi-scope-retrieve.md` (one embed / global RRF+rerank, requesting-host plan 082),
 filed against `@arnilo/prism-rag@0.3.0` / `@arnilo/prism-memory@0.3.0`.
 
 ## Objectives
@@ -42,7 +42,7 @@ filed against `@arnilo/prism-rag@0.3.0` / `@arnilo/prism-memory@0.3.0`.
       - Rag-specific telemetry interface vs. reusing `PrismTracer` shape — chosen: minimal dependency-free `RagTelemetry` seam in `prism-rag` mirroring the `PrismTracer` subset, adapted by the otel package.
     - Chosen Approach:
       - Reuse: limits resolution, redaction pipeline, scope assertion, ingestion-status stores, DDL builder + identifier quoting, memory-store transaction semantics as the reference implementation.
-      - New generic primitives: `RagLexicalQuery` optional store method, `RagTelemetry` seam, record fields (`embedderId`, `contentHash`, `generation`) on `MemoryVectorRecord` — all generic and reusable beyond Synapta's use case.
+      - New generic primitives: `RagLexicalQuery` optional store method, `RagTelemetry` seam, record fields (`embedderId`, `contentHash`, `generation`) on `MemoryVectorRecord` — all generic and reusable beyond the requesting use case.
     - API Notes and Examples:
       ```ts
       // Existing primitive to reuse (packages/memory/src/vector-memory.ts:L145-L153):

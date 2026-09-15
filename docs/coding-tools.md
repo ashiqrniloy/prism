@@ -24,7 +24,7 @@ npm install @dietrichgebert/ponytail
 |---|---|---|
 | `@arnilo/prism-coding-tools/agent` | Core coding tools (read, write, edit, search, bash, git, diagnostics, check, ast-grep, lsp) | — |
 | `@arnilo/prism-coding-tools/security` | Sandbox execution adapters (Docker/OCI, native disposable sandbox, approval policies, egress proxy) | — |
-| `@arnilo/prism-coding-tools/document-reader` | Bounded PDF/DOCX literal-text extraction adapter with fail-closed loading | `pdf-parse`, `mammoth` |
+| `@arnilo/prism-coding-tools/document-reader` | Bounded PDF/DOCX literal-text extraction; optional host-selected Mistral OCR (native fetch, no SDK peer) | `pdf-parse`, `mammoth` |
 | `@arnilo/prism-coding-tools/openapi` | OpenAPI 3.x tool generator and executor with SSRF protection and parameter validation | — |
 | `@arnilo/prism-coding-tools/computer-use-linux` | Linux desktop observation and targeting tool bridge | — |
 | `@arnilo/prism-coding-tools/dev` | Loopback-only developer inspector, event timeline visualizer, and local replay server | — |

@@ -18,8 +18,10 @@ import type {
   ToolCallContent,
 } from "./contracts.js";
 import { AgentLoopStateError, AgentRunStateError } from "./contracts.js";
+import { parseAttentionStickyFrontier, type PersistedAttentionStickyFrontier } from "./attention-compiler.js";
 import type { SecretRedactor } from "./redaction.js";
 import { type LoadedSkillBodiesEntry, validateLoadedSkillBodies } from "./skill-load.js";
+import { HARD_RUN_TOOL_NAMES } from "./tools.js";
 
 export const AGENT_RUN_STATE_NAMESPACE = "prism.agent-run";
 export const AGENT_RUN_STATE_SCHEMA_VERSION = 1 as const;
@@ -63,7 +65,12 @@ export interface StoredAgentRunState extends AgentRunState {
     readonly loadedSkillBodies?: readonly LoadedSkillBodiesEntry[];
     /** Plan 041: tools activated via `search_tools` (names only; inert for absent tools on restore). */
     readonly activatedToolNames?: readonly string[];
+    /** Plan 074 P3: sticky attention mutations (thinking hashes + tool-call ids), so a durable
+     *  resume keeps its stubs instead of re-deciding on the first turn. Validated on load. */
+    readonly attentionSticky?: PersistedAttentionStickyFrontier;
   };
+  /** Per-run allow-list (Task 21). Absent = full registered set (legacy checkpoints). */
+  readonly toolNames?: readonly string[];
 }
 
 /** Session-state caps (plan 015 Task 4): bounded names charged against the run-state byte budget. */
@@ -211,6 +218,7 @@ export function publicState(state: StoredAgentRunState): AgentRunState {
     interruptBeforeTool: _interruptBeforeTool,
     counters: _counters,
     deadlineAt: _deadlineAt,
+    toolNames: _toolNames,
     ...publicValue
   } = state;
   return publicValue;
@@ -324,6 +332,16 @@ export function parseAgentRunState(value: unknown, version?: number): StoredAgen
   ) {
     throw new AgentRunStateError("Malformed agent run loop state");
   }
+  if (state.toolNames !== undefined) {
+    if (!Array.isArray(state.toolNames) || state.toolNames.length > HARD_RUN_TOOL_NAMES) {
+      throw new AgentRunStateError(`Run toolNames exceed ${HARD_RUN_TOOL_NAMES} entries`);
+    }
+    for (const name of state.toolNames) {
+      if (typeof name !== "string" || name.length === 0 || name.length > MAX_PERSISTED_SKILL_NAME_CHARS) {
+        throw new AgentRunStateError("Malformed agent run toolNames");
+      }
+    }
+  }
   // Load bounds against the hard cap, not the default: the configured maxStateBytes is a
   // save-side policy knob, while the load-side bound is only a DoS ceiling. States saved
   // with a raised maxStateBytes must remain resumable.
@@ -378,13 +396,21 @@ function validateSessionState(sessionState: StoredAgentRunState["sessionState"])
     }
   }
   const activated = sessionState.activatedToolNames;
-  if (activated === undefined) return;
-  if (!Array.isArray(activated) || activated.length > MAX_PERSISTED_ACTIVATED_TOOL_NAMES) {
-    throw new AgentRunStateError(`Activated-tool names exceed ${MAX_PERSISTED_ACTIVATED_TOOL_NAMES} entries`);
-  }
-  for (const name of activated) {
-    if (typeof name !== "string" || name.length > MAX_PERSISTED_SKILL_NAME_CHARS) {
-      throw new AgentRunStateError(`Activated-tool name exceeds ${MAX_PERSISTED_SKILL_NAME_CHARS} chars`);
+  if (activated !== undefined) {
+    if (!Array.isArray(activated) || activated.length > MAX_PERSISTED_ACTIVATED_TOOL_NAMES) {
+      throw new AgentRunStateError(`Activated-tool names exceed ${MAX_PERSISTED_ACTIVATED_TOOL_NAMES} entries`);
     }
+    for (const name of activated) {
+      if (typeof name !== "string" || name.length > MAX_PERSISTED_SKILL_NAME_CHARS) {
+        throw new AgentRunStateError(`Activated-tool name exceeds ${MAX_PERSISTED_SKILL_NAME_CHARS} chars`);
+      }
+    }
+  }
+  const attention = sessionState.attentionSticky;
+  if (attention === undefined) return;
+  // Both arrays are capped by the parser, and a malformed frontier is dropped rather than
+  // failing the resume: re-deciding a mutation is safe, refusing to resume is not.
+  if (parseAttentionStickyFrontier(attention) === undefined) {
+    throw new AgentRunStateError("Malformed agent run attention frontier");
   }
 }

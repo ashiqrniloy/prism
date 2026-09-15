@@ -150,14 +150,14 @@ Configuration can carry allow/deny names, but Prism does not define a policy cla
 
 ### Per-run tool scoping
 
-`session.run()` intentionally has no `RunOptions.tools` or `RunOptions.toolFilter`. Scope tools by building the active `ToolRegistry` for the agent/session, by resolving declarative `AgentDefinition.tools`, or by using `PermissionPolicy` / `ToolValidator` to fail closed at dispatch time. Skills do not grant tool access; `toolNames` only validates that host-active tools exist.
+There is still no `RunOptions.tools` or `RunOptions.toolFilter` — those would replace or mutate the registry. `RunOptions.toolNames` is an optional **allow-list of already-registered names**. Omitted → every registered tool (legacy). Empty → no tools this run. Unknown names fail closed. The run snapshots the matching `ToolDefinition`s once; provider schemas, `search_tools`, skill `toolNames` checks, and dispatch all use that snapshot. Resume stores the grant and intersects it with current authority — it cannot widen, even if the live registry grew. Middleware, skills, and nested calls cannot add names outside the grant. Skills do not grant tool access; skill `toolNames` only validates that host-active tools exist.
 
 ```ts
-const activeTools = createToolRegistry([searchTool]);
-const agent = createAgent({ model, provider, tools: activeTools, permission, validator });
+const agent = createAgent({ model, provider, tools: registry, permission, validator });
+await session.run(input, { toolNames: ["web_search"] });
 ```
 
-Need different tools for one request? Build a short-lived agent/session with a narrower registry, or block extra calls with `PermissionPolicy` / `RunOptions.validate`. No extra per-run tool API exists yet; add one only when host apps need it.
+Scope the active `ToolRegistry` (or declarative `AgentDefinition.tools`) at agent construction. `PermissionPolicy` / `RunOptions.validate` still fail closed at dispatch; `toolNames` only intersects that host-active set.
 
 ### Artifact-loop tools
 
@@ -274,7 +274,7 @@ Limits (mirroring the skill-disclosure DEFAULT/HARD cap pattern):
 
 - `search_tools({ query, k? })` returns inert `name: short description [matched: …]` lines — no schemas or tool bodies — and marks returned tools active for the session. Activation is names-only in run persistence (`sessionState.activatedToolNames`, capped at 128 names) and inert for tools absent from the current registry; a host can reset it with `session.clearActivatedTools()`.
 - Fail closed: any index or scoring error discloses the full input list — never zero tools, never wider than the input list. Exhausting the frozen 1024-tool index cap is surfaced the same way.
-- Disclosure never grants access: dispatch re-checks registry membership and allow/deny (`unknown_tool` / `tool_denied`) on every call regardless of what was described. Search results are intersected with the disclosed list structurally — searched tools are only ever selected from that list, never widened.
+- Disclosure never grants access: dispatch re-checks registry membership and allow/deny (`unknown_tool` / `tool_denied`) on every call regardless of what was described. Search results are intersected with the disclosed list structurally — searched tools are only ever selected from that list, never widened. When `RunOptions.toolNames` is set, the search index is built from that snapshot only.
 - Scoring is BM25-lite lexical (name tokens weigh ×3, IDF from the registry): bounded, dependency-free, deterministic tie-breaks. ponytail ceiling: embedder-backed scoring via `@arnilo/prism-memory/rag` if accuracy fixtures fall short.
 - Cross-link: skills apply the same discipline to prompt text — see [Context and skills](context-and-skills.md).
 
@@ -293,6 +293,7 @@ Limits (mirroring the skill-disclosure DEFAULT/HARD cap pattern):
 - [Middleware hooks](middleware-hooks.md): `tool_call` and `tool_result` middleware used during dispatch.
 - [Credentials and redaction](credentials-and-redaction.md): redaction helpers used for tool execution errors.
 - [Observational memory compaction package](compaction-observational-memory.md): optional exact-id recall tool factory.
+- [Memory fabric](memory-fabric.md): optional governed note tools (`memory.view`/`read`/`insert`/`recall`/`forget`) jailed to a host directory.
 - [Tool execution primitives](tool-execution-primitives.md): JSON Schema adapter, parallelism, MCP bridge, and execution-policy designs.
 - [MCP client bridge](mcp-tools.md): optional remote tool mapping plus separate bounded resource/prompt facades; non-tool MCP capabilities never bypass tool dispatch by masquerading as `ToolDefinition`.
 - [Recoverable tool effects](tool-effects.md): optional `tool.effect` + `effectStore` claim/CAS recovery around dispatch.

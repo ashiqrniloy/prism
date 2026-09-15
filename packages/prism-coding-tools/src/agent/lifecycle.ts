@@ -3,10 +3,10 @@
  *
  * Ships only event kinds with a consumer in 0.0.27 (ACP mapper and/or host
  * `CodingLifecycleEmitter` callback). Deferred kinds — check_started/finished,
- * task_created/completed, compaction_started/finished, subagent_started/stopped —
- * MUST NOT be added here until a consumer exists
- * (scripts/phase10-freeze-manifest.json lifecycle.deferredEvents).
+ * task_created/completed, compaction_started/finished — MUST NOT be added here
+ * until a consumer exists (scripts/phase10-freeze-manifest.json lifecycle.deferredEvents).
  */
+import type { AgentRunStatus } from "@arnilo/prism";
 import { validateCodingLimit } from "./limits.js";
 import type { CodingProcessEvent } from "./process/types.js";
 
@@ -56,6 +56,23 @@ export interface PlanRemovedEvent {
   readonly planPath: string;
 }
 
+/** Redacted supervisor milestone. Never includes child input, output, or path. */
+export interface SubagentStartedEvent {
+  readonly type: "subagent_started";
+  readonly childId: string;
+  readonly delegationId: string;
+  readonly depth: number;
+}
+
+/** Terminal redacted supervisor milestone. */
+export interface SubagentStoppedEvent {
+  readonly type: "subagent_stopped";
+  readonly childId: string;
+  readonly delegationId: string;
+  readonly depth: number;
+  readonly status: AgentRunStatus;
+}
+
 export type CodingLifecycleEvent =
   | CodingProcessEvent
   | FileChangedEvent
@@ -63,7 +80,9 @@ export type CodingLifecycleEvent =
   | PermissionDeniedEvent
   | ConfigurationChangedEvent
   | PlanChangedEvent
-  | PlanRemovedEvent;
+  | PlanRemovedEvent
+  | SubagentStartedEvent
+  | SubagentStoppedEvent;
 
 export const DEFAULT_LIFECYCLE_MAX_EVENT_BYTES = 16_384;
 export const HARD_LIFECYCLE_MAX_EVENT_BYTES = 65_536;
@@ -126,7 +145,7 @@ export function resolveCodingLifecycleLimits(limits?: CodingLifecycleLimits): Re
   };
 }
 
-/** Frozen shipped kinds: the six CodingProcessEvent kinds plus the four new kinds. */
+/** Frozen shipped kinds: the six CodingProcessEvent kinds plus supported coding lifecycle kinds. */
 const FROZEN_EVENT_TYPES = new Set<string>([
   "process_started",
   "process_exited",
@@ -140,6 +159,8 @@ const FROZEN_EVENT_TYPES = new Set<string>([
   "configuration_changed",
   "plan_changed",
   "plan_removed",
+  "subagent_started",
+  "subagent_stopped",
 ]);
 
 export interface CodingLifecycleEmitter {

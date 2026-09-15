@@ -79,11 +79,76 @@ export interface MemoryVectorHit extends MemoryVectorRecord {
   readonly recency?: number;
 }
 
+/** Host-verified principal for query-time document ACL. Not the metadata `filter`. */
+export interface RagAccessConstraint {
+  readonly principalId: string;
+  readonly tenantId: string;
+  readonly groupIds?: readonly string[];
+  /** When set, only grants at this version match; unresolved versions deny. */
+  readonly accessVersion?: number;
+}
+
+/** Replace-set of grants for one source. Empty principal+group lists revoke access. */
+export interface SourceAccessGrant {
+  readonly sourceId: string;
+  readonly principalIds?: readonly string[];
+  readonly groupIds?: readonly string[];
+  readonly accessVersion: number;
+}
+
+/** Why a semantic/observational record is excluded from injection. */
+export type MemoryInvalidationReason = "corrected" | "revoked" | "forgotten" | "legal_hold";
+
+/** Durable tombstone; bodies may already be gone. */
+export interface MemoryInvalidationRecord {
+  readonly id: string;
+  readonly reason: MemoryInvalidationReason;
+  readonly at: string;
+  readonly hold?: boolean;
+  readonly supersedesId?: string;
+}
+
+export interface MemoryInvalidationEvent {
+  readonly reason: MemoryInvalidationReason;
+  readonly ids: readonly string[];
+  readonly hold: boolean;
+}
+
+/** v1 lineage stamped at `metadata._lineage`. Missing → self-only (legacy). */
+export interface MemoryLineage {
+  readonly v: 1;
+  readonly sourceIds: readonly string[];
+  readonly reason?: string;
+}
+
+/** Parent→child share of specific source ids. Empty `sourceIds` revokes. */
+export interface MemoryShareGrant {
+  readonly tenantId: string;
+  readonly parentThreadId: string;
+  readonly childThreadId: string;
+  readonly sourceIds: readonly string[];
+  readonly expiresAt?: string;
+}
+
+export interface MemoryRecallExplanation {
+  readonly id: string;
+  readonly sourceIds: readonly string[];
+  readonly createdAt?: string;
+  readonly tenantId: string;
+  readonly resourceId: string;
+  readonly threadId: string;
+  readonly reason?: string;
+  readonly invalidated?: MemoryInvalidationRecord;
+}
+
 export interface VectorQuery extends MemoryScope {
   readonly embedding: readonly number[];
   readonly topK: number;
   readonly threadId: string;
   readonly signal?: AbortSignal;
+  readonly authorization?: RagAccessConstraint;
+  /** Additional allow-list (share grants). Empty → no hits. */
+  readonly ids?: readonly string[];
 }
 
 export interface VectorDeleteFilter extends MemoryScope {
@@ -114,6 +179,8 @@ export interface VectorLexicalQuery {
   readonly text: string;
   readonly topK: number;
   readonly signal?: AbortSignal;
+  readonly authorization?: RagAccessConstraint;
+  readonly ids?: readonly string[];
 }
 
 export type LexicalMode = "fts" | "bm25";
@@ -131,6 +198,35 @@ export interface VectorStore {
   /** Current generation for an exact scope; undefined = no generated records yet (or never swapped). */
   getCurrentGeneration?(scope: MemoryScope): Promise<bigint | number | undefined>;
   setCurrentGeneration?(scope: MemoryScope, generation: bigint | number): Promise<void>;
+  /** Declared when `query`/`lexicalQuery` apply `authorization` before ranking. Absent = ACL mode unsupported. */
+  readonly authorization?: "acl";
+  setSourceAccess?(
+    scope: Required<MemoryScope>,
+    grants: readonly SourceAccessGrant[],
+    options?: { readonly signal?: AbortSignal },
+  ): Promise<void>;
+  checkSourceAccess?(
+    scope: Required<MemoryScope>,
+    sourceId: string,
+    authorization: RagAccessConstraint,
+    options?: { readonly signal?: AbortSignal },
+  ): Promise<boolean>;
+  /** Declared when query/lexicalQuery exclude invalidated ids before ranking. */
+  readonly lineage?: "invalidation";
+  invalidate?(
+    scope: Required<MemoryScope>,
+    entries: readonly MemoryInvalidationRecord[],
+    options?: { readonly signal?: AbortSignal },
+  ): Promise<void>;
+  listInvalidated?(scope: Required<MemoryScope>, options?: { readonly signal?: AbortSignal }): Promise<readonly MemoryInvalidationRecord[]>;
+  /** Drops non-hold rows. Legal hold stays. */
+  clearInvalidation?(scope: Required<MemoryScope>, ids: readonly string[], options?: { readonly signal?: AbortSignal }): Promise<void>;
+  setShareGrant?(scope: Required<MemoryScope>, grant: MemoryShareGrant, options?: { readonly signal?: AbortSignal }): Promise<void>;
+  getShareGrant?(
+    scope: Required<MemoryScope>,
+    childThreadId: string,
+    options?: { readonly signal?: AbortSignal },
+  ): Promise<MemoryShareGrant | undefined>;
 }
 
 export interface WorkingMemoryKey extends MemoryScope {}
@@ -167,6 +263,11 @@ export interface MemoryEntryInput {
   readonly importance?: number;
   /** Redacted reflection record fed to `importanceFrom` (write time only; not persisted). */
   readonly reflection?: JsonObject;
+  /** Stamped onto `metadata._lineage`; missing → self-only at query time. */
+  readonly lineage?: {
+    readonly sourceIds: readonly string[];
+    readonly reason?: string;
+  };
 }
 
 export interface RememberInput {
@@ -203,11 +304,16 @@ export interface RecallOptions {
   /** Optional composite blend; absent = pure similarity scoring, ordering unchanged. */
   readonly scoring?: RecallScoringOptions;
   readonly signal?: AbortSignal;
+  /** When true, each hit gets source/time/scope/reason (no withheld bodies). */
+  readonly explain?: boolean;
+  /** Live parent-thread share; missing/expired/wrong-child grants fail closed. */
+  readonly shareFromParentThreadId?: string;
 }
 
 export interface RecallResult {
   readonly hits: readonly MemoryVectorHit[];
   readonly adjacent: readonly MemoryVectorRecord[];
+  readonly explanations?: readonly MemoryRecallExplanation[];
 }
 
 /** Exact host-verified owner required before semantic-memory export. */
@@ -254,6 +360,8 @@ export interface CreateMemoryOptions extends MemoryScope {
   readonly requireConsent?: boolean;
   /** Host-owned importance derivation from redacted reflection payloads; runs at write time only (see ImportanceFromReflection). */
   readonly importanceFrom?: import("./scoring.js").ImportanceFromReflection;
+  /** Fired after invalidation rows land, before body delete. */
+  readonly onInvalidate?: (event: MemoryInvalidationEvent) => void | Promise<void>;
 }
 
 export interface MemoryContextProviderOptions {
@@ -284,8 +392,17 @@ export interface Memory {
   setConsent(entryId: string, consent: MemoryConsentInput, options?: { readonly signal?: AbortSignal }): Promise<MemoryVectorRecord>;
   /** Correct an entry's text (re-embeds, preserves id/sequence/metadata/consent). */
   correct(entryId: string, text: string, options?: { readonly signal?: AbortSignal }): Promise<MemoryVectorRecord>;
-  /** Real delete of entries (all in thread when no ids given). Returns removed count. */
-  forget(filter?: { readonly ids?: readonly string[] }, options?: { readonly signal?: AbortSignal }): Promise<number>;
+  /** Real delete of entries (all in thread when no ids given). `hold: true` marks legal_hold and skips body delete. */
+  forget(
+    filter?: { readonly ids?: readonly string[]; readonly hold?: boolean },
+    options?: { readonly signal?: AbortSignal },
+  ): Promise<number>;
+  shareWith(
+    childThreadId: string,
+    sourceIds: readonly string[],
+    options?: { readonly expiresAt?: string; readonly signal?: AbortSignal },
+  ): Promise<void>;
+  revokeShare(childThreadId: string, options?: { readonly signal?: AbortSignal }): Promise<void>;
   /** Bounded retention sweep: real-deletes oldest entries past age/count caps. */
   applyRetention(policy: MemoryRetentionPolicy, options?: { readonly signal?: AbortSignal }): Promise<MemoryRetentionResult>;
   /** Returns one redacted, consented page after exact host identity binding. */

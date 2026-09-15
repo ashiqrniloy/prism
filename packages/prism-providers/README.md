@@ -16,7 +16,7 @@ The required `@arnilo/prism` peer is the only dependency. The `/ai-sdk` adapter 
 - [`@arnilo/prism-providers/alibaba`](https://www.npmjs.com/package/@arnilo/prism-providers) — Alibaba Cloud (Model Studio / DashScope, incl. Coding Plan) provider
 - [`@arnilo/prism-providers/anthropic`](https://www.npmjs.com/package/@arnilo/prism-providers) — Anthropic Messages provider
 - [`@arnilo/prism-providers/azure`](https://www.npmjs.com/package/@arnilo/prism-providers) — Azure OpenAI provider (host Entra token or resource key)
-- [`@arnilo/prism-providers/bedrock`](https://www.npmjs.com/package/@arnilo/prism-providers) — AWS Bedrock provider (SigV4, host IAM/IRSA)
+- [`@arnilo/prism-providers/bedrock`](https://www.npmjs.com/package/@arnilo/prism-providers) — AWS Bedrock provider (SigV4, host IAM/IRSA) with OpenAI-compatible and native Converse/ConverseStream routes
 - [`@arnilo/prism-providers/clinepass`](https://www.npmjs.com/package/@arnilo/prism-providers) — ClinePass OpenAI-compatible gateway
 - [`@arnilo/prism-providers/deepseek`](https://www.npmjs.com/package/@arnilo/prism-providers) — DeepSeek Chat Completions provider
 - [`@arnilo/prism-providers/google`](https://www.npmjs.com/package/@arnilo/prism-providers) — Google Gemini generateContent provider

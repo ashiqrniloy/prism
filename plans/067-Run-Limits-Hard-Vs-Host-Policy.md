@@ -1,6 +1,6 @@
 # 067 — Run Limits: HARD (process safety) vs host policy
 
-Request: `prism-run-limits-hard-vs-host-policy.md` (Clay / `@arnilo/prism` 0.5.3).
+Request: `prism-run-limits-hard-vs-host-policy.md` (host report / `@arnilo/prism` 0.5.3).
 Target: **0.5.4** lockstep-compatible core change (no new package).
 Baseline: `src/run-limits.ts`, `src/contracts-core/run-limits.ts`, `docs/runs-and-usage.md`.
 
@@ -393,6 +393,6 @@ Chosen alternatives where the request is wrong or underspecified:
 ## Further Actions
 
 - Optional repeated-tool fingerprint (request D): host-set N consecutive identical `(toolName, canonicalArgs)` tuples. Priority: later, demand-gated.
-- Opt-in fail-closed on missing usage when the host **explicitly** set a token cap (not DEFAULT-filled). Priority: later if Clay hits silent vendors.
-- JSON-RPC/CLI: accept `limits: { maxTurns: null }` (today RPC only forwards numeric `maxToolRounds`). Priority: if Clay drives runs over RPC.
+- Opt-in fail-closed on missing usage when the host **explicitly** set a token cap (not DEFAULT-filled). Priority: later if a host hits silent vendors.
+- JSON-RPC/CLI: accept `limits: { maxTurns: null }` (today RPC only forwards numeric `maxToolRounds`). Priority: if a host drives runs over RPC.
 - Supervisor `timeoutMs` / `maxTokens` product HARD: separate request if coding delegation hits it.

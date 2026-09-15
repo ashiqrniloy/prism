@@ -94,7 +94,13 @@ export interface AgUiInterruptOptions<Authorization> {
 
 /** Legacy binary resolution or a batch of shared run decisions with parity to core. */
 export type AgUiInterruptResolution =
-  | { readonly decision: "approve" | "deny"; readonly expectedVersion?: number }
+  | {
+      readonly decision: "approve" | "deny";
+      readonly modifiedArguments?: import("@arnilo/prism").JsonObject;
+      readonly approvalId?: string;
+      readonly reason?: string;
+      readonly expectedVersion?: number;
+    }
   | { readonly decisions: readonly RunDecision[]; readonly expectedVersion?: number };
 
 export interface AgUiHandler {
@@ -179,7 +185,7 @@ export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUi
       if (input.resume.length > 0) {
         return sse(
           withCoWork(
-            await resumeSource(input, authorization, options, limits, owned.signal),
+            await resumeSource(input, authorization, options, limits, capabilities, owned.signal),
             input,
             authorization,
             options,
@@ -195,7 +201,7 @@ export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUi
         if (!options.replay) throw new AgUiError("ERR_PRISM_AG_UI_REPLAY", "Replay is not configured");
         return sse(
           withCoWork(
-            replaySource(input, cursor, authorization, options, limits, owned.signal),
+            replaySource(input, cursor, authorization, options, limits, capabilities, owned.signal),
             input,
             authorization,
             options,
@@ -209,7 +215,7 @@ export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUi
       const prepared = await prepareInput(input, authorization, options, limits, owned.signal);
       return sse(
         withCoWork(
-          startSource(input, prepared, authorization, options, limits, owned.signal),
+          startSource(input, prepared, authorization, options, limits, capabilities, owned.signal),
           input,
           authorization,
           options,
@@ -259,9 +265,6 @@ export function resolveAgUiCapabilities<Authorization extends AgUiAuthorization 
   if (hasMultimodalInput(requested.multimodal) && !options.input?.project) {
     throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "multimodal input requires input.project");
   }
-  if (requested.humanInTheLoop?.approveWithEdits) {
-    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "approveWithEdits is unsupported");
-  }
   if (hasHitl(requested.humanInTheLoop) && (!options.lifecycle || !options.resolveRun)) {
     throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "human-in-the-loop capability requires lifecycle and resolveRun");
   }
@@ -295,7 +298,7 @@ export function resolveAgUiCapabilities<Authorization extends AgUiAuthorization 
             supported: requested.humanInTheLoop?.supported ?? Boolean(options.lifecycle && options.resolveRun),
             approvals: requested.humanInTheLoop?.approvals ?? Boolean(options.lifecycle && options.resolveRun),
             interrupts: requested.humanInTheLoop?.interrupts ?? Boolean(options.lifecycle && options.resolveRun),
-            approveWithEdits: false,
+            approveWithEdits: requested.humanInTheLoop?.approveWithEdits ?? false,
           }
         : undefined,
   });
@@ -375,6 +378,7 @@ async function* startSource<Authorization extends AgUiAuthorization>(
   authorization: Authorization,
   options: CreateAgUiHandlerOptions<Authorization>,
   limits: ResolvedAgUiLimits,
+  capabilities: AgentCapabilities,
   signal: AbortSignal,
 ): AsyncGenerator<AGUIEvent> {
   if (options.a2a) {
@@ -394,6 +398,7 @@ async function* startSource<Authorization extends AgUiAuthorization>(
     authorization,
     options,
     limits,
+    capabilities,
     signal,
   );
 }
@@ -403,6 +408,7 @@ async function resumeSource<Authorization extends AgUiAuthorization>(
   authorization: Authorization,
   options: CreateAgUiHandlerOptions<Authorization>,
   limits: ResolvedAgUiLimits,
+  capabilities: AgentCapabilities,
   signal: AbortSignal,
 ): Promise<AsyncIterable<AGUIEvent>> {
   if (!options.lifecycle || !options.resolveRun) throw new AgUiError("ERR_PRISM_AG_UI_REPLAY", "Durable resume is not configured");
@@ -410,7 +416,7 @@ async function resumeSource<Authorization extends AgUiAuthorization>(
   const run = await resolveRun(options.resolveRun, { threadId: input.threadId, runId: protocolRunId, authorization, signal });
   const status = await options.lifecycle.status(run.ref, { ownership: authorization.ownership, agentId: run.agentId, signal });
   if (status.state.status !== "suspended") throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume does not match the pending interrupt");
-  const decision = await resumeDecision(input, authorization, run, status, protocolRunId, options, signal);
+  const decision = await resumeDecision(input, authorization, run, status, protocolRunId, options, capabilities, signal);
   return mapped(
     options.lifecycle.resumeStream(
       run.ref,
@@ -427,6 +433,7 @@ async function resumeSource<Authorization extends AgUiAuthorization>(
     authorization,
     options,
     limits,
+    capabilities,
     signal,
   );
 }
@@ -438,15 +445,16 @@ async function resumeDecision<Authorization extends AgUiAuthorization>(
   status: AgentRunStatusResult,
   protocolRunId: string,
   options: CreateAgUiHandlerOptions<Authorization>,
+  capabilities: AgentCapabilities,
   signal: AbortSignal,
 ): Promise<{ readonly decision: "approve" | "deny" } | { readonly decisions: readonly RunDecision[] }> {
   const expectedInterruptId = interruptId(protocolRunId, status.version);
-  if (hasEditedArgs(input.resume)) return { decision: "deny" };
+  if (!capabilities.humanInTheLoop?.approveWithEdits && hasEditedArgs(input.resume)) return { decision: "deny" };
   if (!options.interrupts?.resume) {
     const entry = input.resume.length === 1 ? input.resume[0] : undefined;
     if (!entry || entry.interruptId !== expectedInterruptId)
       throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume does not match the pending interrupt");
-    return simpleResumeDecision(entry);
+    return simpleResumeDecision(entry, status, capabilities);
   }
   const resolved = await options.interrupts.resume({ request: input, authorization, run, status, expectedInterruptId, signal });
   if (!resolved || (resolved.expectedVersion !== undefined && resolved.expectedVersion !== status.version)) {
@@ -455,6 +463,28 @@ async function resumeDecision<Authorization extends AgUiAuthorization>(
   if ("decisions" in resolved) return { decisions: readRunDecisions(resolved.decisions) };
   if (resolved.decision !== "approve" && resolved.decision !== "deny") {
     throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Interrupt resolution is invalid");
+  }
+  if (resolved.decision === "approve" && "modifiedArguments" in resolved && resolved.modifiedArguments !== undefined) {
+    if (!capabilities.humanInTheLoop?.approveWithEdits) {
+      return { decision: "deny" };
+    }
+    const pending =
+      status.state.interruption?.pendingDecisions ??
+      (status.state.interruption?.toolCallId ? [{ approvalId: status.state.interruption.toolCallId }] : []);
+    const approvalId = resolved.approvalId ?? (pending.length === 1 ? pending[0].approvalId : undefined);
+    if (!approvalId) {
+      throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Interrupt resolution with modifiedArguments requires approvalId");
+    }
+    return {
+      decisions: readRunDecisions([
+        {
+          approvalId,
+          outcome: "allow_once",
+          modifiedArguments: resolved.modifiedArguments,
+          ...(resolved.reason ? { reason: resolved.reason } : {}),
+        },
+      ]),
+    };
   }
   return { decision: resolved.decision };
 }
@@ -511,6 +541,7 @@ async function* replaySource<Authorization extends AgUiAuthorization>(
   authorization: Authorization,
   options: CreateAgUiHandlerOptions<Authorization>,
   limits: ResolvedAgUiLimits,
+  capabilities: AgentCapabilities,
   signal: AbortSignal,
 ): AsyncGenerator<AGUIEvent> {
   const request = { threadId: input.threadId, runId: input.runId, cursor, authorization, signal };
@@ -528,7 +559,7 @@ async function* replaySource<Authorization extends AgUiAuthorization>(
         for (const mappedEvent of mappedEvents) yield tagged(mappedEvent, item.record.id, item.cursor);
       }
       if (item.record.event.type === "agent_suspended") {
-        yield tagged(await interruptEvent(input, item.record.event, options, limits), item.record.id, item.cursor);
+        yield tagged(await interruptEvent(input, item.record.event, options, limits, capabilities), item.record.id, item.cursor);
         return;
       }
     }
@@ -539,7 +570,7 @@ async function* replaySource<Authorization extends AgUiAuthorization>(
   for (const record of page.records) {
     for (const mappedEvent of await mapper.map(record.event)) yield tagged(mappedEvent, record.id);
     if (record.event.type === "agent_suspended") {
-      yield await interruptEvent(input, record.event, options, limits);
+      yield await interruptEvent(input, record.event, options, limits, capabilities);
       return;
     }
   }
@@ -561,6 +592,7 @@ async function* replaySource<Authorization extends AgUiAuthorization>(
     authorization,
     options,
     limits,
+    capabilities,
     signal,
   );
 }
@@ -571,6 +603,7 @@ async function* mapped<Authorization extends AgUiAuthorization>(
   authorization: Authorization,
   options: CreateAgUiHandlerOptions<Authorization>,
   limits: ResolvedAgUiLimits,
+  capabilities: AgentCapabilities,
   signal: AbortSignal,
 ): AsyncGenerator<AGUIEvent> {
   const mapper = mapperFor(input, options, limits);
@@ -586,7 +619,7 @@ async function* mapped<Authorization extends AgUiAuthorization>(
         authorization,
         signal,
       });
-      yield await interruptEvent(input, prismEvent, options, limits);
+      yield await interruptEvent(input, prismEvent, options, limits, capabilities);
       return;
     }
   }
@@ -643,19 +676,104 @@ async function resolveRun<Authorization extends AgUiAuthorization>(
   return run;
 }
 
-function simpleResumeDecision(entry: {
-  readonly status: string;
-  readonly payload?: unknown;
-}): { readonly decision: "approve" | "deny" } | { readonly decisions: readonly RunDecision[] } {
+function simpleResumeDecision(
+  entry: {
+    readonly status: string;
+    readonly payload?: unknown;
+  },
+  status: AgentRunStatusResult,
+  capabilities: AgentCapabilities,
+): { readonly decision: "approve" | "deny" } | { readonly decisions: readonly RunDecision[] } {
   if (entry.status === "cancelled") return { decision: "deny" };
   const payload = entry.payload;
-  if (!payload || typeof payload !== "object" || Array.isArray(payload) || Object.keys(payload).length !== 1) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume payload is invalid");
   }
   if (Object.hasOwn(payload, "decisions")) {
+    if (Object.keys(payload).length !== 1) {
+      throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume payload is invalid");
+    }
     return { decisions: readRunDecisions((payload as { decisions: unknown }).decisions) };
   }
   const decision = (payload as { decision?: unknown }).decision;
+  const hasEdits = Object.hasOwn(payload, "editedArgs") || Object.hasOwn(payload, "args") || Object.hasOwn(payload, "modifiedArguments");
+
+  if (hasEdits) {
+    if (!capabilities.humanInTheLoop?.approveWithEdits) {
+      return { decision: "deny" };
+    }
+    if (decision !== undefined && decision !== "approve") {
+      throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume payload is invalid");
+    }
+    const row = payload as Record<string, unknown>;
+    const allowedKeys = new Set(["decision", "editedArgs", "args", "modifiedArguments", "approvalId", "reason", "expectedVersion"]);
+    if (Object.keys(row).some((key) => !allowedKeys.has(key))) {
+      throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume payload is invalid");
+    }
+    if (row.expectedVersion !== undefined && Number(row.expectedVersion) !== status.version) {
+      throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume expectedVersion mismatch");
+    }
+    const rawEdited = row.editedArgs ?? row.args ?? row.modifiedArguments;
+    if (!rawEdited || typeof rawEdited !== "object" || Array.isArray(rawEdited)) {
+      throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume edited arguments must be an object");
+    }
+    const text = JSON.stringify(rawEdited);
+    if (text === undefined || Buffer.byteLength(text, "utf8") > HARD_MAX_ELICITATION_BYTES) {
+      throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume edited arguments exceed limits");
+    }
+    let approvalId: string | undefined;
+    if (row.approvalId !== undefined) {
+      if (typeof row.approvalId !== "string" || row.approvalId.length === 0 || row.approvalId.length > 128) {
+        throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume decision approvalId is invalid");
+      }
+      approvalId = row.approvalId;
+    }
+    if (
+      row.reason !== undefined &&
+      (typeof row.reason !== "string" || Buffer.byteLength(row.reason, "utf8") > HARD_MAX_DECISION_REASON_BYTES)
+    ) {
+      throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume decision reason exceeds limits");
+    }
+
+    const pending =
+      status.state.interruption?.pendingDecisions ??
+      (status.state.interruption?.toolCallId ? [{ approvalId: status.state.interruption.toolCallId }] : []);
+    if (approvalId) {
+      if (pending.length > 0 && !pending.some((p) => p.approvalId === approvalId)) {
+        throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume decision approvalId does not match pending decision");
+      }
+    } else {
+      if (pending.length === 1) {
+        approvalId = pending[0].approvalId;
+      } else if (pending.length === 0) {
+        throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "No pending approval for edited resume");
+      } else {
+        throw new AgUiError(
+          "ERR_PRISM_AG_UI_INPUT",
+          "Resume with edited arguments requires approvalId when multiple decisions are pending",
+        );
+      }
+    }
+    return {
+      decisions: [
+        {
+          approvalId,
+          outcome: "allow_once",
+          modifiedArguments: rawEdited as import("@arnilo/prism").JsonObject,
+          ...(row.reason ? { reason: row.reason as string } : {}),
+        },
+      ],
+    };
+  }
+
+  const row = payload as Record<string, unknown>;
+  if (row.expectedVersion !== undefined && Number(row.expectedVersion) !== status.version) {
+    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume expectedVersion mismatch");
+  }
+  const nonVersionKeys = Object.keys(row).filter((key) => key !== "expectedVersion");
+  if (nonVersionKeys.length !== 1) {
+    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume payload is invalid");
+  }
   if (decision !== "approve" && decision !== "deny") {
     throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume payload is invalid");
   }
@@ -668,7 +786,9 @@ function hasEditedArgs(entries: readonly { readonly payload?: unknown }[]): bool
       entry.payload &&
       typeof entry.payload === "object" &&
       !Array.isArray(entry.payload) &&
-      (Object.hasOwn(entry.payload, "editedArgs") || Object.hasOwn(entry.payload, "args")),
+      (Object.hasOwn(entry.payload, "editedArgs") ||
+        Object.hasOwn(entry.payload, "args") ||
+        Object.hasOwn(entry.payload, "modifiedArguments")),
   );
 }
 
@@ -677,6 +797,7 @@ async function interruptEvent<Authorization extends AgUiAuthorization>(
   eventValue: Extract<AgentEvent, { readonly type: "agent_suspended" }>,
   options: CreateAgUiHandlerOptions<Authorization>,
   limits: ResolvedAgUiLimits,
+  capabilities: AgentCapabilities,
 ): Promise<AGUIEvent> {
   const interruption = options.redactor?.redact(eventValue.interruption) ?? eventValue.interruption;
   const requiredId = interruptId(input.parentRunId ?? input.runId, eventValue.version);
@@ -698,6 +819,15 @@ async function interruptEvent<Authorization extends AgUiAuthorization>(
         additionalProperties: false,
         properties: {
           decision: { enum: ["approve", "deny"] },
+          ...(capabilities.humanInTheLoop?.approveWithEdits
+            ? {
+                editedArgs: { type: "object" },
+                args: { type: "object" },
+                modifiedArguments: { type: "object" },
+                approvalId: { type: "string" },
+                reason: { type: "string" },
+              }
+            : {}),
           decisions: {
             type: "array",
             minItems: 1,
@@ -883,5 +1013,5 @@ function hasMultimodalInput(value: AgentCapabilities["multimodal"] | undefined):
 }
 
 function hasHitl(value: AgentCapabilities["humanInTheLoop"] | undefined): boolean {
-  return Boolean(value && Object.entries(value).some(([key, enabled]) => key !== "approveWithEdits" && enabled));
+  return Boolean(value && Object.values(value).some(Boolean));
 }

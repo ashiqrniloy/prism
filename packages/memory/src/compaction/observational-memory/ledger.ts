@@ -65,3 +65,19 @@ export function activeObservations(ledger: ObservationalMemoryLedger): readonly 
   const dropped = new Set(ledger.droppedObservationIds);
   return ledger.observations.filter((observation) => !dropped.has(observation.id));
 }
+
+export function observationBlockedByInvalidation(
+  observation: Pick<MemoryObservation, "id" | "sourceEntryIds">,
+  invalidated: ReadonlySet<string>,
+): boolean {
+  if (invalidated.has(observation.id)) return true;
+  return observation.sourceEntryIds.some((id) => invalidated.has(id));
+}
+
+export function reflectionBlockedByInvalidation(
+  reflection: Pick<MemoryReflection, "id" | "supportingObservationIds">,
+  droppedOrInvalidated: ReadonlySet<string>,
+): boolean {
+  if (droppedOrInvalidated.has(reflection.id)) return true;
+  return reflection.supportingObservationIds.some((id) => droppedOrInvalidated.has(id));
+}

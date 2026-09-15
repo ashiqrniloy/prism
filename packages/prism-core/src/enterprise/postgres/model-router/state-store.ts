@@ -4,7 +4,7 @@ import { qualifyTable } from "../identifiers.js";
 import { addUsage, consumeRate, readBudget } from "./capacity.js";
 import { claimCircuitProbe, recordCircuitOutcome } from "./circuit.js";
 import { cleanup } from "./expiry.js";
-import { commitBudget, releaseBudget, reserveBudget } from "./reservations.js";
+import { commitBudget, releaseBudget, renewBudget, reserveBudget } from "./reservations.js";
 import type { RouterTables } from "./util.js";
 
 /** Durable PostgreSQL implementation of the model-router atomic state contract. */
@@ -22,6 +22,7 @@ export function createPostgresModelRouterStateStore(pool: Pool, schema: string):
     reserveBudget: (input) => reserveBudget(pool, tables.budgets, input),
     commitBudget: (input) => commitBudget(pool, tables.budgets, input),
     releaseBudget: (input) => releaseBudget(pool, tables.budgets, input),
+    renewBudget: (input) => renewBudget(pool, tables.budgets, input),
     claimCircuitProbe: (input) => claimCircuitProbe(pool, tables.circuits, input),
     recordCircuitOutcome: (input) => recordCircuitOutcome(pool, tables.circuits, input),
     cleanup: (input) => cleanup(pool, tables, input),

@@ -11,6 +11,10 @@ import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-tools/agent";
  * keeps its own session state and policy — the agent is a thin protocol
  * adapter, never a second policy engine.
  *
+ * For a standalone spawnable binary driven by config files with lazy real-provider
+ * activation (OpenAI, Anthropic, etc.) or explicit mock mode, see `@arnilo/prism-acp-agent`
+ * and `docs/acp-agent.md`.
+ *
  * Run: node --input-type=module -e "$(cat examples/acp-coding-host.ts | sed 's/^import.*$//')"
  * (Typechecked by `npm run typecheck`; the in-process client round trip below
  * also runs standalone.)

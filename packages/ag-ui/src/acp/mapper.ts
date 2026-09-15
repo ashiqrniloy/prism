@@ -100,6 +100,17 @@ export function createAcpLifecycleMapper(options: AcpEventMapperOptions = {}): A
         }
         case "plan_removed":
           return [{ sessionUpdate: "plan_removed", planId: text(event.planPath) }];
+        case "subagent_started":
+        case "subagent_stopped": {
+          const status = event.type === "subagent_started" ? "started" : event.status;
+          return [
+            {
+              sessionUpdate: "agent_message_chunk",
+              messageId: text(`prism:subagent:${event.delegationId}`),
+              content: { type: "text", text: text(`Subagent ${event.childId} ${status}`) },
+            },
+          ];
+        }
         default:
           // process_released/expired/unknown are not shipped lifecycle mappings (freeze deferred).
           return [];

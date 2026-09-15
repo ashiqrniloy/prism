@@ -1,0 +1,11 @@
+{
+  "name": "personal-assistant",
+  "description": "Personal workstation assistant: local single-user agent with file tools, credential references, and loopback dev inspection",
+  "version": "0.1.0",
+  "tags": ["personal", "workstation", "assistant", "local", "secure"],
+  "packages": [
+    "@arnilo/prism",
+    "@arnilo/prism-core",
+    "@arnilo/prism-providers"
+  ]
+}

@@ -203,7 +203,7 @@ describe("resolveAgentDefinition", () => {
     assert.throws(() => resolveAgentDefinition(def, {}), /has no model/);
   });
 
-  // FEATURE-1 (Clay integration findings, plan 050 Task 4): a definition
+  // FEATURE-1 (integration findings, plan 050 Task 4): a definition
   // without a model resolves from context.overrides.model (host-injected
   // selection) instead of throwing. Explicit def.model keeps driving registry
   // resolution; overrides may still replace model post-resolution like any

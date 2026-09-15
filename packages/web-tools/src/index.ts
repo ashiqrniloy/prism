@@ -2,7 +2,7 @@ export { createBraveSearch } from "./brave.js";
 export { createExaSearch } from "./exa.js";
 export { createFirecrawlExtractor, createFirecrawlFetch } from "./firecrawl.js";
 export { DEFAULT_WEB_LIMITS, HARD_WEB_LIMITS, resolveWebLimits } from "./limits.js";
-export { canonicalUrl, citation } from "./normalize.js";
+export { canonicalUrl, citation, snapshotWebEvidence } from "./normalize.js";
 export { createWebTools } from "./tools.js";
 export { WebToolError } from "./transport.js";
 export type {

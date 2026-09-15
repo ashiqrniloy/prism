@@ -1,9 +1,30 @@
 import { validateRunStateOptions } from "./agent-run-state.js";
 import { createAgent } from "./agents.js";
 import type { Agent, AgentConfig, Guardrails, SecureAgentOptions } from "./contracts.js";
+import {
+  assertHostCompositionReadiness,
+  HostCompositionError,
+  type HostCompositionGovernance,
+  type HostCompositionOptions,
+  type HostCompositionProfile,
+  type HostCompositionReport,
+  type HostCompositionToolReport,
+  inspectHostComposition,
+} from "./host-composition.js";
 import { assertIdentityActive, assertIdentityMatchesOwnership } from "./identity.js";
 import { resolveRunLimits } from "./run-limits.js";
 import { createToolParameterValidator, createToolRegistry } from "./tools.js";
+
+export {
+  assertHostCompositionReadiness,
+  HostCompositionError,
+  type HostCompositionGovernance,
+  type HostCompositionOptions,
+  type HostCompositionProfile,
+  type HostCompositionReport,
+  type HostCompositionToolReport,
+  inspectHostComposition,
+};
 
 /** Build an opt-in agent whose security-critical defaults cannot be replaced per run. */
 export function createSecureAgent(options: SecureAgentOptions): Agent {
@@ -27,6 +48,9 @@ export function createSecureAgent(options: SecureAgentOptions): Agent {
   if (options.identity) {
     assertIdentityActive(options.identity);
     assertIdentityMatchesOwnership(options.identity, options.ownership);
+  }
+  if (options.composition) {
+    assertHostCompositionReadiness({ ...options.composition, agent: options });
   }
   const runState = Object.freeze({ ...options.runState, definitionRevision: options.definitionRevision, interruptBeforeTool: true });
   validateRunStateOptions(runState);
@@ -66,6 +90,7 @@ function withoutSecureFields(
     guardrails: _guardrails,
     definitionRevision: _revision,
     runState: _runState,
+    composition: _composition,
     ...config
   } = options;
   return config;

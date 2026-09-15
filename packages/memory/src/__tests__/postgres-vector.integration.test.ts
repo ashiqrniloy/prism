@@ -10,6 +10,7 @@ import {
   createPostgresVectorStore,
   MemoryValidationError,
   type MemoryVectorRecord,
+  queryPostgres,
   validateIdentifier,
 } from "../index.js";
 
@@ -71,6 +72,13 @@ describe("postgres vector ddl and identifiers", () => {
     assert.match(all, /ADD COLUMN IF NOT EXISTS generation INTEGER/);
     assert.match(all, /ADD COLUMN IF NOT EXISTS importance REAL/);
     assert.match(all, /CREATE TABLE IF NOT EXISTS "s1"\."t1_rag_scope_generations"/);
+    assert.match(core, /CREATE TABLE IF NOT EXISTS "s1"\."t1_rag_source_acl"/);
+    assert.match(core, /t1_rag_source_acl_principal_idx/);
+    assert.match(core, /CREATE TABLE IF NOT EXISTS "s1"\."t1_invalidation"/);
+    assert.match(core, /t1_invalidation_reason_idx/);
+    assert.match(core, /CREATE TABLE IF NOT EXISTS "s1"\."t1_share_grant"/);
+    assert.match(all, /t1_lineage_source_idx/);
+    assert.match(all, /metadata -> '_lineage' -> 'sourceIds'/);
     assert.match(core, /CREATE TABLE IF NOT EXISTS "s1"\."t1"/);
   });
 });
@@ -409,6 +417,79 @@ describeIntegration("createPostgresVectorStore integration", () => {
         blended.hits.map((hit) => hit.id),
         ["fresh", "stale"],
       ); // same flip as the in-memory adapter
+    } finally {
+      await store.close();
+      await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+    }
+  });
+
+  it("applies source ACL in both query legs, denies by default, and keeps allowed hits inside topK", async () => {
+    const created = await createStore(2);
+    if (!created) return;
+    const { store, schema, pool } = created;
+    const scope = { tenantId: "t1", resourceId: "r1", threadId: "th1" };
+    const alice = { principalId: "alice", tenantId: "t1" };
+    try {
+      assert.equal(store.authorization, "acl");
+      const rag = (sourceId: string, citationId: string) => ({
+        _rag: { sourceId, citationId, chunkIndex: 0, start: 0, end: 4 },
+      });
+      await store.upsert([
+        ...Array.from({ length: 8 }, (_, index) =>
+          baseRecord({
+            id: `secret#${String(index + 1).padStart(4, "0")}`,
+            embedding: [1, 0],
+            sequence: index,
+            text: "secret merger approval policy",
+            metadata: rag("secret", `secret#${String(index + 1).padStart(4, "0")}`),
+          }),
+        ),
+        baseRecord({
+          id: "public#0001",
+          embedding: [0.2, 0.98],
+          sequence: 99,
+          text: "public approval policy handbook",
+          metadata: rag("public", "public#0001"),
+        }),
+      ]);
+      const open = await store.query({ ...scope, embedding: [1, 0], topK: 5 });
+      assert.equal(open.length, 5);
+      assert.ok(open.every((hit) => hit.id.startsWith("secret#")));
+      await store.setSourceAccess!(scope, [{ sourceId: "public", principalIds: ["alice"], accessVersion: 1 }]);
+      const vector = await store.query({ ...scope, embedding: [1, 0], topK: 5, authorization: alice });
+      assert.deepEqual(
+        vector.map((hit) => hit.id),
+        ["public#0001"],
+      );
+      if (store.lexicalModes?.includes("fts") === true) {
+        const lexical = await store.lexicalQuery!({
+          ...scope,
+          text: "approval policy",
+          topK: 5,
+          authorization: alice,
+        });
+        assert.deepEqual(
+          lexical.map((hit) => hit.id),
+          ["public#0001"],
+        );
+      }
+      assert.equal(await store.checkSourceAccess!(scope, "secret", alice), false);
+      await store.setSourceAccess!(scope, [{ sourceId: "public", principalIds: [], accessVersion: 2 }]);
+      assert.equal((await store.query({ ...scope, embedding: [1, 0], topK: 5, authorization: alice })).length, 0);
+      const plan = await queryPostgres(
+        pool,
+        `EXPLAIN SELECT id FROM "${schema}".semantic_memory t
+         WHERE t.tenant_id = $1 AND t.resource_id = $2 AND t.thread_id = $3
+           AND EXISTS (
+             SELECT 1 FROM "${schema}".semantic_memory_rag_source_acl a
+             WHERE a.tenant_id = t.tenant_id AND a.resource_id = t.resource_id AND a.thread_id = t.thread_id
+               AND a.source_id = t.metadata->'_rag'->>'sourceId' AND a.principal_id = $4
+           )
+         ORDER BY t.embedding <=> $5::vector ASC LIMIT 5`,
+        ["t1", "r1", "th1", "alice", "[1,0]"],
+      );
+      const text = plan.rows.map((row: { "QUERY PLAN": string }) => row["QUERY PLAN"]).join("\n");
+      assert.match(text, /semantic_memory_rag_source_acl/);
     } finally {
       await store.close();
       await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);

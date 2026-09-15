@@ -504,6 +504,32 @@
       "cost": "Local containers, no API spend."
     },
     {
+      "id": "coding-tools/e2b-sandbox-live",
+      "package": "@arnilo/prism-coding-tools",
+      "status": "active",
+      "source": "packages/prism-coding-tools/src/security/__tests__/e2b-sandbox-live.test.ts",
+      "command": "node --test dist/security/__tests__/e2b-sandbox-live.test.js",
+      "cwd": "packages/prism-coding-tools",
+      "requires": [
+        "PRISM_TEST_E2B_API_KEY"
+      ],
+      "scope": "E2B API key; least privilege: one throwaway sandbox, no production templates.",
+      "cost": "1 create + 2 exec + filesystem-only pause + connect/resume + kill."
+    },
+    {
+      "id": "coding-tools/mistral-ocr-live",
+      "package": "@arnilo/prism-coding-tools",
+      "status": "active",
+      "source": "packages/prism-coding-tools/src/document-reader/__tests__/mistral-ocr-live.test.ts",
+      "command": "node --test dist/document-reader/__tests__/mistral-ocr-live.test.js",
+      "cwd": "packages/prism-coding-tools",
+      "requires": [
+        "PRISM_TEST_MISTRAL_API_KEY"
+      ],
+      "scope": "Mistral OCR API key; least privilege: one throwaway 2-page sample PDF, no Files API upload.",
+      "cost": "1 OCR request against mistral-ocr-latest."
+    },
+    {
       "id": "core/keychain",
       "package": "@arnilo/prism-core",
       "status": "active",
@@ -583,7 +609,7 @@
       ],
       "scope": "AWS access key + secret (SigV4).",
       "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
-      "notes": "Static keys or AWS_SESSION_TOKEN; IAM-role hosts can harden later.",
+      "notes": "Static keys or AWS_SESSION_TOKEN; IAM-role hosts can harden later. Runs the OpenAI-compatible SSE smoke plus the native Converse/ConverseStream legs (plan 073 Task 22).",
       "model": [
         {
           "env": "PRISM_LIVE_BEDROCK_MODEL",
@@ -591,7 +617,7 @@
           "wired": true
         }
       ],
-      "cost": "3-4 requests on haiku-class model."
+      "cost": "6-8 requests on haiku-class model (compatible SSE + native Converse/ConverseStream)."
     },
     {
       "id": "providers/vertex",
@@ -723,6 +749,23 @@
         }
       ],
       "cost": "1 rerank request per configured endpoint (\u22642 total)."
+    },
+    {
+      "id": "memory/drive-sync-live",
+      "package": "@arnilo/prism-memory",
+      "status": "active",
+      "source": "packages/memory/src/rag/__tests__/google-drive-live.test.ts",
+      "command": "node --test dist/rag/__tests__/google-drive-live.test.js",
+      "requires": [
+        "PRISM_TEST_DRIVE_ACCESS_TOKEN"
+      ],
+      "optional": [
+        "PRISM_TEST_DRIVE_FOLDER_ID",
+        "PRISM_TEST_DRIVE_SHARED_DRIVE_ID"
+      ],
+      "scope": "Delegated Drive readonly token; least privilege: one throwaway folder. Folder/shared-drive ids optional.",
+      "cwd": "packages/memory",
+      "cost": "<=2 Drive list/changes pages plus file media for that page; replay must not re-embed."
     },
     {
       "id": "coding-tools/openapi-live",

@@ -1,4 +1,5 @@
 import { assertValidAgentRunResume, pendingDecisionsOf, resolveRunDecisions } from "./agent-approval.js";
+import { parseAttentionStickyFrontier } from "./attention-compiler.js";
 import type { StoredAgentRunState } from "./agent-run-state.js";
 import { agentFingerprint, loadAgentRunState, publicState, saveAgentRunState } from "./agent-run-state.js";
 import { RuntimeAgentSession, throwIfAbortedSignal } from "./agent-session.js";
@@ -194,6 +195,9 @@ async function prepareAgentRunResume(
     throw new AgentRunStateError("Stale or non-suspended agent run resume");
   }
   const session = new RuntimeAgentSession({ agent, id: state.sessionId, leafId: state.leafId });
+  // Plan 078 Task 7: hand the reconstructed session to an observer (supervisor child-event pump)
+  // before any event flows. Called for every resume outcome; a throw fails closed.
+  options.onSession?.(session);
   // Opt-in session-state restore (plan 015 Task 4): names only; bodies re-resolve from
   // the live registry the next time the model (re)loads them via load_skill.
   if (options.persistSessionState && state.sessionState?.loadedSkillNames) {
@@ -202,6 +206,12 @@ async function prepareAgentRunResume(
   // Plan 041: re-add search-activated tool names (names only; absent tools stay inert until re-searched).
   if (options.persistSessionState && state.sessionState?.activatedToolNames) {
     session.restoreActivatedTools(state.sessionState.activatedToolNames);
+  }
+  // Plan 074 P3: restore sticky attention mutations (already validated at load) so the first
+  // turn after a resume keeps its stubs instead of re-deciding them from the ratio.
+  if (options.persistSessionState && state.sessionState?.attentionSticky) {
+    const frontier = parseAttentionStickyFrontier(state.sessionState.attentionSticky);
+    if (frontier) session.restoreAttentionSticky(frontier);
   }
   // Plan 018 Task 6 (closeout `checkpoint-bodies`): restore exact instructions so the
   // resumed session renders them registry-independently (no load_skill round-trip).

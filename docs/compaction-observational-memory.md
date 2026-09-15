@@ -4,9 +4,11 @@
 
 `@arnilo/prism-memory/compaction/observational-memory` is an optional subpath for source-backed observational memory and fast compaction.
 
-Current status: ledger/projection/render/recall utilities, explicit worker runtime, fast compaction strategy, inert extension helper, recall tool, and status/view command factories are available.
+Current status: ledger/projection/render/recall utilities, optional work-scope indexing, explicit worker runtime, fast compaction strategy, inert extension helper, recall tool, and status/view command factories are available.
 
 This package is distinct from `@arnilo/prism-memory` working/semantic memory: observational memory compresses and recalls source-backed observations/reflections; semantic memory retrieves embeddings; working memory stores the current structured profile/state. Hosts may compose both.
+
+This page's memory stays **episodic**: the ledger records what happened in a session, its observer/reflector/dropper workers are the only writers of observations and reflections, and nothing downstream re-observes the transcript. Typed notes that want to outlive the session (facts, procedures, file references) are a separate layer — the [memory fabric](memory-fabric.md) — which views an observation by id as an `episode` note without copying it, never wraps or replaces these workers, and keeps its own recall path. Promotion out of the ledger is an explicit host write, not a side effect of compaction.
 
 ## Four-layer provider context
 
@@ -19,7 +21,9 @@ Observational memory composes four independent layers for long sessions (Mastra-
 | **Reflections** | Higher-level summaries over observation ids | Reflector worker on observations after last reflection coverage when `reflection.observationTokens` met |
 | **Raw-source retrieval** | Exact branch messages behind a memory id or cursor page | `recallObservationalMemory()` / `recallObservationalMemoryBranchPage()` / `createRecallMemoryTool()` — exact-id or cursor paging only; no semantic search |
 
-Activation is explicit: `createObservationalMemory().attach()` coordinates post-run observe/reflect/drop and `context.compactAfterTokens` compaction. Import and extension `setup` start nothing. Recall, commands, and utilities fail closed on invalid ids, wrong `sessionId`, ambiguous tool input, or oversized pages. Pass `secrets` for exact-value redaction in render/recall/worker paths. Branch isolation: hosts supply current-branch `appendEntry` and `getEntries`; mismatched store/session pairs fail closed after append.
+The opt-in work-scope index filters the observation and reflection layers for a host-selected working set. It is not a fifth context layer, retrieval system, or session scope.
+
+Activation is explicit: `createObservationalMemory().attach()` coordinates post-run observe/reflect/drop and compaction — by default `context.compactAfterTokens`, or whatever host gate `trigger` / `shouldCompact` supplies. Import and extension `setup` start nothing. Recall, commands, and utilities fail closed on invalid ids, wrong `sessionId`, ambiguous tool input, or oversized pages. Pass `secrets` for exact-value redaction in render/recall/worker paths. Branch isolation: hosts supply current-branch `appendEntry` and `getEntries`; mismatched store/session pairs fail closed after append.
 
 See `examples/observational-memory-lifecycle.ts` for attach → turn → projection/recall/page without live credentials.
 
@@ -31,6 +35,8 @@ Use `createObservationalMemoryCompactionStrategy()` when compaction should rende
 
 ## Inputs / request
 
+**Option surfaces** — `appendEntry` takes `ObservationalMemoryAppendOptions` (custom observation/reflection text, trust, and metadata); `createWorkScopeController` takes `WorkScopeControllerOptions` (session, `appendEntry`, optional `secrets`).
+
 Memory records use `SessionEntry.kind: "custom"` with `entry.data.type` markers:
 
 | Type | Payload |
@@ -38,6 +44,9 @@ Memory records use `SessionEntry.kind: "custom"` with `entry.data.type` markers:
 | `om.observations.recorded` | `{ observations, coversUpToId? }` — successful observer runs append coverage even when `observations` is empty. |
 | `om.reflections.recorded` | `{ reflections, coversUpToId? }` |
 | `om.observations.dropped` | `{ observationIds, coversUpToId? }` |
+| `om.scope.opened` | `{ id, parentId?, kind?, label? }` — host-defined scope tree node. |
+| `om.scope.closed` / `om.scope.entered` / `om.scope.left` | `{ scopeId }` for close/enter; `{}` for leave. |
+| `om.scope.bound` / `om.scope.unbound` | `{ scopeId, refs }` — many-to-many `om:<12-hex>` or `reflection:<12-hex>` membership. |
 | `om.folded` | Compaction `data.memory` folded details. |
 
 Ids are known, source-backed 12-character lowercase hex strings matching `^[a-f0-9]{12}$`.
@@ -67,18 +76,21 @@ Key exports:
 | Export | Purpose |
 | --- | --- |
 | `foldObservationalMemoryLedger()` | Fold custom memory entries into observations, reflections, drops, and coverage markers. |
+| `foldWorkScopeMap()` / `createWorkScopeController()` | Fold the opt-in scope index or append validated open/close/enter/leave/bind/unbind entries. |
+| `projectWorkMemory()` | Filter the folded observations/reflections through a scope query; exact-id recall stays unfiltered. |
+| `withWorkScope()` | Open a missing scope, enter it for an async callback, and always leave without closing it. |
 | `isEligibleObservationSourceEntry()` / `eligibleObservationSources()` | Select user/assistant/tool `message` entries for observer input. |
 | `unscannedEntries()` / `observationsUncoveredByReflection()` | Dual coverage helpers for observation scan and reflection windows. |
-| `buildObservationalMemoryProjection()` | Build active/full/folded projections from current branch entries. |
-| `buildObservationalMemoryContextBlocks()` | Render observational-memory + recent-messages context blocks for provider input. |
+| `buildObservationalMemoryProjection()` | Build active/full/folded projections from current branch entries. Optional `invalidatedIds` drops observations whose id or `sourceEntryIds` match, and reflections that rest on them. Full ledger stays for audit. |
+| `buildObservationalMemoryContextBlocks()` | Render observational-memory + recent-messages context blocks for provider input. Same `invalidatedIds` option. |
 | `selectRecentMessageEntries()` / `renderRecentMessageWindow()` | Bounded exact recent-message suffix; count via `keepRecentEntries`, optional token trim via `estimateEntryTokens`. |
 | `createFoldedMemoryDetails()` | Create JSON details for compaction `data.memory`. |
 | `renderObservationalMemory()` | Render reflections and observations into a prepared memory summary. |
-| `recallObservationalMemory()` | Recover source evidence for a known observation/reflection id from supplied current-branch entries. |
+| `recallObservationalMemory()` | Recover source evidence for a known observation/reflection id from supplied current-branch entries. `invalidatedIds` withholds content (`reason: "revoked"`) without injecting derived text. |
 | `recallObservationalMemoryBranchPage()` | Page eligible user/assistant/tool messages around a cursor entry id (`forward`/`backward`, optional `detail: summary|full`). |
 | `createMemoryId()` / `isMemoryId()` | Create/check 12-character ids. |
 | `resolveObservationalMemorySettings()` | Merge `observational-memory` settings with defaults and overrides. |
-| `createObservationalMemory()` / `attach()` | One activation wires post-run observe/reflect/drop and `compactAfterTokens` compaction; returns proxied session, runtime, context provider, and strategy. |
+| `createObservationalMemory()` / `attach()` | One activation wires post-run observe/reflect/drop and compaction (`compactAfterTokens`, or a host `trigger` / `shouldCompact`); returns proxied session, runtime, context provider, and strategy. |
 | `createObservationalMemoryRuntime()` | Low-level explicit flush for advanced hosts or tests. |
 | `createObservationalMemoryCompactionStrategy()` | Render existing folded memory as a standard Prism compaction summary with `data.memory`. |
 | `createObservationalMemoryExtension()` | Inert extension helper that registers the strategy contribution unless disabled. |
@@ -86,7 +98,32 @@ Key exports:
 | `createMemoryStatusCommand()` / `createMemoryViewCommand()` | Optional `om:status` and `om:view` command factories. |
 | `createObservationalMemoryCommands()` | Convenience factory returning status and view commands. |
 
-Pure utilities create no events, workers, tools, commands, credentials, or provider requests. `createObservationalMemoryExtension()` and import alone start nothing. `createObservationalMemory().attach()` runs workers only after proxied `run`/`prompt`/`stream`/`compact` complete (or after `wrapResumeRun` / `wrapResumeStream`). `createObservationalMemoryRuntime().flush()` remains for manual/advanced use. Attached `contextProvider` renders two blocks each turn: `observational-memory` (active reflections/observations aligned to the recent-message boundary) and `recent-messages` (last `keepRecentEntries` message entries in branch order, optionally trimmed by `recentMessageMaxTokens` using `estimateEntryTokens`; oldest dropped first). Compaction uses the same `keepRecentEntries` setting. Observer input includes only eligible `message` entries (`user`, `assistant`, `tool`); memory/compaction/bookkeeping entries advance `coversUpToId` scan coverage without entering the observer prompt. Successful observer/reflector runs append coverage markers even when they record zero facts. Reflection uses only active observations recorded after the last `om.reflections.recorded` entry unless `flush({ fullReflectionRebuild: true })`. Attached `flush()` skips with `run_active` while a proxied run is in flight. The compaction strategy is O(n) over supplied entries and makes no provider call. Tool and command factories are inert until a host registers/selects them.
+Pure utilities create no events, workers, tools, commands, credentials, or provider requests. `createObservationalMemoryExtension()` and import alone start nothing. `createObservationalMemory().attach()` runs workers only after proxied `run`/`prompt`/`stream`/`compact` complete (or after `wrapResumeRun` / `wrapResumeStream`). `createObservationalMemoryRuntime().flush()` remains for manual/advanced use. Attached `contextProvider` renders two blocks each turn: `observational-memory` (active reflections/observations aligned to the recent-message boundary) and `recent-messages` (last `keepRecentEntries` message entries in branch order, optionally trimmed by `recentMessageMaxTokens` using `estimateEntryTokens`; oldest dropped first). Compaction uses the same `keepRecentEntries` setting. Observer input includes only eligible `message` entries (`user`, `assistant`, `tool`); memory/compaction/bookkeeping entries advance `coversUpToId` scan coverage without entering the observer prompt. Successful observer/reflector runs append coverage markers even when they record zero facts. Reflection uses only active observations recorded after the last `om.reflections.recorded` entry unless `flush({ fullReflectionRebuild: true })`. Attached `flush()` skips with `run_active` while a proxied run is in flight. The compaction strategy is O(n) over supplied entries and makes no provider call.
+
+### Work-scope index (opt-in)
+
+`WorkScope` is a host-named, append-only index over one observational-memory ledger. Without `om.scope.*` entries, the map has only its implicit `session` root, context renders the existing active pool, and the dropper keeps its existing behavior.
+
+Use `createWorkScopeController({ session, appendEntry, secrets? })` to `open`, `close`, `enter`, `leave`, `bind`, or `unbind` scopes. Scope ids are host-defined (`[A-Za-z0-9._:/-]{1,128}`, no `..`); there are caps of 256 scopes, depth/stack 8, 4,096 binds per scope, and 512 characters for labels or kinds. Invalid ids, missing/closed parents, duplicate scopes, unknown record ids, and ownership mismatch fail closed. Labels and kinds receive the same secret redaction as observational-memory text.
+
+`projectWorkMemory(ledger, map, { from, include, closed?, kinds? })` returns a filtered observation/reflection view plus outline. `include` is `self`, `self+ancestors`, `self+descendants`, or `lineage`; `closed: "hide"` is the default, except closed ancestors of `from` remain available. Default attached context uses the current leaf with `self+ancestors`, rendering Scope Outline, Reflections, then Observations. The compaction summary — the layer the next run's pack starts from — renders the same projection, so the full ledger never rides into the prefix; the folded payload keeps every observation, so entering another scope can still surface what that summary hid. `recallObservationalMemory()` still reads the complete current branch by exact id.
+
+After a flush records new observations or reflections, it binds those ids once to the current leaf scope only. A host promotes relevant memory explicitly by binding it to an ancestor; a reflection whose bind sits on a **closed** scope can also graduate into durable semantic memory through the fabric's `remember({ kind: "fact" | "procedure", reflectionId })`. While any host scope exists, the runtime skips the observation dropper; the folded-payload byte cap remains a storage safety cap, not working-set garbage collection. `withWorkScope(controller, spec, fn)` opens `spec` if needed, enters it, runs `fn`, and leaves in `finally`; it never closes a scope. This index does not provide resource-scoped observational memory or budget-based dropping as a working-set mechanism.
+
+### Compact-when override
+
+`createObservationalMemory()` accepts a compact-when gate beside the settings: `trigger` (the same union `CompactionOptions.trigger` uses) or the `shouldCompact(context)` shorthand. When either is set it **replaces** `context.compactAfterTokens`; omitted, the token gate is unchanged.
+
+```ts
+const om = createObservationalMemory({
+  observation: { provider, model },
+  shouldCompact: (context) => context.entryCount > 40 || context.estimatedInputTokens / context.inputCapTokens >= 0.9,
+});
+```
+
+- `context.entryCount` counts current-branch entries; `context.estimatedInputTokens` is this package's own `estimateEntryTokens` sum; `context.inputCapTokens` comes from `resolveInputCap` on `attach({ sessionModel })`.
+- Both token numbers resolve lazily, so a callback that only reads counts works with a `sessionModel` that declares no `contextWindow`. Reading the cap without one throws inside the callback, and the gate then decides **false** — the sync loop reports it through the `debug` sink (`observational-memory:compaction-trigger-error`) and never compacts on a guess. `input_ratio` needs a resolvable cap and throws instead.
+- An unknown trigger `type` or a non-function `shouldCompact` throws at `createObservationalMemory()`, before any session work. Tool and command factories are inert until a host registers/selects them.
 
 ## Request/response example
 
@@ -105,8 +142,13 @@ import {
   createObservationalMemoryCommands,
   createObservationalMemoryRuntime,
   createRecallMemoryTool,
+  createWorkScopeController,
+  foldObservationalMemoryLedger,
+  foldWorkScopeMap,
+  projectWorkMemory,
   recallObservationalMemory,
   renderObservationalMemory,
+  withWorkScope,
 } from "@arnilo/prism-memory/compaction/observational-memory";
 
 const om = createObservationalMemory({
@@ -119,11 +161,19 @@ const attached = om.attach(session, {
   appendEntry: (entry, options) => store.append(entry, options),
   sessionModel: agent.config.model,
 });
-await attached.session.run("Continue from prior work");
+const scopes = createWorkScopeController({ session: attached.session, appendEntry: (entry, options) => store.append(entry, options) });
+await scopes.open({ id: "plan:memory", kind: "plan", label: "Memory work" });
+await withWorkScope(scopes, { id: "task:cleanup", parentId: "plan:memory", kind: "task" }, () =>
+  attached.session.run("Continue from prior work"),
+);
 
 const entries = await session.entries();
 const projection = buildObservationalMemoryProjection(entries);
-const summary = renderObservationalMemory(projection.reflections, projection.observations);
+const scoped = projectWorkMemory(foldObservationalMemoryLedger(entries), foldWorkScopeMap(entries), {
+  from: "task:cleanup",
+  include: "self+ancestors",
+});
+const summary = renderObservationalMemory(scoped.reflections, scoped.observations, { outline: scoped.outline });
 const evidence = recallObservationalMemory(entries, "aaaaaaaaaaaa");
 
 const memory = createObservationalMemoryRuntime({
@@ -231,11 +281,14 @@ Ownership: funnel only within the `OwnershipScope` already on the parent agent/s
 ## Related APIs
 
 - [Use-case model selection](use-case-model-selection.md): session vs worker model binding and `resolveUseCaseModel`.
+- [Attention compiler](attention-compiler.md): opt-in per-turn shrink that runs before compaction is considered and resolves the same input cap for `input_ratio` triggers.
 - [Thinking and reasoning](thinking-and-reasoning.md): `thinkingLevel` → provider `compat`.
 - [Provider request policies](provider-request-policies.md): derived `om:{session.id}` on worker generate.
 - [Compaction and retry policies](compaction-and-retry.md): replaceable compaction strategy boundary.
+- [Workflows](workflows.md): a host may use a workflow `nodeId` as a scope id with `withWorkScope`; the workflow runner does not enter scopes itself.
 - [LLM compaction package](compaction-llm.md): existing optional compaction-package pattern.
 - [Session stores and branching](session-stores-and-branching.md): branch entries that observational memory reads and appends to.
+- [Memory fabric](memory-fabric.md): optional typed notes over the same stores; `episode` notes are views of these observation ids, and the ledger stays episodic.
 - [Supervisor delegation](supervisors.md): child sessions whose messages this page's opt-in funnel can copy onto a workspace branch.
 - [Extensions](extensions.md): inert registration pattern for optional package contributions.
 - [Tools](tools.md): host activation and dispatch for optional recall tool contributions.

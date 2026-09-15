@@ -11,7 +11,7 @@ const VERTEX_GEMINI_LEVELS = ["low", "medium", "high"] as const;
  * deployments and bedrock OpenAI models → the OpenAI family table keyed by the
  * deployment/model id). `undefined` → passthrough.
  */
-function declaredLevelsFor(request: ProviderRequest): readonly string[] | undefined {
+export function declaredThinkingLevelsFor(request: ProviderRequest): readonly string[] | undefined {
   const declared = request.model.capabilities?.thinkingLevels;
   if (declared && declared.length > 0) return declared;
   const provider = (request.model.provider ?? "").toLowerCase();
@@ -33,7 +33,7 @@ export function openAICompatThinkingExtra(request: ProviderRequest): JsonObject 
   const optionsCompat = request.options?.compat ?? {};
   const modelCompat = request.model.compat ?? {};
   const snap = (value: string): string => {
-    const declared = declaredLevelsFor(request);
+    const declared = declaredThinkingLevelsFor(request);
     if (!declared) return value;
     // Heuristic declarations must reach the core snap — feed it a model view
     // carrying the effective level set (core reads capabilities.thinkingLevels).

@@ -1,0 +1,65 @@
+import {
+  type Agent,
+  createMemoryCheckpointStore,
+  createMockProvider,
+  createSecretRedactor,
+  createSecureAgent,
+  createStaticPermissionPolicy,
+  createStaticTrustPolicy,
+  providerDone,
+  providerTextDelta,
+} from "@arnilo/prism";
+import { createJsonSchemaArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
+
+export interface CreatePersonalAgentOptions {
+  readonly userId?: string;
+  readonly provider?: import("@arnilo/prism").AIProvider;
+  readonly model?: { readonly provider: string; readonly model: string };
+  readonly workspaceRoot?: string;
+}
+
+export function createAppAgent(options: CreatePersonalAgentOptions = {}): Agent {
+  const userId = options.userId ?? process.env.USER ?? "local-user";
+  const redactor = createSecretRedactor(
+    [process.env.OPENAI_API_KEY].filter((v): v is string => typeof v === "string" && v.length > 0),
+  );
+
+  const provider =
+    options.provider ??
+    createMockProvider([
+      providerTextDelta("Personal Assistant ready. How can I help you today?"),
+      providerDone(),
+    ]);
+
+  return createSecureAgent({
+    id: "personal-assistant",
+    definitionRevision: "1",
+    ownership: { userId },
+    redactor,
+    permission: createStaticPermissionPolicy(true),
+    trust: createStaticTrustPolicy(true),
+    toolArgumentValidator: createJsonSchemaArgumentValidator(),
+    limits: { maxToolRounds: 10 },
+    runState: { checkpoints: createMemoryCheckpointStore() },
+    tools: [
+      {
+        name: "workspace_status",
+        description: "Reports the local workspace status and configuration",
+        parameters: {
+          type: "object",
+          properties: {
+            details: { type: "boolean", description: "Include detailed status" },
+          },
+          additionalProperties: false,
+        },
+        execute: async (_args, ctx) => ({
+          toolCallId: ctx.toolCallId,
+          name: "workspace_status",
+          value: { ok: true, user: userId, status: "active" },
+        }),
+      },
+    ],
+    provider,
+    model: options.model ?? { provider: "mock", model: "personal-default" },
+  });
+}

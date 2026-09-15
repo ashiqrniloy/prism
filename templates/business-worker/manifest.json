@@ -1,0 +1,11 @@
+{
+  "name": "business-worker",
+  "description": "Multi-tenant business worker: durable storage, tenant isolation, verified identity, and governed invocation boundaries",
+  "version": "0.1.0",
+  "tags": ["business", "worker", "multi-tenant", "enterprise", "secure"],
+  "packages": [
+    "@arnilo/prism",
+    "@arnilo/prism-core",
+    "@arnilo/prism-providers"
+  ]
+}

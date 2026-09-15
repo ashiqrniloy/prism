@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AgentIdentity, AIProvider, ModelConfig, ProviderRequest } from "@arnilo/prism";
 import {
+  assertProviderSourceEligible,
   createMemoryModelRouterStateStore,
   createModelRouter,
   HARD_MODEL_ROUTER_LIMITS,
+  isProviderSourceEligible,
   ModelRouterError,
   resolveModelRouterLimits,
 } from "../index.js";
@@ -293,6 +295,246 @@ describe("../index.js", () => {
     assert.throws(() => resolveModelRouterLimits({ maxRateKeys: 65_536 + 1 }));
     assert.throws(() => resolveModelRouterLimits({ maxBudgetKeys: 65_536 + 1 }));
     assert.throws(() => createModelRouter({ resolver: () => provider("ok"), budgets: { reservationTtlMs: 31 * 24 * 60 * 60_000 + 1 } }));
+  });
+
+  describe("providerSource fail-closed governance (Trap B)", () => {
+    it("refuses zero-budget configuration and never invokes resolver", () => {
+      let resolverCalled = 0;
+      const router = createModelRouter({
+        resolver: () => {
+          resolverCalled += 1;
+          return provider("openai");
+        },
+        budgets: { maxCostUsd: 0 },
+      });
+      assert.throws(
+        () => router.providerSource(model("openai", "gpt")),
+        (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED",
+      );
+      assert.equal(resolverCalled, 0);
+
+      // zero token budget
+      const tokenRouter = createModelRouter({
+        resolver: () => {
+          resolverCalled += 1;
+          return provider("openai");
+        },
+        budgets: { maxTokens: 0 },
+      });
+      assert.throws(
+        () => tokenRouter.providerSource(model("openai", "gpt")),
+        (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED",
+      );
+      assert.equal(resolverCalled, 0);
+    });
+
+    it("refuses positive budget configuration and never invokes resolver", () => {
+      let resolverCalled = 0;
+      const router = createModelRouter({
+        resolver: () => {
+          resolverCalled += 1;
+          return provider("openai");
+        },
+        budgets: { maxCostUsd: 100 },
+      });
+      assert.throws(
+        () => router.providerSource(model("openai", "gpt")),
+        (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED",
+      );
+      assert.equal(resolverCalled, 0);
+    });
+
+    it("refuses rate limit configuration and never invokes resolver", () => {
+      let resolverCalled = 0;
+      const router = createModelRouter({
+        resolver: () => {
+          resolverCalled += 1;
+          return provider("openai");
+        },
+        rateLimit: { maxRequests: 10, windowMs: 1_000 },
+      });
+      assert.throws(
+        () => router.providerSource(model("openai", "gpt")),
+        (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED",
+      );
+      assert.equal(resolverCalled, 0);
+    });
+
+    it("refuses circuit breaker configuration (open/configured) and never invokes resolver", () => {
+      let resolverCalled = 0;
+      const router = createModelRouter({
+        resolver: () => {
+          resolverCalled += 1;
+          return provider("openai");
+        },
+        circuit: { failureThreshold: 3, coolDownMs: 1_000 },
+      });
+      assert.throws(
+        () => router.providerSource(model("openai", "gpt")),
+        (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED",
+      );
+      assert.equal(resolverCalled, 0);
+    });
+
+    it("refuses durable/async state configuration and never invokes resolver", () => {
+      let resolverCalled = 0;
+      const router = createModelRouter({
+        resolver: () => {
+          resolverCalled += 1;
+          return provider("openai");
+        },
+        stateStore: createMemoryModelRouterStateStore(),
+      });
+      assert.throws(
+        () => router.providerSource(model("openai", "gpt")),
+        (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_ASYNC_STATE",
+      );
+      assert.equal(resolverCalled, 0);
+    });
+
+    it("refuses unsupported fallback expectations and never invokes resolver", () => {
+      let resolverCalled = 0;
+      const router = createModelRouter({
+        resolver: () => {
+          resolverCalled += 1;
+          return provider("openai");
+        },
+        fallbacks: [model("anthropic", "claude")],
+      });
+      assert.throws(
+        () => router.providerSource(model("openai", "gpt")),
+        (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED",
+      );
+      assert.equal(resolverCalled, 0);
+    });
+
+    it("refuses selection policy and never invokes resolver", () => {
+      let resolverCalled = 0;
+      const router = createModelRouter({
+        resolver: () => {
+          resolverCalled += 1;
+          return provider("openai");
+        },
+        selection: {
+          name: "test-policy",
+          rank: (candidates) => candidates,
+        },
+      });
+      assert.throws(
+        () => router.providerSource(model("openai", "gpt")),
+        (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED",
+      );
+      assert.equal(resolverCalled, 0);
+    });
+
+    it("supports allow-list and residency selection synchronously", () => {
+      let resolverCalled = 0;
+      const router = createModelRouter({
+        resolver: (m) => {
+          resolverCalled += 1;
+          return provider(m.provider);
+        },
+        allowList: { providers: ["ok"], models: ["ok/allowed-model"] },
+        allowedResidencies: ["eu"],
+      });
+
+      // Allowed model and residency
+      const res = router.providerSource(model("ok", "allowed-model", { residency: "eu" }));
+      assert.equal(res?.id, "ok");
+      assert.equal(resolverCalled, 1);
+
+      // Disallowed provider fails before resolver
+      assert.throws(
+        () => router.providerSource(model("forbidden", "allowed-model", { residency: "eu" })),
+        (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_ALLOW_LIST",
+      );
+      assert.equal(resolverCalled, 1);
+
+      // Disallowed model fails before resolver
+      assert.throws(
+        () => router.providerSource(model("ok", "forbidden-model", { residency: "eu" })),
+        (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_ALLOW_LIST",
+      );
+      assert.equal(resolverCalled, 1);
+
+      // Disallowed residency fails before resolver
+      assert.throws(
+        () => router.providerSource(model("ok", "allowed-model", { residency: "us" })),
+        (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_RESIDENCY",
+      );
+      assert.equal(resolverCalled, 1);
+
+      // Missing residency fails before resolver
+      assert.throws(
+        () => router.providerSource(model("ok", "allowed-model")),
+        (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_RESIDENCY",
+      );
+      assert.equal(resolverCalled, 1);
+    });
+
+    it("rejects malformed JS runtime inputs before resolver", () => {
+      let resolverCalled = 0;
+      const router = createModelRouter({
+        resolver: () => {
+          resolverCalled += 1;
+          return provider("ok");
+        },
+        allowList: { providers: ["ok"] },
+      });
+
+      const invalidInputs = [
+        null,
+        undefined,
+        "not-a-model",
+        123,
+        true,
+        {},
+        { provider: "" },
+        { provider: "   ", model: "m" },
+        { provider: "ok" },
+        { provider: "ok", model: "" },
+        { provider: "ok", model: "   " },
+        { model: "m" },
+      ];
+
+      for (const input of invalidInputs) {
+        assert.throws(
+          () => router.providerSource(input as unknown as ModelConfig),
+          (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_VALIDATION",
+        );
+      }
+      assert.equal(resolverCalled, 0);
+    });
+
+    it("isProviderSourceEligible and assertProviderSourceEligible helper parity", () => {
+      const eligible = { resolver: () => provider("ok"), allowList: { providers: ["ok"] } };
+      assert.equal(isProviderSourceEligible(eligible), true);
+      assert.doesNotThrow(() => assertProviderSourceEligible(eligible));
+
+      const ineligibleCases = [
+        { ...eligible, budgets: { maxCostUsd: 0 } },
+        { ...eligible, budgets: { maxTokens: 100 } },
+        { ...eligible, rateLimit: { maxRequests: 5, windowMs: 1_000 } },
+        { ...eligible, circuit: { failureThreshold: 3 } },
+        { ...eligible, fallbacks: [model("backup", "b")] },
+        { ...eligible, selection: { name: "test", rank: (c: readonly ModelConfig[]) => c } },
+      ];
+
+      for (const opt of ineligibleCases) {
+        assert.equal(isProviderSourceEligible(opt), false);
+        assert.throws(
+          () => assertProviderSourceEligible(opt),
+          (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED",
+        );
+      }
+
+      const asyncStateOpt = { ...eligible, stateStore: createMemoryModelRouterStateStore() };
+      assert.equal(isProviderSourceEligible(asyncStateOpt), false);
+      assert.throws(
+        () => assertProviderSourceEligible(asyncStateOpt),
+        (err: unknown) => err instanceof ModelRouterError && err.code === "ERR_PRISM_MODEL_ROUTER_ASYNC_STATE",
+      );
+    });
   });
 
   it("reserves budget atomically: parallel admissions never oversubscribe and remaining is never negative", async () => {

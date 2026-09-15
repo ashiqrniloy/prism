@@ -194,7 +194,7 @@ export const PACKAGE_NOTES = {
   "@arnilo/prism-acp-agent": "capability — ACP adapter",
   "@arnilo/prism-ag-ui": "capability — AG-UI/A2A/A2UI adapter",
   "@arnilo/prism-mcp": "capability — MCP client/server/OAuth interop",
-  "@arnilo/prism-memory": "capability — memory plus /rag, /compaction/*, /graft, /wiki subpaths",
+  "@arnilo/prism-memory": "capability — memory plus /rag, /compaction/*, /fabric, /graft, /wiki subpaths",
   "@arnilo/prism-office": "capability — /documents, /sheets, /diagrams subpaths",
   "@arnilo/prism-web-tools": "capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths",
 };

@@ -35,6 +35,8 @@ export interface AgentDefinition {
   readonly metadata?: Readonly<Record<string, unknown>>;
   /** Optional escape hatch. When present, overrides declarative resolution. */
   create?(config?: AgentConfig): Promise<Agent> | Agent;
+  /** Opt-in attention compiler for the agent this definition resolves to (plan 074 C1). */
+  readonly attentionCompiler?: import("./attention.js").AttentionCompilerSetting;
 }
 
 /** Input to {@link resolveAgentDefinition}. All fields are optional; the host
@@ -68,6 +70,9 @@ export interface AgentConfig {
   readonly toolsSearch?: import("../tool-search.js").ToolsSearchOptions;
   /** Opt-in projection-only fold for aged large tool results in provider view; store untouched. */
   readonly toolResultFold?: import("../tool-result-fold.js").ToolResultFoldOptions;
+  /** Opt-in attention compiler (plan 074): `true` for defaults, an object to tune ratios/depth.
+   *  Omitted keeps today's request bytes; per-run options may only relax this setting. */
+  readonly attentionCompiler?: import("./attention.js").AttentionCompilerSetting;
   readonly inputBuilder?: InputBuilder;
   readonly promptBuilder?: PromptBuilder;
   readonly middleware?: MiddlewareRegistry;
@@ -125,6 +130,8 @@ export interface SecureAgentOptions
   readonly limits: RunLimits;
   readonly definitionRevision: string;
   readonly runState: Omit<AgentRunStateOptions, "definitionRevision" | "interruptBeforeTool">;
+  /** Optional host composition readiness assertions evaluated on creation. */
+  readonly composition?: import("../host-composition.js").HostCompositionOptions;
 }
 
 export interface Agent {

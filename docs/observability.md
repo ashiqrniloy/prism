@@ -13,6 +13,9 @@ APIs:
 - `createOpenTelemetryInstrumentation()`, `wrapOpenTelemetryApi()`, `createInMemoryTelemetry()` in `@arnilo/prism-core/governance/observability`
 - `createRagTelemetry()` in `@arnilo/prism-core/governance/observability` (RAG spans/events; see span tree below)
 - `handleRunFeedback()` / `handleEvaluation()` for explicit safe post-run projection
+- `projectAgentTimeline()`, `projectTraceTimeline()`, `projectWorkflowTimeline()`, `createTimelineFolder()` — [execution timeline projection](execution-timeline.md) for host cockpits and trajectory evals
+- `summarizeTimeline()`, `summarizeSession()` — [cockpit aggregations](#cockpit-aggregations-and-session-summaries) (bounded tool counts, token and cost rollups without double counting)
+- `attachWorkflow()`, `handleWorkflowEvent()` on `OpenTelemetryInstrumentation` for workflow DAG spans and metrics
 
 ## When to use it
 
@@ -67,6 +70,10 @@ const telemetry = createOpenTelemetryInstrumentation({
 
 const detach = telemetry.attachSession(session);
 // or: for await (const event of session.subscribe()) telemetry.handleAgentEvent(event);
+
+// Workflows:
+const detachWorkflow = telemetry.attachWorkflow(eventBus);
+// or: eventBus.subscribe((event) => telemetry.handleWorkflowEvent(event));
 ```
 
 Set `enabled: false` or omit `tracer`/`meter` for a no-op adapter. Feedback handlers accept only `runId`, rating/score, booleans, bounded counts, and fixed status — never comment, tag values, scorer/evaluation IDs, or arbitrary metadata.
@@ -96,6 +103,14 @@ OpenTelemetry mapping (when enabled):
 | `handleDelegation()` | `prism.agent.delegate` child (`INTERNAL`) | none |
 | `handleRunFeedback` | active-run `prism.run.feedback` event or ended-run span | `prism.run.feedback` |
 | `handleEvaluation` | active-run `gen_ai.evaluation.result` event or ended-run span | `prism.run.evaluation` (`status`) |
+
+Workflow mapping (when enabled via `attachWorkflow` or `handleWorkflowEvent`):
+
+| Workflow event | Span | Metric labels |
+| --- | --- | --- |
+| `workflow_started` / `workflow_finished` | `invoke_workflow {workflowId}` (`INTERNAL`) | `prism.workflow.duration` (`prism.workflow.id`, `prism.workflow.status`) |
+| `node_started` / `node_finished` / `node_failed` / `node_skipped` | `prism.workflow.node {nodeId}` child (`INTERNAL`) | none (span attributes: `prism.node.kind`, `prism.node.status`) |
+| `node_iteration_started` / `finished` | `prism.workflow.iteration` events on node span | none |
 
 RAG span tree (`@arnilo/prism-memory/rag` + `createRagTelemetry()`):
 
@@ -171,6 +186,41 @@ const ragTelemetry = createRagTelemetry({ tracer: memory.tracer, meter: memory.m
 const found = await retrieveContext("policy", { embedder, store, scope, telemetry: ragTelemetry }); // rag_request tree
 ```
 
+## Cockpit aggregations and session summaries
+
+Host cockpits and dashboard cards need fast aggregate summaries of an execution without re-walking every raw event or risking prompt/secret leaks:
+
+- `summarizeTimeline(timeline)`: rolls up an `ExecutionTimeline` into a `TimelineSummary` containing duration, turn count, tool call counts, provider attempts, total tokens, cost, error counts, and suspension state.
+- `summarizeSession(timelines)`: rolls up an array of `ExecutionTimeline`s for a session/conversation into a `SessionSummary` with aggregated tokens, costs, run counts, and duration.
+
+```ts
+import { summarizeTimeline, summarizeSession } from "@arnilo/prism-core/governance/observability";
+
+const summary = summarizeTimeline(timeline);
+// summary: TimelineSummary
+// {
+//   durationMs: 1250,
+//   turnCount: 2,
+//   toolCallCount: 3,
+//   toolCounts: { search: 2, lookup: 1 },
+//   providerAttempts: 2,
+//   usage: { totalTokens: 450, promptTokens: 300, completionTokens: 150 },
+//   cost: { amount: 0.0012, currency: "USD" },
+//   errorCount: 0,
+//   blockedToolCount: 0,
+//   suspended: false,
+//   status: "succeeded",
+// }
+
+const sessionSummary = summarizeSession([run1Timeline, run2Timeline]);
+// sessionSummary: SessionSummary
+```
+
+Cardinality and correctness guarantees:
+- **Bounded cardinality**: `toolCounts` is capped to `MAX_SUMMARY_DISTINCT_TOOLS = 64` distinct tool names. If more tools are invoked, lowest-frequency tool names overflow into an `"other"` bucket.
+- **No double counting**: Token usage is derived from the root run's `run_total` (or aggregated across `turn` / `provider` steps if no run-level total exists), avoiding double counting between provider turn steps and run totals. Costs are rounded to 6 decimal places to prevent floating-point drift.
+- **Payload-free**: Summaries contain counts, durations, status codes, and usage metrics only — zero prompt text, tool arguments, or credentials.
+
 ## Extension and configuration notes
 
 - Events flow through `redactAgentEvent` before subscribers and ledger writes — configure `createSecretRedactor` on the agent/run.
@@ -214,11 +264,12 @@ const entries = capture.events(); // oldest-first snapshot; capture.clear() rese
 - Capture middleware follows the same default: `redact: "secrets"` drops message content; buffers are capped and secrets are redacted unconditionally, so a captured buffer can be persisted or replayed without leaking credentials.
 - Use `identityTelemetryAttributes(identity)` when attaching enterprise identity to run metadata or OTel attributes; it emits `prism.identity.*` refs only (tenant/principal/scope counts), never credential secrets or raw tokens.
 - Opt-in content in other event types (`message_delta`, tool `result`) is still subject to `redactAgentEvent`.
-- Metric labels stay low-cardinality (`gen_ai.operation.name`, `gen_ai.provider.name`, token type, controlled outcome/status, feedback rating bucket/link presence); never use session/run/request/call IDs, model output, comments, tag values, scorer/evaluation IDs, or arbitrary metadata as labels. Token usage is recorded once at provider operation scope.
+- Metric labels stay low-cardinality (`gen_ai.operation.name`, `gen_ai.provider.name`, token type, controlled outcome/status, feedback rating bucket/link presence, controlled `prism.workflow.id` names); never use session/run/request/call IDs, dynamic run IDs, model output, comments, tag values, scorer/evaluation IDs, or arbitrary metadata as labels. Token usage is recorded once at provider operation scope.
 - Target overhead when enabled is under 5% excluding exporter I/O; disabled hooks allocate no spans.
 - Provider transport limits and redaction order are documented in [Provider primitives](provider-primitives.md).
 
 ## Related APIs
+- [Execution timeline](execution-timeline.md): cockpit projection — fold `AgentEvent` or `WorkflowEvent` into `ExecutionTimeline`.
 - [Agent identity](agent-identity.md): redacted identity attribute helper for telemetry.
 - [Evaluations](evaluations.md): optional scorers can link scores to run/session/trace IDs from agent events.
 

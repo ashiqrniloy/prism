@@ -1,6 +1,6 @@
 import { RagScopeError, RagValidationError } from "./errors.js";
 import { resolveRagLimits } from "./limits.js";
-import type { IngestionStatus, IngestionStatusQuery, IngestionStatusStore, RagScope } from "./types.js";
+import type { IngestionStatus, IngestionStatusQuery, IngestionStatusStore, RagScope, SourceFreshness } from "./types.js";
 import { assertNotAborted, byteLength, requireScope, requireSourceId } from "./util.js";
 
 export async function listIngestionStatus(
@@ -57,6 +57,7 @@ export function ingestionStatus(
   bytes: number,
   chunks: number,
   error?: string,
+  freshness?: SourceFreshness,
 ): IngestionStatus {
   const status: IngestionStatus = {
     sourceId: requireSourceId(sourceId),
@@ -65,6 +66,7 @@ export function ingestionStatus(
     bytes,
     chunks,
     ...(error ? { error } : {}),
+    ...(freshness ? { freshness } : {}),
     updatedAt: new Date().toISOString(),
   };
   assertStatus(status, status.scope);
@@ -88,6 +90,9 @@ function assertStatus(status: IngestionStatus, scope: RagScope): void {
   if (!Number.isFinite(Date.parse(status.updatedAt))) throw new RagValidationError("ingestion status updatedAt must be an ISO timestamp");
   if (status.error !== undefined && (typeof status.error !== "string" || byteLength(status.error) > 4_096)) {
     throw new RagValidationError("ingestion status error must be a string <= 4096 bytes");
+  }
+  if (status.freshness !== undefined && !(["current", "stale", "unavailable"] as const).includes(status.freshness)) {
+    throw new RagValidationError("ingestion status freshness is invalid");
   }
 }
 

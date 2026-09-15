@@ -6,6 +6,7 @@ import {
   type AgentSession,
   assertIdentityActive,
   assertIdentityMatchesOwnership,
+  assertIdentityPropagation,
   createAgent,
   createEventMultiplexer,
   type NestedRunOutcome,
@@ -14,10 +15,20 @@ import {
   type ResumeNestedRun,
   resumeAgentRun,
   type SecretRedactor,
+  narrowIdentity,
 } from "@arnilo/prism";
 import { SupervisorDeniedError, SupervisorError, SupervisorLimitError, SupervisorValidationError } from "./errors.js";
 import { narrowSupervisorLimits, type ResolvedSupervisorLimits, resolveSupervisorLimits } from "./limits.js";
-import type { CreateSupervisorOptions, DelegationCompletion, DelegationRequest, Supervisor, SupervisorEvent } from "./types.js";
+import type {
+  CreateSupervisorOptions,
+  DelegationCompletion,
+  DelegationHandle,
+  DelegationRequest,
+  DelegationWaitOptions,
+  DelegationWaitResult,
+  Supervisor,
+  SupervisorEvent,
+} from "./types.js";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 interface ChainContext {
@@ -25,10 +36,26 @@ interface ChainContext {
   readonly signal?: AbortSignal;
 }
 
+interface DelegationLaunch {
+  readonly delegationId: string;
+  readonly controller: AbortController;
+}
+
+interface RunningDelegation {
+  readonly controller: AbortController;
+  readonly promise: Promise<AgentRunResult>;
+  cancelled: boolean;
+}
+
+type CompletedDelegation =
+  | { readonly result: AgentRunResult }
+  | { readonly cancelled: true }
+  | { readonly cancelled: false; readonly error: unknown };
+
 const DELEGATION_NAMESPACE = "prism.supervisor-delegation";
 
 /**
- * BUG-2 guard (Clay integration findings): a child factory returning a session
+ * BUG-2 guard (integration findings): a child factory returning a session
  * (or anything non-Agent) used to crash at `.config.permission` with a cryptic
  * TypeError. One shared shape check at both factory-result consumption sites;
  * constructor name ("AgentSession", "Object", ...) names the received type.
@@ -134,22 +161,36 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
   const events = createEventMultiplexer<SupervisorEvent>({ maxQueuedEvents: baseLimits.maxQueuedEvents, overflow: "drop_oldest" });
   let activeChildren = 0;
   let sequence = 0;
+  const runningDelegations = new Map<string, RunningDelegation>();
+  const completedDelegations = new Map<string, CompletedDelegation>();
 
-  async function delegate(request: DelegationRequest, chain: ChainContext = { path: [] }): Promise<AgentRunResult> {
+  async function delegate(
+    request: DelegationRequest,
+    chain: ChainContext = { path: [] },
+    launch?: DelegationLaunch,
+  ): Promise<AgentRunResult> {
     const child = options.children[request.childId];
     if (!child) throw new SupervisorDeniedError("Child is not allow-listed");
     if (chain.path.includes(request.childId)) throw new SupervisorLimitError("Delegation cycle detected");
     const depth = chain.path.length + 1;
     let limits = narrowSupervisorLimits(narrowSupervisorLimits(baseLimits, child.limits), request.limits);
     if (depth > limits.maxDepth) throw new SupervisorLimitError("Delegation depth exceeded");
+    const childIdentity =
+      options.identity && child.scopes !== undefined ? narrowIdentity(options.identity, { scopes: child.scopes }) : options.identity;
+    if (options.identity && childIdentity) assertIdentityPropagation(options.identity, childIdentity);
     let input = options.redactor?.redact(request.input) ?? request.input;
     assertBytes(input, limits.maxMessageBytes, "Delegation input");
-    if (activeChildren >= limits.maxActiveChildren) throw new SupervisorLimitError("Active child limit exceeded");
+    let reserved = false;
+    const reserve = () => {
+      if (activeChildren >= limits.maxActiveChildren) throw new SupervisorLimitError("Active child limit exceeded");
+      activeChildren += 1;
+      reserved = true;
+    };
+    if (!options.hooks?.before) reserve();
 
-    activeChildren += 1;
-    const delegationId = `${id}-${++sequence}`;
+    const delegationId = launch?.delegationId ?? `${id}-${++sequence}`;
     const path = Object.freeze([...chain.path, request.childId]);
-    const controller = new AbortController();
+    const controller = launch?.controller ?? new AbortController();
     const disposeSignals = linkSignals(controller, request.signal, chain.signal);
     let timer = setTimeout(() => controller.abort(new SupervisorLimitError("Delegation timeout exceeded")), limits.timeoutMs);
     let completionSent = false;
@@ -183,13 +224,14 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         }
         limits = narrowSupervisorLimits(limits, decision.limits);
         if (depth > limits.maxDepth) throw new SupervisorLimitError("Delegation depth exceeded");
-        if (activeChildren > limits.maxActiveChildren) throw new SupervisorLimitError("Active child limit exceeded");
         clearTimeout(timer);
         timer = setTimeout(() => controller.abort(new SupervisorLimitError("Delegation timeout exceeded")), limits.timeoutMs);
         hookPermission = decision.permission;
         if (decision.input !== undefined) input = options.redactor?.redact(decision.input) ?? decision.input;
         assertBytes(input, limits.maxMessageBytes, "Delegation input");
       }
+
+      if (!reserved) reserve();
 
       const resourceId = `${id}/${delegationId}/${request.childId}`;
       const threadId = `${resourceId}/${encodeURIComponent(request.threadId ?? "default")}`;
@@ -209,7 +251,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
               depth,
               path,
               ownership: options.ownership,
-              identity: options.identity,
+              identity: childIdentity,
               effectStore: options.effectStore,
               resourceId,
               threadId,
@@ -226,7 +268,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         ...childAgent.config,
         permission: intersectPolicies(preliminaryPermission, childAgent.config.permission),
         ownership: options.ownership,
-        identity: options.identity ?? childAgent.config.identity,
+        identity: childIdentity ?? childAgent.config.identity,
         effectStore: options.effectStore ?? childAgent.config.effectStore,
         redactor: options.redactor ?? childAgent.config.redactor,
       });
@@ -330,8 +372,63 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
     } finally {
       clearTimeout(timer);
       disposeSignals();
-      activeChildren -= 1;
+      if (reserved) activeChildren -= 1;
     }
+  }
+
+  async function delegateAsync(request: DelegationRequest): Promise<DelegationHandle> {
+    const child = options.children[request.childId];
+    if (!child) throw new SupervisorDeniedError("Child is not allow-listed");
+    // Avoid returning a misleading running handle for an immediately-full, no-hook supervisor.
+    if (!options.hooks?.before) {
+      const limits = narrowSupervisorLimits(narrowSupervisorLimits(baseLimits, child.limits), request.limits);
+      if (activeChildren >= limits.maxActiveChildren) throw new SupervisorLimitError("Active child limit exceeded");
+    }
+    const delegationId = `${id}-${++sequence}`;
+    const controller = new AbortController();
+    const promise = delegate(request, { path: [] }, { delegationId, controller });
+    const running: RunningDelegation = { controller, promise, cancelled: false };
+    runningDelegations.set(delegationId, running);
+    void promise.then(
+      (result) => finishAsyncDelegation(delegationId, { result }),
+      (error) => finishAsyncDelegation(delegationId, running.cancelled ? { cancelled: true } : { cancelled: false, error }),
+    );
+    return { delegationId, status: "running" };
+  }
+
+  function finishAsyncDelegation(delegationId: string, terminal: CompletedDelegation): void {
+    runningDelegations.delete(delegationId);
+    completedDelegations.delete(delegationId);
+    completedDelegations.set(delegationId, terminal);
+    while (completedDelegations.size > baseLimits.maxQueuedEvents) {
+      const oldest = completedDelegations.keys().next().value;
+      if (oldest === undefined) break;
+      completedDelegations.delete(oldest);
+    }
+  }
+
+  async function wait(delegationId: string, waitOptions?: DelegationWaitOptions): Promise<DelegationWaitResult> {
+    const terminal = completedDelegations.get(delegationId);
+    if (terminal) return terminalResult(delegationId, terminal);
+    const running = runningDelegations.get(delegationId);
+    if (!running) throw new SupervisorDeniedError("Unknown async delegation");
+    try {
+      return await waitFor(running.promise, waitOptions?.signal, baseLimits.timeoutMs);
+    } catch (error) {
+      if (running.cancelled) return { delegationId, status: "cancelled" };
+      throw error;
+    }
+  }
+
+  function cancel(delegationId: string): boolean {
+    const running = runningDelegations.get(delegationId);
+    if (!running) {
+      if (completedDelegations.has(delegationId)) return false;
+      throw new SupervisorDeniedError("Unknown async delegation");
+    }
+    running.cancelled = true;
+    running.controller.abort(new SupervisorError("Async delegation cancelled"));
+    return true;
   }
 
   async function saveMapping(runId: string, mapping: DelegationMapping): Promise<void> {
@@ -358,10 +455,14 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
     }
     const child = options.children[mapping.childId];
     if (!child) throw new SupervisorDeniedError("Unknown delegated run");
+    const childIdentity =
+      options.identity && child.scopes !== undefined ? narrowIdentity(options.identity, { scopes: child.scopes }) : options.identity;
+    if (options.identity && childIdentity) assertIdentityPropagation(options.identity, childIdentity);
     const depth = mapping.path.length;
     const controller = new AbortController();
     let limits = narrowSupervisorLimits(baseLimits, child.limits);
     let hookPermission: PermissionPolicy | undefined;
+    let stopChildEvents: (() => Promise<void>) | undefined;
     // The before-hook re-runs at resume so its narrowing applies exactly as it did to the
     // original run; hooks must be idempotent (same contract as core resume guardrails).
     if (options.hooks?.before) {
@@ -378,7 +479,24 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         }),
       );
       if (decision.allowed === false) {
-        return { status: "failed", code: "delegation_denied", message: safeError(decision.reason ?? "Delegation denied", options) };
+        // Resume parity with live delegate(): a denied rebuild is a terminal rejection.
+        const reason = safeError(decision.reason ?? "Delegation denied", options);
+        events.publish({
+          type: "delegation_rejected",
+          childId: mapping.childId,
+          delegationId: mapping.delegationId,
+          depth,
+          reason,
+        });
+        await complete({
+          childId: mapping.childId,
+          delegationId: mapping.delegationId,
+          depth,
+          status: "rejected",
+          text: "",
+          error: reason,
+        });
+        return { status: "failed", code: "delegation_denied", message: reason };
       }
       limits = narrowSupervisorLimits(limits, decision.limits);
       hookPermission = decision.permission;
@@ -392,7 +510,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         depth,
         path: mapping.path,
         ownership: options.ownership,
-        identity: options.identity,
+        identity: childIdentity,
         effectStore: options.effectStore,
         resourceId,
         threadId: mapping.threadId,
@@ -406,20 +524,55 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
       ...childAgent.config,
       permission: intersectPolicies(permission, childAgent.config.permission),
       ownership: options.ownership,
-      identity: options.identity ?? childAgent.config.identity,
+      identity: childIdentity ?? childAgent.config.identity,
       effectStore: options.effectStore ?? childAgent.config.effectStore,
       redactor: options.redactor ?? childAgent.config.redactor,
     });
-    const result = await resumeAgentRun(
-      agent,
-      { runId: nested.ref.runId, ...(nested.ref.sessionId ? { sessionId: nested.ref.sessionId } : {}) },
-      { decisions, expectedVersion: mapping.version },
-      { checkpoints, definitionRevision: options.definitionRevision, ownership: options.ownership, resumeNestedRun },
-    );
+    let result: AgentRunResult;
+    try {
+      result = await resumeAgentRun(
+        agent,
+        { runId: nested.ref.runId, ...(nested.ref.sessionId ? { sessionId: nested.ref.sessionId } : {}) },
+        { decisions, expectedVersion: mapping.version },
+        {
+          checkpoints,
+          definitionRevision: options.definitionRevision,
+          ownership: options.ownership,
+          resumeNestedRun,
+          // Plan 078 Task 7: the same pump as live `delegate()`, attached to the rebuilt session,
+          // so a consumer that lost the stream across HITL still sees child milestones.
+          onSession: (session) => {
+            if (options.childEvents !== true) return;
+            stopChildEvents = startChildEventPump(
+              session,
+              { childId: mapping.childId, delegationId: mapping.delegationId, depth },
+              limits,
+              options.redactor,
+              (event) => events.publish(event),
+            );
+          },
+        },
+      );
+    } finally {
+      // Stops on every outcome, including a failed rebuild (stale version, fingerprint drift).
+      await stopChildEvents?.();
+      stopChildEvents = undefined;
+    }
     if (result.status === "suspended") {
       await saveMapping(nested.ref.runId, { ...mapping, version: result.runState?.version ?? mapping.version });
       return { status: "suspended", pendingDecisions: result.interruption?.pendingDecisions ?? [] };
     }
+    // Terminal symmetry with live `delegate()`: publish the finish and run the terminal hook.
+    const totalTokens = result.usage?.totalTokens ?? (result.usage?.inputTokens ?? 0) + (result.usage?.outputTokens ?? 0);
+    events.publish({
+      type: "delegation_finished",
+      childId: mapping.childId,
+      delegationId: mapping.delegationId,
+      depth,
+      status: result.status,
+      totalTokens,
+    });
+    await complete(toCompletion(result, mapping.childId, mapping.delegationId, depth, options));
     if (result.status === "succeeded") {
       return { status: "completed", value: options.redactor?.redact(result.text) ?? result.text };
     }
@@ -446,13 +599,45 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
   }
 
   return {
+    childIds: Object.freeze(children.map(([childId]) => childId)),
+    redact: (value) => options.redactor?.redact(value) ?? value,
     delegate: (request) => delegate(request),
+    delegateAsync,
+    wait,
+    cancel,
     resumeNestedRun,
     subscribe: () => events.subscribe(),
     get activeChildren() {
       return activeChildren;
     },
   };
+}
+
+function terminalResult(delegationId: string, terminal: CompletedDelegation): DelegationWaitResult {
+  if ("result" in terminal) return terminal.result;
+  if (terminal.cancelled) return { delegationId, status: "cancelled" };
+  throw terminal.error;
+}
+
+function waitFor<T>(promise: Promise<T>, signal: AbortSignal | undefined, timeoutMs: number): Promise<T> {
+  if (signal?.aborted) return Promise.reject(signal.reason);
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => done(() => reject(new SupervisorLimitError("Async delegation wait timeout exceeded"))), timeoutMs);
+    const abort = () => {
+      // Registered only when a signal exists; the listener is removed by `done`.
+      if (signal) done(() => reject(signal.reason));
+    };
+    const done = (settle: () => void) => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+      settle();
+    };
+    if (signal) signal.addEventListener("abort", abort, { once: true });
+    promise.then(
+      (value) => done(() => resolve(value)),
+      (error) => done(() => reject(error)),
+    );
+  });
 }
 
 function toCompletion(

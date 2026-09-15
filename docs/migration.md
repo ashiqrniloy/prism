@@ -1,5 +1,17 @@
 # Migration guide
 
+## 0.6.0 → 0.7.0 (host completeness, evidence, and capability boundaries)
+
+**Prism 0.7.0 is a lockstep minor for all ten publishable packages.** Node `>=22` stays the floor; no import path was removed and no store schema changed, so a host that does not touch the ACP agent or the model-router facade upgrades by moving every `@arnilo/*` dependency and peer to `^0.7.0`. The full guide — per-item migration actions, opt-in activation, and rollback — is [migrate-to-0.7.md](migrate-to-0.7.md).
+
+What a 0.6.0 host must check before upgrading:
+
+- **Two hard refusals inside existing surfaces (the only host-breaking changes).** `@arnilo/prism-acp-agent` now matches `mcp.allow` destinations by WHATWG origin plus path-segment subtree (prefix lookalikes such as `https://mcp.example.com.attacker.invalid` no longer match, and allow entries with userinfo/query/fragment/ambiguous encodings fail `ConfigError` at parse time); `router.providerSource(model)` throws `ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED` / `ERR_PRISM_MODEL_ROUTER_ASYNC_STATE` instead of silently bypassing budgets, rate limits, circuits, fallbacks, selection policies, or durable state — move those call sites to `await router.resolve(...)`. An ACP deployment without an explicit provider no longer silently runs `createMockProvider()`; mock mode is explicit.
+- **Behavioral tightenings inside existing surfaces** (agent tool narrowing is monotonic per run, RAG queries are authorized in both legs, memory corrections/revocations propagate, import-fidelity reports replace silent drops, model-router/worker accounting is aggregated): these need a host read-through, not a code change.
+- **Additive declarations only.** No export was removed in 0.7.0; the compat baselines were regenerated because existing declaration groups gained members (new fields on options/results and new subpath exports for the attention compiler, memory fabric, work scopes, and supervisor spawn tools).
+- **Opt-in additions are inert by default**: attention compiler (`AgentConfig`/`RunOptions`), `@arnilo/prism-memory/fabric`, the observational-memory work-scope index, and the supervisor `spawn_agent`/`wait_agent`/`cancel_agent` tools. Omitted, request bytes, stores, and tool lists are unchanged.
+- **Channel adapters (Telegram/Signal) are not in 0.7.0.**
+
 ## 0.5.6 → 0.6.0 (Node 22 floor; folds the never-published 0.5.7)
 
 **Prism 0.6.0 requires Node `>=22`.** Every publishable package declares `"engines": { "node": ">=22" }`; a Node 20 host gets an `EBADENGINE` warning from npm (a hard failure under `engine-strict`) and an unsupported runtime. Node 20 reached upstream end-of-life on 2026-04-30, so the 0.6.0 line moves to Node 22 (maintenance LTS to 2027-04-30) while Node 24 stays the CI default (active LTS to 2028-04-30). The full 0.5.6 → 0.6.0 guide — third-party floors, the removed office peer, the additive host knobs, and upgrade/rollback steps — lives in [migrate-to-0.6.md](migrate-to-0.6.md).
@@ -48,7 +60,7 @@ Stream tokens coalesce on persist (adjacent `text`/`thinking` deltas merge). Rep
 ## 0.5.0 → 0.5.1 (additive)
 
 
-Kernel constructs valid provider requests: session correlation, default cache breakpoints, and `thinkingLevel` on `AgentConfig` / `RunOptions`. Clay may drop host-only `createSessionCachePolicy`. OpenCode Go raw `generate` without `sessionId` throws `ProviderRequirementError` (`ERR_PRISM_PROVIDER_REQUIREMENT`) before fetch instead of an upstream 400. Observational memory uses derived `om:{session.id}`; LLM compaction uses the agent session id. See [migrate-to-0.5.md](migrate-to-0.5.md#8-provider-request-construction--additive-plan-066--051).
+Kernel constructs valid provider requests: session correlation, default cache breakpoints, and `thinkingLevel` on `AgentConfig` / `RunOptions`. Hosts may drop a host-side `createSessionCachePolicy` overlay. OpenCode Go raw `generate` without `sessionId` throws `ProviderRequirementError` (`ERR_PRISM_PROVIDER_REQUIREMENT`) before fetch instead of an upstream 400. Observational memory uses derived `om:{session.id}`; LLM compaction uses the agent session id. See [migrate-to-0.5.md](migrate-to-0.5.md#8-provider-request-construction--additive-plan-066--051).
 
 ## What it does
 

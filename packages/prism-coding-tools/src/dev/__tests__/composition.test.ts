@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createPrismDevInspector } from "../index.js";
+import { createPrismDevInspector, inspectDevInspector } from "../index.js";
 
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const srcRoot = join(pkgRoot, "src/dev");
@@ -45,7 +45,13 @@ describe("composition (plan 040 Task 1)", () => {
     }
     // Public seams only: peer core, peer server, peer ag-ui subpaths. No
     // deeper core subpath (e.g. @arnilo/prism/testing/...) and no internals.
-    const allowList = ["@arnilo/prism", "@arnilo/prism-server", "@arnilo/prism-core/runtime/server", "@arnilo/prism-ag-ui/renderer"];
+    const allowList = [
+      "@arnilo/prism",
+      "@arnilo/prism-server",
+      "@arnilo/prism-core/governance/observability",
+      "@arnilo/prism-core/runtime/server",
+      "@arnilo/prism-ag-ui/renderer",
+    ];
     assert.deepEqual(
       [...new Set(arnilo)].sort(),
       [...new Set(arnilo)].filter((used) => allowList.includes(used)).sort(),
@@ -94,6 +100,37 @@ describe("composition (plan 040 Task 1)", () => {
     } finally {
       await inspector.close();
     }
+  });
+
+  it("GET /inspect returns host composition report with effective tools, ownership, and storage", async () => {
+    const agent = mockAgent("Composition check");
+    const inspector = createPrismDevInspector({ agent, port: 0 });
+    await inspector.listen();
+    try {
+      const response = await fetch(`${inspector.url}/inspect`, {
+        method: "GET",
+        signal: AbortSignal.timeout(5_000),
+      });
+      assert.equal(response.status, 200);
+      const report = (await response.json()) as {
+        profile: string;
+        storage: { durable: boolean; kind: string };
+        readiness: { ok: boolean };
+      };
+      assert.equal(report.profile, "personal");
+      assert.equal(report.storage.durable, false, "in-memory dev inspector store is not durable");
+      assert.ok(typeof report.readiness.ok === "boolean");
+    } finally {
+      await inspector.close();
+    }
+  });
+
+  it("inspectDevInspector reports composition from inspector options", () => {
+    const agent = mockAgent("Test");
+    const report = inspectDevInspector({ agent });
+    assert.equal(report.profile, "personal");
+    assert.equal(report.storage.durable, false);
+    assert.equal(report.effectiveTools.length, 0);
   });
 });
 

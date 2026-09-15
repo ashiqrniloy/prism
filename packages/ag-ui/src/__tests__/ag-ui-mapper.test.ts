@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { EventSchemas, EventType } from "@ag-ui/core";
 import { type AgentEvent, createDelegatedAgentStep, createSecretRedactor } from "@arnilo/prism";
+import { observeSupervisorLifecycle } from "@arnilo/prism-coding-tools/agent";
+import { type SupervisorEvent } from "@arnilo/prism-core/runtime/supervisor";
 import { createAgUiEventMapper, packageName, resolveAgUiLimits } from "../index.js";
 
 describe("@arnilo/prism-ag-ui", () => {
@@ -221,6 +223,50 @@ describe("@arnilo/prism-ag-ui", () => {
     assert.equal(JSON.stringify(mapped).includes("result"), false);
     assert.equal(EventSchemas.safeParse(mapped[0]).success, true);
     assert.equal(EventSchemas.safeParse(mapped[1]).success, true);
+  });
+
+  it("maps observed supervisor lifecycle steps without child transcript bodies", async () => {
+    const steps: AgentEvent[] = [];
+    const supervisorEvents: readonly SupervisorEvent[] = [
+      { type: "delegation_started", childId: "secret-child", delegationId: "delegation-1", depth: 1, resourceId: "r", threadId: "t" },
+      { type: "delegation_finished", childId: "secret-child", delegationId: "delegation-1", depth: 1, status: "succeeded", totalTokens: 2 },
+    ];
+    observeSupervisorLifecycle(
+      {
+        redact: (value) => value.replace("secret", "[REDACTED]"),
+        subscribe: () => ({
+          async *[Symbol.asyncIterator]() {
+            yield* supervisorEvents;
+          },
+        }),
+      },
+      {
+        onEvent: () => undefined,
+        delegatedAgentStep: {
+          sessionId: "session-1",
+          runId: "run-1",
+          adapterId: "coding-supervisor",
+          externalConversationId: "conversation-1",
+          onEvent: (event) => steps.push(event),
+        },
+      },
+    );
+    for (let attempt = 0; steps.length < 2 && attempt < 20; attempt += 1) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+    assert.equal(steps.length, 2);
+
+    const mapper = createAgUiEventMapper({ includeCustomEvents: true });
+    const mapped = (await Promise.all(steps.map((event) => mapper.map(event)))).flat();
+    const activities = mapped.filter((event) => event.type === EventType.ACTIVITY_SNAPSHOT) as Array<{ content: Record<string, unknown> }>;
+    assert.deepEqual(
+      activities.map((event) => [event.content.state, event.content.kind, event.content.subagentType]),
+      [
+        ["active", "subagent", "[REDACTED]-child"],
+        ["done", "subagent", "[REDACTED]-child"],
+      ],
+    );
+    assert.doesNotMatch(JSON.stringify(mapped), /input|output|secret-child/);
   });
 
   it("enforces finite limits and truncates oversized text before schema output", async () => {

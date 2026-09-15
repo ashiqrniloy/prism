@@ -23,6 +23,7 @@ node examples/rpc.ts
 node examples/provider-registration.ts
 node examples/provider-resolver.ts
 node examples/cache-aware-prompt-assembly.ts
+node examples/attention-compiler.ts
 node examples/neuralwatt-agent-run.ts
 node examples/observational-memory-recall-status-view.ts
 node examples/observational-memory-lifecycle.ts
@@ -38,15 +39,20 @@ node examples/custom-tools-skills-context.ts
 node examples/extension-package.ts
 node examples/evals.ts
 node examples/evaluation-gate.ts
+node examples/execution-timeline.ts
+node examples/behavior-evaluation.ts
 node examples/coding-browser-evaluation.ts
 node examples/web-research.ts
 node examples/run-feedback.ts
 node examples/supervisor-a2a.ts
+node examples/spawn-agent-tool.ts
 node examples/handoff-swarm.ts
 node examples/crew-hierarchy.ts
 node examples/ai-sdk-provider.ts
 node examples/working-semantic-memory.ts
 node examples/rag.ts
+node examples/drive-rag-sync.ts
+node examples/scanned-document-rag.ts
 node examples/web-standard-server.ts
 node examples/mcp-server.ts
 node examples/workflow-research-and-review.ts
@@ -71,6 +77,8 @@ node examples/enterprise-work-connectors.ts
 node examples/server-deployment-seams.ts
 node examples/conversation-durable-replay.ts
 node examples/artifact-review-delivery.ts
+node examples/docker-process-session.ts
+node examples/hosted-sandbox.ts
 ```
 
 Each demo prints a single JSON line with its result.
@@ -84,9 +92,12 @@ Each demo prints a single JSON line with its result.
 - `enterprise-work-connectors.ts` — **demo**: fake M365/GWS CLI adapters, shared mail normalizers, and draft-gated work tools.
 - `distributed-events-and-tool-effects.ts` — **demo**: durable event cursor resume + required tool-effect claim/replay/unknown resolve (memory reference, network-free).
 - `enterprise-postgres-state.ts` — compile-checked durable policy/evaluation/work/router composition; host provides the PostgreSQL pool and explicitly schedules cleanup.
-- `server-deployment-seams.ts` — **demo**: health, drain, rate-limit, and deployment lease on `@arnilo/prism-core/runtime/server` (network-free).
+- `governed-provider.ts` — **demo**: opt-in governed `AIProvider` adapter with admission, atomic budget reservation, streaming, and explicit settlement (network-free).
+- `server-deployment-seams.ts` — **demo**: health, drain, fair workflow admission, operator queue, rate-limit, and deployment lease (network-free).
 - `conversation-durable-replay.ts` — **demo**: durable conversation thread (sqlite `:memory:`) with mock-agent continue and reconnectable redacted replay.
 - `artifact-review-delivery.ts` — **demo**: artifact attach/revise/approve review + expiring authorized delivery link over an in-memory checkpoint store.
+- `docker-process-session.ts` — **demo**: long-running process management inside a Docker sandbox with durable recovery, attested reconnect, and fail-closed isolation.
+- `hosted-sandbox.ts` — **demo**: fake E2B client through `createE2BSandbox` / `connectE2BSandbox` (filesystem-only pause, no auto-resume; network-free).
 - `agent-durable-approval.ts` — suspend before a tool side effect, then resume once with durable CAS approval.
 - `durable-loops-and-approvals.ts` — **demo**: durable custom-loop snapshot + parallel batch approvals (network-free).
 - `ag-ui-server.ts` — authorized Web `Request` → bounded AG-UI SSE run with a host-owned mock session.
@@ -94,15 +105,21 @@ Each demo prints a single JSON line with its result.
 - `ag-ui-mcp-apps.ts` — **demo**: authenticated single-bridge MCP Apps resource proxy plus separate-origin sandbox/CSP configuration (network-free).
 - `evals.ts` — deterministic scorers, dataset snapshot, and bounded `runExperiment` over mock agent results.
 - `evaluation-gate.ts` — network-free experiment threshold that exits non-zero on regression.
-- `coding-browser-evaluation.ts` — network-free coding/browser adversarial dataset + scorers + CI threshold (no Docker/Playwright binary).
+- `execution-timeline.ts` — **demo**: offline workflow execution timeline projection, cockpit summary, and Mermaid diagram export (network-free).
+- `behavior-evaluation.ts` — **demo**: host-journey packs that execute `trials: 3` (`sampleCount`), `runScenario` clarify/refuse, denyTools/unknownEffect/failStore injection, Task 8 stale draft revision, revoked-ACL citations, and `validateReleaseEvalManifest` (network-free).
+- `coding-browser-evaluation.ts` — network-free coding/browser adversarial dataset + scorers + CI threshold, plus a test-oracle `toEnvironment` file-hash gate (no Docker/Playwright binary).
 - `web-research.ts` — network-free host-selected Brave search → Firecrawl Markdown route with fake fetch, stable citation, untrusted marker, and fixed host extraction schema.
 - `run-feedback.ts` — immutable owned run feedback linked to an evaluation, bounded query, and safe low-cardinality OpenTelemetry projection.
 - `supervisor-a2a.ts` — bounded allow-listed local child delegation plus an offline A2A 1.0 handler/client round trip.
+- `spawn-agent-tool.ts` — **demo**: parent model starts two narrowed, read-only explore children in parallel, gets an uncatalogued child refused, then joins both handles in a later tool turn (network-free).
 - `handoff-swarm.ts` — **demo**: in-session handoff — triage transfers to a specialist via a generated `handoff` tool (host allow-list), definition swap over the same session transcript, narrowed permissions on transfer (network-free).
 - `crew-hierarchy.ts` — **demo**: hierarchical crew pattern — manager structured task plan, parallel role specialists (fan-out), host reduce aggregation, and conditional validation/revision (network-free).
 - `ai-sdk-provider.ts` — optional AI SDK `LanguageModelV4` adapter demo with a fake in-memory model.
 - `working-semantic-memory.ts` — optional working memory + semantic recall with hash embedder, context injection, and processor update.
 - `rag.ts` — optional bounded Markdown chunk/index/retrieve/citation flow using Phase 7 in-memory vector primitives.
+- `drive-rag-sync.ts` — **demo**: fake Drive connector through `syncKnowledge` (checkpointed cursor, ACL grants, hash skip; network-free).
+- `scanned-document-rag.ts` — **demo**: fake Mistral OCR `fetch` through `createMistralOcrParser` into `replaceDocument` (no default parser, usage hook; network-free).
+- `realtime-voice-host.ts` — **demo**: governed realtime voice bridge over a mock `RealtimeSession` (barge-in before effect, no microphone, network-free).
 - `web-standard-server.ts` — optional framework-free authorized `Request -> Response` agent run using the offline mock provider.
 - `mcp-server.ts` — dual-era authorized Prism tool exposure: factory-based serving over in-memory (default), stdio (`--stdio`), and a commented modern HTTP wiring through SDK `createMcpHandler`.
 - `minimal-host-app.ts` — **demo**: canonical minimal host embed; stream events while a prompt runs via concurrent `Promise.all([drain, session.run])`.
@@ -123,6 +140,7 @@ Each demo prints a single JSON line with its result.
 - `oauth-login.ts` — PKCE OAuth login against a token endpoint (fake host).
 - `openrouter-model-cache-override.ts` — per-model routing/cache overrides.
 - `cache-aware-prompt-assembly.ts` — **demo**: cache-aware stable-prefix assembly and hit-rate reporting across OpenRouter explicit cache hints and NeuralWatt implicit prefix caching, using mocked SSE responses.
+- `attention-compiler.ts` — **demo**: opt-in attention compiler — an under-ratio assembly identical to a compiler-off one, then a stub plus the `attention_compiled` report once the request crosses the ratio (network-free).
 - `neuralwatt-agent-run.ts` — **demo**: NeuralWatt agent run with tools, reasoning controls, streamed usage cache tokens, and mocked energy/cost telemetry.
 - `tools.ts` — host-owned tool registry: allow/deny filter + dispatch.
 - `context.ts` — ordered context-provider pipeline.
@@ -145,6 +163,8 @@ Each demo prints a single JSON line with its result.
   status/view commands; recall fails closed on invalid ids.
 - `observational-memory-lifecycle.ts` — **demo**: `createObservationalMemory().attach()` →
   turn → projection/recall/branch page (mock workers, no network).
+- `work-scopes-coding-loop.ts` — **demo**: nested work scopes with `withWorkScope`, leaf-only auto-bind, projection (task memory hidden until an ancestor bind promotes it), and closed-scope inclusion (network-free).
+- `memory-fabric.ts` — **demo**: typed notes (fact/procedure/working) over the existing stores, in-place folding + supersession, `attach(session)` gating the `memory.*` tools and the linker, and the `memory-fabric` context provider registered for `AgentDefinition.context` (network-free).
 - `host-artifact-loop.ts` — **demo**: third-party host mixing first-party
   and own providers/tools/skills, `AGENTS.md`/`SYSTEM.md` system prompts, and the
   `generate-validate-revise` artifact loop with host-owned schema validation.

@@ -16,6 +16,14 @@ export interface ModelRouterBudgets {
    * `unknown_usage` diagnostic). Default 60s; bounded to 31 days.
    */
   readonly reservationTtlMs?: number;
+  /**
+   * When true, hard-budget mode is strictly enforced:
+   * - If cost budget is active (`maxCostUsd` is configured), candidates lacking pricing
+   *   or calls lacking enforceable cost/output bounds are denied fail-closed with `ERR_PRISM_MODEL_ROUTER_BUDGET`.
+   * - If token budget is active (`maxTokens` is configured), calls lacking enforceable output/token bounds
+   *   are denied fail-closed with `ERR_PRISM_MODEL_ROUTER_BUDGET`.
+   */
+  readonly strict?: boolean;
 }
 
 export interface ModelRouterRateLimit {
@@ -54,9 +62,20 @@ export interface ModelRouterStateOwner {
   readonly principalId: string;
 }
 
+export type PaidWorkKind = "generation" | "embedding" | "compaction" | "tool";
+
+export interface ModelRouterAttribution {
+  readonly tokens: number;
+  readonly costUsd: number;
+  readonly count: number;
+}
+
 export interface ModelRouterStateKey extends ModelRouterStateOwner {
   readonly provider: string;
   readonly model: string;
+  readonly taskId?: string;
+  readonly kind?: PaidWorkKind;
+  readonly attemptId?: string;
 }
 
 export interface ModelRouterReservation {
@@ -79,7 +98,13 @@ export interface ModelRouterStateStore {
     readonly now: number;
     /** Hard cap on tracked budget keys; LRU eviction on new-key insert. */
     readonly maxBudgetKeys?: number;
-  }): Promise<{ readonly tokens: number; readonly costUsd: number }>;
+  }): Promise<{
+    readonly tokens: number;
+    readonly costUsd: number;
+    readonly byModel?: Readonly<Record<string, ModelRouterAttribution>>;
+    readonly byKind?: Readonly<Record<string, ModelRouterAttribution>>;
+    readonly attributions?: Readonly<Record<string, ModelRouterAttribution>>;
+  }>;
   addUsage(input: {
     readonly key: ModelRouterStateKey;
     readonly tokens?: number;
@@ -134,6 +159,20 @@ export interface ModelRouterStateStore {
     readonly windowMs: number;
     readonly now: number;
   }): Promise<void>;
+  /**
+   * Renew an active reservation hold before it expires, advancing its fencing token
+   * and extending its TTL without freeing live liability unsafely.
+   * If the reservation does not exist, fencing mismatch, or has already expired,
+   * fails closed with `ERR_PRISM_MODEL_ROUTER_STATE`.
+   */
+  renewBudget(input: {
+    readonly key: ModelRouterStateKey;
+    readonly reservationId: string;
+    readonly fencingToken: string;
+    readonly extendTtlMs: number;
+    readonly windowMs: number;
+    readonly now: number;
+  }): Promise<{ readonly renewed: boolean; readonly fencingToken: string }>;
   claimCircuitProbe(input: {
     readonly key: ModelRouterStateKey;
     readonly failureThreshold: number;
@@ -219,6 +258,9 @@ export interface ModelRouterResolveRequest {
   readonly maxTokens?: number;
   readonly fallbacks?: readonly ModelConfig[];
   readonly signal?: AbortSignal;
+  readonly taskId?: string;
+  readonly kind?: PaidWorkKind;
+  readonly attemptId?: string;
 }
 
 export type ModelRouterDenyReason =
@@ -270,7 +312,12 @@ export interface ModelRouterResolveResult {
 
 export interface ModelRouter {
   resolve(request: ModelRouterResolveRequest): Promise<ModelRouterResolveResult>;
-  /** Sync `ProviderResolver` facade using router defaults (no per-call budget overrides). */
+  /**
+   * Sync `ProviderResolver` facade. Supported only for allow-list and residency-only routers
+   * without async state, budgets, rate limits, circuits, fallbacks, or selection policies.
+   * Throws `ERR_PRISM_MODEL_ROUTER_ASYNC_STATE` or `ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED` when
+   * unenforced governance options are configured. Use `router.resolve()` instead for governed routing.
+   */
   readonly providerSource: ProviderResolver;
   recordUsage(input: {
     identity: AgentIdentity;
@@ -280,6 +327,9 @@ export interface ModelRouter {
     costUsd?: number;
     /** Commit the admission reservation returned by resolve against actual usage. */
     budgetReservation?: ModelRouterReservation;
+    taskId?: string;
+    kind?: PaidWorkKind;
+    attemptId?: string;
   }): Promise<void>;
   recordOutcome(input: {
     identity: AgentIdentity;
@@ -290,5 +340,43 @@ export interface ModelRouter {
     /** Host-measured provider-call latency; feeds the selection policy EMA. */
     latencyMs?: number;
   }): Promise<void>;
+  /** Release an uncommitted admission reservation back to available budget capacity. */
+  releaseBudget(input: {
+    identity: AgentIdentity;
+    provider: string;
+    model: string;
+    budgetReservation: ModelRouterReservation;
+    taskId?: string;
+    kind?: PaidWorkKind;
+  }): Promise<void>;
+  /** Renew an active reservation hold before it expires, extending its TTL and advancing its fencing token. */
+  renewBudget(input: {
+    identity: AgentIdentity;
+    provider: string;
+    model: string;
+    budgetReservation: ModelRouterReservation;
+    extendTtlMs?: number;
+    taskId?: string;
+    kind?: PaidWorkKind;
+  }): Promise<ModelRouterReservation>;
+  /** Read current budget utilization and attribution breakdown. */
+  readBudget(input: { identity: AgentIdentity; provider?: string; model?: string; taskId?: string }): Promise<{
+    readonly tokens: number;
+    readonly costUsd: number;
+    readonly byModel?: Readonly<Record<string, ModelRouterAttribution>>;
+    readonly byKind?: Readonly<Record<string, ModelRouterAttribution>>;
+    readonly attributions?: Readonly<Record<string, ModelRouterAttribution>>;
+  }>;
+  /** Create a governed AIProvider adapter bound to this router. */
+  createGovernedProvider(
+    options?: Omit<import("./invocation.js").GovernedProviderOptions, "router">,
+  ): import("./invocation.js").GovernedProvider;
   createOpenRouterRoutingPolicy(): ProviderRequestPolicy;
 }
+
+export type {
+  GovernedInvocationSettlement,
+  GovernedProvider,
+  GovernedProviderOptions,
+} from "./invocation.js";
+export { isGovernedProvider } from "./invocation.js";

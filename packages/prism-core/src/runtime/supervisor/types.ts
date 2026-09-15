@@ -21,6 +21,19 @@ export interface DelegationRequest {
   readonly signal?: AbortSignal;
 }
 
+export interface DelegationHandle {
+  readonly delegationId: string;
+  readonly status: "running";
+}
+
+/** A completed child result, or the terminal result of host cancellation. */
+export type DelegationWaitResult = AgentRunResult | { readonly delegationId: string; readonly status: "cancelled" };
+
+export interface DelegationWaitOptions {
+  /** Stops this wait only; it does not cancel the delegated child. */
+  readonly signal?: AbortSignal;
+}
+
 export interface DelegationChildContext {
   readonly childId: string;
   readonly delegationId: string;
@@ -40,6 +53,8 @@ export interface DelegationChildContext {
 
 export interface SupervisorChild {
   readonly description?: string;
+  /** Optional host-authored child scope subset. Omitted preserves the parent identity. */
+  readonly scopes?: readonly string[];
   readonly permission?: PermissionPolicy;
   readonly limits?: SupervisorLimits;
   createAgent(context: DelegationChildContext): Agent | Promise<Agent>;
@@ -155,7 +170,17 @@ export interface CreateSupervisorOptions {
 }
 
 export interface Supervisor {
+  /** Host-authored child IDs advertised by `createSpawnAgentTool`; factories remain private. */
+  readonly childIds: readonly string[];
+  /** Applies the supervisor's configured redactor to model-visible spawn results. */
+  redact(value: string): string;
   delegate(request: DelegationRequest): Promise<AgentRunResult>;
+  /** Starts a child without awaiting it. Handles remain local to this ownership-scoped supervisor. */
+  delegateAsync(request: DelegationRequest): Promise<DelegationHandle>;
+  /** Joins one local async child. Wait is capped at this supervisor's timeout. */
+  wait(delegationId: string, options?: DelegationWaitOptions): Promise<DelegationWaitResult>;
+  /** Aborts one running local async child; false means its known handle is already terminal. */
+  cancel(delegationId: string): boolean;
   /**
    * Routes root-run decisions back to the suspended child. Pass as `resumeNestedRun` in the
    * root run's `runState` (sticky auto-apply) and every `resumeAgentRun` options object.

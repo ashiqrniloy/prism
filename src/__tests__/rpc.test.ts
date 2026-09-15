@@ -188,7 +188,7 @@ describe("rpc", () => {
     assert.ok(lines.some((line: any) => line.id === "2" && line.ok === false));
   });
 
-  // FEATURE-3 (Clay integration findings, plan 050 Task 5): host-opt-in driver
+  // FEATURE-3 (integration findings, plan 050 Task 5): host-opt-in driver
   // hooks on CommandExecutionContext. Absent drivers ⇒ context shape unchanged.
   it("rpc_command_forwards_host_drivers_when_supplied", async () => {
     const seen: unknown[] = [];

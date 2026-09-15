@@ -48,7 +48,7 @@ Four host-facing slices on existing contracts. No new contribution kinds. No mar
       - Karpathy gist: https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f (Ingest / Query / Lint; raw immutable; schema-driven LLM filing; `index.md` + `log.md`)
       - OKF v0.2 SPEC: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md (§3 bundle, §4 frontmatter, §5 `sources`/`generated`, §8 `index.md`, §9 `log.md`)
       - `.agents/skills/create-plan/references/prism-wiki.md`
-      - Prior art: `plans/032-Prism-Wiki-Karpathy-LLM-Wiki-Package.md`, `plans/050-Release-0-3-2-Clay-Integration-Findings-And-OKF-Wiki.md`
+      - Prior art: `plans/032-Prism-Wiki-Karpathy-LLM-Wiki-Package.md`, `plans/050-Release-0-3-2-Integration-Findings-And-OKF-Wiki.md`
     - Options Considered:
       - New plugin host (marketplace, `plugin.json`, auto-start MCP, shell hooks): rejected — product-sized, duplicates Claude/Codex, not needed for trusted SDK hosts.
       - Reuse `Extension` + `CommandDefinition` + `CommandDrivers` + RAG parsers + wiki-maintainer skill; add only `activateKernel` and `ingestWikiSource`: chosen.

@@ -4,11 +4,15 @@ import { PrismServerError } from "./types.js";
 export interface PrismDrainControllerOptions {
   /** Admit cutoff / host exit budget after `beginDrain`. Default 30s, hard 5 min. */
   readonly deadlineMs?: number;
+  /** Injected clock (epoch ms). Tests only. */
+  readonly clock?: () => number;
 }
 
 export interface PrismDrainSnapshot {
   readonly status: "serving" | "draining";
   readonly draining: boolean;
+  /** True when draining and `clock() >= deadlineAt`. */
+  readonly expired: boolean;
   readonly startedAt?: string;
   readonly deadlineAt?: string;
   readonly deadlineMs: number;
@@ -24,6 +28,7 @@ export interface PrismDrainController {
 
 export function createPrismDrainController(options: PrismDrainControllerOptions = {}): PrismDrainController {
   const defaults = resolvePrismDeploymentLimits({ drainDeadlineMs: options.deadlineMs });
+  const clock = options.clock ?? Date.now;
   let draining = false;
   let startedAt: string | undefined;
   let deadlineAt: string | undefined;
@@ -36,9 +41,10 @@ export function createPrismDrainController(options: PrismDrainControllerOptions 
     beginDrain(input) {
       if (!draining) {
         draining = true;
-        startedAt = new Date().toISOString();
+        const now = clock();
+        startedAt = new Date(now).toISOString();
         deadlineMs = resolveDeadline(input?.deadlineMs ?? options.deadlineMs ?? DEFAULT_DRAIN_DEADLINE_MS);
-        deadlineAt = new Date(Date.now() + deadlineMs).toISOString();
+        deadlineAt = new Date(now + deadlineMs).toISOString();
       }
       return this.snapshot();
     },
@@ -48,9 +54,12 @@ export function createPrismDrainController(options: PrismDrainControllerOptions 
       }
     },
     snapshot() {
+      const deadlineMsParsed = deadlineAt === undefined ? Number.NaN : Date.parse(deadlineAt);
+      const expired = draining && Number.isFinite(deadlineMsParsed) && clock() >= deadlineMsParsed;
       return {
         status: draining ? "draining" : "serving",
         draining,
+        expired,
         ...(startedAt === undefined ? {} : { startedAt }),
         ...(deadlineAt === undefined ? {} : { deadlineAt }),
         deadlineMs,

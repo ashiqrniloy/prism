@@ -1,6 +1,6 @@
 # Prism production RAG engine (hybrid retrieve, transactional store, traces)
 
-Status: **requested** — filed against Prism `@arnilo/prism-rag@0.3.0` / `@arnilo/prism-memory@0.3.0`. Synapta Plan 080 is **blocked** until a release implements every item below and Synapta pins that release. Architecture: `docs/architecture/knowledge-rag.md` (noted in plan 034 as not present in-repo).
+Status: **requested** — filed against Prism `@arnilo/prism-rag@0.3.0` / `@arnilo/prism-memory@0.3.0`. The requesting application is **blocked** until a release implements every item below and it pins that release. Architecture: `docs/architecture/knowledge-rag.md` (noted in plan 034 as not present in-repo).
 
 ## Summary
 
@@ -15,9 +15,9 @@ Status: **requested** — filed against Prism `@arnilo/prism-rag@0.3.0` / `@arni
 - `@arnilo/prism-observability-opentelemetry` has no RAG span/event schema.
 - `Reranker` is a seam with no in-cluster TEI adapter.
 
-Synapta will not reimplement these in `knowledge.rs`. We will host Docling, TEI, OpenFGA, Temporal, and UI on this engine once it is production-shaped.
+The requesting host will not reimplement these in its own engine. We will host Docling, TEI, OpenFGA, Temporal, and UI on this engine once it is production-shaped.
 
-## Why Synapta wants it
+## Why the requesting host wants it
 
 Ask-mode RAG must survive handbook updates, embedder upgrades, and “why did we retrieve that?” tickets without serving stale or deleted chunks. Target bar: [RAG in Production](https://arpitbhayani.me/blogs/rag-production/) minus Elasticsearch aliases, cloud embeddings, semantic-chunking agents, and per-request rationale LLM calls.
 
@@ -120,8 +120,8 @@ Add a reference adapter, e.g. `createTeiReranker({ baseUrl, model, timeoutMs })`
 - Reranker cannot overwrite provenance/trust.
 - `IngestionStatusStore` + `listIngestionStatus` (hosts persist it).
 - Caps (bytes, chunks, topK, rerank). Do not remove them.
-- `createRagContextProvider` remains optional. Synapta Ask uses a host tool over `retrieveContext`, not auto-inject, but the provider must keep working.
-- Parsers stay seams. Synapta supplies Docling. Do not expand `pdfParser` into a full Office stack.
+- `createRagContextProvider` remains optional. Ask mode uses a host tool over `retrieveContext`, not auto-inject, but the provider must keep working.
+- Parsers stay seams. The host supplies Docling. Do not expand `pdfParser` into a full Office stack.
 
 ## Out of scope (do not add)
 
@@ -157,7 +157,7 @@ createTeiReranker(options: { baseUrl: string; model: string; timeoutMs?: number 
 // Embedder.id required; records persist embedderId
 ```
 
-Exact names may change; Synapta 080 will pin the shipped names.
+Exact names may change; the requesting application will pin the shipped names.
 
 ## Reproduction (current 0.3.0 gaps)
 

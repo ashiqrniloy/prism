@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { OwnershipScope } from "./contracts.js";
 
 /**
@@ -12,12 +13,24 @@ export type ArtifactApprovalState = "pending" | "approved" | "rejected";
 /** A resolved decision on one revision (pending is the absence of a decision). */
 export type ArtifactDecisionState = Exclude<ArtifactApprovalState, "pending">;
 
+/** Optional host semantic verdict. Never treated as citation integrity or proof. */
+export type CitationSupport = "unverified" | "supported" | "unsupported" | "uncertain";
+
 /** Bounded citation / data-source reference. Host resolves the body; Prism stores the ref only. */
 export interface ArtifactCitation {
   readonly uri: string;
   readonly title?: string;
-  /** Data-source kind (e.g. "web", "database", "upload"); host-defined, bounded. */
+  /** Data-source kind (e.g. "web", "database", "upload", "rag"); host-defined, bounded. */
   readonly kind?: string;
+  readonly sourceId?: string;
+  readonly revision?: string;
+  /** SHA-256 hex of the retrieved source snapshot (optional `sha256:` prefix). */
+  readonly contentHash?: string;
+  readonly retrievedAt?: string;
+  readonly excerpt?: string;
+  readonly span?: { readonly start: number; readonly end: number };
+  readonly tenantId?: string;
+  readonly support?: CitationSupport;
 }
 
 /** One immutable revision of an artifact. `uri`/`hash` reference host-owned content. */
@@ -49,6 +62,8 @@ export interface ArtifactApproval {
   /** Change-request / rejection note. */
   readonly note?: string;
   readonly decidedAt: string;
+  /** SHA-256 of bound citation sourceId/revision/contentHash tuples at decision time. */
+  readonly evidenceDigest?: string;
 }
 
 /**
@@ -173,4 +188,108 @@ export function artifactApprovalState(record: ArtifactRecord): ArtifactApprovalS
   if (latest === undefined) return "pending";
   const decision = record.approvals.find((approval) => approval.version === latest.version);
   return decision?.state ?? "pending";
+}
+
+export const HARD_CITATION_EXCERPT_BYTES = 8192;
+
+export type CitationIntegrityReason =
+  | "ok"
+  | "missing_source"
+  | "hash_mismatch"
+  | "span_mismatch"
+  | "revoked_acl"
+  | "revision_changed"
+  | "excerpt_too_large"
+  | "cross_tenant";
+
+export interface CitationLiveSource {
+  readonly contentHash: string;
+  readonly revision: string;
+  readonly body?: string;
+  readonly tenantId?: string;
+  readonly authorized?: boolean;
+}
+
+export interface CitationIntegrityResult {
+  readonly ok: boolean;
+  readonly reason: CitationIntegrityReason;
+}
+
+function normalizeCitationHash(value: string): string {
+  const raw = value.startsWith("sha256:") ? value.slice("sha256:".length) : value;
+  return raw.trim().toLowerCase();
+}
+
+/** Deterministic source existence / hash / span / ACL check. Ignores `support`. */
+export function checkCitationIntegrity(
+  citation: ArtifactCitation,
+  live?: CitationLiveSource,
+  options?: { readonly boundRevision?: string; readonly maxExcerptBytes?: number },
+): CitationIntegrityResult {
+  const maxExcerpt = options?.maxExcerptBytes ?? HARD_CITATION_EXCERPT_BYTES;
+  if (citation.excerpt !== undefined && Buffer.byteLength(citation.excerpt, "utf8") > maxExcerpt) {
+    return { ok: false, reason: "excerpt_too_large" };
+  }
+  if (!live) return { ok: false, reason: "missing_source" };
+  if (live.authorized === false) return { ok: false, reason: "revoked_acl" };
+  if (citation.tenantId && live.tenantId && citation.tenantId !== live.tenantId) {
+    return { ok: false, reason: "cross_tenant" };
+  }
+  if (!citation.contentHash) return { ok: false, reason: "missing_source" };
+  if (normalizeCitationHash(citation.contentHash) !== normalizeCitationHash(live.contentHash)) {
+    return { ok: false, reason: "hash_mismatch" };
+  }
+  if (citation.revision !== undefined && citation.revision !== live.revision) {
+    return { ok: false, reason: "revision_changed" };
+  }
+  if (options?.boundRevision !== undefined && options.boundRevision !== live.revision) {
+    return { ok: false, reason: "revision_changed" };
+  }
+  if (citation.span) {
+    const { start, end } = citation.span;
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {
+      return { ok: false, reason: "span_mismatch" };
+    }
+    if (live.body !== undefined) {
+      const sliced = live.body.slice(start, end);
+      if (citation.excerpt !== undefined && sliced !== citation.excerpt) {
+        return { ok: false, reason: "span_mismatch" };
+      }
+    }
+  } else if (citation.excerpt !== undefined && live.body !== undefined && citation.excerpt !== live.body) {
+    return { ok: false, reason: "span_mismatch" };
+  }
+  return { ok: true, reason: "ok" };
+}
+
+/** Stable digest of citation identity tuples. Source body changes after approval fail this digest only when citations themselves change; live hash is `checkCitationIntegrity`. */
+export function citationBindingDigest(citations: readonly ArtifactCitation[] | undefined): string {
+  const rows = (citations ?? [])
+    .map(
+      (citation) =>
+        `${citation.sourceId ?? ""}|${citation.revision ?? ""}|${citation.contentHash ? normalizeCitationHash(citation.contentHash) : ""}`,
+    )
+    .sort();
+  return createHash("sha256").update(JSON.stringify(rows)).digest("hex");
+}
+
+/** True when the approval digest still matches the revision and (if given) live sources pass integrity. */
+export function approvalEvidenceIntact(
+  approval: ArtifactApproval,
+  revision: ArtifactRevision,
+  liveSources?: Readonly<Record<string, CitationLiveSource>>,
+): CitationIntegrityResult {
+  if (approval.evidenceDigest !== undefined && approval.evidenceDigest !== citationBindingDigest(revision.citations)) {
+    return { ok: false, reason: "revision_changed" };
+  }
+  if (liveSources === undefined) return { ok: true, reason: "ok" };
+  for (const citation of revision.citations ?? []) {
+    if (!citation.sourceId && !citation.contentHash) continue;
+    const live = citation.sourceId ? liveSources[citation.sourceId] : undefined;
+    const result = checkCitationIntegrity(citation, live, {
+      ...(citation.revision === undefined ? {} : { boundRevision: citation.revision }),
+    });
+    if (!result.ok) return result;
+  }
+  return { ok: true, reason: "ok" };
 }

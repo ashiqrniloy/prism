@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { createPackedConsumer, installedVersion, repoRoot, resolveFromConsumer } from "./fixtures/packed-consumer.mjs";
 
-const JOURNEY_CEILING_MS = 120_000;
+const JOURNEY_CEILING_MS = 180_000;
 
 const packages = [
   { dir: ".", name: "@arnilo/prism" },
@@ -29,14 +29,20 @@ const packages = [
   { dir: "packages/acp-agent", name: "@arnilo/prism-acp-agent" },
 ];
 
-let consumer, run;
+let consumer, run, hostRun;
 let fixtureStartedMs;
 before(() => {
   fixtureStartedMs = Date.now();
   consumer = createPackedConsumer(packages);
   if (consumer.installStatus !== 0) return;
   copyFileSync(join(repoRoot, "scripts/fixtures/e2e-full-surface-journey.mjs"), join(consumer.consumer, "journey.mjs"));
+  copyFileSync(join(repoRoot, "scripts/fixtures/e2e-070-host-completeness-journey.mjs"), join(consumer.consumer, "host-completeness.mjs"));
   run = spawnSync(process.execPath, ["journey.mjs"], { cwd: consumer.consumer, encoding: "utf8", timeout: JOURNEY_CEILING_MS });
+  hostRun = spawnSync(process.execPath, ["host-completeness.mjs"], {
+    cwd: consumer.consumer,
+    encoding: "utf8",
+    timeout: JOURNEY_CEILING_MS,
+  });
   run.durationMs = Date.now() - fixtureStartedMs;
 });
 
@@ -65,8 +71,19 @@ describe("packed-install full-surface journey", () => {
     assert.match(run.stdout, /FULL SURFACE JOURNEY OK/, run.stdout + run.stderr);
   });
 
-  it("finishes within the 120s journey ceiling", () => {
+  it("finishes within the journey ceiling", () => {
     assert.ok(run, "journey must have run");
     assert.ok(run.durationMs < JOURNEY_CEILING_MS, `journey took ${run.durationMs}ms`);
+  });
+
+  it("completes the 0.7.0 host-completeness packed journey", () => {
+    assert.equal(hostRun.status, 0, hostRun.stdout + hostRun.stderr);
+    assert.match(hostRun.stdout, /HOST COMPLETENESS JOURNEY OK/);
+    assert.match(hostRun.stdout, /EVAL OK/);
+    assert.match(hostRun.stdout, /"sampleCount":3/);
+    assert.match(hostRun.stdout, /R16 OK/);
+    assert.doesNotMatch(hostRun.stdout, /R16 BLOCKED/);
+    assert.match(hostRun.stdout, /R17 OK/);
+    assert.doesNotMatch(hostRun.stdout, /R17 BLOCKED/);
   });
 });

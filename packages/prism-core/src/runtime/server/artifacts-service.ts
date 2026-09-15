@@ -20,6 +20,7 @@ import {
   assertIdentityMatchesOwnership,
   CheckpointConflictError,
   type CheckpointStore,
+  citationBindingDigest,
   type OwnershipScope,
   type PersistencePage,
   type SecretRedactor,
@@ -445,12 +446,14 @@ export function createArtifactService(store: CheckpointStore, options: CreateArt
     if (input.note !== undefined) assertBounded(input.note, limits.noteBytes, "note_too_large");
     const reviewer = reviewerRef(input, input.reviewer);
     const now = new Date().toISOString();
+    const decided = record.revisions.find((revision) => revision.version === input.version);
     const approval: ArtifactApproval = {
       version: input.version,
       state,
       reviewer,
       ...(input.note === undefined ? {} : { note: input.note }),
       decidedAt: now,
+      evidenceDigest: citationBindingDigest(decided?.citations),
     };
     // Replace any prior decision on the same version; approval advances lastValidated,
     // rejection never clears it so the last validated revision stays recoverable.
@@ -521,10 +524,56 @@ function normalizeCitations(
       throw new ArtifactError("citation.uri is required", "invalid_input");
     }
     assertBounded(JSON.stringify(citation), limits.citationBytes, "citation_too_large");
+    if (citation.sourceId !== undefined) {
+      if (
+        typeof citation.sourceId !== "string" ||
+        citation.sourceId.length === 0 ||
+        citation.sourceId.length > 256 ||
+        citation.sourceId.includes("\0")
+      ) {
+        throw new ArtifactError("citation.sourceId is invalid", "invalid_input");
+      }
+    }
+    if (citation.revision !== undefined) assertBounded(citation.revision, 128, "citation_too_large");
+    if (citation.contentHash !== undefined) {
+      const hash = citation.contentHash.startsWith("sha256:") ? citation.contentHash.slice("sha256:".length) : citation.contentHash;
+      if (!/^[0-9a-fA-F]{32,128}$/.test(hash)) throw new ArtifactError("citation.contentHash is invalid", "invalid_input");
+    }
+    if (citation.retrievedAt !== undefined) {
+      if (typeof citation.retrievedAt !== "string" || Number.isNaN(Date.parse(citation.retrievedAt))) {
+        throw new ArtifactError("citation.retrievedAt is invalid", "invalid_input");
+      }
+    }
+    if (citation.excerpt !== undefined) assertBounded(citation.excerpt, limits.citationBytes, "citation_too_large");
+    if (citation.span !== undefined) {
+      const { start, end } = citation.span;
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {
+        throw new ArtifactError("citation.span is invalid", "invalid_input");
+      }
+    }
+    if (citation.tenantId !== undefined) assertBounded(citation.tenantId, 128, "citation_too_large");
+    if (citation.support !== undefined) {
+      if (
+        citation.support !== "unverified" &&
+        citation.support !== "supported" &&
+        citation.support !== "unsupported" &&
+        citation.support !== "uncertain"
+      ) {
+        throw new ArtifactError("citation.support is invalid", "invalid_input");
+      }
+    }
     return {
       uri: assertSafeUri(citation.uri, limits.uriBytes),
       ...(citation.title === undefined ? {} : { title: assertBounded(citation.title, limits.citationBytes, "citation_too_large") }),
       ...(citation.kind === undefined ? {} : { kind: assertBounded(citation.kind, 128, "citation_too_large") }),
+      ...(citation.sourceId === undefined ? {} : { sourceId: citation.sourceId }),
+      ...(citation.revision === undefined ? {} : { revision: citation.revision }),
+      ...(citation.contentHash === undefined ? {} : { contentHash: citation.contentHash.toLowerCase() }),
+      ...(citation.retrievedAt === undefined ? {} : { retrievedAt: citation.retrievedAt }),
+      ...(citation.excerpt === undefined ? {} : { excerpt: citation.excerpt }),
+      ...(citation.span === undefined ? {} : { span: { start: citation.span.start, end: citation.span.end } }),
+      ...(citation.tenantId === undefined ? {} : { tenantId: citation.tenantId }),
+      ...(citation.support === undefined ? {} : { support: citation.support }),
     };
   });
 }

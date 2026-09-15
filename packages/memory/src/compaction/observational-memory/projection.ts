@@ -1,5 +1,11 @@
 import type { SessionEntry } from "@arnilo/prism";
-import { activeObservations, foldObservationalMemoryLedger, type ObservationalMemoryLedger } from "./ledger.js";
+import {
+  activeObservations,
+  foldObservationalMemoryLedger,
+  type ObservationalMemoryLedger,
+  observationBlockedByInvalidation,
+  reflectionBlockedByInvalidation,
+} from "./ledger.js";
 import {
   FOLDED_MEMORY,
   type FoldedMemoryDetails,
@@ -21,17 +27,25 @@ export interface ObservationalMemoryProjection {
 export function buildObservationalMemoryProjection(
   entries: readonly SessionEntry[],
   firstKeptEntryId?: string,
+  options?: { readonly invalidatedIds?: readonly string[] },
 ): ObservationalMemoryProjection {
   const boundary = firstKeptEntryId ? entries.findIndex((entry) => entry.id === firstKeptEntryId) : -1;
   const visibleEntries = boundary >= 0 ? entries.slice(0, boundary) : entries;
   const latestFolded = boundary < 0 ? latestFoldedMemory(entries) : undefined;
   const full = foldObservationalMemoryLedger(entries);
   const visible = latestFolded ? foldFromDetails(latestFolded) : foldObservationalMemoryLedger(visibleEntries);
+  const invalidated = new Set(options?.invalidatedIds ?? []);
+  const extraDropped = visible.observations
+    .filter((observation) => observationBlockedByInvalidation(observation, invalidated))
+    .map((observation) => observation.id);
+  const droppedObservationIds = Object.freeze([...new Set([...visible.droppedObservationIds, ...extraDropped])]);
+  const dropped = new Set(droppedObservationIds);
+  for (const id of invalidated) dropped.add(id);
   return {
     full,
-    observations: activeObservations(visible),
-    reflections: visible.reflections,
-    droppedObservationIds: visible.droppedObservationIds,
+    observations: activeObservations({ ...visible, droppedObservationIds }),
+    reflections: visible.reflections.filter((reflection) => !reflectionBlockedByInvalidation(reflection, dropped)),
+    droppedObservationIds,
     folded: latestFolded,
   };
 }

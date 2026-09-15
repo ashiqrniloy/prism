@@ -10,6 +10,7 @@ import type {
   ToolCallRecord,
   UsageRecord,
 } from "@arnilo/prism";
+import type { ExecutionTimeline } from "../observability/timeline-types.js";
 
 /** Score payload returned by a scorer. `score` must be finite and within `[0, 1]`. */
 export interface ScoreResult {
@@ -25,6 +26,8 @@ export interface ScorerInput<TInput = unknown, TExpected = unknown> {
   readonly expected?: TExpected;
   readonly signal?: AbortSignal;
   readonly target?: EvaluationTarget;
+  readonly timeline?: ExecutionTimeline;
+  readonly environment?: unknown;
 }
 
 /** Deterministic function scorer. */
@@ -39,6 +42,7 @@ export interface DatasetItem<TInput = unknown, TExpected = unknown> {
   readonly id: string;
   readonly input: TInput;
   readonly expected?: TExpected;
+  readonly expectedTrajectory?: readonly import("./trajectory.js").ToolCallSpec[];
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
@@ -66,6 +70,8 @@ export interface EvaluationRecord extends OwnershipScope {
   readonly datasetId?: string;
   readonly itemId?: string;
   readonly experimentId?: string;
+  readonly stepId?: string;
+  readonly nodeId?: string;
   readonly error?: ErrorInfo;
   readonly createdAt: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
@@ -124,6 +130,16 @@ export interface ScoreRunOptions<TInput = unknown, TExpected = unknown> {
   readonly metadata?: Readonly<Record<string, unknown>>;
   /** Injectable RNG for deterministic sampling tests. Returns `[0, 1)`. */
   readonly random?: () => number;
+  /** Timeline projection mode. Defaults to "off". */
+  readonly timeline?: "off" | "metadata" | "redacted_io";
+  /** Injected timeline instance (bypasses trace projection when supplied). */
+  readonly injectedTimeline?: ExecutionTimeline;
+  /** Optional host-supplied environment state snapshot. */
+  readonly environment?: unknown;
+  /** Evaluate scorers per step matching kind rather than once per run. */
+  readonly forEach?: "tool" | "workflow_node";
+  /** Maximum step evaluations per run under forEach. Default 32, hard 128. */
+  readonly maxStepScores?: number;
 }
 
 export interface LiveScoreOptions<TInput = unknown, TExpected = unknown> extends Omit<ScoreRunOptions<TInput, TExpected>, "result"> {
@@ -144,6 +160,16 @@ export interface ExperimentAggregate {
   readonly failedCount: number;
   readonly meanScore?: number;
   readonly scoresByScorer: Readonly<Record<string, { readonly count: number; readonly mean?: number }>>;
+  /** True when all hard invariant scorers passed with score 1.0. */
+  readonly invariantsPassed?: boolean;
+}
+
+export interface ExperimentTrials {
+  readonly count: number;
+  readonly seed?: number;
+  readonly uncertaintyMethod: "standard_error" | "single_sample";
+  readonly sampleCount: number;
+  readonly standardError?: number;
 }
 
 export interface ExperimentReport<TInput = unknown, TExpected = unknown> {
@@ -154,6 +180,8 @@ export interface ExperimentReport<TInput = unknown, TExpected = unknown> {
   readonly items: readonly ExperimentItemResult<TInput, TExpected>[];
   readonly evaluations: readonly EvaluationRecord[];
   readonly aggregate: ExperimentAggregate;
+  readonly manifest?: EvalManifest;
+  readonly trials?: ExperimentTrials;
   readonly error?: ErrorInfo;
 }
 
@@ -173,6 +201,7 @@ export interface EvaluationTrace {
 export interface EvaluationTarget {
   readonly result: AgentRunResult;
   readonly trace?: EvaluationTrace;
+  readonly timeline?: ExecutionTimeline;
 }
 
 export interface TraceResolverInput extends OwnershipScope {
@@ -263,6 +292,19 @@ export interface EvaluationThresholds {
   readonly maximumFailures?: number;
   readonly minimumByScorer?: Readonly<Record<string, number>>;
   readonly minimumCandidateWins?: Readonly<Record<string, number>>;
+  /** If true, requires all hard invariant scorers to pass with 1.0. Defaults to true if invariant scorers are present. */
+  readonly requireInvariants?: boolean;
+}
+
+export interface EvalManifest {
+  readonly promptId?: string;
+  readonly promptVersion?: string;
+  readonly toolFingerprint?: string;
+  readonly skillsRevision?: string;
+  readonly model?: string;
+  readonly policyRevision?: string;
+  readonly runtimeRevision: string;
+  readonly datasetVersion: string;
 }
 
 export interface RunExperimentOptions<TInput = unknown, TExpected = unknown> {
@@ -286,4 +328,18 @@ export interface RunExperimentOptions<TInput = unknown, TExpected = unknown> {
   readonly onItem?: (item: ExperimentItemResult<TInput, TExpected>) => void | Promise<void>;
   /** Convert dataset input into agent input. Defaults to string/Message passthrough or JSON.stringify. */
   readonly toAgentInput?: (input: TInput) => string | import("@arnilo/prism").Message | readonly import("@arnilo/prism").Message[];
+  /** Timeline projection mode. Defaults to "off". */
+  readonly timeline?: "off" | "metadata" | "redacted_io";
+  /** Optional callback to resolve host-trusted environment snapshot per item. */
+  readonly toEnvironment?: (
+    item: DatasetItem<TInput, TExpected>,
+    result?: AgentRunResult,
+    timeline?: ExecutionTimeline,
+  ) => unknown | Promise<unknown>;
+  /** Repeated trials count. Defaults to 1, hard cap 16. */
+  readonly trials?: number;
+  /** Explicit seed for trials / RNG reproducibility. */
+  readonly seed?: number;
+  /** Eval manifest binding runtime, dataset, model, and policy revisions. */
+  readonly manifest?: EvalManifest;
 }

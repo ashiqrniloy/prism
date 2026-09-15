@@ -16,6 +16,10 @@ import {
   type MemoryReflection,
   OBSERVATIONS_RECORDED,
   REFLECTIONS_RECORDED,
+  WORK_SCOPE_BOUND,
+  WORK_SCOPE_CLOSED,
+  WORK_SCOPE_ENTERED,
+  WORK_SCOPE_OPENED,
 } from "../index.js";
 
 const model = { provider: "mock", model: "demo" };
@@ -68,6 +72,75 @@ function memoryEntries(): readonly SessionEntry[] {
     message("m2", "recent one"),
     message("m3", "recent two"),
   ];
+}
+
+function scopedMemoryEntries(promoted: boolean): readonly SessionEntry[] {
+  const taskObservation: MemoryObservation = {
+    id: "aaaaaaaaaaaa",
+    content: "Task one keeps the retry budget small",
+    timestamp: now,
+    relevance: "high",
+    sourceEntryIds: ["m1"],
+    tokenCount: 8,
+  };
+  const planObservation: MemoryObservation = {
+    id: "cccccccccccc",
+    content: "The plan owns the shared canary flag",
+    timestamp: now,
+    relevance: "medium",
+    sourceEntryIds: ["m1"],
+    tokenCount: 8,
+  };
+  const taskReflection: MemoryReflection = {
+    id: "bbbbbbbbbbbb",
+    content: "Task one prefers the smallest retry budget",
+    supportingObservationIds: [taskObservation.id],
+    tokenCount: 8,
+  };
+  const entries: SessionEntry[] = [
+    message("m1", "first"),
+    createSessionEntry({
+      id: "om1",
+      sessionId: "s1",
+      parentId: "m1",
+      timestamp: now,
+      kind: "custom",
+      data: { type: OBSERVATIONS_RECORDED, observations: [taskObservation, planObservation], coversUpToId: "m1" },
+    }),
+    createSessionEntry({
+      id: "om2",
+      sessionId: "s1",
+      parentId: "om1",
+      timestamp: now,
+      kind: "custom",
+      data: { type: REFLECTIONS_RECORDED, reflections: [taskReflection], coversUpToId: "om1" },
+    }),
+    scopeEntry("sc1", { type: WORK_SCOPE_OPENED, id: "plan:memory" }),
+    scopeEntry("sc2", { type: WORK_SCOPE_OPENED, id: "task:1", parentId: "plan:memory" }),
+    scopeEntry("sc3", { type: WORK_SCOPE_ENTERED, scopeId: "task:1" }),
+    scopeEntry("sc4", {
+      type: WORK_SCOPE_BOUND,
+      scopeId: "task:1",
+      refs: [`om:${taskObservation.id}`, `reflection:${taskReflection.id}`],
+    }),
+    scopeEntry("sc5", { type: WORK_SCOPE_CLOSED, scopeId: "task:1" }),
+    scopeEntry("sc6", { type: WORK_SCOPE_OPENED, id: "task:2", parentId: "plan:memory" }),
+    scopeEntry("sc7", { type: WORK_SCOPE_BOUND, scopeId: "plan:memory", refs: [`om:${planObservation.id}`] }),
+    scopeEntry("sc8", { type: WORK_SCOPE_ENTERED, scopeId: "task:2" }),
+    message("m2", "recent one"),
+    message("m3", "recent two"),
+  ];
+  if (promoted) {
+    entries.push(
+      scopeEntry("sc9", { type: WORK_SCOPE_BOUND, scopeId: "plan:memory", refs: [`om:${taskObservation.id}`] }),
+      scopeEntry("sc10", { type: WORK_SCOPE_BOUND, scopeId: "plan:memory", refs: [`reflection:${taskReflection.id}`] }),
+    );
+  }
+  return entries;
+}
+
+function scopeEntry(id: string, data: unknown): SessionEntry {
+  return createSessionEntry({ id, sessionId: "s1", timestamp: now, kind: "custom", data });
 }
 
 describe("observational memory compaction strategy", () => {
@@ -129,6 +202,29 @@ describe("observational memory compaction strategy", () => {
     assert.equal((first.entries?.[0]?.data as any)!.memory.fullFold, true);
     assert.equal((second.entries?.[0]?.data as any)!.memory.fullFold, true);
     assert.equal((second.entries?.[0]?.data as any)!.memory.observations.length, 0);
+  });
+
+  it("observational_memory_strategy_packs_the_projected_episodic_layer_when_work_scopes_exist", async () => {
+    const strategy = createObservationalMemoryCompactionStrategy({ keepRecentEntries: 2 });
+    const result = await strategy.compact({ sessionId: "s1", entries: scopedMemoryEntries(false) });
+    assert.match(result.summary, /The plan owns the shared canary flag/);
+    assert.doesNotMatch(result.summary, /Task one keeps the retry budget small/);
+    assert.doesNotMatch(result.summary, /Task one prefers the smallest retry budget/);
+    assert.match(result.summary, /## Scope Outline/);
+    const entry = result.entries?.[0];
+    assert.ok(entry, "strategy must return one compaction entry");
+    const memory = (entry.data as { memory: { observations: readonly { id: string }[] } }).memory;
+    assert.deepEqual(
+      memory.observations.map((item) => item.id),
+      ["aaaaaaaaaaaa", "cccccccccccc"],
+    );
+
+    const promoted = await strategy.compact({ sessionId: "s1", entries: scopedMemoryEntries(true) });
+    assert.match(promoted.summary, /Task one keeps the retry budget small/);
+    assert.match(promoted.summary, /Task one prefers the smallest retry budget/);
+
+    const unscoped = await strategy.compact({ sessionId: "s1", entries: memoryEntries() });
+    assert.doesNotMatch(unscoped.summary, /## Scope Outline/);
   });
 
   it("observational_memory_strategy_redacts_known_secrets_from_summary_and_data", async () => {

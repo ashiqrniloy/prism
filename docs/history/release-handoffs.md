@@ -2,6 +2,42 @@
 
 Operator publish handoffs per release line, kept verbatim. Not read on the hot path.
 
+### 0.7.0 publish handoff (plan 073 Tasks 28–29)
+
+**Decision: GO when the operator prerequisites below are recorded.** Release **0.7.0** is the **six-plan cut** that closed the extended line: [072](../evaluations.md) (execution timeline, workflow graph, trajectory/outcome evals, cockpit aggregations, workflow OTel), [073](../index.md) (host completeness: traps A–C, R01–R06, R08, R10–R14, Tasks 15/30/31 and the cut itself), [074](../attention-compiler.md) (R17 attention compiler and the host-programmable compaction trigger), [075](../memory-fabric.md) (Memory Fabric subpath), [077](../compaction-observational-memory.md) (R16 work-scope memory index) and [078](../supervisors.md) (host-owned subagent spawn, bounded async spawn/wait/cancel, worktree isolation). **Plan 079 (Telegram/Signal channels) was moved to 0.8.0 on 2026-09-15** so the cut stopped waiting on unstarted work; no channel adapter ships in 0.7.0.
+
+The graph is **10 publishable manifests** at exact **0.7.0** with internal caret ranges `^0.7.0`: root `@arnilo/prism` plus 9 workspace packages (3 `prism-*` family packages, 6 capability packages, 19 provider adapter subpaths inside the providers family). The predecessor published release is **0.6.0**.
+
+Host-visible delta (full detail in [migrate-to-0.7.md](../migrate-to-0.7.md)): two **hard refusals** inside existing surfaces — `@arnilo/prism-acp-agent` matches `mcp.allow` by WHATWG origin plus path-segment subtree (lookalike hosts, sibling prefixes, credentials, and ambiguous encodings now fail closed) and no longer silently falls back to a mock provider; `router.providerSource(model)` throws `ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED` / `_ASYNC_STATE` instead of bypassing budgets, rate limits, circuits, fallbacks, selection policies, or durable state. Everything else is additive: opt-in attention compiler, `@arnilo/prism-memory/fabric`, the observational-memory work-scope index, supervisor `spawn_agent`/`wait_agent`/`cancel_agent`, plus behavioral tightenings inside R01–R14 surfaces. **No export was removed**: the compat baselines were regenerated and reviewed as **+469 public declarations, zero removals**.
+
+Evidence recorded for the tree under publication. `scripts/release-evidence.json` — **42 surfaces, 11 pass, 31 protected with reasons, `blocked: false`** (`test:postgres durable conformance` is a real pass; the only unavailable leg is the real-phase26 coding journey). `npm test` 5/5 stages; `npm run typecheck` green for root, all workspaces, and `examples/`; coverage core 92.43 lines against the 60/70/75 gate with every non-protected workspace above its recorded lines threshold (acp-agent recovered to 94.72 by exporting and testing its provider resolver); `npm run pack:dry-run` green for all ten packages; `npm run release:check --lockstep --version 0.7.0` reports **10/10 packages available**; `npm run release:publish --dry-run` produces all ten packs deterministically; `npm run security:threat-suites` **83/83**; `npm audit --audit-level=moderate` **0**; tracked+untracked secret scan **2328 files, 0 findings**; SBOM regenerated (172 packages) and `scripts/verify-sbom.mjs` clean against `security/license-policy.json`.
+
+Protected legs actually run here (not just recorded): `PRISM_TEST_POSTGRES_URL=… npm run test:postgres` against `pgvector/pgvector:pg16` — core **72/72**, memory **457/457**, phase conformance **11/11**; `node scripts/drill-migration-rollback.mjs --url …` — Postgres apply → downgrade `009` → verify-compat → re-apply → checksum-fail-closed and the SQLite flow all pass, plus the `--self-test` URL-refusal check. That leg found and closed three real defects hermetic doubles could not see: a `42P08` parameter-type ambiguity on the first task-scoped budget insert, a swallowed serialization failure that issued SQL against an aborted transaction (`25P02`), and a retry policy too small for 16 concurrent serializable writers. The release workflow's `postgres-integration` job must be green on the release commit before publication.
+
+```bash
+# Operator prerequisites (each a named blocked gate — none may be skipped):
+#  1. protected live-canary matrix green (live-canaries.yml, canary-report.json retained)
+#  2. PostgreSQL protected suite green (test:postgres) and CodeQL SAST green on the release commit
+#  3. npm OIDC trusted publishing identity authenticated (NPM_TOKEN with id-token, provenance)
+#  4. branch protection: the compatibility leg is node22-compat
+
+git diff --check
+npm ci
+# sdk:ready phases, as .github/workflows/release.yml runs them (env scoped to release:gate only):
+npm run typecheck && npm run lint && npm run format:check
+npm test && npm run test:coverage && npm run pack:dry-run
+PRISM_TEST_POSTGRES_URL=... npm run release:gate
+npm run security:threat-suites
+
+# Sign the release on the clean tagged tree (operator GPG key):
+git tag -s v0.7.0 -m "0.7.0"
+node scripts/release.mjs publish --lockstep --version 0.7.0
+
+# First-party package tags: push in batches of <=3 per push (tag-push storms; VENT 26-08-29).
+```
+
+Rollback pins the previous published line — `@arnilo/prism@0.6.0` and its siblings, exact pins per package. Persisted shapes are additive across 0.6.0 → 0.7.0 (fabric notes, scope entries, and spawn handles write new records through existing stores; migrations `001`–`006` are forward-only), so a pin rollback is store-safe: a 0.6.0 host ignores entries it cannot read and regains the pre-0.7.0 ACP prefix matching and router facade bypass, which is why those two refusals should be re-checked before rolling back.
+
 ### 0.6.0 publish handoff (plan 071 Task 16)
 
 
@@ -271,7 +307,7 @@ node scripts/release.mjs publish --independent --baseline c600eaa18f65b56764ec2f
 ### 0.3.2 changed-package cut (plan 050 Task 12)
 
 
-**Decision: GO when the operator prerequisites below are recorded.** The plan 050 cut covers the clay-integration-findings remediation and the OKF wiki adoption: baseline `edb4fcf` (the parent of the plan 050 implementation work); five packages publish in dependency order — root `@arnilo/prism` (FEATURE-1 agent-definition model override fallback, FEATURE-3 command driver hooks, FEATURE-2/6 docs+example, DOCS-1 contracts), `@arnilo/prism-coding-agent` (BUG-1 `allowCustom` default + optional `toolCallId`), `@arnilo/prism-supervisor` (BUG-2 child-factory `Agent` guard, FEATURE-4 opt-in child event passthrough), `@arnilo/prism-wiki` (OKF v0.2 bundle emission, 0.0.2 → 0.0.3), and `@arnilo/prism-acp-agent` (sqlite `:memory:` pass-through fix, 0.0.x-style patch 0.3.1 → 0.3.2). Every unchanged package stays byte-identical; docs-only packages (`@arnilo/prism-workflows`, `@arnilo/prism-compaction-observational-memory`) do not bump. Republished packages carry `^0.3.2` root peers; unchanged packages keep their window peers. Docs-only change on the root: none of the deltas are breaking (additive fields and fail-closed guards), compat additive-only, no migration.
+**Decision: GO when the operator prerequisites below are recorded.** The plan 050 cut covers the integration-findings remediation and the OKF wiki adoption: baseline `edb4fcf` (the parent of the plan 050 implementation work); five packages publish in dependency order — root `@arnilo/prism` (FEATURE-1 agent-definition model override fallback, FEATURE-3 command driver hooks, FEATURE-2/6 docs+example, DOCS-1 contracts), `@arnilo/prism-coding-agent` (BUG-1 `allowCustom` default + optional `toolCallId`), `@arnilo/prism-supervisor` (BUG-2 child-factory `Agent` guard, FEATURE-4 opt-in child event passthrough), `@arnilo/prism-wiki` (OKF v0.2 bundle emission, 0.0.2 → 0.0.3), and `@arnilo/prism-acp-agent` (sqlite `:memory:` pass-through fix, 0.0.x-style patch 0.3.1 → 0.3.2). Every unchanged package stays byte-identical; docs-only packages (`@arnilo/prism-workflows`, `@arnilo/prism-compaction-observational-memory`) do not bump. Republished packages carry `^0.3.2` root peers; unchanged packages keep their window peers. Docs-only change on the root: none of the deltas are breaking (additive fields and fail-closed guards), compat additive-only, no migration.
 
 ```bash
 node scripts/release.mjs changed --baseline edb4fcf   # 5 packages

@@ -36,6 +36,7 @@ function readContractsSrc(): string {
   return out.join("\n");
 }
 const apiPages = [
+  "docs/attention-compiler.md",
   "docs/public-contracts.md",
   "docs/agent-identity.md",
   "docs/policy-and-audit.md",
@@ -93,6 +94,7 @@ const apiPages = [
   "docs/coding-security.md",
   "docs/browser-automation.md",
   "docs/device-adapters.md",
+  "docs/realtime-voice.md",
   "docs/computer-use-linux.md",
   "docs/mcp-tools.md",
   "docs/node-filesystem-config.md",
@@ -3433,6 +3435,7 @@ describe("docs", () => {
       "runs after the permission assertion",
       "Per-run tool scoping",
       "no `RunOptions.tools` or `RunOptions.toolFilter`",
+      "RunOptions.toolNames",
       "active `ToolRegistry`",
       "declarative `AgentDefinition.tools`",
       "PermissionPolicy",
@@ -3959,14 +3962,16 @@ describe("docs", () => {
     // Plan 071 Task 16: the 0.6.0 cut supersedes the never-published 0.5.7 cut.
     // The guide exists, is reachable from the index navigation, states the Node
     // floor and the folded delta, and the 0.5.x guide no longer claims 0.5.7 as
-    // its own status.
+    // its own status. The index banner check tracks the root manifest, so every
+    // later cut (0.7.0 included) keeps this gate instead of bypassing it.
     const index = readFileSync("docs/index.md", "utf8");
     const guide = readFileSync("docs/migrate-to-0.6.md", "utf8");
     const previous = readFileSync("docs/migrate-to-0.5.md", "utf8");
     const migration = readFileSync("docs/migration.md", "utf8");
     const changelog = readFileSync("CHANGELOG.md", "utf8");
+    const version = JSON.parse(readFileSync("package.json", "utf8")).version as string;
     assert.ok(index.includes("(migrate-to-0.6.md)"), "docs/index.md missing the 0.6.0 migration navigation entry");
-    assert.ok(index.includes("Current line (0.6.0)"), "docs/index.md current line must be 0.6.0");
+    assert.ok(index.includes(`Current line (${version})`), `docs/index.md current line must be ${version}`);
     for (const phrase of [
       "Node `>=22`",
       'engines": { "node": ">=22"',
@@ -3986,8 +3991,9 @@ describe("docs", () => {
     assert.ok(migration.includes("## 0.5.6 → 0.6.0"), "migration.md must carry the 0.5.6 → 0.6.0 entry");
     assert.ok(migration.includes("(migrate-to-0.6.md)"), "migration.md must link the 0.6.0 guide");
     assert.ok(!migration.includes("## 0.5.6 → 0.5.7"), "migration.md must fold the never-published 0.5.7 section");
-    assert.ok(changelog.includes(`## [${releaseVersion()}] - 2026-09-12`), `CHANGELOG.md must carry the ${releaseVersion()} entry`);
+    assert.ok(changelog.includes("## [0.6.0] - 2026-09-12"), "CHANGELOG.md must carry the 0.6.0 entry");
     assert.ok(changelog.includes("0.5.7 was never published"), "CHANGELOG.md must record the superseded 0.5.7 cut");
+    assert.ok(changelog.includes("## [0.7.0] - 2026-09-15"), "CHANGELOG.md must carry the 0.7.0 entry");
   });
 
   it("use_case_model_selection_contract_is_documented", () => {

@@ -5,7 +5,17 @@ import { AgentRunSuspended } from "../../agent-approval.js";
 import { resolveLoop, resolveToolConcurrency } from "../../agent-loops.js";
 import { validateRunStateOptions } from "../../agent-run-state.js";
 import { activeTools } from "../../agent-tool-dispatch.js";
-import type { AgentRunResult, ErrorInfo, LoopContext, PromptVersionRef, RunOptions, RunRecord, Usage } from "../../contracts.js";
+import { resolveRunAttentionCompiler } from "../../attention-compiler.js";
+import type {
+  AgentRunResult,
+  AttentionReport,
+  ErrorInfo,
+  LoopContext,
+  PromptVersionRef,
+  RunOptions,
+  RunRecord,
+  Usage,
+} from "../../contracts.js";
 import { AgentLoopStateError, AgentRunError, AgentRunStateError } from "../../contracts.js";
 import { assertGuardrailsAllowed, runGuardrails } from "../../guardrails.js";
 import { identityTelemetryAttributes, ownershipFromIdentity, resolveRunIdentity } from "../../identity.js";
@@ -20,7 +30,7 @@ import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } fro
 import { composeSystemPrompt, mergeSystemPromptConfig } from "../../system-prompts.js";
 import { resolveToolResultFold } from "../../tool-result-fold.js";
 import { createSearchToolsTool, createToolSearchState, resolveToolsDisclosure } from "../../tool-search.js";
-import { createToolRegistry } from "../../tools.js";
+import { createToolRegistry, selectRunTools } from "../../tools.js";
 import {
   bridgeAbort,
   createUsageAccumulator,
@@ -95,7 +105,12 @@ async function assembleRoundContext(params: {
   await session.activeLedger?.appendRun(redactRunLedgerRecord(startRecord, session.activeRedactor));
 
   await session.rebuildHistory();
-  const { registry: baseRegistry, tools: activeToolList } = activeTools(session.agent.config.tools);
+  const { tools: listed } = activeTools(session.agent.config.tools);
+  const selected = selectRunTools(listed, options.toolNames, resumed?.state?.toolNames);
+  session.activeToolNames = selected.grant;
+  // Run-local snapshot: concurrent runs and MCP refresh must not mutate this registry.
+  const activeToolList = selected.tools;
+  const baseRegistry = createToolRegistry(activeToolList);
   const toolsDisclosure = resolveToolsDisclosure(options.toolsDisclosure, session.agent.config.toolsDisclosure);
   const toolSearch =
     toolsDisclosure === "search" && activeToolList.length > 0
@@ -153,6 +168,31 @@ async function assembleRoundContext(params: {
   const providerOptions = resolveRunProviderOptions(options, session.agent.config);
   assertStructuredOutputRequestSupported(options.model ?? session.agent.config.model, providerOptions);
   const validate = options.validate ?? session.agent.config.validator;
+  // Resolved once per run, before any provider turn: a bad setting or a widening run overlay
+  // fails here rather than on the turn that happens to cross the ratio (plan 074 C12).
+  const attentionCompiler = resolveRunAttentionCompiler(
+    session.agent.config.attentionCompiler,
+    options.attentionCompiler,
+    options.model ?? session.agent.config.model,
+  );
+  // Telemetry seam (plan 074 T6): one `attention_compiled` per mutated turn, counts and the
+  // measured ratio inputs only. Under-ratio turns and compiler-off runs emit nothing.
+  const onAttentionReport = attentionCompiler
+    ? (report: AttentionReport) =>
+        session.emit({
+          type: "attention_compiled",
+          sessionId: session.id,
+          runId,
+          used: report.used,
+          usedAfter: report.usedAfter,
+          inputCap: report.inputCap,
+          triggerRatio: report.triggerRatio,
+          droppedThinkingTurns: report.droppedThinkingTurns,
+          stubbedToolResults: report.stubbedToolResults,
+          stubbedBytes: report.stubbedBytes,
+          truncated: report.truncated,
+        })
+    : undefined;
   const instructionInjectors = options.instructionInjectors ?? session.agent.config.instructionInjectors ?? [];
   const inputLayout = options.inputLayout ?? session.agent.config.inputLayout;
   const loop = resolveLoop(options, session.agent.config);
@@ -223,6 +263,11 @@ async function assembleRoundContext(params: {
         toolsSearch: session.agent.config.toolsSearch,
         activatedTools: session.activatedTools,
         toolResultFold: resolveToolResultFold(options.toolResultFold, session.agent.config.toolResultFold),
+        attentionCompiler,
+        // Session-owned: a stub made earlier stays applied even on a later under-ratio turn, so
+        // the prompt-cache prefix is not rewritten (C10). Undefined when the compiler is off.
+        attentionSticky: attentionCompiler ? session.attentionStickyFor() : undefined,
+        onAttentionReport,
         loadedSkills: session.loadedSkills,
         tools,
         resourceLoader: session.agent.config.resourceLoader,

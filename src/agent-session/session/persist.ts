@@ -14,11 +14,14 @@ import type { RoundContext, SessionHost } from "./types.js";
 export async function persistDurable(session: SessionHost, state: StoredAgentRunState): Promise<AgentRunState> {
   const durable = session.activeDurable;
   if (!durable) throw new AgentRunStateError("Durable run state is not configured");
+  const withGrant = session.activeToolNames !== undefined ? { ...state, toolNames: session.activeToolNames } : state;
+  const attentionSticky = session.serializedAttentionSticky();
   const persisted = durable.options.persistSessionState
     ? {
-        ...state,
+        ...withGrant,
         sessionState: {
           loadedSkillNames: session.loadedSkills.list(),
+          ...(attentionSticky ? { attentionSticky } : {}),
           ...(session.activatedTools.list().length ? { activatedToolNames: session.activatedTools.list() } : {}),
           ...(durable.options.includeSkillBodies
             ? {
@@ -33,7 +36,7 @@ export async function persistDurable(session: SessionHost, state: StoredAgentRun
             : {}),
         },
       }
-    : state;
+    : withGrant;
   const saved = await saveAgentRunState({
     checkpoints: durable.options.checkpoints,
     state: persisted,
@@ -187,6 +190,7 @@ export async function cleanupRun(input: {
     session.activeMetadata = undefined;
     session.activePromptVersion = undefined;
     session.activeLimits?.dispose();
+    session.activeToolNames = undefined;
     session.activeLimits = undefined;
     session.activeLimitOutputBuffer = false;
     session.activeRedactor = undefined;

@@ -537,6 +537,330 @@ describe("createAgUiHandler", () => {
     assert.ok((await events(response)).some((item) => item.type === EventType.RUN_ERROR));
   });
 
+  it("advertises and executes approveWithEdits mapping edited arguments to RunDecision", async () => {
+    let receivedResume: any;
+    const lifecycle = {
+      status: async () => ({
+        state: {
+          schemaVersion: 1 as const,
+          agentId: "agent-1",
+          definitionRevision: "1",
+          fingerprint: "fingerprint",
+          runId: "stored-run",
+          sessionId: "session-1",
+          model: { provider: "mock", model: "mock" },
+          status: "suspended" as const,
+          interruption: {
+            kind: "tool_approval" as const,
+            reason: "tool needs review",
+            toolCallId: "call-1",
+            pendingDecisions: [
+              {
+                approvalId: "approval-1",
+                kind: "tool_approval" as const,
+                toolCallId: "call-1",
+                scope: { toolName: "write_file" },
+                reason: "tool needs review",
+              },
+            ],
+          },
+        },
+        version: 2,
+      }),
+      async resume(_ref: AgentRunRef, value: any) {
+        receivedResume = value;
+        return { sessionId: "session-1", runId: "stored-run", status: "succeeded" as const, text: "", content: [] };
+      },
+      async *resumeStream(_ref: AgentRunRef, value: any) {
+        receivedResume = value;
+        yield {
+          type: "agent_finished" as const,
+          sessionId: "session-1",
+          runId: "stored-run",
+        };
+      },
+    };
+
+    const handler = createAgUiHandler({
+      authorize: () => authorization,
+      sessionFactory: () => {
+        throw new Error("resume does not open a session");
+      },
+      capabilities: { humanInTheLoop: { approveWithEdits: true } },
+      lifecycle,
+      resolveRun: () => ({ ref: { sessionId: "session-1", runId: "stored-run" } }),
+    });
+
+    assert.equal(handler.capabilities.humanInTheLoop?.approveWithEdits, true);
+    assert.equal(handler.capabilities.humanInTheLoop?.approvals, true);
+
+    const response = await handler(
+      request(
+        body({
+          parentRunId: "run-1",
+          messages: [],
+          resume: [
+            {
+              interruptId: "run-1:2",
+              status: "resolved",
+              payload: { decision: "approve", editedArgs: { path: "modified.txt", content: "hello" } },
+            },
+          ],
+        }),
+      ),
+    );
+    assert.equal(response.status, 200);
+    await events(response);
+    assert.ok(receivedResume);
+    assert.equal(receivedResume.expectedVersion, 2);
+    assert.equal(receivedResume.decisions?.length, 1);
+    assert.equal(receivedResume.decisions[0].approvalId, "approval-1");
+    assert.equal(receivedResume.decisions[0].outcome, "allow_once");
+    assert.deepEqual(receivedResume.decisions[0].modifiedArguments, { path: "modified.txt", content: "hello" });
+
+    // Also supports explicit approvalId and modifiedArguments key directly
+    const response2 = await handler(
+      request(
+        body({
+          parentRunId: "run-1",
+          messages: [],
+          resume: [
+            {
+              interruptId: "run-1:2",
+              status: "resolved",
+              payload: {
+                decision: "approve",
+                approvalId: "approval-1",
+                modifiedArguments: { path: "direct.txt" },
+                reason: "reviewer edit",
+              },
+            },
+          ],
+        }),
+      ),
+    );
+    assert.equal(response2.status, 200);
+    await events(response2);
+    assert.deepEqual(receivedResume.decisions[0].modifiedArguments, { path: "direct.txt" });
+    assert.equal(receivedResume.decisions[0].reason, "reviewer edit");
+  });
+
+  it("enforces fail-closed validation on malformed or illegal edited resumes", async () => {
+    const lifecycle = {
+      status: async () => ({
+        state: {
+          schemaVersion: 1 as const,
+          agentId: "agent-1",
+          definitionRevision: "1",
+          fingerprint: "fingerprint",
+          runId: "stored-run",
+          sessionId: "session-1",
+          model: { provider: "mock", model: "mock" },
+          status: "suspended" as const,
+          interruption: {
+            kind: "tool_approval" as const,
+            reason: "tool needs review",
+            toolCallId: "call-1",
+            pendingDecisions: [
+              {
+                approvalId: "approval-1",
+                kind: "tool_approval" as const,
+                toolCallId: "call-1",
+                scope: { toolName: "write_file" },
+                reason: "tool needs review",
+              },
+            ],
+          },
+        },
+        version: 2,
+      }),
+      async resume() {
+        throw new Error("should not be called");
+      },
+      async *resumeStream() {
+        throw new Error("should not be called");
+      },
+    };
+
+    const handler = createAgUiHandler({
+      authorize: () => authorization,
+      sessionFactory: () => {
+        throw new Error("resume does not open a session");
+      },
+      capabilities: { humanInTheLoop: { approveWithEdits: true } },
+      lifecycle,
+      resolveRun: () => ({ ref: { sessionId: "session-1", runId: "stored-run" } }),
+    });
+
+    // 1. Non-object editedArgs
+    for (const badEdited of ["not-object", 123, true, [1, 2, 3]]) {
+      const resp = await handler(
+        request(
+          body({
+            parentRunId: "run-1",
+            messages: [],
+            resume: [{ interruptId: "run-1:2", status: "resolved", payload: { decision: "approve", editedArgs: badEdited } }],
+          }),
+        ),
+      );
+      assert.equal(resp.status, 400);
+    }
+
+    // 2. Oversize edited arguments (> 64 KiB fails closed with 400 or 413 payload too large)
+    const big = { big: "x".repeat(70_000) };
+    const oversizeResp = await handler(
+      request(
+        body({
+          parentRunId: "run-1",
+          messages: [],
+          resume: [{ interruptId: "run-1:2", status: "resolved", payload: { decision: "approve", editedArgs: big } }],
+        }),
+      ),
+    );
+    assert.ok(oversizeResp.status === 400 || oversizeResp.status === 413);
+
+    // 3. Mismatched / foreign approvalId
+    const foreignResp = await handler(
+      request(
+        body({
+          parentRunId: "run-1",
+          messages: [],
+          resume: [
+            {
+              interruptId: "run-1:2",
+              status: "resolved",
+              payload: { decision: "approve", approvalId: "foreign-approval", editedArgs: { a: 1 } },
+            },
+          ],
+        }),
+      ),
+    );
+    assert.equal(foreignResp.status, 400);
+
+    // 4. Stale expectedVersion in payload
+    const staleResp = await handler(
+      request(
+        body({
+          parentRunId: "run-1",
+          messages: [],
+          resume: [
+            {
+              interruptId: "run-1:2",
+              status: "resolved",
+              payload: { decision: "approve", expectedVersion: 999, editedArgs: { a: 1 } },
+            },
+          ],
+        }),
+      ),
+    );
+    assert.equal(staleResp.status, 400);
+
+    // 5. Unknown keys in payload
+    const unknownKeyResp = await handler(
+      request(
+        body({
+          parentRunId: "run-1",
+          messages: [],
+          resume: [
+            {
+              interruptId: "run-1:2",
+              status: "resolved",
+              payload: { decision: "approve", editedArgs: { a: 1 }, hackedProperty: true },
+            },
+          ],
+        }),
+      ),
+    );
+    assert.equal(unknownKeyResp.status, 400);
+  });
+
+  it("rejects approveWithEdits capability when lifecycle or resolveRun is omitted", async () => {
+    assert.throws(
+      () =>
+        createAgUiHandler({
+          authorize: () => authorization,
+          sessionFactory: () => ({ id: "s" }) as any,
+          capabilities: { humanInTheLoop: { approveWithEdits: true } },
+        }),
+      /human-in-the-loop capability requires lifecycle and resolveRun/,
+    );
+  });
+
+  it("supports approveWithEdits through custom interrupts.resume hook", async () => {
+    let receivedResume: any;
+    const lifecycle = {
+      status: async () => ({
+        state: {
+          schemaVersion: 1 as const,
+          agentId: "agent-1",
+          definitionRevision: "1",
+          fingerprint: "fingerprint",
+          runId: "stored-run",
+          sessionId: "session-1",
+          model: { provider: "mock", model: "mock" },
+          status: "suspended" as const,
+          interruption: {
+            kind: "tool_approval" as const,
+            reason: "tool needs review",
+            toolCallId: "call-1",
+            pendingDecisions: [
+              {
+                approvalId: "approval-hook-1",
+                kind: "tool_approval" as const,
+                toolCallId: "call-1",
+                scope: { toolName: "write_file" },
+                reason: "tool needs review",
+              },
+            ],
+          },
+        },
+        version: 3,
+      }),
+      async resume() {
+        return { sessionId: "session-1", runId: "stored-run", status: "succeeded" as const, text: "", content: [] };
+      },
+      async *resumeStream(_ref: AgentRunRef, value: any) {
+        receivedResume = value;
+        yield { type: "agent_finished" as const, sessionId: "session-1", runId: "stored-run" };
+      },
+    };
+
+    const handler = createAgUiHandler({
+      authorize: () => authorization,
+      sessionFactory: () => {
+        throw new Error("resume does not open a session");
+      },
+      capabilities: { humanInTheLoop: { approveWithEdits: true } },
+      lifecycle,
+      resolveRun: () => ({ ref: { sessionId: "session-1", runId: "stored-run" } }),
+      interrupts: {
+        resume: () => {
+          return {
+            decision: "approve",
+            approvalId: "approval-hook-1",
+            modifiedArguments: { transformed: true },
+            expectedVersion: 3,
+          };
+        },
+      },
+    });
+
+    const response = await handler(
+      request(
+        body({
+          parentRunId: "run-1",
+          messages: [],
+          resume: [{ interruptId: "run-1:3", status: "resolved", payload: { custom: "data" } }],
+        }),
+      ),
+    );
+    assert.equal(response.status, 200);
+    await events(response);
+    assert.ok(receivedResume);
+    assert.equal(receivedResume.decisions[0].approvalId, "approval-hook-1");
+    assert.deepEqual(receivedResume.decisions[0].modifiedArguments, { transformed: true });
+  });
+
   it("follows a durable source from a cursor without opening a replica-local session", async () => {
     const source = createMemoryAgentEventSource();
     const owned = { tenantId: "tenant-1", userId: "user-1" };

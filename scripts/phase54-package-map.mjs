@@ -57,6 +57,7 @@ export const CONSOLIDATION_SPEC = {
         "Unified Prism core: runtime (server/supervisor/workflows), sessions, governance, credentials, enterprise postgres, work integrations, and schema validation.",
       subpaths: [
         "/runtime/server",
+        "/runtime/realtime",
         "/runtime/supervisor",
         "/runtime/workflows",
         "/sessions/codecs",

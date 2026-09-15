@@ -100,14 +100,19 @@ export async function replaceSource(options: ReplaceSourceOptions): Promise<Sour
         const getCurrent = store.getCurrentGeneration?.bind(store);
         const setCurrent = store.setCurrentGeneration?.bind(store);
         let nextGeneration: number | undefined;
+        const advanceGeneration = options.advanceGeneration !== false;
         if (getCurrent && setCurrent) {
           const current = await getCurrent({
             tenantId: scope.tenantId,
             resourceId: scope.resourceId,
             threadId: scope.corpusId,
           });
-          nextGeneration = (current === undefined ? 0 : Number(current)) + 1;
-          root?.setAttribute("rag.index_generation", nextGeneration);
+          if (advanceGeneration) {
+            nextGeneration = (current === undefined ? 0 : Number(current)) + 1;
+            root?.setAttribute("rag.index_generation", nextGeneration);
+          } else if (current !== undefined) {
+            nextGeneration = Number(current);
+          }
         }
         const previous = await sourceRecords(store, sourceId, scope, options.signal);
         assertNotAborted(options.signal);
@@ -121,7 +126,7 @@ export async function replaceSource(options: ReplaceSourceOptions): Promise<Sour
           const stamped = nextGeneration === undefined ? staged : staged.map((record) => ({ ...record, generation: nextGeneration }));
           await store.upsert(stamped, { signal: options.signal });
         }
-        if (setCurrent && nextGeneration !== undefined) {
+        if (advanceGeneration && setCurrent && nextGeneration !== undefined) {
           await setCurrent(
             {
               tenantId: scope.tenantId,

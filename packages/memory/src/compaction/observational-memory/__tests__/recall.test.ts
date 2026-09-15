@@ -99,6 +99,20 @@ describe("observational memory recall", () => {
     assert.match(result.text, /Source evidence/);
   });
 
+  it("invalidated source withholds the reflection even after a compaction drop", () => {
+    const entries = [
+      source,
+      custom("o", { type: OBSERVATIONS_RECORDED, observations: [observation] }),
+      custom("r", { type: REFLECTIONS_RECORDED, reflections: [reflection] }),
+      custom("d", { type: OBSERVATIONS_DROPPED, observationIds: [observation.id] }),
+    ];
+    const dropped = recallObservationalMemory(entries, reflection.id, [], { invalidatedIds: ["m1"] });
+    assert.equal(dropped.reason, "revoked");
+    assert.equal(dropped.dropped, true);
+    assert.doesNotMatch(dropped.text, /minimal package-only/);
+    assert.equal(recallObservationalMemory(entries, observation.id, [], { invalidatedIds: ["m1"] }).reason, "revoked");
+  });
+
   it("observational_memory_recall_invalid_or_missing_id_fails_closed", () => {
     assert.deepEqual(recallObservationalMemory([], "not-an-id").reason, "invalid_id");
     assert.deepEqual(recallObservationalMemory([], "cccccccccccc").reason, "not_found");

@@ -389,4 +389,72 @@ describe("@arnilo/prism-providers/openai realtime session", () => {
     assert.ok(!JSON.stringify(events).includes("super-secret-key"), "api key must not leak into realtime events");
     await assert.rejects(() => session.sendAudio(new Uint8Array([1])), /closed/i);
   });
+
+  it("function_call_arguments.done emits a host tool_call and completeTool sends function_call_output", async () => {
+    const fake = fakeTransport();
+    const session = createOpenAIRealtimeSession({
+      model,
+      ownerId: "owner_tools",
+      apiKey: "fake-key",
+      webSocket: () => fake.transport,
+      tools: [{ name: "lookup", description: "lookup", parameters: { type: "object" } }],
+    });
+    const { iter } = await start(session, fake);
+    assert.ok(
+      fake.sent.some((row) => row.includes("session.update") && row.includes("lookup")),
+      "session.update advertises host tools",
+    );
+    fake.emit(
+      "message",
+      JSON.stringify({
+        type: "response.function_call_arguments.done",
+        call_id: "call_lookup",
+        name: "lookup",
+        arguments: '{"q":"x"}',
+      }),
+    );
+    const event = (await iter.next()).value as Extract<RealtimeEvent, { type: "tool_call" }>;
+    assert.equal(event.type, "tool_call");
+    assert.equal(event.call.id, "call_lookup");
+    assert.equal(event.call.name, "lookup");
+    assert.equal(event.call.authority, undefined);
+    assert.deepEqual(event.call.arguments, { q: "x" });
+    await session.completeTool?.("call_lookup", '{"ok":true}');
+    assert.ok(fake.sent.some((row) => row.includes("function_call_output") && row.includes("call_lookup")));
+    assert.ok(fake.sent.some((row) => row.includes("response.create")));
+    fake.emit(
+      "message",
+      JSON.stringify({
+        type: "response.done",
+        response: { usage: { input_tokens: 3, output_tokens: 2, total_tokens: 5 } },
+      }),
+    );
+    const usage = (await iter.next()).value as Extract<RealtimeEvent, { type: "usage" }>;
+    assert.equal(usage.type, "usage");
+    assert.equal(usage.usage.totalTokens, 5);
+    await session.close();
+  });
+
+  it("duplicate function call ids are not re-emitted", async () => {
+    const fake = fakeTransport();
+    const session = createOpenAIRealtimeSession({
+      model,
+      ownerId: "owner_dup",
+      apiKey: "fake-key",
+      webSocket: () => fake.transport,
+    });
+    const { iter } = await start(session, fake);
+    const payload = JSON.stringify({
+      type: "response.function_call_arguments.done",
+      call_id: "call_dup",
+      name: "lookup",
+      arguments: "{}",
+    });
+    fake.emit("message", payload);
+    fake.emit("message", payload);
+    assert.equal(((await iter.next()).value as { type: string }).type, "tool_call");
+    fake.emit("close");
+    assert.equal(((await iter.next()).value as { type: string }).type, "session_closed");
+    await session.close();
+  });
 });

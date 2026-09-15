@@ -1,5 +1,6 @@
 import { type DocumentCaps, resolveDocumentCaps, validateByteCap, validateModelCaps } from "./caps.js";
 import { DocumentsParseError } from "./errors.js";
+import { type ImportFidelityReport, reportImportFidelity } from "./fidelity.js";
 import { validateDocumentModel } from "./model-schema.js";
 import type { DocumentsTelemetry } from "./telemetry.js";
 import { parseDocxBytes } from "./translate/docx.js";
@@ -32,6 +33,11 @@ export interface ParseDocumentOptions {
   readonly redactor?: SecretRedactor;
   /** Optional telemetry seam hook. */
   readonly telemetry?: DocumentsTelemetry;
+}
+
+export interface ImportDocumentResult {
+  readonly model: DocumentModel;
+  readonly fidelity: ImportFidelityReport;
 }
 
 /**
@@ -169,12 +175,10 @@ function redactModel(model: DocumentModel, redactor: SecretRedactor): DocumentMo
 }
 
 /**
- * Parses spec-compliant or real-world OOXML package bytes into a typed Prism Document Model.
- *
- * Enforces ZIP magic byte verification, size & element caps, and structural validation.
- * Supports optional P6 text sanitization via SecretRedactor hook.
+ * Parses OOXML bytes into a Document Model plus a ZIP-name fidelity report of
+ * structures the model does not represent (macros, comments, media, …).
  */
-export async function parseDocument(bytes: Uint8Array, options: ParseDocumentOptions): Promise<DocumentModel> {
+export async function importDocument(bytes: Uint8Array, options: ParseDocumentOptions): Promise<ImportDocumentResult> {
   const { kind, caps: userCaps, redactor, telemetry } = options;
 
   const span = telemetry?.startSpan("documents.parse", {
@@ -189,6 +193,8 @@ export async function parseDocument(bytes: Uint8Array, options: ParseDocumentOpt
 
     const caps = resolveDocumentCaps(userCaps);
     validateByteCap(bytes.byteLength, caps);
+    const fidelity = reportImportFidelity(bytes, kind);
+    span?.setAttribute("documents.fidelity_issues", fidelity.issues.length);
 
     let model: DocumentModel;
     try {
@@ -226,11 +232,21 @@ export async function parseDocument(bytes: Uint8Array, options: ParseDocumentOpt
       span?.setAttribute("documents.slides", (model as DeckModel).slides.length);
     }
 
-    return model;
+    return { model, fidelity };
   } catch (err) {
     span?.recordError();
     throw err;
   } finally {
     span?.end();
   }
+}
+
+/**
+ * Parses spec-compliant or real-world OOXML package bytes into a typed Prism Document Model.
+ *
+ * Enforces ZIP magic byte verification, size & element caps, and structural validation.
+ * Supports optional P6 text sanitization via SecretRedactor hook.
+ */
+export async function parseDocument(bytes: Uint8Array, options: ParseDocumentOptions): Promise<DocumentModel> {
+  return (await importDocument(bytes, options)).model;
 }

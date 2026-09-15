@@ -23,6 +23,14 @@ export interface SandboxExecFileRequest {
 
 export type SandboxStatusState = "running" | "stopped" | "removed" | "failed";
 
+/** Vendor snapshot kind. `filesystem` drops RAM/processes on resume; `memory` restores them. */
+export type SandboxSnapshotKind = "memory" | "filesystem";
+
+export interface SandboxPauseResult {
+  readonly kind: SandboxSnapshotKind;
+  readonly state: "paused";
+}
+
 export interface SandboxStatus {
   readonly id: string;
   readonly state: SandboxStatusState;
@@ -34,6 +42,8 @@ export interface SandboxStatus {
   readonly importIdentity?: SandboxExportMetadata;
   /** Content identity of the last successful close export (resume check). */
   readonly lastExportIdentity?: SandboxExportMetadata;
+  /** Set when `state` is `stopped` because the backend paused rather than exited. */
+  readonly snapshot?: { readonly kind: SandboxSnapshotKind };
 }
 
 export interface SandboxExportMetadata {
@@ -97,15 +107,19 @@ export interface SandboxAdapter {
  * Optional on {@link DisposableSandbox.startProcess}; absence = one-shot-only adapter.
  */
 export interface SandboxProcessHandle {
+  readonly pid?: number;
   write(data: Uint8Array): Promise<void>;
   signal(name: string): Promise<void>;
   kill(): Promise<void>;
   release(): Promise<void>;
   wait(options?: { timeoutMs?: number; signal?: AbortSignal }): Promise<{ exitCode: number | null }>;
+  /** Opaque non-secret reattachment ref for durable process recovery. */
+  readonly ref?: string;
 }
 
 export interface DisposableSandbox extends SandboxAdapter {
   readonly id: string;
+  readonly labels?: Readonly<Record<string, string>>;
   /** Present after workspace import; content hash only (no secrets). */
   readonly importIdentity?: SandboxExportMetadata;
   /** Present after a successful `close({ export })`; use for resume hash checks. */
@@ -120,6 +134,19 @@ export interface DisposableSandbox extends SandboxAdapter {
    * Absence → ProcessSessions.start over this sandbox fails closed with ERR_PRISM_PROCESS_UNSUPPORTED.
    */
   startProcess?(request: SandboxExecFileRequest): Promise<SandboxProcessHandle>;
+  /**
+   * Optional process reattachment capability for durable recovery.
+   * Resolves an attested backend ref to an existing live handle; returns null otherwise.
+   */
+  attachProcess?(ref: string): Promise<SandboxProcessHandle | null>;
+  /**
+   * Optional snapshot/pause. Detected, never assumed.
+   * `keepMemory: false` is filesystem-only: resume reboots and running processes are gone.
+   * A refused pause must leave the sandbox running (or unknown) — never claim paused.
+   */
+  pause?(options?: { keepMemory?: boolean; signal?: AbortSignal }): Promise<SandboxPauseResult>;
+  /** Explicit resume after pause. Must not run as a side effect of exec/connect. */
+  resume?(options?: { signal?: AbortSignal }): Promise<void>;
 }
 
 export class SandboxExecutionError extends Error {

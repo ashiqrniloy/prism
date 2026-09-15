@@ -57,10 +57,10 @@ CodingFingerprints	export type { CodingArtifactKind, CodingArtifactRef, CodingCh
 CodingGoalVerifyApproval	export type { CodingGoalVerifyApproval, RunCodingGoalVerifyOptions, } from "./goal-verify.js"
 CodingGoalVerifyError	export declare class CodingGoalVerifyError extends Error
 CodingHandoffSummary	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
-CodingLifecycleEmitter	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+CodingLifecycleEmitter	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 CodingLifecycleError	export declare class CodingLifecycleError extends Error
-CodingLifecycleEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
-CodingLifecycleLimits	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+CodingLifecycleEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+CodingLifecycleLimits	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 CodingPatchReview	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
 CodingPatchReviewCheckSummary	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
 CodingPatchReviewDiagnosticSummary	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
@@ -79,17 +79,20 @@ CodingWorkspaceRecord	export type { CodingWorkspaceLifecycle, CodingWorkspaceRec
 CommandRule	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
 CommandRuleAction	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
 CommandRuleEvaluation	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
-ConfigurationChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+ConfigurationChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+ConnectE2BSandboxOptions	export type { ConnectE2BSandboxOptions, CreateE2BSandboxOptions, E2BClient, E2BConnectOpts, E2BCreateOpts, E2BProcessRecoveryBackendOptions, E2BProcessRefData, E2BSandboxInfo, E2BSandboxInstance, E2BSandboxStatic, } from "./e2b-sandbox.js"
 CreateAllowListEgressProxyOptions	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
-CreateCodingLifecycleEmitterOptions	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+CreateCodingLifecycleEmitterOptions	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 CreateCodingPatchReviewInput	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
 CreateCodingWorkspaceLifecycleOptions	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
-CreateDockerSandboxOptions	export type { CreateDockerSandboxOptions, DockerNetworkConfig, } from "./docker-sandbox.js"
+CreateDockerSandboxOptions	export type { CreateDockerSandboxOptions, DockerNetworkConfig, DockerProcessRecoveryBackendOptions, DockerProcessRefData, } from "./docker-sandbox.js"
+CreateE2BSandboxOptions	export type { ConnectE2BSandboxOptions, CreateE2BSandboxOptions, E2BClient, E2BConnectOpts, E2BCreateOpts, E2BProcessRecoveryBackendOptions, E2BProcessRefData, E2BSandboxInfo, E2BSandboxInstance, E2BSandboxStatic, } from "./e2b-sandbox.js"
 CreateEgressPolicyOptions	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
 CreateGitHubForgeOptions	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
 CreateGitOperationsOptions	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
 CreateGitRunnerOptions	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
 CreateLanguageIntelligenceOptions	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./language/index.js"
+CreateMistralOcrParserOptions	export type { CreateMistralOcrParserOptions, OcrPageSpan, OcrUsage } from "./mistral-ocr.js"
 CreateNativeSandboxOptions	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
 CreateProcessSessionsOptions	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
 DEFAULT_BINARY_SNIFF_BYTES	export declare const DEFAULT_BINARY_SNIFF_BYTES = 8192
@@ -217,6 +220,13 @@ DEFAULT_MAX_WORKSPACE_REPOSITORIES	export declare const DEFAULT_MAX_WORKSPACE_RE
 DEFAULT_MAX_WORKSPACE_WORKTREES	export declare const DEFAULT_MAX_WORKSPACE_WORKTREES = 4
 DEFAULT_MAX_WRITE_BYTES	export declare const DEFAULT_MAX_WRITE_BYTES: number
 DEFAULT_MEMORY_BYTES	export declare const DEFAULT_MEMORY_BYTES: number
+DEFAULT_OCR_BASE_URL	export declare const DEFAULT_OCR_BASE_URL = "https://api.mistral.ai"
+DEFAULT_OCR_MAX_BYTES	export declare const DEFAULT_OCR_MAX_BYTES: number
+DEFAULT_OCR_MAX_CONCURRENT	export declare const DEFAULT_OCR_MAX_CONCURRENT = 1
+DEFAULT_OCR_MAX_PAGES	export declare const DEFAULT_OCR_MAX_PAGES = 32
+DEFAULT_OCR_MAX_RESPONSE_BYTES	export declare const DEFAULT_OCR_MAX_RESPONSE_BYTES: number
+DEFAULT_OCR_MODEL	export declare const DEFAULT_OCR_MODEL = "mistral-ocr-latest"
+DEFAULT_OCR_TIMEOUT_MS	export declare const DEFAULT_OCR_TIMEOUT_MS = 60000
 DEFAULT_OPENAPI_LIMITS	export declare const DEFAULT_OPENAPI_LIMITS: ResolvedOpenApiLimits
 DEFAULT_PONYTAIL_CONFIG	export declare const DEFAULT_PONYTAIL_CONFIG: PonytailConfig
 DEFAULT_REPO_EXCLUDE	export declare const DEFAULT_REPO_EXCLUDE: readonly string[]
@@ -235,17 +245,29 @@ DevInspectorError	export declare class DevInspectorError extends Error
 DiagnosticDelta	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
 DiagnosticDeltaRequest	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
 DiagnosticSeverity	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
-DisposableSandbox	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+DisposableSandbox	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 DockerCliError	export declare class DockerCliError extends Error
 DockerCliRequest	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
 DockerCliResult	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
-DockerNetworkConfig	export type { CreateDockerSandboxOptions, DockerNetworkConfig, } from "./docker-sandbox.js"
+DockerNetworkConfig	export type { CreateDockerSandboxOptions, DockerNetworkConfig, DockerProcessRecoveryBackendOptions, DockerProcessRefData, } from "./docker-sandbox.js"
+DockerProcessRecoveryBackendOptions	export type { CreateDockerSandboxOptions, DockerNetworkConfig, DockerProcessRecoveryBackendOptions, DockerProcessRefData, } from "./docker-sandbox.js"
+DockerProcessRefData	export type { CreateDockerSandboxOptions, DockerNetworkConfig, DockerProcessRecoveryBackendOptions, DockerProcessRefData, } from "./docker-sandbox.js"
 DockerRunner	export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js"
 DockerSandboxError	export declare class DockerSandboxError extends Error
 DockerSandboxLimitOptions	export type { DockerSandboxLimitOptions, ResolvedDockerSandboxLimits, } from "./sandbox-limits.js"
 DocumentReader	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
 DocumentReaderError	export declare class DocumentReaderError extends Error
 DocumentReaderResult	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
+E2BClient	export type { ConnectE2BSandboxOptions, CreateE2BSandboxOptions, E2BClient, E2BConnectOpts, E2BCreateOpts, E2BProcessRecoveryBackendOptions, E2BProcessRefData, E2BSandboxInfo, E2BSandboxInstance, E2BSandboxStatic, } from "./e2b-sandbox.js"
+E2BConnectOpts	export type { ConnectE2BSandboxOptions, CreateE2BSandboxOptions, E2BClient, E2BConnectOpts, E2BCreateOpts, E2BProcessRecoveryBackendOptions, E2BProcessRefData, E2BSandboxInfo, E2BSandboxInstance, E2BSandboxStatic, } from "./e2b-sandbox.js"
+E2BCreateOpts	export type { ConnectE2BSandboxOptions, CreateE2BSandboxOptions, E2BClient, E2BConnectOpts, E2BCreateOpts, E2BProcessRecoveryBackendOptions, E2BProcessRefData, E2BSandboxInfo, E2BSandboxInstance, E2BSandboxStatic, } from "./e2b-sandbox.js"
+E2BProcessRecoveryBackendOptions	export type { ConnectE2BSandboxOptions, CreateE2BSandboxOptions, E2BClient, E2BConnectOpts, E2BCreateOpts, E2BProcessRecoveryBackendOptions, E2BProcessRefData, E2BSandboxInfo, E2BSandboxInstance, E2BSandboxStatic, } from "./e2b-sandbox.js"
+E2BProcessRefData	export type { ConnectE2BSandboxOptions, CreateE2BSandboxOptions, E2BClient, E2BConnectOpts, E2BCreateOpts, E2BProcessRecoveryBackendOptions, E2BProcessRefData, E2BSandboxInfo, E2BSandboxInstance, E2BSandboxStatic, } from "./e2b-sandbox.js"
+E2BSandboxError	export declare class E2BSandboxError extends Error
+E2BSandboxInfo	export type { ConnectE2BSandboxOptions, CreateE2BSandboxOptions, E2BClient, E2BConnectOpts, E2BCreateOpts, E2BProcessRecoveryBackendOptions, E2BProcessRefData, E2BSandboxInfo, E2BSandboxInstance, E2BSandboxStatic, } from "./e2b-sandbox.js"
+E2BSandboxInstance	export type { ConnectE2BSandboxOptions, CreateE2BSandboxOptions, E2BClient, E2BConnectOpts, E2BCreateOpts, E2BProcessRecoveryBackendOptions, E2BProcessRefData, E2BSandboxInfo, E2BSandboxInstance, E2BSandboxStatic, } from "./e2b-sandbox.js"
+E2BSandboxStatic	export type { ConnectE2BSandboxOptions, CreateE2BSandboxOptions, E2BClient, E2BConnectOpts, E2BCreateOpts, E2BProcessRecoveryBackendOptions, E2BProcessRefData, E2BSandboxInfo, E2BSandboxInstance, E2BSandboxStatic, } from "./e2b-sandbox.js"
+E2B_PEER_VERSION	export declare const E2B_PEER_VERSION = "2.49.1"
 EGRESS_PRESETS	export declare const EGRESS_PRESETS: Record<EgressPreset, readonly EgressRule[]>
 Edit	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
 EditOperations	export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js"
@@ -263,8 +285,8 @@ EgressProxy	export type { CreateAllowListEgressProxyOptions, EgressAttestation, 
 EgressProxyEndpoint	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
 EgressProxyStats	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
 EgressRule	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
-FileChangeOp	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
-FileChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+FileChangeOp	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+FileChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 ForgeCheck	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
 ForgeCredential	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
 ForgeCredentialResolver	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
@@ -409,6 +431,11 @@ HARD_MAX_WORKSPACE_REPOSITORIES	export declare const HARD_MAX_WORKSPACE_REPOSITO
 HARD_MAX_WORKSPACE_WORKTREES	export declare const HARD_MAX_WORKSPACE_WORKTREES = 16
 HARD_MAX_WRITE_BYTES	export declare const HARD_MAX_WRITE_BYTES: number
 HARD_MEMORY_BYTES	export declare const HARD_MEMORY_BYTES: number
+HARD_OCR_MAX_BYTES	export declare const HARD_OCR_MAX_BYTES: number
+HARD_OCR_MAX_CONCURRENT	export declare const HARD_OCR_MAX_CONCURRENT = 4
+HARD_OCR_MAX_PAGES	export declare const HARD_OCR_MAX_PAGES = 10000
+HARD_OCR_MAX_RESPONSE_BYTES	export declare const HARD_OCR_MAX_RESPONSE_BYTES: number
+HARD_OCR_TIMEOUT_MS	export declare const HARD_OCR_TIMEOUT_MS = 180000
 HARD_OPENAPI_LIMITS	export declare const HARD_OPENAPI_LIMITS: ResolvedOpenApiLimits
 HARD_SHELL_TIMEOUT_SECONDS	export declare const HARD_SHELL_TIMEOUT_SECONDS = 3600
 HARD_STARTUP_TIMEOUT_MS	export declare const HARD_STARTUP_TIMEOUT_MS = 120000
@@ -416,6 +443,7 @@ HARD_STOP_GRACE_MS	export declare const HARD_STOP_GRACE_MS = 30000
 HARD_TMP_BYTES	export declare const HARD_TMP_BYTES: number
 HARD_WALL_TIME_MS	export declare const HARD_WALL_TIME_MS: number
 HARD_WORKSPACE_BYTES	export declare const HARD_WORKSPACE_BYTES: number
+HostCompositionError	export { assertHostCompositionReadiness, HostCompositionError, type HostCompositionGovernance, type HostCompositionOptions, type HostCompositionProfile, type HostCompositionReport, type HostCompositionToolReport, inspectDevInspector, inspectHostComposition, } from "./composition.js"
 IMPECCABLE_SKILL_NAME	export declare const IMPECCABLE_SKILL_NAME = "impeccable"
 INDEX_STATES	export declare const INDEX_STATES: readonly IndexState[]
 ImpeccableExtensionOptions	export type { ImpeccableExtensionOptions } from "./types.js"
@@ -427,6 +455,12 @@ IndexResourceDiagnostics	export type { IndexedRepositoryOptions, IndexFacade, In
 IndexSearchHit	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
 IndexState	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
 IndexedRepositoryOptions	export type { IndexedRepositoryOptions, IndexFacade, IndexFileChange, IndexLimitOptions, IndexResourceDiagnostics, IndexSearchHit, IndexState, RepoEntryKind, RepoListEntry, RepoSearchMode, RepoSearchOutputMode, RepositoryGlobRequest, RepositoryGlobResult, RepositoryIndexBackend, RepositoryIndexQueryRequest, RepositoryIndexQueryResult, RepositoryIndexRemoveRequest, RepositoryIndexStatus, RepositoryIndexUpdateRequest, RepositoryLimitOptions, RepositoryListRequest, RepositoryListResult, RepositoryO
+InspectorAggregateSlice	export type { InspectorAggregateSlice, InspectorCompareSide, InspectorCompareWinner, InspectorComparison, InspectorCostSlice, InspectorSummarySlice, } from "./compare.js"
+InspectorCompareSide	export type { InspectorAggregateSlice, InspectorCompareSide, InspectorCompareWinner, InspectorComparison, InspectorCostSlice, InspectorSummarySlice, } from "./compare.js"
+InspectorCompareWinner	export type { InspectorAggregateSlice, InspectorCompareSide, InspectorCompareWinner, InspectorComparison, InspectorCostSlice, InspectorSummarySlice, } from "./compare.js"
+InspectorComparison	export type { InspectorAggregateSlice, InspectorCompareSide, InspectorCompareWinner, InspectorComparison, InspectorCostSlice, InspectorSummarySlice, } from "./compare.js"
+InspectorCostSlice	export type { InspectorAggregateSlice, InspectorCompareSide, InspectorCompareWinner, InspectorComparison, InspectorCostSlice, InspectorSummarySlice, } from "./compare.js"
+InspectorSummarySlice	export type { InspectorAggregateSlice, InspectorCompareSide, InspectorCompareWinner, InspectorComparison, InspectorCostSlice, InspectorSummarySlice, } from "./compare.js"
 LSP_RESTARTS_PER_SERVER	export declare const LSP_RESTARTS_PER_SERVER = 3
 LanguageDiagnostic	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./language/index.js"
 LanguageDiagnosticDeltaRequest	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageDiagnosticDeltaRequest, LanguageDiagnosticDeltaResult, LanguageFileDiagnostics, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./types.js"
@@ -458,6 +492,9 @@ NativeSpawnCommand	export type { CreateNativeSandboxOptions, NativeSandboxLimitO
 NativeUnshareMode	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
 NormalizeDiagnosticsOptions	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
 NormalizedDiagnostic	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
+ObserveSupervisorLifecycleOptions	export type { ObserveSupervisorLifecycleOptions } from "./supervisor-lifecycle.js"
+OcrPageSpan	export type { CreateMistralOcrParserOptions, OcrPageSpan, OcrUsage } from "./mistral-ocr.js"
+OcrUsage	export type { CreateMistralOcrParserOptions, OcrPageSpan, OcrUsage } from "./mistral-ocr.js"
 OpenApiCredentialInput	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
 OpenApiCredentialResolver	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
 OpenApiLimits	export type { OpenApiLimits, ResolvedOpenApiLimits } from "./limits.js"
@@ -474,7 +511,7 @@ PROCESS_RECOVERY_CATEGORY	export declare const PROCESS_RECOVERY_CATEGORY = "codi
 PROCESS_RECOVERY_LEASE_NAMESPACE	export declare const PROCESS_RECOVERY_LEASE_NAMESPACE = "prism.coding-agent.process.lease.v1"
 PROCESS_RECOVERY_NAMESPACE	export declare const PROCESS_RECOVERY_NAMESPACE = "prism.coding-agent.process.v1"
 PROCESS_RECOVERY_SCHEMA_VERSION	export declare const PROCESS_RECOVERY_SCHEMA_VERSION = 1
-PermissionDeniedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+PermissionDeniedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 PonytailAppendOptions	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
 PonytailExtensionOptions	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
 PonytailExtensionState	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
@@ -539,7 +576,7 @@ RepositoryWalkLimits	export type { IndexedRepositoryOptions, IndexFacade, IndexF
 ResolvedAskUserDecisionAnswer	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
 ResolvedAskUserDecisionLimits	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
 ResolvedCodingCheckpointLimits	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
-ResolvedCodingLifecycleLimits	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+ResolvedCodingLifecycleLimits	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 ResolvedCodingReviewLimits	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
 ResolvedDiagnosticsLimits	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
 ResolvedDockerSandboxLimits	export type { DockerSandboxLimitOptions, ResolvedDockerSandboxLimits, } from "./sandbox-limits.js"
@@ -560,28 +597,32 @@ SAFE_GIT_ENV	export declare const SAFE_GIT_ENV: Readonly<Record<string, string>>
 SANDBOX_FS_SCRIPTS	export declare const SANDBOX_FS_SCRIPTS: Readonly<
 SKILLS_DIR_NAME	export declare const SKILLS_DIR_NAME = "skills"
 SKILL_FILE_CANDIDATES	export declare const SKILL_FILE_CANDIDATES: readonly ["skills/impeccable/SKILL.md", "SKILL.md"]
-SandboxAdapter	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
-SandboxCapabilities	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
-SandboxCloseOptions	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxAdapter	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxCapabilities	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxCloseOptions	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxCodingComposition	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
 SandboxCodingCompositionError	export declare class SandboxCodingCompositionError extends Error
 SandboxCodingCompositionResult	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
 SandboxCodingToolsOptions	export type { SandboxCodingComposition, SandboxCodingCompositionResult, SandboxCodingToolsOptions, WorkspaceMode, } from "./sandbox-coding-operations.js"
-SandboxExecFileRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
-SandboxExecRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxExecFileRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxExecRequest	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxExecutionError	export declare class SandboxExecutionError extends Error
-SandboxExportMetadata	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxExportMetadata	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxFsError	export declare class SandboxFsError extends Error
 SandboxFsOperationsOptions	export type { SandboxFsOperationsOptions, SandboxRepositoryOperationsOptions, } from "./sandbox-fs-operations.js"
-SandboxProcessHandle	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxPauseResult	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxProcessHandle	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxRepositoryOperationsOptions	export type { SandboxFsOperationsOptions, SandboxRepositoryOperationsOptions, } from "./sandbox-fs-operations.js"
-SandboxStatus	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
-SandboxStatusState	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxProcessHandle, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxSnapshotKind	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxStatus	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
+SandboxStatusState	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxTarError	export declare class SandboxTarError extends Error
 SearchToolOptions	export type { SearchToolOptions } from "./search.js"
 Semaphore	export declare class Semaphore
 ShellConfig	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
 ShellToolOptions	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
+SubagentStartedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+SubagentStoppedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 SuspendAskUserDecisionOptions	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
 TextFileClient	export type { TextFileClient } from "./acp-operations.js"
 TransformImage	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
@@ -602,7 +643,10 @@ WorkspaceRepositoryRecord	export type { CodingWorkspaceLifecycle, CodingWorkspac
 WorkspaceRepositoryRegistration	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
 WorkspaceRepositoryState	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
 WorkspaceState	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
-WorktreeChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, WorktreeChangedEvent, } from "./lifecycle.js"
+WorktreeChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+WorktreeChildContext	export type { WorktreeChildContext, WorktreeChildFactory, WorktreeChildFactoryOptions } from "./spawn-worktree.js"
+WorktreeChildFactory	export type { WorktreeChildContext, WorktreeChildFactory, WorktreeChildFactoryOptions } from "./spawn-worktree.js"
+WorktreeChildFactoryOptions	export type { WorktreeChildContext, WorktreeChildFactory, WorktreeChildFactoryOptions } from "./spawn-worktree.js"
 WriteOperations	export type { WriteOperations, WriteToolOptions } from "./write.js"
 WriteToolOptions	export type { WriteOperations, WriteToolOptions } from "./write.js"
 acquireRecordLease	export declare function acquireRecordLease(input:
@@ -610,6 +654,7 @@ applyAgentEvent	export declare function applyAgentEvent(view: RunView, event: Ag
 applyEditsToNormalizedContent	export declare function applyEditsToNormalizedContent(normalizedContent: string, edits: Edit[], path: string): AppliedEditsResult
 applyReplacementsPreservingUnchangedLines	export declare function applyReplacementsPreservingUnchangedLines(originalContent: string, baseContent: string, replacements: TextReplacement[]): string
 applyTextEdits	export declare function applyTextEdits(content: string, edits: readonly LanguageTextEdit[]): string
+argvCommand	export declare function argvCommand(file: string, args?: readonly string[]): string
 askUserDecisionResumeSchema	export declare function askUserDecisionResumeSchema(request: Pick<AskUserDecisionSuspendData, "selectionMode" | "allowCustom" | "options">): JsonObject
 assertAbsoluteExecutable	export declare function assertAbsoluteExecutable(path: string, label: string): Promise<string>
 assertAbsoluteGit	export declare function assertAbsoluteGit(path: string): Promise<string>
@@ -618,6 +663,7 @@ assertCodingPatchAccepted	export declare function assertCodingPatchAccepted(inpu
 assertCodingResumeAllowed	export declare function assertCodingResumeAllowed(input:
 assertDeadline	export declare function assertDeadline(deadlineAt: number | undefined): void
 assertEgressAttestation	export declare function assertEgressAttestation(attestation: EgressAttestation): EgressAttestation
+assertHostCompositionReadiness	export { assertHostCompositionReadiness, HostCompositionError, type HostCompositionGovernance, type HostCompositionOptions, type HostCompositionProfile, type HostCompositionReport, type HostCompositionToolReport, inspectDevInspector, inspectHostComposition, } from "./composition.js"
 assertNotAborted	export declare function assertNotAborted(signal: AbortSignal | undefined): void
 assertNotDisposed	export declare function assertNotDisposed(host: SessionsHost): void
 assertPathInsideRoots	export declare function assertPathInsideRoots(roots: readonly string[], target: string): Promise<boolean>
@@ -644,9 +690,12 @@ classifyGitWorktreeEffect	export declare function classifyGitWorktreeEffect(args
 codingCheckpointStatePatch	export declare function codingCheckpointStatePatch(metadata: CodingCheckpointMetadata): JsonObject
 codingPlanPathForTask	export declare function codingPlanPathForTask(taskId: string): string
 commandFingerprint	export declare function commandFingerprint(command: string, args: readonly string[]): string
+compareInspectorRuns	export declare function compareInspectorRuns(left: InspectorCompareSide, right: InspectorCompareSide): InspectorComparison
 compileOpenApiDocument	export declare function compileOpenApiDocument(input:
 compileSearchPattern	export declare function compileSearchPattern(query: string, caseSensitive: boolean, maxPatternBytes: number):
 composeEgressSandboxNetwork	export declare function composeEgressSandboxNetwork(attestation: EgressAttestation, name: string): DockerNetworkConfig
+computeCommandFingerprint	export declare function computeCommandFingerprint(file: string, args?: readonly string[]): string
+connectE2BSandbox	export declare function connectE2BSandbox(options: ConnectE2BSandboxOptions): Promise<DisposableSandbox>
 createAcpFilesystemOperations	export declare function createAcpFilesystemOperations(client: TextFileClient):
 createAllTools	export declare function createAllTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
 createAllowListEgressProxy	export declare function createAllowListEgressProxy(options: CreateAllowListEgressProxyOptions): EgressProxy
@@ -668,9 +717,12 @@ createComputerUseLinuxTools	export declare function createComputerUseLinuxTools(
 createDeleteTool	export declare function createDeleteTool(cwd: string, options?: DeleteToolOptions): ToolDefinition
 createDevRouter	export declare function createDevRouter(ctx: DevRouteContext): PrismRequestHandler
 createDirectoryArtifactWriter	export declare function createDirectoryArtifactWriter(rootDir: string): ArtifactWriter
+createDockerProcessRecoveryBackend	export declare function createDockerProcessRecoveryBackend(sandbox: DisposableSandbox, options?: DockerProcessRecoveryBackendOptions): ProcessRecoveryBackend
 createDockerSandbox	export declare function createDockerSandbox(options: CreateDockerSandboxOptions): Promise<DisposableSandbox>
 createDocumentReader	export declare function createDocumentReader(options?: CreateDocumentReaderOptions): Promise<DocumentReader>
 createDocxParser	export declare function createDocxParser(): Promise<DocumentParser>
+createE2BProcessRecoveryBackend	export declare function createE2BProcessRecoveryBackend(sandbox: DisposableSandbox, options?: E2BProcessRecoveryBackendOptions): ProcessRecoveryBackend
+createE2BSandbox	export declare function createE2BSandbox(options: CreateE2BSandboxOptions): Promise<DisposableSandbox>
 createEditTool	export declare function createEditTool(cwd: string, options?: EditToolOptions): ToolDefinition
 createEgressPolicy	export declare function createEgressPolicy(options?: CreateEgressPolicyOptions): EgressPolicy
 createGitApplyTool	export declare function createGitApplyTool(cwd: string, options?: GitToolsOptions): ToolDefinition
@@ -692,6 +744,7 @@ createIndexedRepositoryOperations	export declare function createIndexedRepositor
 createLanguageIntelligence	export declare function createLanguageIntelligence(options: CreateLanguageIntelligenceOptions): LanguageIntelligence
 createLocalBashOperations	export declare function createLocalBashOperations(options?:
 createLocalRepositoryOperations	export declare function createLocalRepositoryOperations(limits?: RepositoryLimitOptions, walk?: RepositoryWalk): RepositoryOperations
+createMistralOcrParser	export declare function createMistralOcrParser(options: CreateMistralOcrParserOptions): DocumentParser
 createMoveTool	export declare function createMoveTool(cwd: string, options?: MoveToolOptions): ToolDefinition
 createNativeSandbox	export declare function createNativeSandbox(options: CreateNativeSandboxOptions): Promise<DisposableSandbox>
 createOpenApiTools	export declare function createOpenApiTools(options: OpenApiToolsOptions): readonly ToolDefinition[]
@@ -718,7 +771,10 @@ createSecretRedactor	export declare function createSecretRedactor(secrets?: read
 createSessionsHost	export declare function createSessionsHost(options: CreateProcessSessionsOptions): SessionsHost
 createShellTool	export declare function createShellTool(cwd: string, options?: ShellToolOptions): ToolDefinition
 createTempArtifactWriter	export declare function createTempArtifactWriter(prefix?: string): ArtifactWriter
+createWorktreeChildFactory	export declare function createWorktreeChildFactory(factory: (context: WorktreeChildContext) => Agent | Promise<Agent>, options: WorktreeChildFactoryOptions): WorktreeChildFactory
 createWriteTool	export declare function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDefinition
+decodeDockerProcessRef	export declare function decodeDockerProcessRef(ref: string): DockerProcessRefData | null
+decodeE2BProcessRef	export declare function decodeE2BProcessRef(ref: string): E2BProcessRefData | null
 deleteProcessRecoveryRecord	export declare function deleteProcessRecoveryRecord(input:
 detectLineEnding	export declare function detectLineEnding(content: string): "\r\n" | "\n"
 detectSupportedImageMimeType	export declare function detectSupportedImageMimeType(buffer: Buffer): string | null
@@ -729,6 +785,8 @@ disposeSessions	export declare function disposeSessions(host: SessionsHost): Pro
 dockerOutputText	export declare function dockerOutputText(runner: DockerRunner, request: Omit<DockerCliRequest, "collectStdout">): Promise<string>
 durableSeams	export declare function durableSeams(host: SessionsHost):
 emit	export declare function emit(host: SessionsHost, event: CodingProcessEvent): void
+encodeDockerProcessRef	export declare function encodeDockerProcessRef(data: DockerProcessRefData): string
+encodeE2BProcessRef	export declare function encodeE2BProcessRef(data: E2BProcessRefData): string
 encodeLspFrame	export declare function encodeLspFrame(message: unknown): Buffer
 enforceExecutionPolicy	export declare function enforceExecutionPolicy(policy: ExecutionPolicy | undefined, action: ExecutionAction, toolCallId: string, toolName: string, /** Called once on policy denial so one site emits lifecycle permission_denied for every tool. */ onDenied?: (input:
 evaluateCommandRules	export declare function evaluateCommandRules(command: string, rules: readonly CommandRule[] | undefined, options?:
@@ -749,6 +807,8 @@ gitRequireOk	export declare function gitRequireOk(runner: BoundGitRunner, reques
 gitText	export declare function gitText(result: GitExecResult, stream?: "stdout" | "stderr"): string
 globLocal	export declare function globLocal(request: RepositoryGlobRequest, defaults: ResolvedRepositoryLimits, walk: RepositoryWalk): Promise<RepositoryGlobResult>
 hasShellMetacharacters	export declare function hasShellMetacharacters(command: string): boolean
+inspectDevInspector	export declare function inspectDevInspector(options: CreatePrismDevInspectorOptions): HostCompositionReport
+inspectHostComposition	export { assertHostCompositionReadiness, HostCompositionError, type HostCompositionGovernance, type HostCompositionOptions, type HostCompositionProfile, type HostCompositionReport, type HostCompositionToolReport, inspectDevInspector, inspectHostComposition, } from "./composition.js"
 inspectorConfigResponse	export declare function inspectorConfigResponse(basePath: string, agentId: string): Response
 inspectorPageResponse	export declare function inspectorPageResponse(): Response
 inspectorScriptResponse	export declare function inspectorScriptResponse(): Response
@@ -783,17 +843,20 @@ normalizeForFuzzyMatch	export declare function normalizeForFuzzyMatch(text: stri
 normalizeLevelArg	export declare function normalizeLevelArg(arg: string): CavemanLevel | null
 normalizeToLF	export declare function normalizeToLF(text: string): string
 nowIso	export declare function nowIso(): string
+observeSupervisorLifecycle	export declare function observeSupervisorLifecycle(supervisor: Pick<Supervisor, "redact" | "subscribe">, options: ObserveSupervisorLifecycleOptions): () => void
 ownershipKey	export declare function ownershipKey(ownership: CreateProcessSessionsOptions["ownership"], identity: CreateProcessSessionsOptions["identity"]): string
 packageName	export declare const packageName = "@arnilo/prism-coding-tools/openapi"
 parseAskUserDecisionArgs	export declare function parseAskUserDecisionArgs(args: Record<string, unknown>, limits: ResolvedAskUserDecisionLimits):
 parseCodingPlanTodos	export declare function parseCodingPlanTodos(markdown: string, limits?: CodingCheckpointLimitOptions): CodingTodoItem[]
 parseGitLsFilesZ	export declare function parseGitLsFilesZ(buffer: Buffer): string[]
+parseInspectorCompareBody	export declare function parseInspectorCompareBody(text: string): InspectorComparison
 parsePorcelainV2	export declare function parsePorcelainV2(stdout: Buffer, options?:
 pathExists	export declare function pathExists(filePath: string): Promise<boolean>
 persistLevel	export declare function persistLevel(options: PersistLevelOptions): Promise<void>
 persistMode	export declare function persistMode(options: PersistModeOptions): Promise<void>
 persistRecoveryUnknown	export declare function persistRecoveryUnknown(host: SessionsHost, current: ProcessRecoveryRecord, version: number, signal?: AbortSignal): Promise<boolean>
 persistTransition	export declare function persistTransition(host: SessionsHost, record: SessionRecord): void
+posixQuote	export declare function posixQuote(value: string): string
 readBoundedFile	export declare function readBoundedFile(root: string, relativePath: string, maxBytes: number): string
 readCavemanConfig	export declare function readCavemanConfig(configPath?: string): CavemanConfig
 readCodingCheckpointFromState	export declare function readCodingCheckpointFromState(state: Readonly<Record<string, unknown>>, limits?: CodingCheckpointLimitOptions): CodingCheckpointMetadata | undefined
@@ -821,6 +884,7 @@ resolveContainedMutationPath	export declare function resolveContainedMutationPat
 resolveDiagnosticsLimits	export declare function resolveDiagnosticsLimits(options?:
 resolveDockerCapabilities	export declare function resolveDockerCapabilities(network: DockerNetworkConfig): SandboxCapabilities
 resolveDockerSandboxLimits	export declare function resolveDockerSandboxLimits(input?: DockerSandboxLimitOptions): ResolvedDockerSandboxLimits
+resolveE2BCapabilities	export declare function resolveE2BCapabilities(override?: Readonly<Partial<SandboxCapabilities>>): SandboxCapabilities
 resolveEgressLimits	export declare function resolveEgressLimits(input?: EgressLimitOptions): ResolvedEgressLimits
 resolveForgeLimits	export declare function resolveForgeLimits(options?: ForgeLimits): ResolvedForgeLimits
 resolveGitLimits	export declare function resolveGitLimits(options?: GitLimitOptions): ResolvedGitLimits
@@ -868,6 +932,11 @@ truncateTail	export declare function truncateTail(content: string, options?: Tru
 type ComputerUseLinuxConnect	export { type ComputerUseLinuxConnect, type ComputerUseLinuxTools, type ComputerUseLinuxToolsOptions, createComputerUseLinuxTools, } from "./create.js"
 type ComputerUseLinuxTools	export { type ComputerUseLinuxConnect, type ComputerUseLinuxTools, type ComputerUseLinuxToolsOptions, createComputerUseLinuxTools, } from "./create.js"
 type ComputerUseLinuxToolsOptions	export { type ComputerUseLinuxConnect, type ComputerUseLinuxTools, type ComputerUseLinuxToolsOptions, createComputerUseLinuxTools, } from "./create.js"
+type HostCompositionGovernance	export { assertHostCompositionReadiness, HostCompositionError, type HostCompositionGovernance, type HostCompositionOptions, type HostCompositionProfile, type HostCompositionReport, type HostCompositionToolReport, inspectDevInspector, inspectHostComposition, } from "./composition.js"
+type HostCompositionOptions	export { assertHostCompositionReadiness, HostCompositionError, type HostCompositionGovernance, type HostCompositionOptions, type HostCompositionProfile, type HostCompositionReport, type HostCompositionToolReport, inspectDevInspector, inspectHostComposition, } from "./composition.js"
+type HostCompositionProfile	export { assertHostCompositionReadiness, HostCompositionError, type HostCompositionGovernance, type HostCompositionOptions, type HostCompositionProfile, type HostCompositionReport, type HostCompositionToolReport, inspectDevInspector, inspectHostComposition, } from "./composition.js"
+type HostCompositionReport	export { assertHostCompositionReadiness, HostCompositionError, type HostCompositionGovernance, type HostCompositionOptions, type HostCompositionProfile, type HostCompositionReport, type HostCompositionToolReport, inspectDevInspector, inspectHostComposition, } from "./composition.js"
+type HostCompositionToolReport	export { assertHostCompositionReadiness, HostCompositionError, type HostCompositionGovernance, type HostCompositionOptions, type HostCompositionProfile, type HostCompositionReport, type HostCompositionToolReport, inspectDevInspector, inspectHostComposition, } from "./composition.js"
 type OpenApiToolErrorCode	export { OpenApiToolError, type OpenApiToolErrorCode } from "./errors.js"
 type ResolveUpstreamRootOptions	export { MAX_SKILL_FILE_BYTES, type ResolvedImpeccableUpstream, type ResolveUpstreamRootOptions, readBoundedFile, redactPaths, resolveUpstreamRoot, SKILL_FILE_CANDIDATES, UpstreamResolveError, } from "./upstream.js"
 type ResolvedImpeccableUpstream	export { MAX_SKILL_FILE_BYTES, type ResolvedImpeccableUpstream, type ResolveUpstreamRootOptions, readBoundedFile, redactPaths, resolveUpstreamRoot, SKILL_FILE_CANDIDATES, UpstreamResolveError, } from "./upstream.js"

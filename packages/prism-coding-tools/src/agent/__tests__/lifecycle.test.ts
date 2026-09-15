@@ -57,17 +57,8 @@ test("emitter delivers to listeners and returns false without listeners", () => 
 test("emitter drops unknown (deferred) kinds and oversized events without throwing", () => {
   const { events, emitter } = collect();
   // Deferred kinds must be dropped at runtime: check_started/finished, task_*,
-  // compaction_*, subagent_* (scripts/phase10-freeze-manifest.json deferredEvents).
-  for (const type of [
-    "check_started",
-    "check_finished",
-    "task_created",
-    "task_completed",
-    "compaction_started",
-    "compaction_finished",
-    "subagent_started",
-    "subagent_stopped",
-  ]) {
+  // compaction_* (scripts/phase10-freeze-manifest.json deferredEvents).
+  for (const type of ["check_started", "check_finished", "task_created", "task_completed", "compaction_started", "compaction_finished"]) {
     assert.equal(emitter.emit({ type } as CodingLifecycleEvent), false, type);
   }
   assert.equal(
@@ -269,7 +260,7 @@ test("frozen shipped event kinds match the freeze manifest lifecycle list", asyn
   const { readFile } = await import("node:fs/promises");
   const manifest = JSON.parse(await readFile(new URL("../../../../../scripts/phase10-freeze-manifest.json", import.meta.url), "utf8"));
   const frozen = new Set(manifest.packages["@arnilo/prism-coding-agent"].modules.lifecycle.events as string[]);
-  // The emitter accepts the six CodingProcessEvent kinds (reused union) plus the six shipped kinds.
+  // The emitter accepts the six CodingProcessEvent kinds (reused union) plus the shipped coding lifecycle kinds.
   const accepted = [
     "process_started",
     "process_exited",
@@ -283,6 +274,8 @@ test("frozen shipped event kinds match the freeze manifest lifecycle list", asyn
     "configuration_changed",
     "plan_changed",
     "plan_removed",
+    "subagent_started",
+    "subagent_stopped",
   ];
   assert.ok(
     [...frozen].every((t) => accepted.includes(t)),

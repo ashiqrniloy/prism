@@ -120,6 +120,8 @@ await runSpeechConformance({
 - [Realtime sessions](public-contracts.md): `RealtimeSession` for interactive
   bidirectional voice; `RealtimeEvent.transcript_delta` is this contract's
   naming anchor.
+- [Realtime voice](realtime-voice.md): governed bridge from a Realtime session
+  into host tool dispatch, barge-in, and transcript privacy.
 - [Provider conformance](provider-conformance.md): `runSpeechConformance` /
   `runTranscriptionConformance` and the offline conformance matrix.
 - [Provider packages](provider-packages.md): subpath import rules for

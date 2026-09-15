@@ -92,6 +92,8 @@ export interface RealtimeSession {
   interrupt(options?: { readonly signal?: AbortSignal }): Promise<void>;
   /** Close the session and release the transport. Idempotent. */
   close(reason?: string, options?: { readonly signal?: AbortSignal }): Promise<void>;
+  /** Return a host-dispatched tool result. Omitted on transports that cannot complete tools. */
+  completeTool?(callId: string, output: string, options?: { readonly signal?: AbortSignal }): Promise<void>;
 }
 
 /** Factory a provider exposes for realtime sessions; not part of `AIProvider`. */

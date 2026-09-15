@@ -12,7 +12,14 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "@arnilo/prism";
-import { createSupervisor, type Supervisor, SupervisorDeniedError } from "../index.js";
+import {
+  createSupervisor,
+  type CreateSupervisorOptions,
+  type DelegationCompletion,
+  type Supervisor,
+  SupervisorDeniedError,
+  type SupervisorEvent,
+} from "../index.js";
 
 const ownership = { tenantId: "tenant", userId: "user" };
 
@@ -32,6 +39,9 @@ function harness(options?: {
   children?: Record<string, { permission?: PermissionPolicy }>;
   /** Root turn plan: a child id delegates to that child, "text" ends the run. */
   rootTurns?: string[];
+  childEvents?: boolean;
+  limits?: CreateSupervisorOptions["limits"];
+  hooks?: CreateSupervisorOptions["hooks"];
 }): Harness {
   const checkpoints = createMemoryCheckpointStore();
   const executed: string[] = [];
@@ -84,6 +94,9 @@ function harness(options?: {
     ownership,
     checkpoints,
     definitionRevision: "1",
+    ...(options?.childEvents !== undefined ? { childEvents: options.childEvents } : {}),
+    ...(options?.limits !== undefined ? { limits: options.limits } : {}),
+    ...(options?.hooks !== undefined ? { hooks: options.hooks } : {}),
     children: Object.fromEntries(
       Object.entries(childDefs).map(([childId, def]) => [
         childId,
@@ -134,6 +147,34 @@ const ROOT_RUN_STATE = (h: Harness) => ({
   definitionRevision: "1",
   resumeNestedRun: h.supervisor.resumeNestedRun,
 });
+
+/** Drain supervisor events until `until` matches (inclusive) or the stream closes. */
+async function pullUntil(iterator: AsyncIterator<SupervisorEvent>, until: (event: SupervisorEvent) => boolean) {
+  const seen: SupervisorEvent[] = [];
+  for (;;) {
+    const next = await iterator.next();
+    if (next.done) break;
+    seen.push(next.value);
+    if (until(next.value)) break;
+  }
+  return seen;
+}
+
+/** Suspend the root on one child approval, then resume it with `outcome`. */
+async function suspendThenResume(h: Harness, sessionId: string, outcome: "allow_once" | "reject_once" = "allow_once") {
+  const first = await h.root.createSession({ id: sessionId }).run("go", { runState: ROOT_RUN_STATE(h) });
+  assert.equal(first.status, "suspended");
+  const decision = first.interruption?.pendingDecisions?.[0];
+  const version = first.runState?.version;
+  assert.ok(decision, "the child approval surfaced on the root run");
+  assert.ok(version !== undefined, "the root run version is durable");
+  return resumeAgentRun(
+    h.root,
+    { runId: first.runId, sessionId: first.sessionId },
+    { expectedVersion: version, decisions: [{ approvalId: decision.approvalId, outcome }] },
+    ROOT_RUN_STATE(h),
+  ).catch((error: unknown) => error);
+}
 
 describe("nested-agent approval propagation", () => {
   it("surfaces child approvals on the root run with attribution and routes the root batch back", async () => {
@@ -416,7 +457,7 @@ describe("nested-agent approval propagation", () => {
     );
   });
 
-  // BUG-2 regression (Clay integration findings, plan 050 Task 3): the rebuilt
+  // BUG-2 regression (integration findings, plan 050 Task 3): the rebuilt
   // child factory on the resume path gets the same actionable guard as the
   // initial delegation — a session return must not crash at `.config.permission`.
   it("fails closed when a rebuilt child factory returns a non-Agent (resume path)", async () => {
@@ -550,5 +591,101 @@ describe("nested-agent approval propagation", () => {
     );
     assert.equal(done.status, "succeeded");
     assert.equal(h.executed.filter((entry) => entry.startsWith("c2:")).length, 1);
+  });
+
+  // Plan 078 Task 7: the rebuilt child session gets the same milestone pump as live `delegate()`,
+  // and a resumed terminal outcome runs `hooks.after` with the original delegation id.
+  it("projects child milestones and runs the terminal hook when a suspended child resumes", async () => {
+    const completions: DelegationCompletion[] = [];
+    const h = harness({ childEvents: true, hooks: { after: (completion) => void completions.push(completion) } });
+    const iterator = h.supervisor.subscribe()[Symbol.asyncIterator]();
+    const result = await suspendThenResume(h, "s7");
+    assert.equal((result as { status?: string }).status, "succeeded");
+
+    const events = await pullUntil(iterator, (event) => event.type === "delegation_finished");
+    const childEvents = events.filter((event) => event.type === "delegation_child_event");
+    const types = childEvents.map((event) => event.childEvent.type);
+    // One pump run per attempt: the live attempt (started, suspended) and the resume.
+    assert.equal(types.filter((type) => type === "agent_started").length, 2);
+    assert.ok(types.includes("agent_suspended"));
+    // The gated tool only executes after the approval, so these milestones can only come from resume.
+    assert.ok(types.includes("tool_execution_started"));
+    assert.ok(types.includes("tool_execution_finished"));
+    assert.ok(types.includes("agent_finished"));
+    assert.equal(types.includes("message_delta") || types.includes("message_started"), false);
+    assert.equal(
+      childEvents.every((event) => event.childId === "writer" && event.delegationId === "lead-1" && event.depth === 1),
+      true,
+    );
+    const finished = events.at(-1);
+    assert.ok(finished && finished.type === "delegation_finished");
+    assert.equal(finished.status, "succeeded");
+
+    const [completion] = completions;
+    assert.ok(completion);
+    assert.equal(completions.length, 1);
+    assert.equal(completion.childId, "writer");
+    assert.equal(completion.delegationId, "lead-1");
+    assert.equal(completion.status, "succeeded");
+    assert.equal(completion.text, "writer done");
+  });
+
+  it("caps resumed child events with one overflow marker", async () => {
+    const h = harness({ childEvents: true, limits: { maxChildEventsPerDelegation: 2 } });
+    const iterator = h.supervisor.subscribe()[Symbol.asyncIterator]();
+    await suspendThenResume(h, "s8");
+
+    const events = await pullUntil(iterator, (event) => event.type === "delegation_finished");
+    const capped = events.filter((event) => event.type === "delegation_child_events_capped");
+    assert.equal(capped.length, 1, "resume emits the overflow marker exactly once");
+    const [marker] = capped;
+    assert.ok(marker && marker.type === "delegation_child_events_capped");
+    assert.equal(marker.maxChildEvents, 2);
+  });
+
+  it("leaves the resume stream unchanged when childEvents is off and still runs the terminal hook", async () => {
+    const completions: DelegationCompletion[] = [];
+    const h = harness({ hooks: { after: (completion) => void completions.push(completion) } });
+    const iterator = h.supervisor.subscribe()[Symbol.asyncIterator]();
+    await suspendThenResume(h, "s9");
+
+    const events = await pullUntil(iterator, (event) => event.type === "delegation_finished");
+    assert.deepEqual(
+      events.filter((event) => event.type === "delegation_child_event"),
+      [],
+    );
+    assert.deepEqual(
+      events.filter((event) => event.type === "delegation_child_events_capped"),
+      [],
+    );
+    assert.equal(completions.length, 1);
+    const [completion] = completions;
+    assert.ok(completion);
+    assert.equal(completion.delegationId, "lead-1");
+    assert.equal(completion.status, "succeeded");
+  });
+
+  it("treats a denied rebuild as terminal: one rejection event and one terminal hook", async () => {
+    const completions: DelegationCompletion[] = [];
+    let beforeCalls = 0;
+    const h = harness({
+      hooks: {
+        before: () => (++beforeCalls === 1 ? { allowed: true } : { allowed: false, reason: "revoked" }),
+        after: (completion) => void completions.push(completion),
+      },
+    });
+    const iterator = h.supervisor.subscribe()[Symbol.asyncIterator]();
+    await suspendThenResume(h, "s10");
+
+    const events = await pullUntil(iterator, (event) => event.type === "delegation_rejected");
+    const rejected = events.at(-1);
+    assert.ok(rejected && rejected.type === "delegation_rejected");
+    assert.equal(rejected.reason, "revoked");
+    assert.equal(completions.length, 1);
+    const [completion] = completions;
+    assert.ok(completion);
+    assert.equal(completion.delegationId, "lead-1");
+    assert.equal(completion.status, "rejected");
+    assert.equal(completion.error, "revoked");
   });
 });

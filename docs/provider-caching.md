@@ -166,7 +166,8 @@ Provider request policies can set `ProviderRequestOptions.cache` or the legacy `
 | `@arnilo/prism-providers/xai` | `implicit` | No `prompt_cache_key`. Package-local `x-grok-conv-id` is `sanitizeCacheKey(cache.key ?? cacheKey ?? sessionId, 128)`. | Same server + unchanged message prefix. Replay `reasoning_content` on reasoning models or the prefix breaks. | Conv-id is never a credential or SuperGrok token. Omitted when `cache.mode` is `off` or `cacheRetention` is `none`. `cached_tokens` → `cacheReadTokens` (inclusive or exclusive reports kept as-is). |
 | `@arnilo/prism-providers/clinepass` | `implicit` | No `cache_control` / `prompt_cache_key`. Gateway-owned prefix cache. | Resend unchanged prior history. Stream only. | Best-effort and backend-dependent (`cline-pass/*` slugs). `cached_tokens` / `prompt_cache_hit_tokens` map when present. |
 | `@arnilo/prism-providers/azure` | none | No Prism cache mapping. | Endpoint/model-specific. | Host owns Azure cache policy. |
-| `@arnilo/prism-providers/bedrock` | none | No Prism cache mapping. | Endpoint/model-specific. | Host owns Bedrock cache policy. |
+| `@arnilo/prism-providers/bedrock` (`compatible`) | none | No Prism cache mapping. | Endpoint/model-specific. | Host owns Bedrock cache policy. |
+| `@arnilo/prism-providers/bedrock` (`converse`) | `cache_control` | Prism breakpoints become standalone `cachePoint` blocks in `system`/message content; long retention adds `ttl: "1h"` when the model allows it. `tools` caching stays host-owned. | Stable prefix in the documented order `tools → system → messages`; changing an earlier section invalidates later ones. | `cacheReadInputTokens`/`cacheWriteInputTokens` map to `Usage.cacheReadTokens`/`Usage.cacheWriteTokens`; `inputTokens` is the non-cached remainder and is never folded. |
 | `@arnilo/prism-providers/vertex` | none | No Prism cache mapping. | Endpoint/model-specific. | Host owns Vertex cache policy. |
 
 Detailed first-party provider notes:
@@ -188,7 +189,7 @@ Detailed first-party provider notes:
 - DeepSeek (`@arnilo/prism-providers/deepseek`): `kind: "implicit"`. Official disk prefix cache is automatic (byte-identical prefix from token 0). Adapter sends no cache payload; tool `parameters` use shared `canonicalizeJsonSchema` (object keys + unordered `required` only; `enum`/`prefixItems`/`examples` keep caller order). `prompt_cache_hit_tokens` maps to `Usage.cacheReadTokens`. Caller-gated `listDeepSeekModels`.
 - xAI (`@arnilo/prism-providers/xai`): `kind: "implicit"`. Automatic prefix cache. Sticky `x-grok-conv-id` is a sanitized session/cache key (128 chars), never an OAuth access token. Reasoning models must replay `reasoning_content`. `prompt_tokens_details.cached_tokens` maps to `Usage.cacheReadTokens`. Caller-gated `listXaiModels`.
 - ClinePass (`@arnilo/prism-providers/clinepass`): `kind: "implicit"`. No explicit cache payload; multi-backend gateway may report `cached_tokens` or `prompt_cache_hit_tokens`. Static `cline-pass/*` catalog only — no `listClinePassModels`.
-- Azure, Bedrock, and Vertex: their OpenAI-compatible packages intentionally emit no Prism cache fields. Endpoint/model-specific cache controls remain host-owned rather than guessed from another provider family.
+- Azure, Bedrock, and Vertex: their OpenAI-compatible packages intentionally emit no Prism cache fields. Endpoint/model-specific cache controls remain host-owned rather than guessed from another provider family. Bedrock's native `converse` route is the exception: it is a documented cache-control surface (`cachePoint`, shared `applyCacheControl` markers) and maps cache usage fields instead of leaving them host-owned.
 
 ### NeuralWatt cache-aware limiter
 
@@ -303,6 +304,7 @@ for (const sample of report.samples) {
 ## Related APIs
 
 - [Input and prompt assembly](input-and-prompt-assembly.md): opt-in cache-aware ordering for stable provider payload prefixes.
+- [Attention compiler](attention-compiler.md): opt-in per-turn shrink that only rewrites rows *behind* the stable prefix, so cache hits survive.
 - [Provider request policies](provider-request-policies.md): set cache hints before provider calls.
 - [Model registry](model-registry.md): register `ModelConfig.cache` capability metadata.
 - [Provider layer](provider-layer.md): provider/model registries and provider events.

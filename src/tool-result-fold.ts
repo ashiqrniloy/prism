@@ -105,7 +105,7 @@ async function foldToolResultMessage(
   if (message.role !== "tool") return message;
   const block = message.content.find((part) => part.type === "tool_result");
   if (block?.type !== "tool_result") return message;
-  const text = toolResultText(block.result, block.error, message.content);
+  const text = toolResultFoldText(block.result, block.error, message.content);
   const folded = await maybeFold({
     options,
     context,
@@ -134,7 +134,7 @@ async function foldToolResultValue(
   options: ResolvedToolResultFoldOptions,
   context: FoldToolResultsContext & { readonly toolResultTurn: number },
 ): Promise<ToolResult> {
-  const text = toolResultText(result.value, result.error, result.content);
+  const text = toolResultFoldText(result.value, result.error, result.content);
   const folded = await maybeFold({
     options,
     context,
@@ -174,7 +174,7 @@ async function maybeFold<T>(input: {
       toolName: input.toolName,
       text: input.text,
     });
-    return input.apply(capSummaryBytes(String(summary), input.options.maxSummaryBytes));
+    return input.apply(capToolResultSummary(String(summary), input.options.maxSummaryBytes));
   } catch {
     return undefined;
   }
@@ -188,7 +188,9 @@ export function foldedToolResultHeader(toolName: string, toolCallId: string, sum
   return `Tool result ${toolName} [${toolCallId}]: ${summary}`;
 }
 
-function toolResultText(result: unknown, error: unknown, extra?: readonly { readonly type: string }[]): string {
+/** Text the fold summarizes for one tool result: the payload JSON, then any text blocks.
+ *  Shared with the attention compiler so both hash/summarize the same bytes. */
+export function toolResultFoldText(result: unknown, error: unknown, extra?: readonly { readonly type: string }[]): string {
   const parts = [JSON.stringify(error ?? result ?? null)];
   for (const block of extra ?? []) {
     if (block.type === "text" && "text" in block && typeof block.text === "string") parts.push(block.text);
@@ -196,7 +198,9 @@ function toolResultText(result: unknown, error: unknown, extra?: readonly { read
   return parts.join("\n");
 }
 
-function capSummaryBytes(summary: string, maxBytes: number): string {
+/** UTF-8 cap that never splits a multi-byte character. Shared with the attention
+ *  compiler's host-summarize path so both cap host text identically. */
+export function capToolResultSummary(summary: string, maxBytes: number): string {
   const bytes = estimateTextBytes(summary);
   if (bytes <= maxBytes) return summary;
   const encoded = new TextEncoder().encode(summary);
@@ -206,7 +210,10 @@ function capSummaryBytes(summary: string, maxBytes: number): string {
   return `${new TextDecoder().decode(encoded.slice(0, end))}…`;
 }
 
-function inferToolResultTurns(history: readonly Message[]): readonly number[] {
+/** Provider turn per history index: assistant messages advance the turn, tool rows use
+ *  their `prismToolResultTurn` stamp when present and the last assistant turn otherwise.
+ *  Shared with the attention compiler so age gates match the fold exactly. */
+export function inferToolResultTurns(history: readonly Message[]): readonly number[] {
   const turns: number[] = new Array(history.length).fill(1);
   let providerTurn = 0;
   let toolTurn = 1;

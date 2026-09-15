@@ -210,6 +210,8 @@ export interface DocumentReaderResult {
   readonly format: string;
   readonly pages: number;
   readonly truncatedBy: "pages" | "bytes" | null;
+  /** Page provenance into `text`. Omitted when a redactor rewrote offsets. */
+  readonly pageSpans?: readonly { readonly page: number; readonly start: number; readonly end: number }[];
 }
 
 export interface ReadOperations {

@@ -51,6 +51,7 @@ export {
   type AgUiInputProjection,
   type AgUiInputProjectorInput,
   type AgUiInterruptOptions,
+  type AgUiInterruptResolution,
   type AgUiInterruptResume,
   type AgUiPreparedInput,
   type AgUiRunResolutionRequest,

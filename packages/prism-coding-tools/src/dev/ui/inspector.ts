@@ -340,6 +340,7 @@ export async function mountInspector(root: HTMLElement): Promise<MountHandles> {
     promptForm(),
     el("div", { id: "usage", class: "usage" }),
     el("div", { id: "decisions", class: "decisions" }),
+    el("div", { id: "compare", class: "compare" }),
     el("h2", {}, "timeline"),
     el("div", { id: "timeline", class: "timeline" }),
   );
@@ -351,6 +352,7 @@ export async function mountInspector(root: HTMLElement): Promise<MountHandles> {
   );
   const usageBox = must(root, "#usage");
   const decisionsBox = must(root, "#decisions");
+  const compareBox = must(root, "#compare");
   const timeline = must(root, "#timeline");
 
   // --- prompt + live streaming -------------------------------------------------
@@ -653,7 +655,55 @@ export async function mountInspector(root: HTMLElement): Promise<MountHandles> {
       const runId = loader.value.trim();
       if (runId) void loadStoredRun(runId);
     });
-    return el("div", {}, el("h2", {}, "runs"), list, loader, loadButton);
+    const compareButton = el("button", { id: "compare-runs" }, "Compare last 2") as HTMLButtonElement;
+    compareButton.addEventListener("click", () => {
+      void compareLastTwo();
+    });
+    return el("div", {}, el("h2", {}, "runs"), list, loader, loadButton, compareButton);
+  }
+
+  async function compareLastTwo(): Promise<void> {
+    const ids = [...runs.keys()].slice(-2);
+    if (ids.length < 2) {
+      compareBox.replaceChildren(el("p", { class: "hint" }, "load two runs to compare quality, cost, latency"));
+      return;
+    }
+    const sides: unknown[] = [];
+    for (const id of ids) {
+      const response = await fetch(`/runs/${encodeURIComponent(id)}/summary`);
+      if (!response.ok) {
+        compareBox.replaceChildren(el("p", { class: "hint" }, "summary requires durable events"));
+        return;
+      }
+      sides.push({ summary: await response.json() });
+    }
+    const compared = await fetch("/compare", {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify({ left: sides[0], right: sides[1] }),
+    });
+    const data = (await compared.json().catch(() => ({}))) as {
+      qualityWinner?: string;
+      latencyWinner?: string;
+      costWinner?: string;
+      left?: { summary?: { durationMs?: number } };
+      right?: { summary?: { durationMs?: number } };
+      error?: { message?: string };
+    };
+    if (!compared.ok) {
+      compareBox.replaceChildren(el("p", { class: "hint" }, data.error?.message ?? "compare failed"));
+      return;
+    }
+    compareBox.replaceChildren(
+      el("h2", {}, "compare"),
+      el("p", {}, `quality ${data.qualityWinner ?? "unknown"}`),
+      el(
+        "p",
+        {},
+        `latency ${data.latencyWinner ?? "unknown"} ${data.left?.summary?.durationMs ?? "?"} vs ${data.right?.summary?.durationMs ?? "?"}`,
+      ),
+      el("p", {}, `cost ${data.costWinner ?? "unknown"}`),
+    );
   }
 
   refreshRuns();

@@ -15,6 +15,10 @@
  *   (`POST {base}/agents/{id}/runs/{runId}/resume`) with a single-entry
  *   decision batch; unknown outcome discriminants fail closed in the core
  *   boundary before any state write (0.2.0 regression guard).
+ * - `GET /runs/:id/summary` → `summarizeTimeline(projectAgentTimeline(events))`
+ *   over durable replay pages (`content: "metadata"`). No I/O payloads.
+ * - `POST /compare` → quality/cost/latency over two TimelineSummary + optional
+ *   ExperimentAggregate slices. Invariant failures block quality winners.
  * - `GET /` + `GET /assets/inspector.js` + `GET /config` → the static
  *   inspector UI (Task 3) served with a strict CSP, no external fetches.
  *
@@ -22,7 +26,11 @@
  * stays reachable from the same listener.
  */
 
-import type { PrismRequestHandler } from "@arnilo/prism-core/runtime/server";
+import type { Agent, AgentEvent, CheckpointStore, SecretRedactor } from "@arnilo/prism";
+import { inspectHostComposition } from "@arnilo/prism";
+import { projectAgentTimeline, summarizeTimeline } from "@arnilo/prism-core/governance/observability";
+import { type PrismRequestHandler, PrismServerError } from "@arnilo/prism-core/runtime/server";
+import { parseInspectorCompareBody } from "./compare.js";
 import { type DevReplaySeams, replayRunPage } from "./replay.js";
 import { inspectorConfigResponse, inspectorPageResponse, inspectorScriptResponse } from "./ui/assets.js";
 
@@ -47,6 +55,10 @@ export interface DevRouteContext {
   readonly agentCapabilityId: string;
   /** Replay seams; absent unless the host wired an event source + resolveRun. */
   readonly replay?: DevReplaySeams;
+  /** Optional agent reference for composition inspection */
+  readonly agent?: Agent;
+  readonly checkpoints?: CheckpointStore;
+  readonly redactor?: SecretRedactor;
 }
 
 /** One data row of the inspectors route table. */
@@ -78,6 +90,22 @@ export function createDevRouter(ctx: DevRouteContext): PrismRequestHandler {
       handle: () => inspectorConfigResponse(ctx.basePath, ctx.agentCapabilityId),
     },
     {
+      method: "GET",
+      // Dev composition inspection: reports tools, credentials, ownership, storage, sandbox, and readiness.
+      pattern: /^(?:\/[^/]+)?\/inspect$/,
+      handle: () => {
+        const report = inspectHostComposition({
+          agent: ctx.agent,
+          checkpoints: ctx.checkpoints,
+          redactor: ctx.redactor,
+        });
+        return new Response(JSON.stringify(report, null, 2), {
+          status: 200,
+          headers: { "content-type": "application/json; charset=utf-8" },
+        });
+      },
+    },
+    {
       method: "POST",
       pattern: /^\/prompt$/,
       handle: (_match, request, url) => adapt(url, `/agents/${ctx.agentCapabilityId}/runs`, request),
@@ -107,6 +135,16 @@ export function createDevRouter(ctx: DevRouteContext): PrismRequestHandler {
       method: "POST",
       pattern: /^\/runs\/([^/]+)\/decisions\/([^/]+)$/,
       handle: (match, request, url) => decision(match[1]!, match[2]!, request, url),
+    },
+    {
+      method: "GET",
+      pattern: /^\/runs\/([^/]+)\/summary$/,
+      handle: (match, request) => summarizeRun(ctx, match[1]!, request),
+    },
+    {
+      method: "POST",
+      pattern: /^\/compare$/,
+      handle: (_match, request) => comparePosted(request),
     },
   ];
 
@@ -162,6 +200,66 @@ async function rewritten(url: URL, toPath: string, request: Request, body?: unkn
     return new Request(next, { method: request.method, headers: request.headers, body: JSON.stringify(body) });
   }
   return new Request(next, request);
+}
+
+const HARD_SUMMARY_PAGES = 8;
+
+async function summarizeRun(ctx: DevRouteContext, runId: string, request: Request): Promise<Response> {
+  if (!ctx.replay) return devError(404, "ERR_PRISM_SERVER_NOT_FOUND", "summary requires a durable event source");
+  try {
+    const authorization = await ctx.replay.authorize({
+      request,
+      operation: "agent.events",
+      capabilityId: ctx.replay.capabilityId,
+      signal: request.signal,
+    });
+    if (!authorization) throw new PrismServerError("Forbidden", 403, "ERR_PRISM_SERVER_FORBIDDEN");
+    if (!authorization.ownership.tenantId) throw new PrismServerError("Forbidden", 403, "ERR_PRISM_SERVER_FORBIDDEN");
+    const run = await ctx.replay.resolveRun({ runId, authorization, signal: request.signal });
+    if (!run?.sessionId) throw new PrismServerError("Run is unavailable", 404, "ERR_PRISM_SERVER_REPLAY");
+    const events: AgentEvent[] = [];
+    let cursor: string | undefined;
+    for (let page = 0; page < HARD_SUMMARY_PAGES; page++) {
+      const result = await ctx.replay.replay.page({
+        ownership: authorization.ownership,
+        sessionId: run.sessionId,
+        runId: run.runId,
+        ...(cursor === undefined ? {} : { cursor }),
+        signal: request.signal,
+      });
+      for (const item of result.items) {
+        const event = item.record?.event;
+        if (event && typeof event === "object" && "type" in event) events.push(event as AgentEvent);
+      }
+      if (result.terminal || !result.nextCursor) break;
+      cursor = result.nextCursor;
+    }
+    const summary = summarizeTimeline(projectAgentTimeline(events, { content: "metadata" }));
+    return new Response(JSON.stringify(summary), {
+      status: 200,
+      headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+    });
+  } catch (error) {
+    if (error instanceof PrismServerError) {
+      return devError(error.status, error.code, error.message);
+    }
+    return devError(500, "ERR_PRISM_DEV_INSPECTOR", "Summary failed");
+  }
+}
+
+async function comparePosted(request: Request): Promise<Response> {
+  try {
+    const comparison = parseInspectorCompareBody(await request.text());
+    return new Response(JSON.stringify(comparison), {
+      status: 200,
+      headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+    });
+  } catch (error) {
+    const status = typeof error === "object" && error && "status" in error ? Number(error.status) : 400;
+    const code = typeof error === "object" && error && "code" in error ? String(error.code) : "ERR_PRISM_DEV_ROUTE";
+    const message = error instanceof Error ? error.message : "compare failed";
+    return devError(Number.isFinite(status) ? status : 400, code, message);
+  }
 }
 
 async function readJsonObject(request: Request): Promise<unknown> {

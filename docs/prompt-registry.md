@@ -90,7 +90,7 @@ const v = await assertPromptPromotion({
 if (v.verdict === "promote") await store.put({ ...hostInput, body: v.candidate.body, labels: ["production"] });
 ```
 
-The verdict carries `promote`/`hold`, per-scorer `wins/losses/ties/failures`, `winRate`, the raw `ComparisonReport`, a redacted bounded `reportJson` (`serializeEvaluationReport`), and `reasons` on hold. The default gate holds unless the candidate wins strictly more scored comparisons than the baseline; `minimumWinRate` and `thresholds` add stricter gates, and threshold equality passes. Requires the optional peer `@arnilo/prism-core/governance/evals` (install it or the helper fails closed with `ERR_PRISM_PROMPT_EVALS_PEER`). Promotion itself stays a host decision: applying the verdict means `put`-ing a new version with labels — the helper never does.
+The verdict carries `promote`/`hold`, per-scorer `wins/losses/ties/failures`, `winRate`, the raw `ComparisonReport`, a redacted bounded `reportJson` (`serializeEvaluationReport`), and `reasons` on hold. The default gate holds unless the candidate wins strictly more scored comparisons than the baseline; `minimumWinRate` and `thresholds` add stricter gates, and threshold equality passes. Requires the optional peer `@arnilo/prism-core/governance/evals` (install it or the helper fails closed with `ERR_PRISM_PROMPT_EVALS_PEER`). Promotion itself stays a host decision: applying the verdict means `put`-ing a new version with labels — the helper never does. When provenance tracking is required, evaluation experiments bind candidate prompt versions via `EvalManifest.promptId` and `promptVersion`; release evidence also calls `validateReleaseEvalManifest` (see [Evaluations](evaluations.md#repeated-trials-and-manifests)).
 
 ## Limits and security
 

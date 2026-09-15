@@ -18,6 +18,14 @@ const source: SessionEntry = {
   kind: "message",
   message: { role: "user", content: [{ type: "text", text: "Route workers separately." }] },
 };
+const existingObservation = {
+  id: "aaaaaaaaaaaa",
+  content: "Existing secret-value observation",
+  timestamp: source.timestamp,
+  relevance: "high",
+  sourceEntryIds: ["m1"],
+  tokenCount: 50,
+} satisfies MemoryObservation;
 
 function provider(events: readonly ProviderEvent[]): AIProvider {
   return {
@@ -47,10 +55,97 @@ describe("observational memory worker split", () => {
       instruction: "Prefer finance-domain wording.",
     });
     assert.equal(requests.length, 1);
-    assert.match(requests[0]!, /supplied messages/i);
-    assert.doesNotMatch(requests[0]!, /coding session/i);
+    assert.match(requests[0]!, /assertions as facts, not questions/i);
+    assert.match(requests[0]!, /user assertions are authoritative/i);
+    assert.match(requests[0]!, /superseding facts when source-backed state changes/i);
+    assert.match(requests[0]!, /completed: only for real completion/i);
+    assert.match(requests[0]!, /identifiers, paths, and errors/i);
+    assert.match(requests[0]!, /Do not repeat existing observations/i);
+    assert.match(requests[0]!, /single-line prose/i);
     assert.match(requests[0]!, /Prefer finance-domain wording/);
     assert.equal(DEFAULT_OBSERVER_INSTRUCTION.includes("coding"), false);
+  });
+
+  it("observer_prompt_lists_existing_active_observations", async () => {
+    const prompts: string[] = [];
+    const observerProvider: AIProvider = {
+      id: "observer",
+      async *generate(request) {
+        const prompt = request.messages.find((message) => message.role === "user")?.content[0];
+        prompts.push(prompt?.type === "text" ? prompt.text : "");
+        yield providerDone();
+      },
+    };
+    const source2 = {
+      ...source,
+      id: "m2",
+      message: { role: "user" as const, content: [{ type: "text" as const, text: "New assertion." }] },
+    };
+    const storeEntries = [
+      source,
+      {
+        id: "om1",
+        sessionId: "s1",
+        timestamp: source.timestamp,
+        kind: "custom" as const,
+        data: { type: "om.observations.recorded", observations: [existingObservation], coversUpToId: "m1" },
+      },
+      source2,
+    ];
+    const session = { id: "s1", leafId: "m2", entries: async () => storeEntries };
+    const runtime = createObservationalMemoryRuntime({
+      session: session as any,
+      appendEntry: async (entry) => {
+        storeEntries.push(entry);
+        session.leafId = entry.id;
+      },
+      observation: { provider: observerProvider, model },
+      overrides: { observation: { messageTokens: 1 }, reflection: { observationTokens: 999_999 }, agentMaxTurns: 1 },
+      secrets: ["secret-value"],
+    });
+
+    await runtime.flush();
+    assert.equal(prompts.length, 1);
+    assert.match(prompts[0]!, /Existing active observations:/);
+    assert.match(prompts[0]!, /\[aaaaaaaaaaaa\]/);
+    assert.doesNotMatch(prompts[0]!, /secret-value/);
+  });
+
+  it("observer_does_not_expose_record_current_task", async () => {
+    const tools: string[] = [];
+    await runObserver({
+      entries: [source],
+      provider: {
+        id: "mock",
+        async *generate(request) {
+          tools.push(...(request.tools?.map((tool) => tool.name) ?? []));
+          yield providerDone();
+        },
+      },
+      model,
+      maxTurns: 1,
+    });
+    assert.doesNotMatch(DEFAULT_OBSERVER_INSTRUCTION, /record_current_task/);
+    assert.deepEqual(tools, ["record_observation"]);
+  });
+
+  it("abstention_observer_does_not_record_unmentioned_ids", async () => {
+    const observations = await runObserver({
+      entries: [source],
+      provider: provider([
+        providerToolCall(
+          toolCallContent("o", "record_observation", {
+            content: "Guess",
+            relevance: "high",
+            sourceEntryIds: ["unmentioned"],
+          }),
+        ),
+        providerDone(),
+      ]),
+      model,
+      maxTurns: 1,
+    });
+    assert.deepEqual(observations, []);
   });
 
   it("runtime_routes_separate_observer_and_reflector_models", async () => {

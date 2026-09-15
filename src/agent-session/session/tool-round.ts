@@ -339,6 +339,7 @@ export function bindDispatchToolCall(ctx: RoundContext): LoopContext["dispatchTo
         ownership: ctx.session.activeOwnership,
         identity: ctx.session.activeIdentity,
         guardrails: ctx.session.activeGuardrails,
+        ...(ctx.tools.length > 0 ? { filter: { allow: ctx.tools.map((tool) => tool.name) } } : {}),
         limitTracker: ctx.limits,
         beforeExecute: async (mediatedCall) => {
           const durable = ctx.session.activeDurable;

@@ -1,4 +1,4 @@
-import type { AgentIdentity, JsonObject, OwnershipScope, ToolDefinition } from "@arnilo/prism";
+import type { AgentIdentity, ArtifactBodyRef, JsonObject, OwnershipScope, ToolDefinition } from "@arnilo/prism";
 
 export type WorkProvider = "microsoft365" | "google-workspace";
 
@@ -108,15 +108,96 @@ export interface WorkPage<T> {
   readonly untrusted: true;
 }
 
+export interface WorkDraftApproval {
+  readonly draftId: string;
+  readonly revision: number;
+  readonly payloadDigest: string;
+  readonly policyRevision?: string;
+  readonly identityKey?: string;
+  readonly approver?: string;
+  readonly approvedAt?: string;
+  readonly expiresAt?: string;
+}
+
 export interface WorkDraft {
   readonly draftId: string;
   readonly provider: WorkProvider;
   readonly op: string;
   readonly identityKey: string;
   readonly payload: JsonObject;
+  readonly revision: number;
+  readonly payloadDigest: string;
+  readonly recipients?: readonly string[];
   readonly createdAt: string;
-  readonly status: "pending" | "approved" | "executed" | "rejected";
+  readonly updatedAt: string;
+  readonly status: "pending" | "pending_approval" | "approved" | "executed" | "rejected" | "unknown";
+  readonly approval?: WorkDraftApproval;
   readonly concurrencyToken?: string;
+  readonly executedAt?: string;
+  readonly bodyRef?: ArtifactBodyRef;
+  readonly policyRevision?: string;
+  readonly mode?: "ephemeral" | "durable";
+}
+
+export interface WorkDraftCreateInput {
+  readonly draftId?: string;
+  readonly provider: WorkProvider;
+  readonly op: string;
+  readonly identity: AgentIdentity;
+  readonly payload: JsonObject;
+  readonly policyRevision?: string;
+  readonly signal?: AbortSignal;
+}
+
+export interface WorkDraftRefInput {
+  readonly draftId: string;
+  readonly identity: AgentIdentity;
+  readonly provider?: WorkProvider;
+  readonly signal?: AbortSignal;
+}
+
+export interface WorkDraftUpdateInput {
+  readonly draftId: string;
+  readonly identity: AgentIdentity;
+  readonly payload: JsonObject;
+  readonly expectedRevision?: number;
+  readonly expectedConcurrencyToken?: string;
+  readonly policyRevision?: string;
+  readonly signal?: AbortSignal;
+}
+
+export interface WorkDraftApproveInput {
+  readonly draftId: string;
+  readonly identity: AgentIdentity;
+  readonly approval: WorkDraftApproval;
+  readonly expectedConcurrencyToken?: string;
+  readonly signal?: AbortSignal;
+}
+
+export interface WorkDraftMarkInput {
+  readonly draftId: string;
+  readonly identity: AgentIdentity;
+  readonly status: WorkDraft["status"];
+  readonly concurrencyToken?: string;
+  readonly expectedConcurrencyToken?: string;
+  readonly signal?: AbortSignal;
+}
+
+export interface WorkDraftStore {
+  readonly mode: "ephemeral" | "durable";
+  createDraft(input: WorkDraftCreateInput): Promise<WorkDraft> | WorkDraft;
+  getDraft(input: WorkDraftRefInput): Promise<WorkDraft | undefined> | WorkDraft | undefined;
+  updateDraft(input: WorkDraftUpdateInput): Promise<WorkDraft> | WorkDraft;
+  approveDraft(input: WorkDraftApproveInput): Promise<WorkDraft> | WorkDraft;
+  markDraft(input: WorkDraftMarkInput): Promise<WorkDraft> | WorkDraft;
+}
+
+export interface SyncWorkDraftStore extends WorkDraftStore {
+  createDraft(input: WorkDraftCreateInput): WorkDraft;
+  getDraft(input: WorkDraftRefInput): WorkDraft | undefined;
+  updateDraft(input: WorkDraftUpdateInput): WorkDraft;
+  approveDraft(input: WorkDraftApproveInput): WorkDraft;
+  markDraft(input: WorkDraftMarkInput): WorkDraft;
 }
 
 /** Bounded summary retained after an approved external mutation. */
@@ -183,9 +264,21 @@ export interface IdempotencyStore {
   ): Promise<WorkMutationRecord>;
 }
 
+export interface WorkApprovalCheckInput {
+  readonly draftId: string;
+  readonly op: string;
+  readonly identity: AgentIdentity;
+  readonly revision?: number;
+  readonly payloadDigest?: string;
+  readonly recipients?: readonly string[];
+  readonly policyRevision?: string;
+}
+
 export interface WorkApprovalGate {
-  /** Return true when host already authorized this draft/mutation. */
-  isApproved(input: { draftId: string; op: string; identity: AgentIdentity }): Promise<boolean> | boolean;
+  /** Return true or an approval decision when host already authorized this draft/mutation. */
+  isApproved(
+    input: WorkApprovalCheckInput | { draftId: string; op: string; identity: AgentIdentity },
+  ): Promise<boolean | WorkDraftApproval> | boolean | WorkDraftApproval;
 }
 
 export interface ExternalRecipientPolicy {
@@ -219,22 +312,44 @@ export interface Microsoft365Adapter {
   readonly provider: "microsoft365";
   readonly identity: AgentIdentity;
   readonly allowedOps: ReadonlySet<Microsoft365Op>;
+  readonly draftStore?: WorkDraftStore;
   ensureReady(signal?: AbortSignal): Promise<string>;
   runOp(op: Microsoft365Op, args: JsonObject, signal?: AbortSignal): Promise<unknown>;
-  createDraft(op: Microsoft365Op, payload: JsonObject): WorkDraft;
-  getDraft(draftId: string): WorkDraft | undefined;
-  markDraft(draftId: string, status: WorkDraft["status"], concurrencyToken?: string): WorkDraft;
+  createDraft(
+    op: Microsoft365Op,
+    payload: JsonObject,
+    options?: { draftId?: string; policyRevision?: string },
+  ): Promise<WorkDraft> | WorkDraft;
+  getDraft(draftId: string): Promise<WorkDraft | undefined> | WorkDraft | undefined;
+  updateDraft?(
+    draftId: string,
+    payload: JsonObject,
+    options?: { expectedRevision?: number; concurrencyToken?: string },
+  ): Promise<WorkDraft> | WorkDraft;
+  approveDraft?(approval: WorkDraftApproval): Promise<WorkDraft> | WorkDraft;
+  markDraft(draftId: string, status: WorkDraft["status"], concurrencyToken?: string): Promise<WorkDraft> | WorkDraft;
 }
 
 export interface GoogleWorkspaceAdapter {
   readonly provider: "google-workspace";
   readonly identity: AgentIdentity;
   readonly allowedOps: ReadonlySet<GoogleWorkspaceOp>;
+  readonly draftStore?: WorkDraftStore;
   ensureReady(signal?: AbortSignal): Promise<string>;
   runOp(op: GoogleWorkspaceOp, args: JsonObject, signal?: AbortSignal): Promise<unknown>;
-  createDraft(op: GoogleWorkspaceOp, payload: JsonObject): WorkDraft;
-  getDraft(draftId: string): WorkDraft | undefined;
-  markDraft(draftId: string, status: WorkDraft["status"], concurrencyToken?: string): WorkDraft;
+  createDraft(
+    op: GoogleWorkspaceOp,
+    payload: JsonObject,
+    options?: { draftId?: string; policyRevision?: string },
+  ): Promise<WorkDraft> | WorkDraft;
+  getDraft(draftId: string): Promise<WorkDraft | undefined> | WorkDraft | undefined;
+  updateDraft?(
+    draftId: string,
+    payload: JsonObject,
+    options?: { expectedRevision?: number; concurrencyToken?: string },
+  ): Promise<WorkDraft> | WorkDraft;
+  approveDraft?(approval: WorkDraftApproval): Promise<WorkDraft> | WorkDraft;
+  markDraft(draftId: string, status: WorkDraft["status"], concurrencyToken?: string): Promise<WorkDraft> | WorkDraft;
 }
 
 export interface WorkToolsOptions {

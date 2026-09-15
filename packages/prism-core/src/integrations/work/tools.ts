@@ -1,11 +1,23 @@
-import type { JsonObject, ToolDefinition, ToolEffectDeclaration, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import {
+  assertIdentityActive,
+  type JsonObject,
+  type ToolDefinition,
+  type ToolEffectDeclaration,
+  type ToolExecutionContext,
+  type ToolResult,
+} from "@arnilo/prism";
+import { computePayloadDigest, extractDraftRecipients, validateApproval } from "./drafts.js";
 import { WorkToolError } from "./errors.js";
+import { identityKey } from "./idempotency.js";
 import { normalizeCalendarPage, normalizeFilePage, normalizeMailMessage, normalizeMailPage, normalizeTaskPage } from "./normalize.js";
 import type {
   GoogleWorkspaceAdapter,
   GoogleWorkspaceOp,
   Microsoft365Adapter,
   Microsoft365Op,
+  WorkApprovalCheckInput,
+  WorkDraft,
+  WorkDraftApproval,
   WorkMutationRecord,
   WorkProvider,
   WorkToolsOptions,
@@ -83,9 +95,120 @@ async function executeApprovedMutation(
   payload: JsonObject,
   context: ToolExecutionContext,
 ): Promise<unknown> {
-  const draft = adapter.createDraft(op as never, payload);
-  const approved = options.approval ? await options.approval.isApproved({ draftId: draft.draftId, op, identity: adapter.identity }) : false;
-  if (!approved) return { draftId: draft.draftId, status: "pending_approval", untrusted: true };
+  const draftId = typeof payload.draftId === "string" && payload.draftId.trim() ? payload.draftId.trim() : undefined;
+  const expectedRevision = typeof payload.revision === "number" ? payload.revision : undefined;
+  const { draftId: _d, revision: _r, idempotencyKey: _i, ...cleanPayload } = payload;
+
+  let draft: WorkDraft;
+  if (draftId) {
+    const existingRes = adapter.getDraft(draftId);
+    const existing = existingRes instanceof Promise ? await existingRes : existingRes;
+    if (!existing) {
+      throw new WorkToolError("ERR_PRISM_WORK_DRAFT", `Draft ${draftId} not found`);
+    }
+    if (existing.identityKey !== identityKey(adapter.identity)) {
+      throw new WorkToolError("ERR_PRISM_WORK_IDENTITY", "Draft identity mismatch");
+    }
+    if (expectedRevision !== undefined && existing.revision !== expectedRevision) {
+      throw new WorkToolError(
+        "ERR_PRISM_WORK_DRAFT_STALE",
+        `Draft revision mismatch (expected ${expectedRevision}, got ${existing.revision})`,
+      );
+    }
+    if (existing.status === "executed") {
+      throw new WorkToolError("ERR_PRISM_WORK_DRAFT_EXECUTED", "Draft already executed");
+    }
+    if (existing.status === "unknown") {
+      throw new WorkToolError("ERR_PRISM_WORK_IDEMPOTENCY_UNKNOWN", "Draft outcome is unknown and requires reconciliation");
+    }
+
+    const hasKeys = Object.keys(cleanPayload).length > 0;
+    const mergedPayload: JsonObject = hasKeys ? { ...existing.payload, ...cleanPayload } : existing.payload;
+    const isModified = hasKeys && computePayloadDigest(mergedPayload) !== existing.payloadDigest;
+
+    if (isModified) {
+      const newRecipients = extractDraftRecipients(mergedPayload);
+      if (newRecipients.length > 0) {
+        assertExternalAllowed(options, newRecipients);
+      }
+      if (adapter.updateDraft) {
+        const updateRes = adapter.updateDraft(existing.draftId, mergedPayload, { expectedRevision: existing.revision });
+        draft = updateRes instanceof Promise ? await updateRes : updateRes;
+      } else {
+        const createRes = adapter.createDraft(op as never, mergedPayload);
+        draft = createRes instanceof Promise ? await createRes : createRes;
+      }
+    } else {
+      draft = existing;
+    }
+  } else {
+    const recipients = extractDraftRecipients(cleanPayload);
+    if (recipients.length > 0) {
+      assertExternalAllowed(options, recipients);
+    }
+    const createRes = adapter.createDraft(op as never, cleanPayload);
+    draft = createRes instanceof Promise ? await createRes : createRes;
+  }
+
+  let approved = false;
+  if (options.approval) {
+    const checkInput: WorkApprovalCheckInput = {
+      draftId: draft.draftId,
+      op,
+      identity: adapter.identity,
+      revision: draft.revision,
+      payloadDigest: draft.payloadDigest,
+      recipients: draft.recipients,
+      policyRevision: draft.policyRevision,
+    };
+    const decisionRes = options.approval.isApproved(checkInput);
+    const decision = decisionRes instanceof Promise ? await decisionRes : decisionRes;
+    if (decision === true) {
+      approved = true;
+      const approval: WorkDraftApproval = {
+        draftId: draft.draftId,
+        revision: draft.revision,
+        payloadDigest: draft.payloadDigest,
+        identityKey: draft.identityKey,
+        policyRevision: draft.policyRevision,
+        approvedAt: new Date().toISOString(),
+      };
+      if (adapter.approveDraft) {
+        const appRes = adapter.approveDraft(approval);
+        draft = appRes instanceof Promise ? await appRes : appRes;
+      } else {
+        const markRes = adapter.markDraft(draft.draftId, "approved");
+        draft = markRes instanceof Promise ? await markRes : markRes;
+      }
+    } else if (typeof decision === "object" && decision !== null) {
+      validateApproval(draft, decision, { policyRevision: draft.policyRevision });
+      approved = true;
+      if (adapter.approveDraft) {
+        const appRes = adapter.approveDraft(decision);
+        draft = appRes instanceof Promise ? await appRes : appRes;
+      } else {
+        const markRes = adapter.markDraft(draft.draftId, "approved");
+        draft = markRes instanceof Promise ? await markRes : markRes;
+      }
+    }
+  } else if (draft.status === "approved") {
+    approved = true;
+  }
+
+  if (!approved || draft.status !== "approved") {
+    return {
+      draftId: draft.draftId,
+      revision: draft.revision,
+      payloadDigest: draft.payloadDigest,
+      status: "pending_approval",
+      untrusted: true,
+    };
+  }
+
+  if (draft.approval) {
+    validateApproval(draft, draft.approval, { policyRevision: draft.policyRevision });
+  }
+  assertIdentityActive(adapter.identity);
 
   const idempotencyKey = context.idempotencyKey;
   const store = options.idempotencyStore;
@@ -95,13 +218,16 @@ async function executeApprovedMutation(
   const claim = await store.begin({ identity: adapter.identity, key: idempotencyKey, op, signal: context.signal });
   if (claim.outcome === "existing") return existingMutationResult(claim.record);
 
-  let result: { draftId: string; resourceId?: string };
+  let result: { draftId: string; revision: number; resourceId?: string };
   try {
-    adapter.markDraft(draft.draftId, "approved");
-    const value = await adapter.runOp(op as never, payload, context.signal);
-    adapter.markDraft(draft.draftId, "executed");
+    const markAppRes = adapter.markDraft(draft.draftId, "approved");
+    draft = markAppRes instanceof Promise ? await markAppRes : markAppRes;
+    const value = await adapter.runOp(op as never, draft.payload, context.signal);
+    const markExecRes = adapter.markDraft(draft.draftId, "executed");
+    draft = markExecRes instanceof Promise ? await markExecRes : markExecRes;
     result = {
       draftId: draft.draftId,
+      revision: draft.revision,
       ...(typeof (value as { id?: string })?.id === "string" ? { resourceId: (value as { id: string }).id } : {}),
     };
   } catch (error) {
@@ -114,8 +240,17 @@ async function executeApprovedMutation(
         expectedVersion: claim.record.version,
       };
       const failure = classifiedFailure(error);
-      if (failure) await store.fail({ ...input, ...failure });
-      else await store.markUnknown({ ...input, failure: { code: "ERR_PRISM_WORK_IDEMPOTENCY_UNKNOWN" } });
+      if (failure) {
+        await store.fail({ ...input, ...failure });
+      } else {
+        await store.markUnknown({ ...input, failure: { code: "ERR_PRISM_WORK_IDEMPOTENCY_UNKNOWN" } });
+        try {
+          const markUnkRes = adapter.markDraft(draft.draftId, "unknown");
+          if (markUnkRes instanceof Promise) await markUnkRes;
+        } catch {
+          // ignore draft mark error
+        }
+      }
     }
     throw error;
   }
@@ -126,7 +261,10 @@ async function executeApprovedMutation(
       op,
       claimToken: claim.record.claimToken,
       expectedVersion: claim.record.version,
-      result,
+      result: {
+        draftId: result.draftId,
+        ...(result.resourceId ? { resourceId: result.resourceId } : {}),
+      },
     });
   }
   return { ...result, status: "executed", untrusted: true as const };
@@ -184,6 +322,8 @@ function pushM365Tools(tools: ToolDefinition[], options: WorkToolsOptions, m365:
       description: "Create a mail draft for approval, then send only when host approval gate allows. Never sends without approval.",
       parameters: objectSchema(
         {
+          draftId: { type: "string" },
+          revision: { type: "integer" },
           to: { type: "string" },
           subject: { type: "string" },
           bodyContents: { type: "string" },
@@ -192,22 +332,34 @@ function pushM365Tools(tools: ToolDefinition[], options: WorkToolsOptions, m365:
           bodyContentType: { type: "string" },
           idempotencyKey: { type: "string" },
         },
-        ["to", "subject", "bodyContents"],
+        [],
       ),
       execute: async (args, context) => {
-        const to = reqString(args, "to");
+        const draftId = optString(args, "draftId");
+        const existingDraftRes = draftId ? m365.getDraft(draftId) : undefined;
+        const existingDraft = existingDraftRes instanceof Promise ? await existingDraftRes : existingDraftRes;
+        const to = optString(args, "to") ?? (existingDraft?.payload.to as string | undefined);
+        if (!to) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "to must be a non-empty string");
+        const subject = optString(args, "subject") ?? (existingDraft?.payload.subject as string | undefined);
+        if (!subject) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "subject must be a non-empty string");
+        const bodyContents = optString(args, "bodyContents") ?? (existingDraft?.payload.bodyContents as string | undefined);
+        if (!bodyContents) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "bodyContents must be a non-empty string");
         assertExternalAllowed(options, [
           ...splitAddresses(to),
-          ...splitAddresses(optString(args, "cc") ?? ""),
-          ...splitAddresses(optString(args, "bcc") ?? ""),
+          ...splitAddresses(optString(args, "cc") ?? (existingDraft?.payload.cc as string | undefined) ?? ""),
+          ...splitAddresses(optString(args, "bcc") ?? (existingDraft?.payload.bcc as string | undefined) ?? ""),
         ]);
         const payload: JsonObject = {
           to,
-          subject: reqString(args, "subject"),
-          bodyContents: reqString(args, "bodyContents"),
-          ...(optString(args, "cc") ? { cc: optString(args, "cc") } : {}),
-          ...(optString(args, "bcc") ? { bcc: optString(args, "bcc") } : {}),
-          ...(optString(args, "bodyContentType") ? { bodyContentType: optString(args, "bodyContentType") } : {}),
+          subject,
+          bodyContents,
+          ...((optString(args, "cc") ?? existingDraft?.payload.cc) ? { cc: optString(args, "cc") ?? existingDraft?.payload.cc } : {}),
+          ...((optString(args, "bcc") ?? existingDraft?.payload.bcc) ? { bcc: optString(args, "bcc") ?? existingDraft?.payload.bcc } : {}),
+          ...((optString(args, "bodyContentType") ?? existingDraft?.payload.bodyContentType)
+            ? { bodyContentType: optString(args, "bodyContentType") ?? existingDraft?.payload.bodyContentType }
+            : {}),
+          ...(draftId ? { draftId } : {}),
+          ...(typeof args.revision === "number" ? { revision: args.revision } : {}),
         };
         return result(
           context,
@@ -221,11 +373,13 @@ function pushM365Tools(tools: ToolDefinition[], options: WorkToolsOptions, m365:
   if (m365.allowedOps.has("calendar.list")) {
     tools.push({
       name: "m365_calendar_list",
-      description: "List Outlook calendar events via host-pinned CLI. Results are untrusted shared calendar shapes.",
+      description: "List Outlook calendar events (capability-gated). Shared calendar shapes.",
       parameters: objectSchema(
         {
           calendarName: { type: "string" },
           calendarId: { type: "string" },
+          userName: { type: "string" },
+          userId: { type: "string" },
           startDateTime: { type: "string" },
           endDateTime: { type: "string" },
         },
@@ -246,6 +400,8 @@ function pushM365Tools(tools: ToolDefinition[], options: WorkToolsOptions, m365:
       description: "Draft a calendar event; executes only after host approval.",
       parameters: objectSchema(
         {
+          draftId: { type: "string" },
+          revision: { type: "integer" },
           subject: { type: "string" },
           start: { type: "string" },
           end: { type: "string" },
@@ -253,15 +409,38 @@ function pushM365Tools(tools: ToolDefinition[], options: WorkToolsOptions, m365:
           calendarId: { type: "string" },
           idempotencyKey: { type: "string" },
         },
-        ["subject", "start", "end"],
+        [],
       ),
-      execute: async (args, context) =>
-        result(
+      execute: async (args, context) => {
+        const draftId = optString(args, "draftId");
+        const existingDraftRes = draftId ? m365.getDraft(draftId) : undefined;
+        const existingDraft = existingDraftRes instanceof Promise ? await existingDraftRes : existingDraftRes;
+        const subject = optString(args, "subject") ?? (existingDraft?.payload.subject as string | undefined);
+        if (!subject) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "subject must be a non-empty string");
+        const start = optString(args, "start") ?? (existingDraft?.payload.start as string | undefined);
+        if (!start) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "start must be a non-empty string");
+        const end = optString(args, "end") ?? (existingDraft?.payload.end as string | undefined);
+        if (!end) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "end must be a non-empty string");
+        const payload: JsonObject = {
+          subject,
+          start,
+          end,
+          ...((optString(args, "calendarName") ?? existingDraft?.payload.calendarName)
+            ? { calendarName: optString(args, "calendarName") ?? existingDraft?.payload.calendarName }
+            : {}),
+          ...((optString(args, "calendarId") ?? existingDraft?.payload.calendarId)
+            ? { calendarId: optString(args, "calendarId") ?? existingDraft?.payload.calendarId }
+            : {}),
+          ...(draftId ? { draftId } : {}),
+          ...(typeof args.revision === "number" ? { revision: args.revision } : {}),
+        };
+        return result(
           context,
           "m365_calendar_draft_add",
           provider,
-          await executeApprovedMutation(options, m365, "calendar.add" satisfies Microsoft365Op, args, context),
-        ),
+          await executeApprovedMutation(options, m365, "calendar.add" satisfies Microsoft365Op, payload, context),
+        );
+      },
     });
   }
   if (m365.allowedOps.has("file.list")) {
@@ -384,6 +563,8 @@ function pushGwsTools(tools: ToolDefinition[], options: WorkToolsOptions, gws: G
       description: "Draft Gmail send; executes only after host approval. Never sends without approval.",
       parameters: objectSchema(
         {
+          draftId: { type: "string" },
+          revision: { type: "integer" },
           to: { type: "string" },
           subject: { type: "string" },
           body: { type: "string" },
@@ -392,22 +573,34 @@ function pushGwsTools(tools: ToolDefinition[], options: WorkToolsOptions, gws: G
           from: { type: "string" },
           idempotencyKey: { type: "string" },
         },
-        ["to", "subject", "body"],
+        [],
       ),
       execute: async (args, context) => {
-        const to = reqString(args, "to");
+        const draftId = optString(args, "draftId");
+        const existingDraftRes = draftId ? gws.getDraft(draftId) : undefined;
+        const existingDraft = existingDraftRes instanceof Promise ? await existingDraftRes : existingDraftRes;
+        const to = optString(args, "to") ?? (existingDraft?.payload.to as string | undefined);
+        if (!to) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "to must be a non-empty string");
+        const subject = optString(args, "subject") ?? (existingDraft?.payload.subject as string | undefined);
+        if (!subject) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "subject must be a non-empty string");
+        const body = optString(args, "body") ?? (existingDraft?.payload.body as string | undefined);
+        if (!body) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "body must be a non-empty string");
         assertExternalAllowed(options, [
           ...splitAddresses(to),
-          ...splitAddresses(optString(args, "cc") ?? ""),
-          ...splitAddresses(optString(args, "bcc") ?? ""),
+          ...splitAddresses(optString(args, "cc") ?? (existingDraft?.payload.cc as string | undefined) ?? ""),
+          ...splitAddresses(optString(args, "bcc") ?? (existingDraft?.payload.bcc as string | undefined) ?? ""),
         ]);
         const payload: JsonObject = {
           to,
-          subject: reqString(args, "subject"),
-          body: reqString(args, "body"),
-          ...(optString(args, "cc") ? { cc: optString(args, "cc") } : {}),
-          ...(optString(args, "bcc") ? { bcc: optString(args, "bcc") } : {}),
-          ...(optString(args, "from") ? { from: optString(args, "from") } : {}),
+          subject,
+          body,
+          ...((optString(args, "cc") ?? existingDraft?.payload.cc) ? { cc: optString(args, "cc") ?? existingDraft?.payload.cc } : {}),
+          ...((optString(args, "bcc") ?? existingDraft?.payload.bcc) ? { bcc: optString(args, "bcc") ?? existingDraft?.payload.bcc } : {}),
+          ...((optString(args, "from") ?? existingDraft?.payload.from)
+            ? { from: optString(args, "from") ?? existingDraft?.payload.from }
+            : {}),
+          ...(draftId ? { draftId } : {}),
+          ...(typeof args.revision === "number" ? { revision: args.revision } : {}),
         };
         return result(context, "gws_mail_draft_send", provider, await executeApprovedMutation(options, gws, "mail.send", payload, context));
       },
@@ -441,21 +634,43 @@ function pushGwsTools(tools: ToolDefinition[], options: WorkToolsOptions, gws: G
       description: "Draft a Google Calendar event; executes only after host approval.",
       parameters: objectSchema(
         {
+          draftId: { type: "string" },
+          revision: { type: "integer" },
           summary: { type: "string" },
           start: { type: "string" },
           end: { type: "string" },
           calendarId: { type: "string" },
           idempotencyKey: { type: "string" },
         },
-        ["summary", "start", "end"],
+        [],
       ),
-      execute: async (args, context) =>
-        result(
+      execute: async (args, context) => {
+        const draftId = optString(args, "draftId");
+        const existingDraftRes = draftId ? gws.getDraft(draftId) : undefined;
+        const existingDraft = existingDraftRes instanceof Promise ? await existingDraftRes : existingDraftRes;
+        const summary = optString(args, "summary") ?? (existingDraft?.payload.summary as string | undefined);
+        if (!summary) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "summary must be a non-empty string");
+        const start = optString(args, "start") ?? (existingDraft?.payload.start as string | undefined);
+        if (!start) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "start must be a non-empty string");
+        const end = optString(args, "end") ?? (existingDraft?.payload.end as string | undefined);
+        if (!end) throw new WorkToolError("ERR_PRISM_WORK_INPUT", "end must be a non-empty string");
+        const payload: JsonObject = {
+          summary,
+          start,
+          end,
+          ...((optString(args, "calendarId") ?? existingDraft?.payload.calendarId)
+            ? { calendarId: optString(args, "calendarId") ?? existingDraft?.payload.calendarId }
+            : {}),
+          ...(draftId ? { draftId } : {}),
+          ...(typeof args.revision === "number" ? { revision: args.revision } : {}),
+        };
+        return result(
           context,
           "gws_calendar_draft_add",
           provider,
-          await executeApprovedMutation(options, gws, "calendar.add" satisfies GoogleWorkspaceOp, args, context),
-        ),
+          await executeApprovedMutation(options, gws, "calendar.add" satisfies GoogleWorkspaceOp, payload, context),
+        );
+      },
     });
   }
   if (gws.allowedOps.has("file.list")) {

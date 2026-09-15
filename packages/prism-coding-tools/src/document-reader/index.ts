@@ -12,14 +12,9 @@
 
 import type { SecretRedactor } from "@arnilo/prism";
 import type { DocumentReader, DocumentReaderResult } from "../agent/index.js";
+import { DocumentReaderError } from "./errors.js";
 
-export class DocumentReaderError extends Error {
-  readonly code = "ERR_PRISM_DOCUMENT_READER";
-  constructor(message: string) {
-    super(message);
-    this.name = "DocumentReaderError";
-  }
-}
+export { DocumentReaderError };
 
 // --- caps (module-local; additive package, no shared limits surface) ---
 
@@ -200,6 +195,7 @@ export async function createDocumentReader(options: CreateDocumentReaderOptions 
         format: parser.format,
         pages: result.pages,
         truncatedBy: result.truncatedBy,
+        ...(!options.redactor && result.pageSpans ? { pageSpans: result.pageSpans } : {}),
       } satisfies DocumentReaderResult;
     },
   };
@@ -207,3 +203,20 @@ export async function createDocumentReader(options: CreateDocumentReaderOptions 
 
 /** Re-exported slot type for host convenience. */
 export type { DocumentReader, DocumentReaderResult };
+
+export {
+  createMistralOcrParser,
+  DEFAULT_OCR_BASE_URL,
+  DEFAULT_OCR_MAX_BYTES,
+  DEFAULT_OCR_MAX_CONCURRENT,
+  DEFAULT_OCR_MAX_PAGES,
+  DEFAULT_OCR_MAX_RESPONSE_BYTES,
+  DEFAULT_OCR_MODEL,
+  DEFAULT_OCR_TIMEOUT_MS,
+  HARD_OCR_MAX_BYTES,
+  HARD_OCR_MAX_CONCURRENT,
+  HARD_OCR_MAX_PAGES,
+  HARD_OCR_MAX_RESPONSE_BYTES,
+  HARD_OCR_TIMEOUT_MS,
+} from "./mistral-ocr.js";
+export type { CreateMistralOcrParserOptions, OcrPageSpan, OcrUsage } from "./mistral-ocr.js";

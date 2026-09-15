@@ -235,6 +235,7 @@ screenshot	export declare function screenshot(ctx: ActionContext, session: RunSe
 scroll	export declare function scroll(ctx: ActionContext, session: RunSession, request: BrowserActRequest): Promise<BrowserActResult>
 select	export declare const select: ActionHandler
 selectPage	export declare function selectPage(ctx: ActionContext, session: RunSession, request: BrowserActRequest): Promise<BrowserActResult>
+snapshotWebEvidence	export declare function snapshotWebEvidence(input:
 spawnObscuraProcess	export declare function spawnObscuraProcess(options: ObscuraProcessOptions): OwnedObscuraProcess
 text	export declare function text(value: unknown): string | undefined
 throttle	export declare const throttle: ActionHandler

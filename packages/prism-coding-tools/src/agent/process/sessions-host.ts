@@ -115,7 +115,11 @@ export function createSessionsHost(options: CreateProcessSessionsOptions): Sessi
   const checkpoints = options.checkpoints;
   const leases = options.leases;
   const ownerId = options.ownerId;
-  const recoveryBackend = options.recoveryBackend;
+  const recoveryBackend =
+    options.recoveryBackend ??
+    (options.sandbox && typeof options.sandbox.attachProcess === "function"
+      ? { attach: (ref: string) => options.sandbox!.attachProcess!(ref) }
+      : undefined);
   const durable = checkpoints !== undefined || leases !== undefined || ownerId !== undefined || recoveryBackend !== undefined;
   if (durable && !(checkpoints && leases && ownerId)) {
     throw new ProcessRecoveryError(

@@ -286,6 +286,41 @@ describe("createArtifactService", () => {
     );
   });
 
+  it("persists citation evidence and stamps approval digest", async () => {
+    const { service } = makeService();
+    const hash = "ab".repeat(32);
+    const record = await service.attach({
+      ...attachInput,
+      ownership,
+      identity,
+      citations: [
+        {
+          uri: "https://example.test/src",
+          kind: "web",
+          sourceId: "s1",
+          revision: "r1",
+          contentHash: hash,
+          retrievedAt: "2026-01-01T00:00:00.000Z",
+          excerpt: "fact",
+          span: { start: 0, end: 4 },
+          support: "unverified",
+        },
+      ],
+    });
+    const citation = record.revisions[0]?.citations?.[0];
+    assert.equal(citation?.sourceId, "s1");
+    assert.equal(citation?.contentHash, hash);
+    const approved = await service.approve({
+      ownership,
+      identity,
+      threadId: "thread-1",
+      artifactId: record.id,
+      version: 1,
+    });
+    assert.equal(typeof approved.approvals[0]?.evidenceDigest, "string");
+    assert.equal(approved.approvals[0]?.evidenceDigest?.length, 64);
+  });
+
   it("redacts secrets before persisting the record", async () => {
     const { store, service } = makeService();
     const record = await service.attach({ ...attachInput, ownership, title: `t-${SECRET}`, changeNote: `note-${SECRET}` });

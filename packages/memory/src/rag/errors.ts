@@ -35,3 +35,19 @@ export class RagAbortError extends RagError {
     this.name = "AbortError";
   }
 }
+
+export class RagSyncCursorError extends RagError {
+  constructor(message = "knowledge sync cursor is invalid") {
+    super(message, "ERR_PRISM_RAG_SYNC_CURSOR");
+    this.name = "RagSyncCursorError";
+  }
+}
+
+export class RagSyncThrottleError extends RagError {
+  readonly retryAfterMs: number;
+  constructor(retryAfterMs = 250, message = "knowledge sync rate limited") {
+    super(message, "ERR_PRISM_RAG_SYNC_THROTTLE");
+    this.name = "RagSyncThrottleError";
+    this.retryAfterMs = retryAfterMs;
+  }
+}

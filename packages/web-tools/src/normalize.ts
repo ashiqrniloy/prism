@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { type ArtifactCitation, HARD_CITATION_EXCERPT_BYTES } from "@arnilo/prism";
 import { WebToolError } from "./transport.js";
 import type { WebCitation, WebProvider, WebProviderMetadata, WebSearchResult } from "./types.js";
 
@@ -21,6 +22,39 @@ export function citation(provider: WebProvider, inputUrl: string, sourceId?: str
     sourceId,
     url,
     citationId: sourceId ? `web:${provider}:${sourceId}` : `web:${provider}:${createHash("sha256").update(url).digest("hex")}`,
+  };
+}
+
+/** Hash an already-fetched body. Never refetches, never stores credentials. */
+export function snapshotWebEvidence(input: {
+  readonly url: string;
+  readonly body: string | Uint8Array;
+  readonly provider: WebProvider;
+  readonly retrievedAt?: string;
+  readonly title?: string;
+  readonly sourceId?: string;
+  readonly tenantId?: string;
+  readonly excerpt?: string;
+  readonly span?: { readonly start: number; readonly end: number };
+  readonly revision?: string;
+}): ArtifactCitation {
+  const base = citation(input.provider, input.url, input.sourceId);
+  const bytes = typeof input.body === "string" ? Buffer.from(input.body, "utf8") : Buffer.from(input.body);
+  if (input.excerpt !== undefined && Buffer.byteLength(input.excerpt, "utf8") > HARD_CITATION_EXCERPT_BYTES) {
+    throw new WebToolError("ERR_PRISM_WEB_LIMIT", `excerpt exceeds ${HARD_CITATION_EXCERPT_BYTES} bytes`);
+  }
+  return {
+    uri: base.url,
+    kind: "web",
+    sourceId: base.sourceId ?? base.citationId,
+    revision: input.revision ?? "1",
+    contentHash: createHash("sha256").update(bytes).digest("hex"),
+    retrievedAt: input.retrievedAt ?? new Date().toISOString(),
+    support: "unverified",
+    ...(input.title === undefined ? {} : { title: input.title }),
+    ...(input.tenantId === undefined ? {} : { tenantId: input.tenantId }),
+    ...(input.excerpt === undefined ? {} : { excerpt: input.excerpt }),
+    ...(input.span === undefined ? {} : { span: input.span }),
   };
 }
 export function normalizeSearchResults(

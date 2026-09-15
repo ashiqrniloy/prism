@@ -564,12 +564,28 @@
           "packages/memory/src/compaction/observational-memory/__tests__/recent-messages.test.ts",
           "packages/memory/src/compaction/observational-memory/__tests__/runtime-coverage.test.ts",
           "packages/memory/src/compaction/observational-memory/__tests__/runtime-drop.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/runtime-scopes.test.ts",
           "packages/memory/src/compaction/observational-memory/__tests__/runtime.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/scopes-helper.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/scopes-project.test.ts",
+          "packages/memory/src/compaction/observational-memory/__tests__/scopes.test.ts",
           "packages/memory/src/compaction/observational-memory/__tests__/settings.test.ts",
           "packages/memory/src/compaction/observational-memory/__tests__/strategy.test.ts",
           "packages/memory/src/compaction/observational-memory/__tests__/tool.test.ts",
           "packages/memory/src/compaction/observational-memory/__tests__/worker-split.test.ts",
           "packages/memory/src/compaction/observational-memory/__tests__/workers.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./fabric": {
+        "suites": [
+          "packages/memory/src/fabric/__tests__/attach.test.ts",
+          "packages/memory/src/fabric/__tests__/consolidate.test.ts",
+          "packages/memory/src/fabric/__tests__/eval-procedure.test.ts",
+          "packages/memory/src/fabric/__tests__/notes.test.ts",
+          "packages/memory/src/fabric/__tests__/recall.test.ts",
+          "packages/memory/src/fabric/__tests__/tools.test.ts",
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": ""
@@ -776,6 +792,20 @@
       "./integrations/work": {
         "suites": [
           "packages/prism-core/src/integrations/work/__tests__/work-tools.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./integrations/work/drafts": {
+        "suites": [
+          "packages/prism-core/src/integrations/work/__tests__/drafts.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./runtime/realtime": {
+        "suites": [
+          "packages/prism-core/src/runtime/__tests__/realtime.test.ts",
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": ""

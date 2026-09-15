@@ -26,6 +26,55 @@ export { createObservationalMemoryExtension } from "./extension.js";
 export { createMemoryId, isMemoryId } from "./ids.js";
 export type { ObservationalMemoryLedger } from "./ledger.js";
 export { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
+export type {
+  WorkBindRef,
+  WorkScope,
+  WorkScopeBoundData,
+  WorkScopeClosedData,
+  WorkScopeController,
+  WorkScopeControllerOptions,
+  WorkScopeEnteredData,
+  WorkScopeEntryData,
+  WorkScopeId,
+  WorkScopeLeftData,
+  WorkScopeMap,
+  WorkScopeOpenedData,
+  WorkScopeSpec,
+  WorkScopeUnboundData,
+} from "./scopes.js";
+export {
+  createWorkScopeController,
+  foldWorkScopeMap,
+  withWorkScope,
+  isWorkBindRef,
+  isWorkScopeBoundData,
+  isWorkScopeClosedData,
+  isWorkScopeEnteredData,
+  isWorkScopeId,
+  isWorkScopeLeftData,
+  isWorkScopeOpenedData,
+  isWorkScopeUnboundData,
+  MAX_WORK_SCOPE_BINDS,
+  MAX_WORK_SCOPE_DEPTH,
+  MAX_WORK_SCOPE_LABEL_CHARS,
+  MAX_WORK_SCOPE_STACK,
+  MAX_WORK_SCOPES,
+  SESSION_WORK_SCOPE_ID,
+  WORK_SCOPE_BOUND,
+  WORK_SCOPE_CLOSED,
+  WORK_SCOPE_ENTERED,
+  WORK_SCOPE_LEFT,
+  WORK_SCOPE_OPENED,
+  WORK_SCOPE_UNBOUND,
+} from "./scopes.js";
+export type {
+  ProjectWorkMemoryOptions,
+  WorkMemoryProjection,
+  WorkScopeClosed,
+  WorkScopeInclude,
+  WorkScopeOutline,
+} from "./scopes-project.js";
+export { projectWorkMemory } from "./scopes-project.js";
 export type { MemoryWorkerLimitOptions, ResolvedMemoryWorkerLimits } from "./limits.js";
 export {
   DEFAULT_MAX_WORKER_ARGUMENT_BYTES,

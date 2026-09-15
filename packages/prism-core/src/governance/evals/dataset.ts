@@ -21,6 +21,7 @@ export function defineDataset<TInput = unknown, TExpected = unknown>(
       id: itemId,
       input: item.input,
       expected: item.expected,
+      expectedTrajectory: item.expectedTrajectory ? Object.freeze([...item.expectedTrajectory]) : undefined,
       metadata: item.metadata ? Object.freeze({ ...item.metadata }) : undefined,
     });
   });

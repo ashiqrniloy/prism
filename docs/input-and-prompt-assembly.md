@@ -189,3 +189,4 @@ const request = await assembleProviderInput({
 - [Agent/session runtime](agent-session-runtime.md): calls assembly each turn and supplies runtime tool results to the next provider request.
 - [Tools](tools.md): host-owned tool registry and tool result boundary.
 - [Compaction and retry policies](compaction-and-retry.md): default compaction strategy that feeds summaries into input assembly.
+- [Attention compiler](attention-compiler.md): opt-in per-turn ratio gate that strips old thinking and stubs old tool results on the assembled groups before they reach the prompt builder.

@@ -6,6 +6,7 @@ import {
   buildEnterpriseMigration003Ddl,
   buildEnterpriseMigration004Ddl,
   buildEnterpriseMigration005Ddl,
+  buildEnterpriseMigration006Ddl,
   ENTERPRISE_INDEX_NAMES,
   ENTERPRISE_TABLE_NAMES,
 } from "./ddl.js";
@@ -13,8 +14,14 @@ import { asEnterprisePostgresError, EnterprisePostgresError } from "./errors.js"
 import { ENTERPRISE_MIGRATION_LOCK_NAMESPACE, qualifyTable, schemaAdvisoryLockKey } from "./identifiers.js";
 
 interface EnterpriseMigration {
-  readonly name: "001_enterprise_state" | "002_tool_effects" | "003_router_reservations" | "004_erp_messaging" | "005_erp_approvals";
-  readonly version: "1" | "2" | "3" | "4" | "5";
+  readonly name:
+    | "001_enterprise_state"
+    | "002_tool_effects"
+    | "003_router_reservations"
+    | "004_erp_messaging"
+    | "005_erp_approvals"
+    | "006_aggregate_budgets";
+  readonly version: "1" | "2" | "3" | "4" | "5" | "6";
   readonly checksum: string;
   readonly ddl: (schema: string) => string;
 }
@@ -77,6 +84,12 @@ const MIGRATIONS: readonly EnterpriseMigration[] = [
     version: "5",
     checksum: createHash("sha256").update(buildEnterpriseMigration005Ddl("prism"), "utf8").digest("hex"),
     ddl: buildEnterpriseMigration005Ddl,
+  },
+  {
+    name: "006_aggregate_budgets",
+    version: "6",
+    checksum: createHash("sha256").update(buildEnterpriseMigration006Ddl("prism"), "utf8").digest("hex"),
+    ddl: buildEnterpriseMigration006Ddl,
   },
 ];
 
@@ -193,6 +206,8 @@ const EXPECTED_TABLES: readonly ExpectedTable[] = [
       { name: "last_used_at", type: "timestamp with time zone", nullable: false },
       { name: "expires_at", type: "timestamp with time zone", nullable: false },
       { name: "reservations", type: "jsonb", nullable: false },
+      { name: "task_id", type: "text", nullable: false },
+      { name: "attributions", type: "jsonb", nullable: false },
     ],
     primaryKey: ["tenant_id", "account_key", "user_key", "principal_id", "provider", "model", "window_ms"],
   },
@@ -347,6 +362,12 @@ const EXPECTED_INDEXES: readonly ExpectedIndex[] = [
     name: "prism_model_router_budgets_expiry_idx",
     table: "prism_model_router_budgets",
     columns: [...ROUTER_OWNER_COLUMNS.map((column) => column.name), "expires_at"],
+    partial: true,
+  },
+  {
+    name: "prism_model_router_budgets_task_idx",
+    table: "prism_model_router_budgets",
+    columns: [...ROUTER_OWNER_COLUMNS.map((column) => column.name), "task_id", "window_ms"],
     partial: true,
   },
   {

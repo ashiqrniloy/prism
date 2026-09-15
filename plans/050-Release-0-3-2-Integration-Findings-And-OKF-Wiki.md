@@ -1,6 +1,6 @@
-# 050 — Release 0.3.2: Clay Integration Findings + OKF Wiki Format
+# 050 — Release 0.3.2: Integration Findings + OKF Wiki Format
 
-Intake for `docs/_evidence/clay-integration-findings.md` (BUG-1, BUG-2,
+Intake for `docs/_evidence/integration-findings.md` (BUG-1, BUG-2,
 FEATURE-1..6, DOCS-1) plus OKF (Open Knowledge Format) adoption in
 `@arnilo/prism-wiki`, closed by a changed-package npm release.
 Roadmap phase: **0.3.x**.
@@ -42,7 +42,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
 
 ## Expected Outcome
 
-- Clay's repro (durable suspend → JSON persistence → resume with
+- The reported repro (durable suspend → JSON persistence → resume with
   `allowCustom` omitted) succeeds for both selection modes; tool and
   workflow paths agree on the `false` default.
 - A wrong supervisor child factory returns
@@ -71,7 +71,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
 
 ## Tasks
 
-- [x] Task 1 — Freeze evidence and review reusable primitives before implementation (2026-08-29: complete — evidence at `docs/_evidence/phase50-clay-okf-capability-matrix.md`; verified spans, OKF field mapping, per-item smallest-gap decisions, global rejections; outcome notes below in Compromises Made)
+- [x] Task 1 — Freeze evidence and review reusable primitives before implementation (2026-08-29: complete — evidence at `docs/_evidence/phase50-okf-capability-matrix.md`; verified spans, OKF field mapping, per-item smallest-gap decisions, global rejections; outcome notes below in Compromises Made)
   - Acceptance Criteria:
     - Functional: Record verified file:line spans for every change site:
       BUG-1 `packages/coding-agent/src/ask-user-decision.ts`
@@ -99,7 +99,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       (`resolveMaxFanOut`, `maxNodeOutputBytes`).
     - Code Quality: one evidence note listing, per feature, the existing
       primitive that covers it and the single smallest gap to fill; reject
-      any feature-specific branch in shared runtimes (e.g. no Clay-specific
+      any feature-specific branch in shared runtimes (e.g. no consumer-specific
       code paths).
     - Security: confirm trust boundaries for each change: suspend-data
       normalization happens at accept time (before persistence); driver
@@ -108,7 +108,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       no secrets (source anchors only).
   - Approach:
     - Documentation Reviewed:
-      - `docs/_evidence/clay-integration-findings.md`: full findings, repros,
+      - `docs/_evidence/integration-findings.md`: full findings, repros,
         acceptance criteria.
       - OKF `SPEC.md` v0.2 (GoogleCloudPlatform/open-knowledge-format):
         §3 bundle structure, §4 concept frontmatter, §5.1 `sources`,
@@ -131,7 +131,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
     - Chosen Approach:
       - Verify each cited span against current source (line numbers above
         were re-verified at plan time); write
-        `docs/_evidence/phase50-clay-okf-capability-matrix.md` recording the
+        `docs/_evidence/phase50-okf-capability-matrix.md` recording the
         seam inventory, the OKF field mapping (wiki frontmatter → OKF keys),
         and per-feature smallest-gap decisions. No code in this task.
     - API Notes and Examples:
@@ -139,10 +139,10 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       graft ask "CommandExecutionContext drivers supervisor child events ask-user-decision suspend" --source
       ```
     - Files to Create/Edit:
-      - `docs/_evidence/phase50-clay-okf-capability-matrix.md`: pinned spans,
+      - `docs/_evidence/phase50-okf-capability-matrix.md`: pinned spans,
         OKF mapping, per-feature decisions.
     - References:
-      - `docs/_evidence/clay-integration-findings.md` (all items).
+      - `docs/_evidence/integration-findings.md` (all items).
       - `https://github.com/GoogleCloudPlatform/open-knowledge-format` —
         `SPEC.md` v0.2, sections cited above.
   - Test Cases to Write:
@@ -151,7 +151,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: no; evidence freeze only.
     - Docs pages to create/edit:
-      - `docs/_evidence/phase50-clay-okf-capability-matrix.md`: evidence
+      - `docs/_evidence/phase50-okf-capability-matrix.md`: evidence
         artifact (nav-exempt per `_evidence` convention).
     - `docs/index.md` update: no; `_evidence/` stays non-navigation.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
@@ -177,7 +177,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       (custom text still rejected when `allowCustom` is `false`).
   - Approach:
     - Documentation Reviewed:
-      - `docs/_evidence/clay-integration-findings.md` BUG-1 (repro, expected,
+      - `docs/_evidence/integration-findings.md` BUG-1 (repro, expected,
         acceptance criteria).
       - `packages/coding-agent/src/ask-user-decision.ts:241-303`
         (`parseAllowCustom`, tool-path normalization) and `:570-665`
@@ -215,7 +215,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
         (or the package's existing test file): durable round-trip regressions.
       - `packages/coding-agent/CHANGELOG.md`: BUG-1 entry.
     - References:
-      - Clay repro (findings BUG-1): `defineWorkflow` + `functionNode` +
+      - Reported repro (findings BUG-1): `defineWorkflow` + `functionNode` +
         `runWorkflow`/`resumeWorkflow` + `createMemoryWorkflowCheckpoints`.
       - Tool-path precedent: `ask-user-decision.ts:241-245`.
   - Test Cases to Write:
@@ -254,7 +254,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       partially-initialized delegation state.
   - Approach:
     - Documentation Reviewed:
-      - `docs/_evidence/clay-integration-findings.md` BUG-2.
+      - `docs/_evidence/integration-findings.md` BUG-2.
       - `packages/supervisor/src/supervisor.ts:130-160, 310-325` (both
         `childAgent.config` consumption sites).
       - `docs/supervisors.md` (child factory contract section).
@@ -320,7 +320,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       model nor override still fails closed.
   - Approach:
     - Documentation Reviewed:
-      - `docs/_evidence/clay-integration-findings.md` FEATURE-1 (repro).
+      - `docs/_evidence/integration-findings.md` FEATURE-1 (repro).
       - `src/agent-definitions.ts:20-66, 143-146` (resolution order,
         `resolveModel`, `applyConfigOverrides`).
       - `docs/agent-definitions.md` (model-optional table row, precedence).
@@ -353,7 +353,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       - `CHANGELOG.md` (root): FEATURE-1 entry.
       - `docs/agent-definitions.md`: precedence row.
     - References:
-      - Clay verified repro (findings FEATURE-1).
+      - Verified repro (findings FEATURE-1).
       - `applyConfigOverrides` (`src/agent-definitions.ts:143`): spread
         semantics unchanged.
   - Test Cases to Write:
@@ -389,7 +389,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       commands) is unaffected.
   - Approach:
     - Documentation Reviewed:
-      - `docs/_evidence/clay-integration-findings.md` FEATURE-3.
+      - `docs/_evidence/integration-findings.md` FEATURE-3.
       - `src/contracts-core/agent.ts:162-170` (`CommandExecutionContext`,
         `CommandResult`).
       - `docs/extension-authoring.md`, `docs/extensions.md` (command
@@ -398,7 +398,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
         precedent: args → result mapping).
     - Options Considered:
       - A generic `context.services` bag: rejected — untyped escape hatch;
-        three named driver seams cover the Clay case and stay auditable.
+        three named driver seams cover the reported case and stay auditable.
       - Named optional `drivers?: { startRun, startWorkflow, steer }` on the
         context, populated only by opting-in hosts: chosen — additive,
         inert by default, matches the findings proposal verbatim.
@@ -431,7 +431,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       - `CHANGELOG.md` (root): FEATURE-3 entry.
       - `docs/extension-authoring.md`: host-opt-in driver section.
     - References:
-      - Clay `/start` mapping case (findings FEATURE-3 motivation).
+      - `/start` mapping case (findings FEATURE-3 motivation).
       - `docs/public-contracts.md` lists `CommandExecutionContext` — update
         if the contracts table enumerates fields.
   - Test Cases to Write:
@@ -469,7 +469,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       internals.
   - Approach:
     - Documentation Reviewed:
-      - `docs/_evidence/clay-integration-findings.md` FEATURE-4.
+      - `docs/_evidence/integration-findings.md` FEATURE-4.
       - `packages/supervisor/src/supervisor.ts` (event emission sites for
         `delegation_started/finished/rejected/error`; `subscribe` shape).
       - `docs/supervisors.md` (event stream section).
@@ -505,7 +505,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       - `packages/supervisor/CHANGELOG.md`: FEATURE-4 entry.
       - `docs/supervisors.md`: opt-in child events section.
     - References:
-      - Clay nested-run UI streaming motivation (findings FEATURE-4).
+      - Nested-run UI streaming motivation (findings FEATURE-4).
       - `docs/agent-events.md` event kinds.
   - Test Cases to Write:
     - Opt-in: child tool-call event appears on supervisor stream with
@@ -543,7 +543,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       key leakage.
   - Approach:
     - Documentation Reviewed:
-      - `docs/_evidence/clay-integration-findings.md` FEATURE-5 (P3; v1
+      - `docs/_evidence/integration-findings.md` FEATURE-5 (P3; v1
         acceptable, pattern is the minimum).
       - `packages/compaction-observational-memory/src/compose.ts`,
         `ids.ts`, `ledger.ts` (store seams and branch id conventions).
@@ -610,7 +610,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       marked; no real egress.
   - Approach:
     - Documentation Reviewed:
-      - `docs/_evidence/clay-integration-findings.md` FEATURE-6.
+      - `docs/_evidence/integration-findings.md` FEATURE-6.
       - `examples/durable-coding-workflow.ts`, `examples/coding-goal-verify.ts`,
         `examples/durable-loops-and-approvals.ts`, `examples/agent-durable-approval.ts`
         (existing composition idioms to reuse).
@@ -642,7 +642,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       - `docs/index.md`: examples list entry.
       - `CHANGELOG.md` (root): FEATURE-6 entry.
     - References:
-      - Clay composition account (findings FEATURE-6 motivation + DOCS-1).
+      - Reported composition account (findings FEATURE-6 motivation + DOCS-1).
       - Plan 039/030 example conventions.
   - Test Cases to Write:
     - Example self-check (asserts): N bounded iterations executed; suspend →
@@ -677,7 +677,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       terminal state, never a hang); audited via replay.
   - Approach:
     - Documentation Reviewed:
-      - `docs/_evidence/clay-integration-findings.md` FEATURE-2 (option 1
+      - `docs/_evidence/integration-findings.md` FEATURE-2 (option 1
         minimum: docs + example).
       - `plans/045-Bounded-Loop-Workflow-Node.md` (deferred primitive).
       - `docs/workflows.md` (suspend/resume, replay, limits sections).
@@ -686,7 +686,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
         scoped separately (scheduler state machine work); findings accept
         the documented pattern as the minimum for this intake.
       - Document the host-loop pattern + point at the example: chosen —
-        zero runtime risk, unblocks Clay, defers the primitive cleanly.
+        zero runtime risk, unblocks the reporter, defers the primitive cleanly.
     - Chosen Approach:
       - Docs section in `docs/workflows.md` with the recipe and the budget
         rules; example (Task 8) is the runnable proof; cross-link both
@@ -743,11 +743,11 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
       prevents, and links `examples/autonomous-coding-loop.ts` (Task 8) as
       the live demonstration.
     - Security: no behavior claims beyond verified runtime behavior (each
-      contract was runtime-verified by the Clay review; re-verify while
+      contract was runtime-verified by the reporting host; re-verify while
       writing).
   - Approach:
     - Documentation Reviewed:
-      - `docs/_evidence/clay-integration-findings.md` DOCS-1.
+      - `docs/_evidence/integration-findings.md` DOCS-1.
       - `docs/workflows.md:77` and `:182-183` (existing partial
         resume-aware coverage), `docs/supervisors.md`,
         `docs/compaction-and-retry.md:24` (compact() description),
@@ -1018,8 +1018,8 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
 ## Compromises Made
-- Task 1 (2026-08-29): evidence-only; no code. Span corrections vs the Clay
-  findings (0.3.0-era line numbers): the first-party command execution site
+- Task 1 (2026-08-29): evidence-only; no code. Span corrections vs the
+  reported findings (0.3.0-era line numbers): the first-party command execution site
   constructing `CommandExecutionContext` is `src/rpc.ts:235` (findings did
   not name it); OM's separate `store` option no longer exists (removed for
   session/store-mismatch safety), so the FEATURE-5 pattern widens only the
@@ -1028,7 +1028,7 @@ Baseline: `@arnilo/prism` npm dist **0.3.0**; repo workspace **0.3.1**
   (plain markdown links per §6).
 - Task 2 (2026-08-29): `toolCallId` also made optional on the
   `suspendAskUserDecision` request union — `AskUserDecisionRequest` marks it
-  required, so the `Pick<>` widening alone still rejected the Clay repro
+  required, so the `Pick<>` widening alone still rejected the reported repro
   (which omits both `allowCustom` and `toolCallId`). Persisted
   `AskUserDecisionSuspendData` shape unchanged (all keys it carries stay
   required once normalized). Docs-truth fallout fixed: plan 050 added to

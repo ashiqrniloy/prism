@@ -117,7 +117,7 @@ Behavior notes:
 - `create` with an explicit `id` writes with `expectedVersion: 0` (create-only): a duplicate create never overwrites the winner's metadata and returns the existing thread.
 - `branch()` enforces `maxActiveBranches` on its read snapshot; the version guard inside the same write makes the cap exact even under concurrency (a concurrent branch cannot slip past the cap), and the marker keeps branch refs append-only.
 - `archive()` on an already-archived thread is a no-op; a stale `branch`/`archive` racing a delete fails `not_found` (the row is gone) and the write path never re-creates a deleted thread — delete wins.
-- Deletion purges the whole session ledger (entries, runs, events, tool calls, usage, branches, search rows) through `lifecycle.applyRetention`; legal holds block deletion and report `held: true`.
+- Deletion purges the whole session ledger (entries, runs, events, tool calls, usage, branches, search rows) through `lifecycle.applyRetention`; legal holds block deletion and report `held: true`. Semantic-memory `forget({ hold: true })` is a separate knowledge-store hold (see [Working and semantic memory](working-and-semantic-memory.md)); conversation delete does not walk embeddings.
 
 ## Security and performance notes
 

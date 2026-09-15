@@ -1,15 +1,20 @@
 import type { JsonObject } from "@arnilo/prism";
 import type { Pool, PoolClient, PoolConfig } from "pg";
+import { assertAccessConstraint, assertAccessGrants, assertAuthorizationTenant } from "./acl.js";
 import { MemoryConflictError, MemoryValidationError } from "./errors.js";
+import { assertInvalidationBatch, assertShareGrant, HARD_LINEAGE_EDGES } from "./lineage.js";
 import { decodeMemoryCursor, encodeMemoryCursor } from "./pagination.js";
 import { buildMemoryDdl, buildVectorSearchDdl, DEFAULT_MEMORY_SCHEMA, DEFAULT_VECTOR_TABLE } from "./postgres-ddl.js";
 import { qualifyTable, quoteIdentifier, validateIdentifier } from "./postgres-identifiers.js";
 import { normalizeImportance } from "./scoring.js";
 import type {
   MemoryConsent,
+  MemoryInvalidationRecord,
+  MemoryShareGrant,
   MemoryVectorHit,
   MemoryVectorOrder,
   MemoryVectorRecord,
+  RagAccessConstraint,
   VectorDeleteFilter,
   VectorQuery,
   VectorStore,
@@ -221,6 +226,9 @@ export async function createPostgresMemoryStores(options: PostgresMemoryStoresOp
   const vectorStore = assembleVectorStore(pool, {
     table: semanticTable,
     generationsTable: `${quoteIdentifier(schema)}.${quoteIdentifier(`${DEFAULT_VECTOR_TABLE}_rag_scope_generations`)}`,
+    aclTable: `${quoteIdentifier(schema)}.${quoteIdentifier(`${DEFAULT_VECTOR_TABLE}_rag_source_acl`)}`,
+    invalidationTable: `${quoteIdentifier(schema)}.${quoteIdentifier(`${DEFAULT_VECTOR_TABLE}_invalidation`)}`,
+    shareGrantTable: `${quoteIdentifier(schema)}.${quoteIdentifier(`${DEFAULT_VECTOR_TABLE}_share_grant`)}`,
     maxEntryTextChars,
     dimensions,
     lexical: await textTsvAvailable(pool, schema, DEFAULT_VECTOR_TABLE).catch(() => false),
@@ -295,16 +303,72 @@ interface VectorTableDeps {
   readonly table: string;
   /** Fully qualified scope-generation pointer table. */
   readonly generationsTable: string;
+  /** Fully qualified per-source ACL table. */
+  readonly aclTable: string;
+  readonly invalidationTable: string;
+  readonly shareGrantTable: string;
   readonly maxEntryTextChars: number;
   readonly dimensions?: number;
   /** Whether the text_tsv column exists — gates the lexical leg declaration. */
   readonly lexical: boolean;
 }
 
+function authorizationPredicate(
+  authorization: RagAccessConstraint | undefined,
+  aclTable: string,
+  tenantId: string,
+  params: unknown[],
+): string {
+  if (!authorization) return "";
+  const auth = assertAccessConstraint(authorization);
+  assertAuthorizationTenant(auth, tenantId);
+  params.push(auth.principalId);
+  const principal = params.length;
+  params.push([...(auth.groupIds ?? [])]);
+  const groups = params.length;
+  params.push(auth.accessVersion ?? null);
+  const version = params.length;
+  return ` AND EXISTS (
+    SELECT 1 FROM ${aclTable} a
+    WHERE a.tenant_id = t.tenant_id
+      AND a.resource_id = t.resource_id
+      AND a.thread_id = t.thread_id
+      AND a.source_id = t.metadata->'_rag'->>'sourceId'
+      AND (a.principal_id = $${principal} OR (cardinality($${groups}::text[]) > 0 AND a.group_id = ANY($${groups}::text[])))
+      AND ($${version}::int IS NULL OR a.access_version = $${version})
+  )`;
+}
+
+function invalidationPredicate(invalidationTable: string): string {
+  return ` AND NOT EXISTS (
+    SELECT 1 FROM ${invalidationTable} i
+    WHERE i.tenant_id = t.tenant_id
+      AND i.resource_id = t.resource_id
+      AND i.thread_id = t.thread_id
+      AND (
+        (i.id = t.id AND i.reason <> 'corrected')
+        OR (
+          i.id <> t.id
+          AND COALESCE(t.metadata->'_lineage'->'sourceIds', '[]'::jsonb) ? i.id
+        )
+      )
+  )`;
+}
+
+function idsPredicate(ids: readonly string[] | undefined, params: unknown[]): string {
+  if (!ids) return "";
+  if (ids.length === 0) return " AND FALSE";
+  if (ids.length > HARD_LINEAGE_EDGES) throw new MemoryValidationError(`query ids exceed hard cap ${HARD_LINEAGE_EDGES}`);
+  params.push([...ids]);
+  return ` AND t.id = ANY($${params.length}::text[])`;
+}
+
 /** All vector statements bound to one Queryable — pool for direct use, PoolClient inside transactions. */
 function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVectorSourceStore {
   const { table } = deps;
   const base: PostgresVectorSourceStore = {
+    authorization: "acl",
+    lineage: "invalidation",
     async upsert(records, upsertOptions = {}) {
       assertNotAborted(upsertOptions.signal);
       for (const record of records) {
@@ -359,17 +423,22 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
       assertNotAborted(query.signal);
       const scope = requireScope(query, true) as Required<WorkingMemoryKey> & { threadId: string };
       assertFiniteVector(query.embedding, "query embedding", deps.dimensions);
+      const params: unknown[] = [scope.tenantId, scope.resourceId, scope.threadId, toVectorLiteral(query.embedding), query.topK];
+      const acl = authorizationPredicate(query.authorization, deps.aclTable, scope.tenantId, params);
+      const ids = idsPredicate(query.ids, params);
+      const inv = invalidationPredicate(deps.invalidationTable);
       const result = await q.query(
         `SELECT ${VECTOR_COLUMNS},
                 1 - (embedding <=> $4::vector) AS score
-         FROM ${table}
+         FROM ${table} t
          WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3
            AND (generation IS NULL OR generation = COALESCE(
                  (SELECT current_generation FROM ${deps.generationsTable}
                   WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3), generation))
+           ${acl}${ids}${inv}
          ORDER BY embedding <=> $4::vector ASC, sequence ASC, id ASC
          LIMIT $5`,
-        [scope.tenantId, scope.resourceId, scope.threadId, toVectorLiteral(query.embedding), query.topK],
+        params,
       );
       return result.rows.map((row) => mapVectorRow(row, Number(row.score))) as MemoryVectorHit[];
     },
@@ -485,6 +554,180 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
         [required.tenantId, required.resourceId, required.threadId, String(generation)],
       );
     },
+
+    async setSourceAccess(scope, input, accessOptions = {}) {
+      assertNotAborted(accessOptions.signal);
+      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const grants = assertAccessGrants(input);
+      if (grants.length === 0) return;
+      const sourceIds = grants.map((grant) => grant.sourceId);
+      await q.query(
+        `DELETE FROM ${deps.aclTable}
+         WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3 AND source_id = ANY($4)`,
+        [required.tenantId, required.resourceId, required.threadId, sourceIds],
+      );
+      const rows: unknown[] = [];
+      const values: string[] = [];
+      let index = 1;
+      for (const grant of grants) {
+        for (const principalId of grant.principalIds ?? []) {
+          values.push(`($${index++},$${index++},$${index++},$${index++},$${index++},'',$${index++})`);
+          rows.push(required.tenantId, required.resourceId, required.threadId, grant.sourceId, principalId, grant.accessVersion);
+        }
+        for (const groupId of grant.groupIds ?? []) {
+          values.push(`($${index++},$${index++},$${index++},$${index++},'',$${index++},$${index++})`);
+          rows.push(required.tenantId, required.resourceId, required.threadId, grant.sourceId, groupId, grant.accessVersion);
+        }
+      }
+      if (values.length === 0) return;
+      await q.query(
+        `INSERT INTO ${deps.aclTable}
+           (tenant_id, resource_id, thread_id, source_id, principal_id, group_id, access_version)
+         VALUES ${values.join(",")}`,
+        rows,
+      );
+    },
+
+    async checkSourceAccess(scope, sourceId, authorization, accessOptions = {}) {
+      assertNotAborted(accessOptions.signal);
+      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      requireNonEmptyString(sourceId, "sourceId");
+      const auth = assertAccessConstraint(authorization);
+      assertAuthorizationTenant(auth, required.tenantId);
+      const result = await q.query(
+        `SELECT 1 FROM ${deps.aclTable}
+         WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3 AND source_id = $4
+           AND (principal_id = $5 OR (cardinality($6::text[]) > 0 AND group_id = ANY($6::text[])))
+           AND ($7::int IS NULL OR access_version = $7)
+         LIMIT 1`,
+        [
+          required.tenantId,
+          required.resourceId,
+          required.threadId,
+          sourceId,
+          auth.principalId,
+          [...(auth.groupIds ?? [])],
+          auth.accessVersion ?? null,
+        ],
+      );
+      return (result.rowCount ?? 0) > 0;
+    },
+
+    async invalidate(scope, entries, invalidateOptions = {}) {
+      assertNotAborted(invalidateOptions.signal);
+      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const batch = assertInvalidationBatch(entries);
+      if (batch.length === 0) return;
+      const rows: unknown[] = [];
+      const values: string[] = [];
+      let index = 1;
+      for (const entry of batch) {
+        values.push(`($${index++},$${index++},$${index++},$${index++},$${index++},$${index++}::timestamptz,$${index++},$${index++})`);
+        rows.push(
+          required.tenantId,
+          required.resourceId,
+          required.threadId,
+          entry.id,
+          entry.reason,
+          entry.at,
+          entry.hold === true || entry.reason === "legal_hold",
+          entry.supersedesId ?? null,
+        );
+      }
+      await q.query(
+        `INSERT INTO ${deps.invalidationTable}
+           (tenant_id, resource_id, thread_id, id, reason, at, hold, supersedes_id)
+         VALUES ${values.join(",")}
+         ON CONFLICT (tenant_id, resource_id, thread_id, id)
+         DO UPDATE SET
+           hold = ${deps.invalidationTable}.hold OR EXCLUDED.hold,
+           reason = CASE
+             WHEN ${deps.invalidationTable}.hold OR ${deps.invalidationTable}.reason = 'legal_hold'
+             THEN ${deps.invalidationTable}.reason
+             ELSE EXCLUDED.reason
+           END,
+           at = EXCLUDED.at,
+           supersedes_id = COALESCE(EXCLUDED.supersedes_id, ${deps.invalidationTable}.supersedes_id)`,
+        rows,
+      );
+    },
+
+    async listInvalidated(scope, listOptions = {}) {
+      assertNotAborted(listOptions.signal);
+      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const result = await q.query(
+        `SELECT id, reason, at, hold, supersedes_id
+         FROM ${deps.invalidationTable}
+         WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3`,
+        [required.tenantId, required.resourceId, required.threadId],
+      );
+      return result.rows.map((row) => {
+        const record: MemoryInvalidationRecord = {
+          id: String(row.id),
+          reason: row.reason as MemoryInvalidationRecord["reason"],
+          at: new Date(row.at).toISOString(),
+          ...(row.hold === true ? { hold: true } : {}),
+          ...(row.supersedes_id ? { supersedesId: String(row.supersedes_id) } : {}),
+        };
+        return record;
+      });
+    },
+
+    async clearInvalidation(scope, ids, clearOptions = {}) {
+      assertNotAborted(clearOptions.signal);
+      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      if (ids.length === 0) return;
+      await q.query(
+        `DELETE FROM ${deps.invalidationTable}
+         WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3
+           AND id = ANY($4::text[])
+           AND hold = FALSE AND reason <> 'legal_hold'`,
+        [required.tenantId, required.resourceId, required.threadId, [...ids]],
+      );
+    },
+
+    async setShareGrant(scope, input, shareOptions = {}) {
+      assertNotAborted(shareOptions.signal);
+      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const grant = assertShareGrant({ ...input, tenantId: required.tenantId, parentThreadId: required.threadId });
+      if (grant.sourceIds.length === 0) {
+        await q.query(
+          `DELETE FROM ${deps.shareGrantTable}
+           WHERE tenant_id = $1 AND parent_thread_id = $2 AND child_thread_id = $3`,
+          [grant.tenantId, grant.parentThreadId, grant.childThreadId],
+        );
+        return;
+      }
+      await q.query(
+        `INSERT INTO ${deps.shareGrantTable}
+           (tenant_id, parent_thread_id, child_thread_id, source_ids, expires_at)
+         VALUES ($1, $2, $3, $4::jsonb, $5::timestamptz)
+         ON CONFLICT (tenant_id, parent_thread_id, child_thread_id)
+         DO UPDATE SET source_ids = EXCLUDED.source_ids, expires_at = EXCLUDED.expires_at`,
+        [grant.tenantId, grant.parentThreadId, grant.childThreadId, JSON.stringify(grant.sourceIds), grant.expiresAt ?? null],
+      );
+    },
+
+    async getShareGrant(scope, childThreadId, shareOptions = {}) {
+      assertNotAborted(shareOptions.signal);
+      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const result = await q.query(
+        `SELECT tenant_id, parent_thread_id, child_thread_id, source_ids, expires_at
+         FROM ${deps.shareGrantTable}
+         WHERE tenant_id = $1 AND parent_thread_id = $2 AND child_thread_id = $3`,
+        [required.tenantId, required.threadId, requireNonEmptyString(childThreadId, "childThreadId")],
+      );
+      const row = result.rows[0];
+      if (!row) return undefined;
+      const grant: MemoryShareGrant = {
+        tenantId: String(row.tenant_id),
+        parentThreadId: String(row.parent_thread_id),
+        childThreadId: String(row.child_thread_id),
+        sourceIds: Array.isArray(row.source_ids) ? row.source_ids.map((id: unknown) => String(id)) : [],
+        ...(row.expires_at ? { expiresAt: new Date(row.expires_at).toISOString() } : {}),
+      };
+      return grant;
+    },
   };
   // Declared only when the tsvector column exists (buildVectorSearchDdl may have been skipped
   // on pre-12 PostgreSQL / pre-0.5 pgvector). Explicit "fts" requests fail closed otherwise.
@@ -497,17 +740,22 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
       assertNotAborted(lexicalQuery.signal);
       const scope = requireScope(lexicalQuery, true) as Required<WorkingMemoryKey> & { threadId: string };
       requireNonEmptyString(lexicalQuery.text, "text");
+      const params: unknown[] = [scope.tenantId, scope.resourceId, scope.threadId, lexicalQuery.text, Math.max(1, lexicalQuery.topK)];
+      const acl = authorizationPredicate(lexicalQuery.authorization, deps.aclTable, scope.tenantId, params);
+      const ids = idsPredicate(lexicalQuery.ids, params);
+      const inv = invalidationPredicate(deps.invalidationTable);
       const result = await q.query(
         `SELECT ${VECTOR_COLUMNS}, ts_rank(text_tsv, websearch_to_tsquery('english', $4)) AS score
-         FROM ${table}
+         FROM ${table} t
          WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3
            AND text_tsv @@ websearch_to_tsquery('english', $4)
            AND (generation IS NULL OR generation = COALESCE(
                  (SELECT current_generation FROM ${deps.generationsTable}
                   WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3), generation))
+           ${acl}${ids}${inv}
          ORDER BY score DESC, sequence ASC, id ASC
          LIMIT $5`,
-        [scope.tenantId, scope.resourceId, scope.threadId, lexicalQuery.text, Math.max(1, lexicalQuery.topK)],
+        params,
       );
       return result.rows.map((row) => mapVectorRow(row, Number(row.score))) as MemoryVectorHit[];
     },
@@ -543,6 +791,18 @@ function assembleVectorStore(pool: Pool, deps: VectorTableDeps): PostgresVectorS
     async upsert(records, options = {}) {
       if (records.length === 0) return;
       return runVectorTransaction(pool, deps, (view) => view.upsert(records, options), options.signal);
+    },
+    async setSourceAccess(scope, grants, options = {}) {
+      return runVectorTransaction(pool, deps, (view) => view.setSourceAccess!(scope, grants, options), options.signal);
+    },
+    async invalidate(scope, entries, options = {}) {
+      return runVectorTransaction(pool, deps, (view) => view.invalidate!(scope, entries, options), options.signal);
+    },
+    async clearInvalidation(scope, ids, options = {}) {
+      return runVectorTransaction(pool, deps, (view) => view.clearInvalidation!(scope, ids, options), options.signal);
+    },
+    async setShareGrant(scope, grant, options = {}) {
+      return runVectorTransaction(pool, deps, (view) => view.setShareGrant!(scope, grant, options), options.signal);
     },
     async transaction(operation, options = {}) {
       return runVectorTransaction(pool, deps, operation, options.signal);
@@ -600,6 +860,9 @@ export async function createPostgresVectorStore(
     assembleVectorStore(pool, {
       table: qualifiedTable,
       generationsTable: `${quoteIdentifier(schema)}.${quoteIdentifier(`${table}_rag_scope_generations`)}`,
+      aclTable: `${quoteIdentifier(schema)}.${quoteIdentifier(`${table}_rag_source_acl`)}`,
+      invalidationTable: `${quoteIdentifier(schema)}.${quoteIdentifier(`${table}_invalidation`)}`,
+      shareGrantTable: `${quoteIdentifier(schema)}.${quoteIdentifier(`${table}_share_grant`)}`,
       maxEntryTextChars,
       dimensions: dimension,
       lexical: await textTsvAvailable(pool, schema, table).catch(() => false),

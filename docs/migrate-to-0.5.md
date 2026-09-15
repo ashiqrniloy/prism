@@ -120,7 +120,7 @@ Additive surface:
 
 What to do:
 
-1. You can drop `createSessionCachePolicy()` from Clay / host agent config if it existed only to inject session correlation.
+1. You can drop `createSessionCachePolicy()` from a host agent config if it existed only to inject session correlation.
 2. Prefer `createAgent({ thinkingLevel: "low" })` over hand-merging `providerOptions.compat`.
 3. Raw `provider.generate()` to OpenCode Go without `options.sessionId` now fails closed with `ProviderRequirementError` instead of HTTP 400.
 4. Custom generate sites should call `applyDefaultProviderRequestOptions(request, { sessionId, thinkingLevel })`.

@@ -13,6 +13,7 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import {
+  type CreateObservationalMemoryOptions,
   createObservationalMemory,
   createObservationalMemoryExtension,
   OBSERVATIONS_RECORDED,
@@ -32,7 +33,11 @@ function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): AIPro
   };
 }
 
-function attachFixture(worker: AIProvider, overrides: ObservationalMemorySettingsInput = {}) {
+function attachFixture(
+  worker: AIProvider,
+  overrides: ObservationalMemorySettingsInput = {},
+  options: { readonly create?: Partial<CreateObservationalMemoryOptions>; readonly sessionModel?: typeof model } = {},
+) {
   const store = createMemorySessionStore();
   const agent = createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), store });
   const baseSession = agent.createSession({ id: "s1" });
@@ -41,10 +46,11 @@ function attachFixture(worker: AIProvider, overrides: ObservationalMemorySetting
     reflection: { provider: worker, model: workerModel },
     dropper: { provider: worker, model: workerModel },
     overrides,
+    ...options.create,
   });
   const attached = om.attach(baseSession, {
-    appendEntry: (entry, options) => store.append(entry, options),
-    sessionModel: model,
+    appendEntry: (entry, entryOptions) => store.append(entry, entryOptions),
+    sessionModel: options.sessionModel ?? model,
   });
   return { attached, store, agent, om, baseSession };
 }
@@ -88,6 +94,122 @@ describe("observational memory attach", () => {
       (await attached.session.entries()).some((entry) => entry.kind === "compaction"),
       true,
     );
+  });
+
+  it("host_trigger_replaces_compact_after_tokens_in_both_directions", async () => {
+    // The callback declines while the token gate would have fired.
+    const declined = attachFixture(
+      sequenceProvider([[providerDone()]]),
+      {
+        observation: { messageTokens: 999_999 },
+        reflection: { observationTokens: 999_999 },
+        context: { compactAfterTokens: 1 },
+        agentMaxTurns: 1,
+      },
+      { create: { shouldCompact: () => false } },
+    );
+    await declined.attached.session.run("hello");
+    assert.equal(
+      (await declined.attached.session.entries()).some((entry) => entry.kind === "compaction"),
+      false,
+      "a false shouldCompact beats compactAfterTokens",
+    );
+
+    // An async callback accepts while the token gate would not have fired; it only reads entryCount,
+    // so the limits-free session model never has to resolve an input cap.
+    const accepted = attachFixture(
+      sequenceProvider([[providerDone()]]),
+      {
+        observation: { messageTokens: 999_999 },
+        reflection: { observationTokens: 999_999 },
+        context: { compactAfterTokens: 999_999 },
+        agentMaxTurns: 1,
+      },
+      { create: { shouldCompact: async (context) => context.entryCount >= 1 } },
+    );
+    await accepted.attached.session.run("hello");
+    assert.equal(
+      (await accepted.attached.session.entries()).some((entry) => entry.kind === "compaction"),
+      true,
+      "a true shouldCompact beats compactAfterTokens",
+    );
+  });
+
+  it("input_ratio_trigger_uses_the_session_model_cap", async () => {
+    const sessionModel = { provider: "mock", model: "demo", limits: { contextWindow: 1_100, maxOutputTokens: 0 } };
+    const fire = attachFixture(
+      sequenceProvider([[providerDone()]]),
+      {
+        observation: { messageTokens: 999_999 },
+        reflection: { observationTokens: 999_999 },
+        context: { compactAfterTokens: 999_999 },
+        agentMaxTurns: 1,
+      },
+      { create: { trigger: { type: "input_ratio", ratio: 0.02 } }, sessionModel },
+    );
+    await fire.attached.session.run("hello");
+    assert.equal(
+      (await fire.attached.session.entries()).some((entry) => entry.kind === "compaction"),
+      true,
+      "a small cap ratio fires on a short branch",
+    );
+
+    const idle = attachFixture(
+      sequenceProvider([[providerDone()]]),
+      {
+        observation: { messageTokens: 999_999 },
+        reflection: { observationTokens: 999_999 },
+        context: { compactAfterTokens: 999_999 },
+        agentMaxTurns: 1,
+      },
+      { create: { trigger: { type: "input_ratio", ratio: 0.5 } }, sessionModel },
+    );
+    await idle.attached.session.run("hello");
+    assert.equal(
+      (await idle.attached.session.entries()).some((entry) => entry.kind === "compaction"),
+      false,
+      "the same branch stays under a larger ratio",
+    );
+  });
+
+  it("throwing_trigger_fails_closed_and_reports_through_debug", async () => {
+    const debug: { message: string; data?: unknown }[] = [];
+    const fixture = attachFixture(
+      sequenceProvider([[providerDone()]]),
+      {
+        observation: { messageTokens: 999_999 },
+        reflection: { observationTokens: 999_999 },
+        context: { compactAfterTokens: 1 },
+        agentMaxTurns: 1,
+      },
+      {
+        create: {
+          debug: (message, data) => debug.push({ message, data }),
+          shouldCompact: () => {
+            throw new Error("trigger boom");
+          },
+        },
+      },
+    );
+
+    await fixture.attached.session.run("hello");
+
+    assert.equal(
+      (await fixture.attached.session.entries()).some((entry) => entry.kind === "compaction"),
+      false,
+      "a throwing callback never compacts",
+    );
+    assert.deepEqual(
+      debug
+        .filter((entry) => entry.message === "observational-memory:compaction-trigger-error")
+        .map((entry) => (entry.data as Error).message),
+      ["trigger boom"],
+    );
+  });
+
+  it("rejects_a_malformed_trigger_at_create", () => {
+    assert.throws(() => createObservationalMemory({ trigger: { type: "whenever" } as never }), /unknown compaction trigger type/);
+    assert.throws(() => createObservationalMemory({ shouldCompact: "yes" as never }), /shouldCompact must be a function/);
   });
 
   it("unattached_extension_setup_makes_zero_provider_calls", async () => {

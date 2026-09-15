@@ -2,11 +2,13 @@ import { randomUUID } from "node:crypto";
 import type {
   CredentialValueSource,
   ErrorInfo,
+  JsonObject,
   ModelConfig,
   RealtimeCaps,
   RealtimeEvent,
   RealtimeSession,
   SecretRedactor,
+  Usage,
 } from "@arnilo/prism";
 import { redactSecrets, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
 
@@ -28,6 +30,14 @@ export interface OpenAIRealtimeSessionOptions {
   readonly caps?: RealtimeCaps;
   readonly redactor?: SecretRedactor;
   readonly signal?: AbortSignal;
+  /** Host tools advertised via `session.update`. Omitted = no update (provider defaults). */
+  readonly tools?: readonly OpenAIRealtimeTool[];
+}
+
+export interface OpenAIRealtimeTool {
+  readonly name: string;
+  readonly description?: string;
+  readonly parameters?: JsonObject;
 }
 
 /** Minimal transport surface the session consumes. Matches the global WebSocket subset. */
@@ -45,6 +55,9 @@ const DEFAULT_CAPS: Required<RealtimeCaps> = {
   maxWallMs: 600_000,
 };
 const OPEN = 1; // WebSocket.OPEN
+const HARD_TOOL_COUNT = 32;
+const HARD_TOOL_ARGS_BYTES = 65_536;
+const HARD_TOOL_OUTPUT_BYTES = 65_536;
 // One active session per host ownership scope. Use a run-scoped ownerId when each run
 // needs an independent session; no process-wide control plane is introduced.
 const activeOwners = new Set<string>();
@@ -57,7 +70,7 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
   const caps = resolveCaps(options.caps);
   const providerId = "openai";
   const queue: QueuedEvent[] = [];
-  const hostedCalls = new Set<string>();
+  const seenCalls = new Set<string>();
   let queuedBytes = 0;
   let transport: RealtimeTransport | undefined;
   let opening: Promise<void> | undefined;
@@ -202,10 +215,83 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
     }
   }
 
+  function rememberCall(callId: string): boolean {
+    if (seenCalls.has(callId)) return false;
+    seenCalls.add(callId);
+    return true;
+  }
+
   function emitHostedCall(name: string, callId: string): void {
-    if (hostedCalls.has(callId)) return;
-    hostedCalls.add(callId);
+    if (!rememberCall(callId)) return;
     push({ type: "tool_call", call: { type: "tool_call", id: callId, name, arguments: {}, authority: "provider-hosted" } });
+  }
+
+  function emitHostFunction(parsed: { readonly [key: string]: unknown }): void {
+    const callId = typeof parsed.call_id === "string" ? parsed.call_id : undefined;
+    const name = typeof parsed.name === "string" ? parsed.name : undefined;
+    if (!callId || !name) return;
+    const id = opaqueId(callId, "call_id", 256);
+    if (!rememberCall(id)) return;
+    const raw = typeof parsed.arguments === "string" ? parsed.arguments : "{}";
+    if (Buffer.byteLength(raw) > HARD_TOOL_ARGS_BYTES) {
+      push({
+        type: "tool_call",
+        call: {
+          type: "tool_call",
+          id,
+          name,
+          arguments: {},
+          argumentsError: { name: "Error", message: "tool arguments exceed cap", code: "ERR_PRISM_REALTIME_LIMIT" },
+        },
+      });
+      return;
+    }
+    let args: JsonObject = {};
+    let argumentsError: ErrorInfo | undefined;
+    try {
+      const parsedArgs: unknown = raw.length === 0 ? {} : JSON.parse(raw);
+      if (!parsedArgs || typeof parsedArgs !== "object" || Array.isArray(parsedArgs)) {
+        argumentsError = { name: "Error", message: "tool arguments must be a JSON object" };
+      } else args = parsedArgs as JsonObject;
+    } catch {
+      argumentsError = { name: "Error", message: "tool arguments are not valid JSON" };
+    }
+    push({
+      type: "tool_call",
+      call: {
+        type: "tool_call",
+        id,
+        name,
+        arguments: args,
+        ...(argumentsError ? { argumentsError } : {}),
+      },
+    });
+  }
+
+  function emitUsage(parsed: { readonly [key: string]: unknown }): void {
+    const response = parsed.response as
+      | { readonly usage?: { readonly input_tokens?: unknown; readonly output_tokens?: unknown; readonly total_tokens?: unknown } }
+      | undefined;
+    const raw = response?.usage;
+    if (!raw) return;
+    const usage: Usage = {
+      ...(typeof raw.input_tokens === "number" && Number.isFinite(raw.input_tokens) ? { inputTokens: raw.input_tokens } : {}),
+      ...(typeof raw.output_tokens === "number" && Number.isFinite(raw.output_tokens) ? { outputTokens: raw.output_tokens } : {}),
+      ...(typeof raw.total_tokens === "number" && Number.isFinite(raw.total_tokens) ? { totalTokens: raw.total_tokens } : {}),
+    };
+    if (usage.inputTokens === undefined && usage.outputTokens === undefined && usage.totalTokens === undefined) return;
+    push({ type: "usage", usage });
+  }
+
+  function advertiseTools(): void {
+    if (!options.tools || !transport || transport.readyState !== OPEN) return;
+    const tools = options.tools.slice(0, HARD_TOOL_COUNT).map((tool) => ({
+      type: "function",
+      name: tool.name,
+      ...(tool.description ? { description: tool.description } : {}),
+      parameters: tool.parameters ?? { type: "object" },
+    }));
+    transport.send(JSON.stringify({ type: "session.update", session: { tools, tool_choice: "auto" } }));
   }
 
   function handleInbound(text: string): void {
@@ -230,7 +316,16 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
         serverSessionId = nextId;
         started = true;
         push({ type: "session_started", sessionId: serverSessionId });
+        advertiseTools();
       }
+      return;
+    }
+    if (type === "response.function_call_arguments.done") {
+      emitHostFunction(parsed);
+      return;
+    }
+    if (type === "response.done" || type === "response.completed") {
+      emitUsage(parsed);
       return;
     }
     if (type === "response.output_audio.delta" && typeof parsed.delta === "string") {
@@ -251,7 +346,7 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
     }
     if (type === "response.output_item.added" && hostedToolItem(parsed.item)) {
       const item = parsed.item as { readonly id?: string; readonly type?: string };
-      emitHostedCall(item.type!, item.id ?? `hosted:${hostedCalls.size}`);
+      emitHostedCall(item.type!, item.id ?? `hosted:${seenCalls.size}`);
       return;
     }
     const progress = /^response\.([a-z_]+_call)\.(?:in_progress|searching|completed)$/.exec(type);
@@ -298,6 +393,14 @@ export function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOption
     },
     async close(reason?: string, _closeOptions?: { readonly signal?: AbortSignal }) {
       doClose(reason);
+    },
+    async completeTool(callId: string, output: string, completeOptions?: { readonly signal?: AbortSignal }) {
+      if (closed || !transport || transport.readyState !== OPEN || !started) throw new Error("realtime session not started");
+      const id = opaqueId(callId, "callId", 256);
+      if (Buffer.byteLength(output) > HARD_TOOL_OUTPUT_BYTES) throw new Error("tool output exceeds cap");
+      transport.send(JSON.stringify({ type: "conversation.item.create", item: { type: "function_call_output", call_id: id, output } }));
+      transport.send(JSON.stringify({ type: "response.create" }));
+      completeOptions?.signal?.throwIfAborted();
     },
   };
 }

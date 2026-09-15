@@ -141,6 +141,51 @@ export function filterTools(tools: readonly ToolDefinition[], filter?: ToolFilte
   return tools.filter((tool) => !denied.has(tool.name) && allows.every((allow) => allow.has(tool.name)));
 }
 
+/** Cap matches tool-search index; run allow-lists never exceed the disclosed set. */
+export const HARD_RUN_TOOL_NAMES = 1024;
+const MAX_RUN_TOOL_NAME_CHARS = 256;
+
+function assertRunToolNames(names: readonly string[]): readonly string[] {
+  if (names.length > HARD_RUN_TOOL_NAMES) {
+    throw new TypeError(`RunOptions.toolNames exceeds ${HARD_RUN_TOOL_NAMES} entries`);
+  }
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const name of names) {
+    if (typeof name !== "string" || name.length === 0 || name.length > MAX_RUN_TOOL_NAME_CHARS) {
+      throw new TypeError(`RunOptions.toolNames entries must be non-empty strings of at most ${MAX_RUN_TOOL_NAME_CHARS} characters`);
+    }
+    if (!seen.has(name)) {
+      seen.add(name);
+      out.push(name);
+    }
+  }
+  return out;
+}
+
+/**
+ * Per-run allow-list. Omitted grant → unchanged list. Checkpointed grant cannot widen.
+ * Fresh unknown names fail closed; resume drops names the current registry no longer has.
+ */
+export function selectRunTools(
+  listed: readonly ToolDefinition[],
+  requested: readonly string[] | undefined,
+  checkpoint?: readonly string[],
+): { readonly tools: readonly ToolDefinition[]; readonly grant: readonly string[] | undefined } {
+  const req = requested === undefined ? undefined : assertRunToolNames(requested);
+  const grant = checkpoint === undefined ? req : req === undefined ? checkpoint : req.filter((name) => checkpoint.includes(name));
+  if (grant === undefined) return { tools: listed, grant };
+  if (grant.length === 0) return { tools: [], grant };
+  const available = new Set(listed.map((tool) => tool.name));
+  if (checkpoint === undefined) {
+    for (const name of grant) {
+      if (!available.has(name)) throw new TypeError(`Unknown run tool: ${name}`);
+    }
+    return { tools: filterTools(listed, { allow: grant }), grant };
+  }
+  return { tools: filterTools(listed, { allow: grant.filter((name) => available.has(name)) }), grant };
+}
+
 function toolExecutionMetadata(startedAt: string, status: ToolCallStatus): ToolExecutionMetadata {
   return { durationMs: Math.max(0, Date.now() - Date.parse(startedAt)), status };
 }

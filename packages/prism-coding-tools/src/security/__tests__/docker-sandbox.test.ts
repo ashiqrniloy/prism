@@ -7,10 +7,14 @@ import { test } from "node:test";
 import { buildDockerCreateArgsForTest } from "../docker-sandbox.js";
 import type { DockerCliRequest, DockerCliResult, DockerRunner } from "../index.js";
 import {
+  computeCommandFingerprint,
+  createDockerProcessRecoveryBackend,
   createDockerSandbox,
   createImportTarStream,
   createSecretRedactor,
+  decodeDockerProcessRef,
   DockerSandboxError,
+  encodeDockerProcessRef,
   HARD_CPUS,
   HARD_MAX_COMMANDS,
   resolveDockerSandboxLimits,
@@ -737,4 +741,352 @@ test("assertBrowserSandboxNetwork requires egress attestation for custom network
       }),
     /proxyEndpoint/,
   );
+});
+
+test("DockerProcessRef: encode, decode, and fail-closed tampering tests", async () => {
+  const fp = computeCommandFingerprint("node", ["server.js"]);
+  const data = {
+    version: 1 as const,
+    containerId: "0123456789abcdef0123456789abcdef",
+    processId: "proc-1234",
+    commandFingerprint: fp,
+    workspace: "/workspace",
+  };
+
+  const ref = encodeDockerProcessRef(data);
+  assert.ok(ref.startsWith("prism-docker-proc:"));
+
+  const decoded = decodeDockerProcessRef(ref);
+  assert.deepEqual(decoded, data);
+
+  // Rejects bad prefixes
+  assert.equal(decodeDockerProcessRef("other-proc:1234"), null);
+  // Rejects invalid base64url or corrupt JSON
+  assert.equal(decodeDockerProcessRef("prism-docker-proc:!!!not-base64"), null);
+  assert.equal(decodeDockerProcessRef(`prism-docker-proc:${Buffer.from("not-json").toString("base64url")}`), null);
+  // Rejects missing required fields
+  const missingCid = Buffer.from(JSON.stringify({ v: 1, pid: "p1", fp: "f1", ws: "/ws" })).toString("base64url");
+  assert.equal(decodeDockerProcessRef(`prism-docker-proc:${missingCid}`), null);
+  // Rejects unexpected version
+  const wrongVersion = Buffer.from(JSON.stringify({ v: 2, cid: "c1", pid: "p1", fp: "f1", ws: "/ws" })).toString("base64url");
+  assert.equal(decodeDockerProcessRef(`prism-docker-proc:${wrongVersion}`), null);
+});
+
+test("DockerSandboxSession startProcess: pipes stdin, streams output, wait, and signals", async () => {
+  await withTempDocker(async (dockerPath, sourceRoot) => {
+    let processResolve: ((res: DockerCliResult) => void) | undefined;
+    const receivedStdin: Buffer[] = [];
+    const signalsReceived: string[] = [];
+
+    const { runner } = createFakeRunner(async (request) => {
+      if (request.args[0] === "version") return ok("29.6.1\n");
+      if (request.args[0] === "create") return ok("0123456789abcdef0123456789abcdef\n");
+      if (request.args[0] === "start") return ok("0123456789abcdef0123456789abcdef\n");
+      if (request.args[0] === "exec" && request.args.includes("-i")) {
+        // Mock child process spawn
+        const fakeChild = {
+          pid: 9999,
+          kill: (sig: string) => {
+            signalsReceived.push(sig);
+          },
+          unref: () => {},
+        };
+        request.onSpawn?.(fakeChild as any);
+
+        request.onData?.(Buffer.from("ready\n"));
+        if (request.stdin && typeof (request.stdin as any).on === "function") {
+          (request.stdin as any).on("data", (chunk: any) => receivedStdin.push(Buffer.from(chunk)));
+        }
+
+        return await new Promise<DockerCliResult>((resolve) => {
+          processResolve = resolve;
+        });
+      }
+      if (request.args[0] === "stop" || request.args[0] === "kill" || request.args[0] === "rm") return ok();
+      return ok();
+    });
+
+    const sandbox = await createDockerSandbox({
+      docker: dockerPath,
+      image: IMAGE,
+      sourceRoot,
+      user: "10001:10001",
+      runner,
+      skipImport: true,
+      limits: { startupTimeoutMs: 5_000, wallTimeMs: 60_000, idleTimeoutMs: 60_000 },
+    });
+
+    const stdoutChunks: string[] = [];
+    const handle = await sandbox.startProcess!({
+      file: "node",
+      args: ["worker.js"],
+      cwd: "/workspace",
+      onData: (chunk) => stdoutChunks.push(chunk.toString("utf8")),
+    });
+
+    assert.ok(handle.ref?.startsWith("prism-docker-proc:"));
+    assert.equal(handle.pid, 9999);
+    assert.deepEqual(stdoutChunks, ["ready\n"]);
+
+    // Write to stdin
+    await handle.write(Buffer.from("ping\n"));
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(Buffer.concat(receivedStdin).toString("utf8"), "ping\n");
+
+    // Signal
+    await handle.signal("SIGTERM");
+    assert.ok(signalsReceived.includes("SIGTERM"));
+
+    // Wait promise
+    const waitPromise = handle.wait();
+    processResolve!(ok());
+    const exitResult = await waitPromise;
+    assert.equal(exitResult.exitCode, 0);
+
+    // After exit, wait() immediately returns exitCode
+    const secondWait = await handle.wait();
+    assert.equal(secondWait.exitCode, 0);
+
+    await sandbox.close();
+  });
+});
+
+test("DockerSandboxSession startProcess: enforces output bounds", async () => {
+  await withTempDocker(async (dockerPath, sourceRoot) => {
+    const { runner } = createFakeRunner(async (request) => {
+      if (request.args[0] === "version") return ok("29.6.1\n");
+      if (request.args[0] === "create") return ok("0123456789abcdef0123456789abcdef\n");
+      if (request.args[0] === "start") return ok("0123456789abcdef0123456789abcdef\n");
+      if (request.args[0] === "exec" && request.args.includes("-i")) {
+        // Output exceeding limit
+        request.onData?.(Buffer.alloc(2000, "x"));
+        return ok();
+      }
+      return ok();
+    });
+
+    const sandbox = await createDockerSandbox({
+      docker: dockerPath,
+      image: IMAGE,
+      sourceRoot,
+      user: "10001:10001",
+      runner,
+      skipImport: true,
+      limits: { maxOutputBytes: 1000, startupTimeoutMs: 5_000, wallTimeMs: 60_000, idleTimeoutMs: 60_000 },
+    });
+
+    await assert.rejects(async () => {
+      const handle = await sandbox.startProcess!({
+        file: "cat",
+        args: ["/dev/zero"],
+      });
+      await handle.wait();
+    }, /maxOutputBytes/);
+
+    await sandbox.close();
+  });
+});
+
+test("DockerSandboxSession attachProcess and createDockerProcessRecoveryBackend: attested reconnect and strict fail-closed", async () => {
+  await withTempDocker(async (dockerPath, sourceRoot) => {
+    let processResolve: ((res: DockerCliResult) => void) | undefined;
+    const { runner } = createFakeRunner(async (request) => {
+      if (request.args[0] === "version") return ok("29.6.1\n");
+      if (request.args[0] === "create") return ok("0123456789abcdef0123456789abcdef\n");
+      if (request.args[0] === "start") return ok("0123456789abcdef0123456789abcdef\n");
+      if (request.args[0] === "exec" && request.args.includes("-i")) {
+        return await new Promise<DockerCliResult>((resolve) => {
+          processResolve = resolve;
+        });
+      }
+      return ok();
+    });
+
+    const sandbox = await createDockerSandbox({
+      docker: dockerPath,
+      image: IMAGE,
+      sourceRoot,
+      user: "10001:10001",
+      runner,
+      skipImport: true,
+      labels: { "custom.label": "valid" },
+      limits: { startupTimeoutMs: 5_000, wallTimeMs: 60_000, idleTimeoutMs: 60_000 },
+    });
+
+    const handle = await sandbox.startProcess!({
+      file: "node",
+      args: ["server.js"],
+    });
+    const ref = handle.ref!;
+    assert.ok(ref);
+
+    // 1. Live attach with sandbox.attachProcess
+    const attached = await sandbox.attachProcess!(ref);
+    assert.equal(attached, handle);
+
+    // 2. Recovery backend attach with matching criteria
+    const recoveryBackend = createDockerProcessRecoveryBackend(sandbox, {
+      expectedContainerId: "0123456789abcdef0123456789abcdef",
+      expectedWorkspace: "/workspace",
+      expectedLabels: { "custom.label": "valid" },
+    });
+    const attachedViaBackend = await recoveryBackend.attach(ref);
+    assert.equal(attachedViaBackend, handle as any);
+
+    // 3. Rejects wrong containerId
+    const wrongContainerBackend = createDockerProcessRecoveryBackend(sandbox, {
+      expectedContainerId: "mismatched-cid",
+    });
+    assert.equal(await wrongContainerBackend.attach(ref), null);
+
+    // 4. Rejects wrong workspace (workspace coherence)
+    const wrongWsBackend = createDockerProcessRecoveryBackend(sandbox, {
+      expectedWorkspace: "/different/workspace",
+    });
+    assert.equal(await wrongWsBackend.attach(ref), null);
+
+    // 5. Rejects wrong label
+    const wrongLabelBackend = createDockerProcessRecoveryBackend(sandbox, {
+      expectedLabels: { "custom.label": "invalid" },
+    });
+    assert.equal(await wrongLabelBackend.attach(ref), null);
+
+    // 6. Rejects tampered ref
+    assert.equal(await sandbox.attachProcess!("prism-docker-proc:invalid"), null);
+
+    // 7. Finish process and verify attachProcess fails closed (no live handle)
+    processResolve!(ok());
+    await handle.wait();
+    assert.equal(await sandbox.attachProcess!(ref), null);
+
+    await sandbox.close();
+  });
+});
+
+test("DockerSandboxSession stop cleanly terminates all active child processes", async () => {
+  await withTempDocker(async (dockerPath, sourceRoot) => {
+    let killed = false;
+    let processResolve: ((res: DockerCliResult) => void) | undefined;
+    const { runner } = createFakeRunner(async (request) => {
+      if (request.args[0] === "version") return ok("29.6.1\n");
+      if (request.args[0] === "create") return ok("0123456789abcdef0123456789abcdef\n");
+      if (request.args[0] === "start") return ok("0123456789abcdef0123456789abcdef\n");
+      if (request.args[0] === "exec" && request.args.includes("-i")) {
+        const fakeChild = {
+          pid: 8888,
+          kill: (sig: string) => {
+            if (sig === "SIGKILL") killed = true;
+            processResolve?.(ok());
+          },
+          unref: () => {},
+        };
+        request.onSpawn?.(fakeChild as any);
+        return await new Promise<DockerCliResult>((resolve) => {
+          processResolve = resolve;
+        });
+      }
+      return ok();
+    });
+
+    const sandbox = await createDockerSandbox({
+      docker: dockerPath,
+      image: IMAGE,
+      sourceRoot,
+      user: "10001:10001",
+      runner,
+      skipImport: true,
+      limits: { startupTimeoutMs: 5_000, wallTimeMs: 60_000, idleTimeoutMs: 60_000 },
+    });
+
+    const handle = await sandbox.startProcess!({
+      file: "sleep",
+      args: ["100"],
+    });
+
+    // Calling sandbox.stop() should kill the process
+    await sandbox.stop();
+    assert.equal(killed, true);
+    await handle.wait();
+    await sandbox.close();
+  });
+});
+
+test("Integration: ProcessSessions + DockerSandbox with durable recovery and fail-closed unknown", async () => {
+  const { createMemoryCheckpointStore, createMemoryLeaseStore } = await import("@arnilo/prism");
+  const { createProcessSessions, loadProcessRecoveryRecord, resolveProcessRecoveryLimits } = await import("../../agent/process/index.js");
+
+  await withTempDocker(async (dockerPath, sourceRoot) => {
+    let processResolve: ((res: DockerCliResult) => void) | undefined;
+    const { runner } = createFakeRunner(async (request) => {
+      if (request.args[0] === "version") return ok("29.6.1\n");
+      if (request.args[0] === "create") return ok("0123456789abcdef0123456789abcdef\n");
+      if (request.args[0] === "start") return ok("0123456789abcdef0123456789abcdef\n");
+      if (request.args[0] === "exec" && request.args.includes("-i")) {
+        return await new Promise<DockerCliResult>((resolve) => {
+          processResolve = resolve;
+        });
+      }
+      return ok();
+    });
+
+    const checkpoints = createMemoryCheckpointStore();
+    const leases = createMemoryLeaseStore();
+
+    const sandbox = await createDockerSandbox({
+      docker: dockerPath,
+      image: IMAGE,
+      sourceRoot,
+      user: "10001:10001",
+      runner,
+      skipImport: true,
+      limits: { startupTimeoutMs: 5_000, wallTimeMs: 60_000, idleTimeoutMs: 60_000 },
+    });
+
+    const sessions = createProcessSessions({
+      cwd: sourceRoot,
+      checkpoints,
+      leases,
+      ownerId: "worker-1",
+      sandbox,
+    });
+
+    // 1. Start a durable process session
+    const session = await sessions.start({
+      command: "node",
+      args: ["app.js"],
+    });
+
+    const metadata = session.metadata();
+    assert.equal(metadata.state, "running");
+
+    const record = await loadProcessRecoveryRecord({
+      checkpoints,
+      id: session.id,
+      limits: resolveProcessRecoveryLimits(),
+    });
+    assert.equal(record?.record.state, "running");
+    assert.ok(record?.record.backendRef?.startsWith("prism-docker-proc:"));
+
+    // 2. Recover sessions with live container & process -> attested reattach
+    const recovery1 = await sessions.recover();
+    assert.equal(recovery1.attached, 1);
+    assert.equal(recovery1.unknown, 0);
+
+    // 3. Stop/close the sandbox while process was still running (simulating container loss/host crash)
+    await sandbox.close();
+
+    // 4. Second host tries to recover -> Docker container is gone / attach fails closed -> marks record unknown
+    const sessions2 = createProcessSessions({
+      cwd: sourceRoot,
+      checkpoints,
+      leases,
+      ownerId: "worker-2",
+      sandbox, // closed sandbox
+    });
+
+    const recovery2 = await sessions2.recover();
+    assert.equal(recovery2.unknown, 1);
+    assert.equal(recovery2.attached, 0);
+    processResolve?.(ok());
+  });
 });

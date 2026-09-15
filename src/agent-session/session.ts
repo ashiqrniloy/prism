@@ -3,7 +3,16 @@
 import { ActiveDurableRun } from "../agent-approval.js";
 import type { PendingToolCall, StoredAgentRunState } from "../agent-run-state.js";
 import { policyList } from "../agent-tool-dispatch.js";
+import {
+  type AttentionStickyFrontier,
+  createAttentionStickyFrontier,
+  type PersistedAttentionStickyFrontier,
+  resolveInputCap,
+  restoreAttentionStickyFrontier,
+  serializeAttentionStickyFrontier,
+} from "../attention-compiler.js";
 import { createDefaultCompactionStrategy, isCompactionEntryData } from "../compaction.js";
+import { estimateAssemblyTokens, estimateTextTokens } from "../context-budget.js";
 import type {
   Agent,
   AgentEvent,
@@ -42,6 +51,7 @@ import {
   DEFAULT_MAX_PENDING_STEERS,
   DEFAULT_SNAPSHOT_CACHE_TTL_MS,
   HARD_MAX_SNAPSHOT_CACHE_TTL_MS,
+  resolveShouldCompact,
 } from "../contracts.js";
 import { GuardrailError, runGuardrails } from "../guardrails.js";
 import type { AgentIdentity } from "../identity.js";
@@ -115,6 +125,31 @@ export class RuntimeAgentSession implements AgentSession {
   restoredSkillBodies: readonly LoadedSkillBodiesEntry[] = [];
   /** Skills of the current run (for the bodies snapshot); replaced at each run start. */
   activeRunSkills: readonly import("../contracts.js").Skill[] = [];
+  /** Per-run tool allow-list (Task 21); undefined means the full registered set. */
+  activeToolNames?: readonly string[];
+  /** Sticky frontier for this session (plan 074 C10); created on first use, so a session whose
+   *  agents never enable the compiler allocates nothing. Mutations stay applied once made, so a
+   *  later under-ratio turn re-applies them instead of rewriting the prompt-cache prefix. */
+  private attentionSticky?: AttentionStickyFrontier;
+
+  attentionStickyFor(): AttentionStickyFrontier {
+    this.attentionSticky ??= createAttentionStickyFrontier();
+    return this.attentionSticky;
+  }
+
+  /** Plan 074 P3: bounded snapshot for a durable checkpoint; `undefined` when the session never
+   *  mutated anything, so a compiler-off (or never-over-ratio) session persists nothing extra. */
+  serializedAttentionSticky(): PersistedAttentionStickyFrontier | undefined {
+    return this.attentionSticky && this.attentionSticky.thinking.size + this.attentionSticky.toolCallIds.size > 0
+      ? serializeAttentionStickyFrontier(this.attentionSticky)
+      : undefined;
+  }
+
+  /** Plan 074 P3: restore a frontier validated at checkpoint load, so a resumed run keeps its
+   *  stubs instead of re-deciding its first turn from the ratio. */
+  restoreAttentionSticky(persisted: PersistedAttentionStickyFrontier): void {
+    this.attentionSticky = restoreAttentionStickyFrontier(persisted);
+  }
 
   /** Plan 015 Task 4: re-add persisted loaded-skill names (names only; bodies re-resolve on demand). */
   restoreLoadedSkills(names: readonly string[]): void {
@@ -498,9 +533,25 @@ export class RuntimeAgentSession implements AgentSession {
 
   async autoCompact(runId: string, options: RunOptions, signal: AbortSignal, inputMessages: readonly Message[]): Promise<void> {
     const compaction = mergeCompaction(this.agent.config.compaction, options.compaction);
-    if (!compaction || compaction.thresholdEntries === undefined) return;
+    if (!compaction || (compaction.trigger === undefined && compaction.thresholdEntries === undefined)) return;
     const snapshot = await this.snapshot();
-    if (snapshot.entries.length <= compaction.thresholdEntries || snapshot.entries.at(-1)?.kind === "compaction") return;
+    // A branch that just compacted keeps its fresh summary: no second pass over the same entries.
+    if (snapshot.entries.at(-1)?.kind === "compaction") return;
+    const shouldCompact = await resolveShouldCompact(
+      { trigger: compaction.trigger, thresholdEntries: compaction.thresholdEntries },
+      {
+        sessionId: this.id,
+        entryCount: snapshot.entries.length,
+        // Estimates of the branch the run is about to send: messages plus carried summaries.
+        estimateInputTokens: () =>
+          estimateAssemblyTokens(snapshot.messages) + snapshot.summaries.reduce((sum, summary) => sum + estimateTextTokens(summary), 0),
+        // Same cap helper the attention compiler resolves its `inputCap` with.
+        resolveInputCapTokens: () => resolveInputCap(undefined, options.model ?? this.agent.config.model),
+        metadata: compaction.metadata,
+        signal,
+      },
+    );
+    if (!shouldCompact) return;
     await this.compactBranch(compaction, runId, signal, "auto");
     const compacted = await this.snapshot();
     this.history = withoutTrailingInput(compacted.messages, inputMessages);

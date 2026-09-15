@@ -51,6 +51,7 @@ export interface ProcessSandboxStartRequest {
  */
 export interface ProcessSandboxBackend {
   startProcess?(request: ProcessSandboxStartRequest): Promise<ProcessSandboxHandle>;
+  attachProcess?(ref: string): Promise<ProcessSandboxHandle | null>;
   status?(): Promise<{ readonly state: string }>;
 }
 

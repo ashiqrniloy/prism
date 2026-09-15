@@ -1,7 +1,9 @@
-import type { AIProvider, ModelConfig, ProviderPackage } from "@arnilo/prism";
-import { defineProviderPackage, trimTrailingSlashes } from "@arnilo/prism";
+import type { AIProvider, ModelConfig, ProviderRequest, ProviderPackage } from "@arnilo/prism";
+import { defineProviderPackage, providerError, trimTrailingSlashes } from "@arnilo/prism";
+import { httpStatusError, readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
 import { openAICompatThinkingExtra } from "../shared/openai-compat.js";
+import { bedrockConverseBody, bedrockConverseResponseEvents, bedrockConverseStreamEvents } from "./converse.js";
 import { type AwsCredentials, signAwsRequest } from "./sigv4.js";
 
 export type BedrockCredentialSource = AwsCredentials | (() => AwsCredentials | Promise<AwsCredentials>);
@@ -24,7 +26,27 @@ export interface BedrockProviderOptions {
 }
 
 export interface BedrockProviderPackageOptions extends BedrockProviderOptions {
+  /** Route to register: `compatible` (OpenAI-compatible `/openai/v1`) or native `converse`. Default `compatible`. */
+  readonly api?: BedrockRoute;
+  /** Native Converse only: use `ConverseStream` (default) or the non-streaming `Converse` operation. */
+  readonly stream?: boolean;
   readonly models?: readonly ModelConfig[];
+}
+
+export type BedrockRoute = "compatible" | "converse";
+
+/** Hard byte ceiling for one non-streaming `Converse` response body (streaming frames have their own cap). */
+export const BEDROCK_CONVERSE_RESPONSE_MAX_BYTES = 4 * 1024 * 1024;
+
+export interface BedrockConverseProviderOptions extends BedrockProviderOptions {
+  /** `true` (default) streams `ConverseStream`; `false` performs one non-streaming `Converse` call. */
+  readonly stream?: boolean;
+}
+
+interface BedrockSignedTransport {
+  readonly endpoint: string;
+  readonly region: string;
+  readonly fetch: typeof fetch;
 }
 
 async function resolveAwsCredentials(source: BedrockCredentialSource): Promise<AwsCredentials> {
@@ -52,10 +74,22 @@ export function bedrockRuntimeEndpoint(region: string, endpoint?: string): strin
 }
 
 export function createBedrockProvider(options: BedrockProviderOptions): AIProvider {
+  const transport = bedrockSignedTransport(options);
+
+  return createOpenAICompatibleProvider({
+    id: options.id ?? "bedrock",
+    baseUrl: `${transport.endpoint}/openai/v1`,
+    authStyle: "none",
+    fetch: transport.fetch,
+    buildBodyExtra: openAICompatThinkingExtra,
+  });
+}
+
+/** Resolve region/endpoint once and build a SigV4-signing fetch over the host transport. */
+function bedrockSignedTransport(options: BedrockProviderOptions): BedrockSignedTransport {
   const region = options.region.trim();
   if (!region) throw new Error("Bedrock region is required");
   const endpoint = bedrockRuntimeEndpoint(region, options.endpoint);
-  const id = options.id ?? "bedrock";
   const sign = options.signRequest ?? signAwsRequest;
   const fetchImpl = options.fetch ?? fetch;
 
@@ -87,34 +121,105 @@ export function createBedrockProvider(options: BedrockProviderOptions): AIProvid
     return fetchImpl(url, { ...init, method, headers: signed, body });
   };
 
-  return createOpenAICompatibleProvider({
+  return { endpoint, region, fetch: signedFetch };
+}
+
+/**
+ * Native `Converse` route: Prism messages/tools/media/cache/structured-output map to
+ * the model-agnostic Converse body, and `ConverseStream` frames (AWS event stream) map
+ * back to Prism provider events. The OpenAI-compatible route stays available and explicit.
+ */
+export function createBedrockConverseProvider(options: BedrockConverseProviderOptions): AIProvider {
+  const id = options.id ?? "bedrock";
+  const stream = options.stream ?? true;
+  const transport = bedrockSignedTransport(options);
+
+  return {
     id,
-    baseUrl: `${endpoint}/openai/v1`,
-    authStyle: "none",
-    fetch: signedFetch,
-    buildBodyExtra: openAICompatThinkingExtra,
-  });
+    async *generate(request: ProviderRequest) {
+      if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
+      const secrets: (string | undefined)[] = [];
+      try {
+        assertRouteCapabilities(request, stream);
+        const body = await bedrockConverseBody(request);
+        const credentials = await resolveAwsCredentials(options.credential);
+        secrets.push(credentials.accessKeyId, credentials.secretAccessKey, credentials.sessionToken);
+        const url = `${transport.endpoint}/model/${encodeURIComponent(request.model.model)}/converse${stream ? "-stream" : ""}`;
+        const response = await transport.fetch(url, {
+          method: "POST",
+          headers: {
+            ...request.options?.headers,
+            "content-type": "application/json",
+            accept: stream ? "application/vnd.amazon.eventstream" : "application/json",
+          },
+          body: JSON.stringify(body),
+          signal: request.signal,
+        });
+        if (!response.ok) {
+          yield providerError(
+            httpStatusError("Bedrock Converse request failed", response, await readBoundedResponseText(response, { secrets })),
+            secrets,
+          );
+          return;
+        }
+        if (stream) {
+          if (!response.body) {
+            yield providerError(new Error("Bedrock ConverseStream response had no body"), secrets);
+            return;
+          }
+          yield* bedrockConverseStreamEvents(response.body, request.signal);
+          return;
+        }
+        const payload = await readBoundedResponseJson(response, { secrets, maxResponseBodyBytes: BEDROCK_CONVERSE_RESPONSE_MAX_BYTES });
+        for (const event of bedrockConverseResponseEvents(payload)) yield event;
+      } catch (error) {
+        yield providerError(error, secrets);
+      }
+    },
+  };
+}
+
+/** Denied/unknown model capabilities reject before any request leaves the process. */
+function assertRouteCapabilities(request: ProviderRequest, stream: boolean): void {
+  const capabilities = request.model.capabilities ?? {};
+  const model = `${request.model.provider}/${request.model.model}`;
+  if (stream && capabilities.streaming === false) {
+    throw new Error(`Model ${model} declares streaming: false; refusing ConverseStream (use stream: false)`);
+  }
+  if (request.tools && request.tools.length > 0 && capabilities.tools === false) {
+    throw new Error(`Model ${model} declares tools: false but the request carries ${request.tools.length} tool(s)`);
+  }
 }
 
 export function createBedrockProviderPackage(options: BedrockProviderPackageOptions): ProviderPackage {
   const endpoint = bedrockRuntimeEndpoint(options.region, options.endpoint);
+  const api: BedrockRoute = options.api ?? "compatible";
+  const id = options.id ?? "bedrock";
   return defineProviderPackage({
     name: "@arnilo/prism-providers/bedrock",
     description: "Amazon Bedrock enterprise provider for Prism.",
     docs: { links: ["docs/providers/bedrock.md"] },
-    setup(api) {
-      api.registerProvider(createBedrockProvider(options));
+    metadata: { route: api, ...(api === "converse" ? { stream: options.stream ?? true } : {}) },
+    setup(providerApi) {
+      providerApi.registerProvider(
+        api === "converse" ? createBedrockConverseProvider({ ...options, id }) : createBedrockProvider({ ...options, id }),
+      );
       for (const model of options.models ?? []) {
-        api.registerModel({ ...model, provider: options.id ?? "bedrock" });
+        providerApi.registerModel({ ...model, provider: id });
       }
-      api.registerAuthMethod({
+      providerApi.registerAuthMethod({
         kind: "api_key",
-        provider: options.id ?? "bedrock",
+        provider: id,
         credentialName: "credential",
         metadata: {
           region: options.region,
           endpoint,
-          note: "Host supplies IAM/IRSA credentials; package signs bedrock-runtime requests.",
+          route: api,
+          ...(api === "converse" ? { stream: options.stream ?? true } : {}),
+          note:
+            api === "converse"
+              ? "Host supplies IAM/IRSA credentials; package signs native bedrock-runtime Converse requests."
+              : "Host supplies IAM/IRSA credentials; package signs bedrock-runtime requests.",
         },
       });
     },

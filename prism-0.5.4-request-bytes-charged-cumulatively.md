@@ -1,6 +1,6 @@
 # Prism 0.5.4: `maxRequestBytes` / `maxResponseBytes` charged cumulatively
 
-Clay host report for `@arnilo/prism@0.5.4`. Forward as-is.
+Host report for `@arnilo/prism@0.5.4`. Forwarded as-is.
 
 ## Symptom
 
@@ -10,7 +10,7 @@ A coding run dies in ~2 minutes with:
 Run limit exceeded: maxRequestBytes
 ```
 
-Clay already sets both byte axes to `HARD_RUN_LIMITS` (64 MiB). Hosts cannot raise further (`null` rejected). Hours-long autonomous jobs are impossible.
+The reporting host already sets both byte axes to `HARD_RUN_LIMITS` (64 MiB). Hosts cannot raise further (`null` rejected). Hours-long autonomous jobs are impossible.
 
 ## Expected (0.5.4 changelog)
 
@@ -72,6 +72,6 @@ assert.throws(() => tracker.charge("maxRequestBytes", 9 * 1024 * 1024), RunLimit
 
 Today the loop throws on the 5th 2 MiB charge.
 
-## Clay
+## Host-side status
 
-No host workaround. Clay already passes `HARD_RUN_LIMITS.maxRequestBytes` / `maxResponseBytes` at `createAgent`. Need a Prism patch + pin bump.
+No host workaround: the host already passes `HARD_RUN_LIMITS.maxRequestBytes` / `maxResponseBytes` at `createAgent`. Need a Prism patch + pin bump.

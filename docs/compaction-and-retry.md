@@ -21,7 +21,7 @@ Current APIs:
 
 ## When to use it
 
-Use compaction when a host wants provider input rebuilt from a summary plus recent messages while preserving the full branch in the session store. Use `session.compact()` for explicit compaction or `thresholdEntries` for opt-in auto-compaction before provider input.
+Use compaction when a host wants provider input rebuilt from a summary plus recent messages while preserving the full branch in the session store. Use `session.compact()` for explicit compaction, `thresholdEntries` for an entry-count auto-compaction gate before provider input, or `trigger` when the decision should follow estimated input size or host code.
 
 Do not use it as vector memory, semantic search, provider-backed summarization, a store rewrite, a database migration, CLI/RPC command, provider-specific HTTP adapter, or whole-run retry loop.
 
@@ -45,11 +45,12 @@ createDefaultCompactionStrategy(options?: DefaultCompactionStrategyOptions): Com
 | Field | Purpose |
 | --- | --- |
 | `strategy` | Optional `CompactionStrategy`; defaults to `createDefaultCompactionStrategy()`. |
-| `thresholdEntries` | Enables auto-compaction when current branch entries exceed this count. Omit it for no auto-compaction. |
+| `thresholdEntries` | Enables auto-compaction when current branch entries exceed this count. Omit it for no auto-compaction. Ignored when `trigger` is set. |
+| `trigger` | Replaces `thresholdEntries`: `{ type: "threshold_entries", entries }`, `{ type: "input_ratio", ratio }` (compact when the estimated input is at least `ratio` of the compiler's resolved input cap), or `{ type: "custom", shouldCompact(context) }`. |
 | `keepRecentEntries` | Number of recent message entries kept in provider context. |
 | `maxSummaryChars` | Maximum default summary length. |
 | `secrets` | Exact known secret strings to redact from summaries/events/store text. |
-| `metadata` | Explicit host metadata passed to the compaction strategy only. |
+| `metadata` | Explicit host metadata passed to the compaction strategy, and to a `custom` trigger context. |
 | `signal` | Optional manual compaction abort signal. |
 
 `RunOptions.compaction: false` disables configured auto-compaction for that run. `CompactionContext` also accepts optional `keepRecentEntries`, `trigger`, and `secrets`. Context values override or add to strategy defaults for that compaction call.
@@ -95,7 +96,37 @@ createDefaultRetryPolicy(options?: DefaultRetryPolicyOptions): RetryPolicy
 
 > **Contract — compact at the task boundary.** `session.compact()` throws `Error("Agent session already has an active run")` while `run()`/`stream()` is in flight. Intended model: one `run()` per task, then compact. Do not design mid-run compaction. Auto-compaction (when `thresholdEntries` is set) already runs **before** provider input, not during the turn. Live demo: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) (`compact` node after execute/validate/gate).
 
-Auto-compaction checks at most once per `run()`, after input/model-change entries are appended and before provider input assembly. It runs only when `AgentConfig.compaction` or `RunOptions.compaction` supplies `thresholdEntries`, and it is skipped by `RunOptions.compaction: false`.
+Auto-compaction checks at most once per `run()`, after input/model-change entries are appended and before provider input assembly. It runs only when `AgentConfig.compaction` or `RunOptions.compaction` supplies `thresholdEntries` or `trigger`, and it is skipped by `RunOptions.compaction: false`.
+
+`trigger` replaces the legacy gates and is asked once per run, with the would-be input already appended. All three forms are resolved by one helper (`resolveShouldCompact`), so `session`, observational memory, and host code share the same decision:
+
+| Trigger | Decides with | Notes |
+| --- | --- | --- |
+| `threshold_entries` | `entryCount > entries` | Pure count, no token estimate. |
+| `input_ratio` | `estimatedInputTokens >= ratio * inputCapTokens` | The cap comes from `resolveInputCap` — the same helper `attentionCompiler` uses, which needs `maxInputTokens` or `model.limits.contextWindow`. An unresolvable cap is a config error and fails the run loudly. |
+| `custom` | `shouldCompact(context)` | Async-ok. `context` carries `sessionId`, `entryCount`, `estimatedInputTokens`, `inputCapTokens`, `metadata`, and `signal`; the two token numbers are resolved lazily, so a callback that only reads counts never needs a model cap. A callback that throws — including one that reads a cap that cannot resolve — decides **false** and never compacts on a guess. |
+
+An unknown trigger `type` throws at first use (`assertCompactionTrigger`), so a typo never silently disables compaction. A branch whose last entry is already `kind: "compaction"` is skipped, so a fresh summary is never compacted again.
+
+`custom` also has a ready-made builder for the [attention compiler](attention-compiler.md)'s `truncated` signal. `createAttentionTruncationTrigger({ threshold })` counts consecutive truncated turns from `attention_compiled` events and fires **once per armed streak** at the next compaction decision, which is exactly "compact at the next task boundary because stubs could no longer hold the request":
+
+```ts
+const truncation = createAttentionTruncationTrigger();
+session.subscribe((event) => {
+  if (event.type === "attention_compiled") truncation.observe(event);
+});
+const agent = createAgent({ model, provider, attentionCompiler: true, compaction: { trigger: truncation.trigger } });
+```
+
+Example — compact when the assembled input passes 90% of the model window:
+
+```ts
+const agent = createAgent({
+  model,
+  provider,
+  compaction: { trigger: { type: "input_ratio", ratio: 0.9 }, keepRecentEntries: 8 },
+});
+```
 
 `rebuildSessionContext()` detects the latest compaction entry on a branch. Its returned `entries` still contains the raw full branch, while `messages` contains only messages after the compaction boundary plus `keepEntryIds`, and `summaries` contains the compaction summary plus later summary entries.
 
@@ -172,6 +203,7 @@ The default strategy does not call a provider. Hosts that need model-generated s
 - [Session stores and branching](session-stores-and-branching.md): branch entries, compaction entries, and `rebuildSessionContext()` behavior.
 - [Input and prompt assembly](input-and-prompt-assembly.md): compacted summaries become default summary messages for provider input.
 - [Agent/session runtime](agent-session-runtime.md): `session.compact()`, opt-in auto-compaction, `RunOptions.retry`, and `retry_scheduled` runtime behavior.
+- [Attention compiler](attention-compiler.md): resolves the same input cap and shrinks an over-ratio request before compaction is considered.
 - Example: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) — task-boundary compact after each iteration.
 - [Middleware hooks](middleware-hooks.md): `compaction` and `retry` middleware payload timing.
 - [Contribution registries](contribution-registries.md): compaction strategy and retry policy contributions.

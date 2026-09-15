@@ -93,6 +93,36 @@ describe("createAcpLifecycleMapper (freeze lifecycleEventMapping)", () => {
     assert.deepEqual(await mapper.map({ type: "configuration_changed", keys: ["verbose"] }), []);
   });
 
+  it("maps redacted subagent lifecycle without child transcript bodies", async () => {
+    const mapper = createAcpLifecycleMapper({ redactor: createSecretRedactor(["secret"]) });
+    const started = await mapper.map({
+      type: "subagent_started",
+      childId: "secret-child",
+      delegationId: "delegation-1",
+      depth: 1,
+    });
+    const stopped = await mapper.map({
+      type: "subagent_stopped",
+      childId: "secret-child",
+      delegationId: "delegation-1",
+      depth: 1,
+      status: "succeeded",
+    });
+    assert.deepEqual(started, [
+      {
+        sessionUpdate: "agent_message_chunk",
+        messageId: "prism:subagent:delegation-1",
+        content: { type: "text", text: "Subagent [REDACTED]-child started" },
+      },
+    ]);
+    assert.deepEqual(stopped.at(0), {
+      sessionUpdate: "agent_message_chunk",
+      messageId: "prism:subagent:delegation-1",
+      content: { type: "text", text: "Subagent [REDACTED]-child succeeded" },
+    });
+    assert.doesNotMatch(JSON.stringify([...started, ...stopped]), /secret|input|output/);
+  });
+
   it("maps plan_changed to a complete plan_update and plan_removed to plan_removed (F5)", async () => {
     const mapper = createAcpLifecycleMapper();
     assert.deepEqual(

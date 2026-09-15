@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { JsonObject, ToolDefinition, ToolEffectDeclaration, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import type { Transport } from "@modelcontextprotocol/client";
 import { Client } from "@modelcontextprotocol/client";
@@ -126,7 +127,7 @@ async function listAllMcpToolsWithHint(
     // Explicit-cursor per-page path on EVERY page (including the first, which
     // uses the opaque empty cursor): the no-cursor form is the SDK's
     // auto-aggregate, which reads/writes its own response cache and applies its
-    // own page cap — neither is acceptable behind Synapta's bounded loop.
+    // own page cap — neither is acceptable behind Prism MCP's bounded loop.
     const page = await client.listTools(cursor === undefined ? { cursor: "" } : { cursor }, {
       signal,
       timeout: limits.callTimeoutMs,
@@ -204,7 +205,7 @@ function parseCacheHint(meta: unknown, topLevel: unknown): McpCacheHint | undefi
 }
 
 /**
- * Local list-cache TTL honoring SEP-2549 server cache hints under Synapta's configured
+ * Local list-cache TTL honoring SEP-2549 server cache hints under Prism MCP's configured
  * ceiling: hint 0 = immediately stale (never serve locally); hint > 0 = min(hint, configured
  * TTL); absent = no caching (spec: absent/≤0 ttlMs is immediately stale — changed lists are
  * pushed via listChanged/subscriptions instead). The cache is per-bridge, so `private`-scoped
@@ -229,7 +230,12 @@ export function mapMcpToolsToDefinitions(
     readonly callTimeoutMs: number;
     readonly maxResultBytes: number;
     readonly isClosed: () => boolean;
-    readonly callRemoteTool: (remoteName: string, args: JsonObject, ctx: ToolExecutionContext) => Promise<ToolResult>;
+    readonly callRemoteTool: (
+      remoteName: string,
+      args: JsonObject,
+      ctx: ToolExecutionContext,
+      identityDigest?: string,
+    ) => Promise<ToolResult>;
     readonly effectForRemoteTool?: (remote: ListedMcpTool) => ToolEffectDeclaration;
   },
 ): ToolDefinition[] {
@@ -240,15 +246,17 @@ export function mapMcpToolsToDefinitions(
     const prefixedName = formatMcpToolName(context.namePrefix, remote.name);
     if (seen.has(prefixedName)) throw new McpToolNameCollisionError(prefixedName, remote.name);
     seen.set(prefixedName, remote.name);
+    const effect = context.effectForRemoteTool?.(remote) ?? unsupportedRemoteEffect();
+    const identityDigest = mcpToolIdentityDigest(remote, effect);
 
     tools.push({
       name: prefixedName,
       description: remote.description,
       parameters: remote.inputSchema as ToolDefinition["parameters"],
-      effect: context.effectForRemoteTool?.(remote) ?? unsupportedRemoteEffect(),
+      effect,
       execute: (args, executionContext) => {
         if (context.isClosed()) throw new McpBridgeClosedError();
-        return context.callRemoteTool(remote.name, args, executionContext);
+        return context.callRemoteTool(remote.name, args, executionContext, identityDigest);
       },
     });
   }
@@ -258,6 +266,12 @@ export function mapMcpToolsToDefinitions(
 
 function unsupportedRemoteEffect(): ToolEffectDeclaration {
   return { kind: "external_mutation", idempotency: "unsupported" };
+}
+
+function mcpToolIdentityDigest(remote: ListedMcpTool, effect: ToolEffectDeclaration): string {
+  return createHash("sha256")
+    .update(JSON.stringify({ schema: remote.inputSchema, effect: { kind: effect.kind, idempotency: effect.idempotency } }))
+    .digest("hex");
 }
 
 function resolveRemoteToolEffect(state: BridgeState, remote: ListedMcpTool): ToolEffectDeclaration {
@@ -283,7 +297,7 @@ function createMcpBridgeClient(mcpApps: boolean, protocolVersion: McpProtocolNeg
       },
       // SDK-owned listChanged in BOTH eras: legacy notification handler, or an
       // auto-opened `subscriptions/listen` stream on 2026-07-28. autoRefresh is
-      // disabled so refreshes stay behind Synapta's bounded explicit-pagination
+      // disabled so refreshes stay behind Prism MCP's bounded explicit-pagination
       // list (byte/schema/page limits), not the SDK's uncapped aggregate.
       listChanged: { tools: { autoRefresh: false, onChanged: () => onListChanged() } },
     },
@@ -357,7 +371,7 @@ async function refreshBridgeTools(
         callTimeoutMs: state.limits.callTimeoutMs,
         maxResultBytes: state.limits.maxResultBytes,
         isClosed: () => state.closed,
-        callRemoteTool: (remoteName, args, ctx) => callRemoteTool(state, remoteName, args, ctx),
+        callRemoteTool: (remoteName, args, ctx, digest) => callRemoteTool(state, remoteName, args, ctx, digest),
         effectForRemoteTool: (remote) => resolveRemoteToolEffect(state, remote),
       },
     );
@@ -379,8 +393,28 @@ async function callRemoteTool(
   remoteName: string,
   args: JsonObject,
   context: ToolExecutionContext,
+  identityDigest?: string,
 ): Promise<ToolResult> {
   assertOpen(state);
+  const prefixedName = formatMcpToolName(state.namePrefix, remoteName);
+  const remoteTool = state.remoteTools.find((tool) => tool.name === remoteName);
+  if (identityDigest) {
+    if (!remoteTool) {
+      return {
+        toolCallId: context.toolCallId,
+        name: prefixedName,
+        error: mcpCallError("MCP tool was revoked"),
+      };
+    }
+    const current = mcpToolIdentityDigest(remoteTool, resolveRemoteToolEffect(state, remoteTool));
+    if (current !== identityDigest) {
+      return {
+        toolCallId: context.toolCallId,
+        name: prefixedName,
+        error: mcpCallError("MCP tool definition changed"),
+      };
+    }
+  }
   const abortController = new AbortController();
   const listeners: Array<() => void> = [];
   const onAbort = () => abortController.abort(context.signal?.reason ?? new Error("aborted"));
@@ -396,10 +430,8 @@ async function callRemoteTool(
   }, state.limits.callTimeoutMs);
   listeners.push(() => clearTimeout(timeout));
 
-  const prefixedName = formatMcpToolName(state.namePrefix, remoteName);
   // Retained discovered definition drives both SEP-2243 `Mcp-Param-*` header
   // mirroring and output-schema validation from the same bounded schema.
-  const remoteTool = state.remoteTools.find((tool) => tool.name === remoteName);
   try {
     const result = await state.client.callTool(
       { name: remoteName, arguments: args },

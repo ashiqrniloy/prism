@@ -24,6 +24,9 @@ export {
   type EnqueueWorkflowOptions,
   enqueueWorkflow,
   startWorkflowBackground,
+  type WorkflowAdmissionDrain,
+  type WorkflowAdmissionMetric,
+  type WorkflowAdmissionPolicy,
   type WorkflowCoordinator,
   type WorkflowCoordinatorOptions,
 } from "./coordinator.js";
@@ -38,6 +41,27 @@ export {
 } from "./errors.js";
 export { createWorkflowEventBus } from "./events.js";
 export {
+  collectWorkflowGraphs,
+  createWorkflowGraphRunFolder,
+  projectWorkflowGraphRun,
+  serializeWorkflowGraph,
+  type WorkflowGraphEdge,
+  type WorkflowGraphNode,
+  type WorkflowGraphNodeRunState,
+  type WorkflowGraphRunFolder,
+  type WorkflowGraphRunNode,
+  type WorkflowGraphRunView,
+  type WorkflowGraphView,
+  type WorkflowRunTimelineSource,
+} from "./graph.js";
+export {
+  type DotExportOptions,
+  type MermaidExportOptions,
+  workflowGraphToDot,
+  workflowGraphToMermaid,
+} from "./graph-export.js";
+export {
+  DEFAULT_ADMISSION_PAGES,
   DEFAULT_CAPABILITY_TTL_MS,
   DEFAULT_EVENT_BUFFER,
   DEFAULT_LIST_PAGE_SIZE,
@@ -55,6 +79,7 @@ export {
   DEFAULT_SCHEDULE_LEASE_TTL_MS,
   DEFAULT_SCHEDULE_PAGE_SIZE,
   DEFAULT_SCHEDULE_POLL_INTERVAL_MS,
+  HARD_ADMISSION_PAGES,
   HARD_CAPABILITY_TOKEN_BYTES,
   HARD_CAPABILITY_TTL_MS,
   HARD_LIST_PAGE_CAP,
@@ -123,7 +148,6 @@ export {
   getWorkflowRun,
   listWorkflowRuns,
 } from "./status.js";
-
 export type {
   AgentNodeDefinition,
   ConditionalNodeDefinition,

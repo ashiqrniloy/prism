@@ -230,6 +230,38 @@ describe("attachMcpToolBridge", () => {
     await bridge.close();
   });
 
+  it("rejects execute when a refreshed schema or revoked tool no longer matches the loaded definition", async () => {
+    const fixture = await createFixture([
+      {
+        name: "echo",
+        handler: async (args) => `echo:${args.text}`,
+      },
+    ]);
+    fixtures.push(fixture);
+    const bridge = await attachMcpToolBridge(fixture.client, fixture.clientTransport, {
+      serverId: "stale",
+      listCacheTtlMs: 60_000,
+    });
+    const loaded = bridge.tools[0]!;
+    setClientRequest(fixture.client, async (request) => {
+      if (request.method === "tools/list") {
+        return { tools: [{ name: "echo", inputSchema: { type: "object", properties: { n: { type: "number" } } } }] };
+      }
+      throw new Error(`unexpected ${request.method}`);
+    });
+    await bridge.refresh();
+    const changed = await loaded.execute({}, executionContext);
+    assert.equal(changed.error?.message, "MCP tool definition changed");
+    setClientRequest(fixture.client, async (request) => {
+      if (request.method === "tools/list") return { tools: [] };
+      throw new Error(`unexpected ${request.method}`);
+    });
+    await bridge.refresh();
+    const revoked = await loaded.execute({}, executionContext);
+    assert.equal(revoked.error?.message, "MCP tool was revoked");
+    await bridge.close();
+  });
+
   it("preserves the previous trusted tool set when refresh validation fails", async () => {
     const fixture = await createFixture([{ name: "safe", handler: async () => "safe" }]);
     fixtures.push(fixture);

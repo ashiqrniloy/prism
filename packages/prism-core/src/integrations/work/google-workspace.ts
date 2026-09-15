@@ -1,10 +1,9 @@
-import { randomUUID } from "node:crypto";
-import { type AgentIdentity, assertIdentityActive, type JsonObject } from "@arnilo/prism";
+import { type AgentIdentity, type ArtifactBodyStore, assertIdentityActive, type CheckpointStore, type JsonObject } from "@arnilo/prism";
 import { assertSafeArgv, createCliRunner, parseCliJson, parseCliNdjson } from "./cli.js";
+import { createCheckpointWorkDraftStore, createMemoryWorkDraftStore } from "./drafts.js";
 import { WorkToolError } from "./errors.js";
-import { identityKey } from "./idempotency.js";
 import { resolveWorkLimits } from "./limits.js";
-import type { GoogleWorkspaceAdapter, GoogleWorkspaceOp, WorkCliRunner, WorkDraft, WorkLimits, WorkTokenProvider } from "./types.js";
+import type { GoogleWorkspaceAdapter, GoogleWorkspaceOp, WorkCliRunner, WorkDraftStore, WorkLimits, WorkTokenProvider } from "./types.js";
 
 /** Default ops enabled without Docs/Sheets/Slides capability gates. */
 export const DEFAULT_GWS_OPS: readonly GoogleWorkspaceOp[] = [
@@ -207,6 +206,10 @@ export interface GoogleWorkspaceCliAdapterOptions {
   readonly minVersion?: string;
   /** Late-bound per-identity token source; undefined token fails the call closed. */
   readonly tokenProvider?: WorkTokenProvider;
+  readonly draftStore?: WorkDraftStore;
+  readonly checkpoints?: CheckpointStore;
+  readonly bodies?: ArtifactBodyStore;
+  readonly ephemeralDrafts?: boolean;
 }
 
 export function createGoogleWorkspaceCliAdapter(options: GoogleWorkspaceCliAdapterOptions): GoogleWorkspaceAdapter {
@@ -221,8 +224,15 @@ export function createGoogleWorkspaceCliAdapter(options: GoogleWorkspaceCliAdapt
       limits: options.limits,
       env: options.env,
     });
-  const drafts = new Map<string, WorkDraft>();
-  const idKey = identityKey(options.identity);
+  const draftStore: WorkDraftStore =
+    options.draftStore ??
+    (options.checkpoints
+      ? createCheckpointWorkDraftStore({
+          checkpoints: options.checkpoints,
+          bodies: options.bodies,
+          limits: options.limits,
+        })
+      : createMemoryWorkDraftStore({ ephemeral: options.ephemeralDrafts ?? true }));
   let readyVersion: string | undefined;
 
   const assertAllowed = (op: GoogleWorkspaceOp) => {
@@ -242,6 +252,7 @@ export function createGoogleWorkspaceCliAdapter(options: GoogleWorkspaceCliAdapt
     provider: "google-workspace",
     identity: options.identity,
     allowedOps,
+    draftStore,
     async ensureReady(signal) {
       if (readyVersion) return readyVersion;
       assertAllowed("version");
@@ -274,30 +285,43 @@ export function createGoogleWorkspaceCliAdapter(options: GoogleWorkspaceCliAdapt
       }
       return parseCliJson(result.stdout, limits);
     },
-    createDraft(op, payload) {
+    createDraft(op, payload, draftOpts) {
       assertAllowed(op);
-      const draft: WorkDraft = {
-        draftId: randomUUID(),
+      return draftStore.createDraft({
+        draftId: draftOpts?.draftId,
         provider: "google-workspace",
         op,
-        identityKey: idKey,
-        payload: { ...payload },
-        createdAt: new Date().toISOString(),
-        status: "pending",
-      };
-      drafts.set(draft.draftId, draft);
-      return draft;
+        identity: options.identity,
+        payload,
+        policyRevision: draftOpts?.policyRevision,
+      });
     },
     getDraft(draftId) {
-      return drafts.get(draftId);
+      return draftStore.getDraft({ draftId, identity: options.identity, provider: "google-workspace" });
+    },
+    updateDraft(draftId, payload, draftOpts) {
+      return draftStore.updateDraft({
+        draftId,
+        identity: options.identity,
+        payload,
+        expectedRevision: draftOpts?.expectedRevision,
+        expectedConcurrencyToken: draftOpts?.concurrencyToken,
+      });
+    },
+    approveDraft(approval) {
+      return draftStore.approveDraft({
+        draftId: approval.draftId,
+        identity: options.identity,
+        approval,
+      });
     },
     markDraft(draftId, status, concurrencyToken) {
-      const draft = drafts.get(draftId);
-      if (!draft) throw new WorkToolError("ERR_PRISM_WORK_DRAFT", "Unknown draft");
-      if (draft.identityKey !== idKey) throw new WorkToolError("ERR_PRISM_WORK_IDENTITY", "Draft identity mismatch");
-      const next = { ...draft, status, concurrencyToken: concurrencyToken ?? draft.concurrencyToken };
-      drafts.set(draftId, next);
-      return next;
+      return draftStore.markDraft({
+        draftId,
+        identity: options.identity,
+        status,
+        concurrencyToken,
+      });
     },
   };
 }

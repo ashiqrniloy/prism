@@ -2,6 +2,8 @@ import type { ContentBlock, ContextBlock, Message, SessionEntry } from "@arnilo/
 import { redactSecrets } from "@arnilo/prism";
 import { truncateWorkerText } from "./limits.js";
 import { buildObservationalMemoryProjection } from "./projection.js";
+import { projectWorkMemory } from "./scopes-project.js";
+import { foldWorkScopeMap } from "./scopes.js";
 import { renderObservationalMemory } from "./render.js";
 import { estimateEntryTokens } from "./tokens.js";
 
@@ -15,7 +17,9 @@ export interface RecentMessageWindowOptions {
   readonly secrets?: readonly (string | undefined)[];
 }
 
-export interface ObservationalMemoryContextOptions extends RecentMessageWindowOptions {}
+export interface ObservationalMemoryContextOptions extends RecentMessageWindowOptions {
+  readonly invalidatedIds?: readonly string[];
+}
 
 export function selectRecentMessageEntryIds(entries: readonly SessionEntry[], keepRecentEntries: number): readonly string[] {
   if (keepRecentEntries <= 0) return [];
@@ -53,10 +57,27 @@ export function buildObservationalMemoryContextBlocks(
 ): readonly ContextBlock[] {
   const recentEntries = selectRecentMessageEntries(entries, options);
   const firstKeptEntryId = recentEntries[0]?.id;
-  const projection = buildObservationalMemoryProjection(entries, firstKeptEntryId);
+  const projection = buildObservationalMemoryProjection(entries, firstKeptEntryId, {
+    invalidatedIds: options.invalidatedIds,
+  });
   const secrets = options.secrets ?? [];
+  const workScopes = foldWorkScopeMap(entries);
+  const scoped =
+    workScopes.scopes.size > 1
+      ? projectWorkMemory(
+          {
+            observations: projection.observations,
+            reflections: projection.reflections,
+            droppedObservationIds: projection.droppedObservationIds,
+          },
+          workScopes,
+          { from: workScopes.stack.at(-1)!, include: "self+ancestors", closed: "hide" },
+        )
+      : undefined;
   const blocks: ContextBlock[] = [];
-  const memory = renderObservationalMemory(projection.reflections, projection.observations, secrets);
+  const memory = scoped
+    ? renderObservationalMemory(scoped.reflections, scoped.observations, { secrets, outline: scoped.outline })
+    : renderObservationalMemory(projection.reflections, projection.observations, secrets);
   if (memory) blocks.push({ title: "observational-memory", content: memory, priority: 10 });
   const recent = renderRecentMessageWindow(recentEntries, secrets);
   if (recent) blocks.push({ title: "recent-messages", content: recent, priority: 9 });

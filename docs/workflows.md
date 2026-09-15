@@ -20,6 +20,9 @@ Primary exports:
 | `defineSaga` / `runSaga` / `resumeSaga` | Bounded linear durable forward steps, reverse compensation, unknown-outcome reconciliation, lease fencing, and manual resolution over existing checkpoint/lease stores |
 | `createWorkflowSchedules` | Explicit ownership-scoped one-time/interval/host-calculated schedules over existing checkpoint/lease stores |
 | `createProactiveScheduleCapabilities` | Scoped, expiring, revocable capability tokens that enable proactive schedules; revocation stops firing fail-closed |
+| `serializeWorkflowGraph` / `collectWorkflowGraphs` | Pure JSON serialization of workflow DAGs (`WorkflowGraphView`) without functions/closures; collect nested graphs |
+| `workflowGraphToMermaid` / `workflowGraphToDot` | Deterministic Mermaid flowchart and Graphviz DOT exporters with node shapes by kind and label escaping |
+| `projectWorkflowGraphRun` / `createWorkflowGraphRunFolder` | Run overlay view (`WorkflowGraphRunView`) from checkpoints, timelines, or live event stream |
 
 Included through the `@arnilo/prism` / `@arnilo/prism-core` family packages; installing them does not start workflows. Interactive TUI is out of scope (C-012 deferred).
 
@@ -106,7 +109,7 @@ Every node receives bounded `ctx.state`, `ctx.stateVersion`, and async `ctx.upda
 
 `replayWorkflow(workflow, { sourceRunId, fromNodeId, runId? }, options)` requires a succeeded source/node, creates a new checkpoint, copies terminal evidence outside the selected node's downstream closure, restores selected-node pre-state, and records `{ sourceRunId, fromNodeId, rootRunId, depth }`. Source evidence is untouched. Copying any prior nested/tool approval is rejected; replay from that approval node or earlier so Phase 8 approval executes again.
 
-`createWorkflowCoordinator({ coordinatorId, workflows, checkpoints, leases, ... })` polls queued/running checkpoints with bounded pages, atomically claims each run, renews its lease, and aborts/fences work after lease loss. Key controls: `leaseTtlMs` (default 30s), `renewalIntervalMs` (default TTL/3), `pollIntervalMs` (default 1s), `maxConcurrentRuns` (default 4), and `pageSize` (default 100, maximum 500).
+`createWorkflowCoordinator({ coordinatorId, workflows, checkpoints, leases, ... })` polls queued/running checkpoints with bounded pages, atomically claims each run, renews its lease, and aborts/fences work after lease loss. Key controls: `leaseTtlMs` (default 30s), `renewalIntervalMs` (default TTL/3), `pollIntervalMs` (default 1s), `maxConcurrentRuns` (default 4), and `pageSize` (default 100, maximum 500). Optional `admission` wraps claims: cursor wrap across pages (default 4 pages/poll, hard 16) so a noisy first page cannot starve later tenants; `perTenant` / `perClass` cap concurrent claims on that worker; `deadlineMs` skips stale `createdAt`; `drain` stops new claims while draining and aborts in-flight after `snapshot().expired`. Workload class is `metadata.workloadClass` (`^[a-z][a-z0-9_-]{0,31}$`, else `default`). `onMetric` labels are `outcome` + `class` only — never tenant or run ids. This is not a second scheduler.
 
 `defineSaga({ id, revision, steps })` validates a bounded linear definition. Each step supplies `run`, `compensate`, and `reconcile`; handlers receive a stable tenant-scoped `operationId`, redacted bounded input/output, prior outputs, and an abort signal. `runSaga(definition, { checkpoints, leases, ownerId, tenantId, runId?, input?, maxAttempts?, leaseTtlMs?, redactor?, onEvent? })` stores a surrogate workflow checkpoint through `WorkflowCheckpointAdapter`, acquires a fenced `LeaseStore` lease, and advances one cursor at a time. `resumeSaga` takes over an expired run; it never replays durably succeeded steps. Forward or compensation handlers mark ambiguous failures with `unknown: true` (or `ERR_PRISM_SAGA_UNKNOWN`), and `reconcile` must return `succeeded`, `failed`, or `unknown` before retry.
 
@@ -404,6 +407,70 @@ For a single bounded refinement, prefer `loopNode`. Keep this host-loop pattern 
 - Agent exclusivity is per session: one active `run()` at a time, same as core.
 - Saga definitions remain host code and only their revision, ordered step IDs, bounded JSON snapshots, cursors, attempt counters, and redacted error/provenance metadata are persisted. The surrogate workflow checkpoint namespace is private to the package.
 
+## Graph serialization, Mermaid, DOT, and run overlay
+
+Workflows can be converted to JSON view-models and visualization formats without executing them or shipping JS functions:
+
+```ts
+import {
+  collectWorkflowGraphs,
+  createWorkflowGraphRunFolder,
+  projectWorkflowGraphRun,
+  serializeWorkflowGraph,
+  workflowGraphToDot,
+  workflowGraphToMermaid,
+} from "@arnilo/prism-core/runtime/workflows";
+
+// 1. Pure static graph view (JSON-serializable)
+const view = serializeWorkflowGraph(workflow);
+// view.nodes: [{ id: "stepA", kind: "function", label: "stepA" }, ...]
+// view.edges: [{ from: "stepA", to: "stepB", kind: "always" }, ...]
+
+// 2. Export to Mermaid flowchart
+const mermaid = workflowGraphToMermaid(view);
+// flowchart TD
+//   stepA["stepA"]
+//   stepB["stepB"]
+//   stepA --> stepB
+
+// 3. Export to Graphviz DOT
+const dot = workflowGraphToDot(view);
+
+// 4. Project run state overlay from checkpoint or timeline
+const overlay = projectWorkflowGraphRun(view, checkpoint);
+// overlay.nodes[0].run?.status -> "succeeded" | "failed" | "running" | ...
+
+// 5. Incremental live folder for WebSocket/SSE cockpits
+const folder = createWorkflowGraphRunFolder(view);
+for await (const event of eventBus.subscribe()) {
+  folder.push(event);
+  const live = folder.snapshot();
+}
+
+// 6. Collect nested workflow graphs by ID
+const graphs = collectWorkflowGraphs(hierarchicalWorkflow);
+// Map with parent and child workflow views
+```
+
+### Graph view-model (`WorkflowGraphView`)
+
+- `schemaVersion`: 1
+- `workflowId`, `revision`, `definitionHash`: matches definition
+- `nodes`: deterministically sorted array of `WorkflowGraphNode` with `id`, `kind`, `label`, `metadata`, `nestedWorkflowId`, `loop`
+- `edges`: deterministically sorted array of `WorkflowGraphEdge` with `from`, `to`, `kind` (`"always" | "then" | "else"`)
+- Closures and functions (`when`, `execute`, `map`, `reduce`) are **omitted** by design so the view is safe for JSON wire transfer and audit logging.
+
+### Visualization & escaping
+
+- `workflowGraphToMermaid()` assigns distinct shapes by node kind: diamond for `conditional`, hexagon for `loop`, stadium for `agent`, subroutine for `workflow`, rounded for `tool`, box for `function`.
+- Mermaid and DOT exporters automatically escape double quotes, HTML characters (`<`, `>`), and literal arrows (`-->`) to prevent script injection (XSS) and parser corruption.
+- Output is byte-identical across runs regardless of dictionary key insertion order.
+
+### Run overlay (`WorkflowGraphRunView`)
+
+- Paints per-node runtime status (`status`, `durationMs`, `attempt`, `errorCode`, `skippedReason`) onto the static DAG structure.
+- Does **not** include node outputs — outputs remain on the execution timeline under content-capture policy to protect credentials and manage payload size.
+
 ## Security and performance notes
 
 - Definitions require a non-empty host-authored `revision` and fail closed on cycles, unknown edges, self-edges, invalid limits, and `maxNodes` overflow. Revision and every nested revision enter the deterministic definition hash; hosts must bump revision when function/tool behavior changes. Loop `maxIterations` is required and capped at 64.
@@ -440,6 +507,7 @@ Use workflows for known, durable, replayable graphs. Use optional supervisor del
 - [A2A interoperability](a2a.md): hosts may adapt existing exact-owner workflow status/list/cancel/checkpoint/event surfaces to `A2ATaskLifecycle`; A2A package adds no workflow worker, queue, or schema.
 - [Agent events](agent-events.md): core `AgentEvent` wrapped by `agent_event`
 - [Session stores and branching](session-stores-and-branching.md): session `leafId` reuse on resume
+- [Observational memory compaction](compaction-observational-memory.md): hosts may pass `ctx.nodeId` to `withWorkScope`; the workflow runner stays scope-unaware.
 - [CLI/RPC](cli-rpc.md): host control seam; wire `createWorkflowCommands()` into `runRpcServer`
 - [Database persistence](database-persistence.md): generic `CheckpointStore` and `LeaseStore` capabilities
 - [SQLite persistence](sqlite-persistence.md): durable `persistence.checkpoints`

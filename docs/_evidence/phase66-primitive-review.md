@@ -32,7 +32,7 @@ Docs currently say hosts decide which request policies become active
 | `assembleProviderInput` | `src/input.ts:180-320` | **Gap** — takes `sessionId` via `InputBuildContext` (`src/contracts-core/agent.ts:267-275`) for injectors/context, then returns `options: options.providerOptions` (`src/input.ts:311-320`). Session id never lands on `ProviderRequest.options`. Task 3 fill-if-missing. |
 | `applyProviderRequestPolicies` | `src/agent-session/session.ts:461-472` | **Keep host-only** — concatenates `AgentConfig.providerRequestPolicies` + `RunOptions.providerRequestPolicies`. Empty list returns the request untouched. Does **not** read the contribution registry. |
 | `createProviderRequestPolicyChain` | `src/provider-request-policy.ts:14-29` | **Reuse** — ordered apply + secret accumulation. |
-| `createSessionCachePolicy` | `src/provider-request-policy.ts:32-47` | **Keep overlay** — stamps `sessionId` from `request.options.sessionId ?? context.sessionId`, `cacheKey` from override or that id, `cacheRetention` default `"short"`. Production callers: tests only in this repo. Clay host-injects it (workaround). Do **not** mutate into the default. |
+| `createSessionCachePolicy` | `src/provider-request-policy.ts:32-47` | **Keep overlay** — stamps `sessionId` from `request.options.sessionId ?? context.sessionId`, `cacheKey` from override or that id, `cacheRetention` default `"short"`. Production callers: tests only in this repo. Hosts inject it as an overlay (workaround). Do **not** mutate into the default. |
 | `mergeProviderRequestOptions` | `src/provider-request-policy.ts:49-74` | **Reuse** — patch scalars win; `headers`/`compat`/`extra` shallow-merge; `cache.breakpoints` **concatenate**. Helper fill-if-missing must not concatenate default breakpoints onto a non-empty host list. |
 | `normalizeProviderRequestPolicyResult` | `src/provider-request-policy.ts:76-78` | **Reuse**. |
 | `registerProviderRequestPolicy` | `src/extensions.ts:201-204` + `ExtensionAPI` `src/contracts-core/extensions.ts:196` | **Dead for construction** — writes `registries.providerRequestPolicies`. Agent session never resolves that registry. First-party provider packages never call it. Hits: tests only. **Do not auto-activate.** |
@@ -165,7 +165,7 @@ Stay provider-local: every header/body field in the matrix, `opencodeSessionId` 
 | Auto-activate package-registered `createSessionCachePolicy` | Registry unread by agent session; OM/compaction still miss; still opt-in-shaped. |
 | Wrap every `AIProvider.generate` | Hides missing ids; breaks explicit test/example requests; image/realtime seams are not chat construction. |
 | Generic `mandatoryRequestFields` manifest | One boolean today (OpenCode Go session). Adapter is the source of truth. |
-| Mutate `createSessionCachePolicy` into the default | Clay overlay semantics must keep working; policies stay optional. |
+| Mutate `createSessionCachePolicy` into the default | Host overlay semantics must keep working; policies stay optional. |
 | Stamp only inside `assembleProviderInput` | OM/compaction do not assemble. |
 | Stamp only inside `generateProviderTurn` | Loops/`ctx.generate` would not see stamped options. |
 | Same correlation id for OM and agent | User: OM fully separate, may use a different model. Derived `om:{session.id}`. |

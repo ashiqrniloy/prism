@@ -29,6 +29,7 @@ export interface DockerCliRequest {
   readonly collectStdout?: boolean;
   readonly collectStderr?: boolean;
   readonly redact?: (text: string) => string;
+  readonly onSpawn?: (child: ChildProcessWithoutNullStreams) => void;
 }
 
 export interface DockerCliResult {
@@ -94,6 +95,7 @@ export async function runDockerCli(request: DockerCliRequest): Promise<DockerCli
         env: request.env ? { ...request.env } : { PATH: "/usr/bin:/bin", LANG: "C" },
         windowsHide: true,
       }) as ChildProcessWithoutNullStreams;
+      request.onSpawn?.(child);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       reject(new DockerCliError(redactText(message, redact)));

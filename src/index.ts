@@ -40,15 +40,44 @@ export type {
   ArtifactDeliveryToken,
   ArtifactRecord,
   ArtifactRevision,
+  CitationIntegrityReason,
+  CitationIntegrityResult,
+  CitationLiveSource,
+  CitationSupport,
 } from "./artifacts.js";
 export {
   ARTIFACT_BODY_ERROR_CODES,
   ARTIFACT_CHECKPOINT_NAMESPACE,
   ArtifactBodyStoreError,
   ArtifactError,
+  approvalEvidenceIntact,
   artifactApprovalState,
   artifactCheckpointKey,
+  checkCitationIntegrity,
+  citationBindingDigest,
+  HARD_CITATION_EXCERPT_BYTES,
 } from "./artifacts.js";
+export {
+  ATTENTION_BUDGET_ERROR_CODE,
+  AttentionBudgetError,
+  createAttentionCompiler,
+  createAttentionTruncationTrigger,
+  DEFAULT_ATTENTION_COMPACT_RATIO,
+  DEFAULT_ATTENTION_KEEP_LAST,
+  DEFAULT_ATTENTION_RESERVE_TOKENS,
+  DEFAULT_ATTENTION_THINKING_KEEP_TURNS,
+  DEFAULT_ATTENTION_TRIGGER_RATIO,
+  DEFAULT_ATTENTION_TRUNCATION_THRESHOLD,
+  isAttentionBudgetError,
+  resolveAttentionReserveTokens,
+  resolveInputCap,
+  resolveRunAttentionCompiler,
+} from "./attention-compiler.js";
+export type {
+  AttentionTruncationTrigger,
+  AttentionTruncationTriggerOptions,
+  PersistedAttentionStickyFrontier,
+} from "./attention-compiler.js";
 export type {
   ApplyCacheControlOptions,
   CacheControlledContentBlock,
@@ -152,6 +181,14 @@ export {
 export type * from "./contracts.js";
 export type {
   ApprovalOutcome,
+  AttentionCompiler,
+  AttentionCompilerContext,
+  AttentionCompilerOptions,
+  AttentionCompilerSetting,
+  AttentionInputCapOptions,
+  AttentionReport,
+  CompactionTrigger,
+  CompactionTriggerContext,
   DecisionScope,
   NestedRunApproval,
   NestedRunOutcome,
@@ -164,6 +201,8 @@ export type {
   RealtimeSession,
   RealtimeSessionFactory,
   RealtimeSessionOptions,
+  ResolveShouldCompactInput,
+  ResolveShouldCompactOptions,
   ResumeNestedRun,
   RunDecision,
   RunLimitCounters,
@@ -189,6 +228,7 @@ export {
   AgentRunError,
   AgentRunStateError,
   assertBatchJobsSupported,
+  assertCompactionTrigger,
   assertEmbeddingsSupported,
   assertImageGenerationSupported,
   assertModerationSupported,
@@ -249,6 +289,7 @@ export {
   modelSupportsVideoGeneration,
   pollBatch,
   resolveSessionSearchQuery,
+  resolveShouldCompact,
   SESSION_APPEND_CONFLICT_CODE,
   SESSION_ENTRY_KINDS,
   SESSION_ENTRY_SCHEMA_VERSION,
@@ -542,7 +583,19 @@ export {
   RunLimitTracker,
   resolveRunLimits,
 } from "./run-limits.js";
-export { createSecureAgent } from "./secure-agent.js";
+export type {
+  HostCompositionGovernance,
+  HostCompositionOptions,
+  HostCompositionProfile,
+  HostCompositionReport,
+  HostCompositionToolReport,
+} from "./secure-agent.js";
+export {
+  assertHostCompositionReadiness,
+  createSecureAgent,
+  HostCompositionError,
+  inspectHostComposition,
+} from "./secure-agent.js";
 export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js";
 export {
   assertPermission,
@@ -707,5 +760,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.6.0";
+export const version = "0.7.0";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

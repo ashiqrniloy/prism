@@ -7,6 +7,7 @@ import {
   type ProviderRequestPolicy,
 } from "@arnilo/prism";
 import { ModelRouterError } from "./errors.js";
+import { createGovernedProvider } from "./invocation.js";
 import { DEFAULT_CIRCUIT_COOLDOWN_MS, DEFAULT_CIRCUIT_FAILURE_THRESHOLD, resolveModelRouterLimits } from "./limits.js";
 import { createMemoryModelRouterStateStore } from "./state.js";
 import type {
@@ -19,6 +20,7 @@ import type {
   ModelRouterSelectionPolicy,
   ModelRouterStateKey,
   ModelRouterStateOwner,
+  PaidWorkKind,
 } from "./types.js";
 
 const DEFAULT_BUDGET_WINDOW_MS = 24 * 60 * 60_000;
@@ -64,7 +66,57 @@ function assertSelectionPolicy(selection: ModelRouterSelectionPolicy | undefined
   }
 }
 
-function stateKey(identity: AgentIdentity | undefined, provider: string, model: string): ModelRouterStateKey {
+function assertModelConfig(model: unknown): asserts model is ModelConfig {
+  if (
+    !model ||
+    typeof model !== "object" ||
+    typeof (model as ModelConfig).provider !== "string" ||
+    (model as ModelConfig).provider.trim().length === 0 ||
+    typeof (model as ModelConfig).model !== "string" ||
+    (model as ModelConfig).model.trim().length === 0
+  ) {
+    throw new ModelRouterError("model must be an object with non-empty provider and model strings", "ERR_PRISM_MODEL_ROUTER_VALIDATION");
+  }
+}
+
+/** Check if router options are eligible for synchronous providerSource facade usage. */
+export function isProviderSourceEligible(options: CreateModelRouterOptions): boolean {
+  if (options.stateStore !== undefined) return false;
+  if (options.budgets !== undefined) return false;
+  if (options.rateLimit !== undefined) return false;
+  if (options.circuit !== undefined) return false;
+  if (options.fallbacks !== undefined && options.fallbacks.length > 0) return false;
+  if (options.selection !== undefined) return false;
+  return true;
+}
+
+/** Fail loudly if router configuration cannot be enforced synchronously. */
+export function assertProviderSourceEligible(options: CreateModelRouterOptions): void {
+  if (options.stateStore !== undefined) {
+    throw new ModelRouterError("providerSource is unavailable with async state", "ERR_PRISM_MODEL_ROUTER_ASYNC_STATE");
+  }
+  const hasBudgets = options.budgets !== undefined;
+  const hasRateLimit = options.rateLimit !== undefined;
+  const hasCircuit = options.circuit !== undefined;
+  const hasFallbacks = options.fallbacks !== undefined && options.fallbacks.length > 0;
+  const hasSelection = options.selection !== undefined;
+
+  if (hasBudgets || hasRateLimit || hasCircuit || hasFallbacks || hasSelection) {
+    throw new ModelRouterError(
+      "providerSource is unavailable with unenforced governance configurations (budgets, rateLimit, circuit, fallbacks, or selection); use router.resolve() instead",
+      "ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED",
+    );
+  }
+}
+
+function stateKey(
+  identity: AgentIdentity | undefined,
+  provider: string,
+  model: string,
+  taskId?: string,
+  kind?: PaidWorkKind,
+  attemptId?: string,
+): ModelRouterStateKey {
   const owner = identity
     ? {
         tenantId: identity.tenantId,
@@ -73,7 +125,14 @@ function stateKey(identity: AgentIdentity | undefined, provider: string, model: 
         principalId: identity.principal.id,
       }
     : MEMORY_OWNER;
-  return { ...owner, provider, model };
+  return {
+    ...owner,
+    provider,
+    model,
+    ...(taskId !== undefined ? { taskId } : {}),
+    ...(kind !== undefined ? { kind } : {}),
+    ...(attemptId !== undefined ? { attemptId } : {}),
+  };
 }
 
 function identityRefs(identity: AgentIdentity | undefined): ModelRouterDiagnostics["identityRefs"] {
@@ -228,12 +287,44 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
   async function assertBudget(
     key: ModelRouterStateKey,
     request: ModelRouterResolveRequest,
+    candidate: ModelConfig,
     t: number,
   ): Promise<BudgetReservation | undefined> {
     const requestMaxTokens = request.maxTokens;
     const requestMaxCost = request.maxCostUsd;
     const windowMaxTokens = options.budgets?.maxTokens;
     const windowMaxCost = options.budgets?.maxCostUsd;
+
+    if (options.budgets?.strict) {
+      const costActive = windowMaxCost !== undefined || requestMaxCost !== undefined;
+      const tokenActive = windowMaxTokens !== undefined || requestMaxTokens !== undefined;
+      if (!costActive && !tokenActive) {
+        throw new ModelRouterError("strict hard-budget mode requires configured budget or request bounds", "ERR_PRISM_MODEL_ROUTER_BUDGET");
+      }
+      if (costActive) {
+        if (!candidate.cost || (candidate.cost.input === undefined && candidate.cost.output === undefined)) {
+          throw new ModelRouterError(
+            "strict hard-budget mode denies candidate lacking pricing configuration",
+            "ERR_PRISM_MODEL_ROUTER_BUDGET",
+          );
+        }
+        if (requestMaxCost === undefined && requestMaxTokens === undefined && candidate.limits?.maxOutputTokens === undefined) {
+          throw new ModelRouterError(
+            "strict hard-budget mode denies calls lacking enforceable cost or output bounds",
+            "ERR_PRISM_MODEL_ROUTER_BUDGET",
+          );
+        }
+      }
+      if (tokenActive) {
+        if (requestMaxTokens === undefined && candidate.limits?.maxOutputTokens === undefined) {
+          throw new ModelRouterError(
+            "strict hard-budget mode denies calls lacking enforceable output or token bounds",
+            "ERR_PRISM_MODEL_ROUTER_BUDGET",
+          );
+        }
+      }
+    }
+
     if (requestMaxTokens === undefined && requestMaxCost === undefined && windowMaxTokens === undefined && windowMaxCost === undefined) {
       return undefined;
     }
@@ -335,12 +426,12 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
 
     for (const candidate of candidates) {
       request.signal?.throwIfAborted();
-      const key = stateKey(request.identity, candidate.provider, candidate.model);
+      const key = stateKey(request.identity, candidate.provider, candidate.model, request.taskId, request.kind, request.attemptId);
       let reservation: BudgetReservation | undefined;
       try {
         assertAllowList(candidate);
         assertResidency(request.residency);
-        reservation = await assertBudget(key, request, t);
+        reservation = await assertBudget(key, request, candidate, t);
         await assertRate(key, t);
       } catch (error) {
         await releaseReservation(reservation);
@@ -430,10 +521,11 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
     );
   }
 
-  return {
+  const router: ModelRouter = {
     resolve,
     providerSource(model) {
-      if (externalState) throw new ModelRouterError("providerSource is unavailable with async state", "ERR_PRISM_MODEL_ROUTER_ASYNC_STATE");
+      assertProviderSourceEligible(options);
+      assertModelConfig(model);
       assertAllowList(model);
       if (options.allowedResidencies?.length) {
         assertResidency(typeof model.compat?.residency === "string" ? model.compat.residency : undefined);
@@ -448,7 +540,7 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
       if (input.costUsd !== undefined && !(Number.isFinite(input.costUsd) && input.costUsd >= 0)) {
         throw new ModelRouterError("costUsd must be finite non-negative", "ERR_PRISM_MODEL_ROUTER_BUDGET");
       }
-      const key = stateKey(input.identity, input.provider, input.model);
+      const key = stateKey(input.identity, input.provider, input.model, input.taskId, input.kind, input.attemptId);
       if (input.budgetReservation) {
         const outcome = await state(() =>
           stateStore.commitBudget({
@@ -506,10 +598,63 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
         ...(input.latencyMs !== undefined ? { latencyMs: input.latencyMs } : {}),
       });
     },
+    async releaseBudget(input) {
+      assertIdentity(input.identity, true);
+      const key = stateKey(input.identity, input.provider, input.model, input.taskId, input.kind);
+      await state(() =>
+        stateStore.releaseBudget({
+          key,
+          reservationId: input.budgetReservation.reservationId,
+          fencingToken: input.budgetReservation.fencingToken,
+          windowMs: budgetWindowMs,
+          now: now(),
+        }),
+      );
+    },
+    async renewBudget(input) {
+      assertIdentity(input.identity, true);
+      const key = stateKey(input.identity, input.provider, input.model, input.taskId, input.kind);
+      const extendTtlMs = input.extendTtlMs ?? budgetReservationTtlMs;
+      const outcome = await state(() =>
+        stateStore.renewBudget({
+          key,
+          reservationId: input.budgetReservation.reservationId,
+          fencingToken: input.budgetReservation.fencingToken,
+          extendTtlMs,
+          windowMs: budgetWindowMs,
+          now: now(),
+        }),
+      );
+      return {
+        reservationId: input.budgetReservation.reservationId,
+        fencingToken: outcome.fencingToken,
+      };
+    },
+    async readBudget(input) {
+      assertIdentity(input.identity, true);
+      const key = stateKey(input.identity, input.provider ?? ":task:", input.model ?? input.taskId ?? ":task:", input.taskId);
+      return await state(() =>
+        stateStore.readBudget({
+          key,
+          windowMs: budgetWindowMs,
+          maxBudgetKeys: limits.maxBudgetKeys,
+          now: now(),
+        }),
+      );
+    },
+    createGovernedProvider(governedOptions = {}) {
+      return createGovernedProvider({
+        fallbacks: options.fallbacks,
+        ...governedOptions,
+        router,
+      });
+    },
     createOpenRouterRoutingPolicy() {
       return openRouterPolicy;
     },
   };
+
+  return router;
 }
 
 function resolveBudgetWindow(value: number | undefined): number {

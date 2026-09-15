@@ -49,13 +49,16 @@ export function createModelJudge<TInput = unknown, TExpected = unknown>(
         input.signal?.addEventListener("abort", abort, { once: true });
         try {
           input.signal?.throwIfAborted();
-          if (Buffer.byteLength(JSON.stringify({ target: input.target ?? { result: input.result }, item: input.item })) > maxInputBytes) {
+          const target = input.target
+            ? { ...input.target, ...(input.timeline && !input.target.timeline ? { timeline: input.timeline } : {}) }
+            : { result: input.result, ...(input.timeline ? { timeline: input.timeline } : {}) };
+          if (Buffer.byteLength(JSON.stringify({ target, item: input.item })) > maxInputBytes) {
             throw new EvalError("model judge input byte limit exceeded", "ERR_PRISM_EVAL_JUDGE_BOUNDS");
           }
           const request = options.judge({
             rubric: options.rubric,
             rubricVersion: options.rubricVersion,
-            target: input.target ?? { result: input.result },
+            target,
             item: input.item,
             signal: controller.signal,
           });

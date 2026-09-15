@@ -54,6 +54,9 @@
       "@arnilo/prism-memory": [
         "./packages/memory/src/index.ts"
       ],
+      "@arnilo/prism-memory/fabric": [
+        "./packages/memory/src/fabric/index.ts"
+      ],
       "@arnilo/prism-memory/rag": [
         "./packages/memory/src/rag/index.ts"
       ],

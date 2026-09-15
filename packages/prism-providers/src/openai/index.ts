@@ -89,6 +89,7 @@ export {
 export {
   createOpenAIRealtimeSession,
   type OpenAIRealtimeSessionOptions,
+  type OpenAIRealtimeTool,
   type RealtimeTransport,
   type RealtimeTransportOptions,
 } from "./realtime.js";

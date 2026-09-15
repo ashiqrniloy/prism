@@ -234,6 +234,12 @@ export interface AgentRunResumeOptions {
   readonly fencingToken?: number;
   /** Routes root decisions for nested-run approvals back to the child (e.g. supervisor). */
   readonly resumeNestedRun?: ResumeNestedRun;
+  /**
+   * Opt-in (plan 078 Task 7): receives the reconstructed session before the resumed run
+   * starts, so an observer (e.g. the supervisor's child-event pump) can subscribe while the
+   * run is still live. The session is valid only for the duration of this resume.
+   */
+  readonly onSession?: (session: AgentSession) => void;
   /** Opt-in (plan 015 Task 4): restore persisted loaded-skill names into the resumed session catalog. */
   readonly persistSessionState?: boolean;
   /** Opt-in (plan 018 Task 6): restore persisted loaded-skill bodies (requires `persistSessionState` too). */

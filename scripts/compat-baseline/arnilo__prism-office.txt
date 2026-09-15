@@ -8,6 +8,8 @@ DEFAULT_MAX_ATTRIBUTES	export declare const DEFAULT_MAX_ATTRIBUTES = 500000
 DEFAULT_MAX_BLOCKS	export declare const DEFAULT_MAX_BLOCKS = 10000
 DEFAULT_MAX_CELLS	export declare const DEFAULT_MAX_CELLS = 500000
 DEFAULT_MAX_COLUMNS	export declare const DEFAULT_MAX_COLUMNS = 1000
+DEFAULT_MAX_DIFF_NODES	export declare const DEFAULT_MAX_DIFF_NODES = 8192
+DEFAULT_MAX_DIFF_OPS	export declare const DEFAULT_MAX_DIFF_OPS = 4096
 DEFAULT_MAX_DOCUMENT_BYTES	export declare const DEFAULT_MAX_DOCUMENT_BYTES: number
 DEFAULT_MAX_ELEMENTS	export declare const DEFAULT_MAX_ELEMENTS = 100000
 DEFAULT_MAX_IMAGES	export declare const DEFAULT_MAX_IMAGES = 100
@@ -60,11 +62,14 @@ DrawioSpinnerAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, Dr
 DrawioStatusAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
 DrawioTemplateAction	export type { DrawioAutosaveEvent, DrawioConfigureAction, DrawioConfigureEvent, DrawioDialogAction, DrawioDraftAction, DrawioErrorEvent, DrawioExitEvent, DrawioExportAction, DrawioExportBounds, DrawioExportEvent, DrawioExportFormat, DrawioFitAction, DrawioInboundEvent, DrawioInitEvent, DrawioLoadAction, DrawioLoadEvent, DrawioMergeAction, DrawioOutboundAction, DrawioPromptAction, DrawioResetEditorAction, DrawioSaveEvent, DrawioSpinnerAction, DrawioStatusAction, DrawioTemplateAction, } from "./me
 FormulaCellValue	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+HARD_FIDELITY_ISSUES	export declare const HARD_FIDELITY_ISSUES = 256
 HARD_INFERENCE_WINDOW_ROWS	export declare const HARD_INFERENCE_WINDOW_ROWS = 5000
 HARD_MAX_ATTRIBUTES	export declare const HARD_MAX_ATTRIBUTES = 2000000
 HARD_MAX_BLOCKS	export declare const HARD_MAX_BLOCKS = 50000
 HARD_MAX_CELLS	export declare const HARD_MAX_CELLS = 2000000
 HARD_MAX_COLUMNS	export declare const HARD_MAX_COLUMNS = 16384
+HARD_MAX_DIFF_NODES	export declare const HARD_MAX_DIFF_NODES = 32768
+HARD_MAX_DIFF_OPS	export declare const HARD_MAX_DIFF_OPS = 16384
 HARD_MAX_DOCUMENT_BYTES	export declare const HARD_MAX_DOCUMENT_BYTES: number
 HARD_MAX_ELEMENTS	export declare const HARD_MAX_ELEMENTS = 500000
 HARD_MAX_IMAGES	export declare const HARD_MAX_IMAGES = 1000
@@ -100,6 +105,7 @@ createDrawioEmbed	export declare function createDrawioEmbed(options: DrawioEmbed
 createPatchHistory	export declare function createPatchHistory(initialModel: DocumentModel): PatchHistory
 deckModelSchema	export declare const deckModelSchema: JsonSchema
 deckModelToPptxOptions	export declare function deckModelToPptxOptions(model: DeckModel): PresentationOptions
+diffDocument	export declare function diffDocument(from: DocumentModel, to: DocumentModel, options?: DiffDocumentOptions): DocumentDiff
 docModelSchema	export declare const docModelSchema: JsonSchema
 docModelToDocxOptions	export declare function docModelToDocxOptions(model: DocModel): DocumentOptions
 documentModelSchema	export declare function documentModelSchema(kind: DocumentKind, slice?: string | readonly string[]): JsonSchema
@@ -108,11 +114,13 @@ generateDocument	export declare function generateDocument(model: DocumentModel, 
 generateDocxBytes	export declare function generateDocxBytes(model: DocModel): Uint8Array
 generatePptxBytes	export declare function generatePptxBytes(model: DeckModel): Uint8Array
 generateXlsxBytes	export declare function generateXlsxBytes(model: SheetModel): Uint8Array
+importDocument	export declare function importDocument(bytes: Uint8Array, options: ParseDocumentOptions): Promise<ImportDocumentResult>
 inferAndTransformRows	export declare function inferAndTransformRows(rawRows: readonly (readonly CellValue[])[], caps: ResolvedSheetsCaps): InferAndTransformResult
 isCanonicalDecimal	export declare function isCanonicalDecimal(str: string): boolean
 isCurrencyString	export declare function isCurrencyString(str: string): boolean
 isScientificNotation	export declare function isScientificNotation(str: string): boolean
 isZipContainer	export declare function isZipContainer(bytes: Uint8Array): boolean
+listZipEntryNames	export declare function listZipEntryNames(bytes: Uint8Array):
 noopDiagramsSpan	export declare const noopDiagramsSpan: DiagramsTelemetrySpan
 noopDiagramsTelemetry	export declare const noopDiagramsTelemetry: DiagramsTelemetry
 noopDocumentsSpan	export declare const noopDocumentsSpan: DocumentsTelemetrySpan
@@ -132,6 +140,7 @@ regenerateGoldens	export declare function regenerateGoldens(): Promise<void>
 regenerateSheetsFixtures	export declare function regenerateSheetsFixtures(): void
 renderPreviewBlocks	export declare function renderPreviewBlocks(model: DocumentModel, options?: PreviewBlocksOptions): PreviewBlock[]
 renderPreviewHtml	export declare function renderPreviewHtml(model: DocumentModel, options?: PreviewHtmlOptions): string
+reportImportFidelity	export declare function reportImportFidelity(bytes: Uint8Array, kind: DocumentKind): ImportFidelityReport
 resolveDiagramsCaps	export declare function resolveDiagramsCaps(caps?: DrawioXmlCaps): ResolvedDrawioXmlCaps
 resolveDocumentCaps	export declare function resolveDocumentCaps(caps?: DocumentCaps): ResolvedDocumentCaps
 resolveSheetsCaps	export declare function resolveSheetsCaps(caps?: SheetsCaps): ResolvedSheetsCaps

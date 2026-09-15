@@ -157,6 +157,12 @@ export {
   resolvePrismServerLimits,
 } from "./limits.js";
 export type {
+  CreatePrismOperatorHandlerOptions,
+  OperatorUnknownEffect,
+  OperatorUnknownEffects,
+} from "./operator.js";
+export { createPrismOperatorHandler } from "./operator.js";
+export type {
   MemoryRateLimiterOptions,
   PrismServerRateLimitDenial,
   PrismServerRateLimiter,

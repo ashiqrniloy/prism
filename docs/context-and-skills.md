@@ -128,7 +128,7 @@ Each active skill contributes two things the runtime wires together:
 - `Skill` prompt text → rendered as system messages by `skillMessages()` / `skillPromptText()` (active set only). Default `skillsDisclosure: "progressive"` sends `Skill <name>: <description>`; full `instructions` appear only when the skill is in the session `LoadedSkillSet` or disclosure is `"eager"`.
 - `Skill.context: ContextProvider[]` → collected across active skills (`activeSkills.flatMap(s => s.context ?? [])`), resolved through the existing `resolveContextProviders(...)`, and merged into the request's `context` **after** host `AgentConfig.context` blocks. Inactive skills contribute neither instructions nor context.
 
-`toolNames` enforcement is live: because selection routes through `resolveActiveSkills()`, a skill demanding a host-inactive tool throws with `Skill ${name} requires inactive tool: ${missing}` **before the first provider turn** — no provider call, no store write, no partial side effect. This is the fail-fast contract the docs already claimed; the runtime now honors it.
+`toolNames` enforcement is live: because selection routes through `resolveActiveSkills()`, a skill demanding a host-inactive tool throws with `Skill ${name} requires inactive tool: ${missing}` **before the first provider turn** — no provider call, no store write, no partial side effect. When `RunOptions.toolNames` narrows the run, that snapshot is the host-active list — a skill cannot require a registered tool the run did not grant.
 
 ```ts
 import { createAgent, createSkillRegistry, type ContextProvider } from "@arnilo/prism";
@@ -219,7 +219,7 @@ Under pressure on a skill with a loaded body, eviction may demote to catalog-onl
 
 ### Optional tool-result fold
 
-`toolResultFold` on `AgentConfig` / `RunOptions` (run wins) is **off** unless the host supplies a `summarize` callback. When enabled, aged large tool-result messages in the **provider view** become a one-line header plus bounded summary text; session store entries stay raw. Defaults: `minAgeTurns` **2**, `minBytes` **4096**, `maxSummaryBytes` **512** (hard **4096**). Summarizer failure keeps the raw tool result (fail closed). Not a second memory system — use observational memory / compaction for durable recall.
+`toolResultFold` on `AgentConfig` / `RunOptions` (run wins) is **off** unless the host supplies a `summarize` callback. When enabled, aged large tool-result messages in the **provider view** become a one-line header plus bounded summary text; session store entries stay raw. Defaults: `minAgeTurns` **2**, `minBytes` **4096**, `maxSummaryBytes` **512** (hard **4096**). Summarizer failure keeps the raw tool result (fail closed). Not a second memory system — use observational memory / compaction for durable recall, and remember that observational memory stays the source-backed **episodic** ledger of the session: typed, time-bounded notes that outlive a session are a separate layer ([memory fabric](memory-fabric.md)) whose provider arrives through this same inert seam.
 
 ```ts
 await session.run("…", {
@@ -267,8 +267,10 @@ Use `activateAllCapabilities: true` only as a temporary all-skills/all-tools com
 
 - [Agent/session runtime](agent-session-runtime.md): consumes host-selected context providers and skills from explicit agent config.
 - [Input and prompt assembly](input-and-prompt-assembly.md): default prompt builder and provider-input assembly helper.
+- [Attention compiler](attention-compiler.md): opt-in ratio gate that rewrites aged history and tool results for one request, leaving resolved context blocks and skills in place.
 - [Instruction injection](instruction-injection.md): package injectors contribute `contextBlocks` that merge after host+skill provider blocks.
 - [Retrieval-augmented generation](rag.md): optional retrieved citations contribute through the same explicit inert context seam.
+- [Memory fabric](memory-fabric.md): optional typed notes whose provider contributes the same `working-memory` / `semantic-memory` blocks this seam already carries, under a host-registered name.
 - [Public contracts](public-contracts.md): `ContextProvider`, `ContextResolutionContext`, `ContextBlock`, `Skill`, `SkillRegistry`, `PromptBuilder`, and `PromptBuildRequest`.
 - [Middleware hooks](middleware-hooks.md): `context` and `prompt_build` hooks.
 - [Contribution registries](contribution-registries.md): inert context provider and skill contributions.

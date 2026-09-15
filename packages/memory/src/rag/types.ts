@@ -1,5 +1,8 @@
 import type { ContextProvider, JsonObject, Message, SecretRedactor } from "@arnilo/prism";
-import type { Embedder, MemoryVectorRecord, VectorStore } from "../types.js";
+import type { Embedder, MemoryVectorRecord, RagAccessConstraint, VectorStore } from "../types.js";
+
+export type { RagAccessConstraint, SourceAccessGrant } from "../types.js";
+
 import type { RagTelemetry, RagTelemetrySpan } from "./telemetry.js";
 
 export interface RagScope {
@@ -81,6 +84,7 @@ export interface TransactionalVectorStore extends SourceVectorStore {
 }
 
 export type IngestionState = "pending" | "indexed" | "failed" | "partial";
+export type SourceFreshness = "current" | "stale" | "unavailable";
 
 export interface IngestionStatus {
   readonly sourceId: string;
@@ -89,6 +93,8 @@ export interface IngestionStatus {
   readonly bytes: number;
   readonly chunks: number;
   readonly error?: string;
+  /** Connector freshness; omitted on index-only status writes. */
+  readonly freshness?: SourceFreshness;
   readonly updatedAt: string;
 }
 
@@ -145,6 +151,8 @@ export interface ReplaceSourceOptions extends Omit<IndexChunksOptions, "chunks" 
   readonly contentHash?: string;
   /** Skip re-indexing when the stored document hash matches. Default true when contentHash is present. */
   readonly skipIfUnchanged?: boolean;
+  /** When false, stamp the current generation and do not advance the scope pointer (multi-source sync). Default true. */
+  readonly advanceGeneration?: boolean;
 }
 
 export interface DeleteSourceOptions {
@@ -224,6 +232,8 @@ export interface RetrieveContextOptions {
   /** RRF smoothing constant (default 60, capped). */
   readonly rrfK?: number;
   readonly filter?: JsonObject;
+  /** Host-verified ACL. Not `filter`. Unsupported stores fail closed. */
+  readonly authorization?: RagAccessConstraint;
   readonly maxResultBytes?: number;
   readonly maxContextTokens?: number;
   readonly maxMetadataBytes?: number;

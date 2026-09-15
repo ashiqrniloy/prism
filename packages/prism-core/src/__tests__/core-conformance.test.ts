@@ -7,12 +7,13 @@ import { fileURLToPath } from "node:url";
 const coreSrcDir = join(fileURLToPath(import.meta.url), "../..");
 
 describe("@arnilo/prism-core family conformance", () => {
-  it("exports all 16 subpaths declared in package.json", async () => {
+  it("exports all 17 subpaths declared in package.json", async () => {
     const pkg = JSON.parse(readFileSync(join(coreSrcDir, "../package.json"), "utf8"));
     const exports = pkg.exports;
 
     const expectedSubpaths = [
       "./runtime/server",
+      "./runtime/realtime",
       "./runtime/supervisor",
       "./runtime/workflows",
       "./sessions/codecs",

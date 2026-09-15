@@ -1,0 +1,28 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { assertHostCompositionReadiness, inspectHostComposition } from "@arnilo/prism";
+import { createAppAgent } from "../agent.js";
+
+describe("personal assistant template", () => {
+  it("creates agent and runs an offline turn", async () => {
+    const agent = createAppAgent({ userId: "test-user" });
+    const session = agent.createSession({ id: "test-session" });
+    const result = await session.run("Hello");
+    assert.ok(result.text.includes("Personal Assistant ready"));
+  });
+
+  it("passes personal host composition readiness inspection", () => {
+    const agent = createAppAgent({ userId: "test-user" });
+    const report = inspectHostComposition({
+      profile: "personal",
+      agent,
+      credentialRefs: ["OPENAI_API_KEY"],
+    });
+
+    assert.equal(report.profile, "personal");
+    assert.equal(report.ownership.userId, "test-user");
+    assert.equal(report.readiness.ok, true);
+    assert.equal(report.storage.durable, false, "in-memory store is non-durable");
+    assert.doesNotThrow(() => assertHostCompositionReadiness({ profile: "personal", agent }));
+  });
+});

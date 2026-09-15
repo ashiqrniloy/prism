@@ -37,6 +37,7 @@ export const SCENARIOS = {
   "multi-agent-runtime": { module: "benchmark-scenarios/multi-agent-runtime.mjs", phase: 35, protected: false },
   "tool-search": { module: "benchmark-scenarios/tool-search.mjs", phase: 41, protected: false },
   redaction: { module: "benchmark-scenarios/redaction.mjs", phase: 70, protected: false },
+  "attention-compiler": { module: "benchmark-scenarios/attention-compiler.mjs", phase: 74, protected: false },
 };
 
 function main() {

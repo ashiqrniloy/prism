@@ -1,10 +1,10 @@
 # Document reader (`@arnilo/prism-coding-tools/document-reader`)
 
-> **Optional peer install:** `pdf-parse` and/or `mammoth` — see [Optional peer dependencies](peer-dependencies.md).
+> **Optional peer install:** `pdf-parse` and/or `mammoth` — see [Optional peer dependencies](peer-dependencies.md). OCR uses **native fetch**, not an SDK peer.
 
 ## What it does
 
-Optional bounded literal-text extraction for PDF and DOCX files, consumed by the coding `read` tool (plan 018 closeout `doc-reader`, 0.1.6). `createDocumentReader()` returns a `DocumentReader` that the host wires into `createReadTool(cwd, { documentReader })`; the read tool then extracts text from supported documents instead of falling back to the raw text page.
+Optional bounded literal-text extraction for PDF and DOCX files, consumed by the coding `read` tool (plan 018 closeout `doc-reader`, 0.1.6). `createDocumentReader()` returns a `DocumentReader` that the host wires into `createReadTool(cwd, { documentReader })`; the read tool then extracts text from supported documents instead of falling back to the raw text page. Scanned PDFs/images need a **host-selected** `createMistralOcrParser({ apiKey })` passed in `parsers` — default wiring never calls an external OCR service.
 
 ## When to use it
 
@@ -63,18 +63,26 @@ const myPdfParser: DocumentParser = {
   },
 };
 const reader = await createDocumentReader({ parsers: [myPdfParser, await createPdfParser()] });
+
+import { createMistralOcrParser } from "@arnilo/prism-coding-tools/document-reader";
+const ocr = createMistralOcrParser({
+  apiKey: hostKey, // never read from process.env
+  recordUsage: (u) => router.recordUsage({ /* Task 7 */ tokens: 0, costUsd: hostPrice(u) }),
+});
+const scanned = await createDocumentReader({ parsers: [ocr] }); // not in the default parser list
 ```
 
 ## Extension and configuration notes
 
 - Default parser wiring uses the optional peer dependencies `pdf-parse` (PDF) and `mammoth` (DOCX raw text). Both are declared optional (`peerDependenciesMeta`); `createDocumentReader` fails closed with a documented error at creation when a selected format's peer is absent — never at read time. Hosts pin parser versions (their CVE surface is the host's responsibility; parser advisory is reviewed at ship time).
+- `createMistralOcrParser` is **not** a default parser. It POSTs `https://api.mistral.ai/v1/ocr` (`mistral-ocr-latest`) with inline `data:` URLs (`include_image_base64: false`). No Files API upload, so no remote cleanup. Host `documentUrl` values pass `assertSsrfAllowedUrl`. Extracted markdown is untrusted. Caps: 8 MiB / 32 pages / 60 s / 1 in-flight by default (hard 50 MiB / 10 000 pages / 180 s / 4). Pass `recordUsage` to admit cost through Task 7 accounting. `baseUrl` selects residency.
 - DOCX has no page concept in raw text: `pages` is always `1` and the page cap applies to PDF only; the text cap governs DOCX output.
 - The read tool re-checks `maxTextBytes` on results (parity with its text-page bounds check) and refuses reader output beyond it.
 - The adapter truncates over-cap text at a UTF-8 byte boundary (never splits a code point).
 
 ## Security and performance notes
 
-- No embedded-script execution, no macro evaluation, no external resource fetching — the peer raw-text surfaces are pure extractors, and the no-fetch property is enforced by an egress tripwire test.
+- No embedded-script execution, no macro evaluation, no external resource fetching on the **default** parsers — the peer raw-text surfaces are pure extractors, and the no-fetch property is enforced by an egress tripwire test on `document-reader/index.js`. OCR is a separate module and only runs when the host passes that parser.
 - Decompression/size-bomb protection: the read tool stats and refuses files above `maxBytes` before loading; output is capped at `maxTextBytes`.
 - Extraction envelope (recorded in `scripts/budgets.json` `docReader`, measured 2026-08-11): a max-cap 1000-page PDF (288 KB) extracts in ~162 ms with ~17 MB heap delta; the gate asserts completion within the ceiling or documented refusal.
 - Parser code never receives a buffer whose format gate failed; random binaries never reach a parser.

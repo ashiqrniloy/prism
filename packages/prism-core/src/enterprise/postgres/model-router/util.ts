@@ -1,12 +1,23 @@
 import type { Pool, PoolClient } from "pg";
-import { ModelRouterError, type ModelRouterStateKey, type ModelRouterStateOwner } from "../../../governance/model-router/index.js";
+import {
+  type ModelRouterAttribution,
+  ModelRouterError,
+  type ModelRouterStateKey,
+  type ModelRouterStateOwner,
+  type PaidWorkKind,
+} from "../../../governance/model-router/index.js";
 import { EnterprisePostgresError } from "../errors.js";
 import { asTimestamp, ownerParams, requiredText, requireStoreOwner, type StoreOwner, storeError } from "../records.js";
 
 const MAX_KEY_BYTES = 512;
 export const MAX_WINDOW_MS = 31 * 24 * 60 * 60_000;
 export const MAX_INTEGER = 2_147_483_647;
-const MAX_TRANSACTION_ATTEMPTS = 3;
+// Serializable retries are the normal cost of concurrent writers on one state row:
+// every conflicting transaction must re-read and re-apply before it can commit.
+// Budget/rate paths lock a row and rewrite it, so a 16-client burst collides repeatedly;
+// the wait is full-jitter exponential (a random point under a capped ceiling), which
+// desynchronizes the retriers instead of marching them back in lockstep.
+const MAX_TRANSACTION_ATTEMPTS = 12;
 const DEFAULT_CLEANUP_LIMIT = 100;
 const HARD_CLEANUP_LIMIT = 500;
 
@@ -15,6 +26,8 @@ export interface RouterContext {
   readonly principalId: string;
   readonly provider: string;
   readonly model: string;
+  readonly taskId?: string;
+  readonly kind?: PaidWorkKind;
 }
 
 export interface CircuitRow {
@@ -33,6 +46,9 @@ export interface Reservation {
   readonly costUsd: number;
   readonly expiresAt: number;
   readonly fencingToken: string;
+  readonly provider?: string;
+  readonly model?: string;
+  readonly kind?: PaidWorkKind;
 }
 
 export interface BudgetRow {
@@ -43,6 +59,8 @@ export interface BudgetRow {
   readonly reservations: Reservation[];
   readonly lastUsedAt: Date;
   readonly expiresAt: Date;
+  readonly taskId?: string;
+  readonly attributions?: Record<string, ModelRouterAttribution>;
 }
 
 /** Table names qualified for a schema; grouped for the sweep operations. */
@@ -83,7 +101,10 @@ export async function withTransaction<T>(pool: Pool, operation: (client: PoolCli
 }
 
 export function retryDelay(attempt: number): Promise<void> {
-  const milliseconds = 2 ** attempt + Math.floor(Math.random() * 3);
+  // Full jitter under a capped ceiling: two colliding writers must not pick the same
+  // instant, or each retry round reproduces the conflict that caused it.
+  const ceiling = Math.min(250, 8 * 2 ** attempt);
+  const milliseconds = 1 + Math.floor(Math.random() * ceiling);
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
@@ -99,6 +120,30 @@ export function routerContext(key: ModelRouterStateKey): RouterContext {
     principalId: owner.principalId,
     provider: text(key.provider, "router provider", MAX_KEY_BYTES),
     model: text(key.model, "router model", MAX_KEY_BYTES),
+    ...(key.taskId ? { taskId: text(key.taskId, "router taskId", MAX_KEY_BYTES) } : {}),
+    ...(key.kind ? { kind: key.kind } : {}),
+  };
+}
+
+export function budgetContext(key: ModelRouterStateKey): RouterContext {
+  const owner = routerOwner(key);
+  const taskId = key.taskId ? text(key.taskId, "router taskId", MAX_KEY_BYTES) : undefined;
+  if (taskId) {
+    return {
+      owner: owner.owner,
+      principalId: owner.principalId,
+      provider: ":task:",
+      model: taskId,
+      taskId,
+      kind: key.kind,
+    };
+  }
+  return {
+    owner: owner.owner,
+    principalId: owner.principalId,
+    provider: text(key.provider, "router provider", MAX_KEY_BYTES),
+    model: text(key.model, "router model", MAX_KEY_BYTES),
+    kind: key.kind,
   };
 }
 
@@ -213,8 +258,79 @@ export function reservationList(value: unknown): Reservation[] {
       costUsd: storedUsage(record.costUsd, `reservation ${index} cost`),
       expiresAt,
       fencingToken: requiredText(record.fencingToken, `reservation ${index} fencing`, 128),
+      ...(typeof record.provider === "string" ? { provider: record.provider } : {}),
+      ...(typeof record.model === "string" ? { model: record.model } : {}),
+      ...(typeof record.kind === "string" ? { kind: record.kind as PaidWorkKind } : {}),
     };
   });
+}
+
+export function parseAttributions(value: unknown): Record<string, ModelRouterAttribution> {
+  if (!value) return {};
+  const raw: unknown = typeof value === "string" ? JSON.parse(value) : value;
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return {};
+  const result: Record<string, ModelRouterAttribution> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "object" && v !== null) {
+      const rec = v as Record<string, unknown>;
+      result[k] = {
+        tokens: storedUsage(rec.tokens, `${k} tokens`),
+        costUsd: storedUsage(rec.costUsd, `${k} costUsd`),
+        count: integer(rec.count ?? 1, `${k} count`, 0, MAX_INTEGER),
+      };
+    }
+  }
+  return result;
+}
+
+export function updateAttributions(
+  existing: Record<string, ModelRouterAttribution> | undefined,
+  provider: string,
+  model: string,
+  kind: string,
+  tokens: number,
+  costUsd: number,
+): Record<string, ModelRouterAttribution> {
+  const map: Record<string, ModelRouterAttribution> = { ...existing };
+  const key = `${provider}:${model}:${kind}`;
+  const prev = map[key] ?? { tokens: 0, costUsd: 0, count: 0 };
+  map[key] = {
+    tokens: prev.tokens + tokens,
+    costUsd: prev.costUsd + costUsd,
+    count: prev.count + 1,
+  };
+  return map;
+}
+
+export function aggregateAttributions(attributions: Record<string, ModelRouterAttribution> | undefined): {
+  readonly byModel: Record<string, ModelRouterAttribution>;
+  readonly byKind: Record<string, ModelRouterAttribution>;
+} {
+  const byModel: Record<string, ModelRouterAttribution> = {};
+  const byKind: Record<string, ModelRouterAttribution> = {};
+  if (!attributions) return { byModel, byKind };
+
+  for (const [key, val] of Object.entries(attributions)) {
+    const parts = key.split(":");
+    const kind = parts.length >= 3 ? parts[parts.length - 1]! : "generation";
+    const modelKey = parts.length >= 3 ? parts.slice(0, -1).join(":") : key;
+
+    const prevModel = byModel[modelKey] ?? { tokens: 0, costUsd: 0, count: 0 };
+    byModel[modelKey] = {
+      tokens: prevModel.tokens + val.tokens,
+      costUsd: prevModel.costUsd + val.costUsd,
+      count: prevModel.count + val.count,
+    };
+
+    const prevKind = byKind[kind] ?? { tokens: 0, costUsd: 0, count: 0 };
+    byKind[kind] = {
+      tokens: prevKind.tokens + val.tokens,
+      costUsd: prevKind.costUsd + val.costUsd,
+      count: prevKind.count + val.count,
+    };
+  }
+
+  return { byModel, byKind };
 }
 
 export function budgetValue(row: Record<string, unknown> | undefined): { readonly tokens: number; readonly costUsd: number } {
@@ -238,6 +354,8 @@ export function budgetRowValue(row: Record<string, unknown>): BudgetRow {
     reservations: reservationList(row.reservations),
     lastUsedAt,
     expiresAt,
+    taskId: typeof row.task_id === "string" && row.task_id.length > 0 ? row.task_id : undefined,
+    attributions: parseAttributions(row.attributions),
   };
 }
 

@@ -493,4 +493,96 @@ describe("prism init", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it("scaffolds personal-assistant template with single-user ownership and offline tests", async () => {
+    const root = mkdtempSync(join(tmpdir(), "prism-init-personal-"));
+    try {
+      const target = join(root, "my-personal");
+      const result = await createInitProject(
+        {
+          directory: target,
+          template: "personal-assistant",
+          provider: "mock",
+          withWorkflows: false,
+          withEvals: false,
+          force: false,
+          help: false,
+        },
+        {
+          stdout: new MemoryWritable(),
+          stderr: new MemoryWritable(),
+          templatesRoot,
+          galleryRoot,
+          packageVersion: "0.0.13",
+          cwd: root,
+        },
+      );
+
+      assert.equal(result.template, "personal-assistant");
+      assert.ok(result.writtenFiles.includes("package.json"));
+      assert.ok(result.writtenFiles.includes("src/agent.ts"));
+      assert.ok(result.writtenFiles.includes("src/index.ts"));
+      assert.ok(result.writtenFiles.includes("src/__tests__/agent.test.ts"));
+
+      const pkg = JSON.parse(readFileSync(join(target, "package.json"), "utf8")) as {
+        name: string;
+        dependencies: Record<string, string>;
+      };
+      assert.equal(pkg.name, "my-personal");
+      assert.ok(pkg.dependencies["@arnilo/prism"]);
+      assert.ok(pkg.dependencies["@arnilo/prism-core"]);
+      assert.ok(pkg.dependencies["@arnilo/prism-providers"]);
+
+      const hits = secretScan(target);
+      assert.deepEqual(hits, []);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("scaffolds business-worker template with tenant isolation and offline tests", async () => {
+    const root = mkdtempSync(join(tmpdir(), "prism-init-business-"));
+    try {
+      const target = join(root, "my-business");
+      const result = await createInitProject(
+        {
+          directory: target,
+          template: "business-worker",
+          provider: "mock",
+          withWorkflows: false,
+          withEvals: false,
+          force: false,
+          help: false,
+        },
+        {
+          stdout: new MemoryWritable(),
+          stderr: new MemoryWritable(),
+          templatesRoot,
+          galleryRoot,
+          packageVersion: "0.0.13",
+          cwd: root,
+        },
+      );
+
+      assert.equal(result.template, "business-worker");
+      assert.ok(result.writtenFiles.includes("package.json"));
+      assert.ok(result.writtenFiles.includes("src/agent.ts"));
+      assert.ok(result.writtenFiles.includes("src/index.ts"));
+      assert.ok(result.writtenFiles.includes("src/__tests__/agent.test.ts"));
+
+      const pkg = JSON.parse(readFileSync(join(target, "package.json"), "utf8")) as {
+        name: string;
+        dependencies: Record<string, string>;
+      };
+      assert.equal(pkg.name, "my-business");
+      assert.ok(pkg.dependencies["@arnilo/prism"]);
+      assert.ok(pkg.dependencies["@arnilo/prism-core"]);
+      assert.ok(pkg.dependencies["@arnilo/prism-providers"]);
+
+      const hits = secretScan(target);
+      assert.deepEqual(hits, []);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

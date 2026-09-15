@@ -73,6 +73,7 @@ const result = {
   security21Status: -1,
   security22Status: -1,
   security23Status: -1,
+  hostCompositionsStatus: -1,
   smokeOut: "",
   integrationOut: "",
   securityOut: "",
@@ -80,6 +81,7 @@ const result = {
   security22Out: "",
   security23Out: "",
   compositionOut: "",
+  hostCompositionsOut: "",
   junk: [] as string[],
   secretFindings: [] as string[],
   tarballNames: [] as string[],
@@ -125,6 +127,7 @@ before(() => {
     "@arnilo/prism-memory/rag",
     "@arnilo/prism-memory/compaction/llm",
     "@arnilo/prism-memory/compaction/observational-memory",
+    "@arnilo/prism-memory/fabric",
     "@arnilo/prism-memory/graft",
     "@arnilo/prism-memory/wiki",
     "@arnilo/prism-web-tools/browser",
@@ -741,6 +744,222 @@ console.log("PACKED PHASE23 SECURITY OK");
   result.security23Status = security23.status;
   result.security23Out = security23.stdout + security23.stderr;
 
+  // 5f. Packed plain-JavaScript host compositions and readiness enforcement (plan 073 Task 5)
+  writeFileSync(
+    join(consumer, "host-compositions.mjs"),
+    `
+import assert from "node:assert/strict";
+import {
+  createAgent,
+  createMemoryCheckpointStore,
+  createMockProvider,
+  createSecretRedactor,
+  createSecureAgent,
+  createStaticPermissionPolicy,
+  createStaticTrustPolicy,
+  inspectHostComposition,
+  assertHostCompositionReadiness,
+  HostCompositionError,
+  providerDone,
+  providerTextDelta,
+} from "@arnilo/prism";
+import { createJsonSchemaArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
+import { inspectDevInspector } from "@arnilo/prism-coding-tools/dev";
+
+const canary = "packed-host-composition-secret";
+const redactor = createSecretRedactor([canary]);
+const validator = createJsonSchemaArgumentValidator();
+
+// 1. Valid Personal Composition
+const personalAgent = createSecureAgent({
+  id: "packed-personal-assistant",
+  definitionRevision: "1",
+  ownership: { userId: "operator" },
+  redactor,
+  permission: createStaticPermissionPolicy(true),
+  trust: createStaticTrustPolicy(true),
+  toolArgumentValidator: validator,
+  limits: { maxToolRounds: 5 },
+  runState: { checkpoints: createMemoryCheckpointStore() },
+  tools: [
+    {
+      name: "status",
+      description: "Reports personal status",
+      parameters: { type: "object", properties: { q: { type: "string" } }, additionalProperties: false },
+      execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "status", value: { ok: true } }),
+    },
+  ],
+  provider: createMockProvider([providerTextDelta("personal ready"), providerDone()]),
+  model: { provider: "mock", model: "p1" },
+});
+
+const personalReport = inspectHostComposition({
+  profile: "personal",
+  agent: personalAgent,
+  store: createMemoryCheckpointStore(),
+  credentialRefs: ["PERSONAL_KEY", canary],
+});
+
+assert.equal(personalReport.profile, "personal");
+assert.equal(personalReport.ownership.userId, "operator");
+assert.equal(personalReport.storage.durable, false, "memory store is not durable");
+assert.equal(personalReport.storage.kind, "memory");
+assert.equal(personalReport.readiness.ok, true);
+assert.equal(JSON.stringify(personalReport).includes(canary), false, "secret canary leaked in personal report");
+assert.doesNotThrow(() => assertHostCompositionReadiness({ profile: "personal", agent: personalAgent }));
+const personalSession = personalAgent.createSession();
+const personalRun = await personalSession.run("hello");
+assert.equal(personalRun.text, "personal ready");
+
+// Dev inspector composition check
+const devReport = inspectDevInspector({ agent: personalAgent });
+assert.equal(devReport.profile, "personal");
+assert.equal(devReport.storage.durable, false);
+
+// 2. Valid Business Worker Composition
+const tenantId = "packed-tenant-corp";
+const businessAgent = createSecureAgent({
+  id: "packed-business-worker",
+  definitionRevision: "1",
+  ownership: { tenantId, userId: "worker-1" },
+  identity: {
+    tenantId,
+    userId: "worker-1",
+    principal: { kind: "user", id: "worker-1" },
+    scopes: ["work"],
+    verified: true,
+    issuedAt: "2026-09-01T00:00:00.000Z",
+  },
+  redactor,
+  permission: createStaticPermissionPolicy(true),
+  trust: createStaticTrustPolicy(true),
+  toolArgumentValidator: validator,
+  limits: { maxToolRounds: 5 },
+  runState: { checkpoints: createMemoryCheckpointStore() },
+  tools: [
+    {
+      name: "work_task",
+      description: "Business task",
+      parameters: { type: "object", properties: { id: { type: "string" } }, additionalProperties: false },
+      execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "work_task", value: { ok: true } }),
+    },
+  ],
+  provider: createMockProvider([providerTextDelta("business ready"), providerDone()]),
+  model: { provider: "mock", model: "b1" },
+});
+
+const businessDurableStore = { kind: "postgres", durable: true };
+const businessReport = inspectHostComposition({
+  profile: "business",
+  agent: businessAgent,
+  store: businessDurableStore,
+  workspaceRoot: "/var/tenant-corp",
+  sandboxRoots: ["/var/tenant-corp/run"],
+  credentialRefs: ["BUSINESS_KEY"],
+});
+
+assert.equal(businessReport.profile, "business");
+assert.equal(businessReport.ownership.tenantId, tenantId);
+assert.equal(businessReport.storage.durable, true);
+assert.equal(businessReport.storage.kind, "postgres");
+assert.equal(businessReport.sandbox.isolated, true);
+assert.equal(businessReport.readiness.ok, true);
+assert.doesNotThrow(() =>
+  assertHostCompositionReadiness({
+    profile: "business",
+    agent: businessAgent,
+    store: businessDurableStore,
+    workspaceRoot: "/var/tenant-corp",
+    sandboxRoots: ["/var/tenant-corp/run"],
+  })
+);
+const businessSession = businessAgent.createSession();
+const businessRun = await businessSession.run("hello");
+assert.equal(businessRun.text, "business ready");
+
+// 3. Negative rejection test cases
+// wrong owner: personal missing userId
+assert.throws(
+  () => assertHostCompositionReadiness({ profile: "personal", agent: { ownership: { tenantId } } }),
+  HostCompositionError,
+);
+// wrong owner: business missing tenantId
+assert.throws(
+  () => assertHostCompositionReadiness({ profile: "business", agent: { ownership: { userId: "u1" } }, store: businessDurableStore }),
+  HostCompositionError,
+);
+// wrong owner: business identity tenant mismatch
+assert.throws(
+  () =>
+    assertHostCompositionReadiness({
+      profile: "business",
+      agent: {
+        ownership: { tenantId: "tenant-A" },
+        identity: { tenantId: "tenant-B", principal: { kind: "user", id: "u" }, scopes: [], verified: true, issuedAt: "2026-09-01T00:00:00.000Z" },
+        permission: createStaticPermissionPolicy(true),
+        trust: createStaticTrustPolicy(true),
+        redactor,
+      },
+      store: businessDurableStore,
+    }),
+  HostCompositionError,
+);
+// memory-only business store
+assert.throws(
+  () => assertHostCompositionReadiness({ profile: "business", agent: businessAgent, store: createMemoryCheckpointStore() }),
+  HostCompositionError,
+);
+// missing redactor/provider
+assert.throws(
+  () => assertHostCompositionReadiness({ profile: "personal", agent: { ownership: { userId: "u1" } } }),
+  HostCompositionError,
+);
+// mixed sandbox workspace
+assert.throws(
+  () =>
+    assertHostCompositionReadiness({
+      profile: "personal",
+      agent: personalAgent,
+      workspaceRoot: "/app/safe",
+      sandboxRoots: ["/app/safe/work", "/etc/outside"],
+    }),
+  HostCompositionError,
+);
+// unsupported governance
+assert.throws(
+  () =>
+    assertHostCompositionReadiness({
+      profile: "business",
+      agent: businessAgent,
+      store: businessDurableStore,
+      governance: { supported: false },
+    }),
+  HostCompositionError,
+);
+
+console.log("PACKED HOST COMPOSITIONS OK");
+`,
+  );
+  const hostComp = run("node", ["host-compositions.mjs"], consumer);
+  result.hostCompositionsStatus = hostComp.status;
+  result.hostCompositionsOut = hostComp.stdout + hostComp.stderr;
+
+  const initPA = run(
+    "node",
+    ["./node_modules/@arnilo/prism/dist/cli.js", "init", "scaffold-pa", "--template", "personal-assistant"],
+    consumer,
+  );
+  assert.equal(initPA.status, 0, initPA.stdout + initPA.stderr);
+  assert.ok(existsSync(join(consumer, "scaffold-pa", "src", "agent.ts")));
+
+  const initBW = run(
+    "node",
+    ["./node_modules/@arnilo/prism/dist/cli.js", "init", "scaffold-bw", "--template", "business-worker"],
+    consumer,
+  );
+  assert.equal(initBW.status, 0, initBW.stdout + initBW.stderr);
+  assert.ok(existsSync(join(consumer, "scaffold-bw", "src", "agent.ts")));
+
   // 6. Walk the installed @arnilo/prism* packages for leaked test artifacts / source maps.
   // Third-party transitive deps (e.g. `diff`) may ship their own maps; we only gate Prism packages.
   const nodeModules = join(consumer, "node_modules");
@@ -797,6 +1016,10 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.security23Status, 0, result.security23Out);
   });
 
+  it("packed personal and business host compositions validate and enforce readiness", () => {
+    assert.equal(result.hostCompositionsStatus, 0, result.hostCompositionsOut);
+  });
+
   it("installed packages contain no test artifacts, source maps, or real-looking secrets", () => {
     assert.deepEqual(result.junk, [], `leaked into installed node_modules: ${result.junk.join(", ")}`);
     assert.deepEqual(result.secretFindings, [], `secret-like value leaked into installed packages: ${result.secretFindings.join(", ")}`);
@@ -804,6 +1027,7 @@ describe("install smoke (fresh offline tarball install)", () => {
       (
         result.integrationOut +
         result.compositionOut +
+        result.hostCompositionsOut +
         result.securityOut +
         result.security21Out +
         result.security22Out +
@@ -811,6 +1035,11 @@ describe("install smoke (fresh offline tarball install)", () => {
       ).includes("packed-integration-secret"),
       false,
       "canary leaked into packed journey output",
+    );
+    assert.equal(
+      result.hostCompositionsOut.includes("packed-host-composition-secret"),
+      false,
+      "host composition canary leaked into output",
     );
   });
 

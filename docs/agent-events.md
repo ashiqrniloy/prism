@@ -105,6 +105,8 @@ Agent / turn / message events:
 
 Adapters should call `createDelegatedAgentStep({ sessionId, runId, adapterId, externalConversationId, stepIndex, state, kind, usage })` rather than forwarding external JSON. The constructor allow-lists fields and fails closed on malformed or oversized identifiers/counters.
 
+Coding hosts call `observeSupervisorLifecycle(supervisor, { onEvent, delegatedAgentStep })` to turn supervisor milestones into `subagent_started` / `subagent_stopped` coding lifecycle events. Both carry only redacted `childId`, `delegationId`, and `depth`; stopped events add terminal `AgentRunStatus`. Supplying `delegatedAgentStep` emits the bounded `delegated_agent_step` records AG-UI already maps. Child inputs, outputs, paths, and delegation error text never cross either bridge.
+
 `message_delta.content.type === "tool_call_delta"` carries `{ index, id?, name?, argumentsText? }`. Treat it as a streaming fragment. The runtime reconstructs and persists a final `tool_call` before executing tools. Deltas missing `id`/`name` at stream end fail the provider turn with `ErrorInfo.code: "incomplete_delta"` (typed `ProviderTransportError`); they never throw a bare `Error`. Malformed JSON with id+name present recovers as a blocked tool result (`invalid_json_arguments`) instead.
 
 Tool execution events:
@@ -134,6 +136,7 @@ Queue / subscriber / compaction / retry / provider events:
 | `event_subscriber_overflow` | `sessionId`, `droppedEvents: number`, `maxQueuedEvents: number`, `overflow: "close" \| "drop_oldest" \| "drop_newest"` |
 | `compaction_started` | `sessionId`, `runId?` |
 | `compaction_finished` | `sessionId`, `runId?`, `summary: string` |
+| `attention_compiled` | `sessionId`, `runId?`, `used: number`, `usedAfter: number`, `inputCap: number`, `triggerRatio: number`, `droppedThinkingTurns: number`, `stubbedToolResults: number`, `stubbedBytes: number`, `truncated: boolean` — one per mutated turn of the opt-in [attention compiler](attention-compiler.md); counts only, never message text |
 | `retry_scheduled` | `sessionId`, `runId`, `attempt: number`, `delayMs: number`, `error: ErrorInfo` |
 
 Provider turn events (metadata only — see [Observability](observability.md)):
@@ -251,4 +254,4 @@ for await (const event of session.stream("draft", { loop: { strategy: "generate-
 - [Observability](observability.md): `ProviderTurnMetadata`; optional adapter builds one parented GenAI span tree from metadata-only lifecycle events and ignores message/progress deltas.
 - [Tools](tools.md): `tool_execution_*` variants.
 - [Compaction and retry policies](compaction-and-retry.md): `compaction_*` and `retry_scheduled` variants.
-- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): optional redacted mapping of this stream; durable replay is ledger-backed and at-least-once, never a live-subscriber substitute. [ACP coding-host interop](acp.md) additionally maps `CodingLifecycleEvent`s from `@arnilo/prism-coding-tools/agent` (`file_changed`, `worktree_changed`, `permission_denied`, `configuration_changed`, `plan_changed`, `plan_removed`; process events reuse `CodingProcessEvent`) into ACP session updates — locations/diff blocks only through projection allow-lists, terminal chunks under `process.outputChunkBytes`, plan updates only to clients that advertised the UNSTABLE `plan` capability.
+- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): optional redacted mapping of this stream; durable replay is ledger-backed and at-least-once, never a live-subscriber substitute. [ACP coding-host interop](acp.md) additionally maps `CodingLifecycleEvent`s from `@arnilo/prism-coding-tools/agent` (`file_changed`, `worktree_changed`, `permission_denied`, `configuration_changed`, `plan_changed`, `plan_removed`, `subagent_started`, `subagent_stopped`; process events reuse `CodingProcessEvent`) into ACP session updates — locations/diff blocks only through projection allow-lists, terminal chunks under `process.outputChunkBytes`, plan updates only to clients that advertised the UNSTABLE `plan` capability.

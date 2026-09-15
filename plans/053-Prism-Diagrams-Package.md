@@ -4,7 +4,7 @@ Source request: `prism-documents.md` (Package C, P10–P12, plus the P13–P15 c
 items that land in this package). Sibling plans: `051-Prism-Documents-Package.md` (Package A),
 `052-Prism-Sheets-Package.md` (Package B).
 
-Visio is out of scope by decision (P12, Synapta decision 2026-08-30): no `.vsd`/`.vsdx` import
+Visio is out of scope by decision (P12, requester decision 2026-08-30): no `.vsd`/`.vsdx` import
 or export anywhere in these packages.
 
 **Amendment (maintainer decision, 2026-09-01):** ships as the `/diagrams` subpath of **one

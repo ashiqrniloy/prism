@@ -83,6 +83,7 @@ Pin the previous published line: `@arnilo/prism@0.5.6` (exact pins per package).
 ## Related APIs
 
 - [Migration guide](migration.md): the era index of migration cuts with replacement tables and rollback notes.
+- [Migrate Prism 0.6 to 0.7](migrate-to-0.7.md): the next line's guide (extended line: plans 072–075, 077–079).
 - [Migrate Prism 0.4 to 0.5](migrate-to-0.5.md): the previous line's guide (plans 055–067).
 - [Release and install](release-and-install.md): packed surfaces, install rules, support matrix, and the offline test budget.
 - [Peer dependencies](peer-dependencies.md): every third-party peer declaration with range, optionality, subpath, and install line.

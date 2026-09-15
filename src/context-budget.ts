@@ -160,7 +160,7 @@ export function applyContextBudget(options: {
 
   // Measure once, then subtract each dropped item's own estimate (dropNext computes it
   // with the same estimators) — avoids an O(n²) re-scan of the full keep-set per drop.
-  const kept = measureAll(groups, context, skills, tools, skillContext, demotedBodies, estimateTokens);
+  const kept = measureInputCost({ groups, context, skills, tools, skillContext, demotedBodies, estimateTokens });
   while (overBudget(kept, budget)) {
     const drop = dropNext(groups, context, skills, layout, skillContext, demotedBodies, historyCursor, estimateTokens);
     if (!drop) {
@@ -284,6 +284,36 @@ function omission(
     byteLength: estimateMessageBytes(message),
   };
 }
+
+/** Everything the assembler will send, in the order it will send it. */
+export interface MeasureInputCostOptions {
+  readonly groups: ContextBudgetMessageGroups;
+  readonly context?: readonly ContextBlock[];
+  readonly skills?: readonly Skill[];
+  readonly tools?: readonly ToolDefinition[];
+  readonly skillContext?: SkillRenderContext;
+  readonly demotedBodies?: ReadonlySet<string>;
+  readonly estimateTokens?: TokenEstimator;
+}
+
+/**
+ * One O(n) cost measurement of the whole request (groups, context, skills, tool declarations).
+ * Shared with the attention-compiler gate, which measures once per turn and then subtracts a
+ * per-mutation delta instead of re-measuring — the same trick `applyContextBudget` uses.
+ */
+export function measureInputCost(options: MeasureInputCostOptions): { tokens: number; bytes: number } {
+  return measureAll(
+    options.groups,
+    options.context ?? [],
+    options.skills ?? [],
+    options.tools,
+    options.skillContext ?? {},
+    options.demotedBodies ?? EMPTY_DEMOTED_BODIES,
+    options.estimateTokens ?? estimateTextTokens,
+  );
+}
+
+const EMPTY_DEMOTED_BODIES: ReadonlySet<string> = new Set<string>();
 
 /**
  * Resolves the budget's estimator, validating each return value: a host estimator that

@@ -30,11 +30,12 @@ Do not use the bundle loader to discover providers — provider/model packages s
 | `model?` | `ModelConfig` object, or a `"<provider>/<model>"` string resolved through `registries.models`. Optional at authoring time: when omitted, resolution falls back to `context.overrides.model` (host-injected selection); an explicit definition `model` drives registry resolution, and neither present fails closed with `Agent "<name>" has no model`. |
 | `tools?` | Tool names to activate from the active tool registry / `registries.tools`. Omitted means no active tools unless `activateAllCapabilities: true` is passed for migration. |
 | `skills?` | Skill names resolved via `resolveActiveSkills()`; omitted means no active skills unless `activateAllCapabilities: true` is passed for migration. `toolNames` enforcement applies at activation. |
-| `context?` | Context provider names from `registries.contextProviders`. |
+| `context?` | Context provider names from `registries.contextProviders`. A host registers whichever providers it wants under its own names — for example a memory fabric's provider as `"memory-fabric"`; the definition contract itself carries no provider-specific field (see [Memory fabric](memory-fabric.md)). |
 | `systemPrompt?` | `SystemPromptConfig` layer (see [System prompts](system-prompts.md)). |
 | `instructions?` | Base prompt text. |
 | `loop?` | `AgentLoopStrategy` or `AgentLoopOptions` (see [Agent loops](agent-loops.md)). |
 | `metadata?` | Free-form metadata. |
+| `attentionCompiler?` | Opt-in attention compiler for the resolved config: `true` for defaults, an `AttentionCompilerOptions` object to tune ratios/depth (see [Attention compiler](attention-compiler.md)). Copied verbatim onto `AgentConfig.attentionCompiler` and nothing else; `RunOptions.attentionCompiler` may later disable or relax it. |
 | `create?(config?)` | Optional escape hatch. When present, overrides declarative resolution: the helper builds a base `AgentConfig` from the declarative fields, calls `create(config)`, then merges `context.overrides`. |
 
 ### `AgentDefinitionResolutionContext` (contract, `@arnilo/prism`)
@@ -115,6 +116,12 @@ instructions: You are a careful coding agent.
 ---
 Prefer minimal diffs. Cite the file you changed.
 ```
+
+`context` names are whatever the host registered in `registries.contextProviders` — for example
+`registries.contextProviders.register("memory-fabric", fabric.createContextProvider())` makes
+`context: [memory-fabric]` work, while an unregistered name fails closed at resolution. Nothing about
+the fabric is required by `AgentDefinition`; a host that never registers a provider resolves the same
+definition unchanged.
 
 `discoverAgentBundles({ configRoot })` returns (paths only):
 
@@ -244,6 +251,7 @@ Use `activateAllCapabilities: true` only while migrating old configs. It intenti
 - [System prompts](system-prompts.md): `composeSystemPrompt` source ranks and the `AGENT.md` body / `SYSTEM.md` / `AGENTS.md` prompt layering reused by `resolveAgentBundle`.
 - [Contribution discovery (workspace)](contribution-discovery.md): `discoverContributions` for repo `.agents/` contributions passed as `repoContributions`.
 - [Context and skills](context-and-skills.md): `resolveActiveSkills` and `RunOptions.activeSkills` activation that consumes discovered skills.
+- [Memory fabric](memory-fabric.md): optional `fabric.createContextProvider()` registered as a `context` name, and `fabric.attach(session)` gating its tools and workers.
 - [Tools](tools.md): `ToolDefinition` / `(toolNames)` enforcement and host-owned tool execution.
 - [Agent loops](agent-loops.md): `resolveLoop` and loop strategies passed via `loop` / `context.overrides`.
 - [Extensions](extensions.md): `registerAgent()` programmatic registration of inert `AgentDefinition` values.

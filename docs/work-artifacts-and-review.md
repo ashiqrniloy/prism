@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-core/runtime/server` ships a durable artifact co-work review service (Phase 9 / 0.0.14): authorized attach of source/output references with MIME/hash/version, producer-run attribution, citations/data sources, and preview metadata; revision comparison; reviewer approve/reject (request-changes) with last-validated recovery; and authorized, expiring delivery links. Core (`@arnilo/prism`) exports artifact **types only** (`ArtifactRecord`, `ArtifactRevision`, `ArtifactApproval`, `ArtifactDeliveryToken`, approval state `pending | approved | rejected`). Prism persists bounded metadata, revisions, approvals, and delivery references over the existing versioned checkpoint store — **never file bodies**; hosts own blob storage and rendering.
+`@arnilo/prism-core/runtime/server` ships a durable artifact co-work review service: authorized attach of source/output references with MIME/hash/version, producer-run attribution, citations/data sources, and preview metadata; revision comparison; reviewer approve/reject (request-changes) with last-validated recovery; and authorized, expiring delivery links. Citations may carry shared evidence fields (`sourceId`, `revision`, `contentHash`, `retrievedAt`, `excerpt`, `span`, `tenantId`, `support`). Approve stamps `evidenceDigest` over those identity tuples. Core (`@arnilo/prism`) exports artifact types plus `checkCitationIntegrity` / `citationBindingDigest` / `approvalEvidenceIntact`. Prism persists bounded metadata, revisions, approvals, and delivery references over the existing versioned checkpoint store — **never file bodies**; hosts own blob storage and rendering. Integrity is existence/hash/span/ACL only; `support` is an optional host verdict, not proof.
 
 ## When to use it
 
@@ -34,8 +34,8 @@ Every operation input carries `ownership` (from host `authorize`, never request 
 | `list` | Ownership/thread-scoped `PersistencePage<ArtifactRecord>` |
 | `get` | `ArtifactRecord` |
 | `revise` | `ArtifactRecord` with an appended revision (new revision resets state to pending) |
-| `compare` | `{ artifactId, from, to, changed: { hash, mime, uri, citations } }` — hash+metadata only |
-| `approve` / `reject` | `ArtifactRecord`; approve advances `lastValidatedVersion`, reject never clears it |
+| `compare` | `{ artifactId, from, to, changed: { hash, mime, uri, citations } }` — hash+metadata only; structural Office diffs use `diffDocument` |
+| `approve` / `reject` | `ArtifactRecord`; approve advances `lastValidatedVersion` and stamps `evidenceDigest`; reject never clears last-validated |
 | `lastValidated` | The last approved `ArtifactRevision` (fails closed before any approval) |
 | `deliveryLink` | `{ link, token }` — signed expiring `ArtifactDeliveryToken` |
 
@@ -87,13 +87,21 @@ export const handler = createArtifactHandler({ service: artifacts, authorize: ho
 
 - Every operation requires authenticated identity + thread ownership derived from host `authorize`; cross-ownership access fails closed as `not_found` (never leaks existence).
 - Concurrent reviewer conflicts resolve via checkpoint CAS (`expectedVersion`); the loser gets a retryable `conflict` and no approval is lost or duplicated. A throw before commit persists nothing, so failed updates roll back.
-- Local filesystem paths are rejected in `uri`/citations (`file:`, absolute, or drive paths); records are redacted before persist and on response, so paths/secrets/document-private data never enter records, events, or exports.
+- Local filesystem paths are rejected in `uri`/citations (`file:`, absolute, or drive paths); records are redacted before persist and on response, so paths/secrets/document-private data never enter records, events, or exports. Citation evidence is untrusted/inert: hosts pass already-retrieved snapshots into `checkCitationIntegrity` (no URL refetch, no persisted presigned credentials). A live source hash/revision/ACL change fails integrity even when a semantic judge scores the prose 1.0.
 - Frozen caps (default / hard): artifacts per thread 64/256; revisions per artifact 32/128; record 8/64 KiB; preview 16/64 KiB; citations 32/128 and 2/8 KiB each; MIME 128/512 B; hash 256/1 KiB; compare exactly 2 revisions; delivery TTL 5 min/24 h; delivery token 4/16 KiB. Raising the revision cap may require raising `recordBytes` (aggregate backstop).
 - Compare is hash+metadata-bounded (hosts render content); no file bodies are persisted or transferred. With a wired body store, bodies live in the host's object store and are streamed through the adapter (bounded by `maxBodyBytes` 64 MiB/512 MiB, concurrent transfers 4/16, presign TTL 10 min/24 h); object-store outages surface typed `ERR_PRISM_S3_*` / `ERR_PRISM_ARTIFACT_BODY_*` errors, never silent success.
 
 ## Coding patch review composition (0.2.6, plan 026)
 
 `@arnilo/prism-coding-tools/agent` composes over this service for the coding patch review workflow: `createCodingPatchReviewManifest` builds a bounded manifest (repository/worktree identity, base/head, patch digest, changed paths, diffstat, check and diagnostic summaries) and returns a structural `ArtifactAttachInput` whose `preview.review` embeds the manifest and whose `hash` is the patch SHA-256; `assertCodingPatchAccepted` derives `pending|accepted|rejected|superseded` from the returned `ArtifactRecord` by binding to the exact artifact revision, digest, and identity — any patch/repository/worktree/base/head change supersedes a prior acceptance (a newer revision attached after approval makes the old acceptance stale and refused). Decisions never apply/commit/push/merge; the manifest never embeds a raw patch body. Full contract: [Coding review and diagnostics](coding-review-and-diagnostics.md).
+
+## Business action drafts and editable approvals (0.7.0)
+
+Business tools (e.g. mail, calendar, documents in `@arnilo/prism-core/integrations/work`) record mutations through durable `WorkDraftStore` drafts before execution. Human reviewers can approve, deny, or edit draft payloads directly:
+- AG-UI clients advertise and send `approveWithEdits` with revised arguments (`editedArgs`/`modifiedArguments`).
+- The server resume endpoint accepts `{ decision: "approve", modifiedArguments: { ... } }` under CAS `expectedVersion`.
+- If arguments are modified, a new draft revision is created with bumped revision number and payload digest. The previous revision's approval is invalidated and the mutation requires approval for the revised content.
+- Untyped/malformed edits, recipient escalation, schema violations, or stale CAS versions fail closed.
 
 ## Live probe (plans/064 Task 9)
 
@@ -115,3 +123,5 @@ Probes: put → get (hash + size verified), presigned delivery URL with `X-Amz-S
 - [Policy and audit](policy-and-audit.md): `onDecision` events bridge here for an auditable review ledger.
 - [Host security](host-security.md): identity/ownership, redaction, and expiring-link boundaries.
 - [Frontend interoperability (AG-UI and ACP)](ag-ui.md): projects artifact progress/approval/download-link as redacted co-work events over the durable-resume stream.
+- [Documents, spreadsheets, and presentations](documents.md): `diffDocument` for structural paragraph/table/cell/slide review.
+- [Evaluations](evaluations.md): `createCitationIntegrityScorer` invariant over `environment.citations`.
