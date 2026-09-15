@@ -157,15 +157,21 @@ test("fail-closed: a non-protected package below its threshold exits 1, is liste
     for (const [pkg, entry] of Object.entries(thresholds.packages)) {
       if (entry.protectedException) assert.ok(!artifact.belowThreshold.includes(pkg), `${pkg} must never be a threshold failure`);
     }
-    // Reproduction: back-to-back runs are stable well inside the 3pp margin.
-    // 0.5pp absorbs rare runner noise (observed 0.13pp on @arnilo/prism-browser
-    // on a loaded 2-vCPU runner 2026-08-14; local + container runs are
-    // byte-identical at 83.78). A vacuous/mis-instrumented run differs by tens
-    // of pp or produces 100.00/missing rows, far outside this window.
+    // Reproduction: back-to-back runs land well inside this window; the window
+    // absorbs runner wobble, it is not the sabotage detector.
+    //   @arnilo/prism-browser  0.13pp on a loaded 2-vCPU runner 2026-08-14
+    //   @arnilo/prism-acp-agent 1.12pp (93.60 vs 94.72) in one GitHub job
+    //                       2026-09-15 with functions identical (92.59 both
+    //                       passes) — same functions, fewer lines/branches, so
+    //                       a scheduling/load-sensitive arm, not a missing
+    //                       suite; local runs are byte-identical at 94.72.
+    // A vacuous/mis-instrumented run differs by tens of pp or produces
+    // 100.00/missing rows, so 2pp keeps the signal (and the mcp denominator
+    // proof: pollution reads 45.47 lines against a 90.25 expectation).
     for (const name of workspaceNames) {
       const real = JSON.parse(realArtifact).packages[pkgName(name)];
       const temp = artifact.packages[pkgName(name)];
-      assert.ok(Math.abs(real.lines - temp.lines) < 0.5, `${pkgName(name)} coverage not reproduced: ${real.lines} vs ${temp.lines}`);
+      assert.ok(Math.abs(real.lines - temp.lines) < 2, `${pkgName(name)} coverage not reproduced: ${real.lines} vs ${temp.lines}`);
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });
