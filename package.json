@@ -125,10 +125,10 @@
     "packages/mcp",
     "packages/prism-providers",
     "packages/memory",
+    "packages/prism-work",
     "packages/prism-core",
     "packages/prism-channels",
     "packages/prism-coding-tools",
-    "packages/prism-work",
     "packages/ag-ui",
     "packages/web-tools",
     "packages/acp-agent"
