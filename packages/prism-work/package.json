@@ -91,7 +91,7 @@
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
-    "mammoth": "^1.8.0",
+    "mammoth": "^1.12.3",
     "pdf-parse": "^2.4.5",
     "playwright-core": "1.63.0"
   },
