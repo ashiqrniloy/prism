@@ -79,18 +79,17 @@ if (unresolved?.[0]?.state !== "executing") {
   persistence.close();
   throw new Error("worker never claimed the operation");
 }
-process.stdout.write(`STATE ${JSON.stringify({ operationId: unresolved[0].operationId, version: unresolved[0].version })}\n`);
-// Graceful path: SIGTERM lets the runtime abort in-flight work, settle the operation
-// (cancelled/failed) and release its lease before the process leaves. The interval only keeps the
-// event loop open so the signal is actually observed — a bare unresolved top-level await would let
-// Node exit 13 the moment the STATE line is flushed, which would make SIGTERM untestable.
-await new Promise((resolve) => {
+// Install SIGTERM before STATE. The test kills on the first STATE line; a handler
+// registered after that write loses the race on loaded CI (exit code null).
+const stopping = new Promise((resolve) => {
   const keepAlive = setInterval(() => {}, 60_000);
   process.on("SIGTERM", () => {
     clearInterval(keepAlive);
     resolve();
   });
 });
+process.stdout.write(`STATE ${JSON.stringify({ operationId: unresolved[0].operationId, version: unresolved[0].version })}\n`);
+await stopping;
 await runtime.stop();
 persistence.close();
 process.stdout.write("STOPPED\n");
