@@ -290,7 +290,7 @@ test("lease fencing: held lease rejects; stale CAS worker rejects", async () => 
   await leases.releaseLease({ namespace: WORKSPACE_NAMESPACE, key: wsId, ownerId: "replica-2", token: fresh!.token, tenantId: "tenant-a" });
 });
 
-test("ownership: another tenant fails closed as ownership", async () => {
+test("ownership: another tenant cannot see or mutate the record", async () => {
   const h = await makeHarness();
   await h.lifecycle.create({ taskId: "task-17", repositories: [{ repositoryId: "app", branch: "b" }] });
   const otherTenant = createCodingWorkspaceLifecycle({
@@ -301,8 +301,15 @@ test("ownership: another tenant fails closed as ownership", async () => {
     repositories: { app: { root: h.fakes.app!.root, git: makeFakeOperations(h.fakes.app!) } },
     worktreeRoots: [h.worktreeRoot],
   });
-  await expectCode(otherTenant.cleanup({ taskId: "task-17" }), "ERR_PRISM_WORKSPACE_OWNERSHIP");
-  await expectCode(otherTenant.get({ taskId: "task-17" }), "ERR_PRISM_WORKSPACE_OWNERSHIP");
+  // Plan 080 Task 3: a foreign read is a miss (no ownership-shaped existence oracle),
+  // while every foreign mutation still fails closed and leaves the owner's record intact.
+  assert.equal(await otherTenant.get({ taskId: "task-17" }), null);
+  await expectCode(otherTenant.cleanup({ taskId: "task-17" }), "ERR_PRISM_WORKSPACE_UNKNOWN");
+  await expectCode(
+    otherTenant.create({ taskId: "task-17", repositories: [{ repositoryId: "app", branch: "b" }] }),
+    "ERR_PRISM_WORKSPACE_OWNERSHIP",
+  );
+  assert.equal((await h.lifecycle.get({ taskId: "task-17" }))?.taskId, "task-17", "the owner's record is untouched");
 });
 
 test("unknown repository and limits fail closed", async () => {

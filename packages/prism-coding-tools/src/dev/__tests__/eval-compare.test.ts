@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import {
   type Agent,
   type AgentEventRecord,
@@ -32,9 +32,9 @@ import {
   validateReleaseEvalManifest,
   wrapAgentWithFailureInjection,
 } from "@arnilo/prism-core/governance/evals";
-import { createMemoryWorkDraftStore, validateApproval } from "@arnilo/prism-core/integrations/work";
 import type { ExecutionStep, ExecutionTimeline } from "@arnilo/prism-core/governance/observability";
 import { summarizeTimeline } from "@arnilo/prism-core/governance/observability";
+import { createMemoryWorkDraftStore, validateApproval } from "@arnilo/prism-work/connectors";
 import { compareInspectorRuns, createPrismDevInspector, parseInspectorCompareBody } from "../index.js";
 
 const OWNERSHIP = { tenantId: "local", userId: "local" } as const;

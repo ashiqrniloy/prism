@@ -1,8 +1,8 @@
 import { assertValidAgentRunResume, pendingDecisionsOf, resolveRunDecisions } from "./agent-approval.js";
-import { parseAttentionStickyFrontier } from "./attention-compiler.js";
 import type { StoredAgentRunState } from "./agent-run-state.js";
 import { agentFingerprint, loadAgentRunState, publicState, saveAgentRunState } from "./agent-run-state.js";
 import { RuntimeAgentSession, throwIfAbortedSignal } from "./agent-session.js";
+import { parseAttentionStickyFrontier } from "./attention-compiler.js";
 import type {
   Agent,
   AgentEvent,
@@ -81,6 +81,7 @@ export function createAgentRunLifecycle(options: AgentRunLifecycleOptions): Agen
         ownership: request.ownership,
         fencingToken: options.fencingToken,
         definitionRevision: resolved.definitionRevision,
+        signal: request.signal,
         persistSessionState: request.persistSessionState,
         includeSkillBodies: request.includeSkillBodies,
       });
@@ -114,7 +115,8 @@ export async function resumeAgentRun(
   resume: AgentRunResume,
   options: AgentRunResumeOptions,
 ): Promise<AgentRunResult> {
-  return executePreparedAgentRunResume(await prepareAgentRunResume(agent, ref, resume, options));
+  throwIfAbortedSignal(options.signal);
+  return executePreparedAgentRunResume(await prepareAgentRunResume(agent, ref, resume, options, options.signal), options.signal);
 }
 
 /** Subscribe before resuming one durable run. Early consumer return aborts that resumed execution. */
@@ -163,13 +165,23 @@ type PreparedAgentRunResume =
       readonly ownership?: OwnershipScope;
     }
   | {
-      readonly kind: "approve";
+      readonly kind: "claim";
       readonly session: RuntimeAgentSession;
       readonly state: StoredAgentRunState;
       readonly runState: AgentRunStateOptions;
       readonly decisions?: ReadonlyMap<string, RunDecision>;
       readonly ownership?: OwnershipScope;
     };
+
+/**
+ * A `continue` resume needs a run whose frontier is intact: a crash-recovery checkpoint
+ * (`status: "running"`) or a turn-policy stop, which writes a terminal state that still carries
+ * the frontier (plan 084 Task 2). Every other terminal state is final — a naturally finished run
+ * must never be resurrected.
+ */
+function isContinuableState(state: StoredAgentRunState): boolean {
+  return state.status === "running" || (state.status === "succeeded" && state.stopReason === "host_policy");
+}
 
 async function prepareAgentRunResume(
   agent: Agent,
@@ -183,6 +195,7 @@ async function prepareAgentRunResume(
   // resolution, subscription, or tool execution. Unknown legacy decisions (e.g. "sideways")
   // and malformed untyped batches fail closed here instead of falling through to approval.
   assertValidAgentRunResume(resume);
+  const continuing = resume.decision === "continue";
   const { record, state } = await loadAgentRunState(options.checkpoints, ref, options.ownership);
   if (
     state.definitionRevision !== options.definitionRevision ||
@@ -191,8 +204,17 @@ async function prepareAgentRunResume(
   ) {
     throw new AgentRunStateError("Agent definition revision or fingerprint mismatch on resume");
   }
-  if (record.version !== resume.expectedVersion || state.status !== "suspended") {
-    throw new AgentRunStateError("Stale or non-suspended agent run resume");
+  if (record.version !== resume.expectedVersion || !(continuing ? isContinuableState(state) : state.status === "suspended")) {
+    throw new AgentRunStateError(continuing ? "Stale or non-running agent run resume" : "Stale or non-suspended agent run resume");
+  }
+  // Crash recovery never bypasses a gate: only a running checkpoint with no unresolved work may
+  // continue. A suspended state (tool approval, elicitation, input guardrail) requires a decision.
+  if (continuing) {
+    const pending = pendingDecisionsOf(state);
+    const awaitingDispatch = state.pending?.status === "ready" || state.pendingCalls?.some((entry) => entry.status === "ready") === true;
+    if (state.interruption !== undefined || (pending?.length ?? 0) > 0 || awaitingDispatch) {
+      throw new AgentRunStateError("Continue resume requires a running checkpoint with no pending decisions");
+    }
   }
   const session = new RuntimeAgentSession({ agent, id: state.sessionId, leafId: state.leafId });
   // Plan 078 Task 7: hand the reconstructed session to an observer (supervisor child-event pump)
@@ -347,7 +369,7 @@ async function prepareAgentRunResume(
     fencingToken: options.fencingToken,
   });
   return {
-    kind: "approve",
+    kind: "claim",
     session,
     state: claimed.state,
     decisions: resolved?.decisionsById,
@@ -358,6 +380,9 @@ async function prepareAgentRunResume(
       interruptBeforeTool: state.interruptBeforeTool,
       fencingToken: options.fencingToken,
       resumeNestedRun: options.resumeNestedRun,
+      // The checkpoint records its own cadence (plan 084 Task 1), so a continued run keeps writing
+      // turn checkpoints without the host repeating the option on resume.
+      ...(state.checkpointPolicy ? { checkpointPolicy: state.checkpointPolicy } : {}),
     },
   };
 }

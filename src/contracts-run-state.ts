@@ -17,7 +17,7 @@ import type {
   ToolCallContent,
   Usage,
 } from "./contracts-core.js";
-import type { AgentEvent, RunOptions, ToolEffectKind } from "./contracts-protocol.js";
+import type { AgentEvent, AgentFinishReason, RunOptions, ToolEffectKind } from "./contracts-protocol.js";
 
 export type AgentRunStatus = "succeeded" | "failed" | "aborted" | "suspended" | "denied";
 
@@ -178,6 +178,17 @@ export interface AgentRunStateOptions {
   readonly checkpoints: CheckpointStore;
   /** Host-authored immutable revision required for durable runs. */
   readonly definitionRevision: string;
+  /**
+   * Durable checkpoint cadence (plan 084 Task 1). `"decision"` (default) persists only on
+   * suspension and terminal status. `"every-turn"` additionally persists a running-state
+   * checkpoint at each provider-turn boundary — after the previous turn's tool results are in
+   * the session store, before the next provider request — so a host process that dies mid-run
+   * can `resumeAgentRun(..., { decision: "continue" })` from the last turn instead of re-running
+   * the investigation. Costs one bounded, redacted checkpoint write per provider turn; the
+   * policy is recorded in the checkpoint, so a later resume keeps checkpointing without the host
+   * repeating the option.
+   */
+  readonly checkpointPolicy?: "decision" | "every-turn";
   /** Suspend every tool call before its side effect. */
   readonly interruptBeforeTool?: boolean;
   readonly maxStateBytes?: number;
@@ -220,8 +231,13 @@ export interface AgentRunState {
 
 export interface AgentRunResume {
   readonly expectedVersion: number;
-  /** Legacy single-approval path; `approve` allows all pending once, `deny` terminates the run denied. */
-  readonly decision?: "approve" | "deny";
+  /**
+   * Legacy decision path. `approve` allows all pending decisions once; `deny` terminates the run
+   * as `denied`; `continue` resumes a running-state `"every-turn"` checkpoint that has no pending
+   * decisions (crash recovery). A suspended run still requires `approve`/`deny` or a decision
+   * batch — `continue` never bypasses an approval gate and is a host-API-only action.
+   */
+  readonly decision?: "approve" | "deny" | "continue";
   /** Batch decision path; exactly one of decision/decisions. Applied as one atomic CAS transition. */
   readonly decisions?: readonly RunDecision[];
 }
@@ -232,6 +248,8 @@ export interface AgentRunResumeOptions {
   readonly definitionRevision: string;
   readonly ownership?: OwnershipScope;
   readonly fencingToken?: number;
+  /** Host abort for the resume: checked between steps and threaded into the resumed provider/tool turn. */
+  readonly signal?: AbortSignal;
   /** Routes root decisions for nested-run approvals back to the child (e.g. supervisor). */
   readonly resumeNestedRun?: ResumeNestedRun;
   /**
@@ -246,10 +264,8 @@ export interface AgentRunResumeOptions {
   readonly includeSkillBodies?: boolean;
 }
 
-/** Bounded, abortable options for `resumeAgentRunStream()`. */
-export interface AgentRunResumeStreamOptions extends AgentRunResumeOptions, SubscribeOptions {
-  readonly signal?: AbortSignal;
-}
+/** Bounded live-event options for `resumeAgentRunStream()`; `signal` is inherited from the base resume options. */
+export interface AgentRunResumeStreamOptions extends AgentRunResumeOptions, SubscribeOptions {}
 
 export interface AgentRunRef {
   readonly runId: string;
@@ -302,6 +318,10 @@ export interface AgentRunResult {
   readonly error?: ErrorInfo;
   /** String form of the abort reason when `status` is `"aborted"`. */
   readonly abortReason?: string;
+  /** Present when the loop stopped on a ceiling or host turn policy instead of a natural end. */
+  readonly stopReason?: AgentFinishReason;
+  /** Host stop detail from `TurnPolicyOptions.stop` (≤256 bytes, redacted). */
+  readonly stopDetail?: string;
   /** Present for durable suspended/terminal runs. Payload is redacted and bounded. */
   readonly runState?: AgentRunState;
   /** Present only while awaiting an operator decision. */

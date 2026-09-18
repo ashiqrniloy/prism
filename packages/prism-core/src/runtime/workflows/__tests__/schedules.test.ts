@@ -177,7 +177,7 @@ describe("durable workflow schedules", () => {
       ownership: { tenantId: "tenant-b", userId: "user-b" },
       ownerId: "other",
     });
-    await assert.rejects(other.get("secure"));
+    assert.equal(await other.get("secure"), null, "a foreign schedule scope reads as absent, not as an existence oracle");
   });
 
   test("registers schedule commands only when a schedule service is selected", async () => {

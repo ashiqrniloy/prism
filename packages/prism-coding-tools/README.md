@@ -1,12 +1,11 @@
 # @arnilo/prism-coding-tools
 
-Unified coding agent tools, security sandboxing, document parsing, OpenAPI tools, Linux desktop integration, Dev inspector, and persona extensions for Prism.
+Unified coding agent tools, security sandboxing, OpenAPI tools, Linux desktop integration, Dev inspector, and persona extensions for Prism.
 
 ## Subpaths
 
 - `@arnilo/prism-coding-tools/agent`: Core coding tools (read, write, edit, search, bash, git, diagnostics, check, ast-grep, lsp).
 - `@arnilo/prism-coding-tools/security`: Sandbox execution adapters (Docker/OCI, native disposable sandbox, approval policies, egress proxy).
-- `@arnilo/prism-coding-tools/document-reader`: Bounded PDF/DOCX literal-text extraction adapter with optional peer fail-closed loading.
 - `@arnilo/prism-coding-tools/openapi`: OpenAPI 3.x tool generator and executor with SSRF protection and parameter validation.
 - `@arnilo/prism-coding-tools/computer-use-linux`: Linux desktop observation and targeting tool bridge.
 - `@arnilo/prism-coding-tools/dev`: Loopback-only developer inspector, event timeline visualizer, and local replay server.

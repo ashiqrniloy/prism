@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
+  classifyProviderFailure,
   DEFAULT_MAX_BUFFER_BYTES,
   DEFAULT_MAX_EVENT_BYTES,
   DEFAULT_MAX_RESPONSE_BODY_BYTES,
@@ -51,6 +52,19 @@ describe("provider transport primitives", () => {
 
     const plain = httpStatusError("X request failed", new Response("bad", { status: 400 }), "bad") as Error & { retryAfterMs?: number };
     assert.equal(plain.retryAfterMs, undefined);
+  });
+
+  it("classifies quota, auth, rate, transient, permanent, and unknown provider failures", () => {
+    for (const [error, expected] of [
+      [Object.assign(new Error('{"error":{"code":"GoUsageLimitError"}}'), { code: 429 }), "quota"],
+      [Object.assign(new Error("unauthorized"), { code: 401 }), "auth"],
+      [Object.assign(new Error("slow down"), { code: 429 }), "rate_limited"],
+      [Object.assign(new Error("connection reset"), { code: "ECONNRESET" }), "transient"],
+      [Object.assign(new Error("bad request"), { code: 400 }), "permanent"],
+      [new Error("unclassified"), "unknown"],
+    ] as const) {
+      assert.equal(classifyProviderFailure(error), expected);
+    }
   });
 
   it("parseRetryAfterMs handles delay-seconds, HTTP-date, and garbage", () => {

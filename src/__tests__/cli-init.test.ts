@@ -578,6 +578,7 @@ describe("prism init", () => {
       assert.ok(pkg.dependencies["@arnilo/prism"]);
       assert.ok(pkg.dependencies["@arnilo/prism-core"]);
       assert.ok(pkg.dependencies["@arnilo/prism-providers"]);
+      assert.ok(pkg.dependencies["@arnilo/prism-work"]);
 
       const hits = secretScan(target);
       assert.deepEqual(hits, []);

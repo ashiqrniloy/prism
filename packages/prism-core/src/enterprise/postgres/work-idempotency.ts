@@ -1,18 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { assertIdentityActive } from "@arnilo/prism";
+import type {
+  IdempotencyStore,
+  WorkMutationFailure,
+  WorkMutationKey,
+  WorkMutationRecord,
+  WorkMutationResult,
+  WorkMutationStatus,
+  WorkMutationTransitionInput,
+} from "@arnilo/prism-work/connectors";
 import type { Pool } from "pg";
-import {
-  DEFAULT_WORK_LIMITS,
-  HARD_WORK_LIMITS,
-  type IdempotencyStore,
-  type WorkMutationFailure,
-  type WorkMutationKey,
-  type WorkMutationRecord,
-  type WorkMutationResult,
-  type WorkMutationStatus,
-  type WorkMutationTransitionInput,
-  WorkToolError,
-} from "../../integrations/work/index.js";
 import { decodeBoundedJson, encodeBoundedJson } from "./codecs.js";
 import { EnterprisePostgresError } from "./errors.js";
 import { qualifyTable } from "./identifiers.js";
@@ -20,8 +17,8 @@ import { asTimestamp, deepFreeze, ownerParams, requiredText, requireStoreOwner, 
 
 const DEFAULT_CLAIM_TTL_MS = 15 * 60_000;
 const HARD_CLAIM_TTL_MS = 60 * 60_000;
-const DEFAULT_MAX_ATTEMPTS = DEFAULT_WORK_LIMITS.maxRetries + 1;
-const HARD_MAX_ATTEMPTS = HARD_WORK_LIMITS.maxRetries + 1;
+const DEFAULT_MAX_ATTEMPTS = 3;
+const HARD_MAX_ATTEMPTS = 5;
 const RETENTION_MS = 30 * 24 * 60 * 60_000;
 const MAX_KEY_BYTES = 2 * 1024;
 const MAX_OP_BYTES = 512;
@@ -250,7 +247,7 @@ function contextParams(context: WorkContext): [string, string, string, string, s
 function resolveClaimTtl(value: number | undefined): number {
   const ttl = value ?? DEFAULT_CLAIM_TTL_MS;
   if (!Number.isSafeInteger(ttl) || ttl < 1 || ttl > HARD_CLAIM_TTL_MS) {
-    throw new WorkToolError("ERR_PRISM_WORK_IDEMPOTENCY", "claimTtlMs out of range");
+    throw new EnterprisePostgresError("claimTtlMs out of range", "ERR_PRISM_WORK_IDEMPOTENCY");
   }
   return ttl;
 }
@@ -258,21 +255,21 @@ function resolveClaimTtl(value: number | undefined): number {
 function resolveMaxAttempts(value: number | undefined): number {
   const attempts = value ?? DEFAULT_MAX_ATTEMPTS;
   if (!Number.isSafeInteger(attempts) || attempts < 1 || attempts > HARD_MAX_ATTEMPTS) {
-    throw new WorkToolError("ERR_PRISM_WORK_IDEMPOTENCY", "maxAttempts out of range");
+    throw new EnterprisePostgresError("maxAttempts out of range", "ERR_PRISM_WORK_IDEMPOTENCY");
   }
   return attempts;
 }
 
 function version(value: unknown): number {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) {
-    throw new WorkToolError("ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT", "idempotency transition conflict");
+    throw new EnterprisePostgresError("idempotency transition conflict", "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT");
   }
   return value;
 }
 
 function validateResult(result: WorkMutationResult): WorkMutationResult {
   if (!result || typeof result !== "object" || Array.isArray(result)) {
-    throw new WorkToolError("ERR_PRISM_WORK_IDEMPOTENCY", "result is required and bounded");
+    throw new EnterprisePostgresError("result is required and bounded", "ERR_PRISM_WORK_IDEMPOTENCY");
   }
   const draftId = inputText(result.draftId, "draftId", MAX_RESULT_FIELD_BYTES);
   const resourceId = result.resourceId === undefined ? undefined : inputText(result.resourceId, "resourceId", MAX_RESULT_FIELD_BYTES);
@@ -281,7 +278,7 @@ function validateResult(result: WorkMutationResult): WorkMutationResult {
 
 function validateFailure(failure: WorkMutationFailure): WorkMutationFailure {
   if (!failure || typeof failure !== "object" || Array.isArray(failure)) {
-    throw new WorkToolError("ERR_PRISM_WORK_IDEMPOTENCY", "failure is required and bounded");
+    throw new EnterprisePostgresError("failure is required and bounded", "ERR_PRISM_WORK_IDEMPOTENCY");
   }
   const code = inputText(failure.code, "failure code", MAX_FAILURE_CODE_BYTES);
   const reference =
@@ -291,7 +288,7 @@ function validateFailure(failure: WorkMutationFailure): WorkMutationFailure {
 
 function failureStatus(value: unknown): "failed_retryable" | "failed_terminal" {
   if (value !== "failed_retryable" && value !== "failed_terminal") {
-    throw new WorkToolError("ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT", "idempotency transition conflict");
+    throw new EnterprisePostgresError("idempotency transition conflict", "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT");
   }
   return value;
 }
@@ -303,7 +300,7 @@ function inputText(
   code: "ERR_PRISM_WORK_IDEMPOTENCY" | "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT" = "ERR_PRISM_WORK_IDEMPOTENCY",
 ): string {
   if (typeof value !== "string" || !value.trim() || Buffer.byteLength(value, "utf8") > maxBytes) {
-    throw new WorkToolError(code, `${label} is required and bounded`);
+    throw new EnterprisePostgresError(`${label} is required and bounded`, code);
   }
   return value;
 }
@@ -418,9 +415,9 @@ function boundedInteger(value: unknown, label: string, min: number, max: number)
 }
 
 function idempotencyConflict(): never {
-  throw new WorkToolError("ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT", "idempotency transition conflict");
+  throw new EnterprisePostgresError("idempotency transition conflict", "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT");
 }
 
 function workStoreError(error: unknown): Error {
-  return error instanceof WorkToolError ? error : storeError(error);
+  return error instanceof EnterprisePostgresError ? error : storeError(error);
 }

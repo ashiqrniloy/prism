@@ -78,6 +78,8 @@ export interface GuardrailContext<S extends GuardrailStage> {
   readonly runId: string;
   readonly toolCallId?: string;
   readonly toolName?: string;
+  /** Same-run completed host tool results, available only at the output stage. */
+  readonly toolResults?: S extends "output" ? readonly ToolResult[] : never;
   readonly metadata: Readonly<Record<string, unknown>>;
   readonly signal: AbortSignal;
 }

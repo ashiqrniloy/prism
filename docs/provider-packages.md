@@ -25,26 +25,26 @@ Do not use provider packages as a package manager, credential store, env loader,
 
 | adapter package | version |
 | --- | --- |
-| `@arnilo/prism-providers/ai-sdk` | 0.7.0 |
-| `@arnilo/prism-providers/alibaba` | 0.7.0 |
-| `@arnilo/prism-providers/anthropic` | 0.7.0 |
-| `@arnilo/prism-providers/azure` | 0.7.0 |
-| `@arnilo/prism-providers/bedrock` | 0.7.0 |
-| `@arnilo/prism-providers/clinepass` | 0.7.0 |
-| `@arnilo/prism-providers/commandcode` | 0.7.0 |
-| `@arnilo/prism-providers/deepseek` | 0.7.0 |
-| `@arnilo/prism-providers/google` | 0.7.0 |
-| `@arnilo/prism-providers/hyper` | 0.7.0 |
-| `@arnilo/prism-providers/kimi` | 0.7.0 |
-| `@arnilo/prism-providers/model-discovery` | 0.7.0 |
-| `@arnilo/prism-providers/neuralwatt` | 0.7.0 |
-| `@arnilo/prism-providers/ollama` | 0.7.0 |
-| `@arnilo/prism-providers/openai` | 0.7.0 |
-| `@arnilo/prism-providers/opencode-go` | 0.7.0 |
-| `@arnilo/prism-providers/openrouter` | 0.7.0 |
-| `@arnilo/prism-providers/vertex` | 0.7.0 |
-| `@arnilo/prism-providers/xai` | 0.7.0 |
-| `@arnilo/prism-providers/zai` | 0.7.0 |
+| `@arnilo/prism-providers/ai-sdk` | 0.8.0 |
+| `@arnilo/prism-providers/alibaba` | 0.8.0 |
+| `@arnilo/prism-providers/anthropic` | 0.8.0 |
+| `@arnilo/prism-providers/azure` | 0.8.0 |
+| `@arnilo/prism-providers/bedrock` | 0.8.0 |
+| `@arnilo/prism-providers/clinepass` | 0.8.0 |
+| `@arnilo/prism-providers/commandcode` | 0.8.0 |
+| `@arnilo/prism-providers/deepseek` | 0.8.0 |
+| `@arnilo/prism-providers/google` | 0.8.0 |
+| `@arnilo/prism-providers/hyper` | 0.8.0 |
+| `@arnilo/prism-providers/kimi` | 0.8.0 |
+| `@arnilo/prism-providers/model-discovery` | 0.8.0 |
+| `@arnilo/prism-providers/neuralwatt` | 0.8.0 |
+| `@arnilo/prism-providers/ollama` | 0.8.0 |
+| `@arnilo/prism-providers/openai` | 0.8.0 |
+| `@arnilo/prism-providers/opencode-go` | 0.8.0 |
+| `@arnilo/prism-providers/openrouter` | 0.8.0 |
+| `@arnilo/prism-providers/vertex` | 0.8.0 |
+| `@arnilo/prism-providers/xai` | 0.8.0 |
+| `@arnilo/prism-providers/zai` | 0.8.0 |
 <!-- generated:package-truth:providers end -->
 
 

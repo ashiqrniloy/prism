@@ -61,7 +61,7 @@ function resolveFile(file) {
     "packages/observability-opentelemetry/": "packages/prism-core/src/governance/observability/",
     "packages/credentials-node/": "packages/prism-core/src/credentials/node/",
     "packages/enterprise-postgres/": "packages/prism-core/src/enterprise/postgres/",
-    "packages/work-tools/": "packages/prism-core/src/integrations/work/",
+    "packages/work-tools/": "packages/prism-work/src/connectors/",
     "packages/tool-validator-json-schema/": "packages/prism-core/src/validation/json-schema/",
   };
   for (const [prefix, target] of Object.entries(coreMap)) {

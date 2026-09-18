@@ -14,7 +14,11 @@ and `runTranscriptionConformance` from `@arnilo/prism/testing/provider-conforman
 ## When to use it
 
 Use it for one-shot voice output and batch/stream transcription where the host
-owns playback, capture, and audio storage. Do not use it for interactive
+owns playback, capture, and audio storage. Messaging hosts wrap these providers
+and hand the wrappers to a channel adapter — Telegram `transcribe` turns an
+inbound voice note into turn text and `synthesize` adds a voice note next to a
+final reply ([telegram-channel.md](telegram-channel.md)); `@arnilo/prism-channels`
+never imports this package and never stores audio. Do not use it for interactive
 bidirectional voice — that is the Realtime session contract
 ([`RealtimeSession`](public-contracts.md)), which keeps its own
 `audio_delta`/`transcript_delta` events. Streaming here is one-directional:

@@ -39,6 +39,21 @@ const DEFAULT_BASE_URL = "https://dashscope-intl.aliyuncs.com/api/v1";
 /** Videos are large; only invoked for `fetchUrl`-defaulted result downloads. */
 const DEFAULT_RESULT_MAX_BYTES = 512 * 1024 * 1024;
 
+async function downloadVideo(
+  url: string,
+  maxBytes: number,
+  fetchUrl: (url: URL, init?: { readonly signal?: AbortSignal }) => Promise<Response>,
+  signal?: AbortSignal,
+): Promise<Uint8Array> {
+  const response = await fetchUrl(new URL(url), { signal });
+  if (!response.ok) throw new VideoGenerationError("request_failed", `Alibaba video result download failed: ${response.status}`);
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.byteLength > maxBytes) {
+    throw new VideoGenerationError("response_malformed", `Alibaba video result exceeded ${maxBytes} bytes`);
+  }
+  return bytes;
+}
+
 /** Create a DashScope wanx `VideoGenerationProvider` (text- and image-to-video).
  *  Credentials resolve per call and are redacted from every thrown error. */
 export function createAlibabaVideoGenerationProvider(
@@ -48,7 +63,7 @@ export function createAlibabaVideoGenerationProvider(
   const baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
   const fetchImpl = options.fetch ?? fetch;
   const maxResultBytes = DEFAULT_RESULT_MAX_BYTES;
-  const _fetchUrl = options.fetchUrl ?? ((url, init) => pinnedFetch(url, { method: "GET", ...init }, { maxResponseBytes: maxResultBytes }));
+  const fetchUrl = options.fetchUrl ?? ((url, init) => pinnedFetch(url, { method: "GET", ...init }, { maxResponseBytes: maxResultBytes }));
   const pollIntervalMs = options.pollIntervalMs ?? 10_000;
   const timeoutMs = options.timeoutMs ?? 15 * 60_000;
   // DashScope status responses do not echo the model; remember it per submitted
@@ -105,7 +120,7 @@ export function createAlibabaVideoGenerationProvider(
     return { state: "queued" };
   }
 
-  function extractVideo(payload: Record<string, unknown>, model: string): VideoGenerationJob {
+  async function extractVideo(payload: Record<string, unknown>, model: string, signal?: AbortSignal): Promise<VideoGenerationJob> {
     const output = (payload.output ?? {}) as Record<string, unknown>;
     const results = (output.results ?? []) as { url?: string }[];
     const url = results.find((entry) => typeof entry.url === "string")?.url;
@@ -115,7 +130,7 @@ export function createAlibabaVideoGenerationProvider(
     return {
       jobId: String(output.task_id ?? ""),
       state: "succeeded",
-      video: { url, mimeType: "video/mp4", provider: id, model },
+      video: { bytes: await downloadVideo(url, maxResultBytes, fetchUrl, signal), url, mimeType: "video/mp4", provider: id, model },
     };
   }
 
@@ -149,7 +164,7 @@ export function createAlibabaVideoGenerationProvider(
     const taskStatus = String(output.task_status ?? "PENDING");
     const label = [output.code, output.message].filter((part) => typeof part === "string" && part.length > 0).join(" ");
     const mapped = mapState(taskStatus, label);
-    if (mapped.state === "succeeded") return extractVideo(payload, jobModels.get(jobId) ?? id);
+    if (mapped.state === "succeeded") return await extractVideo(payload, jobModels.get(jobId) ?? id, signal);
     return { jobId, ...mapped };
   }
 

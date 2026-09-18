@@ -3,7 +3,7 @@ import type { AgentIdentity } from "@arnilo/prism";
 import type { EvaluationStore } from "../../../governance/evals/index.js";
 import { ModelRouterError, type ModelRouterStateStore } from "../../../governance/model-router/index.js";
 import type { PolicyDecisionStore } from "../../../governance/policy/index.js";
-import type { IdempotencyStore } from "../../../integrations/work/index.js";
+import type { IdempotencyStore } from "@arnilo/prism-work/connectors";
 
 export interface EnterpriseConformanceStores {
   readonly policy: PolicyDecisionStore;

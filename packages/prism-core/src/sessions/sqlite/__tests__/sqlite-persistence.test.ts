@@ -335,9 +335,18 @@ describe("createSqlitePersistence", () => {
     assert.deepEqual((await reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-a" }))?.value, {
       status: "running",
     });
+    // Plan 080 Task 3: a foreign scope is a miss and a foreign write is a generic
+    // CAS conflict; neither distinguishes "other tenant owns this key" from "missing".
+    assert.equal(await reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-b" }), null);
     await assert.rejects(
-      reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-b" }),
-      /ownership mismatch/,
+      reopened.checkpoints.saveCheckpoint({
+        namespace: "workflow",
+        key: "wf/run",
+        version: 9,
+        value: { status: "evil" },
+        tenantId: "tenant-b",
+      }),
+      /compare-and-swap failed/,
     );
     await reopened.checkpoints.saveCheckpoint({
       namespace: "workflow",

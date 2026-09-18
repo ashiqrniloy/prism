@@ -15,7 +15,7 @@ import {
   providerTextDelta,
   toolCallContent,
 } from "@arnilo/prism";
-import { createAgentEventSourceAgUiReplay, createAgUiHandler, createPersistenceAgUiReplay } from "../index.js";
+import { type AgUiPreparedInput, createAgentEventSourceAgUiReplay, createAgUiHandler, createPersistenceAgUiReplay } from "../index.js";
 
 const authorization = { ownership: { userId: "user-1" } };
 
@@ -38,6 +38,11 @@ async function events(response: Response) {
     .split("\n\n")
     .filter(Boolean)
     .map((line) => JSON.parse(line.slice(6)));
+}
+
+/** Run-scoped message ids are the only volatile part of an identical stream. */
+async function stableBody(response: Response) {
+  return (await response.text()).replace(/run_[0-9a-f-]+:/g, "run_:");
 }
 
 function request(value: string, suffix = "") {
@@ -112,6 +117,165 @@ describe("createAgUiHandler", () => {
     const response = await handler(request(body({ state: { client: "cannot mutate host" } })));
     assert.equal(response.status, 400);
     assert.equal(calls, 0);
+  });
+
+  it("ignores client state and tools from the official client under inputPolicy.ignore", async () => {
+    let executed = 0;
+    let seen: { readonly state: unknown; readonly tools: readonly unknown[]; readonly frontendTools: readonly unknown[] } | undefined;
+    let prepared: AgUiPreparedInput | undefined;
+    const agent = createAgent({
+      model: { provider: "mock", model: "mock" },
+      provider: {
+        id: "mock",
+        async *generate() {
+          yield providerTextDelta("server-authoritative");
+          yield providerDone();
+        },
+      },
+      tools: [{ name: "server-only", execute: () => ({ toolCallId: "never", name: "server-only", value: ++executed }) }],
+    });
+    const handler = createAgUiHandler({
+      authorize: () => authorization,
+      inputPolicy: { clientState: "ignore" },
+      input: {
+        frontendTools: ({ request: value }) => value.tools.map((tool) => ({ name: tool.name, execution: "client" as const })),
+        project: ({ request: value, frontendTools }) => {
+          seen = { state: value.state, tools: value.tools, frontendTools };
+          return { messages: [{ id: "user-2", role: "user" as const, content: [{ type: "text" as const, text: "hello" }] }] };
+        },
+      },
+      sessionFactory: ({ input }) => {
+        prepared = input;
+        return agent.createSession({ id: "ignore-session" });
+      },
+    });
+    const client = new HttpAgent({
+      url: "https://example.test/ag-ui",
+      threadId: "thread-1",
+      initialState: { client: "cannot decide" },
+      initialMessages: [{ id: "client-user", role: "user", content: "hello" }],
+      fetch: (_url, init) =>
+        handler(
+          new Request("https://example.test/ag-ui", {
+            method: "POST",
+            headers: init.headers,
+            body: init.body,
+            signal: init.signal,
+          }),
+        ),
+    });
+    await client.runAgent({
+      runId: "http-run",
+      tools: [{ name: "pick_file", description: "client action", parameters: { type: "object" } }],
+      forwardedProps: { untrusted: true },
+    });
+
+    assert.ok(client.messages.some((message) => message.role === "assistant" && message.content === "server-authoritative"));
+    assert.deepEqual(seen, { state: undefined, tools: [], frontendTools: [] });
+    assert.equal(prepared?.clientState, "ignore");
+    assert.deepEqual(prepared?.frontendTools, []);
+    assert.equal(executed, 0, "a client Tool schema never becomes an executor");
+  });
+
+  it("answers a state-or-tools post exactly like a bare-text post under inputPolicy.ignore", async () => {
+    const agent = createAgent({
+      model: { provider: "mock", model: "mock" },
+      provider: {
+        id: "mock",
+        async *generate() {
+          yield providerTextDelta("done");
+          yield providerDone();
+        },
+      },
+    });
+    const handler = createAgUiHandler({
+      authorize: () => authorization,
+      inputPolicy: { clientState: "ignore" },
+      sessionFactory: () => agent.createSession({ id: "ignore-session" }),
+    });
+
+    const posted = await handler(
+      request(
+        body({
+          state: { client: "cannot decide" },
+          tools: [{ name: "pick_file", description: "client action", parameters: { type: "object" } }],
+        }),
+      ),
+    );
+    const bare = await handler(request(body()));
+    assert.equal(posted.status, 200);
+    assert.equal(bare.status, 200);
+    assert.equal(await stableBody(posted), await stableBody(bare));
+  });
+
+  it("keeps honoring validated client input by default and with an explicit honor policy", async () => {
+    const observed: unknown[] = [];
+    const makeHandler = (inputPolicy?: { readonly clientState: "honor" | "ignore" }) => {
+      const agent = createAgent({
+        model: { provider: "mock", model: "mock" },
+        provider: {
+          id: "mock",
+          async *generate() {
+            yield providerTextDelta("honored");
+            yield providerDone();
+          },
+        },
+      });
+      return createAgUiHandler({
+        authorize: () => authorization,
+        ...(inputPolicy ? { inputPolicy } : {}),
+        input: {
+          project: ({ request: value }) => {
+            observed.push(value.state);
+            return { messages: [{ id: "user-2", role: "user" as const, content: [{ type: "text" as const, text: "hello" }] }] };
+          },
+        },
+        sessionFactory: () => agent.createSession({ id: "honor-session" }),
+      });
+    };
+    const posted = body({ state: { client: "projected by the host" } });
+    const implicit = await makeHandler()(request(posted));
+    const explicit = await makeHandler({ clientState: "honor" })(request(posted));
+    assert.equal(implicit.status, 200);
+    assert.equal(await stableBody(implicit), await stableBody(explicit));
+    assert.deepEqual(observed, [{ client: "projected by the host" }, { client: "projected by the host" }]);
+  });
+
+  it("fails closed on an unknown input policy and still bounds ignored fields", async () => {
+    const refuse = () => {
+      throw new Error("must not run");
+    };
+    assert.throws(
+      () =>
+        createAgUiHandler({
+          authorize: () => authorization,
+          sessionFactory: refuse,
+          inputPolicy: { clientState: "Ignore" } as never,
+        }),
+      /inputPolicy/,
+    );
+    assert.throws(
+      () =>
+        createAgUiHandler({
+          authorize: () => authorization,
+          sessionFactory: refuse,
+          inputPolicy: { clientState: "ignore" },
+          input: { frontendTools: () => [] },
+          capabilities: { tools: { clientProvided: true } },
+        }),
+      /clientProvided tools conflict/,
+    );
+
+    const handler = createAgUiHandler({
+      authorize: () => authorization,
+      sessionFactory: refuse,
+      inputPolicy: { clientState: "ignore" },
+      limits: { maxStateBytes: 2_048 },
+    });
+    const oversized = await handler(request(body({ state: { blob: "x".repeat(4_096) } })));
+    const malformed = await handler(request("{ not json"));
+    assert.equal(oversized.status, 413, "over-limit input keeps the existing ERR_PRISM_AG_UI_LIMIT mapping");
+    assert.equal(malformed.status, 400);
   });
 
   it("accepts host-projected full input and client tool continuation without executing it", async () => {

@@ -1,10 +1,14 @@
-# Prism Roadmap — Release 0.7.0
+# Prism Roadmap — Release 0.8.0
 
-Updated: **2026-09-15**  
-Released baseline: **0.6.0** — root plus nine first-party npm packages, Node `>=22`.  
-Current release: **0.7.0 — shipped 2026-09-15** as a **six-plan cut** ([072](plans/072-Host-Eval-And-Observability-Cockpit.md), [073](plans/073-Release-0-7-0-Host-Completeness.md), [074](plans/074-Attention-Compiler.md), [075](plans/075-Memory-Fabric.md), [077](plans/077-Work-Scope-Memory-Index.md), [078](plans/078-Host-Owned-Subagent-Spawn-And-Parallel-Agents.md)) carrying every P0–P2 recommendation below, the three integration fixes, R15 host-consumable timeline/graph/cockpit primitives, R16 work-scope memory index, R17 cache-stable attention compiler, the [Memory Fabric](plans/075-Memory-Fabric.md) (reassigned from 0.8.0 on 2026-09-14) and [host-owned subagent spawn](plans/078-Host-Owned-Subagent-Spawn-And-Parallel-Agents.md). There was no 0.6.1 cut and no interim cut inside the line.  
-Status: **implemented and cut**; [073 Tasks 28–29](plans/073-Release-0-7-0-Host-Completeness.md) ran on 2026-09-15 against the six closed plans.  
-Next release: **0.8.0** — [messaging channels](plans/079-Prism-Messaging-Channels-Telegram-Signal.md) (Telegram/Signal adapters), **moved off the 0.7.0 line on 2026-09-15 by user request** so the cut stopped waiting on it; R09 delegated coding runtimes, R12 native Vertex and R13 remote clients/channels remain later-release items if demand returns.
+Updated: **2026-09-18**
+
+Released baseline: **0.7.0** — shipped 2026-09-15 as the six-plan host-completeness line ([072](plans/072-Host-Eval-And-Observability-Cockpit.md)–[078](plans/078-Host-Owned-Subagent-Spawn-And-Parallel-Agents.md)), Node `>=22`, ten publishable manifests.
+
+Current release: **0.8.0** — eleven publishable manifests. Messaging channels (`@arnilo/prism-channels`), connected apps, `@arnilo/prism-work` replacing `@arnilo/prism-office`, durable long-run surfaces, and honesty gates. Cut owned by [085](plans/085-Honesty-Gates-Runtime-Split-And-0-8-0-Cut.md) (supersedes [080](plans/080-Messaging-Channel-Followons-And-0-8-0-Cut.md) Task 10). Registry/tag writes stay operator-authorized.
+
+Status: **verified 2026-09-18** (085 Task 8). Registry/tag writes stay operator-authorized.
+
+Next: R09 delegated coding runtimes, R12 native Vertex, and R13 remote clients remain later-release items if demand returns.
 
 This roadmap replaces the previous historical roadmap in full. It preserves the rationale and priorities from the 2026-09-13 review for future reference. Historical implementation evidence remains in [plans](plans/README.md), [CHANGELOG](CHANGELOG.md), and [documentation history](docs/history/README.md); it is not repeated here.
 

@@ -57,6 +57,11 @@ export {
   citationBindingDigest,
   HARD_CITATION_EXCERPT_BYTES,
 } from "./artifacts.js";
+export type {
+  AttentionTruncationTrigger,
+  AttentionTruncationTriggerOptions,
+  PersistedAttentionStickyFrontier,
+} from "./attention-compiler.js";
 export {
   ATTENTION_BUDGET_ERROR_CODE,
   AttentionBudgetError,
@@ -72,11 +77,6 @@ export {
   resolveAttentionReserveTokens,
   resolveInputCap,
   resolveRunAttentionCompiler,
-} from "./attention-compiler.js";
-export type {
-  AttentionTruncationTrigger,
-  AttentionTruncationTriggerOptions,
-  PersistedAttentionStickyFrontier,
 } from "./attention-compiler.js";
 export type {
   ApplyCacheControlOptions,
@@ -373,6 +373,13 @@ export {
 } from "./devices.js";
 export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js";
 export { createEventMultiplexer, EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE, EventMultiplexerError } from "./event-multiplexer.js";
+export type {
+  ClaimGroundingEvidence,
+  ClaimGroundingEvidenceExtractor,
+  ClaimGroundingEvidenceExtractorContext,
+  ClaimGroundingGuardrailOptions,
+} from "./evidence-grounding.js";
+export { createClaimGroundingGuardrail } from "./evidence-grounding.js";
 export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js";
 export { applyExecutionDecision, assertExecutionAllowed, checkExecution, ExecutionDeniedError } from "./execution-policy.js";
 export type {
@@ -563,6 +570,8 @@ export type { LoadBinaryResourceOptions } from "./resources.js";
 export { loadBinaryResource, loadJsonResource, loadManifestResource, loadTextResource } from "./resources.js";
 export type { DefaultRetryPolicyOptions } from "./retry.js";
 export { createDefaultRetryPolicy, isTransientErrorInfo, waitForRetry } from "./retry.js";
+export type { RunBundleSnapshot, RunBundleSnapshotInput } from "./run-bundle.js";
+export { RUN_BUNDLE_SCHEMA_VERSION, snapshotRunBundle } from "./run-bundle.js";
 export type { BatchedRunLedgerOptions } from "./run-ledger.js";
 export {
   createBatchedRunLedger,
@@ -760,5 +769,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.7.0";
+export const version = "0.8.0";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

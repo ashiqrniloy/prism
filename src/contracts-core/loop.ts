@@ -5,6 +5,46 @@ import type { AgentInput } from "../input.js";
 import type { JsonValue, Message, ToolCallContent, Usage } from "./content.js";
 import type { ProviderRequest, StructuredOutputOptions } from "./provider.js";
 
+/**
+ * Metadata-only view of a run at a provider-turn boundary (plan 084 Task 2). Hosts branch on
+ * counters, never content: tool arguments, prompts, and tool results are not fields.
+ */
+export interface TurnBoundaryContext {
+  readonly sessionId: string;
+  readonly runId: string;
+  /** 1-based index of the provider turn this boundary precedes. */
+  readonly turn: number;
+  /** Provider turns already completed in this run (`turn - 1`; 0 at the first boundary). */
+  readonly turns: number;
+  /** Host tool calls dispatched so far in this run. */
+  readonly toolCalls: number;
+  /** Run-total usage so far, when the provider reported any. */
+  readonly usage?: Usage;
+  readonly metadata: Readonly<Record<string, unknown>>;
+}
+
+/** Synchronous decision at a turn boundary. `stop` ends the run cleanly; `continue` runs the turn. */
+export type TurnStopDecision = { readonly action: "continue" } | { readonly action: "stop"; readonly reason: string };
+
+/**
+ * Host turn policy (plan 084 Task 2). Evaluated before every provider request, at the same
+ * boundary a `checkpointPolicy: "every-turn"` checkpoint is written. Omit it and the run keeps
+ * its exact 0.8.x turn structure (no callback, no reads).
+ */
+export interface TurnPolicyOptions {
+  /**
+   * Clean turn cap. Reaching it stops the run (`stopReason: "turn_limit"`) instead of failing it
+   * with a limit breach. A run overlay may only narrow `limits.maxTurns`; widening throws.
+   */
+  readonly maxTurns?: number;
+  /**
+   * Consulted before every provider request. Returning `stop` ends the run cleanly with
+   * `stopReason: "host_policy"` and a resumable checkpoint (`decision: "continue"` resumes it).
+   * Must be synchronous and must not throw; a throw fails the run with `ERR_PRISM_TURN_POLICY`.
+   */
+  readonly stop?: (context: TurnBoundaryContext) => TurnStopDecision;
+}
+
 export interface LoopContext {
   readonly sessionId: string;
   readonly runId: string;

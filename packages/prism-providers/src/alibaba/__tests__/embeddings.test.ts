@@ -15,7 +15,7 @@ type EmbedderShape = {
   readonly dimensions: number;
   embed(texts: readonly string[], options?: { readonly signal?: AbortSignal }): Promise<readonly (readonly number[])[]>;
 };
-const _assignable: EmbedderShape = createAlibabaEmbedder({ model: "text-embedding-v4" });
+void (createAlibabaEmbedder({ model: "text-embedding-v4" }) satisfies EmbedderShape);
 
 function embeddingResponse(entries: readonly { index: number; embedding: readonly number[] }[]): Response {
   return new Response(JSON.stringify({ object: "list", data: entries, model: "text-embedding-v4" }), { status: 200 });

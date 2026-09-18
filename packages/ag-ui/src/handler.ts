@@ -71,11 +71,22 @@ export interface AgUiInputOptions<Authorization> {
   ) => readonly AgUiFrontendToolHandoff[] | undefined | Promise<readonly AgUiFrontendToolHandoff[] | undefined>;
 }
 
+/** Who owns the two client-supplied fields a browser must never decide: its `state` projection and its `tools` list. */
+export interface AgUiInputPolicyOptions {
+  /**
+   * `"honor"` keeps today's behavior: the validated `state`/`tools` reach `input.project`. `"ignore"` validates the same
+   * envelope for shape and bounds, then discards both fields, so input comes only from the server session and projector.
+   */
+  readonly clientState: "honor" | "ignore";
+}
+
 export interface AgUiPreparedInput {
   readonly messages: string | Message | readonly Message[];
   readonly frontendTools: readonly AgUiFrontendToolHandoff[];
   /** Host-reviewed remote MCP tools. `sessionFactory` decides how to combine them with local tools. */
   readonly serverTools: readonly import("@arnilo/prism").ToolDefinition[];
+  /** `"ignore"` means client-supplied `state`/`tools` were validated then discarded before this payload was built. */
+  readonly clientState: "honor" | "ignore";
 }
 
 export interface AgUiInterruptResume<Authorization> {
@@ -128,6 +139,8 @@ export interface CreateAgUiHandlerOptions<Authorization extends AgUiAuthorizatio
   readonly replay?: AgUiReplay<Authorization>;
   /** Explicit full-input policy. Omit it to preserve the text-only/default-deny boundary. */
   readonly input?: AgUiInputOptions<Authorization>;
+  /** Server-authoritative input policy. Omit it to keep honoring validated client `state`/`tools` through `input.project`. */
+  readonly inputPolicy?: AgUiInputPolicyOptions;
   /** Optional reviewed MCP bridge adapter. Its selected tools are passed only to `sessionFactory`. */
   readonly mcp?: AgUiMcpAdapter<Authorization>;
   /** Optional verified remote A2A mode. When configured it replaces local `sessionFactory` only for this handler. */
@@ -162,6 +175,7 @@ export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUi
 ): AgUiHandler {
   const limits = resolveAgUiLimits(options.limits);
   const capabilities = resolveAgUiCapabilities(options);
+  const clientState = resolveInputPolicy(options.inputPolicy);
   const handler = async (request: Request): Promise<Response> => {
     const owned = requestSignal(request, limits.requestTimeoutMs);
     try {
@@ -169,7 +183,9 @@ export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUi
       if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
         return complete(owned, failure(415, "ERR_PRISM_AG_UI_CONTENT_TYPE", "Content-Type must be application/json"));
       }
-      const input = parseAgUiInput(await readJson(request, limits.maxRequestBytes, owned.signal), limits);
+      const parsed = parseAgUiInput(await readJson(request, limits.maxRequestBytes, owned.signal), limits);
+      // Shape and bounds were enforced above; `"ignore"` then drops the two fields a browser must not own.
+      const input = clientState === "ignore" ? withoutClientInput(parsed) : parsed;
       // Preserve the legacy boundary: unsupported state/tools fail before authorization/session lookup.
       if (!options.input?.project && input.resume.length === 0 && new URL(request.url).searchParams.get("cursor") === null) {
         defaultAgUiInput(input, limits);
@@ -201,7 +217,7 @@ export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUi
         if (!options.replay) throw new AgUiError("ERR_PRISM_AG_UI_REPLAY", "Replay is not configured");
         return sse(
           withCoWork(
-            replaySource(input, cursor, authorization, options, limits, capabilities, owned.signal),
+            replaySource(input, cursor, authorization, options, limits, capabilities, owned.signal, clientState),
             input,
             authorization,
             options,
@@ -212,7 +228,7 @@ export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUi
           limits,
         );
       }
-      const prepared = await prepareInput(input, authorization, options, limits, owned.signal);
+      const prepared = await prepareInput(input, authorization, options, limits, owned.signal, clientState);
       return sse(
         withCoWork(
           startSource(input, prepared, authorization, options, limits, capabilities, owned.signal),
@@ -233,11 +249,25 @@ export function createAgUiHandler<Authorization extends AgUiAuthorization = AgUi
   return Object.assign(handler, { capabilities });
 }
 
+/** Resolves the host policy, failing closed on an unknown value instead of silently honoring client state. */
+function resolveInputPolicy(policy: AgUiInputPolicyOptions | undefined): "honor" | "ignore" {
+  if (policy === undefined) return "honor";
+  if (policy.clientState !== "honor" && policy.clientState !== "ignore") {
+    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Invalid inputPolicy.clientState");
+  }
+  return policy.clientState;
+}
+
+/** Drops the fields only the server may own. `parseAgUiInput` already enforced shape, counts, and byte bounds. */
+function withoutClientInput(input: ParsedAgUiInput): ParsedAgUiInput {
+  return { ...input, request: { ...input.request, state: undefined, tools: [] }, state: undefined, tools: [] };
+}
+
 /** Creates the validated declaration attached to every handler. */
 export function resolveAgUiCapabilities<Authorization extends AgUiAuthorization = AgUiAuthorization>(
   options: Pick<
     CreateAgUiHandlerOptions<Authorization>,
-    "capabilities" | "input" | "interrupts" | "lifecycle" | "projection" | "replay" | "resolveRun"
+    "capabilities" | "input" | "inputPolicy" | "interrupts" | "lifecycle" | "projection" | "replay" | "resolveRun"
   >,
 ): AgentCapabilities {
   const parsed = AgentCapabilitiesSchema.safeParse(options.capabilities ?? {});
@@ -247,7 +277,12 @@ export function resolveAgUiCapabilities<Authorization extends AgUiAuthorization 
     throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Unsupported AG-UI transport was declared");
   }
   if (requested.transport?.resumable && !options.replay) throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "resumable requires replay");
-  if (requested.tools?.clientProvided && !options.input?.frontendTools) {
+  // Truthful declaration: an ignoring handler never hands client tools to a session, so it cannot advertise them.
+  const clientTools = options.inputPolicy?.clientState !== "ignore" && Boolean(options.input?.frontendTools);
+  if (requested.tools?.clientProvided && options.inputPolicy?.clientState === "ignore") {
+    throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "clientProvided tools conflict with inputPolicy.clientState ignore");
+  }
+  if (requested.tools?.clientProvided && !clientTools) {
     throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "clientProvided tools require input.frontendTools");
   }
   if (requested.state?.snapshots && !options.projection?.state && !options.projection?.stateSnapshot) {
@@ -272,9 +307,7 @@ export function resolveAgUiCapabilities<Authorization extends AgUiAuthorization 
     ...requested,
     transport: { ...requested.transport, streaming: true, resumable: requested.transport?.resumable ?? Boolean(options.replay) },
     tools:
-      requested.tools || options.input?.frontendTools
-        ? { ...requested.tools, clientProvided: requested.tools?.clientProvided ?? Boolean(options.input?.frontendTools) }
-        : undefined,
+      requested.tools || clientTools ? { ...requested.tools, clientProvided: requested.tools?.clientProvided ?? clientTools } : undefined,
     state:
       requested.state || options.projection?.state || options.projection?.stateSnapshot || options.projection?.stateDelta
         ? {
@@ -310,12 +343,14 @@ async function prepareInput<Authorization extends AgUiAuthorization>(
   options: CreateAgUiHandlerOptions<Authorization>,
   limits: ResolvedAgUiLimits,
   signal: AbortSignal,
+  clientState: "honor" | "ignore",
 ): Promise<AgUiPreparedInput> {
   if (!options.input?.project)
     return {
       messages: defaultAgUiInput(input, limits),
       frontendTools: [],
       serverTools: await prepareMcpTools(input, authorization, options, limits, signal),
+      clientState,
     };
   const policyInput = { request: input, authorization, signal };
   const frontendTools = input.tools.length === 0 ? [] : await options.input.frontendTools?.(policyInput);
@@ -334,6 +369,7 @@ async function prepareInput<Authorization extends AgUiAuthorization>(
     messages: projected.messages,
     frontendTools: selected,
     serverTools: await prepareMcpTools(input, authorization, options, limits, signal),
+    clientState,
   };
 }
 
@@ -543,6 +579,7 @@ async function* replaySource<Authorization extends AgUiAuthorization>(
   limits: ResolvedAgUiLimits,
   capabilities: AgentCapabilities,
   signal: AbortSignal,
+  clientState: "honor" | "ignore",
 ): AsyncGenerator<AGUIEvent> {
   const request = { threadId: input.threadId, runId: input.runId, cursor, authorization, signal };
   const mapper = mapperFor(input, options, limits);
@@ -583,7 +620,7 @@ async function* replaySource<Authorization extends AgUiAuthorization>(
     threadId: input.threadId,
     authorization,
     signal,
-    input: await prepareInput(input, authorization, options, limits, signal),
+    input: await prepareInput(input, authorization, options, limits, signal, clientState),
   });
   if (session.id !== page.run.ref.sessionId) throw new AgUiError("ERR_PRISM_AG_UI_REPLAY", "Replay session mismatch");
   yield* mapped(

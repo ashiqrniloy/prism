@@ -3,6 +3,7 @@
 // Aggregates every test surface into scripts/release-evidence.json with state
 // pass/skip/blocked/protected. Records env var NAMES only, never values
 // (the manifest is retained and uploaded by CI).
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { auditBlockedGates, protectedGateSurfaces } from "./blocked-gate.mjs";
@@ -12,6 +13,7 @@ const MANIFEST_PATH = process.env.PRISM_RELEASE_EVIDENCE ?? join(ROOT, "scripts"
 const COVERAGE_ARTIFACT = process.env.PRISM_COVERAGE_ARTIFACT ?? join(ROOT, "scripts", "coverage-summary.json");
 const THRESHOLDS_PATH = join(ROOT, "scripts", "coverage-thresholds.json");
 const REQUIRED_POSTGRES_ENV = "PRISM_TEST_POSTGRES_URL";
+const POSTGRES_EVIDENCE_PATH = process.env.PRISM_POSTGRES_EVIDENCE ?? join(ROOT, "scripts", "postgres-evidence.json");
 
 // The four live canaries implemented by scripts/live-canary.mjs (run by
 // .github/workflows/live-canaries.yml with real credentials, outside the
@@ -35,6 +37,39 @@ function latestBaseline() {
 function envSet(name) {
   const value = process.env[name];
   return value !== undefined && value !== "";
+}
+
+function postgresEvidenceForCurrentHead(path) {
+  if (!existsSync(path)) return { reason: "no postgres evidence for this run (run npm run test:postgres)" };
+  let evidence;
+  try {
+    evidence = JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return { reason: "postgres evidence is unreadable" };
+  }
+  const { gitHead, captured, counts } = evidence;
+  if (
+    !/^[0-9a-f]{40,64}$/i.test(gitHead ?? "") ||
+    typeof captured !== "string" ||
+    Number.isNaN(Date.parse(captured)) ||
+    !Number.isInteger(counts?.tests) ||
+    !Number.isInteger(counts?.pass) ||
+    !Number.isInteger(counts?.fail) ||
+    counts.tests < 1 ||
+    counts.pass < 1 ||
+    counts.pass > counts.tests ||
+    counts.fail !== 0
+  ) {
+    return { reason: "postgres evidence is invalid" };
+  }
+  let currentHead;
+  try {
+    currentHead = execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim();
+  } catch {
+    return { reason: "cannot determine current git HEAD for postgres evidence" };
+  }
+  if (gitHead !== currentHead) return { reason: "postgres evidence is not for current git HEAD" };
+  return { evidence };
 }
 
 function parseCounts(pattern, text) {
@@ -80,7 +115,7 @@ function workspacePackages() {
     .map((dir) => ({ dir, name: JSON.parse(readFileSync(join(ROOT, "packages", dir, "package.json"), "utf8")).name }));
 }
 
-function buildSurfaces({ baseline, artifact, thresholds, packages }) {
+function buildSurfaces({ baseline, artifact, thresholds, packages, postgresEvidence }) {
   const surfaces = [];
 
   // Required: core npm test.
@@ -149,11 +184,20 @@ function buildSurfaces({ baseline, artifact, thresholds, packages }) {
     }
   }
 
-  // Required: postgres durable conformance (a release cannot ship with the
-  // required env absent; the release pipeline runs it in the
-  // postgres-integration job).
-  const postgresCount = parseCounts(/(\d+)\/\d+/, counts.testPostgres ?? "");
-  if (!envSet(REQUIRED_POSTGRES_ENV)) {
+  // Required: postgres durable conformance. A matching, successful this-tree
+  // run is the evidence; a phase baseline cannot attest the current checkout.
+  // CI verify does not run the suite (no Postgres service); publish already
+  // needs the postgres-integration job. PRISM_RELEASE_POSTGRES_JOB keeps that
+  // split from failing closed on missing evidence.
+  if (envSet("PRISM_RELEASE_POSTGRES_JOB") && !postgresEvidence.evidence) {
+    surfaces.push({
+      name: "test:postgres durable conformance",
+      state: "protected",
+      protected: true,
+      requiredEnv: REQUIRED_POSTGRES_ENV,
+      reason: "verify job does not run test:postgres; publish needs the postgres-integration job (pgvector/pgvector:pg16)",
+    });
+  } else if (!envSet(REQUIRED_POSTGRES_ENV)) {
     surfaces.push({
       name: "test:postgres durable conformance",
       state: "blocked",
@@ -161,13 +205,13 @@ function buildSurfaces({ baseline, artifact, thresholds, packages }) {
       requiredEnv: REQUIRED_POSTGRES_ENV,
       reason: `${REQUIRED_POSTGRES_ENV} not set at release-evidence time`,
     });
-  } else if (!postgresCount) {
+  } else if (!postgresEvidence.evidence) {
     surfaces.push({
       name: "test:postgres durable conformance",
       state: "blocked",
       protected: true,
       requiredEnv: REQUIRED_POSTGRES_ENV,
-      reason: `${REQUIRED_POSTGRES_ENV} set but no testPostgres evidence in baseline`,
+      reason: postgresEvidence.reason,
     });
   } else {
     surfaces.push({
@@ -175,13 +219,12 @@ function buildSurfaces({ baseline, artifact, thresholds, packages }) {
       state: "pass",
       protected: true,
       requiredEnv: REQUIRED_POSTGRES_ENV,
-      count: postgresCount,
+      count: postgresEvidence.evidence.counts.tests,
     });
   }
 
-  // Protected: real NATS JetStream legs (no NATS service in release CI; the
-  // real-leg suite does not exist yet — the offline fake-jetstream seam only
-  // runs in default workspace tests).
+  // Protected: real NATS JetStream legs. `npm run test:nats` exists, but
+  // release CI has no broker to run it against.
   surfaces.push({
     name: "test:nats real JetStream legs",
     state: "protected",
@@ -189,7 +232,7 @@ function buildSurfaces({ baseline, artifact, thresholds, packages }) {
     live: true,
     requiredEnv: "PRISM_TEST_NATS_URL",
     reason:
-      "no NATS service in release CI and no suite references PRISM_TEST_NATS_URL yet; offline fake-jetstream seam only in default runs (session-store-nats); real-leg expansion is roadmap 0.3.0",
+      "no NATS service in release CI; npm run test:nats requires PRISM_TEST_NATS_URL and runs the real JetStream suite outside default network-free runs",
   });
 
   // Protected: provider live legs (offline conformance suites cover the same
@@ -304,12 +347,17 @@ function buildSurfaces({ baseline, artifact, thresholds, packages }) {
   return surfaces;
 }
 
-export function buildManifest({ artifactPath = COVERAGE_ARTIFACT, thresholdsPath = THRESHOLDS_PATH } = {}) {
+export function buildManifest({
+  artifactPath = COVERAGE_ARTIFACT,
+  thresholdsPath = THRESHOLDS_PATH,
+  postgresEvidencePath = POSTGRES_EVIDENCE_PATH,
+} = {}) {
   const version = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
   const baseline = latestBaseline();
   const artifact = existsSync(artifactPath) ? JSON.parse(readFileSync(artifactPath, "utf8")) : undefined;
   const thresholds = existsSync(thresholdsPath) ? JSON.parse(readFileSync(thresholdsPath, "utf8")) : undefined;
-  const surfaces = buildSurfaces({ baseline, artifact, thresholds, packages: workspacePackages() });
+  const postgresEvidence = postgresEvidenceForCurrentHead(postgresEvidencePath);
+  const surfaces = buildSurfaces({ baseline, artifact, thresholds, packages: workspacePackages(), postgresEvidence });
   const crossRef = baseline
     ? {
         baseline: baseline.name,

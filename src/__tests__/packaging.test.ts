@@ -29,9 +29,10 @@ const packages: Array<{
   { dir: "packages/acp-agent", name: "@arnilo/prism-acp-agent" },
   { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools" },
   { dir: "packages/prism-core", name: "@arnilo/prism-core" },
+  { dir: "packages/prism-channels", name: "@arnilo/prism-channels" },
   // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
   { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isSubpaths: true },
-  { dir: "packages/office", name: "@arnilo/prism-office", isSubpaths: true },
+  { dir: "packages/prism-work", name: "@arnilo/prism-work", isSubpaths: true },
 ];
 
 const deniedPatterns: ReadonlyArray<{ pattern: RegExp; label: string }> = [
@@ -210,6 +211,27 @@ describe("packaging guard", () => {
     assert.ok((manifest.files as string[] | undefined)?.includes("skills"), "desktop package manifest must include skills");
   });
 
+  it("prism-channels keeps telegram/signal isolated from the root barrel and has no third-party peers", () => {
+    const manifest = readPkg("packages/prism-channels");
+    const exportsMap = manifest.exports as Record<string, { types: string; default: string }>;
+    assert.deepEqual(Object.keys(exportsMap).sort(), [".", "./signal", "./telegram"]);
+    assert.deepEqual(Object.keys((manifest.peerDependencies as Record<string, string>) ?? {}), ["@arnilo/prism"]);
+    assert.equal(manifest.dependencies, undefined, "channels must not add runtime dependencies");
+    const files = getPackList("packages/prism-channels", "@arnilo/prism-channels");
+    for (const required of ["dist/index.js", "dist/telegram.js", "dist/signal.js"]) {
+      assert.ok(files.includes(required), `channels pack missing ${required}`);
+    }
+    assert.equal(
+      files.some((file) => file.includes("__tests__") || file.includes("fixtures")),
+      false,
+      "channels tarball must not ship tests or fixtures",
+    );
+    const root = readFileSync(join(repoRoot, "packages/prism-channels/dist/index.js"), "utf8");
+    const telegram = readFileSync(join(repoRoot, "packages/prism-channels/dist/telegram.js"), "utf8");
+    assert.equal(root.includes("./signal.js") || root.includes("./telegram.js"), false, "root barrel must not load adapters");
+    assert.equal(telegram.includes("./signal.js") || telegram.includes("node:net"), false, "telegram must not load signal or Unix sockets");
+  });
+
   it("web-tools family keeps browser/Obscura subpaths peer-gated and out of the root import", () => {
     const webTools = readPkg("packages/web-tools");
     const exportsMap = webTools.exports as Record<string, { types: string; default: string }>;
@@ -295,6 +317,7 @@ describe("packaging guard", () => {
 
   it("provider family exports exactly the 20 adapter subpaths with no activating root barrel", () => {
     const manifest = readPkg("packages/prism-providers");
+    assert.equal(manifest.dependencies, undefined, "provider family must not add runtime dependencies");
     const exports = manifest.exports as Record<string, Record<string, string>>;
     const adapters = [
       "ai-sdk",
@@ -348,14 +371,76 @@ describe("packaging guard", () => {
     }
   });
 
-  it("office family exports exactly documents/sheets/diagrams with no activating root barrel", () => {
-    const manifest = readPkg("packages/office");
+  it("work family exports isolated subpaths with no activating root barrel", () => {
+    const manifest = readPkg("packages/prism-work");
     const exports = manifest.exports as Record<string, Record<string, string>>;
-    assert.deepEqual(Object.keys(exports).sort(), ["./diagrams", "./documents", "./sheets"]);
-    assert.equal(exports["."], undefined, "office family must have no root barrel");
-    const files = getPackList("packages/office", "@arnilo/prism-office");
-    for (const required of ["dist/documents/index.js", "dist/sheets/index.js", "dist/diagrams/index.js"]) {
-      assert.ok(files.includes(required), `office pack missing ${required}`);
+    assert.deepEqual(Object.keys(exports).sort(), [
+      "./connectors",
+      "./connectors/drafts",
+      "./connectors/google-workspace",
+      "./connectors/microsoft365",
+      "./diagrams",
+      "./document-reader",
+      "./documents",
+      "./sandbox",
+      "./sheets",
+      "./skills",
+      "./tools",
+    ]);
+    assert.equal(exports["."], undefined, "work family must have no root barrel");
+    const files = getPackList("packages/prism-work", "@arnilo/prism-work");
+    for (const required of [
+      "dist/connectors/index.js",
+      "dist/connectors/drafts.js",
+      "dist/connectors/google-workspace.js",
+      "dist/connectors/microsoft365.js",
+      "dist/documents/index.js",
+      "dist/sheets/index.js",
+      "dist/diagrams/index.js",
+      "dist/document-reader/index.js",
+      "dist/sandbox/index.js",
+      "dist/skills/index.js",
+      "dist/tools/index.js",
+      "vendor/hermes-agent/skills/productivity/docx/SKILL.md",
+      "vendor/hermes-agent/skills/productivity/xlsx/SKILL.md",
+      "vendor/hermes-agent/skills/productivity/powerpoint/SKILL.md",
+      "vendor/hermes-agent/skills/productivity/pdf/SKILL.md",
+    ]) {
+      assert.ok(files.includes(required), `work pack missing ${required}`);
+    }
+    const connectors = readFileSync(join(repoRoot, "packages/prism-work/dist/connectors/index.js"), "utf8");
+    assert.doesNotMatch(connectors, /office-open|\.\.\/documents/, "connectors subpath must not load document dependencies");
+  });
+
+  it("work move has no forbidden runtime package edges", () => {
+    const work = readPkg("packages/prism-work");
+    const core = readPkg("packages/prism-core");
+    for (const manifest of [work, core]) {
+      const runtime = {
+        ...(manifest.dependencies as Record<string, string> | undefined),
+        ...(manifest.peerDependencies as Record<string, string> | undefined),
+      };
+      assert.equal(runtime["@arnilo/prism-work"], undefined, "core must not runtime-depend on work");
+      assert.equal(runtime["@arnilo/prism-core"], undefined, "work must not runtime-depend on core");
+      assert.equal(runtime["@arnilo/prism-coding-tools"], undefined, "work must not runtime-depend on coding tools");
+    }
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+        entry.isDirectory() && entry.name !== "__tests__"
+          ? walk(join(dir, entry.name))
+          : entry.name.endsWith(".js")
+            ? [join(dir, entry.name)]
+            : [],
+      );
+    for (const dir of [join(repoRoot, "packages/prism-work/dist"), join(repoRoot, "packages/prism-core/dist/enterprise/postgres")]) {
+      for (const file of walk(dir)) {
+        const text = readFileSync(file, "utf8");
+        assert.doesNotMatch(
+          text,
+          /(?:from\s+|import\s*(?:\(\s*)?)["']@arnilo\/prism-(?:core|coding-tools|work)/,
+          `${file} has a forbidden runtime package edge`,
+        );
+      }
     }
   });
 
@@ -409,23 +494,25 @@ describe("packaging guard", () => {
     }
   });
 
-  it("plan 054 Task 8: office family exports and migration guide cover documents/sheets/diagrams", () => {
-    const office = readPkg("packages/office");
-    const exports = Object.keys(office.exports as Record<string, unknown>).sort();
-    assert.deepEqual(exports, ["./diagrams", "./documents", "./sheets"]);
+  it("plan 054 Task 8: the historical migration guide preserves office subpaths", () => {
+    const work = readPkg("packages/prism-work");
+    const exports = Object.keys(work.exports as Record<string, unknown>).sort();
+    assert.ok(["./diagrams", "./documents", "./sheets"].every((subpath) => exports.includes(subpath)));
     const guide = readFileSync(join(repoRoot, "docs/history/migrate-to-0.4.md"), "utf8");
     assert.ok(guide.includes("### Office suite"), "migration guide missing Office suite heading");
     for (const spec of ["@arnilo/prism-office/documents", "@arnilo/prism-office/sheets", "@arnilo/prism-office/diagrams"]) {
       assert.ok(guide.includes(spec), `migration guide missing ${spec}`);
     }
     const truth = JSON.parse(readFileSync(join(repoRoot, "scripts/package-truth.json"), "utf8")) as { counts: { publishable: number } };
-    assert.equal(truth.counts.publishable, 10, "package truth must report 10 active packages");
+    assert.equal(truth.counts.publishable, 11, "package truth must report 11 active packages");
   });
 
-  it("0.4 package set — 10 manifests in lockstep, no shims, family roots stay inert", () => {
+  it("0.4 package set — 11 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 10, "10 active packages including root");
+    assert.equal(names.length, 11, "11 active packages including root");
+    assert.ok(names.includes("@arnilo/prism-work"), "work package must be present");
+    assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
     for (const pkg of packages) {
       // Plan 055/066/070 cut history lives in CHANGELOG.md; here the invariant is the
       // lockstep itself: every active manifest at the root version (plan 071 Task 1).
@@ -442,7 +529,7 @@ describe("packaging guard", () => {
     for (const name of retired) {
       assert.ok(!names.includes(name), `retired ${name} must not be a workspace package`);
     }
-    for (const dir of ["packages/prism-providers", "packages/office"]) {
+    for (const dir of ["packages/prism-providers", "packages/prism-work"]) {
       const exports = Object.keys((readPkg(dir).exports as Record<string, unknown>) ?? {});
       assert.ok(!exports.includes("."), `${dir} must not activate a root barrel`);
     }

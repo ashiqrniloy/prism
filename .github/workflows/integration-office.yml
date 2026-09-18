@@ -26,7 +26,7 @@ jobs:
           node-version: "24"
           cache: "npm"
       - run: npm ci
-      - run: npm run build:core && npm run build -w @arnilo/prism-office
+      - run: npm run build:core && npm run build -w @arnilo/prism-work
       # Golden round-trips against the packed tarball (LibreOffice conversion
       # stays in release.yml office-validation on workspace source).
       - name: run office golden packed suites

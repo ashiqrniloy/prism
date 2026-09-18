@@ -211,6 +211,19 @@ Mode slices and skill bodies are independent: the injector can add `PONYTAIL MOD
 
 Pure validation without the tool: `resolveSkillLoad({ registry, name, tools, loaded, activeSkillNames })`.
 
+### Bundled work skills (`docx`, `xlsx`, `powerpoint`, `pdf`)
+
+`@arnilo/prism-work/skills` vendors four MIT Hermes productivity skills. `loadWorkSkills()` reads the committed `SKILL.md` files (64 KiB cap) and overlays Prism `toolNames` in TypeScript — vendored markdown is never edited.
+
+```ts
+import { createSkillRegistry } from "@arnilo/prism";
+import { loadWorkSkills } from "@arnilo/prism-work/skills";
+
+const registry = createSkillRegistry(loadWorkSkills(), { duplicate: "error" });
+```
+
+Scripts run only via work-sandbox `execFile` (argv, no shell). See [Work sandbox](work-sandbox.md).
+
 ### Context budget priority and skill demotion
 
 When `assembleProviderInput` runs with `contextBudget`, `applyContextBudget` evicts droppable sections in layout order. Within `context` blocks and skills, victims sort by ascending `ContextBlock.priority` (missing = **0**), then LIFO within the same priority.

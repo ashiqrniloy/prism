@@ -7,13 +7,17 @@ import { validateRunStateOptions } from "../../agent-run-state.js";
 import { activeTools } from "../../agent-tool-dispatch.js";
 import { resolveRunAttentionCompiler } from "../../attention-compiler.js";
 import type {
+  AgentFinishReason,
   AgentRunResult,
   AttentionReport,
   ErrorInfo,
   LoopContext,
   PromptVersionRef,
+  ResolvedRunLimits,
   RunOptions,
   RunRecord,
+  TurnBoundaryContext,
+  TurnPolicyOptions,
   Usage,
 } from "../../contracts.js";
 import { AgentLoopStateError, AgentRunError, AgentRunStateError } from "../../contracts.js";
@@ -40,7 +44,7 @@ import {
   mergeGuardrails,
   throwIfAborted,
 } from "../helpers.js";
-import { cleanupRun, persistDurable, persistSucceeded, suspendDurable } from "./persist.js";
+import { checkpointDurableTurn, cleanupRun, persistDurable, persistSucceeded, suspendDurable } from "./persist.js";
 import { generateWithRetry, recordProviderUsage } from "./provider-round.js";
 import {
   bindChargeToolRound,
@@ -49,10 +53,99 @@ import {
   runLoopUntilSettled,
   suspendGatedRound,
 } from "./tool-round.js";
-import type { RoundContext, SessionHost } from "./types.js";
+import type { RoundContext, RunStopInfo, SessionHost } from "./types.js";
 
 const PROMPT_VERSION_MAX_NAME_BYTES = 256;
 const PROMPT_VERSION_HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
+/** Cap on the host stop detail that reaches the result, ledger, and timeline (plan 084 Task 2). */
+const TURN_STOP_DETAIL_MAX_BYTES = 256;
+
+/**
+ * `RunOptions.turnPolicy` stopped the run at a turn boundary (plan 084 Task 2). Internal control
+ * signal: it unwinds any loop shape and `executeRun` turns it into a clean terminal success with
+ * `stopReason: "host_policy"` — never a run error.
+ */
+class AgentRunStopped extends Error {
+  constructor() {
+    super("Agent run stopped by host turn policy");
+    this.name = "AgentRunStopped";
+  }
+}
+
+/** Host turn-policy misuse: a throwing or malformed callback fails the run closed. */
+class TurnPolicyError extends Error {
+  readonly code = "ERR_PRISM_TURN_POLICY";
+  constructor(message: string, options?: { readonly cause?: unknown }) {
+    super(message, options);
+    this.name = "TurnPolicyError";
+  }
+}
+
+/** Validate `RunOptions.turnPolicy` once, before any provider turn (plan 084 Task 2). */
+function assertTurnPolicy(policy: TurnPolicyOptions | undefined, resolvedLimits: ResolvedRunLimits): void {
+  if (policy === undefined) return;
+  if (typeof policy !== "object" || policy === null) throw new TypeError("RunOptions.turnPolicy must be an object");
+  if (policy.stop !== undefined && typeof policy.stop !== "function") {
+    throw new TypeError("RunOptions.turnPolicy.stop must be a function");
+  }
+  const maxTurns = policy.maxTurns;
+  if (maxTurns === undefined) return;
+  if (!Number.isSafeInteger(maxTurns) || maxTurns < 1) {
+    throw new TypeError("RunOptions.turnPolicy.maxTurns must be a positive safe integer");
+  }
+  // Same narrowing law as `limits`: a run overlay may tighten the agent's cap, never widen it.
+  const configured = resolvedLimits.maxTurns;
+  if (configured !== null && maxTurns > configured) {
+    throw new TypeError(`RunOptions.turnPolicy.maxTurns (${maxTurns}) cannot widen limits.maxTurns (${configured})`);
+  }
+}
+
+/** Redact and bound a host stop reason; anything unusable fails the run closed. */
+function boundedStopDetail(session: SessionHost, reason: unknown): string {
+  if (typeof reason !== "string" || reason.length === 0) {
+    throw new TurnPolicyError("RunOptions.turnPolicy.stop must return a non-empty reason string");
+  }
+  const redacted = session.redact(reason);
+  if (Buffer.byteLength(redacted, "utf8") > TURN_STOP_DETAIL_MAX_BYTES) {
+    throw new TurnPolicyError(`RunOptions.turnPolicy.stop reason must be at most ${TURN_STOP_DETAIL_MAX_BYTES} UTF-8 bytes`);
+  }
+  return redacted;
+}
+
+/**
+ * Evaluate the host turn policy at the current provider-turn boundary (plan 084 Task 2). Returns
+ * the stop to record, or `undefined` to run the turn. Omitted policy → nothing is read or called.
+ */
+function evaluateTurnStop(ctx: RoundContext): RunStopInfo | undefined {
+  const policy = ctx.options.turnPolicy;
+  if (!policy) return undefined;
+  const turn = Math.max(1, ctx.session.activeLoopTurn);
+  const turns = turn - 1;
+  if (policy.maxTurns !== undefined && turns >= policy.maxTurns) return { reason: "turn_limit", detail: "maxTurns" };
+  if (!policy.stop) return undefined;
+  const context: TurnBoundaryContext = {
+    sessionId: ctx.session.id,
+    runId: ctx.runId,
+    turn,
+    turns,
+    toolCalls: ctx.toolCalls,
+    ...(ctx.runUsage.value() ? { usage: ctx.runUsage.value() } : {}),
+    metadata: ctx.metadata,
+  };
+  let decision: unknown;
+  try {
+    decision = policy.stop(context);
+  } catch (error) {
+    throw new TurnPolicyError("RunOptions.turnPolicy.stop threw", { cause: error });
+  }
+  if (decision === null || typeof decision !== "object" || typeof (decision as { then?: unknown }).then === "function") {
+    throw new TurnPolicyError("RunOptions.turnPolicy.stop must synchronously return a TurnStopDecision");
+  }
+  const action = (decision as { action?: unknown }).action;
+  if (action === "continue") return undefined;
+  if (action !== "stop") throw new TurnPolicyError('RunOptions.turnPolicy.stop decision action must be "continue" or "stop"');
+  return { reason: "host_policy", detail: boundedStopDetail(ctx.session, (decision as { reason?: unknown }).reason) };
+}
 
 function assertPromptVersionRef(ref: PromptVersionRef | undefined): PromptVersionRef | undefined {
   if (ref === undefined) return undefined;
@@ -227,6 +320,8 @@ async function assembleRoundContext(params: {
     assembledTurn: false,
     artifactFinished: false,
     artifactFailedInfo: undefined as RoundContext["artifactFailedInfo"],
+    toolCalls: 0,
+    toolResults: [],
     runUsage,
     loopCtx: undefined as unknown as LoopContext,
   } as RoundContext;
@@ -289,6 +384,20 @@ async function assembleRoundContext(params: {
       await suspendGatedRound(ctx);
       if (!ctx.assembledTurn) limits.charge("maxTurns");
       ctx.assembledTurn = false;
+      // Host turn policy (plan 084 Task 2): evaluated at the same turn boundary as the
+      // crash-recovery checkpoint below, before any provider work. Throwing unwinds any loop
+      // shape; `executeRun` converts it into a clean terminal success with `stopReason`.
+      const stop = evaluateTurnStop(ctx);
+      if (stop) {
+        ctx.runStop = stop;
+        ctx.loopCtx.finishReason = stop.reason;
+        throw new AgentRunStopped();
+      }
+      // Crash-recovery boundary (plan 084 Task 1): after the previous turn's tool results are in
+      // the store and before this provider request. No-op unless `checkpointPolicy: "every-turn"`.
+      if (session.activeDurable?.options.checkpointPolicy === "every-turn") {
+        await checkpointDurableTurn(session, { runId, model, limits });
+      }
       const policyResult = await session.applyProviderRequestPolicies(request, runId, options, metadata, controller.signal);
       const middlewareRequest =
         (await session.agent.config.middleware?.run("provider_request", policyResult.request)) ?? policyResult.request;
@@ -302,6 +411,7 @@ async function assembleRoundContext(params: {
           policyResult.secrets,
           session.activeLoopTurn,
           (turnUsage, turn, attempt) => recordProviderUsage(ctx, turnUsage, turn, attempt),
+          ctx.toolResults,
         );
       } catch (error) {
         if (isSteerSoftInterrupt(error)) {
@@ -357,6 +467,7 @@ export async function executeRun(
   }
   const requestedLimits = options.limits;
   const resolvedLimits = resolveRunLimits(session.agent.config.limits, requestedLimits);
+  assertTurnPolicy(options.turnPolicy, resolvedLimits);
   const durableOptions = options.runState ?? session.agent.config.runState;
   if (session.agent.config.runState && options.runState && session.agent.config.runState !== options.runState) {
     throw new AgentRunStateError("RunOptions cannot replace agent durable run-state configuration");
@@ -402,6 +513,9 @@ export async function executeRun(
   const startedAt = new Date().toISOString();
   let runError: ErrorInfo | undefined;
   let runStatus: AgentRunResult["status"] = "succeeded";
+  // Set only on the clean-success path; the finish ledger record carries them (plan 084 Task 2).
+  let stopReason: AgentFinishReason | undefined;
+  let stopDetail: string | undefined;
   const runUsage = createUsageAccumulator();
   let usage: Usage | undefined;
   const metadata = {
@@ -454,8 +568,15 @@ export async function executeRun(
       }
       ctx.loop.restore?.(resumedLoopState.snapshot);
     }
-    const loopUsage = await runLoopUntilSettled(ctx);
-    if (ctx.loop.name === "generate-validate-revise" && !ctx.artifactFinished) {
+    const loopUsage = await runLoopUntilSettled(ctx).catch((error: unknown) => {
+      // Host turn-policy stop (plan 084 Task 2): the loop was unwound on purpose at a turn
+      // boundary. Not an error — the run settles cleanly and stays resumable.
+      if (error instanceof AgentRunStopped) return undefined;
+      throw error;
+    });
+    stopReason = ctx.runStop?.reason ?? ctx.loopCtx.finishReason;
+    stopDetail = ctx.runStop?.detail;
+    if (!ctx.runStop && ctx.loop.name === "generate-validate-revise" && !ctx.artifactFinished) {
       throw Object.assign(new Error(ctx.artifactFailedInfo?.message ?? "artifact loop ended without a validated artifact"), {
         name: "ArtifactFailed",
         code: ctx.artifactFailedInfo?.code ?? "artifact_failed",
@@ -496,6 +617,6 @@ export async function executeRun(
     });
     throw new AgentRunError(result, { cause: error });
   } finally {
-    await cleanupRun({ session, controller, cleanupSignal, runId, model, startedAt, runStatus, runError });
+    await cleanupRun({ session, controller, cleanupSignal, runId, model, startedAt, runStatus, runError, stopReason, stopDetail });
   }
 }

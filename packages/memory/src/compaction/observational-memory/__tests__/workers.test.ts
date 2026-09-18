@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AIProvider, Message, ProviderEvent, ProviderRequest, SessionEntry, ToolDefinition } from "@arnilo/prism";
-import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism";
+import { providerDone, providerTextDelta, providerThinkingDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
+import { MemoryError, MemoryLimitError } from "../../../errors.js";
 import { type MemoryObservation, runDropper, runObserver, runReflector } from "../index.js";
 import { runMemoryWorkerLoop } from "../worker-loop.js";
 
@@ -93,7 +94,17 @@ describe("observational memory workers", () => {
     assert.deepEqual(dropped, [observation.id]);
   });
 
-  it("rejects unknown, per-turn, total, argument, result, and message overflow", async () => {
+  it("treats text-only provider turns as no-op worker output", async () => {
+    const observations = await runObserver({
+      entries: [source],
+      provider: provider([providerTextDelta("No observation."), providerThinkingDelta("No tool."), providerDone()]),
+      model,
+      maxTurns: 1,
+    });
+    assert.deepEqual(observations, []);
+  });
+
+  it("rejects unknown and limit failures with typed errors", async () => {
     await assert.rejects(
       runObserver({
         entries: [source],
@@ -101,7 +112,8 @@ describe("observational memory workers", () => {
         model,
         maxTurns: 1,
       }),
-      /Unknown observational memory tool/,
+      (error: unknown) =>
+        error instanceof MemoryError && error.code === "unknown_tool" && /Unknown observational memory tool/.test(error.message),
     );
     await assert.rejects(
       runObserver({
@@ -114,7 +126,7 @@ describe("observational memory workers", () => {
         maxTurns: 1,
         maxToolCallsPerTurn: 1,
       }),
-      /tool calls per turn/,
+      (error: unknown) => error instanceof MemoryLimitError && error.code === "limit" && /tool calls per turn/.test(error.message),
     );
     let turn = 0;
     const repeated: AIProvider = {
@@ -123,7 +135,10 @@ describe("observational memory workers", () => {
         yield providerToolCall(toolCallContent(`c${turn++}`, "record_observation", { content: "one", sourceEntryIds: ["m1"] }));
       },
     };
-    await assert.rejects(runObserver({ entries: [source], provider: repeated, model, maxTurns: 2, maxToolCalls: 1 }), /total tool calls/);
+    await assert.rejects(
+      runObserver({ entries: [source], provider: repeated, model, maxTurns: 2, maxToolCalls: 1 }),
+      (error: unknown) => error instanceof MemoryLimitError && error.code === "limit" && /total tool calls/.test(error.message),
+    );
     await assert.rejects(
       runObserver({
         entries: [source],
@@ -134,7 +149,7 @@ describe("observational memory workers", () => {
         maxTurns: 1,
         maxArgumentBytes: 32,
       }),
-      /tool arguments exceeds/,
+      (error: unknown) => error instanceof MemoryLimitError && error.code === "limit" && /tool arguments exceeds/.test(error.message),
     );
 
     const hugeResult: ToolDefinition = {
@@ -151,7 +166,7 @@ describe("observational memory workers", () => {
         maxTurns: 1,
         maxResultBytes: 32,
       }),
-      /tool result exceeds/,
+      (error: unknown) => error instanceof MemoryLimitError && error.code === "limit" && /tool result exceeds/.test(error.message),
     );
     await assert.rejects(
       runMemoryWorkerLoop({
@@ -163,7 +178,7 @@ describe("observational memory workers", () => {
         maxTurns: 1,
         maxMessageBytes: 32,
       }),
-      /worker message/,
+      (error: unknown) => error instanceof MemoryLimitError && error.code === "limit" && /worker message/.test(error.message),
     );
   });
 
@@ -240,10 +255,13 @@ describe("observational memory workers", () => {
       id: "mock",
       async *generate(request) {
         requests.push(request);
-        if (turn++ === 0)
+        if (turn++ === 0) {
+          yield providerTextDelta("Ignored worker text.");
+          yield providerThinkingDelta("Ignored worker thinking.");
           yield providerToolCall(
             toolCallContent("c1", "record_observation", { content: "Package-only memory.", relevance: "high", sourceEntryIds: ["m1"] }),
           );
+        }
         yield providerDone();
       },
     };
@@ -257,6 +275,7 @@ describe("observational memory workers", () => {
     assert.equal(replay?.[1]?.role, "tool");
     assert.equal(replay?.[1]?.content[0]?.type, "tool_result");
     assert.equal((replay?.[1]?.content[0] as any)!.toolCallId, "c1");
+    assert.equal(JSON.stringify(replay).includes("Ignored worker"), false);
   });
 
   it("stamps sessionId and cacheKey on worker generate", async () => {

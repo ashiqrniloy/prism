@@ -1,15 +1,15 @@
 # Work tools
 
-Optional `@arnilo/prism-core/integrations/work` subpath: identity-scoped Microsoft 365 and Google Workspace connectors. Host-pinned CLI binaries only; hard-coded `execFile` argv templates; draft-then-approve mutations; side-effect idempotency; shared mail/calendar/file/task result shapes.
+Optional `@arnilo/prism-work/connectors` subpath: identity-scoped Microsoft 365 and Google Workspace connectors. Host-pinned CLI binaries or pinned HTTP adapters; hard-coded operation maps; draft-then-approve mutations; side-effect idempotency; shared mail/calendar/file/task result shapes. HTTP file gets persist untrusted bytes to a host artifact store or contained filesystem, never the transcript.
 
 ## When to use
 
-Use when agents must read or mutate tenant mail/calendar/files/tasks through the enterprise CLI the host already operates — not through model-built shell strings or generic Graph/Discovery free-form calls.
+Use when agents must read or mutate tenant mail/calendar/files/tasks through a host-pinned enterprise CLI or a pinned HTTP adapter — not through model-built shell strings, model-supplied URLs, or generic Graph/Discovery free-form calls.
 
 ## Install
 
 ```bash
-npm install @arnilo/prism-core
+npm install @arnilo/prism @arnilo/prism-work
 # host separately:
 #   npm i -g @pnp/cli-microsoft365
 #   npm i -g @googleworkspace/cli
@@ -20,26 +20,28 @@ npm install @arnilo/prism-core
 ```ts
 import {
   createWorkTools,
-  createMicrosoft365CliAdapter,
+  createMicrosoft365HttpAdapter,
   createGoogleWorkspaceCliAdapter,
+  createGoogleWorkspaceHttpAdapter,
   createMemoryIdempotencyStore,
-} from "@arnilo/prism-core/integrations/work";
-// or: import { createGoogleWorkspaceCliAdapter } from "@arnilo/prism-core/integrations/work/google-workspace";
+} from "@arnilo/prism-work/connectors";
+import { createOAuthWorkTokenProvider } from "@arnilo/prism-core/credentials/node";
+// or: import { createGoogleWorkspaceCliAdapter } from "@arnilo/prism-work/connectors/google-workspace";
 
-const microsoft365 = createMicrosoft365CliAdapter({
-  binary: process.env.M365_BIN!,
-  configDir: `/var/prism/m365/${tenant}/${user}`,
+const microsoft365 = createMicrosoft365HttpAdapter({
   identity,
-  // Optional late-bound per-identity token (0.0.14): env var only, never argv/model context.
-  // tokenProvider: createOAuthWorkTokenProvider({ provider: m365OAuth, store, envVar: "M365_ACCESSTOKEN" }),
+  tokenProvider: createOAuthWorkTokenProvider({ provider: m365OAuth, store, envVar: "M365_ACCESSTOKEN" }),
+  accessEnvVar: "M365_ACCESSTOKEN",
 });
+// Or retain createMicrosoft365CliAdapter({ binary, configDir, identity }) for host-pinned m365.
 
-const googleWorkspace = createGoogleWorkspaceCliAdapter({
-  binary: process.env.GWS_BIN!,
-  configDir: `/var/prism/gws/${tenant}/${user}`,
+const googleWorkspace = createGoogleWorkspaceHttpAdapter({
   identity,
+  tokenProvider: createOAuthWorkTokenProvider({ provider: gwsOAuth, store, envVar: "GOOGLE_ACCESS_TOKEN" }),
+  accessEnvVar: "GOOGLE_ACCESS_TOKEN",
   // allowedOps: add docs.create / sheets.create / slides.create when gated
 });
+// Or retain createGoogleWorkspaceCliAdapter({ binary, configDir, identity }) for host-pinned gws.
 
 const tools = createWorkTools({
   microsoft365,
@@ -47,6 +49,9 @@ const tools = createWorkTools({
   idempotencyStore: createMemoryIdempotencyStore(),
   approval: { isApproved: ({ draftId }) => hostHasApproved(draftId) },
   externalRecipients: { allow: (addr) => addr.endsWith("@contoso.com") },
+  scanAttachment: ({ bytes }) => hostScan(bytes), // required before file-get persistence
+  artifacts: hostWorkArtifacts, // creates ArtifactBodyRef values and owns body storage
+  filesystem: containedFilesystem, // optional destination/source for work-sandbox files
 });
 ```
 
@@ -64,7 +69,9 @@ Verified against [CLI for Microsoft 365](https://pnp.github.io/cli-microsoft365/
 | `calendar.list` | `m365 outlook event list --output json` |
 | `calendar.add` | `m365 outlook event add --output json --subject … --start … --end …` |
 | `file.list` | `m365 file list --output json --webUrl … --folderUrl …` |
+| `file.get` | HTTP only: `GET /me/drive/items/{id}/content` on `graph.microsoft.com` |
 | `file.add` | `m365 file add --output json --folderUrl … --filePath …` |
+| `file.copy` | `m365 file copy --output json --webUrl … --sourceUrl … --targetUrl …` (draft-then-approve) |
 | `file.share` | `m365 spo file sharinglink add` (`--scope organization` only) |
 | `todo.*` / `planner.*` | capability-gated via `allowedOps` |
 
@@ -80,12 +87,22 @@ Verified against [`@googleworkspace/cli` / `gws`](https://github.com/googleworks
 | `calendar.list` | `gws calendar events list --params … --fields …` |
 | `calendar.add` | `gws calendar events insert --params … --json …` |
 | `file.list` | `gws drive files list --params … [--page-all]` (NDJSON when paginated) |
+| `file.get` | HTTP only: `GET /drive/v3/files/{id}?alt=media` on `www.googleapis.com` |
 | `file.add` | `gws drive files create --json … --upload …` |
 | `file.share` | `gws drive permissions create` (`type=domain\|user` only; `anyone` denied) |
 | `task.*` | `gws tasks tasks list\|insert\|patch` |
 | `docs.create` / `sheets.create` / `slides.create` | capability-gated via `allowedOps` |
+| `docs.update` / `sheets.update` / `slides.update` | capability-gated fixed-shape updates; never free-form batch requests |
 
-Startup: M365 `version --output json`; GWS `--version`. Forbidden: `login`, `setup`, `auth`, `schema`, `doctor`, `--debug`, `--verbose`, credentials in argv, anonymous share, model-supplied command strings / free-form Discovery.
+### Microsoft 365 HTTP adapter
+
+`createMicrosoft365HttpAdapter()` uses host-provided OAuth tokens only in the `Authorization` header and pinned fetch against `graph.microsoft.com`. Its fixed map covers Outlook messages/events, draft-then-approve OneDrive copy/sharing, and capability-gated To Do/Planner tasks. `ensureReady()` performs a bounded Graph `/me` request. `m365_file_get` accepts only an item ID and uses fixed `/me/drive/items/{id}/content`; it writes untrusted bytes to an artifact and/or contained filesystem after `scanAttachment`, returning only `{ artifact?, path?, byteLength, contentHash, untrusted: true }`. File list/upload/copy accepts an HTTPS Graph Drive-item URL; arbitrary SharePoint links are rejected rather than resolved with an extra request. The CLI adapter remains available for CLI-specific SharePoint paths.
+
+### Google Workspace HTTP adapter
+
+`createGoogleWorkspaceHttpAdapter()` uses host-provided OAuth tokens only in the `Authorization` header and pinned fetch against `docs.googleapis.com`, `gmail.googleapis.com`, `sheets.googleapis.com`, `slides.googleapis.com`, `www.googleapis.com`, and `tasks.googleapis.com`. Its operation map is fixed: Gmail messages, Calendar events, Drive files/permissions, Google Tasks, and capability-gated native Docs/Sheets/Slides creates plus draft-then-approve fixed-shape updates. Docs accepts only replace-text and insert-text requests; Sheets PUTs a string matrix with `valueInputOption=RAW`; Slides accepts only shape text insertion. No tool accepts a free-form `requests[]`. `ensureReady()` performs a bounded Gmail profile request; `gws_file_get` accepts only an item ID and uses fixed `Drive files.get?alt=media`, persisting untrusted bytes exactly like `m365_file_get`. `file.add` accepts a host-local path, `ArtifactBodyRef`, or contained sandbox path; its approved draft binds the content SHA-256 and rejects changed bytes. The CLI adapter remains available.
+
+Startup: M365 CLI uses `version --output json`; M365 HTTP `ensureReady()` uses Graph `/me`; GWS CLI uses `--version`; GWS HTTP `ensureReady()` uses Gmail profile. Forbidden: `login`, `setup`, `auth`, `schema`, `doctor`, `--debug`, `--verbose`, credentials in argv, anonymous share, model-supplied command strings / URLs / free-form Discovery.
 
 ### Draft → approve → execute (0.7.0, R02)
 
@@ -99,6 +116,7 @@ In Prism 0.7.0, draft lifecycles are durably managed:
 - **Resuming approved drafts**: Mutation tools accept `{ draftId, revision }` without requiring callers to re-supply the full payload. The tool loads the stored draft, validates approval status and digest, reauthorizes immediately before execution, and executes the effect.
 - **Idempotent duplicate approvals**: Re-approving an approved draft with the same approval object is idempotent. Submitting an approval with a mismatched revision or payload digest is rejected with `ERR_PRISM_WORK_DRAFT_STALE` or `ERR_PRISM_WORK_DRAFT_DIGEST`.
 - **Ambiguous failure handling**: If a connector call fails ambiguously after dispatch, both the idempotency record and the draft are marked `unknown`. Re-running with that draft ID or idempotency key fails closed (`ERR_PRISM_WORK_IDEMPOTENCY_UNKNOWN`) and never auto-replays without explicit operator reconciliation.
+- **File-byte binding**: `*_file_draft_upload` accepts a host-local path, `ArtifactBodyRef`, or contained sandbox path. Its payload digest includes `contentHash`; execution re-hashes bytes and rejects a changed source. Artifact reads verify their hash/size through `ArtifactBodyStore`.
 - **Optional body offloading**: Supplying `bodies: ArtifactBodyStore` automatically stores large draft message/file bodies in the object store with an `ArtifactBodyRef` recorded on the draft metadata.
 
 ### Durable idempotency (0.0.23)
@@ -115,6 +133,8 @@ In Prism 0.7.0, draft lifecycles are durably managed:
 | `unknown` | External result is ambiguous; reconcile with the connector/operator through `resolveUnknown()`. Never auto-replay. |
 
 Call `begin({ identity, key, op })` **before** the external effect. After it succeeds, call `complete`, `fail`, or `markUnknown` with the returned claim token and version. The connector effect stays outside the database transaction, so this is claim-before-effect/deduplication—not exactly-once delivery. Claims default to 15 minutes (hard 60 minutes); expired claims transition to `unknown`; attempts default to 3 (hard 5). Stored rows contain no request body, token, raw provider response, or unrestricted payload.
+
+Durable adapters reject with the portable codes `ERR_PRISM_WORK_IDEMPOTENCY` (a claim or payload the adapter refuses) and `ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT` (a lost race, a stale claim token, or a transition out of order). Match on `error.code`: the error *class* is adapter-specific — the in-memory store raises `WorkToolError`, `createPostgresEnterpriseState(...).workIdempotency` raises `EnterprisePostgresError`, because `@arnilo/prism-core` cannot depend on `@arnilo/prism-work` at runtime — so an `instanceof` check that worked against the pre-move import path will silently stop matching. `packages/prism-core/src/enterprise/postgres/__tests__/work-idempotency.integration.test.ts` drives both adapters through the same conflict scenarios and asserts they report the same codes.
 
 ## Subprocess environment isolation (0.2.0, plan 020 Task 3)
 
@@ -145,6 +165,7 @@ Environment maps are validated before spawn: NUL-free, `[A-Za-z_][A-Za-z0-9_]*` 
 | Pagination pages | 20 / 100 |
 | Items / aggregate | 50/500 ; 200/2000 |
 | Body / stdout | 256 KiB–2 MiB / 2–16 MiB |
+| Download / upload file | 10 MiB / 50 MiB |
 | Process wall time | 60 s / 10 min |
 | Concurrent CLI / identity | 2 / 8 |
 
@@ -155,9 +176,10 @@ Approved mutations require core-derived `context.idempotencyKey` and a configure
 ## Security
 
 - Require host-verified `AgentIdentity`; no cross-identity configDir reuse.
-- Connector tokens (0.0.14): an optional `tokenProvider` resolves a per-identity access token into an env var per call — never argv, never model context. A missing/expired/revoked/cross-identity/wrong-tenant token fails the call closed before any exec. Refresh is late-bound and single-flighted per account (no refresh storm under reconnect). Build one with `createOAuthWorkTokenProvider()` from `@arnilo/prism-core/credentials/node`.
+- Connector tokens: a `tokenProvider` resolves a per-identity access token only at the connector edge — into CLI env for CLI adapters or an `Authorization` header for HTTP adapters, never argv or model context. A missing/expired/revoked/cross-identity/wrong-tenant token fails the call closed before dispatch. Refresh is late-bound and single-flighted per account. Build one with `createOAuthWorkTokenProvider()` from `@arnilo/prism-core/credentials/node`.
 - External mail recipients fail closed unless `externalRecipients.allow` returns true.
 - Anonymous / `anyone` sharing denied.
+- File gets accept IDs, never URLs; their response stream is cancelled at `maxFileBytes`, scanned before persistence, and returned only as artifact/path metadata with `untrusted: true`.
 - CLI stdout/stderr capped (linear chunk capture, killed/rejected before bytes beyond the cap are retained); NDJSON page streams strictly parsed and page-capped; process killed on timeout/abort/overflow.
 - Subprocess environment isolated (0.2.0): fixed allow-listed base + explicit `env` + late-bound token env; `HOME`/telemetry controls forced; reserved/duplicate/NUL/over-cap env and non-absolute binary/configDir fail before spawn. See [Subprocess environment isolation](#subprocess-environment-isolation-020-plan-020-task-3).
 

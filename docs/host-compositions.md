@@ -1,6 +1,6 @@
 # Host compositions
 
-Prism agents are host-assembled: the host application owns credentials, providers, persistence, permissions, and tool definitions. Prism provides two canonical, maintained host compositions and a zero-network inspection and readiness API to ensure host setups conform to their operational contracts:
+Prism agents are host-assembled: the host application owns credentials, providers, persistence, permissions, tool definitions, and connected-app transports. Prism provides two canonical, maintained host compositions and a zero-network inspection and readiness API to ensure host setups conform to their operational contracts:
 
 - **`personal` (`personal-assistant`)**: Local-personal host composition for single-operator productivity, personal tools, local/memory persistence, and secret redaction.
 - **`business` (`business-worker`)**: Multi-tenant enterprise worker host composition with verified tenant identity, mandatory durable storage, sandbox workspace containment, and strict governance enforcement.
@@ -37,6 +37,7 @@ const report = inspectHostComposition({
   agent: personalAgent,
   store: memoryStore,
   credentialRefs: ["OPENAI_API_KEY"],
+  connectedApps: { appIds: ["slack"], serverIds: ["slack"] },
 });
 ```
 
@@ -45,8 +46,9 @@ Report structure:
 - `profile`: `"personal"` or `"business"`.
 - `effectiveTools`: Readonly list of tool names registered on the agent.
 - `credentialRefs`: Host credential references (sanitized, values never included).
+- `connectedApps`: Optional copied `appIds` and `serverIds` (up to 32 identifiers per list); transports, environment, headers, and tokens are never accepted or reported. Business hosts require a verified identity when this field is present.
 - `ownership`: Tenant and user ownership identifiers.
-- `storage`: Storage summary with `kind` (`"memory"`, `"postgres"`, `"sqlite"`, etc.) and `durable` boolean. Memory stores are truthfully reported with `durable: false`.
+- `storage`: Storage summary with `kind` (`"memory"`, `"postgres"`, `"sqlite"`, etc.) and `durable` boolean. Memory stores are truthfully reported with `durable: false`. `snapshotRunBundle()` ([effective run bundle snapshots](run-bundle.md)) reuses this classification for the per-run store kinds.
 - `sandbox`: Isolation status and resolved root paths.
 - `governance`: Coverage flags (authorization, trust, and custom policies).
 - `readiness`: Object with `ok: boolean` and list of `reasons` if not ready.
@@ -100,17 +102,17 @@ Always install containing packages directly. **NPM install never accepts subpath
 
 ```bash
 # Correct — install containing published packages:
-npm install @arnilo/prism @arnilo/prism-core @arnilo/prism-providers
+npm install @arnilo/prism @arnilo/prism-core @arnilo/prism-providers @arnilo/prism-work
 
 # Never install subpaths:
-# npm install @arnilo/prism-core/integrations/work (WRONG: fails with 404 / E404)
+# npm install @arnilo/prism-work/connectors (WRONG: fails with 404 / E404)
 ```
 
 In your application code, import from documented subpaths:
 
 ```ts
-// Subpaths exported by @arnilo/prism-core:
-import { createWorkTools } from "@arnilo/prism-core/integrations/work";
+// Subpaths exported by @arnilo/prism-work:
+import { createWorkTools } from "@arnilo/prism-work/connectors";
 import { createJsonSchemaArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
 
 // Subpaths exported by @arnilo/prism-providers:

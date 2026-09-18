@@ -34,6 +34,8 @@ const STOP_REASON: Readonly<Record<AgentFinishReason, StopReason>> = {
   turn_limit: "max_turn_requests",
   token_limit: "max_tokens",
   refusal: "refusal",
+  // A host turn-policy stop is a clean terminal turn from the client's perspective.
+  host_policy: "end_turn",
 };
 
 function stopReasonFor(finishReason: AgentFinishReason | undefined, aborted: boolean): StopReason {

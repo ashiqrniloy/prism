@@ -750,3 +750,22 @@ test("read findText rejects an unknown findMode", async () => {
     await rm(cwd, { recursive: true, force: true });
   }
 });
+
+test("read accepts a host-injected structural document reader", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "file.bin"), "bytes");
+    const tool = createReadTool(cwd, {
+      documentReader: {
+        maxInputBytes: 1024,
+        maxTextBytes: 1024,
+        extract: async ({ buffer }) => ({ text: buffer.toString("utf8"), format: "test", pages: 1, truncatedBy: null }),
+      },
+    });
+    const r = await tool.execute({ path: "file.bin" }, ctx());
+    assert.equal(textOf(r), "bytes");
+    assert.deepEqual(r.metadata?.document, { format: "test", pages: 1, truncatedBy: null });
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});

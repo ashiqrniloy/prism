@@ -5,11 +5,11 @@ import {
   createAgent,
   createMockProvider,
   createSecretRedactor,
+  type JsonObject,
   providerDone,
   providerTextDelta,
   providerToolCall,
   providerUsage,
-  type JsonObject,
   type ToolDefinition,
 } from "@arnilo/prism";
 import { createCancelAgentTool, createSpawnAgentTool, createSupervisor, createWaitAgentTool } from "../index.js";

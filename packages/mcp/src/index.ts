@@ -1,6 +1,8 @@
 export type { McpClientAuth, McpClientAuthOptions, McpClientAuthState, McpOAuthLimitsInput, McpOAuthRegistrationStrategy } from "./auth.js";
 export { createMcpClientAuth, McpOAuthError } from "./auth.js";
 export { attachMcpToolBridge, connectMcpTools, listAllMcpTools, mapMcpToolsToDefinitions } from "./bridge.js";
+export { createConnectedAppSession } from "./connected-apps.js";
+export type { ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, CreateConnectedAppSessionOptions } from "./types.js";
 export { attachMcpCapabilities, connectMcpCapabilities, createMcpCapabilityClient } from "./capabilities.js";
 export {
   DEFAULT_CALL_TIMEOUT_MS,

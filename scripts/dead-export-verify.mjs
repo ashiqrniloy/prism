@@ -26,7 +26,7 @@ if (!existsSync(reportPath)) {
 }
 const report = JSON.parse(readFileSync(reportPath, "utf8"));
 
-const candidates = [...report.deadExports.matchAll(/^(?<name>[A-Za-z_$][\w$]*) \(defined in (?<file>[^)]+)\)$/gm)].map((m) => ({
+const candidates = [...(report.deadExports ?? "").matchAll(/^(?<name>[A-Za-z_$][\w$]*) \(defined in (?<file>[^)]+)\)$/gm)].map((m) => ({
   name: m.groups.name,
   file: m.groups.file,
 }));

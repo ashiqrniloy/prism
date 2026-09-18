@@ -1,12 +1,12 @@
 import { type AgentIdentity, createMemoryCheckpointStore } from "@arnilo/prism";
 import {
-  createGoogleWorkspaceCliAdapter,
+  createGoogleWorkspaceHttpAdapter,
   createMemoryIdempotencyStore,
-  createMicrosoft365CliAdapter,
+  createMicrosoft365HttpAdapter,
   createWorkTools,
   normalizeMailPage,
   type WorkDraftApproval,
-} from "@arnilo/prism-core/integrations/work";
+} from "@arnilo/prism-work/connectors";
 
 const identity: AgentIdentity = {
   tenantId: "tenant-a",
@@ -17,40 +17,30 @@ const identity: AgentIdentity = {
   verified: true,
 };
 
-/** Network-free M365 + GWS fake CLI adapters; shared mail page shapes & durable draft lifecycle. */
+/** Network-free HTTP adapters; shared mail page shapes & durable draft lifecycle. */
 export async function demo(): Promise<Record<string, unknown>> {
-  const runner = {
-    async exec(argv: readonly string[]) {
-      if (argv[0] === "version" || argv[0] === "--version") {
-        return { exitCode: 0, stdout: argv[0] === "--version" ? "0.22.5\n" : '"v11.7.0"', stderr: "" };
-      }
-      if (argv.includes("send")) {
-        return { exitCode: 0, stdout: JSON.stringify({ id: "sent_msg_001" }), stderr: "" };
-      }
-      return {
-        exitCode: 0,
-        stdout: argv.includes("messages") || argv.includes("message") ? '{"messages":[{"id":"m1","snippet":"hi"}]}' : "[]",
-        stderr: "",
-      };
-    },
-  };
-
   // Shared durable checkpoint store survives process restart
   const checkpoints = createMemoryCheckpointStore();
 
-  const microsoft365 = createMicrosoft365CliAdapter({
-    binary: "/usr/bin/m365",
-    configDir: "/tmp/prism-m365-demo",
+  const microsoft365 = createMicrosoft365HttpAdapter({
     identity,
     checkpoints,
-    runner,
+    tokenProvider: { tokenEnv: () => ({ M365_ACCESSTOKEN: "demo-token" }) },
+    accessEnvVar: "M365_ACCESSTOKEN",
+    fetch: async (input) => {
+      const url = new URL(input instanceof URL ? input.href : typeof input === "string" ? input : input.url);
+      return Response.json(url.pathname.includes("messages") ? { value: [{ id: "m1", bodyPreview: "hi" }] } : {});
+    },
   });
-  const googleWorkspace = createGoogleWorkspaceCliAdapter({
-    binary: "/usr/bin/gws",
-    configDir: "/tmp/prism-gws-demo",
+  const googleWorkspace = createGoogleWorkspaceHttpAdapter({
     identity,
     checkpoints,
-    runner,
+    tokenProvider: { tokenEnv: () => ({ GOOGLE_ACCESS_TOKEN: "demo-token" }) },
+    accessEnvVar: "GOOGLE_ACCESS_TOKEN",
+    fetch: async (input) => {
+      const url = new URL(input instanceof URL ? input.href : typeof input === "string" ? input : input.url);
+      return Response.json(url.hostname === "gmail.googleapis.com" ? { messages: [{ id: "m1", snippet: "hi" }] } : {});
+    },
   });
 
   // 1. Create a draft in Microsoft 365
@@ -71,12 +61,15 @@ export async function demo(): Promise<Record<string, unknown>> {
   await microsoft365.approveDraft!(approval);
 
   // 3. Process restart: new adapter instance with same checkpoints resumes approved draft
-  const restartedM365 = createMicrosoft365CliAdapter({
-    binary: "/usr/bin/m365",
-    configDir: "/tmp/prism-m365-demo",
+  const restartedM365 = createMicrosoft365HttpAdapter({
     identity,
     checkpoints,
-    runner,
+    tokenProvider: { tokenEnv: () => ({ M365_ACCESSTOKEN: "demo-token" }) },
+    accessEnvVar: "M365_ACCESSTOKEN",
+    fetch: async (input) => {
+      const url = new URL(input instanceof URL ? input.href : typeof input === "string" ? input : input.url);
+      return Response.json(url.pathname.includes("messages") ? { value: [{ id: "m1", bodyPreview: "hi" }] } : {});
+    },
   });
 
   const tools = createWorkTools({

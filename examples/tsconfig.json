@@ -51,6 +51,15 @@
       "@arnilo/prism-enterprise-postgres": [
         "./packages/enterprise-postgres/src/index.ts"
       ],
+      "@arnilo/prism-channels": [
+        "./packages/prism-channels/src/index.ts"
+      ],
+      "@arnilo/prism-channels/telegram": [
+        "./packages/prism-channels/src/telegram.ts"
+      ],
+      "@arnilo/prism-channels/signal": [
+        "./packages/prism-channels/src/signal.ts"
+      ],
       "@arnilo/prism-memory": [
         "./packages/memory/src/index.ts"
       ],

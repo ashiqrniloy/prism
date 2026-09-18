@@ -22,7 +22,7 @@ import {
   validateReleaseEvalManifest,
   wrapAgentWithFailureInjection,
 } from "@arnilo/prism-core/governance/evals";
-import { createMemoryWorkDraftStore, validateApproval, type WorkDraftApproval } from "@arnilo/prism-core/integrations/work";
+import { createMemoryWorkDraftStore, validateApproval, type WorkDraftApproval } from "@arnilo/prism-work/connectors";
 
 const requestApprovalTool: ToolDefinition = {
   name: "request_approval",

@@ -1,4 +1,13 @@
-import type { AgentEvent, AgentEventRecord, ErrorInfo, SecretRedactor, ToolCallRecord, Usage, UsageRecord } from "@arnilo/prism";
+import type {
+  AgentEvent,
+  AgentEventRecord,
+  AgentFinishReason,
+  ErrorInfo,
+  SecretRedactor,
+  ToolCallRecord,
+  Usage,
+  UsageRecord,
+} from "@arnilo/prism";
 import { resolveRedactor } from "@arnilo/prism";
 import type { WorkflowEvent } from "../../runtime/workflows/types.js";
 import type { EvaluationTrace } from "../evals/types.js";
@@ -135,6 +144,10 @@ interface FoldState {
   runId: string;
   sessionId?: string;
   status: string;
+  /** Clean-stop taxonomy of the finished run (`agent_finished.finishReason`), when it stopped on a ceiling or host policy. */
+  stopReason?: AgentFinishReason;
+  /** Host turn-policy stop detail, bounded and redacted at the runtime boundary. */
+  stopDetail?: string;
   startedAt: string;
   finishedAt?: string;
   runInput?: unknown;
@@ -209,6 +222,8 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
       }
       state.totalUsage = addUsage(state.totalUsage, event.usage);
       state.status = event.finishReason ? `finished:${event.finishReason}` : "succeeded";
+      state.stopReason = event.finishReason;
+      state.stopDetail = event.stopDetail;
       state.finishedAt = now();
       return;
     }
@@ -532,6 +547,8 @@ function buildTimeline(state: FoldState): ExecutionTimeline {
     ...(state.sessionId ? { sessionId: state.sessionId } : {}),
     ...(resolvedTraceId ? { traceId: resolvedTraceId } : {}),
     status: state.status,
+    ...(state.stopReason ? { stopReason: state.stopReason } : {}),
+    ...(state.stopDetail ? { stopDetail: state.stopDetail } : {}),
     startedAt: state.startedAt || now(),
     ...(state.finishedAt ? { finishedAt: state.finishedAt } : {}),
     ...(state.runInput !== undefined ? { input: state.runInput } : {}),

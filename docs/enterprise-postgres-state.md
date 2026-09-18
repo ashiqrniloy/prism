@@ -200,6 +200,10 @@ export async function recordEnterpriseState(state: PostgresEnterpriseState) {
 // `state` comes from `await createPostgresEnterpriseState({ pool, schema: "prism" })`.
 ```
 
+## Composing with messaging channels
+
+An outbox row is a natural fit for the `deliver` seam of `createMessagingRuntime` when the host wants each reply recorded alongside its own business state: append in the host transaction, commit, then hand the reply to the transport adapter. The channel runtime never imports this package and `@arnilo/prism-channels` has no `pg` peer — the composition is host code, because only the host knows which local mutation the row belongs with and which transport it owns. The appended payload should carry correlation ids (`connectionId`, the answered event id, reply kind) rather than message text, and the tenant id should come from the resolved identity's ownership scope rather than from the inbound event. `examples/messaging-outbox.ts` runs this seam offline against a fake pool.
+
 ## Extension and configuration notes
 
 - `createModelRouter({ resolver, stateStore: state.modelRouter })` keeps allow-list, residency, fallback, and diagnostics behavior in `@arnilo/prism-core/governance/model-router`; this package only supplies durable state. Router admission reservations (`reserveBudget`/`commitBudget`/`releaseBudget` on `state.modelRouter`) live in the `reservations` JSONB column of `prism_model_router_budgets`: one atomic UPSERT per admission, fencing-token-guarded commit/release in a SERIALIZABLE transaction, and TTL reconciliation as unknown usage; see [Model routing](model-routing.md).

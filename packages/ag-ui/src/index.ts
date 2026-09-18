@@ -48,6 +48,7 @@ export {
   type AgUiFrontendToolPolicyInput,
   type AgUiHandler,
   type AgUiInputOptions,
+  type AgUiInputPolicyOptions,
   type AgUiInputProjection,
   type AgUiInputProjectorInput,
   type AgUiInterruptOptions,

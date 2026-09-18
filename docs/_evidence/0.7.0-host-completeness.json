@@ -28,7 +28,7 @@
     "web-tools/browser-live",
     "memory/drive-sync-live",
     "coding-tools/e2b-sandbox-live",
-    "coding-tools/mistral-ocr-live"
+    "work/mistral-ocr-live"
   ],
   "outOfRelease": [
     "R09",
@@ -85,7 +85,7 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "packages/prism-core/src/integrations/work/__tests__/work-tools.test.ts",
+        "packages/prism-work/src/connectors/__tests__/work-tools.test.ts",
         "scripts/fixtures/e2e-070-host-completeness-journey.mjs"
       ],
       "docs": [
@@ -187,11 +187,11 @@
       "status": "environment-blocked",
       "tier": "live",
       "tests": [
-        "packages/office/src/documents/__tests__/fidelity.test.ts",
+        "packages/prism-work/src/documents/__tests__/fidelity.test.ts",
         "packages/prism-core/src/governance/evals/__tests__/citations.test.ts"
       ],
       "live": [
-        "coding-tools/mistral-ocr-live"
+        "work/mistral-ocr-live"
       ],
       "docs": [
         "docs/documents.md",

@@ -97,7 +97,7 @@ export const handler = createArtifactHandler({ service: artifacts, authorize: ho
 
 ## Business action drafts and editable approvals (0.7.0)
 
-Business tools (e.g. mail, calendar, documents in `@arnilo/prism-core/integrations/work`) record mutations through durable `WorkDraftStore` drafts before execution. Human reviewers can approve, deny, or edit draft payloads directly:
+Business tools (e.g. mail, calendar, documents in `@arnilo/prism-work/connectors`) record mutations through durable `WorkDraftStore` drafts before execution. Human reviewers can approve, deny, or edit draft payloads directly:
 - AG-UI clients advertise and send `approveWithEdits` with revised arguments (`editedArgs`/`modifiedArguments`).
 - The server resume endpoint accepts `{ decision: "approve", modifiedArguments: { ... } }` under CAS `expectedVersion`.
 - If arguments are modified, a new draft revision is created with bumped revision number and payload digest. The previous revision's approval is invalidated and the mutation requires approval for the revised content.

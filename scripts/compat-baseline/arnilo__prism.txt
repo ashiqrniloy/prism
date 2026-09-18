@@ -79,6 +79,10 @@ CitationIntegrityReason	export type { ArtifactApproval, ArtifactApprovalState, A
 CitationIntegrityResult	export type { ArtifactApproval, ArtifactApprovalState, ArtifactBodyErrorCode, ArtifactBodyPresignOptions, ArtifactBodyRef, ArtifactBodyStore, ArtifactBodyTransferOptions, ArtifactCitation, ArtifactDecisionState, ArtifactDeliveryToken, ArtifactRecord, ArtifactRevision, CitationIntegrityReason, CitationIntegrityResult, CitationLiveSource, CitationSupport, } from "./artifacts.js"
 CitationLiveSource	export type { ArtifactApproval, ArtifactApprovalState, ArtifactBodyErrorCode, ArtifactBodyPresignOptions, ArtifactBodyRef, ArtifactBodyStore, ArtifactBodyTransferOptions, ArtifactCitation, ArtifactDecisionState, ArtifactDeliveryToken, ArtifactRecord, ArtifactRevision, CitationIntegrityReason, CitationIntegrityResult, CitationLiveSource, CitationSupport, } from "./artifacts.js"
 CitationSupport	export type { ArtifactApproval, ArtifactApprovalState, ArtifactBodyErrorCode, ArtifactBodyPresignOptions, ArtifactBodyRef, ArtifactBodyStore, ArtifactBodyTransferOptions, ArtifactCitation, ArtifactDecisionState, ArtifactDeliveryToken, ArtifactRecord, ArtifactRevision, CitationIntegrityReason, CitationIntegrityResult, CitationLiveSource, CitationSupport, } from "./artifacts.js"
+ClaimGroundingEvidence	export type { ClaimGroundingEvidence, ClaimGroundingEvidenceExtractor, ClaimGroundingEvidenceExtractorContext, ClaimGroundingGuardrailOptions, } from "./evidence-grounding.js"
+ClaimGroundingEvidenceExtractor	export type { ClaimGroundingEvidence, ClaimGroundingEvidenceExtractor, ClaimGroundingEvidenceExtractorContext, ClaimGroundingGuardrailOptions, } from "./evidence-grounding.js"
+ClaimGroundingEvidenceExtractorContext	export type { ClaimGroundingEvidence, ClaimGroundingEvidenceExtractor, ClaimGroundingEvidenceExtractorContext, ClaimGroundingGuardrailOptions, } from "./evidence-grounding.js"
+ClaimGroundingGuardrailOptions	export type { ClaimGroundingEvidence, ClaimGroundingEvidenceExtractor, ClaimGroundingEvidenceExtractorContext, ClaimGroundingGuardrailOptions, } from "./evidence-grounding.js"
 CliUsageError	export declare class CliUsageError extends Error
 CompactionTrigger	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldCompactOptions, ResumeNested
 CompactionTriggerContext	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldCompactOptions, ResumeNested
@@ -372,6 +376,7 @@ ProviderTransportError	export declare class ProviderTransportError extends Error
 ProviderTurnFailure	export declare class ProviderTurnFailure extends Error
 PutLegalHoldInput	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 REDACTED	export declare const REDACTED = "[REDACTED]"
+RUN_BUNDLE_SCHEMA_VERSION	export declare const RUN_BUNDLE_SCHEMA_VERSION = 1
 RealtimeCaps	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldCompactOptions, ResumeNested
 RealtimeEvent	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldCompactOptions, ResumeNested
 RealtimeSession	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldCompactOptions, ResumeNested
@@ -393,6 +398,8 @@ ResolvedToolResultFoldOptions	export type { FoldToolResultsContext, ResolvedTool
 ResolvedUseCaseModel	export type { ResolvedUseCaseModel, ResolveUseCaseModelInput, UseCaseModelBinding, } from "./use-case-model.js"
 ResumeNestedRun	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldCompactOptions, ResumeNested
 RevocableOAuthCredentialStore	export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js"
+RunBundleSnapshot	export type { RunBundleSnapshot, RunBundleSnapshotInput } from "./run-bundle.js"
+RunBundleSnapshotInput	export type { RunBundleSnapshot, RunBundleSnapshotInput } from "./run-bundle.js"
 RunDecision	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, DecisionScope, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldCompactOptions, ResumeNested
 RunFeedbackError	export declare class RunFeedbackError extends Error
 RunFeedbackLimits	export type { MemoryRunFeedbackStoreOptions, PrepareRunFeedbackOptions, RunFeedbackLimits, RunFeedbackRun, RunFeedbackRunResolver, } from "./feedback.js"
@@ -580,7 +587,9 @@ capToolResultSummary	export declare function capToolResultSummary(summary: strin
 checkCitationIntegrity	export declare function checkCitationIntegrity(citation: ArtifactCitation, live?: CitationLiveSource, options?:
 checkExecution	export declare function checkExecution(policy: ExecutionPolicy | undefined, action: ExecutionAction): Promise<ExecutionDecision>
 checkPermission	export declare function checkPermission(policy: PermissionPolicy | undefined, request: PermissionRequest): Promise<PermissionDecision>
+checkpointDurableTurn	export declare function checkpointDurableTurn(session: SessionHost, input:
 citationBindingDigest	export declare function citationBindingDigest(citations: readonly ArtifactCitation[] | undefined): string
+classifyProviderFailure	export declare function classifyProviderFailure(error: unknown): ProviderFailureClass
 cleanupRun	export declare function cleanupRun(input:
 collectMessageContentBlocks	export declare function collectMessageContentBlocks(messages: readonly Message[]): ContentBlock[]
 collectProviderEvents	export declare function collectProviderEvents(provider: AIProvider, request: ProviderRequest): Promise<readonly ProviderEvent[]>
@@ -602,6 +611,7 @@ createBoundedUploadCache	export declare function createBoundedUploadCache<T>(max
 createCacheTelemetry	export declare function createCacheTelemetry(options?: CacheTelemetryOptions): CacheTelemetry
 createChainedCredentialResolver	export declare function createChainedCredentialResolver(resolvers: readonly CredentialResolver[]): CredentialResolver
 createChainedSettingsProvider	export declare function createChainedSettingsProvider(providers: readonly SettingsProvider[]): SettingsProvider
+createClaimGroundingGuardrail	export declare function createClaimGroundingGuardrail(options: ClaimGroundingGuardrailOptions): Guardrail<"output">
 createContributionRegistries	export declare function createContributionRegistries(options?: ContributionRegistriesOptions): ContributionRegistries
 createContributionRegistry	export declare function createContributionRegistry<T>(options?: ContributionRegistryOptions): ContributionRegistry<T>
 createDefaultCompactionStrategy	export declare function createDefaultCompactionStrategy(options?: DefaultCompactionStrategyOptions): CompactionStrategy
@@ -670,6 +680,7 @@ definePrismManifest	export declare function definePrismManifest(manifest: PrismM
 defineProviderPackage	export declare function defineProviderPackage(providerPackage: ProviderPackage): ProviderPackage
 denialToErrorInfo	export declare function denialToErrorInfo(error: unknown): ErrorInfo
 deriveToolEffectKey	export declare function deriveToolEffectKey(input: Omit<ToolEffectKey, "key" | "signal">): string
+describeStorage	export declare function describeStorage(store: unknown, checkpoints: unknown):
 description	export declare const description = "Agent harness for AI providers, agents, sessions, and tools."
 discoverAgentBundles	export declare function discoverAgentBundles(options: DiscoverAgentBundlesOptions): Promise<readonly AgentBundle[]>
 discoverContributions	export declare function discoverContributions(options: DiscoveryOptions): Promise<readonly DiscoveredContribution[]>
@@ -692,9 +703,9 @@ foldToolResultHistory	export declare function foldToolResultHistory(history: rea
 foldToolResults	export declare function foldToolResults(results: readonly ToolResult[], options: ResolvedToolResultFoldOptions, context: FoldToolResultsContext): Promise<readonly ToolResult[]>
 foldedToolResultHeader	export declare function foldedToolResultHeader(toolName: string, toolCallId: string, summary: string): string
 formatFoldedToolResult	export declare function formatFoldedToolResult(summary: string): string
-generateProviderTurn	export declare function generateProviderTurn(session: SessionHost, request: ProviderRequest, runId: string, signal: AbortSignal, secrets?: readonly (string | undefined)[], turn?: number, attempt?: number, recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<void>): Promise<ProviderTurnResult>
+generateProviderTurn	export declare function generateProviderTurn(session: SessionHost, request: ProviderRequest, runId: string, signal: AbortSignal, secrets?: readonly (string | undefined)[], turn?: number, attempt?: number, recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<void>, toolResults?: readonly ToolResult[]): Promise<ProviderTurnResult>
 generateValidateReviseLoop	export declare function generateValidateReviseLoop(opts:
-generateWithRetry	export declare function generateWithRetry(session: SessionHost, request: ProviderRequest, runId: string, options: RunOptions, signal: AbortSignal, requestSecrets?: readonly (string | undefined)[], turn?: number, recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<void>): Promise<ProviderTurnResult>
+generateWithRetry	export declare function generateWithRetry(session: SessionHost, request: ProviderRequest, runId: string, options: RunOptions, signal: AbortSignal, requestSecrets?: readonly (string | undefined)[], turn?: number, recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<void>, toolResults?: readonly ToolResult[]): Promise<ProviderTurnResult>
 getContextBudgetReport	export declare function getContextBudgetReport(request: ProviderRequest): ContextBudgetReport | undefined
 getInitUsage	export declare function getInitUsage(templatesRoot?: string, galleryRoot?: string): string
 getPersistencePaginationCursors	export declare function getPersistencePaginationCursors(): readonly PersistencePaginationCursor[]
@@ -812,7 +823,7 @@ providerContent	export declare function providerContent(event: Extract<ProviderE
 providerContentDelta	export declare function providerContentDelta(content: ContentBlock): ProviderEvent
 providerContinuationRequired	export declare function providerContinuationRequired(cursor: string, reason?: string): ProviderEvent
 providerDone	export declare function providerDone(usage?: Usage): ProviderEvent
-providerError	export declare function providerError(error: unknown, secrets?: readonly (string | undefined)[]): ProviderEvent
+providerError	export declare function providerError(error: unknown, secrets?: readonly (string | undefined)[]): Extract<ProviderEvent,
 providerTextDelta	export declare function providerTextDelta(text: string): ProviderEvent
 providerThinkingDelta	export declare function providerThinkingDelta(text: string, signature?: string): ProviderEvent
 providerToolCall	export declare function providerToolCall(call: ToolCallContent): ProviderEvent
@@ -932,6 +943,7 @@ skillMessages	export declare function skillMessages(skills: readonly Skill[] | u
 skillPromptText	export declare function skillPromptText(skill: Skill, context?: SkillRenderContext): string | undefined
 snapThinkingLevel	export declare function snapThinkingLevel(model: Pick<ModelConfig, "provider" | "compat" | "capabilities">, level: ThinkingLevel | string): ThinkingLevel | string
 snapshotLoadedSkillBodies	export declare function snapshotLoadedSkillBodies(skills: readonly Skill[], loaded: LoadedSkillSet, restored?: ReadonlyMap<string, string>): LoadedSkillBodiesEntry[]
+snapshotRunBundle	export declare function snapshotRunBundle(input: RunBundleSnapshotInput): RunBundleSnapshot
 sniffMediaMimeType	export declare function sniffMediaMimeType(bytes: Uint8Array): string | undefined
 splitFrontmatter	export declare function splitFrontmatter(text: string, path: string):
 suspendDurable	export declare function suspendDurable(session: SessionHost, input:
@@ -963,7 +975,7 @@ validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(valu
 validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
-version	export declare const version = "0.7.0"
+version	export declare const version = "0.8.0"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]

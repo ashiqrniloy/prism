@@ -1,7 +1,7 @@
 {
   "name": "@arnilo/prism-coding-tools",
-  "version": "0.7.0",
-  "description": "Unified coding agent tools, security sandboxing, document parsing, OpenAPI tools, Linux desktop integration, Dev inspector, and persona extensions for Prism.",
+  "version": "0.8.0",
+  "description": "Unified coding agent tools, security sandboxing, OpenAPI tools, Linux desktop integration, Dev inspector, and persona extensions for Prism.",
   "type": "module",
   "main": "./dist/agent/index.js",
   "types": "./dist/agent/index.d.ts",
@@ -16,10 +16,6 @@
     "./security": {
       "types": "./dist/security/index.d.ts",
       "default": "./dist/security/index.js"
-    },
-    "./document-reader": {
-      "types": "./dist/document-reader/index.d.ts",
-      "default": "./dist/document-reader/index.js"
     },
     "./openapi": {
       "types": "./dist/openapi/index.d.ts",
@@ -62,31 +58,23 @@
   "scripts": {
     "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node ../../scripts/with-build-lock.mjs node --test dist/**/__tests__/*.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs node --test \"dist/**/__tests__/*.test.js\"",
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@arnilo/prism-core": "^0.7.0",
+    "@arnilo/prism-core": "^0.8.0",
     "diff": "^9.0.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.7.0",
+    "@arnilo/prism": "^0.8.0",
     "@dietrichgebert/ponytail": "^4.9.0",
-    "e2b": "2.49.1",
-    "mammoth": "^1.8.0",
-    "pdf-parse": "^2.4.5"
+    "e2b": "2.49.1"
   },
   "peerDependenciesMeta": {
     "@dietrichgebert/ponytail": {
       "optional": true
     },
     "e2b": {
-      "optional": true
-    },
-    "mammoth": {
-      "optional": true
-    },
-    "pdf-parse": {
       "optional": true
     }
   },
@@ -95,11 +83,10 @@
     "@arnilo/prism-ag-ui": "file:../ag-ui",
     "@arnilo/prism-core": "file:../prism-core",
     "@arnilo/prism-mcp": "file:../mcp",
+    "@arnilo/prism-work": "file:../prism-work",
     "@dietrichgebert/ponytail": "^4.9.0",
     "@types/diff": "^7.0.2",
     "@types/node": "^22.20.0",
-    "mammoth": "^1.8.0",
-    "pdf-parse": "^2.4.5",
     "typescript": "^7.0.2"
   },
   "engines": {
@@ -122,7 +109,6 @@
     "agent",
     "security",
     "sandbox",
-    "document-reader",
     "openapi",
     "computer-use",
     "dev",

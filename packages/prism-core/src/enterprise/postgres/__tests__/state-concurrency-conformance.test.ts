@@ -7,7 +7,7 @@ import { after, describe, it } from "node:test";
 import { assertStateConcurrencyConforms } from "@arnilo/prism/testing/state-concurrency-conformance";
 import { Pool } from "pg";
 import { createMemoryModelRouterStateStore } from "../../../governance/model-router/index.js";
-import { createMemoryIdempotencyStore } from "../../../integrations/work/index.js";
+import { createMemoryIdempotencyStore } from "@arnilo/prism-work/connectors";
 import { createPostgresEnterpriseState } from "../enterprise.js";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;

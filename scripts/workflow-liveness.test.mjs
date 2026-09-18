@@ -177,16 +177,16 @@ test("a retired package or missing script in a live workflow fails (positive con
   const file = join(WORKFLOWS, "sandbox-browser.yml");
   const text = readFileSync(file, "utf8");
   assert.deepEqual(workflowReferenceProblems(text, inventory), [], "sandbox-browser.yml must be live");
-  const retired = text.replace("@arnilo/prism-office", "@arnilo/prism-diagrams");
+  const retired = text.replace("@arnilo/prism-work", "@arnilo/prism-diagrams");
   assert.match(
     workflowReferenceProblems(retired, inventory).join("\n"),
     /unknown workspace "@arnilo\/prism-diagrams"/,
     "a retired package name must be reported",
   );
-  const missingScript = `${text}\n          npm run test:drawio -w @arnilo/prism-office\n`;
+  const missingScript = `${text}\n          npm run test:drawio -w @arnilo/prism-work\n`;
   assert.match(
     workflowReferenceProblems(missingScript, inventory).join("\n"),
-    /@arnilo\/prism-office has no "test:drawio" script/,
+    /@arnilo\/prism-work has no "test:drawio" script/,
     "a script no package declares must be reported",
   );
 });

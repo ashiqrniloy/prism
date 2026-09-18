@@ -3,7 +3,7 @@ import type { Pool, PoolClient, PoolConfig } from "pg";
 import type { EvaluationStore } from "../../governance/evals/index.js";
 import type { ModelRouterStateStore } from "../../governance/model-router/index.js";
 import type { PolicyDecisionStore } from "../../governance/policy/index.js";
-import type { IdempotencyStore } from "../../integrations/work/index.js";
+import type { IdempotencyStore } from "@arnilo/prism-work/connectors";
 
 /** Default PostgreSQL schema for enterprise-state tables. */
 export const DEFAULT_ENTERPRISE_SCHEMA = "prism";

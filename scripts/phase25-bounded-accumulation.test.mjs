@@ -227,6 +227,6 @@ test("cli: collectOutput is already linear (plan 020 Task 3 audit-only — no ch
   // toString()) — the exact pattern Task 3 applied to framing/tar. It was linearized in
   // plan 020 Task 3 and has no residual quadratic site. The import below confirms the
   // module loads unchanged (no regression from Task 3's adjacent edits).
-  const mod = await import("@arnilo/prism-core/integrations/work");
+  const mod = await import("@arnilo/prism-work/connectors");
   assert.ok(typeof mod.createCliRunner === "function", "work-tools cli module loads (collectOutput audit-clean)");
 });

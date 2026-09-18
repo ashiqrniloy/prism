@@ -13,8 +13,8 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import {
-  createSupervisor,
   type CreateSupervisorOptions,
+  createSupervisor,
   type DelegationCompletion,
   type Supervisor,
   SupervisorDeniedError,

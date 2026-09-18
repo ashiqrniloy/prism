@@ -4,7 +4,6 @@ import type { AgentIdentity, ToolEffectKey } from "@arnilo/prism";
 import { ToolEffectError } from "@arnilo/prism";
 import type { Pool } from "pg";
 import { PolicyError } from "../../../governance/policy/index.js";
-import { WorkToolError } from "../../../integrations/work/index.js";
 import { EnterprisePostgresError } from "../errors.js";
 import { createPostgresEvaluationStore } from "../evaluations.js";
 import { createPostgresPolicyDecisionStore } from "../policy.js";
@@ -95,7 +94,7 @@ describe("enterprise policy and evaluation stores", () => {
     const queryCount = queries.length;
     await assert.rejects(
       () => work.begin({ identity, key: "x".repeat(2_049), op: "mail.send" }),
-      (error: unknown) => error instanceof WorkToolError && error.code === "ERR_PRISM_WORK_IDEMPOTENCY",
+      (error: unknown) => error instanceof EnterprisePostgresError && error.code === "ERR_PRISM_WORK_IDEMPOTENCY",
     );
     assert.equal(queries.length, queryCount);
     await assert.rejects(
@@ -109,7 +108,7 @@ describe("enterprise policy and evaluation stores", () => {
           status: "completed",
           failure: { code: "bad" },
         } as never),
-      (error: unknown) => error instanceof WorkToolError && error.code === "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT",
+      (error: unknown) => error instanceof EnterprisePostgresError && error.code === "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT",
     );
     assert.equal(queries.length, queryCount);
   });

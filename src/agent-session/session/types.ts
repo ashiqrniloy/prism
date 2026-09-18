@@ -6,6 +6,7 @@ import type { AttentionStickyFrontier, PersistedAttentionStickyFrontier } from "
 import type {
   Agent,
   AgentEvent,
+  AgentFinishReason,
   AgentLoopStrategy,
   AgentRunResult,
   AIProvider,
@@ -26,6 +27,7 @@ import type {
   ToolDefinition,
   ToolEffectStore,
   ToolRegistry,
+  ToolResult,
   Usage,
 } from "../../contracts.js";
 import type { AgentIdentity } from "../../identity.js";
@@ -117,6 +119,9 @@ export function asSessionHost(session: unknown): SessionHost {
   return session as SessionHost;
 }
 
+/** Why a run's loop ended, plus the host's stop detail when `RunOptions.turnPolicy` stopped it. */
+export type RunStopInfo = { readonly reason: AgentFinishReason; readonly detail?: string };
+
 export type RoundContext = {
   session: SessionHost;
   input: AgentInput;
@@ -144,6 +149,12 @@ export type RoundContext = {
   assembledTurn: boolean;
   artifactFinished: boolean;
   artifactFailedInfo: { message: string; code?: string | number } | undefined;
+  /** Host tool calls dispatched in this run; the turn-boundary context's `toolCalls` (plan 084 Task 2). */
+  toolCalls: number;
+  /** Completed host tool results from this run, for output evidence guardrails (plan 084 Task 5). */
+  toolResults: ToolResult[];
+  /** Set when a `RunOptions.turnPolicy` stop ended the loop (plan 084 Task 2). */
+  runStop?: RunStopInfo;
   runUsage: { add(usage: Usage): void; value(): Usage | undefined };
   loopCtx: LoopContext;
 };

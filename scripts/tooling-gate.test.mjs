@@ -63,7 +63,8 @@ describe("tooling gates fail on violations", () => {
     assert.notEqual(result.status, 0, "protected PostgreSQL gate passed without a URL");
     assert.match(result.stderr, /PRISM_TEST_POSTGRES_URL is required/);
     const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts;
-    assert.match(scripts["test:postgres"], /require-postgres-url/);
+    assert.equal(scripts["test:postgres"], "node scripts/postgres-evidence.mjs");
+    assert.match(scripts["test:postgres:run"], /require-postgres-url/);
     assert.doesNotMatch(scripts["sdk:ready"], /test:postgres/);
   });
 

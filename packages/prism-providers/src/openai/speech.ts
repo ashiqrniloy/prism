@@ -29,14 +29,6 @@ export interface OpenAISpeechOptions {
   readonly maxAudioBytes?: number;
 }
 
-async function _bearerHeaders(options: OpenAISpeechOptions, id: string): Promise<Record<string, string>> {
-  const token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
-  return {
-    ...options.headers,
-    ...(token ? { authorization: `Bearer ${token}` } : {}),
-  };
-}
-
 function assertInput(request: SpeechRequest, maxChars: number): void {
   if (request.input.length === 0) throw new SpeechError("empty_input", "synthesize requires non-empty input");
   if (request.input.length > maxChars) {

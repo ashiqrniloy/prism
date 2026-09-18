@@ -317,7 +317,6 @@
       "./anthropic": {
         "suites": [
           "packages/prism-providers/src/anthropic/__tests__/anthropic.test.ts",
-          "packages/prism-providers/src/anthropic/__tests__/index.test.ts",
           "packages/prism-providers/src/anthropic/__tests__/live.test.ts",
           "scripts/e2e-full-surface.test.mjs",
           "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
@@ -343,7 +342,6 @@
       "./clinepass": {
         "suites": [
           "packages/prism-providers/src/clinepass/__tests__/clinepass.test.ts",
-          "packages/prism-providers/src/clinepass/__tests__/index.test.ts",
           "packages/prism-providers/src/clinepass/__tests__/live.test.ts",
           "scripts/e2e-full-surface.test.mjs",
           "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
@@ -362,7 +360,6 @@
       "./deepseek": {
         "suites": [
           "packages/prism-providers/src/deepseek/__tests__/deepseek.test.ts",
-          "packages/prism-providers/src/deepseek/__tests__/index.test.ts",
           "packages/prism-providers/src/deepseek/__tests__/live.test.ts",
           "scripts/e2e-full-surface.test.mjs",
           "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
@@ -372,7 +369,6 @@
       "./google": {
         "suites": [
           "packages/prism-providers/src/google/__tests__/google.test.ts",
-          "packages/prism-providers/src/google/__tests__/index.test.ts",
           "packages/prism-providers/src/google/__tests__/live.test.ts",
           "scripts/e2e-full-surface.test.mjs",
           "packages/prism-providers/src/__tests__/thinking-conformance.test.ts"
@@ -390,7 +386,6 @@
       },
       "./kimi": {
         "suites": [
-          "packages/prism-providers/src/kimi/__tests__/index.test.ts",
           "packages/prism-providers/src/kimi/__tests__/kimi.test.ts",
           "packages/prism-providers/src/kimi/__tests__/live.test.ts",
           "scripts/e2e-full-surface.test.mjs",
@@ -400,24 +395,12 @@
       },
       "./model-discovery": {
         "suites": [
-          "packages/prism-providers/src/anthropic/__tests__/index.test.ts",
-          "packages/prism-providers/src/clinepass/__tests__/index.test.ts",
-          "packages/prism-providers/src/deepseek/__tests__/index.test.ts",
-          "packages/prism-providers/src/google/__tests__/index.test.ts",
-          "packages/prism-providers/src/kimi/__tests__/index.test.ts",
-          "packages/prism-providers/src/neuralwatt/__tests__/index.test.ts",
-          "packages/prism-providers/src/openai/__tests__/index.test.ts",
-          "packages/prism-providers/src/opencode-go/__tests__/index.test.ts",
-          "packages/prism-providers/src/openrouter/__tests__/index.test.ts",
-          "packages/prism-providers/src/xai/__tests__/index.test.ts",
-          "packages/prism-providers/src/zai/__tests__/index.test.ts",
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": "live+hermetic"
       },
       "./neuralwatt": {
         "suites": [
-          "packages/prism-providers/src/neuralwatt/__tests__/index.test.ts",
           "packages/prism-providers/src/neuralwatt/__tests__/live.test.ts",
           "packages/prism-providers/src/neuralwatt/__tests__/neuralwatt-quota.test.ts",
           "packages/prism-providers/src/neuralwatt/__tests__/neuralwatt-retry.test.ts",
@@ -441,7 +424,6 @@
           "packages/prism-providers/src/openai/__tests__/embeddings.test.ts",
           "packages/prism-providers/src/openai/__tests__/hosted-continuation-realtime.test.ts",
           "packages/prism-providers/src/openai/__tests__/images.test.ts",
-          "packages/prism-providers/src/openai/__tests__/index.test.ts",
           "packages/prism-providers/src/openai/__tests__/live.test.ts",
           "packages/prism-providers/src/openai/__tests__/moderation.test.ts",
           "packages/prism-providers/src/openai/__tests__/openai-media.test.ts",
@@ -455,7 +437,6 @@
       },
       "./opencode-go": {
         "suites": [
-          "packages/prism-providers/src/opencode-go/__tests__/index.test.ts",
           "packages/prism-providers/src/opencode-go/__tests__/live.test.ts",
           "packages/prism-providers/src/opencode-go/__tests__/opencode-go.test.ts",
           "scripts/e2e-full-surface.test.mjs",
@@ -465,7 +446,6 @@
       },
       "./openrouter": {
         "suites": [
-          "packages/prism-providers/src/openrouter/__tests__/index.test.ts",
           "packages/prism-providers/src/openrouter/__tests__/live.test.ts",
           "packages/prism-providers/src/openrouter/__tests__/openrouter.test.ts",
           "scripts/e2e-full-surface.test.mjs"
@@ -482,7 +462,6 @@
       },
       "./xai": {
         "suites": [
-          "packages/prism-providers/src/xai/__tests__/index.test.ts",
           "packages/prism-providers/src/xai/__tests__/live.test.ts",
           "packages/prism-providers/src/xai/__tests__/oauth.test.ts",
           "packages/prism-providers/src/xai/__tests__/xai.test.ts",
@@ -493,7 +472,6 @@
       },
       "./zai": {
         "suites": [
-          "packages/prism-providers/src/zai/__tests__/index.test.ts",
           "packages/prism-providers/src/zai/__tests__/live.test.ts",
           "packages/prism-providers/src/zai/__tests__/zai.test.ts",
           "scripts/e2e-full-surface.test.mjs",
@@ -789,20 +767,6 @@
         ],
         "mode": ""
       },
-      "./integrations/work": {
-        "suites": [
-          "packages/prism-core/src/integrations/work/__tests__/work-tools.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": ""
-      },
-      "./integrations/work/drafts": {
-        "suites": [
-          "packages/prism-core/src/integrations/work/__tests__/drafts.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": ""
-      },
       "./runtime/realtime": {
         "suites": [
           "packages/prism-core/src/runtime/__tests__/realtime.test.ts",
@@ -810,23 +774,38 @@
         ],
         "mode": ""
       },
-      "./integrations/work/microsoft365": {
-        "suites": [
-          "packages/prism-core/src/integrations/work/__tests__/work-tools.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": "live+hermetic"
-      },
-      "./integrations/work/google-workspace": {
-        "suites": [
-          "packages/prism-core/src/integrations/work/__tests__/work-tools.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": "live+hermetic"
-      },
       "./validation/json-schema": {
         "suites": [
           "packages/prism-core/src/validation/json-schema/__tests__/json-schema.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-channels": {
+      ".": {
+        "suites": [
+          "packages/prism-channels/src/__tests__/runtime.test.ts",
+          "packages/prism-channels/src/__tests__/state.test.ts",
+          "packages/prism-channels/src/__tests__/recovery.test.ts",
+          "packages/prism-channels/src/__tests__/postgres.integration.test.ts",
+          "packages/prism-channels/src/__tests__/end-to-end.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./telegram": {
+        "suites": [
+          "packages/prism-channels/src/__tests__/telegram.test.ts",
+          "packages/prism-channels/src/__tests__/telegram-live.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./signal": {
+        "suites": [
+          "packages/prism-channels/src/__tests__/signal.test.ts",
+          "packages/prism-channels/src/__tests__/signal-live.test.ts",
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": ""
@@ -886,13 +865,6 @@
           "packages/prism-coding-tools/src/security/__tests__/sandbox-coding-operations.test.ts",
           "packages/prism-coding-tools/src/security/__tests__/sandbox-fs-operations.test.ts",
           "packages/prism-coding-tools/src/security/__tests__/workspace-consistency.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": ""
-      },
-      "./document-reader": {
-        "suites": [
-          "packages/prism-coding-tools/src/document-reader/__tests__/index.test.ts",
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": ""
@@ -960,42 +932,93 @@
         "mode": ""
       }
     },
-    "@arnilo/prism-office": {
+    "@arnilo/prism-work": {
+      "./connectors": {
+        "suites": [
+          "packages/prism-work/src/connectors/__tests__/work-tools.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./connectors/drafts": {
+        "suites": [
+          "packages/prism-work/src/connectors/__tests__/drafts.test.ts"
+        ],
+        "mode": ""
+      },
+      "./connectors/google-workspace": {
+        "suites": [
+          "packages/prism-work/src/connectors/__tests__/google-workspace-http.test.ts"
+        ],
+        "mode": ""
+      },
+      "./connectors/microsoft365": {
+        "suites": [
+          "packages/prism-work/src/connectors/__tests__/microsoft365-http.test.ts"
+        ],
+        "mode": ""
+      },
+      "./document-reader": {
+        "suites": [
+          "packages/prism-work/src/document-reader/__tests__/index.test.ts",
+          "packages/prism-work/src/document-reader/__tests__/mistral-ocr.test.ts",
+          "packages/prism-work/src/document-reader/__tests__/office-parsers.test.ts"
+        ],
+        "mode": ""
+      },
       "./documents": {
         "suites": [
-          "packages/office/src/documents/__tests__/generate.test.ts",
-          "packages/office/src/documents/__tests__/golden.test.ts",
-          "packages/office/src/documents/__tests__/model.test.ts",
-          "packages/office/src/documents/__tests__/parse.test.ts",
-          "packages/office/src/documents/__tests__/patch-history.test.ts",
-          "packages/office/src/documents/__tests__/patch.test.ts",
-          "packages/office/src/documents/__tests__/preview-html.test.ts",
-          "packages/office/src/documents/__tests__/preview.test.ts",
-          "packages/office/src/documents/__tests__/schema-slice.test.ts",
-          "packages/office/src/documents/__tests__/telemetry.test.ts",
+          "packages/prism-work/src/documents/__tests__/generate.test.ts",
+          "packages/prism-work/src/documents/__tests__/golden.test.ts",
+          "packages/prism-work/src/documents/__tests__/model.test.ts",
+          "packages/prism-work/src/documents/__tests__/parse.test.ts",
+          "packages/prism-work/src/documents/__tests__/patch-history.test.ts",
+          "packages/prism-work/src/documents/__tests__/patch.test.ts",
+          "packages/prism-work/src/documents/__tests__/preview-html.test.ts",
+          "packages/prism-work/src/documents/__tests__/preview.test.ts",
+          "packages/prism-work/src/documents/__tests__/schema-slice.test.ts",
+          "packages/prism-work/src/documents/__tests__/telemetry.test.ts",
           "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./tools": {
+        "suites": [
+          "packages/prism-work/src/tools/__tests__/office-tools.test.ts"
+        ],
+        "mode": ""
+      },
+      "./sandbox": {
+        "suites": [
+          "packages/prism-work/src/sandbox/__tests__/composition.test.ts"
+        ],
+        "mode": ""
+      },
+      "./skills": {
+        "suites": [
+          "packages/prism-work/src/skills/__tests__/load.test.ts"
         ],
         "mode": ""
       },
       "./sheets": {
         "suites": [
-          "packages/office/src/sheets/__tests__/caps.test.ts",
-          "packages/office/src/sheets/__tests__/corpus.test.ts",
-          "packages/office/src/sheets/__tests__/csv.test.ts",
-          "packages/office/src/sheets/__tests__/decimal.test.ts",
-          "packages/office/src/sheets/__tests__/inference.test.ts",
-          "packages/office/src/sheets/__tests__/telemetry.test.ts",
-          "packages/office/src/sheets/__tests__/xlsx.test.ts",
+          "packages/prism-work/src/sheets/__tests__/caps.test.ts",
+          "packages/prism-work/src/sheets/__tests__/corpus.test.ts",
+          "packages/prism-work/src/sheets/__tests__/csv.test.ts",
+          "packages/prism-work/src/sheets/__tests__/decimal.test.ts",
+          "packages/prism-work/src/sheets/__tests__/inference.test.ts",
+          "packages/prism-work/src/sheets/__tests__/telemetry.test.ts",
+          "packages/prism-work/src/sheets/__tests__/xlsx.test.ts",
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": ""
       },
       "./diagrams": {
         "suites": [
-          "packages/office/src/diagrams/__tests__/canonicalize.test.ts",
-          "packages/office/src/diagrams/__tests__/drawio-live.test.ts",
-          "packages/office/src/diagrams/__tests__/embed.test.ts",
-          "packages/office/src/diagrams/__tests__/xml.test.ts",
+          "packages/prism-work/src/diagrams/__tests__/canonicalize.test.ts",
+          "packages/prism-work/src/diagrams/__tests__/drawio-live.test.ts",
+          "packages/prism-work/src/diagrams/__tests__/embed.test.ts",
+          "packages/prism-work/src/diagrams/__tests__/xml.test.ts",
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": ""

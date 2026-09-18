@@ -1,6 +1,6 @@
 # @arnilo/prism-core
 
-Unified core runtime, sessions, governance, credentials, enterprise persistence, and work integration family package for Prism.
+Unified core runtime, sessions, governance, credentials, and enterprise persistence family package for Prism.
 
 ## Installation
 
@@ -45,7 +45,6 @@ npm install @nats-io/jetstream @nats-io/transport-node
 ### Credentials & Integrations
 - `@arnilo/prism-core/credentials/node`: Keyring-backed encrypted credential store, scrypt envelope encryption, OAuth2 PKCE providers, and OIDC identity verification.
 - `@arnilo/prism-core/enterprise/postgres`: Unified multi-tenant enterprise PostgreSQL state (approvals, evaluations, model-router, policy, tool effects, work idempotency).
-- `@arnilo/prism-core/integrations/work`: Microsoft 365 and Google Workspace CLI tool adapters with approval gates and idempotency.
 - `@arnilo/prism-core/validation/json-schema`: Ajv-backed JSON Schema tool argument validation.
 
 ## License

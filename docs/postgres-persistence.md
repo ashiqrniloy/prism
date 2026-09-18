@@ -60,7 +60,7 @@ Hosts own TLS (`ssl` in `poolConfig`), credentials, connection limits, and backu
 | `RunLedger.append*` | Inserts run/event/tool/usage rows; events receive monotonic per-run `sequence` values. |
 | `events` | Durable `AgentEventSource`; `LISTEN`/`NOTIFY` only wakes exact owned indexed reads, while polling remains recovery fallback. |
 | `ProductionPersistenceStore.query*` | Parameterized cursor pagination on indexed columns with tenant/account/user filters. |
-| `checkpoints` | Generic versioned `CheckpointStore` backed by `prism_checkpoints`; ownership, CAS/fencing checks, bounded pagination, and workflow suspended/denied/schedule/state/replay values without a schema migration. |
+| `checkpoints` | Generic versioned `CheckpointStore` backed by `prism_checkpoints`; ownership, CAS/fencing checks, bounded pagination, and workflow suspended/denied/schedule/state/replay values without a schema migration. A load or delete under a non-matching ownership scope reads as absent and a cross-scope write fails as a generic `ERR_PRISM_CHECKPOINT_CONFLICT` (plan 080 Task 3) — no ownership-shaped existence oracle. |
 | `leases` | Atomic `LeaseStore` backed by `prism_leases`; database-clock expiry, opaque renew/release token, monotonic takeover fence. |
 | `close()` | Ends the pool when the adapter created it from `connectionString`. |
 

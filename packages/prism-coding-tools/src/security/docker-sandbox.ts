@@ -4,6 +4,8 @@ import { constants as fsConstants } from "node:fs";
 import { access, realpath } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import { PassThrough } from "node:stream";
+import type { ProcessRecoveryBackend } from "../agent/process/recovery.js";
+import type { ProcessSandboxHandle } from "../agent/process/types.js";
 import {
   assertAbsoluteExecutable,
   createSecretRedactor,
@@ -28,8 +30,6 @@ import type {
 import { type DockerSandboxLimitOptions, type ResolvedDockerSandboxLimits, resolveDockerSandboxLimits } from "./sandbox-limits.js";
 import { createImportTarStream, SandboxTarError, summarizeTarStream } from "./sandbox-tar.js";
 import { Semaphore } from "./semaphore.js";
-import type { ProcessRecoveryBackend } from "../agent/process/recovery.js";
-import type { ProcessSandboxHandle } from "../agent/process/types.js";
 
 const IMAGE_DIGEST_RE = /@sha256:[a-f0-9]{64}$/i;
 const ENV_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;

@@ -24,9 +24,10 @@ const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?
   { dir: "packages/acp-agent", name: "@arnilo/prism-acp-agent" },
   { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools", isSubpaths: true },
   { dir: "packages/prism-core", name: "@arnilo/prism-core", isSubpaths: true },
+  { dir: "packages/prism-channels", name: "@arnilo/prism-channels" },
   // Pure-manifest family/profile packages (no dist/exports): pack + install, but skip dynamic-import.
   { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isSubpaths: true },
-  { dir: "packages/office", name: "@arnilo/prism-office", isSubpaths: true },
+  { dir: "packages/prism-work", name: "@arnilo/prism-work", isSubpaths: true },
 ];
 
 // Derive every documented core import specifier from the root `exports` map and
@@ -149,9 +150,16 @@ before(() => {
     "@arnilo/prism-providers/vertex",
     "@arnilo/prism-providers/xai",
     "@arnilo/prism-providers/zai",
-    "@arnilo/prism-office/documents",
-    "@arnilo/prism-office/sheets",
-    "@arnilo/prism-office/diagrams",
+    "@arnilo/prism-work/connectors",
+    "@arnilo/prism-work/connectors/microsoft365",
+    "@arnilo/prism-work/connectors/google-workspace",
+    "@arnilo/prism-work/connectors/drafts",
+    "@arnilo/prism-work/documents",
+    "@arnilo/prism-work/sheets",
+    "@arnilo/prism-work/diagrams",
+    "@arnilo/prism-work/document-reader",
+    "@arnilo/prism-channels/telegram",
+    "@arnilo/prism-channels/signal",
   ];
   writeFileSync(
     join(consumer, "smoke.mjs"),
@@ -404,7 +412,7 @@ import {
   providerDone, providerTextDelta, resumeAgentRun, toolCallContent,
 } from "@arnilo/prism";
 import { createCodingApprovalPolicy, createSandboxCodingComposition, resolveSandboxCapabilities } from "@arnilo/prism-coding-tools/security";
-import { createCliRunner } from "@arnilo/prism-core/integrations/work";
+import { createCliRunner } from "@arnilo/prism-work/connectors";
 
 // --- phase20 blocker 1: unknown durable-resume decision fails closed, no tool call ---
 const executed = [];
@@ -1053,7 +1061,7 @@ describe("install smoke (fresh offline tarball install)", () => {
     );
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // The umbrella tarballs must be present too (providers carries the 0.5.1 lockstep cut).
-    for (const meta of [`arnilo-prism-providers-${PROVIDERS_VERSION}.tgz`, `arnilo-prism-office-${ROOT_VERSION}.tgz`]) {
+    for (const meta of [`arnilo-prism-providers-${PROVIDERS_VERSION}.tgz`, `arnilo-prism-work-${ROOT_VERSION}.tgz`]) {
       assert.ok(result.tarballNames.includes(meta), `missing family tarball ${meta}`);
     }
   });
@@ -1158,11 +1166,11 @@ describe("packed truth conformance (plan 024 Task 5)", () => {
     assert.equal(actual.length, expected.length, "family size must match generated prism-providers deps");
   });
 
-  it("the installed office tarball exports documents/sheets/diagrams subpaths", (t) => {
+  it("the installed work tarball exports work and document subpaths", (t) => {
     skipIfInstallFailed(t);
-    const officeRoot = join(consumer, "node_modules", "@arnilo", "prism-office");
-    for (const sub of ["documents", "sheets", "diagrams"]) {
-      assert.ok(existsSync(join(officeRoot, "dist", sub, "index.js")), `office tarball missing ${sub} subpath`);
+    const workRoot = join(consumer, "node_modules", "@arnilo", "prism-work");
+    for (const sub of ["connectors", "documents", "sheets", "diagrams", "document-reader"]) {
+      assert.ok(existsSync(join(workRoot, "dist", sub, "index.js")), `work tarball missing ${sub} subpath`);
     }
     assert.ok(
       existsSync(join(consumer, "node_modules", "@arnilo", "prism-providers", "dist", "azure", "index.js")),

@@ -15,6 +15,7 @@ import {
   DOC_BLOCK_TARGETS,
   expandWorkspaceDirs,
   readManifest,
+  renderGeneratedDocs,
   renderInventoryBlock,
   renderProvidersBlock,
 } from "./package-truth.mjs";
@@ -110,6 +111,20 @@ test("generated docs blocks match the live renderer on every target page", () =>
       );
     }
   }
+});
+
+test("package-truth generated docs include current Phase 54 evidence", () => {
+  const truth = computePackageTruth(ROOT);
+  const rendered = renderGeneratedDocs(ROOT, truth);
+  const actual = rendered["docs/_evidence/phase54-package-map.md"];
+  const expected = readFileSync(join(ROOT, "docs", "_evidence", "phase54-package-map.md"), "utf8");
+  const stripGenerated = (text) => text.replace(/Generated: `[^`]+`/, "Generated: `TIMESTAMP`");
+
+  assert.equal(
+    stripGenerated(actual),
+    stripGenerated(expected),
+    "Phase 54 evidence is stale; run: node scripts/package-truth.mjs --emit-docs",
+  );
 });
 
 // Plan 057 Task 4 test case: hand-editing a generated block must be fixed by

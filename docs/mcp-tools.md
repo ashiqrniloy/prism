@@ -305,6 +305,7 @@ The scenario stays sandboxed (read-only echo tool, authorize-gated denial, no po
 
 ## Related APIs
 
+- [Connected apps](connected-apps.md): identity-bound host admission and lifecycle for a small set of MCP bridges.
 - [Agent identity](agent-identity.md): optional verified identity on MCP authorize results
 - [Tools](tools.md): registry, dispatch, validation
 - [Web search, fetch, and extraction](web-tools.md): preferred direct bounded Brave/Exa/Firecrawl production path

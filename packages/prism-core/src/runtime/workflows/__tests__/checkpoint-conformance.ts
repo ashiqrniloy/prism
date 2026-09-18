@@ -77,15 +77,28 @@ export async function runCheckpointAdapterConformance(
     `${label}: stale version`,
   );
 
+  // Plan 080 Task 3: a foreign scope lands as a miss, never an ownership-shaped oracle,
+  // and a foreign save fails closed as a generic CAS conflict.
+  assert.equal(
+    await checkpoints.load({
+      workflowId: "wf",
+      runId: "run1",
+      ownership: { tenantId: "other" },
+    }),
+    null,
+    `${label}: tenant mismatch is a miss`,
+  );
   await assert.rejects(
     () =>
-      checkpoints.load({
+      checkpoints.save({
         workflowId: "wf",
         runId: "run1",
+        version: 2,
         ownership: { tenantId: "other" },
+        value: sampleValue(),
       }),
-    /ownership|tenant/i,
-    `${label}: tenant mismatch`,
+    WorkflowCheckpointError,
+    `${label}: foreign save must fail closed`,
   );
 
   if (checkpoints.list) {

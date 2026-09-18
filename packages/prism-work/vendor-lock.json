@@ -1,0 +1,11 @@
+{
+  "repo": "NousResearch/hermes-agent",
+  "sha": "bbaf7af5c83546d19f8060f4097d3bb25cd1a3c3",
+  "paths": [
+    "skills/productivity/docx",
+    "skills/productivity/xlsx",
+    "skills/productivity/powerpoint",
+    "skills/productivity/pdf"
+  ],
+  "license": "MIT"
+}

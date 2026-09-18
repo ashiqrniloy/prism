@@ -322,6 +322,8 @@ export class RuntimeAgentSession implements AgentSession {
     readonly limit?: import("../contracts.js").RunLimitBreach;
     readonly error?: ErrorInfo;
     readonly abortReason?: string;
+    readonly stopReason?: import("../contracts.js").AgentFinishReason;
+    readonly stopDetail?: string;
     readonly runState?: AgentRunState;
     readonly interruption?: import("../contracts.js").AgentRunInterruption;
   }): AgentRunResult {
@@ -338,6 +340,8 @@ export class RuntimeAgentSession implements AgentSession {
       limit: input.limit,
       error: input.error,
       abortReason: input.abortReason,
+      stopReason: input.stopReason,
+      stopDetail: input.stopDetail,
       runState: input.runState,
       interruption: input.interruption,
     };

@@ -1,4 +1,4 @@
-import type { ErrorInfo, SecretRedactor, Usage } from "@arnilo/prism";
+import type { AgentFinishReason, ErrorInfo, SecretRedactor, Usage } from "@arnilo/prism";
 import type { WorkflowCheckpointValue, WorkflowEvent } from "../../runtime/workflows/types.js";
 
 // ─── Content-capture policy ───────────────────────────────────────────────────
@@ -68,6 +68,10 @@ export interface ExecutionTimeline {
   readonly workflowRevision?: string;
   readonly traceId?: string;
   readonly status: string;
+  /** Clean-stop taxonomy when the run stopped on a ceiling or host turn policy (`agent_finished.finishReason`). */
+  readonly stopReason?: AgentFinishReason;
+  /** Host turn-policy stop detail, bounded and redacted at the runtime boundary. */
+  readonly stopDetail?: string;
   readonly startedAt: string;
   readonly finishedAt?: string;
   /** Run-level input, present only under non-metadata content policy. */

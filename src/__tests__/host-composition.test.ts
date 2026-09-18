@@ -11,6 +11,7 @@ import {
   createStaticPermissionPolicy,
   createStaticTrustPolicy,
   HostCompositionError,
+  type HostCompositionOptions,
   inspectHostComposition,
   providerDone,
   providerTextDelta,
@@ -130,6 +131,78 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     assert.equal(report.governance.secure, true);
     assert.equal(report.readiness.ok, true);
     assert.deepEqual(report.readiness.errors, []);
+  });
+
+  it("reports connected-app identifiers without transport configuration", () => {
+    const token = "HOST_ONLY_CONNECTED_APP_TOKEN";
+    const connectedApps = {
+      appIds: ["slack"],
+      serverIds: ["slack"],
+      // @ts-expect-error Connected-app inspection accepts identifiers, not transports.
+      transport: { env: { APP_TOKEN: token } },
+    } satisfies NonNullable<HostCompositionOptions["connectedApps"]>;
+    const report = inspectHostComposition({
+      profile: "personal",
+      agent: validPersonalAgent(),
+      store: createMemoryCheckpointStore(),
+      connectedApps,
+    });
+
+    assert.deepEqual(report.connectedApps, { appIds: ["slack"], serverIds: ["slack"] });
+    assert.equal(JSON.stringify(report).includes(token), false);
+  });
+
+  it("requires verified identity for business connected apps", () => {
+    const identities: readonly (AgentIdentity | undefined)[] = [
+      undefined,
+      {
+        tenantId: "tenant-acme",
+        userId: "worker-1",
+        principal: { kind: "user", id: "worker-1" },
+        scopes: ["worker:run"],
+        verified: false,
+        issuedAt: "2026-09-01T00:00:00.000Z",
+      } as unknown as AgentIdentity,
+    ];
+
+    for (const identity of identities) {
+      const options = {
+        profile: "business" as const,
+        agent: createAgent({
+          model: { provider: "mock", model: "m" },
+          provider: createMockProvider([providerDone()]),
+          redactor: createSecretRedactor([]),
+          ownership: { tenantId: "tenant-acme", userId: "worker-1" },
+          ...(identity === undefined ? {} : { identity }),
+          permission: createStaticPermissionPolicy(true),
+          trust: createStaticTrustPolicy(true),
+          validator: () => undefined,
+        }),
+        store: { kind: "postgres", durable: true },
+        connectedApps: { appIds: ["slack"], serverIds: ["slack"] },
+      } satisfies HostCompositionOptions;
+
+      const report = inspectHostComposition(options);
+      assert.equal(report.readiness.ok, false);
+      assert.ok(report.readiness.errors.includes("Business connected apps require a verified identity"));
+      assert.throws(
+        () => assertHostCompositionReadiness(options),
+        (error) => error instanceof HostCompositionError && error.message.includes("Business connected apps require a verified identity"),
+      );
+    }
+  });
+
+  it("rejects connected-app identifier lists above the hard cap", () => {
+    assert.throws(
+      () =>
+        inspectHostComposition({
+          connectedApps: {
+            appIds: Array.from({ length: 33 }, (_, index) => `app-${index}`),
+            serverIds: [],
+          },
+        }),
+      (error) => error instanceof HostCompositionError && error.message.includes("at most 32 identifiers"),
+    );
   });
 
   it("wrong owner: personal composition rejects missing userId", () => {
@@ -293,8 +366,11 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
         profile: "personal",
         agent,
         store: createMemoryCheckpointStore(),
+        connectedApps: { appIds: ["offline"], serverIds: ["offline"] },
+        liveChecks: true,
       });
       assert.equal(report.readiness.ok, true);
+      assert.deepEqual(report.connectedApps, { appIds: ["offline"], serverIds: ["offline"] });
       assert.equal(fetchCalled, false, "inspect must make zero network calls");
     } finally {
       g.fetch = originalFetch;

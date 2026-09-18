@@ -1,0 +1,129 @@
+{
+  "name": "@arnilo/prism-work",
+  "version": "0.8.0",
+  "description": "Prism work connectors, Office document capabilities, and bounded document-reader subpaths.",
+  "type": "module",
+  "exports": {
+    "./connectors": {
+      "types": "./dist/connectors/index.d.ts",
+      "default": "./dist/connectors/index.js"
+    },
+    "./connectors/microsoft365": {
+      "types": "./dist/connectors/microsoft365.d.ts",
+      "default": "./dist/connectors/microsoft365.js"
+    },
+    "./connectors/google-workspace": {
+      "types": "./dist/connectors/google-workspace.d.ts",
+      "default": "./dist/connectors/google-workspace.js"
+    },
+    "./connectors/drafts": {
+      "types": "./dist/connectors/drafts.d.ts",
+      "default": "./dist/connectors/drafts.js"
+    },
+    "./documents": {
+      "types": "./dist/documents/index.d.ts",
+      "default": "./dist/documents/index.js"
+    },
+    "./sheets": {
+      "types": "./dist/sheets/index.d.ts",
+      "default": "./dist/sheets/index.js"
+    },
+    "./diagrams": {
+      "types": "./dist/diagrams/index.d.ts",
+      "default": "./dist/diagrams/index.js"
+    },
+    "./document-reader": {
+      "types": "./dist/document-reader/index.d.ts",
+      "default": "./dist/document-reader/index.js"
+    },
+    "./sandbox": {
+      "types": "./dist/sandbox/index.d.ts",
+      "default": "./dist/sandbox/index.js"
+    },
+    "./skills": {
+      "types": "./dist/skills/index.d.ts",
+      "default": "./dist/skills/index.js"
+    },
+    "./tools": {
+      "types": "./dist/tools/index.d.ts",
+      "default": "./dist/tools/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/__tests__",
+    "!dist/**/*.map",
+    "sandbox",
+    "vendor",
+    "vendor-lock.json",
+    "THIRD_PARTY_NOTICES",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node ../../scripts/with-build-lock.mjs node --test dist/connectors/__tests__/*.test.js dist/document-reader/__tests__/*.test.js dist/documents/__tests__/*.test.js dist/sandbox/__tests__/*.test.js dist/skills/__tests__/*.test.js dist/tools/__tests__/*.test.js dist/sheets/__tests__/*.test.js dist/diagrams/__tests__/*.test.js",
+    "test:office": "PRISM_TEST_LIBREOFFICE=1 node ../../scripts/with-build-lock.mjs node --test dist/documents/__tests__/golden.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@office-open/docx": "0.14.5",
+    "@office-open/pptx": "0.14.5",
+    "@office-open/xlsx": "0.14.5",
+    "@office-open/xml": "0.14.5",
+    "ajv": "^8.17.1",
+    "fast-xml-parser": "5.11.1"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "^0.8.0",
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^2.4.5"
+  },
+  "peerDependenciesMeta": {
+    "mammoth": {
+      "optional": true
+    },
+    "pdf-parse": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../..",
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^2.4.5",
+    "playwright-core": "1.63.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/prism-work"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-work#readme",
+  "keywords": [
+    "prism",
+    "work",
+    "connectors",
+    "office",
+    "documents",
+    "document-reader",
+    "sheets",
+    "diagrams",
+    "docx",
+    "xlsx",
+    "pptx",
+    "drawio"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

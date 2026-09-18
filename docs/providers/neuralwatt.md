@@ -95,7 +95,7 @@ after resolved fields so per-call values and overrides win.
 | --- | --- |
 | Provider stream | Prism text, thinking (`delta.reasoning_content` → `providerThinkingDelta`), tool-call delta/final, `usage`, `done`, redacted `error` with HTTP-status `code` for retry classification. |
 | Block preservation | Text, thinking, assistant `tool_call` → `tool_calls`, `tool_result` → role `tool` messages, images when `capabilities.input` includes `"image"`. |
-| Model catalog | Featured aliases declare provider id, display name, context limit, text/image input support, tools, reasoning/fast variants, streaming, implicit cache, and NeuralWatt JSON-mode compat metadata where documented. |
+| Model catalog | Featured aliases declare provider id, display name, context limit, text/image input support, tools, reasoning/fast variants, streaming, implicit cache, NeuralWatt JSON-mode compat metadata where documented, and conformance-derived `toolCallStrictness: "strict"`. |
 | Pricing | Static aliases do not guess rates. Exact per-alias input/output/cache-read prices are advertised by NeuralWatt's `/v1/models` response and mapped by `listNeuralWattModels()` when present. |
 | SSE comments | `: energy` / `: cost` comment lines are parsed by `neuralWattEventsWithTelemetry()` into `neuralwatt:telemetry` events; the standard `neuralWattEvents()` stream (used by `generate()`) tolerates them without spurious events. |
 | `[DONE]` | Terminates the stream; final `providerDone(usage)` always emitted on a clean stream. |
@@ -292,6 +292,10 @@ prior tool turns through a multi-turn loop:
   the stringified `tool_result` — matching the OpenAI requirement that a tool result
   follows the call that produced it. `tool_result` blocks must appear in `role: "tool"
   messages; `tool_call` blocks must be the only content on their assistant message.
+- **Catalog evidence.** Curated aliases carry `capabilities.toolCallStrictness: "strict"`
+  because the network-free conformance fixtures cover parallel indexed calls,
+  schema-shaped arguments, and empty `{}` arguments. This is adapter evidence, not a
+  provider SLA: hosts still validate every call. See [tool-call coverage](../_evidence/toolcall-coverage-2026-09-17.md).
 
 ### Energy and cost telemetry
 

@@ -9,10 +9,14 @@ export interface JsonObject {
   readonly [key: string]: JsonValue;
 }
 
+export type ProviderFailureClass = "quota" | "auth" | "rate_limited" | "transient" | "permanent" | "unknown";
+
 export interface ErrorInfo {
   readonly name?: string;
   readonly message: string;
   readonly code?: string | number;
+  /** Advisory classification stamped only for provider failures; it never changes retry behavior. */
+  readonly failureClass?: ProviderFailureClass;
   /** Provider backpressure hint (e.g. from a `Retry-After` header); retry policies
    *  honor it capped at their own `maxDelayMs`. */
   readonly retryAfterMs?: number;
@@ -126,6 +130,8 @@ export interface ModelCapabilities {
   readonly output?: readonly string[];
   readonly reasoning?: boolean;
   readonly tools?: boolean;
+  /** Advisory, conformance-derived tool-call behavior. Absent means unknown; it never changes runtime tool validation. */
+  readonly toolCallStrictness?: "strict" | "lenient" | "legacy";
   readonly streaming?: boolean;
   /** Native JSON-schema structured output support for this model. */
   readonly structuredOutput?: boolean | "json_schema";

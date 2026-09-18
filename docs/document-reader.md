@@ -1,14 +1,14 @@
-# Document reader (`@arnilo/prism-coding-tools/document-reader`)
+# Document reader (`@arnilo/prism-work/document-reader`)
 
 > **Optional peer install:** `pdf-parse` and/or `mammoth` — see [Optional peer dependencies](peer-dependencies.md). OCR uses **native fetch**, not an SDK peer.
 
 ## What it does
 
-Optional bounded literal-text extraction for PDF and DOCX files, consumed by the coding `read` tool (plan 018 closeout `doc-reader`, 0.1.6). `createDocumentReader()` returns a `DocumentReader` that the host wires into `createReadTool(cwd, { documentReader })`; the read tool then extracts text from supported documents instead of falling back to the raw text page. Scanned PDFs/images need a **host-selected** `createMistralOcrParser({ apiKey })` passed in `parsers` — default wiring never calls an external OCR service.
+Optional bounded literal-text extraction for PDF, DOCX, XLSX, and PPTX files, consumed by the coding `read` tool. `createDocumentReader()` returns a `DocumentReader` that the host wires into `createReadTool(cwd, { documentReader })`; the read tool then extracts text from supported documents instead of falling back to the raw text page. XLSX renders as TSV and PPTX as a slide title/bullet outline through the in-package OOXML parser. Scanned PDFs/images need a **host-selected** `createMistralOcrParser({ apiKey })` passed in `parsers` — default wiring never calls an external OCR service.
 
 ## When to use it
 
-Use when coding agents must read PDF/Office files (specs, requirements docs, reports) as literal text. Do **not** use it when embedded content execution, macro evaluation, or external resource fetching is required — this adapter never does any of those by construction, and the optional peer parsers (`pdf-parse`, `mammoth`) are the only parsing code involved. Docker-less hosts that need document reads pair this with the network-free native sandbox backend (`@arnilo/prism-coding-tools/security` `createNativeSandbox`) for the surrounding tool execution.
+Use when coding agents must read PDF/Office files (specs, requirements docs, reports) as literal text. Do **not** use it when embedded content execution, macro evaluation, or external resource fetching is required — this adapter never does any of those by construction. PDF/DOCX use optional peer parsers (`pdf-parse`, `mammoth`); XLSX/PPTX use the bounded Prism OOXML parser. Docker-less hosts that need document reads pair this with the network-free native sandbox backend (`@arnilo/prism-coding-tools/security` `createNativeSandbox`) for the surrounding tool execution.
 
 Activation is explicit: no file-extension sniffing anywhere enables parsing. Absent `documentReader` option = exactly the 0.1.5 read behavior.
 
@@ -21,10 +21,10 @@ Activation is explicit: no file-extension sniffing anywhere enables parsing. Abs
 | `maxBytes` | Hard input size cap; oversize files refuse before loading | 32 MiB | 512 MiB |
 | `maxPages` | Page cap for formats that report pages; over-page documents refuse | 1000 | 10 000 |
 | `maxTextBytes` | Extracted-literal-text cap; over-cap results truncate (`truncatedBy: "bytes"`) | 2 MiB | 64 MiB |
-| `parsers` | Host-selected `DocumentParser[]`; default wiring loads the optional peers | `[pdf, docx]` | — |
+| `parsers` | Host-selected `DocumentParser[]`; default wiring includes peer-backed PDF/DOCX plus OOXML XLSX/PPTX | `[pdf, docx, xlsx, pptx]` | — |
 | `redactor` | Optional `SecretRedactor` applied to extracted text at the adapter boundary | none | — |
 
-Format gating is magic-byte based: PDF header (`%PDF-`); DOCX zip container + `word/document.xml` part marker. Unsupported buffers return `null` and the read falls through to its text path.
+Format gating is magic-byte based: PDF header (`%PDF-`); DOCX/XLSX/PPTX zip container plus `word/document.xml`, `xl/workbook.xml`, or `ppt/presentation.xml` part marker. Unsupported buffers return `null` and the read falls through to its text path.
 
 ## Outputs / response / events
 
@@ -36,7 +36,7 @@ Errors: `DocumentReaderError` with code `ERR_PRISM_DOCUMENT_READER` for missing 
 
 ```ts
 import { createReadTool } from "@arnilo/prism-coding-tools/agent";
-import { createDocumentReader } from "@arnilo/prism-coding-tools/document-reader";
+import { createDocumentReader } from "@arnilo/prism-work/document-reader";
 
 const documentReader = await createDocumentReader({
   maxBytes: 32 * 1024 * 1024,
@@ -51,7 +51,7 @@ A `read` of `spec.pdf` yields text content extracted from the PDF (up to 2 MiB o
 ## Implementation example
 
 ```ts
-import { createDocumentReader, createPdfParser, type DocumentParser } from "@arnilo/prism-coding-tools/document-reader";
+import { createDocumentReader, createPdfParser, type DocumentParser } from "@arnilo/prism-work/document-reader";
 
 // Host-selected parser wiring: swap in a different PDF backend without touching bounds.
 const myPdfParser: DocumentParser = {
@@ -64,7 +64,7 @@ const myPdfParser: DocumentParser = {
 };
 const reader = await createDocumentReader({ parsers: [myPdfParser, await createPdfParser()] });
 
-import { createMistralOcrParser } from "@arnilo/prism-coding-tools/document-reader";
+import { createMistralOcrParser } from "@arnilo/prism-work/document-reader";
 const ocr = createMistralOcrParser({
   apiKey: hostKey, // never read from process.env
   recordUsage: (u) => router.recordUsage({ /* Task 7 */ tokens: 0, costUsd: hostPrice(u) }),
@@ -74,7 +74,7 @@ const scanned = await createDocumentReader({ parsers: [ocr] }); // not in the de
 
 ## Extension and configuration notes
 
-- Default parser wiring uses the optional peer dependencies `pdf-parse` (PDF) and `mammoth` (DOCX raw text). Both are declared optional (`peerDependenciesMeta`); `createDocumentReader` fails closed with a documented error at creation when a selected format's peer is absent — never at read time. Hosts pin parser versions (their CVE surface is the host's responsibility; parser advisory is reviewed at ship time).
+- Default parser wiring uses optional peer dependencies `pdf-parse` (PDF) and `mammoth` (DOCX raw text), plus in-package XLSX/PPTX parsing. Missing selected peers fail closed at creation — never at read time. XLSX sheet count and PPTX slide count share `maxPages`; text remains capped at `maxTextBytes`.
 - `createMistralOcrParser` is **not** a default parser. It POSTs `https://api.mistral.ai/v1/ocr` (`mistral-ocr-latest`) with inline `data:` URLs (`include_image_base64: false`). No Files API upload, so no remote cleanup. Host `documentUrl` values pass `assertSsrfAllowedUrl`. Extracted markdown is untrusted. Caps: 8 MiB / 32 pages / 60 s / 1 in-flight by default (hard 50 MiB / 10 000 pages / 180 s / 4). Pass `recordUsage` to admit cost through Task 7 accounting. `baseUrl` selects residency.
 - DOCX has no page concept in raw text: `pages` is always `1` and the page cap applies to PDF only; the text cap governs DOCX output.
 - The read tool re-checks `maxTextBytes` on results (parity with its text-page bounds check) and refuses reader output beyond it.

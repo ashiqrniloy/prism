@@ -80,7 +80,12 @@ export function finalAssistantMessage(history: readonly Message[]): {
   return { content: [], text: "" };
 }
 export function errorFromInfo(error: ErrorInfo): Error {
-  return Object.assign(new Error(error.message), { name: error.name ?? "Error", cause: error.cause, code: error.code });
+  return Object.assign(new Error(error.message), {
+    name: error.name ?? "Error",
+    cause: error.cause,
+    code: error.code,
+    failureClass: error.failureClass,
+  });
 }
 
 export class ProviderTurnFailure extends Error {

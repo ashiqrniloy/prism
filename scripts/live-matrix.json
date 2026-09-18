@@ -436,12 +436,12 @@
       "cost": "n/a until wired."
     },
     {
-      "id": "office/libreoffice-golden",
-      "package": "@arnilo/prism-office",
+      "id": "work/libreoffice-golden",
+      "package": "@arnilo/prism-work",
       "status": "active",
-      "source": "packages/office/src/documents/__tests__/golden.test.ts",
+      "source": "packages/prism-work/src/documents/__tests__/golden.test.ts",
       "command": "node --test dist/documents/__tests__/golden.test.js",
-      "cwd": "packages/office",
+      "cwd": "packages/prism-work",
       "requires": [
         "PRISM_TEST_LIBREOFFICE"
       ],
@@ -449,12 +449,12 @@
       "cost": "Local process, no API spend."
     },
     {
-      "id": "office/drawio-live",
-      "package": "@arnilo/prism-office",
+      "id": "work/drawio-live",
+      "package": "@arnilo/prism-work",
       "status": "active",
-      "source": "packages/office/src/diagrams/__tests__/drawio-live.test.ts",
+      "source": "packages/prism-work/src/diagrams/__tests__/drawio-live.test.ts",
       "command": "node --test dist/diagrams/__tests__/drawio-live.test.js",
-      "cwd": "packages/office",
+      "cwd": "packages/prism-work",
       "requires": [],
       "requiresAny": [
         "PRISM_LIVE_DRAWIO_URL",
@@ -517,12 +517,12 @@
       "cost": "1 create + 2 exec + filesystem-only pause + connect/resume + kill."
     },
     {
-      "id": "coding-tools/mistral-ocr-live",
-      "package": "@arnilo/prism-coding-tools",
+      "id": "work/mistral-ocr-live",
+      "package": "@arnilo/prism-work",
       "status": "active",
-      "source": "packages/prism-coding-tools/src/document-reader/__tests__/mistral-ocr-live.test.ts",
+      "source": "packages/prism-work/src/document-reader/__tests__/mistral-ocr-live.test.ts",
       "command": "node --test dist/document-reader/__tests__/mistral-ocr-live.test.js",
-      "cwd": "packages/prism-coding-tools",
+      "cwd": "packages/prism-work",
       "requires": [
         "PRISM_TEST_MISTRAL_API_KEY"
       ],
@@ -973,6 +973,37 @@
       "cost": "free",
       "plan": "065 (task 15)",
       "notes": "Hermetic leg \u2014 no credentials. Live acceptance of the emitted fields is pinned by the thinkingProbe entries (providers/anthropic, google, kimi, xai, zai, azure)."
+    },
+    {
+      "id": "channels/telegram-live",
+      "package": "@arnilo/prism-channels",
+      "status": "active",
+      "source": "packages/prism-channels/src/__tests__/telegram-live.test.ts",
+      "command": "node --test dist/__tests__/telegram-live.test.js",
+      "cwd": "packages/prism-channels",
+      "requires": ["PRISM_LIVE_TELEGRAM", "TELEGRAM_BOT_TOKEN"],
+      "optional": ["PRISM_LIVE_TELEGRAM_CHAT_ID"],
+      "scope": "Operator-owned Telegram bot token. getMe + 1s poll; send only if PRISM_LIVE_TELEGRAM_CHAT_ID names a chat you operate. Never creates contacts.",
+      "cost": "1 getMe + 1 getWebhookInfo (+ optional 1 sendMessage).",
+      "plan": "079 (task 8)"
+    },
+    {
+      "id": "channels/signal-live",
+      "package": "@arnilo/prism-channels",
+      "status": "active",
+      "source": "packages/prism-channels/src/__tests__/signal-live.test.ts",
+      "command": "node --test dist/__tests__/signal-live.test.js",
+      "cwd": "packages/prism-channels",
+      "requires": [
+        "PRISM_LIVE_SIGNAL",
+        "PRISM_LIVE_SIGNAL_SOCKET",
+        "PRISM_LIVE_SIGNAL_ACCOUNT",
+        "PRISM_LIVE_SIGNAL_TERMS_VERSION"
+      ],
+      "optional": ["PRISM_LIVE_SIGNAL_RECIPIENT_UUID"],
+      "scope": "Existing private signal-cli v0.14.8 Unix socket and account you already operate. Never registers or links. Send only to PRISM_LIVE_SIGNAL_RECIPIENT_UUID.",
+      "cost": "1 subscribeReceive + health (+ optional 1 send).",
+      "plan": "079 (task 8)"
     }
   ]
 }

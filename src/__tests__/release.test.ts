@@ -47,8 +47,8 @@ const missing = async () => new Response("not found", { status: 404 });
 
 test("0.3.0 release graph is independent, publishable, and documented", () => {
   const release = loadRelease(process.cwd());
-  // 10 = root + 9 workspace packages after removing the delegated CLI adapter.
-  assert.equal(release.packages.length, 10);
+  // 11 = root + 10 workspace packages, including the extracted channels family.
+  assert.equal(release.packages.length, 11);
   assert.doesNotThrow(() =>
     validateReleaseIndependent(release, {
       baseline: "HEAD",
@@ -59,7 +59,11 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
   );
   for (const pkg of release.packages) {
     const changelog = readFileSync(join(process.cwd(), pkg.path, "CHANGELOG.md"), "utf8");
-    assert.ok(changelog.includes("## [0.1.0] - 2026-08-09"), `${pkg.manifest.name} missing 0.1.0 changelog`);
+    if (pkg.manifest.name === "@arnilo/prism-channels") {
+      assert.ok(changelog.includes("## [Unreleased] (plan 079 Task 4)"), "channels package missing extraction changelog");
+    } else {
+      assert.ok(changelog.includes("## [0.1.0] - 2026-08-09"), `${pkg.manifest.name} missing 0.1.0 changelog`);
+    }
   }
   const changelog = readFileSync(join(process.cwd(), "CHANGELOG.md"), "utf8");
   assert.ok(changelog.includes("## [0.2.0] - 2026-08-13"), "root changelog missing 0.2.0 entry");

@@ -38,7 +38,13 @@ export function createMemoryCheckpointStore(options: MemoryCheckpointStoreOption
       }
       const id = recordKey(input);
       const existing = records.get(id);
-      if (existing) assertOwnership(input, existing);
+      // A foreign-owned record is indistinguishable from a CAS miss: never an
+      // ownership-shaped error (plan 080 Task 3).
+      if (existing && !ownershipMatches(input, existing)) {
+        throw new CheckpointConflictError(
+          `Checkpoint compare-and-swap failed (expected ${input.expectedVersion ?? 0}, current ${existing.version})`,
+        );
+      }
       if (input.expectedVersion !== undefined && input.expectedVersion !== (existing?.version ?? 0)) {
         throw new CheckpointConflictError(
           `Checkpoint compare-and-swap failed (expected ${input.expectedVersion}, current ${existing?.version ?? 0})`,
@@ -84,8 +90,7 @@ export function createMemoryCheckpointStore(options: MemoryCheckpointStoreOption
       assertKey(input);
       const record = records.get(recordKey(input));
       if (!record) return null;
-      assertOwnership(input, record);
-      return record;
+      return ownershipMatches(input, record) ? record : null;
     },
 
     async listCheckpoints(query: CheckpointQuery = {}) {
@@ -114,8 +119,7 @@ export function createMemoryCheckpointStore(options: MemoryCheckpointStoreOption
       const id = recordKey(input);
       const record = records.get(id);
       if (!record) return false;
-      assertOwnership(input, record);
-      return records.delete(id);
+      return ownershipMatches(input, record) ? records.delete(id) : false;
     },
   };
 }
@@ -146,12 +150,6 @@ function ownershipFilterMatches(expected: OwnershipScope, actual: OwnershipScope
     (expected.accountId === undefined || expected.accountId === actual.accountId) &&
     (expected.userId === undefined || expected.userId === actual.userId)
   );
-}
-
-function assertOwnership(expected: OwnershipScope, actual: OwnershipScope): void {
-  if (!ownershipMatches(expected, actual)) {
-    throw new CheckpointConflictError("Checkpoint ownership mismatch");
-  }
 }
 
 function cloneJson(value: unknown, label: string): unknown {

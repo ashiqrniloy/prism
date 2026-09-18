@@ -68,7 +68,7 @@
       "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
     },
     {
-      "includes": ["packages/office/src/**"],
+      "includes": ["packages/prism-work/src/**"],
       "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
     },
     {

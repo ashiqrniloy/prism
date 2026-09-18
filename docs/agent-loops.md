@@ -130,6 +130,39 @@ The snapshot is stored as `loopState: { name, revision, snapshot }` on the durab
 
 A strategy returned by `generateValidateReviseLoop()` is safe to reuse across sequential runs. Its built-in state is scoped to `(sessionId, runId)`; a new non-restored run resets attempts, artifact phase, saved schema, and pending repair messages, while a restored run keeps the checkpointed state. Arbitrary custom strategies are not cloned or reset automatically.
 
+## Turn policy
+
+`RunOptions.turnPolicy` (`TurnPolicyOptions`) lets a host end a run **cleanly** at a provider-turn boundary — after the previous turn's tool results are persisted, before the next provider request (the same point `checkpointPolicy: "every-turn"` checkpoints at). This is the "stop when the agent has done enough" seam: an investigation that should stop at the first plan paint, a desk that stops after N turns, a policy that stops once a tool budget is spent.
+
+```ts
+await session.run("Investigate the churn spike", {
+  turnPolicy: {
+    // Clean turn cap: reaching it stops the run instead of failing it.
+    maxTurns: 4,
+    // Consulted once per boundary; a stop ends the run as `succeeded`.
+    stop: (ctx) =>
+      ctx.turns >= 1 && ctx.toolCalls >= 1
+        ? { action: "stop", reason: "l1-first-plan-paint" }
+        : { action: "continue" },
+  },
+});
+```
+
+| `TurnBoundaryContext` field | Meaning |
+| --- | --- |
+| `sessionId`, `runId` | Run correlation. |
+| `turn` | 1-based index of the provider turn this boundary precedes. |
+| `turns` | Provider turns already completed (`turn - 1`; `0` at the first boundary). |
+| `toolCalls` | Host tool calls dispatched so far in this run. |
+| `usage` | Run-total usage so far, when the provider reported any. |
+| `metadata` | Run metadata (never prompt text, tool arguments, or results). |
+
+A `stop` decision is a **clean terminal outcome**, not an error or a limit breach: the run returns `status: "succeeded"` with `stopReason: "host_policy"` and `stopDetail` (the host's `reason`, ≤256 UTF-8 bytes, redacted). The same pair rides `agent_finished.finishReason`/`stopDetail`, the finish `RunRecord`, and the projected `ExecutionTimeline`. `turnPolicy.maxTurns` is a *clean* cap: it reports `stopReason: "turn_limit"` and, unlike a `limits.maxTurns` breach, never throws `AgentRunLimitError`. A run overlay may only narrow `limits.maxTurns` — widening throws before the first provider turn.
+
+A policy stop stays **resumable**: with `runState: { checkpointPolicy: "every-turn" }` the terminal state keeps the run frontier, so `resumeAgentRun(..., { decision: "continue" })` continues from the boundary. Steers queued before the stop are already in the session history and reach the resumed leg exactly once. A `turnPolicy.maxTurns` stop is the exception — resuming it would re-stop on the first boundary. Resumed runs carry no `turnPolicy` (resume options are not run options), so a continued leg runs to its natural end unless the host stops it again.
+
+The callback is synchronous and bounded, and is never called when `turnPolicy` is omitted: a run without a policy keeps its exact request stream. A callback that throws or returns a malformed decision fails the run closed with `ERR_PRISM_TURN_POLICY` (the boundary makes no provider call and the checkpoint stays fail-closed); a stopped run is never recorded as failed.
+
 ## Outputs / response / events
 
 `AgentLoopStrategy.run(ctx)` returns `Promise<Usage | undefined>` as a fallback for custom loops. Core runtime independently accumulates every usage-bearing provider turn in O(turns), persists scoped turn/run rows, and emits `agent_finished` with the aggregate.

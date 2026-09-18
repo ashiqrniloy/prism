@@ -1,24 +1,24 @@
 import {
   assertHostCompositionReadiness,
   HostCompositionError,
-  inspectHostComposition,
   type HostCompositionGovernance,
   type HostCompositionOptions,
   type HostCompositionProfile,
   type HostCompositionReport,
   type HostCompositionToolReport,
+  inspectHostComposition,
 } from "@arnilo/prism";
 import type { CreatePrismDevInspectorOptions } from "./index.js";
 
 export {
   assertHostCompositionReadiness,
   HostCompositionError,
-  inspectHostComposition,
   type HostCompositionGovernance,
   type HostCompositionOptions,
   type HostCompositionProfile,
   type HostCompositionReport,
   type HostCompositionToolReport,
+  inspectHostComposition,
 };
 
 /**

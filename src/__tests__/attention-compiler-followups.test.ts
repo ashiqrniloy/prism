@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { createAttentionTruncationTrigger, resolveShouldCompact } from "../index.js";
 import { parseAttentionStickyFrontier, restoreAttentionStickyFrontier, serializeAttentionStickyFrontier } from "../attention-compiler.js";
+import { createAttentionTruncationTrigger, resolveShouldCompact } from "../index.js";
 
 const HEX = "a".repeat(32);
 /** Documented frontier caps (plan 074 P3). Spelled out so a silent cap change fails here. */

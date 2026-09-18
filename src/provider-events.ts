@@ -1,5 +1,5 @@
 import type { ContentBlock, ErrorInfo, JsonObject, ProviderEvent, ToolCallContent, ToolCallDeltaContent, Usage } from "./contracts.js";
-import { ProviderTransportError, tryParseJsonObjectArguments } from "./providers/transport.js";
+import { classifyProviderFailure, ProviderTransportError, tryParseJsonObjectArguments } from "./providers/transport.js";
 import { errorToErrorInfo } from "./redaction.js";
 
 export function providerTextDelta(text: string): ProviderEvent {
@@ -64,9 +64,9 @@ export function providerDone(usage?: Usage): ProviderEvent {
   return { type: "done", usage };
 }
 
-export function providerError(error: unknown, secrets: readonly (string | undefined)[] = []): ProviderEvent {
+export function providerError(error: unknown, secrets: readonly (string | undefined)[] = []): Extract<ProviderEvent, { type: "error" }> {
   const info: ErrorInfo = errorToErrorInfo(error, secrets);
-  return { type: "error", error: info };
+  return { type: "error", error: info.failureClass ? info : { ...info, failureClass: classifyProviderFailure(error) } };
 }
 
 export function toolCallContent(id: string, name: string, args: JsonObject = {}): ToolCallContent {

@@ -72,12 +72,12 @@ describe("Plan 027 Task 10 release closeout", () => {
       Number(hasDocumentsPackage) +
       Number(hasSheetsPackage) +
       Number(hasDiagramsPackage);
-    const hasOffice = truth.capability.includes("@arnilo/prism-office"); // plan 054 Task 8 office family
+    const hasWork = truth.capability.includes("@arnilo/prism-work");
     const hasCodingTools = truth.family?.includes("@arnilo/prism-coding-tools");
     const hasCore = truth.family?.includes("@arnilo/prism-core");
-    const delta = hasOffice ? -45 : hasCodingTools ? -42 : hasCore ? -14 : 0;
-    assert.equal(truth.counts.publishable, hasCodingTools && !hasOffice ? 17 : 55 + added + delta, "current publishable package count");
-    assert.equal(truth.counts.workspace, hasCodingTools && !hasOffice ? 16 : 54 + added + delta, "current workspace package count");
+    const delta = hasWork ? -45 : hasCodingTools ? -42 : hasCore ? -14 : 0;
+    assert.equal(truth.counts.publishable, hasCodingTools && !hasWork ? 17 : 55 + added + delta, "current publishable package count");
+    assert.equal(truth.counts.workspace, hasCodingTools && !hasWork ? 16 : 54 + added + delta, "current workspace package count");
     // Decision B: the root may patch independently after the 0.3.0 cut (plan 039 moved the root
     // to 0.3.1), so the claim is the floor, derived from the manifest. The frozen list of released
     // versions this used to pin was a sweep on every cut and said nothing the comparison does not

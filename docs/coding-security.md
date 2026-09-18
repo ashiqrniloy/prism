@@ -219,6 +219,7 @@ A native Windows backend (Job objects / AppContainer) is tracked, not scheduled.
 
 ## Related APIs
 
+- [Work sandbox](work-sandbox.md): work image + `createWorkComposition`; host injects `createDockerSandbox` (prism-work does not fork it)
 - [Coding agent tools](coding-agent-tools.md): durable plan/todo Markdown helpers and `state.coding` checkpoint metadata for restart/resume without a second runtime
 - [Hosted sandboxes](hosted-sandboxes.md): E2B pause/resume adapter, filesystem-only snapshots, reconnect by sandbox id
 - [Workflows](workflows.md): `runWorkflow` / `resumeWorkflow` / `startWorkflowBackground` composition for coding tasks

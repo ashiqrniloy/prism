@@ -1,5 +1,35 @@
 # Migration guide
 
+## 0.7.0 → 0.8.0 (messaging channels, connected apps, work family, durable runs)
+
+**Prism 0.8.0 is a lockstep minor for all eleven publishable packages.** Node `>=22` stays the floor. The only import-map break is `@arnilo/prism-office` → `@arnilo/prism-work` (plus the work/document-reader subpath moves). A host that never imported those paths upgrades by moving every `@arnilo/*` dependency and peer to `^0.8.0`. The full guide — per-item actions, opt-in activation, and rollback — is [migrate-to-0.8.md](migrate-to-0.8.md).
+
+What a 0.7.0 host must check before upgrading:
+
+- **One import-map break.** Replace `@arnilo/prism-office/*`, `@arnilo/prism-core/integrations/work*`, and `@arnilo/prism-coding-tools/document-reader` with `@arnilo/prism-work` subpaths. Catch work-idempotency by `error.code`, not class. No pre-1.0 shim.
+- **Eleventh package.** `@arnilo/prism-channels` is new and optional; omit it if the host has no messaging ingress.
+- **Additive, inert by default:** connected-app MCP sessions, work HTTP adapters, turn-boundary checkpoints / `decision: "continue"`, turn-stop policy, run-bundle snapshots, claim-grounding guardrail, work sandbox/skills.
+- **Behavioral pins inside existing surfaces:** observational-memory workers stay tool-only (text-only turns are successful no-ops); channel lease release clears in-memory state only after the store acknowledges; AG-UI `inputPolicy.clientState: "ignore"` is opt-in (default honor matches 0.7.0); a foreign checkpoint/run-status load is a miss, not an existence leak.
+
+## Next lockstep cut — work family package move
+
+`@arnilo/prism-office` and the work/document-reader subpaths are removed with no pre-1.0 compatibility shim. Install `@arnilo/prism-work` with `@arnilo/prism` and update imports:
+
+| Old import | Replacement |
+| --- | --- |
+| `@arnilo/prism-office/documents` | `@arnilo/prism-work/documents` |
+| `@arnilo/prism-office/sheets` | `@arnilo/prism-work/sheets` |
+| `@arnilo/prism-office/diagrams` | `@arnilo/prism-work/diagrams` |
+| `@arnilo/prism-core/integrations/work` | `@arnilo/prism-work/connectors` |
+| `@arnilo/prism-core/integrations/work/microsoft365` | `@arnilo/prism-work/connectors/microsoft365` |
+| `@arnilo/prism-core/integrations/work/google-workspace` | `@arnilo/prism-work/connectors/google-workspace` |
+| `@arnilo/prism-core/integrations/work/drafts` | `@arnilo/prism-work/connectors/drafts` |
+| `@arnilo/prism-coding-tools/document-reader` | `@arnilo/prism-work/document-reader` |
+
+The coding `createReadTool({ documentReader })` injection seam is unchanged; pass the reader created by the new subpath. Core keeps its durable adapter behind `createPostgresEnterpriseState({ pool }).workIdempotency` at `@arnilo/prism-core/enterprise/postgres` with type-only structural coupling.
+
+**Match work-idempotency conflicts by `code`, not by error class.** The portable codes are unchanged across the move — `ERR_PRISM_WORK_IDEMPOTENCY` for a rejected claim/transition and `ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT` for a lost race or stale claim token — and a host that catches them by `error.code` (the pattern `docs/work-tools.md` documents) needs no change. The *class* is adapter-specific: `createMemoryIdempotencyStore()` throws `WorkToolError` (an upstream `Error` subclass) while the PostgreSQL adapter throws `EnterprisePostgresError`, since `@arnilo/prism-core` cannot depend on `@arnilo/prism-work` at runtime. A pre-existing adapter that caught the old import path's error by `instanceof` must switch to `code` matching; `packages/prism-core/src/enterprise/postgres/__tests__/work-idempotency.integration.test.ts` runs both adapters through the same conflict scenarios and asserts the two agree.
+
 ## 0.6.0 → 0.7.0 (host completeness, evidence, and capability boundaries)
 
 **Prism 0.7.0 is a lockstep minor for all ten publishable packages.** Node `>=22` stays the floor; no import path was removed and no store schema changed, so a host that does not touch the ACP agent or the model-router facade upgrades by moving every `@arnilo/*` dependency and peer to `^0.7.0`. The full guide — per-item migration actions, opt-in activation, and rollback — is [migrate-to-0.7.md](migrate-to-0.7.md).

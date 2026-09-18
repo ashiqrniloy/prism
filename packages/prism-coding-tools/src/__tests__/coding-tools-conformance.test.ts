@@ -8,7 +8,6 @@ import { createCodingTools, createEditTool, createReadTool, createWriteTool } fr
 import { createCavemanExtension } from "../caveman/index.js";
 import { createComputerUseLinuxTools } from "../computer-use-linux/index.js";
 import { compareInspectorRuns, createPrismDevInspector } from "../dev/index.js";
-import { createDocumentReader, createMistralOcrParser } from "../document-reader/index.js";
 import { createImpeccableExtension } from "../impeccable/index.js";
 import { createOpenApiTools } from "../openapi/index.js";
 import { createPonytailExtension } from "../ponytail/index.js";
@@ -23,7 +22,6 @@ describe("@arnilo/prism-coding-tools conformance", () => {
     const expectedSubpaths = [
       "./agent",
       "./security",
-      "./document-reader",
       "./openapi",
       "./computer-use-linux",
       "./dev",
@@ -47,8 +45,6 @@ describe("@arnilo/prism-coding-tools conformance", () => {
     assert.equal(typeof createCodingApprovalPolicy, "function");
     assert.equal(typeof createDockerSandbox, "function");
     assert.equal(typeof createE2BSandbox, "function");
-    assert.equal(typeof createDocumentReader, "function");
-    assert.equal(typeof createMistralOcrParser, "function");
     assert.equal(typeof createOpenApiTools, "function");
     assert.equal(typeof createComputerUseLinuxTools, "function");
     assert.equal(typeof createPrismDevInspector, "function");
@@ -95,22 +91,5 @@ describe("@arnilo/prism-coding-tools conformance", () => {
     }
 
     scanDir(join(pkgRoot, "src"));
-  });
-
-  it("document-reader fails closed when parser peers are absent", async () => {
-    // npm >= 7 auto-installs optional peers (hoisted to the root node_modules),
-    // so absence is environment-dependent. The fail-closed contract is asserted
-    // unconditionally by the packed-consumer journeys (no peers installed);
-    // here it is only provable when the peers are genuinely missing.
-    const peersAbsent = await Promise.all(
-      ["pdf-parse", "mammoth"].map(async (name) =>
-        import(name).then(
-          () => false,
-          () => true,
-        ),
-      ),
-    );
-    if (!peersAbsent.every(Boolean)) return; // peers installed: rejection path unreachable
-    await assert.rejects(async () => await createDocumentReader(), /optional peer parser/);
   });
 });

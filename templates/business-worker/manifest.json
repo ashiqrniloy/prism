@@ -6,6 +6,7 @@
   "packages": [
     "@arnilo/prism",
     "@arnilo/prism-core",
-    "@arnilo/prism-providers"
+    "@arnilo/prism-providers",
+    "@arnilo/prism-work"
   ]
 }

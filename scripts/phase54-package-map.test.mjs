@@ -15,15 +15,15 @@ test("phase54 package map: exact manifest counts and topology invariants", () =>
 
   // Total current manifests in repo after consolidation and delegated CLI adapter removal.
   assert.ok(
-    [10, 17, 34, 40, 42, 50, 65].includes(map.counts.totalCurrentManifests),
-    "Total repository manifests must be 10, 17, 34, 40, 42, 50 or 65",
+    [11, 17, 34, 40, 42, 50, 65].includes(map.counts.totalCurrentManifests),
+    "Total repository manifests must be 11, 17, 34, 40, 42, 50 or 65",
   );
   assert.equal(map.counts.baselineManifests, 62, "Baseline 0.3.3 manifests count must be 62");
   assert.equal(map.counts.officeDraftManifests, 3, "Office drafts count must be 3");
   assert.equal(map.counts.retiredPackages, 55, "Retired packages count must be exactly 55");
   assert.equal(map.counts.retainedPackages, 7, "Retained packages count must be exactly 7");
-  assert.equal(map.counts.newPackages, 3, "New packages count must be exactly 3");
-  assert.equal(map.counts.targetActivePackages, 10, "Target active packages count must be exactly 10");
+  assert.equal(map.counts.newPackages, 4, "New packages count must be exactly 4");
+  assert.equal(map.counts.targetActivePackages, 11, "Target active packages count must be exactly 11");
 });
 
 test("phase54 package map: partitioning - every current manifest is accounted for without duplication", () => {
@@ -47,8 +47,9 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
   const allowedManifests = new Set([
     ...baselineUnion,
     "@arnilo/prism-core",
+    "@arnilo/prism-channels",
     "@arnilo/prism-coding-tools",
-    ...(existsSync(join(rootDir, "packages/office/package.json")) ? ["@arnilo/prism-office"] : []),
+    ...(existsSync(join(rootDir, "packages/prism-work/package.json")) ? ["@arnilo/prism-work"] : []),
   ]);
   for (const name of manifestNames) {
     assert.ok(allowedManifests.has(name), `Manifest ${name} must be classified in package map`);
@@ -128,7 +129,11 @@ test("phase54 package map: generated markdown evidence file matches output", () 
   const onDisk = readFileSync(evidencePath, "utf8");
 
   const stripGen = (text) => text.replace(/Generated: `[^`]+`/, "Generated: `TIMESTAMP`");
-  assert.equal(stripGen(onDisk), stripGen(md), "docs/_evidence/phase54-package-map.md is stale; run: node scripts/phase54-package-map.mjs");
+  assert.equal(
+    stripGen(onDisk),
+    stripGen(md),
+    "docs/_evidence/phase54-package-map.md is stale; run: node scripts/package-truth.mjs --emit-docs",
+  );
   assert.ok(onDisk.includes("# Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence"));
   assert.ok(onDisk.includes("## 1. Executive Summary & Counts"));
   assert.ok(onDisk.includes("## 2. Target Active Package Topology (11 Active Packages)"));

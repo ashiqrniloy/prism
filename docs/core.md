@@ -41,7 +41,6 @@ Every peer below is optional and fails closed at first use; the [optional peer d
 | `@arnilo/prism-core/governance/observability` | OpenTelemetry instrumentation and event tracing | `@opentelemetry/api` |
 | `@arnilo/prism-core/credentials/node` | Keyring-backed encrypted credential store, scrypt envelope encryption, OAuth2 PKCE providers, and OIDC identity verification | `@napi-rs/keyring` (bundled) |
 | `@arnilo/prism-core/enterprise/postgres` | Unified multi-tenant enterprise PostgreSQL state (approvals, evaluations, model-router, policy, tool effects, work idempotency) | `pg` |
-| `@arnilo/prism-core/integrations/work` | Microsoft 365 and Google Workspace CLI tool adapters with approval gates and idempotency | — |
 | `@arnilo/prism-core/validation/json-schema` | Ajv-backed JSON Schema tool argument validation | `ajv` (bundled) |
 
 ## Usage Examples
@@ -85,3 +84,4 @@ const validator = createJsonSchemaToolArgumentValidator();
 - Subpaths never load database drivers (`pg`, `better-sqlite3`) unless the specific database subpath is imported.
 - All database and network drivers fail closed with clear actionable error messages when peers are omitted.
 - Root `@arnilo/prism` remains dependency-free contracts and CLI runner.
+- Messaging channels are `@arnilo/prism-channels` (`/telegram`, `/signal`), not a `@arnilo/prism-core` subpath.

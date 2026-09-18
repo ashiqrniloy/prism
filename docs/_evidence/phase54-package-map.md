@@ -1,15 +1,15 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-09-15T16:18:29.486Z`  
-Repository root version: `0.7.0`  
+Generated: `2026-09-18T05:52:26.254Z`
+Repository root version: `0.8.0`
 
 ## 1. Executive Summary & Counts
 
-- **Current repository manifests:** 10 (50 packages during consolidation transition)
+- **Current repository manifests:** 11 (50 packages during consolidation transition)
 - **Retired 0.3.x package names:** 55 (hard-frozen at final 0.3.x releases, deprecated with legacy tag)
 - **Retained package names:** 7 (`@arnilo/prism`, `@arnilo/prism-providers`, `@arnilo/prism-web-tools`, `@arnilo/prism-memory`, `@arnilo/prism-mcp`, `@arnilo/prism-acp-agent`, `@arnilo/prism-ag-ui`)
-- **New family packages:** 3 (`@arnilo/prism-core`, `@arnilo/prism-coding-tools`, `@arnilo/prism-office`)
-- **Target active 0.4 packages:** **10** (Consolidation ratio: 62 → 10, −52 manifests net)
+- **New family packages:** 4 (`@arnilo/prism-core`, `@arnilo/prism-channels`, `@arnilo/prism-coding-tools`, `@arnilo/prism-office`)
+- **Target active 0.4 packages:** **11** (Consolidation ratio: 62 → 11, −51 manifests net)
 
 ---
 
@@ -19,14 +19,15 @@ Repository root version: `0.7.0`
 |---|---|---|---|---|---|---|
 | 1 | `@arnilo/prism` | root | retained | ., ./providers/openai-compatible, ./providers/transport +22 more | `prism` | none |
 | 2 | `@arnilo/prism-core` | family | new | /runtime/server, /runtime/realtime, /runtime/supervisor +14 more | none | `better-sqlite3`, `pg`, `@nats-io/jetstream`, `@nats-io/transport-node` |
-| 3 | `@arnilo/prism-providers` | family | retained-converted | /ai-sdk, /alibaba, /anthropic +14 more | none | `@ai-sdk/provider` |
-| 4 | `@arnilo/prism-coding-tools` | family | new | /agent, /security, /document-reader +6 more | `prism-dev` | `mammoth`, `pdf-parse`, `@dietrichgebert/ponytail` |
-| 5 | `@arnilo/prism-web-tools` | family | retained-expanded | ., ./brave, ./exa +3 more | none | `playwright-core` |
-| 6 | `@arnilo/prism-memory` | family | retained-expanded | ., /rag, /compaction/llm +3 more | `prism-wiki` | `@nanonets/graft` |
-| 7 | `@arnilo/prism-mcp` | interop | retained | . | none | none |
-| 8 | `@arnilo/prism-acp-agent` | interop | retained | . | `prism-acp-agent` | none |
-| 9 | `@arnilo/prism-ag-ui` | interop | retained | . | none | `@arnilo/prism-mcp`, `@arnilo/prism-supervisor` |
-| 10 | `@arnilo/prism-office` | family | new | /documents, /sheets, /diagrams | none | `playwright-core` |
+| 3 | `@arnilo/prism-channels` | family | new | ., /telegram, /signal | none | none |
+| 4 | `@arnilo/prism-providers` | family | retained-converted | /ai-sdk, /alibaba, /anthropic +14 more | none | `@ai-sdk/provider` |
+| 5 | `@arnilo/prism-coding-tools` | family | new | /agent, /security, /document-reader +6 more | `prism-dev` | `mammoth`, `pdf-parse`, `@dietrichgebert/ponytail` |
+| 6 | `@arnilo/prism-web-tools` | family | retained-expanded | ., ./brave, ./exa +3 more | none | `playwright-core` |
+| 7 | `@arnilo/prism-memory` | family | retained-expanded | ., /rag, /compaction/llm +3 more | `prism-wiki` | `@nanonets/graft` |
+| 8 | `@arnilo/prism-mcp` | interop | retained | . | none | none |
+| 9 | `@arnilo/prism-acp-agent` | interop | retained | . | `prism-acp-agent` | none |
+| 10 | `@arnilo/prism-ag-ui` | interop | retained | . | none | `@arnilo/prism-mcp`, `@arnilo/prism-supervisor` |
+| 11 | `@arnilo/prism-office` | family | new | /documents, /sheets, /diagrams | none | `playwright-core` |
 
 ### Subpath Breakdown for Active Packages
 
@@ -90,6 +91,18 @@ Repository root version: `0.7.0`
   - /governance/evals: Evaluation run isolation, dataset curation redaction, and metric integrity.
   - /governance/prompts: Versioned prompt promotion gating, rollback protection, and evaluation score thresholds.
   - /credentials/node: OS keychain integration via @napi-rs/keyring; credentials never leak to logs or memory dumps.
+
+#### `@arnilo/prism-channels` (family)
+- **Description:** Transport-neutral messaging runtime with durable bindings, journal, pairing and one-use approvals; official Telegram and experimental pinned signal-cli Signal ship as isolated subpaths.
+- **Declared Subpaths:**
+  - `@arnilo/prism-channels`
+  - `@arnilo/prism-channels/telegram`
+  - `@arnilo/prism-channels/signal`
+- **Security & Trust Boundaries:**
+  - Deny-by-default sender authorization before session access; host-verified identity/ownership only (transport fields are never authority); per-logical-session serialization and final-text-only output projection.
+  - Durable operation keys embed ownership; staged replies, compare-and-swap claims and lease fencing fail closed. One-use approval controls bind principal, grant, agent revision, session/run, pending decision, version and expiry before core resume.
+  - /telegram: Explicit native-fetch polling or host-mounted Web webhook handler; service-owned receiver lease prevents concurrent modes, webhook secret is constant-time checked, fixed endpoint forbids redirects/token URL leakage, and only private non-bot text plus opted-in (`allowGroups`) non-bot group/topic text from non-`sender_chat` senders reaches admission.
+  - /signal (experimental): Node-only private-socket manual-receive client for an externally supervised signal-cli v0.14.8 daemon; explicit operator acceptable-use/GPL attestation rejects at construction, one service-owned receiver lease fences subscribe, and only selected-account direct UUID text reaches admission.
 
 #### `@arnilo/prism-providers` (family)
 - **Description:** Unified provider code family containing all 17 provider adapters.
@@ -556,13 +569,14 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 
 | Package Name | Declared Public Exports | Snapshot Baseline File |
 |---|---|---|
-| `@arnilo/prism` | 969 | `scripts/compat-baseline/arnilo__prism.txt` |
-| `@arnilo/prism-mcp` | 127 | `scripts/compat-baseline/arnilo__prism-mcp.txt` |
+| `@arnilo/prism` | 981 | `scripts/compat-baseline/arnilo__prism.txt` |
+| `@arnilo/prism-mcp` | 132 | `scripts/compat-baseline/arnilo__prism-mcp.txt` |
 | `@arnilo/prism-providers` | 496 | `scripts/compat-baseline/arnilo__prism-providers.txt` |
 | `@arnilo/prism-memory` | 740 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
-| `@arnilo/prism-core` | 1359 | `scripts/compat-baseline/arnilo__prism-core.txt` |
-| `@arnilo/prism-coding-tools` | 961 | `scripts/compat-baseline/arnilo__prism-coding-tools.txt` |
-| `@arnilo/prism-office` | 178 | `scripts/compat-baseline/arnilo__prism-office.txt` |
-| `@arnilo/prism-ag-ui` | 298 | `scripts/compat-baseline/arnilo__prism-ag-ui.txt` |
+| `@arnilo/prism-core` | 1281 | `scripts/compat-baseline/arnilo__prism-core.txt` |
+| `@arnilo/prism-channels` | 91 | `scripts/compat-baseline/arnilo__prism-channels.txt` |
+| `@arnilo/prism-coding-tools` | 935 | `scripts/compat-baseline/arnilo__prism-coding-tools.txt` |
+| `@arnilo/prism-work` | 328 | `scripts/compat-baseline/arnilo__prism-work.txt` |
+| `@arnilo/prism-ag-ui` | 299 | `scripts/compat-baseline/arnilo__prism-ag-ui.txt` |
 | `@arnilo/prism-web-tools` | 294 | `scripts/compat-baseline/arnilo__prism-web-tools.txt` |
 | `@arnilo/prism-acp-agent` | 13 | `scripts/compat-baseline/arnilo__prism-acp-agent.txt` |

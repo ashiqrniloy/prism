@@ -12,7 +12,7 @@ import { after, before, test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const GOLDEN = join(ROOT, "packages", "office", "golden");
+const GOLDEN = join(ROOT, "packages", "prism-work", "golden");
 
 // Synthetic diagrams pair: same model, permuted attributes/whitespace.
 const DIAGRAM_A = `<mxfile host="prism.test" version="24.0.0"><diagram id="d1" name="P1"><mxGraphModel dx="1000" dy="800"><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" parent="1" value="A" vertex="1"><mxGeometry as="geometry" x="10" y="10" width="30" height="60"/></mxCell></root></mxGraphModel></diagram></mxfile>`;
@@ -25,8 +25,8 @@ let diagrams;
 before(async () => {
   // Extract under a tmp dir inside the workspace root so packed files resolve
   // hoisted prod deps; removed in after().
-  packedDir = mkdtempSync(join(ROOT, "node_modules", ".prism-office-packed-"));
-  const tgz = execFileSync("npm", ["pack", "-w", "@arnilo/prism-office", "--pack-destination", packedDir], {
+  packedDir = mkdtempSync(join(ROOT, "node_modules", ".prism-work-packed-"));
+  const tgz = execFileSync("npm", ["pack", "-w", "@arnilo/prism-work", "--pack-destination", packedDir], {
     cwd: ROOT,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -47,7 +47,7 @@ after(() => {
 
 test("packed office golden round-trip (docx/xlsx/pptx) + diagrams canonicalize", async () => {
   const { assertDocModelEqual, assertSheetModelEqual, assertDeckModelEqual } = await import(
-    pathToFileURL(join(ROOT, "packages", "office", "dist", "documents", "__tests__", "equality.js")).href
+    pathToFileURL(join(ROOT, "packages", "prism-work", "dist", "documents", "__tests__", "equality.js")).href
   );
   for (const c of [
     { format: "docx", kind: "doc", model: "golden.doc.model.json", equal: assertDocModelEqual },

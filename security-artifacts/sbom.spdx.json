@@ -2,22 +2,22 @@
   "spdxVersion": "SPDX-2.3",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "name": "@arnilo/prism@0.6.0",
-  "documentNamespace": "http://spdx.org/spdxdocs/@arnilo%2fprism-0.6.0-c542a589-27a2-4257-a62e-496d8abcf379",
+  "name": "@arnilo/prism@0.8.0",
+  "documentNamespace": "http://spdx.org/spdxdocs/@arnilo%2fprism-0.8.0-8fb3f737-cf6f-49d8-a42d-b628cab03e0d",
   "creationInfo": {
-    "created": "2026-09-12T18:37:35.366Z",
+    "created": "2026-09-18T05:58:36.712Z",
     "creators": [
       "Tool: npm/cli-11.17.0"
     ]
   },
   "documentDescribes": [
-    "SPDXRef-Package-arnilo.prism-0.6.0"
+    "SPDXRef-Package-arnilo.prism-0.8.0"
   ],
   "packages": [
     {
       "name": "@arnilo/prism",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-0.6.0",
-      "versionInfo": "0.6.0",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-0.8.0",
+      "versionInfo": "0.8.0",
       "packageFileName": "",
       "description": "Agent harness for AI providers, agents, sessions, and tools.",
       "primaryPackagePurpose": "LIBRARY",
@@ -29,7 +29,7 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism@0.6.0"
+          "referenceLocator": "pkg:npm/%40arnilo/prism@0.8.0"
         }
       ]
     },
@@ -3915,8 +3915,8 @@
     },
     {
       "name": "@arnilo/prism-acp-agent",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-acp-agent-0.6.0",
-      "versionInfo": "0.6.0",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-acp-agent-0.8.0",
+      "versionInfo": "0.8.0",
       "packageFileName": "node_modules/@arnilo/prism-acp-agent",
       "description": "Spawnable ACP agent: serves createPrismAcpAgent over stdio from a config file.",
       "downloadLocation": "NOASSERTION",
@@ -3927,14 +3927,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-acp-agent@0.6.0"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-acp-agent@0.8.0"
         }
       ]
     },
     {
       "name": "@arnilo/prism-ag-ui",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-ag-ui-0.6.0",
-      "versionInfo": "0.6.0",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-ag-ui-0.8.0",
+      "versionInfo": "0.8.0",
       "packageFileName": "node_modules/@arnilo/prism-ag-ui",
       "description": "Optional bounded AG-UI event mapper for Prism agent events.",
       "downloadLocation": "NOASSERTION",
@@ -3945,14 +3945,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-ag-ui@0.6.0"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-ag-ui@0.8.0"
         }
       ]
     },
     {
       "name": "@arnilo/prism-mcp",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-mcp-0.6.0",
-      "versionInfo": "0.6.0",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-mcp-0.8.0",
+      "versionInfo": "0.8.0",
       "packageFileName": "node_modules/@arnilo/prism-mcp",
       "description": "Bounded MCP tools, resources, prompts, client callbacks, and authorized Streamable HTTP sessions.",
       "downloadLocation": "NOASSERTION",
@@ -3963,14 +3963,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-mcp@0.6.0"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-mcp@0.8.0"
         }
       ]
     },
     {
       "name": "@arnilo/prism-memory",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-memory-0.6.0",
-      "versionInfo": "0.6.0",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-memory-0.8.0",
+      "versionInfo": "0.8.0",
       "packageFileName": "node_modules/@arnilo/prism-memory",
       "description": "Memory and context family for Prism: working/semantic memory, RAG, compaction strategies, Graft bridge, and Wiki with bundled skills.",
       "downloadLocation": "NOASSERTION",
@@ -3981,34 +3981,34 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-memory@0.6.0"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-memory@0.8.0"
         }
       ]
     },
     {
-      "name": "@arnilo/prism-office",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-office-0.6.0",
-      "versionInfo": "0.6.0",
-      "packageFileName": "node_modules/@arnilo/prism-office",
-      "description": "Prism office capabilities: documents (docx/xlsx/pptx generate/parse/patch/preview), sheets (CSV/XLSX inference), and diagrams (draw.io embed) as gated subpaths.",
+      "name": "@arnilo/prism-channels",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-channels-0.8.0",
+      "versionInfo": "0.8.0",
+      "packageFileName": "node_modules/@arnilo/prism-channels",
+      "description": "Messaging channels family for Prism: transport-neutral channel contracts, Prism execution adapter, durable bindings/journal/pairing, and (as subpaths) Telegram/Signal adapters.",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
-      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/office#readme",
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-channels#readme",
       "licenseDeclared": "MIT",
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-office@0.6.0"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-channels@0.8.0"
         }
       ]
     },
     {
       "name": "@arnilo/prism-coding-tools",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "versionInfo": "0.6.0",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
+      "versionInfo": "0.8.0",
       "packageFileName": "node_modules/@arnilo/prism-coding-tools",
-      "description": "Unified coding agent tools, security sandboxing, document parsing, OpenAPI tools, Linux desktop integration, Dev inspector, and persona extensions for Prism.",
+      "description": "Unified coding agent tools, security sandboxing, OpenAPI tools, Linux desktop integration, Dev inspector, and persona extensions for Prism.",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
       "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-coding-tools#readme",
@@ -4017,16 +4017,16 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-coding-tools@0.6.0"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-coding-tools@0.8.0"
         }
       ]
     },
     {
       "name": "@arnilo/prism-core",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-core-0.6.0",
-      "versionInfo": "0.6.0",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "versionInfo": "0.8.0",
       "packageFileName": "node_modules/@arnilo/prism-core",
-      "description": "Core runtime, sessions, governance, credentials, enterprise state, and work integrations family package for Prism.",
+      "description": "Core runtime, sessions, governance, credentials, and enterprise state family package for Prism.",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
       "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-core#readme",
@@ -4035,14 +4035,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-core@0.6.0"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-core@0.8.0"
         }
       ]
     },
     {
       "name": "@arnilo/prism-providers",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-providers-0.6.0",
-      "versionInfo": "0.6.0",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-providers-0.8.0",
+      "versionInfo": "0.8.0",
       "packageFileName": "node_modules/@arnilo/prism-providers",
       "description": "Unified provider family: all 19 first-party Prism provider adapters as explicit subpaths (openai, anthropic, google, azure, bedrock, vertex, deepseek, xai, zai, alibaba, kimi, clinepass, neuralwatt, ollama, opencode-go, openrouter, ai-sdk, hyper, commandcode). Importing one adapter never evaluates another.",
       "downloadLocation": "NOASSERTION",
@@ -4053,14 +4053,32 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-providers@0.6.0"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-providers@0.8.0"
+        }
+      ]
+    },
+    {
+      "name": "@arnilo/prism-work",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-work-0.8.0",
+      "versionInfo": "0.8.0",
+      "packageFileName": "node_modules/@arnilo/prism-work",
+      "description": "Prism work connectors, Office document capabilities, and bounded document-reader subpaths.",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/prism-work#readme",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40arnilo/prism-work@0.8.0"
         }
       ]
     },
     {
       "name": "@arnilo/prism-web-tools",
-      "SPDXID": "SPDXRef-Package-arnilo.prism-web-tools-0.6.0",
-      "versionInfo": "0.6.0",
+      "SPDXID": "SPDXRef-Package-arnilo.prism-web-tools-0.8.0",
+      "versionInfo": "0.8.0",
       "packageFileName": "node_modules/@arnilo/prism-web-tools",
       "description": "Unified web tools family for Prism: bounded Brave/Exa/Firecrawl web research, Playwright browser automation with egress policy and quarantine, and Obscura browser-engine tools over a host-installed binary.",
       "downloadLocation": "NOASSERTION",
@@ -4071,7 +4089,7 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40arnilo/prism-web-tools@0.6.0"
+          "referenceLocator": "pkg:npm/%40arnilo/prism-web-tools@0.8.0"
         }
       ]
     }
@@ -4079,67 +4097,72 @@
   "relationships": [
     {
       "spdxElementId": "SPDXRef-DOCUMENT",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
       "relationshipType": "DESCRIBES"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-providers-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-providers-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-memory-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-memory-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-core-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-channels-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-office-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-ag-ui-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-work-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-web-tools-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-ag-ui-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-acp-agent-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-web-tools-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-acp-agent-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-biomejs.biome-2.5.13",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-types.node-22.20.2",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-typescript-7.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
@@ -4294,297 +4317,342 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-agentclientprotocol.sdk-1.4.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-core-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-ag-ui-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-ag-ui-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-providers-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-acp-agent-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-zod-4.6.2",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.8.0",
       "relationshipType": "PREREQUISITE_FOR"
     },
     {
       "spdxElementId": "SPDXRef-Package-ag-ui.core-0.0.59",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-agentclientprotocol.sdk-1.4.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ag-ui.client-0.0.59",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-core-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-ag-ui-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-diff-9.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-channels-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-ag-ui-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-core-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-dietrichgebert.ponytail-4.9.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-types.diff-7.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-types.node-22.20.2",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-mammoth-1.12.2",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-pdf-parse-2.4.5",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-typescript-7.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.6.0",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-napi-rs.keyring-2.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.6.0",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-ajv-8.20.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.6.0",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.6.0",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-memory-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.6.0",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-nats-io.jetstream-3.4.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.6.0",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-nats-io.transport-node-3.4.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.6.0",
-      "relationshipType": "DEV_DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-opentelemetry.api-1.9.1",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-channels-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-types.better-sqlite3-9.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-channels-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-types.pg-8.23.1",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-channels-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-better-sqlite3-13.0.3",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-channels-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-pg-8.23.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-channels-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-modelcontextprotocol.client-2.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.6.0",
+      "spdxElementId": "SPDXRef-Package-diff-9.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-modelcontextprotocol.server-2.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.6.0",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-zod-4.6.2",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.6.0",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-pg-8.23.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.6.0",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-ag-ui-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-providers-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-nanonets.graft-0.18.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-types.pg-8.23.1",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-work-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-office-open.docx-0.14.5",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-office-0.6.0",
-      "relationshipType": "DEPENDENCY_OF"
+      "spdxElementId": "SPDXRef-Package-dietrichgebert.ponytail-4.9.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-office-open.pptx-0.14.5",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-office-0.6.0",
-      "relationshipType": "DEPENDENCY_OF"
+      "spdxElementId": "SPDXRef-Package-types.diff-7.0.2",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-office-open.xlsx-0.14.5",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-office-0.6.0",
-      "relationshipType": "DEPENDENCY_OF"
+      "spdxElementId": "SPDXRef-Package-types.node-22.20.2",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-office-open.xml-0.14.5",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-office-0.6.0",
+      "spdxElementId": "SPDXRef-Package-typescript-7.0.2",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-coding-tools-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-napi-rs.keyring-2.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ajv-8.20.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-office-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.8.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-fast-xml-parser-5.11.1",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-office-0.6.0",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-office-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-playwright-core-1.63.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-office-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-memory-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-work-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-nats-io.jetstream-3.4.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-nats-io.transport-node-3.4.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-opentelemetry.api-1.9.1",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-types.better-sqlite3-9.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-types.pg-8.23.1",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-better-sqlite3-13.0.3",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-pg-8.23.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-modelcontextprotocol.client-2.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.8.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-modelcontextprotocol.server-2.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.8.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-zod-4.6.2",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.8.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-mcp-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-pg-8.23.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.8.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-providers-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-nanonets.graft-0.18.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-types.pg-8.23.1",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-memory-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ai-sdk.openai-4.0.65",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ai-sdk.provider-4.0.13",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-providers-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-web-tools-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-web-tools-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-core-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-web-tools-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-core-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-web-tools-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-web-tools-0.6.0",
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-mcp-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-web-tools-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-playwright-core-1.63.0",
-      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-web-tools-0.6.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-web-tools-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-office-open.docx-0.14.5",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-0.8.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-office-open.pptx-0.14.5",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-0.8.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-office-open.xlsx-0.14.5",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-0.8.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-office-open.xml-0.14.5",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-0.8.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-ajv-8.20.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-0.8.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-fast-xml-parser-5.11.1",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-0.8.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-arnilo.prism-0.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-mammoth-1.12.2",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-pdf-parse-2.4.5",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-0.8.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-playwright-core-1.63.0",
+      "relatedSpdxElement": "SPDXRef-Package-arnilo.prism-work-0.8.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {

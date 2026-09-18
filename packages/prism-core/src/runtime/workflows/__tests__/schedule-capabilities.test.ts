@@ -142,7 +142,9 @@ describe("proactive schedule capability tokens", () => {
       ownership: { tenantId: "tenant-b", userId: "user-b" },
       ownerId: "scheduler-b",
     });
-    await assert.rejects(foreign.get(token.tokenId));
-    await assert.rejects(foreign.assertActive(token.tokenId));
+    // Plan 080 Task 3: a foreign token scope reads as absent (no existence oracle);
+    // every guard path still denies.
+    assert.equal(await foreign.get(token.tokenId), null);
+    await assert.rejects(foreign.assertActive(token.tokenId), /unknown/);
   });
 });

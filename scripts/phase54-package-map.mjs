@@ -89,6 +89,25 @@ export const CONSOLIDATION_SPEC = {
       ],
     },
     {
+      name: "@arnilo/prism-channels",
+      role: "family",
+      type: "new",
+      description:
+        "Transport-neutral messaging runtime with durable bindings, journal, pairing and one-use approvals; official Telegram and experimental pinned signal-cli Signal ship as isolated subpaths.",
+      subpaths: [".", "/telegram", "/signal"],
+      bins: [],
+      peers: {
+        "@arnilo/prism": "^0.7.0",
+      },
+      optionalPeers: [],
+      securityBoundaries: [
+        "Deny-by-default sender authorization before session access; host-verified identity/ownership only (transport fields are never authority); per-logical-session serialization and final-text-only output projection.",
+        "Durable operation keys embed ownership; staged replies, compare-and-swap claims and lease fencing fail closed. One-use approval controls bind principal, grant, agent revision, session/run, pending decision, version and expiry before core resume.",
+        "/telegram: Explicit native-fetch polling or host-mounted Web webhook handler; service-owned receiver lease prevents concurrent modes, webhook secret is constant-time checked, fixed endpoint forbids redirects/token URL leakage, and only private non-bot text plus opted-in (`allowGroups`) non-bot group/topic text from non-`sender_chat` senders reaches admission.",
+        "/signal (experimental): Node-only private-socket manual-receive client for an externally supervised signal-cli v0.14.8 daemon; explicit operator acceptable-use/GPL attestation rejects at construction, one service-owned receiver lease fences subscribe, and only selected-account direct UUID text reaches admission.",
+      ],
+    },
+    {
       name: "@arnilo/prism-providers",
       role: "family",
       type: "retained-converted",
@@ -795,8 +814,8 @@ export function generateMarkdown(map) {
 
   lines.push("# Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence");
   lines.push("");
-  lines.push(`Generated: \`${map.generatedAt}\`  `);
-  lines.push(`Repository root version: \`${map.rootVersion}\`  `);
+  lines.push(`Generated: \`${map.generatedAt}\``);
+  lines.push(`Repository root version: \`${map.rootVersion}\``);
   lines.push("");
   lines.push("## 1. Executive Summary & Counts");
   lines.push("");
@@ -810,7 +829,7 @@ export function generateMarkdown(map) {
     `- **Retained package names:** ${map.counts.retainedPackages} (\`@arnilo/prism\`, \`@arnilo/prism-providers\`, \`@arnilo/prism-web-tools\`, \`@arnilo/prism-memory\`, \`@arnilo/prism-mcp\`, \`@arnilo/prism-acp-agent\`, \`@arnilo/prism-ag-ui\`)`,
   );
   lines.push(
-    `- **New family packages:** ${map.counts.newPackages} (\`@arnilo/prism-core\`, \`@arnilo/prism-coding-tools\`, \`@arnilo/prism-office\`)`,
+    `- **New family packages:** ${map.counts.newPackages} (\`@arnilo/prism-core\`, \`@arnilo/prism-channels\`, \`@arnilo/prism-coding-tools\`, \`@arnilo/prism-office\`)`,
   );
   lines.push(
     `- **Target active 0.4 packages:** **${map.counts.targetActivePackages}** (Consolidation ratio: ${map.counts.baselineManifests} → ${map.counts.targetActivePackages}, −${map.counts.baselineManifests - map.counts.targetActivePackages} manifests net)`,

@@ -19,7 +19,7 @@ const hasGraftPackage = existsSync(join(ROOT, "packages", "prism-graft")); // pl
 const hasObscuraPackage = existsSync(join(ROOT, "packages", "obscura", "package.json")); // plan 039 optional Obscura browser package
 const hasDevInspectorPackage = existsSync(join(ROOT, "packages", "prism-dev", "package.json")); // plan 040 dev inspector (omitted from umbrellas)
 const hasPromptPackage = existsSync(join(ROOT, "packages", "prompts", "package.json")); // plan 042 versioned prompt registry (omitted from umbrellas)
-const hasOfficePackage = existsSync(join(ROOT, "packages", "office", "package.json")); // plan 054 Task 8 office family
+const hasWorkPackage = existsSync(join(ROOT, "packages", "prism-work", "package.json")); // plan 083 Task 2 work family
 const hasDocumentsPackage = existsSync(join(ROOT, "packages", "documents", "package.json")); // plan 051 documents engine (omitted from umbrellas)
 const hasSheetsPackage = existsSync(join(ROOT, "packages", "sheets", "package.json")); // plan 052 sheets engine (omitted from umbrellas)
 const hasDiagramsPackage = existsSync(join(ROOT, "packages", "diagrams", "package.json")); // plan 053 diagrams engine (omitted from umbrellas)
@@ -52,14 +52,14 @@ test("counts match manifests at the truth graph", () => {
     Number(hasDocumentsPackage) +
     Number(hasSheetsPackage) +
     Number(hasDiagramsPackage);
-  if (hasOfficePackage) {
+  if (hasWorkPackage) {
     // Current package set: delegated CLI adapter removed; provider family has 20 subpaths (plan 062 added ./model-discovery).
-    assert.equal(t.counts.publishable, 10);
-    assert.equal(t.counts.workspace, 9);
+    assert.equal(t.counts.publishable, 11);
+    assert.equal(t.counts.workspace, 10);
     assert.equal(t.counts.provider, 20);
-    assert.equal(t.counts.prismFamily, 3);
+    assert.equal(t.counts.prismFamily, 4);
     assert.equal(t.counts.capability, 6);
-    assert.equal(t.counts.codeWithPeer, 9);
+    assert.equal(t.counts.codeWithPeer, 10);
     assert.equal(t.counts.pureManifest, 0);
   } else if (hasCodingToolsPackage) {
     assert.equal(t.counts.publishable, 17);
@@ -110,7 +110,7 @@ test("umbrella closures match manifests", () => {
       "@arnilo/prism-provider-vertex",
     ]);
   }
-  if (hasOfficePackage) {
+  if (hasWorkPackage) {
     // Plan 054 Task 8: prism-all is retired; the provider family is the only umbrella.
     assert.equal(t.umbrella["prism-all"], undefined);
     assert.deepEqual(providers.deps, []);
@@ -129,7 +129,7 @@ test("umbrella closures match manifests", () => {
 
 test("profile closures match manifests", () => {
   const t = computePackageTruth();
-  if (hasOfficePackage) {
+  if (hasWorkPackage) {
     // Plan 054 Task 8: profile manifests are deleted; only the provider family remains.
     assert.deepEqual(t.profiles, {});
     return;
@@ -230,7 +230,7 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
   assert.equal(ponytail.peerDependencies["@dietrichgebert/ponytail"], "^4.9.0");
   // Plan 054 Task 8: profile manifests are deleted; every workspace package is a
   // code package with a core peer, so nothing may lack one.
-  if (hasOfficePackage) {
+  if (hasWorkPackage) {
     for (const p of pkgs) {
       assert.notEqual(p.peerDependencies?.["@arnilo/prism"], undefined, `${p.name} must peer @arnilo/prism`);
     }

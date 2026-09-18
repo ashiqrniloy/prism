@@ -4,7 +4,7 @@ Optional `createOpenApiTools` compiles host-selected OpenAPI 3.1 operations into
 
 ## When to use it
 
-Hosts that already expose a JSON API with an OpenAPI 3.1 document and want the agent to call a **fixed, host-chosen subset** of it — never model-driven discovery, never a raw method/path passthrough. For vendor web search/extraction use `@arnilo/prism-web-tools`; for M365/GWS use `@arnilo/prism-core/integrations/work`; this adapter is for arbitrary host APIs.
+Hosts that already expose a JSON API with an OpenAPI 3.1 document and want the agent to call a **fixed, host-chosen subset** of it — never model-driven discovery, never a raw method/path passthrough. For vendor web search/extraction use `@arnilo/prism-web-tools`; for M365/GWS use `@arnilo/prism-work/connectors`; this adapter is for arbitrary host APIs.
 
 ## Usage
 

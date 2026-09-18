@@ -465,12 +465,13 @@ async function prepareAgUiInput(
   signal: AbortSignal,
 ): Promise<AgUiPreparedInput> {
   if (!options.input?.project) {
-    return { messages: defaultAgUiInput(parsed, limits), frontendTools: [], serverTools: [] };
+    // A2A synthesizes its own AG-UI envelope, so client-owned state/tools never reach a projector here.
+    return { messages: defaultAgUiInput(parsed, limits), frontendTools: [], serverTools: [], clientState: "ignore" };
   }
   const projected = await options.input.project({ request: parsed, authorization, signal, frontendTools: [] });
   if (!projected) throw new AgUiError("ERR_PRISM_AG_UI_FORBIDDEN", "Input is unavailable");
   assertBoundedJson(projected.messages, limits.maxInputTextBytes, limits, "projected messages");
-  return { messages: projected.messages, frontendTools: [], serverTools: [] };
+  return { messages: projected.messages, frontendTools: [], serverTools: [], clientState: "ignore" };
 }
 
 /** A2A message ids are host strings; AG-UI ids must match the bounded `[A-Za-z0-9._:-]` shape. */

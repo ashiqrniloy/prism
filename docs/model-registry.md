@@ -36,7 +36,7 @@ import { createModelRegistry, type ModelConfig } from "@arnilo/prism";
 | --- | --- |
 | `provider` / `model` | Required registry key. |
 | `displayName` | Human-readable label. |
-| `capabilities` | Input/output modes (`text`, `image`, `audio`, `file`, `document`) plus reasoning/tools/streaming booleans and optional `structuredOutput` (`true` or `"json_schema"`) for native JSON-schema requests. |
+| `capabilities` | Input/output modes (`text`, `image`, `audio`, `file`, `document`) plus reasoning/tools/streaming booleans, optional `structuredOutput` (`true` or `"json_schema"`) for native JSON-schema requests, and advisory `toolCallStrictness`. |
 | `limits` | Context and output-token limits (`ModelLimits`). |
 | `cost` | Input/output/cache read/cache write pricing. |
 | `cache` | Generic `ModelCacheCapabilities`. |
@@ -101,9 +101,19 @@ const registry = createModelRegistry([model], { duplicate: "error" });
 const resolved = registry.resolve("demo", "demo-large");
 ```
 
+## Tool-call reliability metadata
+
+`ModelCapabilities.toolCallStrictness?: "strict" | "lenient" | "legacy"` is advisory evidence metadata for hosts pinning models. Omission means **unknown** and must never be inferred as `"strict"`; it changes neither tool disclosure, argument validation, parallel dispatch, retries, nor provider requests.
+
+- `"strict"`: the provider catalog has a network-free conformance fixture covering parallel-call reconstruction, a schema-shaped argument object, and an empty `{}` argument object.
+- `"lenient"`: a catalog has tested tool support but a known relaxed behavior; hosts should retain extra guardrails.
+- `"legacy"`: a catalog has tested compatibility-only tool behavior; hosts should avoid relying on strict multi-call/schema semantics.
+
+Current first-party evidence is generated at [tool-call coverage matrix](_evidence/toolcall-coverage-2026-09-17.md). Only NeuralWatt's curated catalog is stamped `"strict"`: its fixture checks all three behaviors. Every other first-party static catalog with `tools: true` is explicitly unstamped-unknown until it has that fixture coverage. Dynamic discovery records remain unknown because provider responses are untrusted catalog metadata. Hosts must still validate every tool argument against its schema.
+
 ## Extension and configuration notes
 
-Provider packages register models through `ProviderPackageAPI.registerModel(model)`. The extension kernel stores those records in the host-owned registries. Static package metadata is allowed; dynamic model discovery remains provider/host code outside Prism core.
+Provider packages register models through `ProviderPackageAPI.registerModel(model). The extension kernel stores those records in the host-owned registries. Static package metadata is allowed; dynamic model discovery remains provider/host code outside Prism core.
 
 `ModelConfig.compat` remains for provider-owned inert JSON. Prefer typed fields (`capabilities`, `limits`, `cost`, `cache`) for generic behavior shared across providers.
 

@@ -241,7 +241,7 @@ await section("@arnilo/prism-memory: graft + wiki", async () => {
 });
 
 // ---------------------------------------------------------------------------
-// @arnilo/prism-core (21 subpaths)
+// @arnilo/prism-core (24 subpaths)
 // ---------------------------------------------------------------------------
 await section("@arnilo/prism-core: runtime/server", async () => {
   const server = await import("@arnilo/prism-core/runtime/server");
@@ -386,13 +386,82 @@ await section("@arnilo/prism-core: enterprise/postgres", async () => {
   assert.ok(enterprise.packageName.includes("enterprise/postgres"), "enterprise subpath must identify itself");
 });
 
-await section("@arnilo/prism-core: integrations/work", async () => {
-  const work = await import("@arnilo/prism-core/integrations/work");
+await section("@arnilo/prism-work: connectors", async () => {
+  const work = await import("@arnilo/prism-work/connectors");
   assert.equal(typeof work.buildMicrosoft365Argv, "function");
-  const m365 = await import("@arnilo/prism-core/integrations/work/microsoft365");
+  const m365 = await import("@arnilo/prism-work/connectors/microsoft365");
   assert.equal(typeof m365.createMicrosoft365CliAdapter, "function");
-  const gws = await import("@arnilo/prism-core/integrations/work/google-workspace");
+  const gws = await import("@arnilo/prism-work/connectors/google-workspace");
   assert.equal(typeof gws.createGoogleWorkspaceCliAdapter, "function");
+});
+
+await section("@arnilo/prism-channels", async () => {
+  const channels = await import("@arnilo/prism-channels");
+  assert.equal(typeof channels.createMessagingRuntime, "function");
+  const runtime = channels.createMessagingRuntime({
+    authorize: () => false,
+    resolveAgent: () => {
+      throw new Error("a denied channel event must not resolve an agent");
+    },
+    deliver: () => ({ delivered: false }),
+  });
+  const admission = await runtime.admit({
+    connectionId: "probe",
+    externalConversationId: "probe",
+    externalActorId: "probe",
+    eventId: "1",
+    text: "hello",
+  });
+  assert.equal(admission.status, "denied", "channel runtime must deny an unauthorized sender without provider work");
+  await runtime.stop();
+
+  // Durable journal surface: bindings and dedup records land in a host-owned checkpoint store
+  // (the packed install ships the store factory and the journal writers together).
+  const prism = await import("@arnilo/prism");
+  const checkpoints = prism.createMemoryCheckpointStore();
+  const state = channels.createChannelStateStore({ checkpoints, maxJournalRecordBytes: 4096 });
+  const ownership = { tenantId: "probe", userId: "probe" };
+  const binding = await state.createBinding(
+    { ownership, connectionId: "probe", externalConversationId: "probe", externalActorId: "probe", agentAlias: "primary" },
+    {
+      sessionId: "chan-packed-probe",
+      agentAlias: "primary",
+      generation: 0,
+      suspended: false,
+      updatedAt: new Date().toISOString(),
+    },
+  );
+  assert.equal(binding?.version, 1, "channel journal must create a durable binding");
+  assert.equal(typeof channels.createChannelPairingStore, "function");
+  assert.equal(typeof channels.createChannelDeliveryJournal, "function");
+
+  const telegram = await import("@arnilo/prism-channels/telegram");
+  assert.equal(typeof telegram.createTelegramAdapter, "function");
+  const adapter = telegram.createTelegramAdapter({
+    connectionId: "probe-telegram",
+    botToken: "not-a-live-token",
+    checkpoints,
+    leases: prism.createMemoryLeaseStore(),
+    cursorOwnership: ownership,
+  });
+  assert.equal(adapter.capabilities.acknowledgement, "telegram_offset", "Telegram construction remains network-free");
+  await adapter.stop();
+
+  const signal = await import("@arnilo/prism-channels/signal");
+  assert.equal(typeof signal.createSignalAdapter, "function");
+  assert.equal(signal.SIGNAL_CLI_VERSION, "0.14.8", "Signal adapter must pin its signal-cli compatibility target");
+  const signalAdapter = signal.createSignalAdapter({
+    connectionId: "probe-signal",
+    socketPath: "/run/prism/probe-signal.sock",
+    account: "+15550001111",
+    signalCliVersion: "0.14.8",
+    policy: { acceptableUse: "operator_approved", gplDistribution: "operator_approved", termsVersion: "probe" },
+    checkpoints,
+    leases: prism.createMemoryLeaseStore(),
+    cursorOwnership: ownership,
+  });
+  assert.equal(signalAdapter.capabilities.acknowledgement, "none", "Signal construction remains socket-free");
+  await signalAdapter.stop();
 });
 
 await section("@arnilo/prism-core: validation/json-schema", async () => {
@@ -507,8 +576,8 @@ await section("@arnilo/prism-coding-tools: security", async () => {
   assert.equal(typeof security.resolveSandboxCapabilities, "function");
 });
 
-await section("@arnilo/prism-coding-tools: document-reader + openapi", async () => {
-  const reader = await import("@arnilo/prism-coding-tools/document-reader");
+await section("@arnilo/prism-work: document-reader", async () => {
+  const reader = await import("@arnilo/prism-work/document-reader");
   const documentReader = await reader.createDocumentReader({
     // ponytail: hermetic leg — host-selected text-only parser instead of the
     // optional pdf-parse/mammoth peers the packed consumer does not install.
@@ -564,15 +633,15 @@ await section("@arnilo/prism-coding-tools: persona extensions", async () => {
 });
 
 // ---------------------------------------------------------------------------
-// @arnilo/prism-office (3 subpaths) — local generation/parsing, no LibreOffice.
+// @arnilo/prism-work Office subpaths — local generation/parsing, no LibreOffice.
 // ---------------------------------------------------------------------------
-await section("@arnilo/prism-office: documents + sheets + diagrams", async () => {
-  const documents = await import("@arnilo/prism-office/documents");
+await section("@arnilo/prism-work: documents + sheets + diagrams", async () => {
+  const documents = await import("@arnilo/prism-work/documents");
   assert.ok(documents.resolveDocumentCaps({}), "documents caps must resolve");
-  const sheets = await import("@arnilo/prism-office/sheets");
+  const sheets = await import("@arnilo/prism-work/sheets");
   const csv = sheets.parseCsv("a,b\n1,2\n");
   assert.ok(csv, "sheets csv parser must parse");
-  const diagrams = await import("@arnilo/prism-office/diagrams");
+  const diagrams = await import("@arnilo/prism-work/diagrams");
   assert.ok(diagrams.canonicalizeDrawioXml('<mxfile><diagram name="d"><mxGraphModel/></diagram></mxfile>'), "drawio xml must canonicalize");
 });
 

@@ -2,15 +2,19 @@ import type { OwnershipScope } from "@arnilo/prism";
 
 /**
  * Cross-tenant trust boundary: the ownership-scope comparison. Shared so both
- * SQL adapters route every ownership mismatch through one tested helper — a
- * single place to audit the tenant/account/user filter. Each adapter supplies
- * its conflict error via `makeError` so the store-specific error type and message
- * are preserved; only the comparison logic is deduplicated.
+ * SQL adapters route every ownership decision through one tested helper — a
+ * single place to audit the tenant/account/user filter. Each adapter decides
+ * what a mismatch means: a foreign checkpoint load or delete is a miss (plan
+ * 080 Task 3), a foreign checkpoint save is a generic CAS conflict, and lease /
+ * lifecycle writes still fail closed with their store-specific error.
  */
+export function ownershipScopeMatches(expected: OwnershipScope, actual: OwnershipScope): boolean {
+  return expected.tenantId === actual.tenantId && expected.accountId === actual.accountId && expected.userId === actual.userId;
+}
+
+/** Throwing form of {@link ownershipScopeMatches} for stores that fail closed (leases, lifecycle holds). */
 export function assertOwnershipScope(expected: OwnershipScope, actual: OwnershipScope, makeError: () => Error): void {
-  if (expected.tenantId !== actual.tenantId || expected.accountId !== actual.accountId || expected.userId !== actual.userId) {
-    throw makeError();
-  }
+  if (!ownershipScopeMatches(expected, actual)) throw makeError();
 }
 
 /**

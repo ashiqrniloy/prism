@@ -172,7 +172,7 @@ const found = await retrieveContext("leave balance", {
 - `createRagContextProvider()` derives its query from latest user text by default; pass a fixed string or callback for host-controlled query generation.
 - `createResourceDocumentLoader({ loader })` calls one host-owned `ResourceLoader`; it scans nothing and performs no filesystem or network I/O itself. Pass the host's permission/trust context to that loader.
 - `createWebFetchDocumentLoader({ fetcher })` accepts an already-configured `@arnilo/prism-web-tools` fetch adapter. It never opens a socket, rejects file/local/private/IP-literal URLs, and carries normalized citation/trust metadata forward. The fetch adapter still owns DNS/SSRF policy.
-- `pdfParser` is deliberately limited to bounded, uncompressed PDF text. Provide a host parser through `Parser` for compressed, scanned, or complex PDFs; do not silently index partial text. Hosts that need OCR wrap `createMistralOcrParser` from `@arnilo/prism-coding-tools/document-reader` — it is never the default parser and never runs unless the host passes it to `replaceDocument({ parser })`.
+- `pdfParser` is deliberately limited to bounded, uncompressed PDF text. Provide a host parser through `Parser` for compressed, scanned, or complex PDFs; do not silently index partial text. Hosts that need OCR wrap `createMistralOcrParser` from `@arnilo/prism-work/document-reader` — it is never the default parser and never runs unless the host passes it to `replaceDocument({ parser })`.
 - Package is available directly or via the `@arnilo/prism-memory` family tarball; installation does not create an embedder, vector store, loader, parser, or context provider.
 
 ## Security and performance notes

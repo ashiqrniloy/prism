@@ -66,6 +66,7 @@ describe("@arnilo/prism-providers/shared (retry-http)", () => {
     assert.doesNotMatch(error.message, /secret-token-123/);
     assert.match(error.message, /\[REDACTED\]/);
     assert.equal((error as { code?: number }).code, 429);
+    assert.equal((error as { failureClass?: string }).failureClass, "rate_limited");
     const descriptor = Object.getOwnPropertyDescriptor(error, "code");
     assert.deepEqual({ enumerable: descriptor?.enumerable, writable: descriptor?.writable }, { enumerable: true, writable: false });
   });
@@ -74,6 +75,7 @@ describe("@arnilo/prism-providers/shared (retry-http)", () => {
     const plain = providerHttpError("Provider", { status: 500, code: 500 }, "", []);
     assert.equal(plain.message, "Provider request failed: 500");
     assert.equal((plain as { code?: number }).code, 500);
+    assert.equal((plain as { failureClass?: string }).failureClass, "transient");
     const withBody = providerHttpError("Provider", { status: 503, code: 503 }, "upstream unavailable", []);
     assert.equal(withBody.message, "Provider request failed: 503 upstream unavailable");
   });

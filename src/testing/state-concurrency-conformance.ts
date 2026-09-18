@@ -221,11 +221,15 @@ async function checkpointCasProbe(checkpoints: CheckpointStore): Promise<void> {
   const loaded = await checkpoints.loadCheckpoint(key);
   assert.equal(loaded?.version, 4, "winning version must persist");
   assert.equal(loaded?.fencingToken, 6, "winning fence must persist");
-  await assertRejects(
-    () => checkpoints.loadCheckpoint({ ...key, tenantId: "tenant-b" }),
-    /ownership|tenant/i,
-    "foreign checkpoint access must fail closed",
+  const foreign = await checkpoints.loadCheckpoint({ ...key, tenantId: "tenant-b" });
+  assert.equal(foreign, null, "a foreign checkpoint lands as a miss, not an ownership-shaped existence oracle");
+  await assertRejectsCode(
+    () => checkpoints.saveCheckpoint({ ...key, tenantId: "tenant-b", version: 99, expectedVersion: 0, value: { evil: true } }),
+    "ERR_PRISM_CHECKPOINT_CONFLICT",
+    "a foreign checkpoint save must fail closed as a CAS conflict",
   );
+  const intact = await checkpoints.loadCheckpoint(key);
+  assert.equal(intact?.version, 4, "a foreign writer must not disturb the owner's record");
 }
 
 /**
@@ -546,14 +550,4 @@ async function assertRejectsCode(action: () => Promise<unknown>, code: string, m
     throw new Error(`${message}; expected code ${code}, received ${String((error as { code?: unknown })?.code)}: ${String(error)}`);
   }
   throw new Error(`${message}; expected a rejection with code ${code}`);
-}
-
-async function assertRejects(action: () => Promise<unknown>, pattern: RegExp, message: string): Promise<void> {
-  try {
-    await action();
-  } catch (error) {
-    if (pattern.test(String(error))) return;
-    throw new Error(`${message}; rejection did not match ${pattern}: ${String(error)}`);
-  }
-  throw new Error(`${message}; expected a rejection matching ${pattern}`);
 }

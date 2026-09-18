@@ -1,4 +1,4 @@
-import type { AgentEvent, ErrorInfo, Message, ProviderRequest, RunLedgerRecord, SessionEntry } from "./contracts.js";
+import type { AgentEvent, ErrorInfo, Message, ProviderFailureClass, ProviderRequest, RunLedgerRecord, SessionEntry } from "./contracts.js";
 import type { FieldPolicy } from "./field-policy.js";
 import { applyFieldPolicy } from "./field-policy.js";
 
@@ -206,20 +206,23 @@ export function errorToErrorInfo(error: unknown, secrets: readonly (string | und
   const code = readErrorCode(error);
   const retry = readRetryAfterMs(error);
   const retryAfter = retry !== undefined ? { retryAfterMs: retry } : {};
+  const failureClass = readProviderFailureClass(error);
+  const failure = failureClass === undefined ? {} : { failureClass };
   if (error instanceof Error) {
     return {
       name: error.name,
       message: redactSecrets(error.message, secrets),
       code,
+      ...failure,
       ...retryAfter,
       cause: error.cause ? redactSecrets(String(error.cause), secrets) : undefined,
     };
   }
   if (error && typeof error === "object" && "message" in error) {
-    return { message: redactSecrets(String((error as { message: unknown }).message), secrets), code, ...retryAfter };
+    return { message: redactSecrets(String((error as { message: unknown }).message), secrets), code, ...failure, ...retryAfter };
   }
 
-  return { message: redactSecrets(String(error), secrets), code, ...retryAfter };
+  return { message: redactSecrets(String(error), secrets), code, ...failure, ...retryAfter };
 }
 
 function readErrorCode(error: unknown): string | number | undefined {
@@ -232,4 +235,17 @@ function readRetryAfterMs(error: unknown): number | undefined {
   if (!error || typeof error !== "object" || !("retryAfterMs" in error)) return undefined;
   const value = (error as { retryAfterMs?: unknown }).retryAfterMs;
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+function readProviderFailureClass(error: unknown): ProviderFailureClass | undefined {
+  if (!error || typeof error !== "object" || !("failureClass" in error)) return undefined;
+  const value = (error as { failureClass?: unknown }).failureClass;
+  return value === "quota" ||
+    value === "auth" ||
+    value === "rate_limited" ||
+    value === "transient" ||
+    value === "permanent" ||
+    value === "unknown"
+    ? value
+    : undefined;
 }

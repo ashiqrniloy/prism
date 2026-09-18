@@ -7,7 +7,7 @@
  * --test-coverage-include=dist/**, then prints one labeled row per package.
  * Workspaces are discovered by "has *.test.js under dist/" (recursive), not by
  * a top-level dist/__tests__ directory: @arnilo/prism-acp-agent builds its
- * tests to dist/src/__tests__ and @arnilo/prism-office to dist/<area>/__tests__
+ * tests to dist/src/__tests__ and @arnilo/prism-work to dist/<area>/__tests__
  * (plan 070 Task 7 — those two were previously skipped entirely).
  * The include filter keeps the symlinked root core dist (resolved via
  * node_modules/@arnilo/prism -> ../..) out of each workspace denominator.

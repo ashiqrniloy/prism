@@ -2,21 +2,29 @@
 
 Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credentials, storage, and behavior; Prism supplies contracts, registries, events, and replaceable runtime primitives.
 
-## Current line (0.7.0)
+## Current line (0.8.0)
 
-- **Traps closed (plan 073)**: ACP MCP destination matching uses WHATWG origin plus path-segment subtree rules, the ACP launcher requires a real provider (mock mode is explicit), and the model-router facade refuses governance it cannot enforce (`ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED` / `_ASYNC_STATE`).
-- **Governed host surfaces (plan 073)**: validated personal/business compositions, governed provider invocation with aggregate task/tenant accounting, durable business-action drafts with editable approvals, Docker process sessions and coherent workspace recovery, Drive knowledge synchronization, snapshot/reconnect with one hosted sandbox, fair worker admission, cross-layer memory lineage with correction/revocation, evidence-backed citations with import-fidelity/OCR reports, and monotonic per-run tool narrowing.
-- **Evidence cockpit (plan 072)**: execution timeline, workflow graph, trajectory/outcome evals (scenarios, trials, manifests), cockpit aggregations, and workflow OpenTelemetry spans — with the cross-package journey matrix behind them.
-- **Attention Compiler (plan 074)**: opt-in per-turn gate that mutates the transcript only after a ratio of the model input cap, with sticky thinking/tool stubs and a host-programmable compaction trigger.
-- **Memory Fabric (plan 075)**: opt-in typed notes (fact/procedure/file/working/episode) with links, validity windows, and time/tool recall over the working, semantic, and observational-memory engines.
-- **Work-scope memory index (plan 077)**: host-named work scopes (`open`/`bind`/`project`/`enter`) project the observational outline; unscoped attach keeps the 0.6.0 dropper.
-- **Host-owned subagent spawn (plan 078)**: `spawn_agent` over the host supervisor (allow-listed children, narrowed identity, redacted results), bounded async spawn with `wait_agent`/`cancel_agent`, opt-in per-child worktree isolation, and redacted `subagent_started`/`subagent_stopped` lifecycle events.
-- **Native Bedrock Converse and governed realtime voice (plan 073 R12/R14)**: `createBedrockConverseProvider` adds a native `Converse`/`ConverseStream` route next to the OpenAI-compatible one, with no AWS SDK dependency; realtime voice sessions stay host-governed.
-- **10 publishable packages** at current **0.7.0** lockstep, with the migration guide reachable from the release section below — inventory below.
+- **Messaging channels**: `@arnilo/prism-channels` transport-neutral runtime with deny-by-default authorization, owned bindings, one-use durable approvals, official Telegram (private DMs, opt-in granted groups/topics, drafts, bounded media/voice, opt-in notices) and experimental pinned signal-cli Signal.
+- **Connected apps**: identity-bound MCP server sessions admit host-selected transports and register prefixed tools; Google Workspace and Microsoft 365 HTTP adapters live under `@arnilo/prism-work/connectors`.
+- **Work family**: `@arnilo/prism-work` replaces `@arnilo/prism-office` — connectors, documents, sheets, diagrams, document-reader, sandbox, and vendored office skills. No pre-1.0 shim.
+- **Durable long runs**: turn-boundary checkpoints with host-only `decision: "continue"`, turn-stop policy, frozen run-bundle snapshots, claim-grounding guardrail, and typed provider failure classes.
+- **Honesty surfaces**: Postgres release evidence is this-commit, channel lease release stays held until the store acknowledges, and observational-memory workers ignore non-tool events on purpose.
+- **11 publishable packages** at current **0.8.0** lockstep, with the migration guide reachable from the release section below — inventory below.
+
+### Carried from the 0.7.0 line
+
+- **Traps closed**: ACP MCP destination matching uses WHATWG origin plus path-segment subtree rules, the ACP launcher requires a real provider (mock mode is explicit), and the model-router facade refuses governance it cannot enforce (`ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED` / `_ASYNC_STATE`).
+- **Governed host surfaces**: validated personal/business compositions, governed provider invocation with aggregate task/tenant accounting, durable business-action drafts with editable approvals, Docker process sessions and coherent workspace recovery, Drive knowledge synchronization, snapshot/reconnect with one hosted sandbox, fair worker admission, cross-layer memory lineage with correction/revocation, evidence-backed citations with import-fidelity/OCR reports, and monotonic per-run tool narrowing.
+- **Evidence cockpit**: execution timeline, workflow graph, trajectory/outcome evals (scenarios, trials, manifests), cockpit aggregations, and workflow OpenTelemetry spans — with the cross-package journey matrix behind them.
+- **Attention Compiler**: opt-in per-turn gate that mutates the transcript only after a ratio of the model input cap, with sticky thinking/tool stubs and a host-programmable compaction trigger.
+- **Memory Fabric**: opt-in typed notes (fact/procedure/file/working/episode) with links, validity windows, and time/tool recall over the working, semantic, and observational-memory engines.
+- **Work-scope memory index**: host-named work scopes (`open`/`bind`/`project`/`enter`) project the observational outline; unscoped attach keeps the 0.6.0 dropper.
+- **Host-owned subagent spawn**: `spawn_agent` over the host supervisor (allow-listed children, narrowed identity, redacted results), bounded async spawn with `wait_agent`/`cancel_agent`, opt-in per-child worktree isolation, and redacted `subagent_started`/`subagent_stopped` lifecycle events.
+- **Native Bedrock Converse and governed realtime voice**: `createBedrockConverseProvider` adds a native `Converse`/`ConverseStream` route next to the OpenAI-compatible one, with no AWS SDK dependency; realtime voice sessions stay host-governed.
 
 ### Carried from the 0.6.0 line
 
-- **Node 22 floor**: `engines.node` is `>=22` in all ten publishable packages, the `node20-compat` CI leg becomes `node22-compat`, and `@types/node` moves to `^22.20.0` (plan 071; Node 20 is upstream EOL since 2026-04-30).
+- **Node 22 floor**: `engines.node` is `>=22` in all eleven publishable packages, the `node20-compat` CI leg becomes `node22-compat`, and `@types/node` moves to `^22.20.0` (plan 071; Node 20 is upstream EOL since 2026-04-30).
 - **Folded 0.5.7 content**: the 0.5.7 cut was never published — its durable-tool-round and strict-tool-result fixes, host knobs, peer/options truth, and dependency floors ship in 0.6.0 (migration guide below).
 - **Release-truth gates**: one forward-claim version-literal gate (manifests, internal ranges, lockfile, version constant, index banner, workflow tags), a workflow-liveness gate (every script target and action reference resolves, actions SHA-pinned), and a load-tolerant startup budget ratio (plan 071).
 - **Self-describing coverage failures**: a failing coverage child prints its redacted output tail and records `status`/`exitCode`/`tail` on its artifact row (plan 071).
@@ -35,8 +43,8 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 ## Public contracts
 
 - [Public contracts](public-contracts.md): canonical message, agent, tool, store, resource, credential, and event shapes.
-- [Coding tools, sandboxing, and personas](coding-tools.md): `@arnilo/prism-coding-tools` family subpaths — agent, security, document-reader, openapi, computer-use-linux, dev, personas.
-- [Core runtime, sessions, and governance](core.md): `@arnilo/prism-core` family subpaths — runtime, sessions, governance, credentials, enterprise, work, validation.
+- [Coding tools, sandboxing, and personas](coding-tools.md): `@arnilo/prism-coding-tools` family subpaths — agent, security, openapi, computer-use-linux, dev, personas.
+- [Core runtime, sessions, and governance](core.md): `@arnilo/prism-core` family subpaths — runtime, sessions, governance, credentials, enterprise, validation.
 - [Configuration options index](options-index.md): every public `*Options`/`*Limits`/`*Config` surface mapped to the doc page that owns its fields.
 
 ## Identity and governance
@@ -49,6 +57,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 ## Agent/session runtime
 
 - [Agent/session runtime](agent-session-runtime.md): create agents/sessions, `run`/`prompt`/`steer`/`stream`, durable resume, batch approvals, per-run `toolNames` narrowing.
+- [Durable runs](durable-runs.md): turn-boundary `checkpointPolicy: "every-turn"` checkpoints and `decision: "continue"` crash recovery for long runs.
 - [Agent definitions](agent-definitions.md): declarative `AgentDefinition` resolution and `AGENT.md` bundle discovery, fail-closed activation.
 - [Agent loops](agent-loops.md): replaceable loops with `limits.maxToolRounds` budgets and durable revision/restore hooks.
 - [Guardrails](guardrails.md): typed fail-closed input/output/tool checks with redacted decision records.
@@ -111,7 +120,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 - [System prompts](system-prompts.md): layered system prompts plus trust-gated `AGENTS.md`/`SYSTEM.md` file auto-load.
 - [Versioned prompt registry](prompt-registry.md): immutable content-hashed prompt assets with durable stores and bounded diff.
 - [Instruction injection](instruction-injection.md): package injectors layer redacted instructions without granting capabilities.
-- [Context and skills](context-and-skills.md): ordered context providers, progressive skill disclosure, fail-closed activation.
+- [Context and skills](context-and-skills.md): ordered context providers, progressive skill disclosure, fail-closed activation. `@arnilo/prism-work` ships `docx`, `xlsx`, `powerpoint`, `pdf`.
 - [LLM Wiki](wiki.md): optional knowledge compiler emitting OKF bundles, with `/wiki-ingest` raw staging (text, file, image, or URL via a host `fetchUrl` hook) and on-device hybrid search.
 - [Retrieval-augmented generation](rag.md): bounded source lifecycle, hybrid retrieval, permission-trimmed query legs, reranking, evidence-backed citations, inert injection.
 - [Knowledge synchronization](knowledge-sync.md): paged enterprise-source import with a Drive connector, checkpointed change cursors, and host-owned ACL mapping.
@@ -124,15 +133,17 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 - [Tool execution primitives](tool-execution-primitives.md): bounded JSON Schema validation, parallel dispatch, MCP bridge mapping.
 - [Tool validator JSON Schema package](../packages/prism-core/README.md): optional `@arnilo/prism-core/validation/json-schema` adapter.
 - [MCP client bridge and server exposure](mcp-tools.md): SDK v2 bridge and serving with OAuth transports and DNS-pinned transport.
+- [Connected apps](connected-apps.md): identity-bound MCP server sessions that admit host-selected transports and register prefixed tools.
 - [Web search, fetch, and extraction](web-tools.md): Brave/Exa/Firecrawl tools with finite limits, hashed web evidence snapshots, and untrusted-content boundaries.
-- [Work tools](work-tools.md): identity-scoped M365/GWS connectors — durable draft persistence, revision binding, draft-then-approve, isolated subprocess environments.
+- [Work tools](work-tools.md): identity-scoped M365/GWS connectors — scanned file get, hash-bound uploads/copies, fixed Docs/Sheets/Slides updates, approvals, isolated subprocess environments.
 - [Work connectors](work-connectors.md): connector principles, capability gates, scoped OAuth establishment, out-of-scope boundaries.
+- [Work sandbox](work-sandbox.md): host-pinned document image and `createWorkComposition` — office/exec in an injected Docker sandbox, connectors stay on the host.
 - [Browser automation](browser-automation.md): Playwright-backed browser tools with egress policy, caps, and verified checkpoints.
 - [Device adapters](device-adapters.md): deny-by-default realtime voice/desktop-control contract with consent and sandbox gating.
 - [Linux desktop control](computer-use-linux.md): optional `computer-use-linux` MCP wrapper — doctor-first, approval-gated mutators.
 - [Obscura browser engine](obscura.md): optional host-binary browser engine adapter with fail-closed lifecycle and CDP composition.
 - [Coding agent tools](coding-agent-tools.md): shell/read/write/edit/search toolset with caps, document reader, and optional Git awareness.
-- [Document reader](document-reader.md): bounded PDF/DOCX text extraction behind `createReadTool({ documentReader })`; optional host-selected Mistral OCR parser (not default).
+- [Document reader](document-reader.md): bounded PDF/DOCX/XLSX/PPTX text extraction behind `createReadTool({ documentReader })`; optional host-selected Mistral OCR parser (not default).
 - [Indexed code search](indexed-code-search.md): host-owned incremental index seam; results labeled `untrusted_index`.
 - [Coding workspaces](coding-workspaces.md): worktree lifecycle with CheckpointStore CAS records, LeaseStore fencing, and opt-in per-child spawn isolation.
 - [Coding review and diagnostics](coding-review-and-diagnostics.md): bounded patch-review manifests and normalized LSP diagnostics.
@@ -159,6 +170,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 ## Configuration/manifests
 
 - [Configuration and manifests](configuration-and-manifests.md): layered JSON config merge with data-only manifest validation.
+- [Effective run bundle snapshots](run-bundle.md): frozen JSON projection of the effective run bundle — prompt/skill/tool/guardrail digests, resolved limits, storage kinds, one pinning digest, zero network or store reads.
 - [Host compositions](host-compositions.md): personal and business worker host compositions, inspection reports, storage durability truth, sandbox isolation, and fail-closed readiness enforcement.
 - [Node filesystem config loader](node-filesystem-config.md): explicitly read caller-named JSON config files in Node.
 - [Resource loading](resource-loading.md): decode text/JSON/binary through caller-provided loaders; RAG bridge.
@@ -203,7 +215,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 - [Compaction conformance](compaction-conformance.md): assert redacted non-empty summaries and abort observation.
 - [Tool conformance](tool-conformance.md): assert blocked-reason matrix and success-path dispatch behavior.
 - [Extension conformance](extension-conformance.md): assert inert contributions and redacted setup errors.
-- `examples/`: compile-checked typed examples ([`conversation-durable-replay.ts`](../examples/conversation-durable-replay.ts), [`artifact-review-delivery.ts`](../examples/artifact-review-delivery.ts), [`enterprise-identity.ts`](../examples/enterprise-identity.ts), [`enterprise-policy-audit.ts`](../examples/enterprise-policy-audit.ts), [`enterprise-work-connectors.ts`](../examples/enterprise-work-connectors.ts), [`server-deployment-seams.ts`](../examples/server-deployment-seams.ts), [`neuralwatt-agent-run.ts`](../examples/neuralwatt-agent-run.ts), [`cache-aware-prompt-assembly.ts`](../examples/cache-aware-prompt-assembly.ts), [`ag-ui-server.ts`](../examples/ag-ui-server.ts), [`acp-coding-host.ts`](../examples/acp-coding-host.ts), and more), plus runnable mock demos.
+- `examples/`: compile-checked typed examples ([`conversation-durable-replay.ts`](../examples/conversation-durable-replay.ts), [`artifact-review-delivery.ts`](../examples/artifact-review-delivery.ts), [`enterprise-identity.ts`](../examples/enterprise-identity.ts), [`enterprise-policy-audit.ts`](../examples/enterprise-policy-audit.ts), [`enterprise-work-connectors.ts`](../examples/enterprise-work-connectors.ts), [`connected-slack-mcp.ts`](../examples/connected-slack-mcp.ts), [`server-deployment-seams.ts`](../examples/server-deployment-seams.ts), [`neuralwatt-agent-run.ts`](../examples/neuralwatt-agent-run.ts), [`cache-aware-prompt-assembly.ts`](../examples/cache-aware-prompt-assembly.ts), [`ag-ui-server.ts`](../examples/ag-ui-server.ts), [`acp-coding-host.ts`](../examples/acp-coding-host.ts), [`telegram-agent.ts`](../examples/telegram-agent.ts), [`signal-agent.ts`](../examples/signal-agent.ts), [`messaging-agent.ts`](../examples/messaging-agent.ts), and more), plus runnable mock demos.
 
 ## Third-party integrations
 
@@ -211,10 +223,15 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 - [Ponytail behavior integration](ponytail.md): upstream Ponytail skills with injector and peer resolution; opt-in.
 - [Graft context-graph integration](graft.md): graft CLI pull tools, retrieval-pack context provider, blast-radius middleware, and `/graft-init` / `/graft-build` / `/graft-build-deep` commands (host-configured `deepModel`).
 - [Impeccable behavior integration](impeccable.md): upstream Impeccable skill behind `load_skill`; host supplies the compiled `SKILL.md`.
+- [Messaging channels](messaging-channels.md): `@arnilo/prism-channels` transport-neutral runtime — deny-by-default sender authorization, owned session binding, serialized turns, current-run replies, one-use durable approvals, bounded attachment refs (images reach the model only when it declares image input), and opt-in host notices to one already-bound pair.
+- [Telegram channel](telegram-channel.md): official `@arnilo/prism-channels/telegram` long polling and mountable webhook ingress with durable offset/lease handling, approval callbacks, opt-in granted group/topic text, bounded media with optional voice transcription/synthesis, and opt-in streaming drafts.
+- [Signal channel (experimental)](signal-channel.md): `@arnilo/prism-channels/signal` pinned signal-cli v0.14.8 private-socket manual receive, explicit policy gate, UUID DM filtering and bounded ambiguous delivery.
+- [Messaging channel operations](messaging-channel-operations.md): durable journal, restart and reconciliation contract, lease fencing, retention and the operator runbook.
 
 ## Release and install
 
 - [Release and install](release-and-install.md): install rules, package graph, and deterministic resumable publication.
+- [Migrate 0.7 → 0.8](migrate-to-0.8.md): work-family import map, messaging channels, connected apps, durable runs, and 0.8.0 host migration steps.
 - [Migrate 0.6 → 0.7](migrate-to-0.7.md): ACP MCP allow-list URL normalization, model router facade fail-closed governance, and 0.7.0 host migration steps.
 - [Migrate 0.5 → 0.6](migrate-to-0.6.md): Node 22 floor, folded 0.5.7 host delta, third-party floors, and upgrade/rollback steps.
 - [Migrate 0.5](migrate-to-0.5.md): 0.4 → 0.5 migration guide with per-release sections and rollback.
@@ -226,18 +243,19 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 The generated inventory below derives from [`scripts/package-truth.json`](../scripts/package-truth.json) — regenerate with `node scripts/package-truth.mjs --emit-docs`, never hand-edit.
 
 <!-- generated:package-truth:inventory begin -->
-**10 publishable manifests** — root `@arnilo/prism` plus 9 workspace packages (3 `prism-*` family packages, 6 capability packages). Generated by `node scripts/package-truth.mjs --emit-docs` — do not hand-edit.
+**11 publishable manifests** — root `@arnilo/prism` plus 10 workspace packages (4 `prism-*` family packages, 6 capability packages). Generated by `node scripts/package-truth.mjs --emit-docs` — do not hand-edit.
 
 | package | version | notes |
 | --- | --- | --- |
-| `@arnilo/prism` | 0.7.0 | core — runtime, CLI/RPC, templates, docs |
-| `@arnilo/prism-coding-tools` | 0.7.0 | family — /agent, /security, /document-reader, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths |
-| `@arnilo/prism-core` | 0.7.0 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /work, /validation subpaths |
-| `@arnilo/prism-providers` | 0.7.0 | family — all provider adapters as `/<adapter>` subpaths |
-| `@arnilo/prism-acp-agent` | 0.7.0 | capability — ACP adapter |
-| `@arnilo/prism-ag-ui` | 0.7.0 | capability — AG-UI/A2A/A2UI adapter |
-| `@arnilo/prism-mcp` | 0.7.0 | capability — MCP client/server/OAuth interop |
-| `@arnilo/prism-memory` | 0.7.0 | capability — memory plus /rag, /compaction/*, /fabric, /graft, /wiki subpaths |
-| `@arnilo/prism-office` | 0.7.0 | capability — /documents, /sheets, /diagrams subpaths |
-| `@arnilo/prism-web-tools` | 0.7.0 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
+| `@arnilo/prism` | 0.8.0 | core — runtime, CLI/RPC, templates, docs |
+| `@arnilo/prism-channels` | 0.8.0 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
+| `@arnilo/prism-coding-tools` | 0.8.0 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths |
+| `@arnilo/prism-core` | 0.8.0 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths |
+| `@arnilo/prism-providers` | 0.8.0 | family — all provider adapters as `/<adapter>` subpaths |
+| `@arnilo/prism-acp-agent` | 0.8.0 | capability — ACP adapter |
+| `@arnilo/prism-ag-ui` | 0.8.0 | capability — AG-UI/A2A/A2UI adapter |
+| `@arnilo/prism-mcp` | 0.8.0 | capability — MCP client/server/OAuth interop |
+| `@arnilo/prism-memory` | 0.8.0 | capability — memory plus /rag, /compaction/*, /fabric, /graft, /wiki subpaths |
+| `@arnilo/prism-web-tools` | 0.8.0 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
+| `@arnilo/prism-work` | 0.8.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-reader, /sandbox, /skills, /tools subpaths |
 <!-- generated:package-truth:inventory end -->

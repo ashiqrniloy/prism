@@ -71,13 +71,13 @@ Set only the rows you want to run; everything else skips. Least-privilege scope 
 | `web-tools/obscura-live` | active | `PRISM_LIVE_OBSCURA` + `PRISM_OBSCURA_BIN` | — | Local obscura CLI binary; suite fails closed if flag set without binary. | Local process, no API spend. |
 | `memory/observational-live` | active | `PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS` + `OPENAI_API_KEY` | `PRISM_LIVE_OPENAI_MODEL` (not wired yet) | Reuses the OpenAI key as the compaction worker provider. | A few small summarization requests. |
 | `memory/compaction-llm-live` | active | `PRISM_LIVE_COMPACTION_TESTS` | — | Stub leg today: live summary-provider checks are wired by plans/064 Task 6 (provider key + model env TBD there). | n/a until wired. |
-| `office/libreoffice-golden` | active | `PRISM_TEST_LIBREOFFICE` | — | Local LibreOffice binary renders golden documents; no secret. | Local process, no API spend. |
-| `office/drawio-live` | active | any of: `PRISM_LIVE_DRAWIO_URL` / `PRISM_TEST_DRAWIO_URL` | — | Operator-hosted drawio export service URL (not a secret). | 1-2 export requests to your own service. |
+| `work/libreoffice-golden` | active | `PRISM_TEST_LIBREOFFICE` | — | Local LibreOffice binary renders golden documents; no secret. | Local process, no API spend. |
+| `work/drawio-live` | active | any of: `PRISM_LIVE_DRAWIO_URL` / `PRISM_TEST_DRAWIO_URL` | — | Operator-hosted drawio export service URL (not a secret). | 1-2 export requests to your own service. |
 | `core/postgres` | active | `PRISM_TEST_POSTGRES_URL` | — | Throwaway PostgreSQL database URL (sessions + enterprise + event-source + memory vector legs). | Local/container DB, no API spend. |
 | `core/nats` | active | `PRISM_TEST_NATS_URL` | — | NATS server URL with JetStream enabled. | Local/container server, no API spend. |
 | `coding-tools/docker-sandbox` | active | `PRISM_TEST_DOCKER_SANDBOX` + `PRISM_TEST_DOCKER_BIN` + `PRISM_TEST_DOCKER_IMAGE` + `PRISM_TEST_DOCKER_USER` | — | Local Docker daemon + pinned minimal sandbox image; no secret. | Local containers, no API spend. |
 | `coding-tools/e2b-sandbox-live` | active | `PRISM_TEST_E2B_API_KEY` | — | E2B API key; least privilege: one throwaway sandbox, no production templates. | 1 create + 2 exec + filesystem-only pause + connect/resume + kill. |
-| `coding-tools/mistral-ocr-live` | active | `PRISM_TEST_MISTRAL_API_KEY` | — | Mistral OCR API key; least privilege: one throwaway 2-page sample PDF, no Files API upload. | 1 OCR request against mistral-ocr-latest. |
+| `work/mistral-ocr-live` | active | `PRISM_TEST_MISTRAL_API_KEY` | — | Mistral OCR API key; least privilege: one throwaway 2-page sample PDF, no Files API upload. | 1 OCR request against mistral-ocr-latest. |
 | `core/keychain` | active | `PRISM_TEST_KEYCHAIN` | — | Real OS keychain; writes throwaway test entries only. | Local, no API spend. |
 | `acp/client-smoke` | active | `PRISM_TEST_ACP_CLIENT` | — | Real ACP SDK client over stdio in a subprocess; sandboxed, policy never disabled. | Local process, no API spend. |
 | `canaries/deployed` | active | `PRISM_LIVE_CANARIES`; optional: `PRISM_CANARY_TIMEOUT_MS` `PRISM_CANARY_REPORT` | — | Deployed prism provider/MCP/A2A endpoints; script itself validates all PRISM_CANARY_* URL/token vars and credential-free HTTPS. | 1-4 bounded requests (64 KiB JSON cap) against your deployments. |
@@ -104,6 +104,8 @@ Set only the rows you want to run; everything else skips. Least-privilege scope 
 | `coding-tools/lsp-forge` | active | — (hermetic leg) | — | LSP/language-intelligence + forge suites: real child-process spawns over the real LSP/forge wire protocols against fixture binaries. | Hermetic; no network. |
 | `ag-ui/conformance` | active | — (hermetic leg) | — | AG-UI + ACP conformance suites: real-event replay over the acp/a2a/ag-ui protocol surfaces (fixture agents, real event-source wire semantics). | Hermetic; no network. |
 | `prism-providers/conformance` | active | — (hermetic leg) | — | Plan-065 machine-checked thinking coverage: every first-party reasoning catalog model declares capabilities.thinkingLevels + a compat.thinkingFamily stamp and emits a legal effort field on the wire (14 catalogs walked hermetically). | free |
+| `channels/telegram-live` | active | `PRISM_LIVE_TELEGRAM` + `TELEGRAM_BOT_TOKEN`; optional: `PRISM_LIVE_TELEGRAM_CHAT_ID` | — | Operator-owned Telegram bot token. getMe + 1s poll; send only if PRISM_LIVE_TELEGRAM_CHAT_ID names a chat you operate. Never creates contacts. | 1 getMe + 1 getWebhookInfo (+ optional 1 sendMessage). |
+| `channels/signal-live` | active | `PRISM_LIVE_SIGNAL` + `PRISM_LIVE_SIGNAL_SOCKET` + `PRISM_LIVE_SIGNAL_ACCOUNT` + `PRISM_LIVE_SIGNAL_TERMS_VERSION`; optional: `PRISM_LIVE_SIGNAL_RECIPIENT_UUID` | — | Existing private signal-cli v0.14.8 Unix socket and account you already operate. Never registers or links. Send only to PRISM_LIVE_SIGNAL_RECIPIENT_UUID. | 1 subscribeReceive + health (+ optional 1 send). |
 <!-- generated:live-matrix:end -->
 
 ## Strict CI workflow

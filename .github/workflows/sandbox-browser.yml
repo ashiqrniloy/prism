@@ -38,7 +38,7 @@ jobs:
           npm run build -w @arnilo/prism-ag-ui
           npm run build -w @arnilo/prism-coding-tools
           npm run build -w @arnilo/prism-web-tools
-          npm run build -w @arnilo/prism-office
+          npm run build -w @arnilo/prism-work
       - name: network-free adversarial eval fixtures
         run: |
           npm test -w @arnilo/prism-coding-tools -- --test-name-pattern "adversarial"
@@ -117,7 +117,7 @@ jobs:
         timeout-minutes: 5
         env:
           PRISM_TEST_DRAWIO_URL: ${{ vars.PRISM_TEST_DRAWIO_URL || 'http://localhost:8080' }}
-          # The draw.io suite lives in @arnilo/prism-office (packages/office, diagrams)
+          # The draw.io suite lives in @arnilo/prism-work (packages/prism-work, diagrams)
           # and is owned by the live matrix, which resolves credentials and skips or
           # fails per its contract; the retired @arnilo/prism-diagrams package's
           # `test:drawio` script no longer exists. Plan 071 Task 4.

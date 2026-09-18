@@ -92,7 +92,6 @@ CreateGitHubForgeOptions	export type { CreateGitHubForgeOptions, ForgeCheck, For
 CreateGitOperationsOptions	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
 CreateGitRunnerOptions	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
 CreateLanguageIntelligenceOptions	export type { CreateLanguageIntelligenceOptions, LanguageDiagnostic, LanguageIntelligence, LanguageIntelligenceLimits, LanguageLocation, LanguageServerSpec, LanguageSymbol, LanguageTextEdit, LanguageWorkspaceEdit, } from "./language/index.js"
-CreateMistralOcrParserOptions	export type { CreateMistralOcrParserOptions, OcrPageSpan, OcrUsage } from "./mistral-ocr.js"
 CreateNativeSandboxOptions	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
 CreateProcessSessionsOptions	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
 DEFAULT_BINARY_SNIFF_BYTES	export declare const DEFAULT_BINARY_SNIFF_BYTES = 8192
@@ -126,9 +125,6 @@ DEFAULT_MAX_CODING_CHECKPOINT_BYTES	export declare const DEFAULT_MAX_CODING_CHEC
 DEFAULT_MAX_COMMANDS	export declare const DEFAULT_MAX_COMMANDS = 100
 DEFAULT_MAX_CONCURRENT_EXECS	export declare const DEFAULT_MAX_CONCURRENT_EXECS = 1
 DEFAULT_MAX_DIAGNOSTIC_MESSAGE_BYTES	export declare const DEFAULT_MAX_DIAGNOSTIC_MESSAGE_BYTES: number
-DEFAULT_MAX_DOCUMENT_BYTES	export declare const DEFAULT_MAX_DOCUMENT_BYTES: number
-DEFAULT_MAX_DOCUMENT_PAGES	export declare const DEFAULT_MAX_DOCUMENT_PAGES = 1000
-DEFAULT_MAX_DOCUMENT_TEXT_BYTES	export declare const DEFAULT_MAX_DOCUMENT_TEXT_BYTES: number
 DEFAULT_MAX_EDITS	export declare const DEFAULT_MAX_EDITS = 100
 DEFAULT_MAX_EDIT_FILE_BYTES	export declare const DEFAULT_MAX_EDIT_FILE_BYTES: number
 DEFAULT_MAX_EDIT_INPUT_BYTES	export declare const DEFAULT_MAX_EDIT_INPUT_BYTES: number
@@ -220,13 +216,6 @@ DEFAULT_MAX_WORKSPACE_REPOSITORIES	export declare const DEFAULT_MAX_WORKSPACE_RE
 DEFAULT_MAX_WORKSPACE_WORKTREES	export declare const DEFAULT_MAX_WORKSPACE_WORKTREES = 4
 DEFAULT_MAX_WRITE_BYTES	export declare const DEFAULT_MAX_WRITE_BYTES: number
 DEFAULT_MEMORY_BYTES	export declare const DEFAULT_MEMORY_BYTES: number
-DEFAULT_OCR_BASE_URL	export declare const DEFAULT_OCR_BASE_URL = "https://api.mistral.ai"
-DEFAULT_OCR_MAX_BYTES	export declare const DEFAULT_OCR_MAX_BYTES: number
-DEFAULT_OCR_MAX_CONCURRENT	export declare const DEFAULT_OCR_MAX_CONCURRENT = 1
-DEFAULT_OCR_MAX_PAGES	export declare const DEFAULT_OCR_MAX_PAGES = 32
-DEFAULT_OCR_MAX_RESPONSE_BYTES	export declare const DEFAULT_OCR_MAX_RESPONSE_BYTES: number
-DEFAULT_OCR_MODEL	export declare const DEFAULT_OCR_MODEL = "mistral-ocr-latest"
-DEFAULT_OCR_TIMEOUT_MS	export declare const DEFAULT_OCR_TIMEOUT_MS = 60000
 DEFAULT_OPENAPI_LIMITS	export declare const DEFAULT_OPENAPI_LIMITS: ResolvedOpenApiLimits
 DEFAULT_PONYTAIL_CONFIG	export declare const DEFAULT_PONYTAIL_CONFIG: PonytailConfig
 DEFAULT_REPO_EXCLUDE	export declare const DEFAULT_REPO_EXCLUDE: readonly string[]
@@ -256,7 +245,6 @@ DockerRunner	export type { DockerCliRequest, DockerCliResult, DockerRunner } fro
 DockerSandboxError	export declare class DockerSandboxError extends Error
 DockerSandboxLimitOptions	export type { DockerSandboxLimitOptions, ResolvedDockerSandboxLimits, } from "./sandbox-limits.js"
 DocumentReader	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
-DocumentReaderError	export declare class DocumentReaderError extends Error
 DocumentReaderResult	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
 E2BClient	export type { ConnectE2BSandboxOptions, CreateE2BSandboxOptions, E2BClient, E2BConnectOpts, E2BCreateOpts, E2BProcessRecoveryBackendOptions, E2BProcessRefData, E2BSandboxInfo, E2BSandboxInstance, E2BSandboxStatic, } from "./e2b-sandbox.js"
 E2BConnectOpts	export type { ConnectE2BSandboxOptions, CreateE2BSandboxOptions, E2BClient, E2BConnectOpts, E2BCreateOpts, E2BProcessRecoveryBackendOptions, E2BProcessRefData, E2BSandboxInfo, E2BSandboxInstance, E2BSandboxStatic, } from "./e2b-sandbox.js"
@@ -339,9 +327,6 @@ HARD_MAX_CODING_CHECKPOINT_BYTES	export declare const HARD_MAX_CODING_CHECKPOINT
 HARD_MAX_COMMANDS	export declare const HARD_MAX_COMMANDS = 256
 HARD_MAX_CONCURRENT_EXECS	export declare const HARD_MAX_CONCURRENT_EXECS = 8
 HARD_MAX_DIAGNOSTIC_MESSAGE_BYTES	export declare const HARD_MAX_DIAGNOSTIC_MESSAGE_BYTES: number
-HARD_MAX_DOCUMENT_BYTES	export declare const HARD_MAX_DOCUMENT_BYTES: number
-HARD_MAX_DOCUMENT_PAGES	export declare const HARD_MAX_DOCUMENT_PAGES = 10000
-HARD_MAX_DOCUMENT_TEXT_BYTES	export declare const HARD_MAX_DOCUMENT_TEXT_BYTES: number
 HARD_MAX_EDITS	export declare const HARD_MAX_EDITS = 1000
 HARD_MAX_EDIT_FILE_BYTES	export declare const HARD_MAX_EDIT_FILE_BYTES: number
 HARD_MAX_EDIT_INPUT_BYTES	export declare const HARD_MAX_EDIT_INPUT_BYTES: number
@@ -431,11 +416,6 @@ HARD_MAX_WORKSPACE_REPOSITORIES	export declare const HARD_MAX_WORKSPACE_REPOSITO
 HARD_MAX_WORKSPACE_WORKTREES	export declare const HARD_MAX_WORKSPACE_WORKTREES = 16
 HARD_MAX_WRITE_BYTES	export declare const HARD_MAX_WRITE_BYTES: number
 HARD_MEMORY_BYTES	export declare const HARD_MEMORY_BYTES: number
-HARD_OCR_MAX_BYTES	export declare const HARD_OCR_MAX_BYTES: number
-HARD_OCR_MAX_CONCURRENT	export declare const HARD_OCR_MAX_CONCURRENT = 4
-HARD_OCR_MAX_PAGES	export declare const HARD_OCR_MAX_PAGES = 10000
-HARD_OCR_MAX_RESPONSE_BYTES	export declare const HARD_OCR_MAX_RESPONSE_BYTES: number
-HARD_OCR_TIMEOUT_MS	export declare const HARD_OCR_TIMEOUT_MS = 180000
 HARD_OPENAPI_LIMITS	export declare const HARD_OPENAPI_LIMITS: ResolvedOpenApiLimits
 HARD_SHELL_TIMEOUT_SECONDS	export declare const HARD_SHELL_TIMEOUT_SECONDS = 3600
 HARD_STARTUP_TIMEOUT_MS	export declare const HARD_STARTUP_TIMEOUT_MS = 120000
@@ -493,8 +473,6 @@ NativeUnshareMode	export type { CreateNativeSandboxOptions, NativeSandboxLimitOp
 NormalizeDiagnosticsOptions	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
 NormalizedDiagnostic	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
 ObserveSupervisorLifecycleOptions	export type { ObserveSupervisorLifecycleOptions } from "./supervisor-lifecycle.js"
-OcrPageSpan	export type { CreateMistralOcrParserOptions, OcrPageSpan, OcrUsage } from "./mistral-ocr.js"
-OcrUsage	export type { CreateMistralOcrParserOptions, OcrPageSpan, OcrUsage } from "./mistral-ocr.js"
 OpenApiCredentialInput	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
 OpenApiCredentialResolver	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
 OpenApiLimits	export type { OpenApiLimits, ResolvedOpenApiLimits } from "./limits.js"
@@ -719,8 +697,6 @@ createDevRouter	export declare function createDevRouter(ctx: DevRouteContext): P
 createDirectoryArtifactWriter	export declare function createDirectoryArtifactWriter(rootDir: string): ArtifactWriter
 createDockerProcessRecoveryBackend	export declare function createDockerProcessRecoveryBackend(sandbox: DisposableSandbox, options?: DockerProcessRecoveryBackendOptions): ProcessRecoveryBackend
 createDockerSandbox	export declare function createDockerSandbox(options: CreateDockerSandboxOptions): Promise<DisposableSandbox>
-createDocumentReader	export declare function createDocumentReader(options?: CreateDocumentReaderOptions): Promise<DocumentReader>
-createDocxParser	export declare function createDocxParser(): Promise<DocumentParser>
 createE2BProcessRecoveryBackend	export declare function createE2BProcessRecoveryBackend(sandbox: DisposableSandbox, options?: E2BProcessRecoveryBackendOptions): ProcessRecoveryBackend
 createE2BSandbox	export declare function createE2BSandbox(options: CreateE2BSandboxOptions): Promise<DisposableSandbox>
 createEditTool	export declare function createEditTool(cwd: string, options?: EditToolOptions): ToolDefinition
@@ -744,11 +720,9 @@ createIndexedRepositoryOperations	export declare function createIndexedRepositor
 createLanguageIntelligence	export declare function createLanguageIntelligence(options: CreateLanguageIntelligenceOptions): LanguageIntelligence
 createLocalBashOperations	export declare function createLocalBashOperations(options?:
 createLocalRepositoryOperations	export declare function createLocalRepositoryOperations(limits?: RepositoryLimitOptions, walk?: RepositoryWalk): RepositoryOperations
-createMistralOcrParser	export declare function createMistralOcrParser(options: CreateMistralOcrParserOptions): DocumentParser
 createMoveTool	export declare function createMoveTool(cwd: string, options?: MoveToolOptions): ToolDefinition
 createNativeSandbox	export declare function createNativeSandbox(options: CreateNativeSandboxOptions): Promise<DisposableSandbox>
 createOpenApiTools	export declare function createOpenApiTools(options: OpenApiToolsOptions): readonly ToolDefinition[]
-createPdfParser	export declare function createPdfParser(): Promise<DocumentParser>
 createPonytailCommands	export declare function createPonytailCommands(ctx: PonytailCommandContext): readonly CommandDefinition[]
 createPonytailExtension	export declare function createPonytailExtension(options: PonytailExtensionOptions): Extension
 createPrismDevInspector	export declare function createPrismDevInspector(options: CreatePrismDevInspectorOptions): PrismDevInspector

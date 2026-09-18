@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "release": "0.8.0",
+  "plan": "plans/085-Honesty-Gates-Runtime-Split-And-0-8-0-Cut.md",
+  "releasePlans": [
+    "plans/079-Prism-Messaging-Channels-Telegram-Signal.md",
+    "plans/080-Messaging-Channel-Followons-And-0-8-0-Cut.md",
+    "plans/081-Connected-Apps-Mcp-Host-And-Work-Http.md",
+    "plans/082-Package-Evidence-Generation-And-Connected-App-Follow-Up-Review.md",
+    "plans/083-Prism-Work-Package-Sandbox-And-Skills.md",
+    "plans/084-Host-Long-Run-Durability-Steering-And-Honesty-Surfaces.md",
+    "plans/085-Honesty-Gates-Runtime-Split-And-0-8-0-Cut.md"
+  ],
+  "cutTasks": {
+    "plan": "plans/085-Honesty-Gates-Runtime-Split-And-0-8-0-Cut.md",
+    "tasks": ["Task 7", "Task 8"],
+    "state": "executed"
+  },
+  "recorded": "2026-09-18",
+  "packages": 11,
+  "predecessor": "0.7.0",
+  "inThisCut": [
+    "079-channels",
+    "080-followons",
+    "081-connected-apps",
+    "082-package-truth-evidence",
+    "083-prism-work",
+    "084-durable-runs",
+    "085-honesty-gates"
+  ],
+  "breaking": {
+    "importMap": "@arnilo/prism-office → @arnilo/prism-work",
+    "source": "083"
+  },
+  "compatBaseline": {
+    "note": "Task 7 regenerated 2026-09-18 with runGates({ version: 0.8.0, updateBaseline: true, skipTarball: true }) because release.mjs gate also requires this-tree Postgres evidence (Task 8). Inherited 083 office→work removals were already in the 084 baseline regen (zero removals vs pre-cut baselines). 085 Tasks 1–6 add no public removals. 085 additions (dist-wide declaration scan, not package.json exports): @arnilo/prism-channels +14 (createRuntimeAdmit/Core/Reconcile/Turn, retryableAdmission, telegram command/limit constants); @arnilo/prism-work +14 (tool-helpers split: pushM365Tools/pushGwsTools/pushTool and local helpers). @arnilo/prism version constant signature 0.7.0 → 0.8.0.",
+    "updated": true,
+    "added": {
+      "@arnilo/prism-channels": 14,
+      "@arnilo/prism-work": 14
+    },
+    "removed": {},
+    "changed": {
+      "@arnilo/prism": ["version"]
+    }
+  },
+  "verification": {
+    "owner": "085 Task 8",
+    "gitHead": "a7915d6c2c79f2fbfdc61f290301b918b54e1025",
+    "npmTestStages": "6/6",
+    "coverage": {
+      "core": { "lines": 92.5, "branches": 85.85, "functions": 93.07 },
+      "workLines": 83.27,
+      "officeKeyAbsent": true
+    },
+    "postgresEvidence": {
+      "gitHeadMatches": true,
+      "tests": 544,
+      "pass": 540,
+      "fail": 0
+    },
+    "releaseEvidence": {
+      "surfaces": 43,
+      "pass": 12,
+      "protected": 31,
+      "blocked": false,
+      "postgresState": "pass",
+      "postgresCount": 544
+    },
+    "threatSuites": "83/83",
+    "audit": 0,
+    "secretScan": { "files": 6895, "findings": 0 },
+    "sbom": { "packages": 173, "verify": true },
+    "releaseCheck": "11/11 available",
+    "publishDryRunLockstep": 11,
+    "registryWrite": false
+  }
+}

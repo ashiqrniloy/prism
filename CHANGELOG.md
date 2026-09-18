@@ -1,3 +1,38 @@
+## [Unreleased]
+
+## [0.8.0] - 2026-09-18 (messaging channels, connected apps, work family, durable runs, honesty gates)
+
+> **Eleven publishable packages.** `@arnilo/prism-channels` is new; `@arnilo/prism-work` replaces `@arnilo/prism-office`. Predecessor published line is **0.7.0**. Registry/tag writes stay operator-authorized.
+
+### Added
+- **Messaging channels.** `@arnilo/prism-channels` ships the transport-neutral runtime (deny-by-default sender authorization, owned session binding, serialized turns, current-run replies, one-use durable approvals, bounded attachment refs), official Telegram (private DMs, opt-in granted groups/topics, private-chat drafts, bounded media, optional voice transcription/synthesis, opt-in notices to one already-bound pair), and experimental pinned signal-cli Signal. See [docs/messaging-channels.md](docs/messaging-channels.md), [docs/telegram-channel.md](docs/telegram-channel.md), [docs/signal-channel.md](docs/signal-channel.md), [docs/messaging-channel-operations.md](docs/messaging-channel-operations.md).
+- **Connected apps and work HTTP.** Identity-bound MCP connected-app sessions admit host-selected transports and register prefixed tools. Google Workspace and Microsoft 365 HTTP adapters live under `@arnilo/prism-work/connectors`. Slack MCP wrap and Open Connector sidecar stay examples. See [docs/connected-apps.md](docs/connected-apps.md), [docs/work-connectors.md](docs/work-connectors.md).
+- **Durable runs, turn-boundary stops, and run-bundle snapshots.** `AgentRunStateOptions.checkpointPolicy: "every-turn"` checkpoints a run at the provider-turn boundary so a crashed worker resumes with the host-only `decision: "continue"` action (never reachable from AG-UI or the server boundary, and rejected while any approval or ready tool call is pending). `RunOptions.turnPolicy` (`TurnPolicyOptions`) stops a run synchronously at a turn boundary and reports `stopReason: "host_policy"` with a redacted, bounded `stopDetail` on the result, the ledger row, the `agent_finished` event, and the execution timeline; a host-policy stop stays resumable. `snapshotRunBundle` returns a `RunBundleSnapshot` — a frozen, redacted digest projection of the effective run bundle with zero store or network reads. `createClaimGroundingGuardrail` (stage `"output"`) blocks or flags numeric claims that no tool result or host evidence supports. `ErrorInfo.failureClass` (`ProviderFailureClass`) types provider failures as `quota` / `rate_limited` / `auth` / `transient` / `permanent` / `unknown`; `ModelCapabilities.toolCallStrictness` adds advisory tool-call reliability. See [docs/durable-runs.md](docs/durable-runs.md), [docs/run-bundle.md](docs/run-bundle.md), [docs/guardrails.md](docs/guardrails.md).
+- **Work sandbox and vendored skills.** `@arnilo/prism-work/sandbox` plus `createWorkComposition` run office/exec in an injected Docker sandbox; connectors stay on the host. The package ships `docx`, `xlsx`, `powerpoint`, `pdf` skills.
+
+### Changed
+- **Lockstep `0.7.0` → `0.8.0`.** All eleven publishable manifests move together with `^0.8.0` internal ranges; the lockfile, the `src/index.ts` version constant, the docs index banner, the release-workflow tag lists, and the generated package-truth artifact agree (enforced by `scripts/version-literal-gate.test.mjs`).
+- **Work family rename.** `@arnilo/prism-office` is replaced by `@arnilo/prism-work` (connectors, documents, sheets, diagrams, document-reader, sandbox, skills, tools). No pre-1.0 shim. See [docs/migrate-to-0.8.md](docs/migrate-to-0.8.md).
+- **AG-UI input authority is opt-in server-side.** `CreateAgUiHandlerOptions.inputPolicy.clientState: "ignore"` validates then discards client-supplied AG-UI state and tools before projection, and stops advertising client-provided tools; the default `"honor"` path is byte-identical to 0.7.0.
+- **Observational-memory workers are tool-only.** Text/thinking/done-only turns are successful no-ops. Limit and unknown-tool failures throw `MemoryError` / `MemoryLimitError` rather than matching an English message prefix.
+- **Channel lease release is fail-closed.** In-memory `route.lease` clears only after the store acknowledges; a failed release retries on idle/`stop`. TTL remains the cross-process backstop.
+- **This-tree Postgres evidence.** `release:gate` reports `test:postgres` as pass only when `scripts/postgres-evidence.json` matches current `git rev-parse HEAD`. A stale phase baseline is blocked.
+- **Compat baselines regenerated** at 0.8.0. Inherited 083 `@arnilo/prism-office` → `@arnilo/prism-work` removals (and `prism-core` / `prism-coding-tools` moves) are listed separately from 085 additions. This cut's own Tasks 1–6 add no public removals.
+- **Migration guide for 0.7.0 hosts**: [docs/migrate-to-0.8.md](docs/migrate-to-0.8.md), indexed from [docs/migration.md](docs/migration.md) and [docs/index.md](docs/index.md).
+
+### Fixed
+- **Portable work-idempotency error codes survived the work-family move.** The enterprise PostgreSQL `IdempotencyStore` adapter keeps `ERR_PRISM_WORK_IDEMPOTENCY` / `ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT`; only the error class changed (`EnterprisePostgresError`).
+- **Stale ownership assertions in the protected PostgreSQL leg:** a foreign checkpoint scope is a miss plus a generic CAS conflict, and a foreign agent-run status read is indistinguishable from a missing run (`ERR_PRISM_AGENT_RUN_STATE`).
+- **Wiki isolation nested-runner flake.** The wiki scratch gate spawns `node --test --test-isolation=none` (still strips `NODE_TEST_CONTEXT` / `NODE_TEST_WORKER_ID`) so worker IPC deserialization cannot fail the gate under `npm test` load.
+- **Coverage artifact names.** Package keys in `scripts/coverage-summary.json` must equal live workspace manifests (`@arnilo/prism-work`, not `@arnilo/prism-office`).
+- **Alibaba video `fetchUrl`.** Declared `fetchUrl` now downloads generated video bytes; unused OpenAI speech `_bearerHeaders` deleted.
+
+### Security
+- **Numeric claims must be grounded or they fail closed.** The claim-grounding guardrail blocks by default, bounds every reported span, caps evidence collection (4,096 figures, 16 levels, 128 KiB), and treats a missing evidence set as ungrounded rather than passing silently.
+- **Crash recovery cannot bypass approval gates.** `"continue"` resumes only a running checkpoint with no pending decision or ready call, and keeps the recorded fingerprint, revision, ownership/fencing, and CAS-version gates.
+- **Failed channel lease release is not success.** This process does not treat the binding as free until the store acknowledges; TTL is the other-process backstop.
+- **Postgres release pass cannot be inherited.** Missing or stale this-tree evidence is blocked, never a pass from a previous commit's counts.
+
 ## [0.7.0] - 2026-09-15 (extended line: plans 072, 073, 074, 075, 077, 078)
 
 > **Channels are not in this cut.** Plan 079 (Telegram/Signal adapters) was reassigned to **0.8.0** so the 0.7.0 cut stops waiting on it; nothing in this release mentions or ships a channel adapter.

@@ -22,8 +22,8 @@ One row per declaration. `Unlocks` names the subpath whose import reaches the pe
 | `zod` | `^3.25.0 \|\| ^4.0.0` | no | `@arnilo/prism-ag-ui` | `./acp` | `npm i zod` | no |
 | `@nanonets/graft` | `^0.16.0 \|\| ^0.18.0` | yes | `@arnilo/prism-memory` | `./graft` | `npm i @nanonets/graft` | no |
 | `@dietrichgebert/ponytail` | `^4.9.0` | yes | `@arnilo/prism-coding-tools` | `./ponytail` | `npm i @dietrichgebert/ponytail` | no |
-| `mammoth` | `^1.8.0` | yes | `@arnilo/prism-coding-tools` | `./document-reader` | `npm i mammoth` | no |
-| `pdf-parse` | `^2.4.5` | yes | `@arnilo/prism-coding-tools` | `./document-reader` | `npm i pdf-parse` | no |
+| `mammoth` | `^1.8.0` | yes | `@arnilo/prism-work` | `./document-reader` | `npm i mammoth` | no |
+| `pdf-parse` | `^2.4.5` | yes | `@arnilo/prism-work` | `./document-reader` | `npm i pdf-parse` | no |
 | `e2b` | `2.49.1` | yes | `@arnilo/prism-coding-tools` | `./security` | `npm i e2b@2.49.1` | yes |
 | `better-sqlite3` | `^13.0.3` | yes | `@arnilo/prism-core` | `./sessions/sqlite`, `./governance/prompts` | `npm i better-sqlite3` | no |
 | `pg` | `^8.23.0` | yes | `@arnilo/prism-core` | `./sessions/postgres`, `./enterprise/postgres`, `./governance/prompts` | `npm i pg` | yes |
@@ -51,7 +51,7 @@ Two peers are pinned to an exact version instead of a range, because the pin is 
 - **No secrets are read by the peers.** Prism resolves credentials through host providers and redacts them at the boundary; peers only ever receive a resolved connection string or model object. See [Credentials and redaction](credentials-and-redaction.md) and [Host security guide](host-security.md).
 - **Nothing is installed implicitly.** Optional peers are never auto-installed by npm; a missing one fails closed at the call site with a typed error naming the peer and the subpath. Required peers (today only `zod`) are installed by npm with the package.
 
-Test-only dependencies are *not* peers. `playwright-core` appears in `@arnilo/prism-office` as a devDependency only, because the office diagrams embed takes a host-supplied iframe and the sole consumer is the gated live draw.io conformance test.
+Test-only dependencies are *not* peers. `playwright-core` appears in `@arnilo/prism-work` as a devDependency only, because the office diagrams embed takes a host-supplied iframe and the sole consumer is the gated live draw.io conformance test.
 
 ## Implementation example
 
@@ -66,7 +66,7 @@ npm i @arnilo/prism-core pg
 npm i @arnilo/prism-core @nats-io/transport-node @nats-io/jetstream
 
 # Document reader: pick the parser you need (both are independent)
-npm i @arnilo/prism-coding-tools pdf-parse mammoth
+npm i @arnilo/prism-work pdf-parse mammoth
 ```
 
 ```ts
@@ -80,7 +80,7 @@ const tools = await createBrowserTools({ browser });
 ## Extension and configuration notes
 
 - A peer is an *implementation the host owns*. When a peer's default wiring is not what you want, pass your own implementation instead of installing theirs: the document reader accepts host parsers (`createReadTool({ documentReader })`), the memory `/graft` resolver accepts an explicit package root, and the browser surfaces accept a host `Browser`.
-- Subpaths that need a peer isolate that import, so importing another subpath of the same package never evaluates it. The office family is the extreme case: zero peers, because it takes structural inputs.
+- Subpaths that need a peer isolate that import, so importing another subpath of the same package never evaluates it. The office family is the extreme case: zero peers, because it takes structural inputs. `@arnilo/prism-channels` also has no third-party peers: Telegram uses native `fetch`, and signal-cli is a host-operated binary rather than an npm peer.
 - Adding a peer to a Prism package is a release-gated change: the declaration must be optional unless a hard dependency's own peer forces it (the `zod` case), and exact pins must come with a version-gate or compatibility rationale.
 
 ## Security and performance notes
@@ -93,4 +93,4 @@ const tools = await createBrowserTools({ browser });
 
 - [Release and install](release-and-install.md): install profiles that pair with each peer.
 - [Configuration options index](options-index.md): the option surfaces each peer unlocks.
-- Package-level detail: [Coding tools](coding-tools.md), [Core runtime](core.md), [Session stores](session-stores.md), [Browser automation](browser-automation.md), [Document reader](document-reader.md), [Graft](graft.md), [Ponytail](ponytail.md), [Provider packages](provider-packages.md).
+- Package-level detail: [Coding tools](coding-tools.md), [Core runtime](core.md), [Session stores](session-stores.md), [Browser automation](browser-automation.md), [Document reader](document-reader.md), [Graft](graft.md), [Ponytail](ponytail.md), [Provider packages](provider-packages.md), [Messaging channels](messaging-channels.md).

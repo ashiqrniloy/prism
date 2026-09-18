@@ -18,7 +18,14 @@ describe("CheckpointStore", () => {
     await store.saveCheckpoint({ namespace: "workflow", key: "c", version: 1, value: null, category: "done", tenantId: "t1" });
 
     assert.equal((await store.loadCheckpoint({ namespace: "workflow", key: "a", tenantId: "t1" }))?.version, 1);
-    await assert.rejects(store.loadCheckpoint({ namespace: "workflow", key: "a", tenantId: "other" }), CheckpointConflictError);
+    // Foreign scope is a miss, not an ownership-shaped existence oracle (plan 080 Task 3).
+    assert.equal(await store.loadCheckpoint({ namespace: "workflow", key: "a", tenantId: "other" }), null);
+    assert.equal(await store.deleteCheckpoint({ namespace: "workflow", key: "a", tenantId: "other" }), false);
+    await assert.rejects(
+      store.saveCheckpoint({ namespace: "workflow", key: "a", version: 9, value: null, tenantId: "other" }),
+      CheckpointConflictError,
+    );
+    assert.equal((await store.loadCheckpoint({ namespace: "workflow", key: "a", tenantId: "t1" }))?.version, 1);
     await assert.rejects(
       store.saveCheckpoint({ namespace: "workflow", key: "a", version: 1, value: null, tenantId: "t1" }),
       CheckpointConflictError,

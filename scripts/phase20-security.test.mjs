@@ -38,7 +38,7 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "@arnilo/prism";
-import { createCliRunner } from "@arnilo/prism-core/integrations/work";
+import { createCliRunner } from "@arnilo/prism-work/connectors";
 import {
   createCodingApprovalPolicy,
   createSandboxCodingComposition,

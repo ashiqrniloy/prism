@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { CheckpointConflictError, createMemoryCheckpointStore } from "@arnilo/prism";
+import { createMemoryCheckpointStore } from "@arnilo/prism";
 import { createReadPathSet, createReadPathSetPersistence, READ_PATH_SET_NAMESPACE } from "../read-path-set.js";
 
 test("read-path persistence: save then restore into a fresh set (plan 015 Task 4)", async () => {
@@ -40,7 +40,11 @@ test("read-path persistence: restore under a different ownership scope fails clo
     key: "session-1",
     ownership: { tenantId: "tenant-b", userId: "user-1" },
   });
-  await assert.rejects(other.restore(createReadPathSet()), CheckpointConflictError, "cross-tenant restore must not leak state");
+  // Plan 080 Task 3: the foreign scope reads as absent, so nothing is restored — no throw,
+  // no leaked state, and the owner's record stays intact.
+  const target = createReadPathSet();
+  assert.equal(await other.restore(target), 0, "cross-tenant restore restores nothing");
+  assert.deepEqual(target.list(), []);
 });
 
 test("read-path persistence: bounds overflow fails closed with no partial write (plan 015 Task 4)", async () => {

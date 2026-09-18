@@ -58,6 +58,41 @@ export interface McpStreamableHttpTransport {
 
 export type McpTransportConfig = McpStdioTransport | McpStreamableHttpTransport;
 
+/** A host-configured MCP server binding. `identity`, when supplied, must match the session identity. */
+export interface ConnectedAppBinding {
+  readonly appId: string;
+  readonly serverId: string;
+  readonly transport: McpTransportConfig;
+  /** Exact remote MCP tool names to expose; omission exposes every bridged tool. */
+  readonly allowTools?: readonly string[];
+  /** Per-binding classification, which overrides the session policy when set. */
+  readonly effect?: McpToolEffectPolicy;
+  readonly identity?: AgentIdentity;
+}
+
+/** Required host admission gate for each connected-app transport. */
+export type ConnectedAppSelect = (binding: ConnectedAppBinding & { readonly identity: AgentIdentity }) => boolean | Promise<boolean>;
+
+export interface CreateConnectedAppSessionOptions {
+  readonly identity: AgentIdentity;
+  readonly select: ConnectedAppSelect;
+  /** Shared remote-tool policy; omission preserves the bridge mutation default. */
+  readonly effect?: McpToolEffectPolicy;
+  /** Test seam; production callers use `connectMcpTools`. */
+  readonly connect?: (options: ConnectMcpToolsOptions) => Promise<McpToolBridge>;
+  /** Defaults to 8; values above 32 are rejected. */
+  readonly maxApps?: number;
+}
+
+export interface ConnectedAppSession {
+  bind(binding: ConnectedAppBinding): Promise<void>;
+  unbind(appId: string): Promise<void>;
+  list(): readonly { readonly appId: string; readonly serverId: string; readonly tools: readonly string[] }[];
+  tools(): readonly ToolDefinition[];
+  refresh(): Promise<void>;
+  close(): Promise<void>;
+}
+
 export interface PrismMcpAuthorizationInput {
   readonly kind: "tool" | "command" | "resource" | "prompt";
   readonly name: string;

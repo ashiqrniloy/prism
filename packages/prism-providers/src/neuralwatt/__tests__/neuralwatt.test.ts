@@ -191,6 +191,7 @@ describe("@arnilo/prism-providers/neuralwatt (model registry)", () => {
       assert.ok(caps!.input?.includes("text"), `${m.model} must accept text input`);
       assert.equal(caps!.streaming, true);
       assert.equal(caps!.tools, true);
+      assert.equal(caps?.toolCallStrictness, "strict", `${m.model} must retain tested tool-call metadata`);
       const limits = m.limits;
       assert.ok(limits, `${m.model} must declare limits`);
       assert.ok(typeof limits!.contextWindow === "number");

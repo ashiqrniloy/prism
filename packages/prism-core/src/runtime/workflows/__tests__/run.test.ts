@@ -896,7 +896,7 @@ describe("runWorkflow", () => {
             validateResume: () => undefined,
           },
         ),
-      /ownership|tenant/i,
+      /ownership|tenant|No checkpoint for workflow/i,
     );
     await assert.rejects(
       () =>
@@ -1016,7 +1016,7 @@ describe("runWorkflow", () => {
             ownership: { tenantId: "t2" },
           },
         ),
-      /ownership|tenant/i,
+      /ownership|tenant|No checkpoint for workflow/i,
     );
   });
 });

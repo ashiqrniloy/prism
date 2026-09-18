@@ -92,6 +92,7 @@ const apiPages = [
   "docs/tool-execution-primitives.md",
   "docs/coding-agent-tools.md",
   "docs/coding-security.md",
+  "docs/work-sandbox.md",
   "docs/browser-automation.md",
   "docs/device-adapters.md",
   "docs/realtime-voice.md",
@@ -114,6 +115,10 @@ const apiPages = [
   "docs/documents.md",
   "docs/sheets.md",
   "docs/diagrams.md",
+  "docs/messaging-channels.md",
+  "docs/telegram-channel.md",
+  "docs/signal-channel.md",
+  "docs/messaging-channel-operations.md",
 ];
 
 const providerPackagePages: ReadonlyArray<[string, string]> = [
@@ -1001,7 +1006,10 @@ describe("docs", () => {
     assert.ok(readiness.includes("## Protected restart-recovery evidence (plan 012 Task 4)"), "readiness missing restart section");
     for (const token of ["scripts/phase12-restart-recovery.test.mjs", "reconnectP95Ms", "BLOCKED GATE", "phase12-restart-recovery.json"])
       assert.ok(readiness.includes(token), `readiness missing ${token}`);
-    assert.ok(pkg.scripts["test:postgres"].includes("scripts/phase12-restart-recovery.test.mjs"), "test:postgres missing restart suite");
+    assert.ok(
+      pkg.scripts["test:postgres:run"].includes("scripts/phase12-restart-recovery.test.mjs"),
+      "test:postgres runner missing restart suite",
+    );
     assert.ok(release.includes("Protected restart-recovery leg (plan 012 Task 4)"), "release-and-install missing restart leg");
     assert.ok(existsSync("scripts/fixtures/phase12-restart-worker.mjs"), "missing restart worker fixture");
     assert.ok(existsSync("scripts/phase12-restart-recovery.json"), "missing restart evidence record");
@@ -1239,7 +1247,7 @@ describe("docs", () => {
       "consumer providers must stay separate from enterprise cloud adapters",
     );
     assert.ok(
-      existsSync("packages/work-tools") || existsSync("packages/prism-core/src/integrations/work"),
+      existsSync("packages/work-tools") || existsSync("packages/prism-work/src/connectors"),
       "work-tools package must exist after Task 7",
     );
     // plan 054 Task 6: enterprise cloud adapters ship as family subpaths.
@@ -1254,16 +1262,15 @@ describe("docs", () => {
     );
     assert.ok(index.includes("(work-tools.md)") && index.includes("(work-connectors.md)"), "docs/index.md missing work-tools navigation");
     assert.ok(
-      existsSync("packages/work-tools/src/microsoft365.ts") || existsSync("packages/prism-core/src/integrations/work/microsoft365.ts"),
+      existsSync("packages/work-tools/src/microsoft365.ts") || existsSync("packages/prism-work/src/connectors/microsoft365.ts"),
       "microsoft365 adapter source missing",
     );
     assert.ok(
-      existsSync("packages/work-tools/src/google-workspace.ts") ||
-        existsSync("packages/prism-core/src/integrations/work/google-workspace.ts"),
+      existsSync("packages/work-tools/src/google-workspace.ts") || existsSync("packages/prism-work/src/connectors/google-workspace.ts"),
       "google-workspace adapter must exist after Task 8",
     );
     assert.ok(
-      existsSync("packages/work-tools/src/normalize.ts") || existsSync("packages/prism-core/src/integrations/work/normalize.ts"),
+      existsSync("packages/work-tools/src/normalize.ts") || existsSync("packages/prism-work/src/connectors/normalize.ts"),
       "shared work-tools normalizers missing",
     );
   });
@@ -1334,7 +1341,7 @@ describe("docs", () => {
       existsSync("packages/browser/src/policy.ts") ? "packages/browser/src/policy.ts" : "packages/web-tools/src/browser/policy.ts",
       existsSync("packages/work-tools/src/idempotency.ts")
         ? "packages/work-tools/src/idempotency.ts"
-        : "packages/prism-core/src/integrations/work/idempotency.ts",
+        : "packages/prism-work/src/connectors/idempotency.ts",
       existsSync("packages/credentials-node/src/resolver.ts")
         ? "packages/credentials-node/src/resolver.ts"
         : "packages/prism-core/src/credentials/node/resolver.ts",
@@ -1597,9 +1604,7 @@ describe("docs", () => {
       existsSync("packages/credentials-node/src/index.ts")
         ? "packages/credentials-node/src/index.ts"
         : "packages/prism-core/src/credentials/node/index.ts",
-      existsSync("packages/work-tools/src/index.ts")
-        ? "packages/work-tools/src/index.ts"
-        : "packages/prism-core/src/integrations/work/index.ts",
+      existsSync("packages/work-tools/src/index.ts") ? "packages/work-tools/src/index.ts" : "packages/prism-work/src/connectors/index.ts",
     ];
     for (const barrel of barrels) {
       const text = readFileSync(barrel, "utf8").toLowerCase();
@@ -1859,8 +1864,8 @@ describe("docs", () => {
     const release = readFileSync("docs/release-and-install.md", "utf8");
     assert.equal(
       dirs.length,
-      existsSync("packages/office/src")
-        ? 10
+      existsSync("packages/prism-work/src")
+        ? 11
         : existsSync("packages/prism-providers/src")
           ? 17
           : existsSync("packages/prism-coding-tools")
@@ -1875,8 +1880,12 @@ describe("docs", () => {
       const readme = readFileSync(join(dir, "README.md"), "utf8");
       const changelog = readFileSync(join(dir, "CHANGELOG.md"), "utf8");
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
-      assert.ok(changelog.includes("## [0.1.0] - 2026-08-09"), `${dir}/CHANGELOG.md missing finalized 0.1.0 section`);
-      assert.ok(changelog.includes("## [0.0.28] - 2026-08-08"), `${dir}/CHANGELOG.md missing prior 0.0.28 section`);
+      if (manifest.name === "@arnilo/prism-channels") {
+        assert.ok(changelog.includes("## [Unreleased] (plan 079 Task 4)"), `${dir}/CHANGELOG.md missing extraction entry`);
+      } else {
+        assert.ok(changelog.includes("## [0.1.0] - 2026-08-09"), `${dir}/CHANGELOG.md missing finalized 0.1.0 section`);
+        assert.ok(changelog.includes("## [0.0.28] - 2026-08-08"), `${dir}/CHANGELOG.md missing prior 0.0.28 section`);
+      }
       assert.ok(manifest.files?.includes("CHANGELOG.md"), `${manifest.name} does not ship CHANGELOG.md`);
       assert.ok(release.includes(manifest.name), `release-and-install.md missing ${manifest.name}`);
     }
@@ -2380,8 +2389,13 @@ describe("docs", () => {
     );
     assert.equal(
       packageJson.scripts["test:postgres"],
-      "node scripts/require-postgres-url.mjs && npm run test:postgres --workspace @arnilo/prism-core --if-present && npm run test:postgres --workspace @arnilo/prism-memory && node --test scripts/phase7-conformance.test.mjs scripts/phase12-restart-recovery.test.mjs scripts/phase22-conformance.test.mjs",
-      "root test:postgres should require an explicit PostgreSQL URL and cover adapters plus Phase 7/12/22 process conformance, restart recovery, and state concurrency",
+      "node scripts/postgres-evidence.mjs",
+      "root test:postgres must write this-tree evidence",
+    );
+    assert.equal(
+      packageJson.scripts["test:postgres:run"],
+      "node scripts/require-postgres-url.mjs && npm run test:postgres --workspace @arnilo/prism-core --if-present && npm run test:postgres --workspace @arnilo/prism-memory && npm run test:postgres --workspace @arnilo/prism-channels && node --test scripts/phase7-conformance.test.mjs scripts/phase12-restart-recovery.test.mjs scripts/phase22-conformance.test.mjs",
+      "test:postgres runner should require an explicit PostgreSQL URL and cover adapters plus Phase 7/12/22 process conformance, restart recovery, and state concurrency",
     );
 
     for (const phrase of [
@@ -3033,6 +3047,37 @@ describe("docs", () => {
     }
   });
 
+  it("081 open connector sidecar stays out of core and documents admission", () => {
+    const recipe = readFileSync("examples/open-connector-sidecar/README.md", "utf8");
+    const compose = readFileSync("examples/open-connector-sidecar/docker-compose.yml", "utf8");
+
+    // Operator recipe: immutable release tag, loopback-only, secrets from the operator.
+    assert.ok(compose.includes("${OPEN_CONNECTOR_VERSION:"), "compose must require a pinned release tag");
+    assert.ok(!/open-connector:(?:latest|tip)/.test(compose), "compose must not track latest/tip");
+    assert.ok(compose.includes("127.0.0.1:3000:3000"), "compose must publish the runtime on loopback only");
+    assert.ok(compose.includes("OOMOL_CONNECT_ENCRYPTION_KEY"), "compose must require the encryption key from the operator");
+
+    // The recipe documents the seams a host must own.
+    for (const phrase of [
+      "Pin an immutable release tag",
+      "Idempotency-Key",
+      "/v1/actions/:actionId",
+      "allowLoopbackHttp",
+      "allowTools",
+      "pinnedFetch",
+      "skipDnsValidation",
+      "host glue",
+    ]) {
+      assert.ok(recipe.includes(phrase), `open-connector-sidecar README missing ${phrase}`);
+    }
+
+    // No workspace package depends on the sidecar.
+    const manifests = ["package.json", ...readdirSync("packages").map((dir) => `packages/${dir}/package.json`)];
+    for (const manifest of manifests) {
+      assert.ok(!/open-connector|oomol/i.test(readFileSync(manifest, "utf8")), `${manifest} depends on the Open Connector sidecar`);
+    }
+  });
+
   it("host_app_sdk_examples_cover_adoption_seams_without_coding_tools", () => {
     const readme = readFileSync("examples/README.md", "utf8");
     const minimal = readFileSync("examples/minimal-host-app.ts", "utf8");
@@ -3269,6 +3314,8 @@ describe("docs", () => {
         "examples/compaction.ts",
         "examples/coding-compaction.ts",
         "examples/acp-coding-host.ts",
+        "examples/connected-slack-mcp.ts",
+        "examples/open-connector-sidecar.ts",
         "examples/observational-memory-recall-status-view.ts",
         "examples/observational-memory-lifecycle.ts",
         "examples/skills-progressive-disclosure.ts",
@@ -3305,6 +3352,21 @@ describe("docs", () => {
         const out = `${result.stdout}\n${result.stderr}`;
         assert.ok(out.trim().length > 0, `${file} produced no output`);
         assert.ok(!secret.test(out), `${file} emitted a real-looking secret`);
+        if (file === "examples/connected-slack-mcp.ts") {
+          assert.deepEqual(JSON.parse(out), {
+            readEffect: "none",
+            writeEffect: "external_mutation",
+            tools: ["mcp:slack:list_channels", "mcp:slack:get_channel", "mcp:slack:search_messages", "mcp:slack:post_message"],
+          });
+        }
+        if (file === "examples/open-connector-sidecar.ts") {
+          assert.deepEqual(JSON.parse(out), {
+            tools: ["mcp:oc:search_actions", "mcp:oc:get_action_guide", "mcp:oc:execute_action"],
+            executeEffect: "external_mutation",
+            executeIdempotency: "unsupported",
+            selectRejected: true,
+          });
+        }
       }
     } finally {
       for (const file of emitted) rmSync(join(examplesDir, file), { force: true });
@@ -3996,6 +4058,36 @@ describe("docs", () => {
     assert.ok(changelog.includes("## [0.7.0] - 2026-09-15"), "CHANGELOG.md must carry the 0.7.0 entry");
   });
 
+  it("085_release_0_8_0_contract_is_documented", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const guide = readFileSync("docs/migrate-to-0.8.md", "utf8");
+    const migration = readFileSync("docs/migration.md", "utf8");
+    const changelog = readFileSync("CHANGELOG.md", "utf8");
+    const version = JSON.parse(readFileSync("package.json", "utf8")).version as string;
+    assert.equal(version, "0.8.0");
+    assert.ok(index.includes("(migrate-to-0.8.md)"), "docs/index.md missing the 0.8.0 migration navigation entry");
+    assert.ok(index.includes(`Current line (${version})`), `docs/index.md current line must be ${version}`);
+    const currentLine = index.split("## Current line (0.8.0)")[1]?.split("### Carried")[0] ?? "";
+    assert.ok(currentLine.includes("Messaging channels"), "0.8.0 current-line missing messaging channels");
+    assert.ok(!currentLine.includes("plan 0"), "0.8.0 current-line blurbs must not include plan numbers");
+    for (const phrase of [
+      "@arnilo/prism-work",
+      "@arnilo/prism-office",
+      "@arnilo/prism-channels",
+      "ERR_PRISM_WORK_IDEMPOTENCY",
+      "eleven",
+      "## Upgrade steps",
+      "## Rollback",
+    ]) {
+      assert.ok(guide.includes(phrase), `migrate-to-0.8.md missing ${phrase}`);
+    }
+    assert.ok(migration.includes("## 0.7.0 → 0.8.0"), "migration.md must carry the 0.7.0 → 0.8.0 entry");
+    assert.ok(migration.includes("(migrate-to-0.8.md)"), "migration.md must link the 0.8.0 guide");
+    assert.ok(changelog.includes("## [0.8.0] - 2026-09-18"), "CHANGELOG.md must carry the 0.8.0 entry");
+    assert.ok(changelog.includes("@arnilo/prism-channels"), "CHANGELOG.md must name messaging channels");
+    assert.ok(changelog.includes("@arnilo/prism-work"), "CHANGELOG.md must name the work family");
+  });
+
   it("use_case_model_selection_contract_is_documented", () => {
     const page = readFileSync("docs/use-case-model-selection.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
@@ -4105,8 +4197,8 @@ describe("docs", () => {
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
     assert.equal(
       manifests.filter((manifest) => !manifest.private).length,
-      existsSync("packages/office/src")
-        ? 10
+      existsSync("packages/prism-work/src")
+        ? 11
         : existsSync("packages/prism-providers/src")
           ? 17
           : existsSync("packages/prism-coding-tools")

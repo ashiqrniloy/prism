@@ -10,12 +10,12 @@ import {
   createAgent,
   createEventMultiplexer,
   type NestedRunOutcome,
+  narrowIdentity,
   type PermissionPolicy,
   type PermissionRequest,
   type ResumeNestedRun,
   resumeAgentRun,
   type SecretRedactor,
-  narrowIdentity,
 } from "@arnilo/prism";
 import { SupervisorDeniedError, SupervisorError, SupervisorLimitError, SupervisorValidationError } from "./errors.js";
 import { narrowSupervisorLimits, type ResolvedSupervisorLimits, resolveSupervisorLimits } from "./limits.js";

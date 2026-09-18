@@ -85,7 +85,7 @@ The staging primitive behind `/wiki-ingest`, `wiki_ingest`, and the CLI. Accepts
 | :--- | :--- |
 | Text-like files and `text` | Decoded as UTF-8 (RAG text/markdown/html parsers) |
 | Uncompressed PDF | Parsed by the RAG PDF parser (bounded pages/bytes) |
-| Compressed PDF / DOCX | Throws a named error unless the host supplies `options.extractDocument` (e.g. wire `createDocumentReader()` from `@arnilo/prism-coding-tools/document-reader`) |
+| Compressed PDF / DOCX | Throws a named error unless the host supplies `options.extractDocument` (e.g. wire `createDocumentReader()` from `@arnilo/prism-work/document-reader`) |
 | `url` | `assertSsrfAllowedUrl` runs first (private/link-local hosts rejected before any fetch); then the host `fetchUrl` hook supplies the bytes/text — missing or empty hook output fails closed. Staged filename comes from the hook, the URL extension (`doc.pdf`), or `source.md` |
 | Images | Staged as-is; stub extract points at the staged `source.*` — no OCR; view the file |
 | Unknown binary | Fails closed unless `extractDocument` claims it |

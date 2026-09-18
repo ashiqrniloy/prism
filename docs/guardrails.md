@@ -70,6 +70,39 @@ const agent = createAgent({ model, provider, guardrails: { input: [pii], output:
 await agent.createSession().run("Draft reply", { guardrails: { toolInput: [commandGuard] } });
 ```
 
+## Claim grounding
+
+`createClaimGroundingGuardrail(options: ClaimGroundingGuardrailOptions)` is a deterministic output guardrail for quantitative claims. It scans assistant text once, then attributes each number to a completed host tool result from **this run** or to a host-governed figure. It never calls a model, store, or network service.
+
+```ts
+import { createClaimGroundingGuardrail } from "@arnilo/prism";
+
+const grounding = createClaimGroundingGuardrail({
+  requireEvidenceForNumbers: true,
+  evidenceSources: "tool_results", // default
+  onViolation: "block", // default; "flag" records but permits output
+});
+
+const agent = createAgent({ model, provider, guardrails: { output: [grounding] } });
+```
+
+Numbers in an assistant text block pass when their exact numeric value occurs in a same-run successful tool result. The default is strict: `4,320.50` matches `4320.5`; `~4.3k` does not. Set `tolerance: "rounded"` to accept half the final printed unit, so `~4.3k` can match `4320.5`.
+
+A host can supply governed figures without giving this package a storage dependency:
+
+```ts
+const grounding = createClaimGroundingGuardrail({
+  requireEvidenceForNumbers: true,
+  evidenceSources: ({ metadata }) =>
+    metadata.metric === "revenue-q2" ? [{ value: 4320.5, ref: "metric:revenue-q2" }] : [],
+});
+// `Revenue is 999 [evidence:metric:revenue-q2]` cites that governed source.
+```
+
+An explicit citation is `[evidence:<ref>]`, immediately after its claim (within 96 characters). Tool-result refs are `tool:<toolCallId>`; extractor refs may contain only letters, digits, `.`, `_`, `:`, and `-` (1–128 chars). A citation must name an evidence ref the guardrail received; arbitrary labels do not pass.
+
+With `onViolation: "block"`, the standard `GuardrailError` has `reason: "claim_ungrounded"` and bounded metadata `{ claim, contentIndex, start, end }` — never a full response body. `"flag"` returns `action: "allow"` plus that same metadata and `violation: true`, so the response stays visible while the normal `guardrail_decision` event and run ledger preserve the flag. Strict mode treats every standalone number (including dates, percentages, and versions) as a claim; use the option only where that law is wanted.
+
 ## Extension and configuration notes
 
 Guardrails are callbacks supplied by the host. Prism does not discover, load, retry, or persist callback code. `createSecureAgent()` keeps configured guardrails and only appends run-level checks; it never lets a run remove secure defaults. Custom loops receive guarded `LoopContext.generate()` and `LoopContext.dispatchToolCall()`; host code that directly calls a provider or `ToolDefinition.execute()` is outside the runtime boundary.

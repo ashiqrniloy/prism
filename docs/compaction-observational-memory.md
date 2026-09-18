@@ -67,7 +67,7 @@ Worker limits are finite positive safe integers:
 | Recent-message window | — | 512 KiB | `renderRecentMessageWindow()` hard cap |
 | Recall page size | 20 | 100 | `retrieval.pageLimit` / recall tool `limit` |
 
-Direct `runObserver()` / `runReflector()` / `runDropper()` calls retain required `maxTurns` and accept the corresponding shorter worker fields (`maxToolCalls`, `maxResultBytes`, etc.). Named default/hard constants and `resolveMemoryWorkerLimits()` are exported.
+Direct `runObserver()` / `runReflector()` / `runDropper()` calls retain required `maxTurns` and accept the corresponding shorter worker fields (`maxToolCalls`, `maxResultBytes`, etc.). Workers are tool-only: text, thinking, and done events are ignored; a turn with no `tool_call` succeeds as a no-op and records nothing. Named default/hard constants and `resolveMemoryWorkerLimits()` are exported.
 
 ## Outputs / response / events
 

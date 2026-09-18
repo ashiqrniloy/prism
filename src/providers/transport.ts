@@ -1,4 +1,4 @@
-import type { JsonObject } from "../contracts.js";
+import type { JsonObject, ProviderFailureClass } from "../contracts.js";
 import { redactSecrets } from "../redaction.js";
 
 export const DEFAULT_MAX_EVENT_BYTES = 262_144;
@@ -28,6 +28,20 @@ export type ProviderTransportErrorCode =
   | "incomplete_delta"
   | "response_body_shape";
 
+const QUOTA_BODY = /quota|usage[\s_-]*limit|insufficient[\s_-]*(?:quota|credit|balance)|billing[\s_-]*(?:limit|quota)/i;
+const TRANSIENT_NETWORK_CODES = new Set(["ECONNRESET", "ECONNREFUSED", "EAI_AGAIN", "ENETUNREACH", "ETIMEDOUT", "UND_ERR_CONNECT_TIMEOUT"]);
+
+/** Maps already-captured provider transport evidence to advisory outcome metadata. */
+export function classifyProviderFailure(error: unknown): ProviderFailureClass {
+  const status = readHttpStatus(error);
+  if (status === 401 || status === 403) return "auth";
+  if (status === 429) return QUOTA_BODY.test(errorMessage(error)) ? "quota" : "rate_limited";
+  if (status !== undefined) return status >= 500 ? "transient" : status >= 400 ? "permanent" : "unknown";
+  const cause = readField(error, "cause");
+  if (isTransientNetworkCode(readField(error, "code")) || isTransientNetworkCode(readField(cause, "code"))) return "transient";
+  return "unknown";
+}
+
 export class ProviderTransportError extends Error {
   readonly code: ProviderTransportErrorCode;
   readonly limitBytes?: number;
@@ -48,7 +62,30 @@ export function httpStatusError(prefix: string, response: Response, bodyText: st
   error.code = response.status;
   const hint = parseRetryAfterMs(response.headers.get("retry-after"));
   if (hint !== undefined) error.retryAfterMs = hint;
+  Object.defineProperty(error, "failureClass", { value: classifyProviderFailure(error), enumerable: true });
   return error;
+}
+
+function readHttpStatus(error: unknown): number | undefined {
+  for (const key of ["code", "status", "statusCode"]) {
+    const value = readField(error, key);
+    const status = typeof value === "number" ? value : typeof value === "string" && /^\d{3}$/.test(value) ? Number(value) : undefined;
+    if (status !== undefined && status >= 100 && status <= 599) return status;
+  }
+  return undefined;
+}
+
+function readField(error: unknown, key: string): unknown {
+  return error && typeof error === "object" && key in error ? (error as Record<string, unknown>)[key] : undefined;
+}
+
+function isTransientNetworkCode(value: unknown): boolean {
+  return typeof value === "string" && TRANSIENT_NETWORK_CODES.has(value.toUpperCase());
+}
+
+function errorMessage(error: unknown): string {
+  const cause = readField(error, "cause");
+  return [readField(error, "message"), readField(cause, "message")].filter((value): value is string => typeof value === "string").join(" ");
 }
 
 /** Parse a `Retry-After` header (delay-seconds or HTTP-date) into milliseconds. */

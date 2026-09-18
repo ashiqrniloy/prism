@@ -13,7 +13,17 @@ const patterns = [
   ["slack-token", new RegExp("xo" + "[abprs]-[A-Za-z0-9-]{20,}")],
   ["openai-key", new RegExp("(?:^|[^A-Za-z0-9_-])sk" + "-[A-Za-z0-9]{20,}")],
 ];
-const ignored = new Set([".git", "node_modules", "coverage"]);
+const ignored = new Set([".git", "node_modules", "coverage", "graft"]);
+// Local credential files are the one place real keys are meant to live: `.gitignore`
+// already excludes `scripts/live.env` and any `*.local.env`, they are never committed
+// or packed, and CI scans the tracked set (`git ls-files`) where they cannot appear.
+// Everything else — including other gitignored files — is still scanned.
+const localCredentials = /(?:^|\/)live\.env$|(?:^|\/)[^/]*\.local\.env$/;
+
+/** True for the local-only credential files the scan skips by name (never committed, never packed). */
+export function isLocalCredential(path) {
+  return localCredentials.test(path);
+}
 
 async function* files(path) {
   const stat = await lstat(path);
@@ -31,6 +41,7 @@ export async function scanSecrets(paths) {
   const findings = [];
   for (const root of paths)
     for await (const path of files(root)) {
+      if (isLocalCredential(path)) continue;
       if (++scanned > MAX_FILES) throw new Error("Secret scan file count exceeds policy");
       // Open-then-stat to avoid TOCTOU between size check and read (CodeQL js/file-system-race).
       const handle = await open(path, "r");

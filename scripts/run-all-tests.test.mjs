@@ -5,7 +5,7 @@
 // gates out) stays assertable now that the chain is data instead of a
 // `package.json` string.
 import assert from "node:assert/strict";
-import { readdirSync } from "node:fs";
+import { globSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { readManifest } from "./package-truth.mjs";
@@ -81,6 +81,31 @@ test("the effective chain is the package.json entry plus every stage", () => {
   const chain = effectiveTestChain();
   for (const file of GATE_FILES) assert.ok(chain.includes(file), `effective chain missing ${file}`);
   assert.ok(chain.includes("--workspaces"), "effective chain must keep the workspace suites");
+});
+
+test("performance budget runs outside the parallel gate suite", () => {
+  assert.ok(!GATE_FILES.includes("scripts/budget-gate.test.mjs"));
+  assert.deepEqual(STAGES.find((stage) => stage.name === "performance budget")?.args.slice(-2), ["--test", "scripts/budget-gate.test.mjs"]);
+});
+
+test("workspace test globs quote `**` so the shell cannot collapse nested suites", () => {
+  const packagesDir = join(ROOT, "packages");
+  const quoted = [];
+  for (const dir of readdirSync(packagesDir).sort()) {
+    const script = readManifest(join(packagesDir, dir, "package.json")).scripts?.test ?? "";
+    if (!script.includes("**")) continue;
+    const match = /"([^"]*\*\*[^"]*)"/.exec(script);
+    assert.ok(match, `${dir} test script must quote its ** glob (plan 080 Task 2)`);
+    const files = globSync(match[1], { cwd: join(packagesDir, dir) });
+    const collapsed = globSync(match[1].replaceAll("**", "*"), { cwd: join(packagesDir, dir) });
+    assert.ok(files.length > 0, `${dir}: ${match[1]} matched no files (build first)`);
+    assert.ok(
+      files.length > collapsed.length,
+      `${dir}: quoting ${match[1]} must run more than the shell-collapsed ${collapsed.length} file(s) (plan 080 Task 2)`,
+    );
+    quoted.push(dir);
+  }
+  assert.deepEqual(quoted, ["prism-coding-tools", "prism-core"], "positive control: both nested-glob packages are covered");
 });
 
 test("protection gates stay in the chain and retired phase gates stay out", () => {

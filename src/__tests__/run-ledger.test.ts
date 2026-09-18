@@ -12,11 +12,13 @@ import type {
   UsageRecord,
 } from "../index.js";
 import {
+  AgentRunError,
   createAgent,
   createMockProvider,
   createSecretRedactor,
   createToolRegistry,
   providerDone,
+  providerError,
   providerTextDelta,
   providerToolCall,
   redactRunLedgerRecord,
@@ -374,25 +376,31 @@ describe("RunLedger runtime wiring", () => {
     assert.ok(events.some((e) => e.type === "error"));
   });
 
-  it("records failed status and error when provider throws", async () => {
+  it("records typed, redacted provider quota failures on the result and terminal ledger row", async () => {
+    const secret = "provider-quota-secret";
     const { ledger, runs } = createMemoryLedger();
     const agent = createAgent({
       model: { provider: "mock", model: "demo" },
       provider: {
         id: "mock",
         async *generate() {
-          throw new Error("provider blew up");
+          yield providerError(Object.assign(new Error(`GoUsageLimitError ${secret}`), { code: 429 }), [secret]);
         },
       },
       runLedger: ledger,
+      redactor: createSecretRedactor([secret]),
     });
     const session = agent.createSession({ id: "s7" });
 
-    await assert.rejects(session.run("fail me"));
+    await assert.rejects(
+      session.run("fail me"),
+      (error: unknown) => error instanceof AgentRunError && error.result.error?.failureClass === "quota",
+    );
 
     const finish = runs.find((r) => r.status !== "running");
     assert.equal(finish?.status, "failed");
-    assert.ok(finish?.error?.message.includes("provider blew up"));
+    assert.equal(finish?.error?.failureClass, "quota");
+    assert.equal(JSON.stringify(finish).includes(secret), false);
   });
 
   it("serializes ledger appends with concurrency of one", async () => {

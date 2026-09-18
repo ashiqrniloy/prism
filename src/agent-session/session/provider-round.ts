@@ -11,12 +11,13 @@ import type {
   RetryMiddlewarePayload,
   RunOptions,
   ToolCallContent,
+  ToolResult,
   Usage,
   UsageRecord,
 } from "../../contracts.js";
 import { assertGuardrailsAllowed, GuardrailError, runGuardrails } from "../../guardrails.js";
 import { createProviderTurnMetadata, readProviderHttpStatus } from "../../observability.js";
-import { providerToolCallDeltaContent } from "../../provider-events.js";
+import { providerError, providerToolCallDeltaContent } from "../../provider-events.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets } from "../../redaction.js";
 import { createDefaultRetryPolicy, waitForRetry } from "../../retry.js";
 import {
@@ -106,13 +107,14 @@ export async function generateWithRetry(
   requestSecrets: readonly (string | undefined)[] = [],
   turn = 1,
   recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<void>,
+  toolResults: readonly ToolResult[] = [],
 ): Promise<ProviderTurnResult> {
   const retry = mergeRetry(session.agent.config.retry, options.retry);
   const secrets = [...requestSecrets, ...(retry?.secrets ?? [])];
   const policy = retry?.policy ?? (retry ? createDefaultRetryPolicy(retry) : undefined);
   for (let attempt = 1; ; attempt += 1) {
     try {
-      return await generateProviderTurn(session, request, runId, signal, secrets, turn, attempt, recordUsage);
+      return await generateProviderTurn(session, request, runId, signal, secrets, turn, attempt, recordUsage, toolResults);
     } catch (error) {
       if (error instanceof GuardrailError || isSteerSoftInterrupt(error)) throw error;
       const failure = error instanceof ProviderTurnFailure ? error : undefined;
@@ -142,6 +144,7 @@ export async function generateProviderTurn(
   turn = 1,
   attempt = 1,
   recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<void>,
+  toolResults: readonly ToolResult[] = [],
 ): Promise<ProviderTurnResult> {
   session.activeLimits!.charge("maxProviderAttempts");
   session.activeLimits!.charge("maxRequestBytes", jsonBytes(request));
@@ -227,7 +230,13 @@ export async function generateProviderTurn(
           stage: "output",
           guardrails: session.activeGuardrails,
           value: { content, calls, messageId, started, usage },
-          context: { sessionId: session.id, runId, metadata: session.activeMetadata ?? {}, signal: turnAbort.signal },
+          context: {
+            sessionId: session.id,
+            runId,
+            metadata: session.activeMetadata ?? {},
+            signal: turnAbort.signal,
+            toolResults,
+          },
           redactor: session.activeRedactor,
           emit: (event) => session.emit(event),
         }),
@@ -259,7 +268,7 @@ export async function generateProviderTurn(
       throw new SteerSoftInterrupt();
     }
     const latencyMs = Math.round(performance.now() - startedAt);
-    const info = error instanceof ProviderTurnFailure ? redactSecrets(error.info, secrets) : errorToErrorInfo(error, secrets);
+    const info = error instanceof ProviderTurnFailure ? redactSecrets(error.info, secrets) : providerError(error, secrets).error;
     await recordTurnUsage();
     session.emit({
       type: "provider_turn_finished",

@@ -1,7 +1,7 @@
 {
   "name": "@arnilo/prism-core",
-  "version": "0.7.0",
-  "description": "Core runtime, sessions, governance, credentials, enterprise state, and work integrations family package for Prism.",
+  "version": "0.8.0",
+  "description": "Core runtime, sessions, governance, credentials, and enterprise state family package for Prism.",
   "type": "module",
   "exports": {
     "./runtime/server": {
@@ -76,22 +76,6 @@
       "types": "./dist/enterprise/postgres/index.d.ts",
       "default": "./dist/enterprise/postgres/index.js"
     },
-    "./integrations/work": {
-      "types": "./dist/integrations/work/index.d.ts",
-      "default": "./dist/integrations/work/index.js"
-    },
-    "./integrations/work/microsoft365": {
-      "types": "./dist/integrations/work/microsoft365.d.ts",
-      "default": "./dist/integrations/work/microsoft365.js"
-    },
-    "./integrations/work/google-workspace": {
-      "types": "./dist/integrations/work/google-workspace.d.ts",
-      "default": "./dist/integrations/work/google-workspace.js"
-    },
-    "./integrations/work/drafts": {
-      "types": "./dist/integrations/work/drafts.d.ts",
-      "default": "./dist/integrations/work/drafts.js"
-    },
     "./validation/json-schema": {
       "types": "./dist/validation/json-schema/index.d.ts",
       "default": "./dist/validation/json-schema/index.js"
@@ -108,7 +92,7 @@
   "scripts": {
     "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node ../../scripts/with-build-lock.mjs node --test dist/**/__tests__/*.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs node --test \"dist/**/__tests__/*.test.js\" dist/__tests__/messaging-primitives.test.js",
     "test:postgres": "node ../../scripts/require-postgres-url.mjs && node ../../scripts/with-build-lock.mjs node --test dist/sessions/postgres/__tests__/*.test.js dist/enterprise/postgres/__tests__/*.test.js",
     "test:nats": "node ../../scripts/require-nats-url.mjs && node ../../scripts/with-build-lock.mjs node --test dist/sessions/nats/__tests__/nats.integration.test.js",
     "pack:dry-run": "npm pack --dry-run"
@@ -118,8 +102,8 @@
     "ajv": "^8.17.1"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.7.0",
-    "@arnilo/prism-memory": "^0.7.0",
+    "@arnilo/prism": "^0.8.0",
+    "@arnilo/prism-memory": "^0.8.0",
     "@nats-io/jetstream": "^3.4.0",
     "@nats-io/transport-node": "^3.4.0",
     "better-sqlite3": "^13.0.3",
@@ -145,6 +129,7 @@
   "devDependencies": {
     "@arnilo/prism": "file:../..",
     "@arnilo/prism-memory": "file:../memory",
+    "@arnilo/prism-work": "file:../prism-work",
     "@nats-io/jetstream": "^3.4.0",
     "@nats-io/transport-node": "^3.4.0",
     "@opentelemetry/api": "^1.9.0",
@@ -185,7 +170,6 @@
     "observability",
     "credentials",
     "enterprise",
-    "work-tools",
     "json-schema"
   ],
   "sideEffects": false,

@@ -446,3 +446,21 @@ test("maxSteps validation rejects invalid values", () => {
     (err: unknown) => err instanceof TimelineError && err.code === "ERR_PRISM_TIMELINE_BOUNDS",
   );
 });
+
+test("host turn-policy stop lands on the timeline as stopReason plus bounded detail", () => {
+  const events: AgentEvent[] = [
+    agentEvent("agent_started"),
+    agentEvent("turn_started", { turn: 1 }),
+    agentEvent("turn_finished", { turn: 1 }),
+    agentEvent("agent_finished", { finishReason: "host_policy", stopDetail: "l1-first-plan-paint" }),
+  ];
+  const timeline = projectAgentTimeline(events);
+  assert.equal(timeline.status, "finished:host_policy");
+  assert.equal(timeline.stopReason, "host_policy");
+  assert.equal(timeline.stopDetail, "l1-first-plan-paint");
+  // A natural end carries neither field, so existing projections stay byte-identical.
+  const natural = projectAgentTimeline([agentEvent("agent_started"), agentEvent("agent_finished")]);
+  assert.equal(natural.status, "succeeded");
+  assert.equal(natural.stopReason, undefined);
+  assert.equal(natural.stopDetail, undefined);
+});

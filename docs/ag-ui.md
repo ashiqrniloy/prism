@@ -31,6 +31,7 @@ npm install @arnilo/prism @arnilo/prism-ag-ui
 | `authorize` | Rebinds untrusted AG-UI thread/run selectors to host ownership on every request. `false` returns 403. |
 | `sessionFactory` | Returns an authorized Prism `AgentSession`; it receives only host-approved `AgUiPreparedInput`, never raw client tools/state. |
 | `input.project` | Opts into full `RunAgentInput`; turns bounded, still-untrusted history, state, context, forwarded props, media, and lineage into host-selected Prism `Message` values. Omit for legacy final-text mode. |
+| `inputPolicy.clientState` (`AgUiInputPolicyOptions`) | `"honor"` (default) passes validated client `state`/`tools` to `input.project`. `"ignore"` validates the same envelope for shape and bounds, then discards both fields, so input comes only from the server session and projector; an unknown value fails at construction with `ERR_PRISM_AG_UI_INPUT` instead of silently honoring the client. |
 | `input.frontendTools` | Explicitly selects client-side handoffs. Returned names must be request-tool subset; adapter never turns JSON tool declarations into Prism `ToolDefinition`s. |
 | `mcp` | Optional `createAgUiMcpAdapter({ bridge, select })`; host selects reviewed `bridge.tools`, then `sessionFactory` receives them as `input.serverTools`. Normal Prism dispatch/loop remains sole executor. |
 | `a2a` | Optional `createAgUiA2AAdapter({ client, select, correlate })`; verified remote A2A task stream replaces this handler's local session only. Host selection/correlation binds each remote task to ownership. |
@@ -43,6 +44,10 @@ npm install @arnilo/prism @arnilo/prism-ag-ui
 | `redactor`, `limits` | Host redaction and narrowing-only finite caps (`AgUiLimitOptions`, with its A2UI variant). |
 
 The handler accepts only `POST` JSON validated with official AG-UI `RunAgentInputSchema`. Every aggregate is bounded before a callback runs. With no `input.project`, it preserves compatibility: final text user message only; non-empty state or frontend tools fail before authorization/session lookup. With a projector, all current roles/history, context, state, forwarded props, multimodal parts, parent lineage, and tool-result continuations are available as untrusted input. The projector must apply Prism media URL/SSRF/MIME policy before forwarding media. Start a run with no `resume` and no `?cursor=`; replay supplies `?cursor=`.
+
+### Server-authoritative input (`inputPolicy.clientState: "ignore"`)
+
+An official browser client posts its own projection: `initialState` becomes the request `state` and `runAgent({ tools })` supplies a tool list. Hosts that keep projection and tools on the server had two options — relay/rewrite every request, or reject state posts and break every browser run. `inputPolicy: { clientState: "ignore" }` is the third: the posted envelope is still schema-validated and bounded (so malformed, oversized, and poisonous payloads fail exactly as before, `400`/`413`), and then client `state` and `tools` are dropped before authorization, `coWorkContext`, `mcp.prepare`, `input.project`, and `defaultAgUiInput` see the input. Input is derived solely from the server session and the host projector, so a browser posting full state gets a normal run whose projection and tool list are the server's own. `AgUiPreparedInput.clientState` reports which policy produced the payload, `frontendTools` stays empty, and `capabilities.tools.clientProvided` is refused under `"ignore"` because the handler never hands client tools to a session. `state`, `context`, and `forwardedProps` reaching the projector under `"honor"` remain untrusted: the projector is still the only authority.
 
 ## Outputs / response / events
 

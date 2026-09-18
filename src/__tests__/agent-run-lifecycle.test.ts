@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { saveAgentRunState } from "../agent-run-state.js";
+import type { AIProvider, ProviderRequest } from "../contracts.js";
 import {
   applyRestoredSkillBodies,
   createAgent,
@@ -18,7 +19,6 @@ import {
   toolCallContent,
   validateLoadedSkillBodies,
 } from "../index.js";
-import type { AIProvider, ProviderRequest } from "../contracts.js";
 
 describe("agent run lifecycle", () => {
   it("streams an authorized durable approval through the shared core path", async () => {

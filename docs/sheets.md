@@ -1,8 +1,8 @@
-# Spreadsheets, CSV parsing, and typed schema inference (`@arnilo/prism-office/sheets`)
+# Spreadsheets, CSV parsing, and typed schema inference (`@arnilo/prism-work/sheets`)
 
 ## What it does
 
-The `@arnilo/prism-office/sheets` package provides fail-closed, high-fidelity spreadsheet (XLSX) and delimiter-separated (CSV/TSV/PSV) data ingestion with automatic dialect sniffing, typed column schema inference, and **strict financial decimal safety**.
+The `@arnilo/prism-work/sheets` package provides fail-closed, high-fidelity spreadsheet (XLSX) and delimiter-separated (CSV/TSV/PSV) data ingestion with automatic dialect sniffing, typed column schema inference, and **strict financial decimal safety**.
 
 ### Headline Guarantee: Strict Financial Decimal Safety
 
@@ -10,7 +10,7 @@ The `@arnilo/prism-office/sheets` package provides fail-closed, high-fidelity sp
 > **Zero Float Coercion on Decimal Paths**:
 > In financial and enterprise data processing, floating-point rounding errors (IEEE-754 `double`) silently distort monetary totals, balance ledgers, and transaction reconciliations.
 >
-> In `@arnilo/prism-office/sheets`:
+> In `@arnilo/prism-work/sheets`:
 > - Money-like and decimal values are **never converted to JavaScript numbers (`Number()`, `parseFloat()`, or unary `+`)**.
 > - All decimal and currency values are parsed, normalized, and emitted as exact canonical decimal strings: `{ type: "decimal", value: "1234.56" }`.
 > - Currency markers (`$`, `€`, `£`, `¥`, `₹`, `CHF`, `USD`, `EUR`, etc.) and accounting parentheses `($1,234.56)` are normalized safely into canonical strings (`"-1234.56"`).
@@ -29,7 +29,7 @@ The `@arnilo/prism-office/sheets` package provides fail-closed, high-fidelity sp
 
 ## When to use it
 
-Use `@arnilo/prism-office/sheets` when autonomous agents, data pipelines, or enterprise workflows need to:
+Use `@arnilo/prism-work/sheets` when autonomous agents, data pipelines, or enterprise workflows need to:
 1. Ingest untrusted customer XLSX or CSV files with strict, unbypassable byte, row, column, and sheet caps.
 2. Parse tabular financial records, invoices, ledgers, or pricing sheets with mathematical decimal precision guarantees.
 3. Automatically determine CSV delimiters, quotes, and headers without manual dialect configuration.
@@ -151,7 +151,7 @@ TXN-1003,"Hardware Device","£ 2,500.00",2500.00,"$ 0.00"
 ## Implementation example
 
 ```ts
-import { parseWorkbook, parseCsv, type SheetsTelemetry } from "@arnilo/prism-office/sheets";
+import { parseWorkbook, parseCsv, type SheetsTelemetry } from "@arnilo/prism-work/sheets";
 
 // 1. Parse XLSX workbook with custom caps
 const xlsxBytes = new Uint8Array([...]); // Untrusted file bytes
@@ -194,7 +194,7 @@ console.log(`Revenue value:`, csvResult.rows[1][2]);
 ## Extension and configuration notes
 
 ### Sub-package Pinning
-To avoid pulling in CLI frameworks or extraneous dependencies, `@arnilo/prism-office/sheets` directly pins the exact underlying modular packages:
+To avoid pulling in CLI frameworks or extraneous dependencies, `@arnilo/prism-work/sheets` directly pins the exact underlying modular packages:
 - `@office-open/xlsx@0.12.3`
 - `@office-open/xml@0.12.3`
 
@@ -211,7 +211,7 @@ const telemetry: SheetsTelemetry = {
 ```
 
 ### Self-Hosting & Operational Notes
-- **Zero Network & Storage Dependencies**: `@arnilo/prism-office/sheets` does not write files or contact network services. Host engines own persistence, storage buckets, and lake datasets.
+- **Zero Network & Storage Dependencies**: `@arnilo/prism-work/sheets` does not write files or contact network services. Host engines own persistence, storage buckets, and lake datasets.
 - **Fail-Closed Container Gating**: Malicious or non-standard files are rejected before allocation or XML decompression occurs.
 
 ## Security and performance notes
@@ -224,6 +224,6 @@ const telemetry: SheetsTelemetry = {
 
 ## Related APIs
 
-- [`@arnilo/prism-office/documents`](./documents.md): Specification-compliant OpenXML document generation, parsing, patching, and preview rendering for DOCX, XLSX, and PPTX.
-- [`@arnilo/prism-coding-tools/document-reader`](./document-reader.md): Bounded literal text extraction from PDF and DOCX documents for coding agent tools.
+- [`@arnilo/prism-work/documents`](./documents.md): Specification-compliant OpenXML document generation, parsing, patching, and preview rendering for DOCX, XLSX, and PPTX.
+- [`@arnilo/prism-work/document-reader`](./document-reader.md): Bounded literal text extraction from PDF and DOCX documents for coding agent tools.
 - [`@arnilo/prism-core/governance/observability`](./observability.md): OpenTelemetry instrumentation and trace adapters.

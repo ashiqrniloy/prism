@@ -7,6 +7,7 @@
  * in exactly one place. Classification is O(1) and makes no extra provider calls.
  */
 import { redactSecrets } from "@arnilo/prism";
+import { classifyProviderFailure } from "@arnilo/prism/providers/transport";
 
 /** Upstream statuses every classifier retries: 429 rate limits and 5xx upstream failures. */
 export const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([429, 500, 502, 503]);
@@ -60,6 +61,12 @@ export function providerHttpError(
   const suffix = bodyText ? ` ${redactSecrets(bodyText, secrets)}` : "";
   const error = new Error(`${parts.join(" ")}${suffix}`);
   Object.defineProperty(error, "code", { value: decision.code, enumerable: true, writable: false, configurable: false });
+  Object.defineProperty(error, "failureClass", {
+    value: classifyProviderFailure(error),
+    enumerable: true,
+    writable: false,
+    configurable: false,
+  });
   return error;
 }
 

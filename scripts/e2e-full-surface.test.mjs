@@ -1,6 +1,6 @@
 /**
  * Plans/064 Task 10: full-surface packed journey test.
- * Packs all ten first-party packages, installs the tarballs into a fresh
+ * Packs all eleven first-party packages, installs the tarballs into a fresh
  * consumer, then runs scripts/fixtures/e2e-full-surface-journey.mjs inside
  * that consumer — public exports only, resolved against the packed
  * node_modules, never workspace source paths. Hermetic and network-free:
@@ -19,11 +19,12 @@ const JOURNEY_CEILING_MS = 180_000;
 const packages = [
   { dir: ".", name: "@arnilo/prism" },
   { dir: "packages/prism-core", name: "@arnilo/prism-core" },
+  { dir: "packages/prism-channels", name: "@arnilo/prism-channels" },
   { dir: "packages/prism-providers", name: "@arnilo/prism-providers" },
   { dir: "packages/memory", name: "@arnilo/prism-memory" },
   { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools" },
   { dir: "packages/web-tools", name: "@arnilo/prism-web-tools" },
-  { dir: "packages/office", name: "@arnilo/prism-office" },
+  { dir: "packages/prism-work", name: "@arnilo/prism-work" },
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
   { dir: "packages/acp-agent", name: "@arnilo/prism-acp-agent" },
@@ -49,7 +50,7 @@ before(() => {
 after(() => consumer?.cleanup());
 
 describe("packed-install full-surface journey", () => {
-  it("packs and installs all ten packages at the workspace version", () => {
+  it("packs and installs all eleven packages at the workspace version", () => {
     assert.equal(consumer.installStatus, 0, consumer.installOut);
     for (const pkg of packages) {
       assert.equal(
@@ -63,7 +64,7 @@ describe("packed-install full-surface journey", () => {
   it("resolves public imports from the packed install, not the workspace", () => {
     const resolved = resolveFromConsumer(consumer.consumer, "@arnilo/prism-core/governance/policy");
     assert.ok(resolved.startsWith(`file://${consumer.consumer}`), `resolved to ${resolved}, expected consumer node_modules`);
-    assert.ok(!resolved.includes(repoRoot), "must not resolve into the workspace tree");
+    assert.equal(resolved.includes(repoRoot), false, "must not resolve into the workspace tree");
   });
 
   it("completes every package section from packed public exports", () => {

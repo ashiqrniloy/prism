@@ -127,7 +127,7 @@ const agent = createAgent({ model: { provider: own.id, model: "demo" }, provider
 
 - Registry `resolve()` returns the matching provider/model or throws before any provider `generate()` call.
 - Provider event helpers return plain `ProviderEvent` objects.
-- `providerError()` converts unknown errors to redacted `ErrorInfo` through `errorToErrorInfo()` and preserves safe string/number `code` fields for retry classification.
+- `providerError()` converts unknown errors to redacted `ErrorInfo`, preserves safe string/number `code` fields for retry classification, and stamps advisory `failureClass` (`quota`, `auth`, `rate_limited`, `transient`, `permanent`, or `unknown`) from already-captured status/body evidence. It never changes retry behavior or exposes response bodies/headers; see [Runs and usage ledger](runs-and-usage.md#provider-failure-classes).
 - `createMockProvider()` returns an `AIProvider` whose `generate()` yields the scripted events in order and checks `request.signal?.aborted` before each event.
 - The agent/session runtime passes its per-run abort signal as `ProviderRequest.signal`. `ProviderRequestOptions.structuredOutput` requests provider-native JSON-schema output when the model declares `capabilities.structuredOutput`; unsupported models fail before fetch. Timeouts are host-owned: pass `RunOptions.signal`/host abort controllers; retries are runtime-owned via `AgentConfig.retry`/`RunOptions.retry`. Provider-level timeout/retry hints were removed in 0.1.5.
 
@@ -200,7 +200,7 @@ for await (const event of resolvedProvider.generate({
 - `createMockProvider()` uses scripted events only: no timers, credentials, SDKs, or network.
 - Do not hide real secrets in mock event fixtures. If an error event must include secret-like text, use fake placeholders and redaction helpers.
 - `providerError(error, secrets)` only redacts the provided secret values. It is not a general secret scanner.
-- Providers may set safe `ErrorInfo.code` values such as `429`, `503`, or `ETIMEDOUT`; retry policy code treats them as classification hints, not trusted provider metadata.
+- Providers may set safe `ErrorInfo.code` values such as `429`, `503`, or `ETIMEDOUT`; retry policy code treats them as classification hints, not trusted provider metadata. The shared `classifyProviderFailure()` transport helper maps those already-captured values to advisory run outcome metadata; `unknown` is always the fallback.
 
 ## Related APIs
 

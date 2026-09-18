@@ -250,8 +250,8 @@ async function resumeReplicaB() {
   });
   await assert.rejects(
     lifecycle.status(ref, { ownership: foreign }),
-    (error) => error?.name === "CheckpointConflictError",
-    "foreign ownership cannot read the run state",
+    (error) => error?.code === "ERR_PRISM_AGENT_RUN_STATE",
+    "a foreign ownership scope reads the run state as missing (no cross-tenant existence leak)",
   );
   const ownStatus = await lifecycle.status(ref, { ownership });
   assert.equal(ownStatus.version, state.version, "run state survives the crash with its CAS version");

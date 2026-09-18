@@ -190,10 +190,10 @@ test("Task 6 HA drill: two-process failover, fencing, cursors, split-brain, tena
     // 7. Tenant isolation: a foreign tenant can neither inspect nor mutate A's
     //    records — reads, writes, and lease takeover all fail closed.
     const tenantB = `tenant-b-${randomUUID().slice(0, 8)}`;
-    await assert.rejects(
-      () => persistence.checkpoints.loadCheckpoint({ namespace: NS, key: opKey, tenantId: tenantB }),
-      /ownership mismatch/,
-      "foreign tenant read must fail closed",
+    assert.equal(
+      await persistence.checkpoints.loadCheckpoint({ namespace: NS, key: opKey, tenantId: tenantB }),
+      null,
+      "a foreign tenant read lands as a miss, never an ownership-shaped existence oracle",
     );
     await assert.rejects(
       () =>
@@ -206,8 +206,8 @@ test("Task 6 HA drill: two-process failover, fencing, cursors, split-brain, tena
           fencingToken: 10,
           value: { evil: true },
         }),
-      /ownership mismatch/,
-      "foreign tenant save must fail closed",
+      /ERR_PRISM_CHECKPOINT_CONFLICT|compare-and-swap/,
+      "foreign tenant save must fail closed as a generic conflict",
     );
     await assert.rejects(
       () => persistence.leases.tryAcquireLease({ namespace: NS, key: opKey, tenantId: tenantB, ownerId: "worker-B2", ttlMs }),

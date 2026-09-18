@@ -82,9 +82,7 @@ tenant's reads, writes, and lease takeover all fail closed.
   fencing token), and a stale token's renewal returns `null`. There is
   intentionally no "force unlock" operation — deleting a lease row manually
   bypasses fencing and can cause split-brain writes; never do it.
-- Tenant ownership is checked on every durable read/write; cross-tenant
-  reads, saves, and lease acquisitions fail closed with ownership-mismatch
-  errors.
+- Tenant ownership is checked on every durable read/write: a foreign checkpoint read or delete is a miss (never an existence oracle), a foreign checkpoint write fails as `ERR_PRISM_CHECKPOINT_CONFLICT`, and lease acquisition still fails closed with an ownership-mismatch error.
 - An uncertain commit (side effect landed, cursor not advanced) is resolved
   by replaying the effect with its stable id — never by guessing. Reload
   durable state before any retry; retries that skip the reload risk

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 import type { AgentIdentity, ToolExecutionContext } from "@arnilo/prism";
+import { createMemoryIdempotencyStore, createMicrosoft365CliAdapter, createWorkTools } from "@arnilo/prism-work/connectors";
 import { Pool } from "pg";
-import { createMicrosoft365CliAdapter, createWorkTools, WorkToolError } from "../../../integrations/work/index.js";
 import { createPostgresEnterpriseState } from "../enterprise.js";
 import { EnterprisePostgresError } from "../errors.js";
 import { qualifyTable } from "../identifiers.js";
@@ -29,6 +29,17 @@ function identity(tenantId = "tenant"): AgentIdentity {
 function context(): ToolExecutionContext {
   return { sessionId: "session", runId: "run", toolCallId: "call", idempotencyKey: `prism:tool-effect:v1:${"a".repeat(64)}` };
 }
+
+function isIdempotencyError(error: unknown): boolean {
+  return error instanceof EnterprisePostgresError && error.code === "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT";
+}
+
+function errorCodeOf(error: unknown): string | undefined {
+  return typeof error === "object" && error !== null && "code" in error ? String(error.code) : undefined;
+}
+
+/** Portable conflict codes both adapters must reject with; the class differs, the code must not. */
+const PORTABLE_IDEMPOTENCY_CODES = ["ERR_PRISM_WORK_IDEMPOTENCY", "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT"] as const;
 
 describeIntegration("enterprise PostgreSQL work idempotency", () => {
   const pools: Pool[] = [];
@@ -65,7 +76,7 @@ describeIntegration("enterprise PostgreSQL work idempotency", () => {
     );
     await assert.rejects(
       () => second.workIdempotency.get({ ...input, op: "calendar.add" }),
-      (error: unknown) => error instanceof WorkToolError && error.code === "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT",
+      (error: unknown) => isIdempotencyError(error),
     );
     await assert.rejects(
       () =>
@@ -75,7 +86,7 @@ describeIntegration("enterprise PostgreSQL work idempotency", () => {
           expectedVersion: acquired.record.version,
           result: { draftId: "draft" },
         }),
-      (error: unknown) => error instanceof WorkToolError && error.code === "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT",
+      (error: unknown) => isIdempotencyError(error),
     );
     const completed = await first.workIdempotency.complete({
       ...input,
@@ -160,7 +171,7 @@ describeIntegration("enterprise PostgreSQL work idempotency", () => {
           expectedVersion: claim.record.version,
           result: { draftId: "late" },
         }),
-      (error: unknown) => error instanceof WorkToolError && error.code === "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT",
+      (error: unknown) => isIdempotencyError(error),
     );
     const unknown = await state.workIdempotency.get(input);
     assert.equal(unknown?.status, "unknown");
@@ -174,7 +185,7 @@ describeIntegration("enterprise PostgreSQL work idempotency", () => {
     assert.equal(resolved.status, "failed_terminal");
     await assert.rejects(
       () => state.workIdempotency.resolveUnknown({ ...input, expectedVersion: unknown!.version, status: "failed_terminal" }),
-      (error: unknown) => error instanceof WorkToolError && error.code === "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT",
+      (error: unknown) => isIdempotencyError(error),
     );
 
     await pool.query(`UPDATE ${work} SET result = '[]'::jsonb WHERE idempotency_key = $1`, [input.key]);
@@ -182,6 +193,54 @@ describeIntegration("enterprise PostgreSQL work idempotency", () => {
       () => state.workIdempotency.get(input),
       (error: unknown) => error instanceof EnterprisePostgresError,
     );
+  });
+
+  it("rejects lost races with the same portable code in the memory and PostgreSQL adapters", async () => {
+    const schema = uniqueSchema();
+    const state = await createPostgresEnterpriseState({ pool: createPool(), schema });
+    const adapters = [
+      ["memory", createMemoryIdempotencyStore()],
+      ["postgres", state.workIdempotency],
+    ] as const;
+
+    for (const [name, store] of adapters) {
+      const input = { identity: identity(), key: "portable-code", op: "mail.send" };
+      const claim = await store.begin(input);
+      assert.equal(claim.outcome, "acquired", name);
+      // Lost race: complete twice with the same (already consumed) claim token.
+      await store.complete({
+        ...input,
+        claimToken: claim.record.claimToken ?? "",
+        expectedVersion: claim.record.version,
+        result: { draftId: "draft" },
+      });
+      const replay = await store
+        .complete({
+          ...input,
+          claimToken: claim.record.claimToken ?? "",
+          expectedVersion: claim.record.version,
+          result: { draftId: "draft" },
+        })
+        .then(
+          () => undefined,
+          (error: unknown) => errorCodeOf(error),
+        );
+      assert.equal(replay, PORTABLE_IDEMPOTENCY_CODES[1], name);
+
+      // Rejected transition: an unknown claim token on a fresh key.
+      const other = { identity: identity(), key: "portable-code-other", op: "mail.send" };
+      const otherClaim = await store.begin(other);
+      const stale = await store
+        .complete({ ...other, claimToken: "stale", expectedVersion: otherClaim.record.version, result: { draftId: "draft" } })
+        .then(
+          () => undefined,
+          (error: unknown) => errorCodeOf(error),
+        );
+      assert.ok(
+        stale === PORTABLE_IDEMPOTENCY_CODES[0] || stale === PORTABLE_IDEMPOTENCY_CODES[1],
+        `${name} rejected a stale claim with a portable code (got ${stale})`,
+      );
+    }
   });
 
   it("claims before connector dispatch across replicas and replays only completed summaries", async () => {

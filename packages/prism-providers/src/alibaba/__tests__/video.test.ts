@@ -35,7 +35,16 @@ function dashscopeFetch(submitOk: unknown, pollResponses: unknown[]) {
 describe("createAlibabaVideoGenerationProvider", () => {
   it("submits_t2v_task_and_polls_to_succeeded_with_provenance", async () => {
     const { fetchImpl, requests } = dashscopeFetch(SUBMIT_OK, [TASK_DONE]);
-    const provider = createAlibabaVideoGenerationProvider({ apiKey: "sk-dashscope-secret", fetch: fetchImpl, pollIntervalMs: 1 });
+    const downloaded: string[] = [];
+    const provider = createAlibabaVideoGenerationProvider({
+      apiKey: "sk-dashscope-secret",
+      fetch: fetchImpl,
+      fetchUrl: async (url) => {
+        downloaded.push(url.href);
+        return new Response(new Uint8Array([1, 2, 3]));
+      },
+      pollIntervalMs: 1,
+    });
     const { jobId } = await provider.submit({ model: "wanx2.2-t2v-plus", prompt: "a red cube spinning", durationSeconds: 5 });
     assert.equal(jobId, "task-9");
     assert.equal(requests[0].url, "https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/video-synthesis/video-synthesis");
@@ -50,6 +59,8 @@ describe("createAlibabaVideoGenerationProvider", () => {
     assert.equal(job.video?.provider, "alibaba", "provenance preserved");
     assert.equal(job.video?.model, "wanx2.2-t2v-plus", "status remembers the submitted model");
     assert.equal(job.video?.mimeType, "video/mp4");
+    assert.deepEqual(job.video?.bytes, new Uint8Array([1, 2, 3]));
+    assert.deepEqual(downloaded, [RESULT_URL]);
   });
 
   it("image_to_video_uses_the_i2v_route_and_passes_img_url", async () => {
@@ -133,7 +144,12 @@ describe("createAlibabaVideoGenerationProvider", () => {
     );
 
     const done = dashscopeFetch(SUBMIT_OK, [TASK_DONE]);
-    const ok = createAlibabaVideoGenerationProvider({ apiKey: "sk-x", fetch: done.fetchImpl, pollIntervalMs: 1 });
+    const ok = createAlibabaVideoGenerationProvider({
+      apiKey: "sk-x",
+      fetch: done.fetchImpl,
+      fetchUrl: async () => new Response(new Uint8Array([1])),
+      pollIntervalMs: 1,
+    });
     const { jobId: id2 } = await ok.submit({ model: "m", prompt: "x" });
     const job = await ok.waitFor(id2);
     assert.equal(job.state, "succeeded");
@@ -142,7 +158,12 @@ describe("createAlibabaVideoGenerationProvider", () => {
   it("passes_video_generation_conformance_with_fake_transport", async () => {
     const { fetchImpl } = dashscopeFetch(SUBMIT_OK, [TASK_DONE]);
     await runVideoGenerationConformance({
-      provider: createAlibabaVideoGenerationProvider({ apiKey: "sk-x", fetch: fetchImpl, pollIntervalMs: 1 }),
+      provider: createAlibabaVideoGenerationProvider({
+        apiKey: "sk-x",
+        fetch: fetchImpl,
+        fetchUrl: async () => new Response(new Uint8Array([1])),
+        pollIntervalMs: 1,
+      }),
       model: "wanx2.2-t2v-plus",
       maxPromptChars: ALIBABA_VIDEO_PROMPT_MAX_CHARS,
       sample: { prompt: "a red cube spinning" },

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { type PersistedAttentionStickyFrontier, parseAttentionStickyFrontier } from "./attention-compiler.js";
 import type {
   Agent,
   AgentRunInterruption,
@@ -18,7 +19,6 @@ import type {
   ToolCallContent,
 } from "./contracts.js";
 import { AgentLoopStateError, AgentRunStateError } from "./contracts.js";
-import { parseAttentionStickyFrontier, type PersistedAttentionStickyFrontier } from "./attention-compiler.js";
 import type { SecretRedactor } from "./redaction.js";
 import { type LoadedSkillBodiesEntry, validateLoadedSkillBodies } from "./skill-load.js";
 import { HARD_RUN_TOOL_NAMES } from "./tools.js";
@@ -71,6 +71,18 @@ export interface StoredAgentRunState extends AgentRunState {
   };
   /** Per-run allow-list (Task 21). Absent = full registered set (legacy checkpoints). */
   readonly toolNames?: readonly string[];
+  /**
+   * Recorded checkpoint cadence (plan 084 Task 1). Present only for `"every-turn"` runs, so
+   * default checkpoints stay byte-identical. A resume of such a state keeps checkpointing each
+   * turn without the host repeating the option.
+   */
+  readonly checkpointPolicy?: "every-turn";
+  /**
+   * Set when a terminal state was written by a `RunOptions.turnPolicy` stop (plan 084 Task 2):
+   * the run succeeded cleanly but its frontier is intact, so `decision: "continue"` may resume
+   * it. Absent on every other state — a naturally finished run is never continuable.
+   */
+  readonly stopReason?: "host_policy";
 }
 
 /** Session-state caps (plan 015 Task 4): bounded names charged against the run-state byte budget. */
@@ -166,6 +178,9 @@ export function validateRunStateOptions(options: AgentRunStateOptions): void {
   if (!Number.isSafeInteger(bytes) || bytes < 1 || bytes > HARD_MAX_AGENT_RUN_STATE_BYTES) {
     throw new AgentRunStateError(`maxStateBytes must be a positive safe integer at most ${HARD_MAX_AGENT_RUN_STATE_BYTES}`);
   }
+  if (options.checkpointPolicy !== undefined && options.checkpointPolicy !== "decision" && options.checkpointPolicy !== "every-turn") {
+    throw new AgentRunStateError('checkpointPolicy must be "decision" or "every-turn"');
+  }
 }
 
 export async function loadAgentRunState(
@@ -219,6 +234,8 @@ export function publicState(state: StoredAgentRunState): AgentRunState {
     counters: _counters,
     deadlineAt: _deadlineAt,
     toolNames: _toolNames,
+    checkpointPolicy: _checkpointPolicy,
+    stopReason: _stopReason,
     ...publicValue
   } = state;
   return publicValue;
@@ -258,6 +275,7 @@ export function initialAgentRunState(input: {
     interruptBeforeTool: input.interruptBeforeTool,
     counters: input.counters,
     deadlineAt: input.deadlineAt,
+    ...(input.options.checkpointPolicy === "every-turn" ? { checkpointPolicy: "every-turn" as const } : {}),
   };
 }
 
@@ -341,6 +359,12 @@ export function parseAgentRunState(value: unknown, version?: number): StoredAgen
         throw new AgentRunStateError("Malformed agent run toolNames");
       }
     }
+  }
+  if (state.checkpointPolicy !== undefined && state.checkpointPolicy !== "every-turn") {
+    throw new AgentRunStateError("Malformed agent run checkpoint policy");
+  }
+  if (state.stopReason !== undefined && state.stopReason !== "host_policy") {
+    throw new AgentRunStateError("Malformed agent run stop reason");
   }
   // Load bounds against the hard cap, not the default: the configured maxStateBytes is a
   // save-side policy knob, while the load-side bound is only a DoS ceiling. States saved

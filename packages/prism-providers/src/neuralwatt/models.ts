@@ -80,7 +80,8 @@ const fastCompat = { tool_stream: true, reasoning: false, pricing_source: "/v1/m
 const jsonMode = { json_mode: true } as const;
 
 function featuredModel(config: NeuralWattModelConfig): ModelConfig {
-  return defineNeuralWattModel({ cache: implicitCache, ...config });
+  const model = defineNeuralWattModel({ cache: implicitCache, ...config });
+  return { ...model, capabilities: { ...model.capabilities, toolCallStrictness: "strict" } };
 }
 
 /**

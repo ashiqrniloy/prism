@@ -1,10 +1,10 @@
-import { CheckpointConflictError, type CheckpointQuery, type CheckpointRecord, type CheckpointStore } from "@arnilo/prism";
+import { type CheckpointQuery, type CheckpointRecord, type CheckpointStore } from "@arnilo/prism";
 import type Database from "better-sqlite3";
 import {
   assertCheckpointInput,
-  assertOwnershipScope,
   decodeCheckpointCursor,
   encodeCheckpointJson,
+  ownershipScopeMatches,
   staleCheckpoint,
   staleCheckpointExpected,
   staleCheckpointFence,
@@ -76,7 +76,11 @@ WHERE prism_checkpoints.version < excluded.version
       throwIfAborted(input.signal);
       assertCheckpointInput(input);
       const previous = rowToRecord(select.get(input.namespace, input.key) as Row | undefined);
-      if (previous) assertOwnershipScope(input, previous, () => new CheckpointConflictError("Checkpoint ownership mismatch"));
+      // A foreign-owned record reads as a CAS miss, never an ownership-shaped error
+      // (plan 080 Task 3: no cross-tenant existence leak).
+      if (previous && !ownershipScopeMatches(input, previous)) {
+        throw staleCheckpointExpected(input.expectedVersion ?? 0, previous.version);
+      }
       if (input.expectedVersion !== undefined && input.expectedVersion !== (previous?.version ?? 0))
         throw staleCheckpointExpected(input.expectedVersion, previous?.version ?? 0);
       if (previous && input.version <= previous.version) throw staleCheckpoint(input.version, previous.version);
@@ -107,8 +111,7 @@ WHERE prism_checkpoints.version < excluded.version
       throwIfAborted(input.signal);
       const record = rowToRecord(select.get(input.namespace, input.key) as Row | undefined);
       if (!record) return null;
-      assertOwnershipScope(input, record, () => new CheckpointConflictError("Checkpoint ownership mismatch"));
-      return record;
+      return ownershipScopeMatches(input, record) ? record : null;
     },
 
     async listCheckpoints(query: CheckpointQuery = {}) {
@@ -153,7 +156,7 @@ WHERE prism_checkpoints.version < excluded.version
       throwIfAborted(input.signal);
       const record = rowToRecord(select.get(input.namespace, input.key) as Row | undefined);
       if (!record) return false;
-      assertOwnershipScope(input, record, () => new CheckpointConflictError("Checkpoint ownership mismatch"));
+      if (!ownershipScopeMatches(input, record)) return false;
       return remove.run(input.namespace, input.key).changes > 0;
     },
   };

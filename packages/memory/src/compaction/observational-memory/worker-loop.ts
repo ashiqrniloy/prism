@@ -9,6 +9,7 @@ import type {
   ToolResult,
 } from "@arnilo/prism";
 import { applyDefaultProviderRequestOptions, applyThinkingLevelForModel, redactSecrets } from "@arnilo/prism";
+import { MemoryError, MemoryLimitError } from "../../errors.js";
 import { type MemoryWorkerLimitOptions, measureWorkerJson, resolveMemoryWorkerLimits, truncateWorkerText } from "./limits.js";
 
 export interface MemoryWorkerLoopOptions extends MemoryWorkerLimitOptions {
@@ -31,10 +32,18 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
   const secrets = options.secrets ?? [];
   const messages: Message[] = [];
   let messageBytes = 2;
+  const measure = (value: unknown, maxBytes: number, label: string): number => {
+    try {
+      return measureWorkerJson(value, maxBytes, label);
+    } catch (error) {
+      throw new MemoryLimitError(error instanceof Error ? error.message : "Observational memory worker limit exceeded");
+    }
+  };
   const messageSize = (message: Message): number => {
-    const bytes = measureWorkerJson(message, limits.maxMessageBytes, "Observational memory worker message");
+    const bytes = measure(message, limits.maxMessageBytes, "Observational memory worker message");
     const next = messageBytes + (messages.length ? 1 : 0) + bytes;
-    if (next > limits.maxMessageBytes) throw new Error(`Observational memory worker messages exceed ${limits.maxMessageBytes} bytes`);
+    if (next > limits.maxMessageBytes)
+      throw new MemoryLimitError(`Observational memory worker messages exceed ${limits.maxMessageBytes} bytes`);
     return next;
   };
   const addMessage = (message: Message): void => {
@@ -69,25 +78,26 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
         if (event.type === "error") throw new Error(safeWorkerError(event.error, secrets, limits.maxErrorBytes));
         if (event.type !== "tool_call") continue;
         if (calls.length >= limits.maxToolCallsPerTurn)
-          throw new Error(`Observational memory worker exceeds ${limits.maxToolCallsPerTurn} tool calls per turn`);
+          throw new MemoryLimitError(`Observational memory worker exceeds ${limits.maxToolCallsPerTurn} tool calls per turn`);
         totalCalls += 1;
         if (totalCalls > limits.maxToolCalls)
-          throw new Error(`Observational memory worker exceeds ${limits.maxToolCalls} total tool calls`);
+          throw new MemoryLimitError(`Observational memory worker exceeds ${limits.maxToolCalls} total tool calls`);
         const tool = tools.get(event.call.name);
         if (!tool)
-          throw new Error(
+          throw new MemoryError(
+            "unknown_tool",
             `Unknown observational memory tool: ${truncateWorkerText(redactSecrets(event.call.name, secrets), limits.maxErrorBytes)}`,
           );
-        measureWorkerJson(event.call, limits.maxMessageBytes, "Observational memory tool call");
-        measureWorkerJson(event.call.arguments, limits.maxArgumentBytes, "Observational memory tool arguments");
+        measure(event.call, limits.maxMessageBytes, "Observational memory tool call");
+        measure(event.call.arguments, limits.maxArgumentBytes, "Observational memory tool arguments");
         const safe = redactSecrets(event.call, secrets);
-        measureWorkerJson(safe.arguments, limits.maxArgumentBytes, "Redacted observational memory tool arguments");
+        measure(safe.arguments, limits.maxArgumentBytes, "Redacted observational memory tool arguments");
         messageSize({ role: "assistant", content: [...calls.map((call) => call.safe), safe] });
         calls.push({ raw: event.call, safe });
       }
     } catch (error) {
       throwIfAborted(options.signal);
-      if (error instanceof Error && /^(Observational memory|Unknown observational)/.test(error.message)) throw error;
+      if (error instanceof MemoryError) throw error;
       throw new Error(safeWorkerError(error, secrets, limits.maxErrorBytes));
     }
 
@@ -107,11 +117,11 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
         throwIfAborted(options.signal);
         throw new Error(safeWorkerError(error, secrets, limits.maxErrorBytes));
       }
-      measureWorkerJson(result, limits.maxResultBytes, "Observational memory tool result");
+      measure(result, limits.maxResultBytes, "Observational memory tool result");
       const payload = { result: result.value, error: result.error };
-      measureWorkerJson(payload, limits.maxResultBytes, "Observational memory tool result payload");
+      measure(payload, limits.maxResultBytes, "Observational memory tool result payload");
       const safePayload = redactSecrets(payload, secrets);
-      measureWorkerJson(safePayload, limits.maxResultBytes, "Redacted observational memory tool result");
+      measure(safePayload, limits.maxResultBytes, "Redacted observational memory tool result");
       addMessage(toolResultMessage(call.safe, safePayload));
     }
   }

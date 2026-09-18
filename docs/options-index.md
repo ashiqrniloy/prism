@@ -29,6 +29,24 @@ Field-level detail (defaults, bounds, failure modes) lives on the owning page �
 - **Request-time overrides narrow, never widen.** `RunOptions.limits` can only tighten `AgentConfig.limits`; a configured finite ceiling wins over `null`.
 - **Byte caps are not estimator-dependent.** Token-budget options that accept a host estimator (`tokenEstimator`) affect eviction accounting only; byte caps and redaction stay authoritative.
 
+## Durable runs
+
+**Agent run state** — [`durable-runs.md`](durable-runs.md)
+`AgentRunStateOptions`
+
+`AgentRunStateOptions.checkpointPolicy` (`"decision"` | `"every-turn"`) writes turn-boundary checkpoints so a crashed worker resumes with `decision: "continue"`; that action stays host-only and is never reachable from AG-UI or the server boundary.
+
+## Host stop, snapshot, and honesty surfaces
+
+| Surface | What it controls | Owning page |
+| --- | --- | --- |
+| `RunOptions.turnPolicy` (`TurnPolicyOptions`) | Synchronous host stop at a turn boundary; a stop lands as `stopReason: "host_policy"` and stays resumable | [Agent loops](agent-loops.md) |
+| `CreateAgUiHandlerOptions.inputPolicy` (`AgUiInputPolicyOptions`) | `clientState: "honor"` \| `"ignore"` — whether the server honors client-supplied AG-UI state and tools | [Frontend interoperability](ag-ui.md) |
+| `snapshotRunBundle(...)` → `RunBundleSnapshot` | Inspectable digest projection of the effective run bundle (prompt/skill/tool/guardrail digests, limits, storage kinds) | [Run bundle](run-bundle.md) |
+| `createClaimGroundingGuardrail` (`ClaimGroundingGuardrailOptions`) | `"output"`-stage guardrail that blocks or flags numeric claims no tool result or host evidence supports | [Guardrails](guardrails.md) |
+| `ErrorInfo.failureClass` (`ProviderFailureClass`) | Typed provider failure on run outcomes, ledger rows, and tool results (`quota`, `rate_limited`, `auth`, `transient`, `permanent`) | [Runs and usage](runs-and-usage.md) |
+| `ModelConfig.capabilities.toolCallStrictness` | Advisory tool-call reliability (`"strict"` \| `"lenient"` \| `"legacy"`); catalog conformance, not a promise | [Model registry](model-registry.md) |
+
 ## Agent/session runtime
 
 **Agent definitions** — [`agent-definitions.md`](agent-definitions.md)  
@@ -38,7 +56,10 @@ Field-level detail (defaults, bounds, failure modes) lives on the owning page �
 `SubscribeOptions`
 
 **Agent loops** — [`agent-loops.md`](agent-loops.md)  
-`AgentLoopOptions`
+`AgentLoopOptions`, `TurnPolicyOptions`
+
+**Guardrails** — [`guardrails.md`](guardrails.md)
+`ClaimGroundingGuardrailOptions`
 
 **Agent/session runtime** — [`agent-session-runtime.md`](agent-session-runtime.md)  
 `AgentConfig`, `AgentRunResumeOptions`, `AgentRunResumeStreamOptions`, `AgentSessionCloneOptions`, `AgentSessionConfig`, `AgentSessionForkOptions`, `RunOptions`, `SteerOptions`
@@ -230,7 +251,7 @@ Field-level detail (defaults, bounds, failure modes) lives on the owning page �
 `AcpCapabilitiesOptions`, `CreatePrismAcpAgentOptions`
 
 **Frontend interoperability (AG-UI and ACP)** — [`ag-ui.md`](ag-ui.md)  
-`AgUiLimitOptions`
+`AgUiInputPolicyOptions`, `AgUiLimitOptions`
 
 **Supervisors and subagents** — [`supervisors.md`](supervisors.md)  
 `CreateSupervisorOptions`, `SupervisorLimits`, `ResolvedSupervisorLimits`, `DelegationWaitOptions`, `CreateSpawnAgentToolOptions`, `CreateDelegationControlToolOptions`, `WorktreeChildFactoryOptions`, `ObserveSupervisorLifecycleOptions`
@@ -239,6 +260,17 @@ Field-level detail (defaults, bounds, failure modes) lives on the owning page �
 
 **Workflows** — [`workflows.md`](workflows.md)  
 `RunWorkflowOptions`
+
+## Third-party integrations
+
+**Messaging channels** — [`messaging-channels.md`](messaging-channels.md)
+`MessagingRuntimeOptions`, `ChannelLimits`, `ChannelDeliveryJournalOptions`, `ChannelPairingStoreOptions`, `ChannelStateStoreOptions`
+
+**Telegram channel** — [`telegram-channel.md`](telegram-channel.md)
+`TelegramAdapterOptions`, `TelegramWebhookHandlerOptions`
+
+**Signal channel (experimental)** — [`signal-channel.md`](signal-channel.md)
+`SignalAdapterOptions`
 
 ## Conformance harnesses
 

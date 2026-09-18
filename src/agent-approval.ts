@@ -50,6 +50,10 @@ export function pendingDecisionsOf(state: StoredAgentRunState): readonly Pending
  * crash with raw TypeErrors. State-dependent checks (foreign/stale/duplicate ids, scope,
  * schema, policy) stay in {@link resolveRunDecisions}. Errors never include tool arguments,
  * elicitation payloads, credentials, or foreign approval details.
+ *
+ * The legacy `decision` accepts `continue` (plan 084 Task 1) in addition to `approve`/`deny`;
+ * it is a crash-recovery action for running-state checkpoints and is resolved in
+ * `prepareAgentRunResume`, never as an approval outcome.
  */
 export function assertValidAgentRunResume(resume: AgentRunResume): void {
   const invalid = (message: string) => new AgentDecisionError("ERR_PRISM_DECISION_INVALID", message);
@@ -65,7 +69,7 @@ export function assertValidAgentRunResume(resume: AgentRunResume): void {
   if (hasDecision && hasDecisions) throw invalid("Resume accepts exactly one of decision or decisions");
   if (!hasDecision && !hasDecisions) throw invalid("Resume requires a decision or decisions");
   if (hasDecision) {
-    if (resume.decision !== "approve" && resume.decision !== "deny") {
+    if (resume.decision !== "approve" && resume.decision !== "deny" && resume.decision !== "continue") {
       throw invalid("Unknown legacy decision");
     }
     return;

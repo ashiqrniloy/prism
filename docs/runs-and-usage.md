@@ -65,6 +65,18 @@ Prism charges turns before assembly, provider attempts before generation, reques
 
 `createRunLimitTracker()` and `resolveRunLimits()` are public for adapters that need the same validation and accounting semantics. Workflow agent nodes forward `RunWorkflowOptions.limits`; supervisor delegation narrows its step/tool/token/timeout budget into core limits; MCP tool calls use a per-call tracker.
 
+## Clean stops and stop reasons
+
+A run can end without an error but also without the model finishing its thought: a host `RunOptions.turnPolicy.stop`, a `turnPolicy.maxTurns` cap, or a loop ceiling. `AgentRunResult.stopReason` names that outcome — `"host_policy"` for a host policy stop, `"turn_limit"`, `"token_limit"`, or `"refusal"` for loop ceilings — with `turnPolicy.stop`'s own string in `stopDetail`. A natural end carries neither field, so hosts that only care about "did it stop early?" check truthiness. The same values ride the emitted `agent_finished` event (as `finishReason`/`stopDetail`), the finish `RunRecord`, and the projected [Execution Timeline](execution-timeline.md).
+
+A `host_policy` stop is terminal for the run yet resumable: with `runState: { checkpointPolicy: "every-turn" }` the stopped state keeps its frontier, and `resumeAgentRun(..., { decision: "continue" })` picks the loop up at the boundary. Every other terminal state is final. See [Agent loops § Turn policy](agent-loops.md#turn-policy).
+
+## Provider failure classes
+
+Provider-originated failures carry advisory `ErrorInfo.failureClass` on the failed `AgentRunResult`, terminal `RunRecord`, error events, and any `ToolResult.error` that already carries that `ErrorInfo`. Values are `"quota"`, `"auth"`, `"rate_limited"`, `"transient"`, `"permanent"`, and `"unknown"`. The classifier uses an already-captured HTTP status plus bounded error body: quota-shaped `429` responses (for example `GoUsageLimitError`) are `"quota"`; other `429` values are `"rate_limited"`; `401`/`403` are `"auth"`; `5xx` and known network codes such as `ECONNRESET` are `"transient"`; other `4xx` values are `"permanent"`; anything else is `"unknown"`.
+
+This field is outcome metadata, not a retry control. Existing retry policy, attempt limits, and fail-closed behavior continue to use `ErrorInfo.code` exactly as before. Prism records no provider headers or response bodies beyond the existing redacted error message.
+
 ## Durable run state
 
 `RunOptions.runState` writes a bounded, versioned checkpoint only at a safe interruption boundary. Its counters and absolute deadline resume with the run, while transcript history stays in `SessionStore` by session/leaf reference. `AgentRunResult.runState` exposes only redacted identity/status/version data; `interruption` excludes tool arguments. See [Agent/session runtime](agent-session-runtime.md#durable-interruption).
@@ -86,6 +98,8 @@ The adapter receives these record shapes:
 | `status` | `queued` \| `running` \| `suspended` \| `denied` \| `succeeded` \| `failed` \| `aborted`. |
 | `startedAt` / `finishedAt` | ISO timestamps. |
 | `abortReason` | Set when status is `aborted`. |
+| `stopReason` | Why the loop stopped cleanly instead of reaching a natural end: `host_policy` (`RunOptions.turnPolicy.stop`), `turn_limit`, `token_limit`, or `refusal`. Absent on a natural end. |
+| `stopDetail` | Host stop detail from `turnPolicy.stop` (≤256 bytes, redacted). |
 | `error` | `ErrorInfo` when status is `failed`. |
 | `tenantId` / `accountId` / `userId` | From active ownership scope. |
 

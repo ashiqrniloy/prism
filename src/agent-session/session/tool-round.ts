@@ -312,8 +312,9 @@ export function bindDispatchToolCall(ctx: RoundContext): LoopContext["dispatchTo
     if (ctx.session.activeGatedRound?.has(call.id)) {
       return { toolCallId: call.id, name: call.name, metadata: { approvalPending: true } };
     }
+    ctx.toolCalls += 1;
     try {
-      return await dispatchToolCall({
+      const result = await dispatchToolCall({
         call,
         registry: ctx.registry,
         context: {
@@ -398,6 +399,8 @@ export function bindDispatchToolCall(ctx: RoundContext): LoopContext["dispatchTo
         },
         validate: ctx.validate,
       });
+      ctx.toolResults.push(result);
+      return result;
     } catch (error) {
       if (error instanceof AgentDelegationSuspendedError && !error.toolCall) error.toolCall = call;
       throw error;

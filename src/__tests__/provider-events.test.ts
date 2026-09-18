@@ -97,8 +97,17 @@ describe("provider event helpers", () => {
     });
 
     const event = providerError(new Error("bad sk-test-123"), ["sk-test-123"]);
+    const quota = providerError(Object.assign(new Error("GoUsageLimitError sk-test-123"), { code: 429 }), ["sk-test-123"]);
 
     assert.equal(event.type, "error");
-    if (event.type === "error") assert.equal(event.error.message, "bad [REDACTED]");
+    if (event.type === "error") {
+      assert.equal(event.error.message, "bad [REDACTED]");
+      assert.equal(event.error.failureClass, "unknown");
+    }
+    assert.equal(quota.type, "error");
+    if (quota.type === "error") {
+      assert.equal(quota.error.failureClass, "quota");
+      assert.equal(quota.error.message.includes("sk-test-123"), false);
+    }
   });
 });

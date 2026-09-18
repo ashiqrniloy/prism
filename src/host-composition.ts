@@ -31,6 +31,10 @@ export interface HostCompositionOptions {
   readonly workspaceRoot?: string;
   readonly sandboxRoots?: readonly string[];
   readonly credentialRefs?: readonly string[];
+  readonly connectedApps?: {
+    readonly appIds: readonly string[];
+    readonly serverIds: readonly string[];
+  };
   readonly governance?: HostCompositionGovernance;
   readonly redactor?: SecretRedactor;
   /** Explicit opt-in for live network checks; inert by default. */
@@ -47,6 +51,10 @@ export interface HostCompositionReport {
   readonly profile: "personal" | "business";
   readonly effectiveTools: readonly HostCompositionToolReport[];
   readonly credentialReferences: readonly string[];
+  readonly connectedApps?: {
+    readonly appIds: readonly string[];
+    readonly serverIds: readonly string[];
+  };
   readonly ownership: {
     readonly tenantId?: string;
     readonly accountId?: string;
@@ -123,12 +131,43 @@ function sanitizeCredentialRefs(refs: readonly string[] = [], redactor?: SecretR
   return Object.freeze(sanitized);
 }
 
+const HARD_MAX_CONNECTED_APPS = 32;
+const MAX_CONNECTED_APP_IDENTIFIER_BYTES = 128;
+
+function copyConnectedApps(value: unknown): HostCompositionReport["connectedApps"] {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== "object") throw new HostCompositionError("Connected apps must provide identifier arrays");
+  return Object.freeze({
+    appIds: copyConnectedAppIdentifiers((value as { appIds?: unknown }).appIds, "appIds"),
+    serverIds: copyConnectedAppIdentifiers((value as { serverIds?: unknown }).serverIds, "serverIds"),
+  });
+}
+
+function copyConnectedAppIdentifiers(value: unknown, name: "appIds" | "serverIds"): readonly string[] {
+  if (!Array.isArray(value) || value.length > HARD_MAX_CONNECTED_APPS) {
+    throw new HostCompositionError(`Connected app ${name} must contain at most ${HARD_MAX_CONNECTED_APPS} identifiers`);
+  }
+  return Object.freeze(
+    value.map((identifier) => {
+      if (
+        typeof identifier !== "string" ||
+        !identifier.trim() ||
+        Buffer.byteLength(identifier, "utf8") > MAX_CONNECTED_APP_IDENTIFIER_BYTES
+      ) {
+        throw new HostCompositionError(`Connected app ${name} must contain 1..${MAX_CONNECTED_APP_IDENTIFIER_BYTES} byte identifiers`);
+      }
+      return identifier;
+    }),
+  );
+}
+
 function isContainedPath(parent: string, child: string): boolean {
   const rel = relative(parent, child);
   return !rel.startsWith("..") && !isAbsolute(rel);
 }
 
-function resolveStorage(store: unknown, checkpoints: unknown): { kind: string; durable: boolean } {
+/** Classifies a store by declared kind/durability and constructor name — never reads contents or connection strings (plan 084 Task 4 reuses it for run-bundle snapshots). */
+export function describeStorage(store: unknown, checkpoints: unknown): { kind: string; durable: boolean } {
   const target = store ?? checkpoints;
   if (!target || typeof target !== "object") {
     return { kind: "none", durable: false };
@@ -193,6 +232,7 @@ export function inspectHostComposition(options: HostCompositionOptions): HostCom
 
   // 2. Credential references (identifier references only, raw values redacted)
   const credRefs = sanitizeCredentialRefs(options.credentialRefs, redactor);
+  const connectedApps = copyConnectedApps(options.connectedApps);
 
   // 3. Ownership
   const rawOwnership = config?.ownership;
@@ -203,7 +243,7 @@ export function inspectHostComposition(options: HostCompositionOptions): HostCom
   };
 
   // 4. Storage durability
-  const storage = resolveStorage(options.store, options.checkpoints ?? config?.runState?.checkpoints);
+  const storage = describeStorage(options.store, options.checkpoints ?? config?.runState?.checkpoints);
 
   // 5. Sandbox capabilities
   const workspaceRoot = options.workspaceRoot;
@@ -273,6 +313,9 @@ export function inspectHostComposition(options: HostCompositionOptions): HostCom
 
     // Verified identity verification
     const identity = config?.identity;
+    if (connectedApps !== undefined && identity?.verified !== true) {
+      errors.push("Business connected apps require a verified identity");
+    }
     if (identity) {
       if (!identity.principal?.id || !identity.tenantId) {
         errors.push("Business worker identity cannot be empty or fabricated");
@@ -314,6 +357,7 @@ export function inspectHostComposition(options: HostCompositionOptions): HostCom
     profile: normalizedProfile,
     effectiveTools: Object.freeze(effectiveTools),
     credentialReferences: credRefs,
+    ...(connectedApps === undefined ? {} : { connectedApps }),
     ownership: Object.freeze(ownership),
     storage: Object.freeze(storage),
     sandbox: Object.freeze({

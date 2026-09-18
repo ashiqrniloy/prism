@@ -1,0 +1,27 @@
+# Operator-only recipe. Prism never depends on this sidecar and CI never pulls it.
+# Pin an immutable release tag: `tip` tracks `main`, `latest` moves under you.
+#   OPEN_CONNECTOR_VERSION=0.x.y docker compose up
+services:
+  open-connector:
+    image: ghcr.io/oomol-lab/open-connector:${OPEN_CONNECTOR_VERSION:?pin an immutable Open Connector release tag}
+    # Loopback only. Prism's streamable-http transport reaches this through
+    # allowedOrigins + allowLoopbackHttp; never expose the runtime on 0.0.0.0.
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - open-connector-data:/app/data
+    environment:
+      OOMOL_CONNECT_DATA_DIR: /app/data
+      OOMOL_CONNECT_ORIGIN: http://127.0.0.1:3000
+      # Secrets stay operator-supplied; export them before `docker compose up`.
+      OOMOL_CONNECT_ENCRYPTION_KEY: ${OOMOL_CONNECT_ENCRYPTION_KEY:?generate and store this first}
+      OOMOL_CONNECT_ADMIN_TOKEN: ${OOMOL_CONNECT_ADMIN_TOKEN:?generate and store this first}
+      OOMOL_CONNECT_RUNTIME_TOKEN: ${OOMOL_CONNECT_RUNTIME_TOKEN:?token Prism sends as Authorization: Bearer}
+      # Narrow the runtime to the actions this host actually admits.
+      OOMOL_CONNECT_ALLOWED_ACTIONS: ${OOMOL_CONNECT_ALLOWED_ACTIONS:-}
+      OOMOL_CONNECT_BLOCKED_ACTIONS: ${OOMOL_CONNECT_BLOCKED_ACTIONS:-}
+      # Prism never uses Open Connector's provider proxy path.
+      OOMOL_CONNECT_ALLOWED_PROXIES: ""
+
+volumes:
+  open-connector-data:

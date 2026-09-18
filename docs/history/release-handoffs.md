@@ -2,6 +2,44 @@
 
 Operator publish handoffs per release line, kept verbatim. Not read on the hot path.
 
+### 0.8.0 publish handoff (plan 085 Tasks 7–8)
+
+**Decision: GO when the operator prerequisites below are recorded on the tagged commit.** Release **0.8.0** is the **seven-plan cut**: [079](../../plans/079-Prism-Messaging-Channels-Telegram-Signal.md) (messaging channels), [080](../../plans/080-Messaging-Channel-Followons-And-0-8-0-Cut.md) Tasks 1–9, [081](../../plans/081-Connected-Apps-Mcp-Host-And-Work-Http.md) (connected apps / work HTTP), [082](../../plans/082-Package-Evidence-Generation-And-Connected-App-Follow-Up-Review.md), [083](../../plans/083-Prism-Work-Package-Sandbox-And-Skills.md) (`@arnilo/prism-work` replacing `@arnilo/prism-office`), [084](../../plans/084-Host-Long-Run-Durability-Steering-And-Honesty-Surfaces.md) (durable runs), [085](../../plans/085-Honesty-Gates-Runtime-Split-And-0-8-0-Cut.md) Tasks 1–6 (honesty gates). **080 Task 10 is superseded here.** Plan 079 is **in** this cut.
+
+The graph is **11 publishable manifests** at exact **0.8.0** with internal caret ranges `^0.8.0`: root `@arnilo/prism` plus 10 workspace packages (4 `prism-*` family packages, 6 capability packages, 19 provider adapter subpaths inside the providers family). The predecessor published release is **0.7.0**.
+
+Host-visible delta (full detail in [migrate-to-0.8.md](../migrate-to-0.8.md)): one **import-map break** — `@arnilo/prism-office` and the work/document-reader subpaths move to `@arnilo/prism-work` with no shim; catch work-idempotency by `code`. Everything else is additive or a documented pin: `@arnilo/prism-channels`, connected-app MCP sessions, durable turn checkpoints / `continue`, turn-stop policy, run bundle, claim-grounding guardrail, OM workers stay tool-only, channel lease release is fail-closed, AG-UI `inputPolicy.clientState: "ignore"` is opt-in.
+
+Evidence recorded for the tree under publication. `scripts/release-evidence.json` — **43 surfaces, 12 pass, 31 protected with reasons, `blocked: false`** (`test:postgres durable conformance` is a this-tree pass, count 544, `gitHead` matches `git rev-parse HEAD`). `npm test` 6/6 stages; `npm run typecheck` green for root, all workspaces, and `examples/`; coverage core 92.50 lines against the 60/70/75 gate with every non-protected workspace above its recorded lines threshold (artifact keys include `@arnilo/prism-work`, not `@arnilo/prism-office`); `npm run pack:dry-run` green for all eleven packages; `npm run release:check --lockstep --version 0.8.0` reports **11/11 packages available**; `npm run release:publish --dry-run --lockstep --version 0.8.0` produces all eleven packs deterministically; `npm run security:threat-suites` **83/83**; `npm audit --audit-level=moderate` **0**; secret scan **6895 files, 0 findings**; SBOM regenerated (173 packages) and `scripts/verify-sbom.mjs` clean against `security/license-policy.json`.
+
+Protected legs actually run here (not just recorded): `PRISM_TEST_POSTGRES_URL=… npm run test:postgres` against `pgvector/pgvector:pg16` — 544 tests, 540 pass, 0 fail; `node scripts/drill-migration-rollback.mjs --url …` — Postgres apply → downgrade `009` → verify-compat → re-apply → checksum-fail-closed and the SQLite flow all pass, plus the `--self-test` URL-refusal check. The release workflow's `postgres-integration` job must be green on the release commit before publication. No registry write in this plan. Ledger: [0.8.0-cut.md](../_evidence/0.8.0-cut.md).
+
+```bash
+# Operator prerequisites (each a named blocked gate — none may be skipped):
+#  1. protected live-canary matrix green (live-canaries.yml, canary-report.json retained)
+#  2. PostgreSQL protected suite green (test:postgres) with this-tree scripts/postgres-evidence.json
+#     matching git rev-parse HEAD, and CodeQL SAST green on the release commit
+#  3. npm OIDC trusted publishing identity authenticated (NPM_TOKEN with id-token, provenance)
+#  4. branch protection: the compatibility leg is node22-compat
+
+git diff --check
+npm ci
+# sdk:ready phases, as .github/workflows/release.yml runs them (env scoped to release:gate only):
+npm run typecheck && npm run lint && npm run format:check
+npm test && npm run test:coverage && npm run pack:dry-run
+PRISM_TEST_POSTGRES_URL=... npm run test:postgres
+PRISM_TEST_POSTGRES_URL=... npm run release:gate
+npm run security:threat-suites
+
+# Sign the release on the clean tagged tree (operator GPG key) — Task 8 / operator only:
+# git tag -s v0.8.0 -m "0.8.0"
+# node scripts/release.mjs publish --lockstep --version 0.8.0
+
+# First-party package tags: push in batches of <=3 per push (tag-push storms; VENT 26-08-29).
+```
+
+Rollback pins the previous published line — `@arnilo/prism@0.7.0` and its siblings, exact pins per package. Session/checkpoint schema is unchanged; channel journals and `@arnilo/prism-work` stores are new 0.8.0 surfaces a 0.7.0 host never opened.
+
 ### 0.7.0 publish handoff (plan 073 Tasks 28–29)
 
 **Decision: GO when the operator prerequisites below are recorded.** Release **0.7.0** is the **six-plan cut** that closed the extended line: [072](../evaluations.md) (execution timeline, workflow graph, trajectory/outcome evals, cockpit aggregations, workflow OTel), [073](../index.md) (host completeness: traps A–C, R01–R06, R08, R10–R14, Tasks 15/30/31 and the cut itself), [074](../attention-compiler.md) (R17 attention compiler and the host-programmable compaction trigger), [075](../memory-fabric.md) (Memory Fabric subpath), [077](../compaction-observational-memory.md) (R16 work-scope memory index) and [078](../supervisors.md) (host-owned subagent spawn, bounded async spawn/wait/cancel, worktree isolation). **Plan 079 (Telegram/Signal channels) was moved to 0.8.0 on 2026-09-15** so the cut stopped waiting on unstarted work; no channel adapter ships in 0.7.0.

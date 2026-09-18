@@ -1,4 +1,4 @@
-import { createMistralOcrParser } from "@arnilo/prism-coding-tools/document-reader";
+import { createMistralOcrParser } from "@arnilo/prism-work/document-reader";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory";
 import { replaceDocument, retrieveContext } from "@arnilo/prism-memory/rag";
 

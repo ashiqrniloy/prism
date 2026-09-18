@@ -85,7 +85,7 @@ function runWikiSuites(cwd) {
   // A nested `node --test` refuses to run ("skipping running files") while
   // NODE_TEST_CONTEXT is inherited — it exits 0 with no output, so a gate that
   // spawns the runner must strip it and assert a pass count afterwards.
-  const result = spawnSync(process.execPath, ["--test", suiteGlob(cwd)], {
+  const result = spawnSync(process.execPath, ["--test", "--test-isolation=none", suiteGlob(cwd)], {
     cwd,
     encoding: "utf8",
     env: { ...process.env, NODE_TEST_CONTEXT: undefined, NODE_TEST_WORKER_ID: undefined },
@@ -94,6 +94,11 @@ function runWikiSuites(cwd) {
   assert.equal(result.status, 0, `wiki suites must pass with cwd=${label}:\n${output.slice(-4000)}`);
   assert.match(output, /ℹ pass [1-9]/, `wiki suites reported no passing tests with cwd=${label}`);
 }
+
+test("nested wiki runner uses one process while retaining pollution checks", () => {
+  const source = readFileSync(join(ROOT, "scripts", "wiki-scratch-isolation.test.mjs"), "utf8");
+  assert.match(source, /\["--test", "--test-isolation=none", suiteGlob\(cwd\)\]/);
+});
 
 test("wiki suites are hermetic: tracked fixtures and the repository root stay untouched", () => {
   assert.ok(existsSync(fixtureDir(ROOT)), "packages/memory/.wiki fixture must exist");

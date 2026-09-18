@@ -157,7 +157,6 @@ DEFAULT_EVALUATION_PAGE_SIZE	export declare const DEFAULT_EVALUATION_PAGE_SIZE =
 DEFAULT_EVENT_BUFFER	export declare const DEFAULT_EVENT_BUFFER = 2048
 DEFAULT_EXPERIMENT_CONCURRENCY	export declare const DEFAULT_EXPERIMENT_CONCURRENCY = 1
 DEFAULT_FILE_MODE	export declare const DEFAULT_FILE_MODE = 384
-DEFAULT_GWS_OPS	export declare const DEFAULT_GWS_OPS: readonly GoogleWorkspaceOp[]
 DEFAULT_JUDGE_MAX_ATTEMPTS	export declare const DEFAULT_JUDGE_MAX_ATTEMPTS = 1
 DEFAULT_JUDGE_MAX_INPUT_BYTES	export declare const DEFAULT_JUDGE_MAX_INPUT_BYTES: number
 DEFAULT_JUDGE_MAX_OUTPUT_BYTES	export declare const DEFAULT_JUDGE_MAX_OUTPUT_BYTES: number
@@ -166,7 +165,6 @@ DEFAULT_JUDGE_TIMEOUT_MS	export declare const DEFAULT_JUDGE_TIMEOUT_MS = 30000
 DEFAULT_KEYCHAIN_TIMEOUT_MS	export declare const DEFAULT_KEYCHAIN_TIMEOUT_MS = 5000
 DEFAULT_LEASE_TTL_MS	export declare const DEFAULT_LEASE_TTL_MS = 30000
 DEFAULT_LIST_PAGE_SIZE	export declare const DEFAULT_LIST_PAGE_SIZE = 100
-DEFAULT_M365_OPS	export declare const DEFAULT_M365_OPS: readonly Microsoft365Op[]
 DEFAULT_MAX_ACTIVE_CHILDREN	export declare const DEFAULT_MAX_ACTIVE_CHILDREN = 4
 DEFAULT_MAX_ATTEMPTS	export declare const DEFAULT_MAX_ATTEMPTS = 3
 DEFAULT_MAX_CHECKPOINT_BYTES	export declare const DEFAULT_MAX_CHECKPOINT_BYTES: number
@@ -233,7 +231,6 @@ DEFAULT_TRACE_MAX_BYTES	export declare const DEFAULT_TRACE_MAX_BYTES: number
 DEFAULT_TRACE_PAGES	export declare const DEFAULT_TRACE_PAGES = 20
 DEFAULT_TRACE_PAGE_SIZE	export declare const DEFAULT_TRACE_PAGE_SIZE = 100
 DEFAULT_TRIALS_COUNT	export declare const DEFAULT_TRIALS_COUNT = 1
-DEFAULT_WORK_LIMITS	export declare const DEFAULT_WORK_LIMITS: ResolvedWorkLimits
 Dataset	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
 DatasetFromRunsInput	export type { CuratedItemDraft, CuratedRun, CurateResult, CurateToItem, CurationSkip, DatasetFromRunsInput, } from "./curate.js"
 DatasetItem	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
@@ -291,19 +288,13 @@ ExperimentReport	export type { ComparisonCandidate, ComparisonRecord, Comparison
 ExperimentTrials	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
 ExportPolicyDecisionsOptions	export type { ExportPolicyDecisionsOptions } from "./export.js"
 ExtendedOAuthCredentialStore	export type { ExtendedOAuthCredentialStore } from "./resolver.js"
-ExternalRecipientPolicy	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
 FailureInjectionOptions	export type { FailureInjectionOptions, RunScenarioOptions, ScenarioResult, ScenarioTurn, } from "./scenarios.js"
 FakeJetStream	export declare class FakeJetStream implements NatsJetStream
 FanOutNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, WorkflowDefinition, WorkflowEvent, Work
 FilePolicyDecisionStoreOptions	export type { FilePolicyDecisionStoreOptions, MemoryPolicyDecisionStoreOptions } from "./store.js"
 FunctionNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, WorkflowDefinition, WorkflowEvent, Work
-GATED_GWS_OPS	export declare const GATED_GWS_OPS: ReadonlySet<GoogleWorkspaceOp>
-GATED_M365_OPS	export declare const GATED_M365_OPS: ReadonlySet<Microsoft365Op>
 GOOGLE_WORKSPACE_BASE_SCOPES	export declare const GOOGLE_WORKSPACE_BASE_SCOPES: readonly ["openid", "email", "profile"]
 GOOGLE_WORKSPACE_SCOPE_BUNDLES	export declare const GOOGLE_WORKSPACE_SCOPE_BUNDLES: Readonly<Record<string, WorkloadScopeBundle>>
-GoogleWorkspaceAdapter	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-GoogleWorkspaceCapability	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-GoogleWorkspaceOp	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
 GovernedInvocationSettlement	export type { GovernedInvocationSettlement, GovernedProvider, GovernedProviderOptions, } from "./invocation.js"
 GovernedProvider	export type { GovernedInvocationSettlement, GovernedProvider, GovernedProviderOptions, } from "./invocation.js"
 GovernedProviderOptions	export type { GovernedInvocationSettlement, GovernedProvider, GovernedProviderOptions, } from "./invocation.js"
@@ -412,11 +403,9 @@ HARD_SCHEDULE_PAGE_CAP	export declare const HARD_SCHEDULE_PAGE_CAP = 500
 HARD_TRACE_MAX_BYTES	export declare const HARD_TRACE_MAX_BYTES: number
 HARD_TRACE_PAGES	export declare const HARD_TRACE_PAGES = 100
 HARD_TRACE_PAGE_SIZE	export declare const HARD_TRACE_PAGE_SIZE = 1000
-HARD_WORK_LIMITS	export declare const HARD_WORK_LIMITS: ResolvedWorkLimits
 HostKms	export type { HostKms, HostKmsCryptoOptions, KmsEnvelope } from "./kms.js"
 HostKmsCryptoOptions	export type { HostKms, HostKmsCryptoOptions, KmsEnvelope } from "./kms.js"
 ID_PATTERN	export declare const ID_PATTERN: RegExp
-IdempotencyStore	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
 InMemoryTelemetry	export type { DelegationTelemetry, EvaluationTelemetry, InMemoryTelemetry, OpenTelemetryContextApi, OpenTelemetryInstrumentation, OpenTelemetryInstrumentationOptions, OpenTelemetryTraceApi, PrismContext, PrismCounter, PrismHistogram, PrismMeter, PrismSpan, PrismSpanKind, PrismSpanStatus, PrismTracer, RecordedMetric, RecordedSpan, RunFeedbackTelemetry, TraceReference, } from "./instrumentation.js"
 JSON_HEADERS	export declare const JSON_HEADERS:
 JoinNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, WorkflowDefinition, WorkflowEvent, Work
@@ -454,9 +443,6 @@ MODEL_ROUTER_ERROR_CODES	export declare const MODEL_ROUTER_ERROR_CODES:
 MemoryApprovalStoreOptions	export type { ApprovalAction, ApprovalActorRef, ApprovalAuthority, ApprovalConsumeInput, ApprovalCreateInput, ApprovalDecideInput, ApprovalDecision, ApprovalDecisionValue, ApprovalGetInput, ApprovalQuery, ApprovalQueryClient, ApprovalRecord, ApprovalRequest, ApprovalRequirement, ApprovalRevokeInput, ApprovalRoleGrant, ApprovalStatus, ApprovalStore, MemoryApprovalStoreOptions, PreparedApprovalCreate, PreparedApprovalDecision, PreparedApprovalTransition, } from "./approvals.js"
 MemoryPolicyDecisionStoreOptions	export type { FilePolicyDecisionStoreOptions, MemoryPolicyDecisionStoreOptions } from "./store.js"
 MemoryRateLimiterOptions	export type { MemoryRateLimiterOptions, PrismServerRateLimitDenial, PrismServerRateLimiter, PrismServerRateLimitInput, } from "./rate-limit.js"
-Microsoft365Adapter	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-Microsoft365Capability	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-Microsoft365Op	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
 ModelJudgeOptions	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
 ModelJudgeRequest	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
 ModelRouteCandidate	export type { CostLatencySelectionOptions, CreateModelRouterOptions, ModelRouteCandidate, ModelRouter, ModelRouterAllowList, ModelRouterAttempt, ModelRouterAttribution, ModelRouterBudgets, ModelRouterCircuitOptions, ModelRouterDenyReason, ModelRouterDiagnostics, ModelRouterLimits, ModelRouterRateLimit, ModelRouterReservation, ModelRouterResolveRequest, ModelRouterResolveResult, ModelRouterSelectionPolicy, ModelRouterStateKey, ModelRouterStateOwner, ModelRouterStateStore, PaidWorkKind, ResolvedMo
@@ -588,7 +574,6 @@ ResolvedModelRouterLimits	export type { CostLatencySelectionOptions, CreateModel
 ResolvedPolicyLimits	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
 ResolvedPrismDeploymentLimits	export type { PrismDeploymentLimits, PrismServerLimits, ResolvedPrismDeploymentLimits, ResolvedPrismServerLimits, } from "./limits.js"
 ResolvedPrismServerLimits	export type { PrismDeploymentLimits, PrismServerLimits, ResolvedPrismDeploymentLimits, ResolvedPrismServerLimits, } from "./limits.js"
-ResolvedWorkLimits	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
 RotateEncryptedCredentialStoreOptions	export type { EncryptedCredentialStoreLimits, EncryptedCredentialStoreOptions, EncryptedEnvelope, KeychainCredentialStoreOptions, RotateEncryptedCredentialStoreOptions, ScryptParameters, } from "./types.js"
 RunComparisonOptions	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
 RunExperimentOptions	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
@@ -626,7 +611,6 @@ SupervisorDeniedError	export declare class SupervisorDeniedError extends Supervi
 SupervisorError	export declare class SupervisorError extends Error
 SupervisorLimitError	export declare class SupervisorLimitError extends SupervisorError
 SupervisorValidationError	export declare class SupervisorValidationError extends SupervisorError
-SyncWorkDraftStore	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
 TimelineContentPolicy	export type { ExecutionStep, ExecutionStepKind, ExecutionStepStatus, ExecutionTimeline, TimelineContentPolicy, TimelineFolder, TimelineProjectionOptions, WorkflowTimelineFolder, WorkflowTimelineProjectionOptions, } from "./timeline-types.js"
 TimelineError	export declare class TimelineError extends Error
 TimelineFolder	export type { ExecutionStep, ExecutionStepKind, ExecutionStepStatus, ExecutionTimeline, TimelineContentPolicy, TimelineFolder, TimelineProjectionOptions, WorkflowTimelineFolder, WorkflowTimelineProjectionOptions, } from "./timeline-types.js"
@@ -645,7 +629,6 @@ VerifyAuditBatchInput	export type { AuditCursor, AuditCursorSaveInput, AuditCurs
 VerifyAuditBatchResult	export type { AuditCursor, AuditCursorSaveInput, AuditCursorStore, AuditExportBatchInput, AuditExportBatchResult, AuditExporter, AuditExporterOptions, AuditExportItem, AuditPage, AuditPageSource, AuditPublicKey, AuditRedaction, AuditRedactionPolicy, AuditSiemPending, AuditSiemSink, AuditSiemStatus, AuditSiemWrite, AuditSigner, AuditWormAck, AuditWormSink, AuditWormWrite, VerifyAuditBatchInput, VerifyAuditBatchResult, } from "./audit-export.js"
 WORKFLOW_CHECKPOINT_SCHEMA_VERSION	export declare const WORKFLOW_CHECKPOINT_SCHEMA_VERSION: 1
 WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION	export declare const WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION: 1
-WORK_DRAFT_CHECKPOINT_NAMESPACE	export declare const WORK_DRAFT_CHECKPOINT_NAMESPACE = "prism.work.draft"
 WeakKdfParametersError	export declare class WeakKdfParametersError extends CredentialStoreError
 WebhookDeliveryOptions	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
 WebhookEnvelope	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
@@ -657,37 +640,6 @@ WebhookNotifierDiagnostics	export type { WebhookDeliveryOptions, WebhookEnvelope
 WebhookNotifierLimits	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
 WebhookNotifierOptions	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
 WebhookTarget	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
-WorkApprovalCheckInput	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkApprovalGate	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkCalendarEvent	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkCitation	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkCliExecResult	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkCliRunner	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkDraft	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkDraftApproval	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkDraftApproveInput	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkDraftCreateInput	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkDraftMarkInput	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkDraftRefInput	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkDraftStore	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkDraftUpdateInput	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkFileItem	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkLimits	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkMailMessage	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkMutationBeginInput	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkMutationFailure	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkMutationKey	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkMutationRecord	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkMutationResult	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkMutationStatus	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkMutationTransitionInput	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkPage	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkProvider	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkTaskItem	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkTokenProvider	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkToolError	export declare class WorkToolError extends Error
-WorkToolSet	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
-WorkToolsOptions	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileIte
 WorkflowAbortError	export declare class WorkflowAbortError extends Error
 WorkflowCheckpointAdapter	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, WorkflowDefinition, WorkflowEvent, Work
 WorkflowCheckpointAdapterOptions	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, WorkflowDefinition, WorkflowEvent, Work
@@ -752,7 +704,6 @@ applySqliteMigrations	export declare function applySqliteMigrations(db: Database
 applySqlitePromptMigrations	export declare function applySqlitePromptMigrations(db: Database.Database): readonly AppliedPromptMigration[]
 asEnterprisePostgresError	export declare function asEnterprisePostgresError(error: unknown, code: EnterprisePostgresErrorCode, message: string): EnterprisePostgresError
 asTimestamp	export declare function asTimestamp(value: unknown, label: string): string
-assertBoundedJson	export declare function assertBoundedJson(value: unknown, maxDepth: number, maxProperties: number, maxBytes: number): void
 assertBytes	export declare function assertBytes(value: string, maxBytes: number, label: string): void
 assertCheckpointInput	export declare function assertCheckpointInput(input:
 assertCompatible	export declare function assertCompatible(value: SagaCheckpointValue, definition: SagaDefinition, tenantId: string, runId: string): void
@@ -775,7 +726,6 @@ assertPromptPromotion	export declare function assertPromptPromotion<TInput = unk
 assertProviderSourceEligible	export declare function assertProviderSourceEligible(options: CreateModelRouterOptions): void
 assertRequestPolicy	export declare function assertRequestPolicy(request: Request, hosts?: readonly string[], origins?: readonly string[]): void
 assertRestrictiveFileMode	export declare function assertRestrictiveFileMode(path: string): void
-assertSafeArgv	export declare function assertSafeArgv(argv: readonly string[]): void
 assertScryptParameters	export declare function assertScryptParameters(params: ScryptParameters, maxMemoryBytes?: number): void
 assertScryptWorkBounds	export declare function assertScryptWorkBounds(N: number, r: number, p: number, maxMemoryBytes: number): void
 assertSqlitePromptSchemaReady	export declare function assertSqlitePromptSchemaReady(db: Database.Database): void
@@ -805,9 +755,7 @@ buildEnterpriseMigration003Ddl	export declare function buildEnterpriseMigration0
 buildEnterpriseMigration004Ddl	export declare function buildEnterpriseMigration004Ddl(schema: string): string
 buildEnterpriseMigration005Ddl	export declare function buildEnterpriseMigration005Ddl(schema: string): string
 buildEnterpriseMigration006Ddl	export declare function buildEnterpriseMigration006Ddl(schema: string): string
-buildGoogleWorkspaceArgv	export declare function buildGoogleWorkspaceArgv(op: GoogleWorkspaceOp, args: JsonObject): string[]
 buildGraph	export declare function buildGraph(workflow: WorkflowDefinition):
-buildMicrosoft365Argv	export declare function buildMicrosoft365Argv(op: Microsoft365Op, args: JsonObject): string[]
 buildMigration001Ddl	export declare function buildMigration001Ddl(schema: string): string
 buildMigration002Ddl	export declare function buildMigration002Ddl(schema: string): string
 buildMigration003Ddl	export declare function buildMigration003Ddl(schema: string): string
@@ -822,7 +770,7 @@ buildPromptMigrationMetaDdl	export declare function buildPromptMigrationMetaDdl(
 buildWebhookEnvelope	export declare function buildWebhookEnvelope(event: WebhookNotification, redactor: SecretRedactor, id: string): WebhookEnvelope
 cancelWorkflowRun	export declare function cancelWorkflowRun(input: CancelWorkflowRunInput): Promise<CancelWorkflowRunResult>
 canonicalHeaders	export declare function canonicalHeaders(headers: Readonly<Record<string, string>>, signedHeaders: readonly string[]): string
-canonicalJson	export declare function canonicalJson(value: unknown): unknown
+canonicalJson	export declare function canonicalJson(value: unknown): string
 canonicalJsonBytes	export declare function canonicalJsonBytes(value: unknown): Buffer
 canonicalQueryString	export declare function canonicalQueryString(query: Readonly<Record<string, string>>): string
 canonicalizeA2AAgentCard	export declare function canonicalizeA2AAgentCard(card: A2AAgentCard): string
@@ -842,7 +790,6 @@ commitBudget	export declare function commitBudget(pool: Pool, table: string, inp
 comparePromptPosition	export declare function comparePromptPosition(name: string, version: number, cursor: PromptCursor | undefined, order: "asc" | "desc"): number
 compensationContext	export declare function compensationContext(runtime: Runtime, step: SagaStepRecord): SagaCompensationContext
 computeOAuth2S256Challenge	export declare function computeOAuth2S256Challenge(verifier: string): string
-computePayloadDigest	export declare function computePayloadDigest(payload: JsonObject): string
 conditionalNode	export declare function conditionalNode(config: Omit<ConditionalNodeDefinition, "kind">): ConditionalNodeDefinition
 configureSqliteDatabase	export declare function configureSqliteDatabase(db: Database.Database, options: Pick<SqlitePersistenceOptions, "wal" | "busyTimeoutMs">): void
 consumeRate	export declare function consumeRate(pool: Pool, table: string, input: Parameters<ModelRouterStateStore["consumeRate"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["consumeRate"]>>>
@@ -855,9 +802,7 @@ createArtifactHandler	export declare function createArtifactHandler(options: Cre
 createArtifactService	export declare function createArtifactService(store: CheckpointStore, options: CreateArtifactServiceOptions): ArtifactService
 createAuditExporter	export declare function createAuditExporter(options: AuditExporterOptions): AuditExporter
 createCancelAgentTool	export declare function createCancelAgentTool(options: CreateDelegationControlToolOptions): ToolDefinition
-createCheckpointWorkDraftStore	export declare function createCheckpointWorkDraftStore(options: CheckpointWorkDraftStoreOptions): WorkDraftStore
 createCitationIntegrityScorer	export declare function createCitationIntegrityScorer<TInput = unknown, TExpected = unknown>(options?: CitationIntegrityScorerOptions): Scorer<TInput, TExpected>
-createCliRunner	export declare function createCliRunner(options:
 createConversationHandler	export declare function createConversationHandler(options: CreateConversationHandlerOptions): PrismRequestHandler
 createConversationService	export declare function createConversationService(store: ConversationServiceStore, options: CreateConversationServiceOptions): ConversationService
 createCostLatencySelection	export declare function createCostLatencySelection(options?: CostLatencySelectionOptions): ModelRouterSelectionPolicy
@@ -867,7 +812,6 @@ createEnterpriseStateCleanup	export declare function createEnterpriseStateCleanu
 createErpInvariantScorers	export declare function createErpInvariantScorers(): readonly Scorer<unknown, unknown>[]
 createErrorClassScorer	export declare function createErrorClassScorer<TInput = unknown, TExpected = unknown>(options?: ErrorClassScorerOptions): Scorer<TInput, TExpected>
 createFilePolicyDecisionStore	export declare function createFilePolicyDecisionStore(options: FilePolicyDecisionStoreOptions): PolicyDecisionStore
-createGoogleWorkspaceCliAdapter	export declare function createGoogleWorkspaceCliAdapter(options: GoogleWorkspaceCliAdapterOptions): GoogleWorkspaceAdapter
 createGoogleWorkspaceOAuthProvider	export declare function createGoogleWorkspaceOAuthProvider(options?: GoogleWorkspaceOAuthOptions): OAuthProvider
 createGovernedProvider	export declare function createGovernedProvider(options: GovernedProviderOptions): GovernedProvider
 createInMemoryTelemetry	export declare function createInMemoryTelemetry(): InMemoryTelemetry
@@ -878,14 +822,11 @@ createMemoryApprovalStore	export declare function createMemoryApprovalStore(opti
 createMemoryAuditCursorStore	export declare function createMemoryAuditCursorStore(): AuditCursorStore
 createMemoryEvaluationStore	export declare function createMemoryEvaluationStore(initial?: readonly EvaluationRecord[]): EvaluationStore
 createMemoryHostKms	export declare function createMemoryHostKms(seed?: string): HostKms
-createMemoryIdempotencyStore	export declare function createMemoryIdempotencyStore(options?:
 createMemoryModelRouterStateStore	export declare function createMemoryModelRouterStateStore(): ModelRouterStateStore
 createMemoryPolicyDecisionStore	export declare function createMemoryPolicyDecisionStore(options?: MemoryPolicyDecisionStoreOptions): PolicyDecisionStore
 createMemoryPromptStore	export declare function createMemoryPromptStore(optionsOrInitial?: PromptStoreOptions | readonly PromptRecord[]): PromptStore
 createMemoryRateLimiter	export declare function createMemoryRateLimiter(options: MemoryRateLimiterOptions): PrismServerRateLimiter
-createMemoryWorkDraftStore	export declare function createMemoryWorkDraftStore(options?: MemoryWorkDraftStoreOptions): SyncWorkDraftStore
 createMemoryWorkflowCheckpoints	export declare function createMemoryWorkflowCheckpoints(options?: WorkflowCheckpointAdapterOptions): WorkflowCheckpointAdapter
-createMicrosoft365CliAdapter	export declare function createMicrosoft365CliAdapter(options: Microsoft365CliAdapterOptions): Microsoft365Adapter
 createMicrosoft365OAuthProvider	export declare function createMicrosoft365OAuthProvider(options?: Microsoft365OAuthOptions): OAuthProvider
 createModelJudge	export declare function createModelJudge<TInput = unknown, TExpected = unknown>(options: ModelJudgeOptions<TInput, TExpected>): Scorer<TInput, TExpected>
 createModelRouter	export declare function createModelRouter(options: CreateModelRouterOptions): ModelRouter
@@ -945,7 +886,6 @@ createTimelineFolder	export declare function createTimelineFolder(options?: Time
 createToolCallMatchScorer	export declare function createToolCallMatchScorer<TInput = unknown, TExpected = unknown>(options: ToolCallMatchScorerOptions): Scorer<TInput, TExpected>
 createWaitAgentTool	export declare function createWaitAgentTool(options: CreateDelegationControlToolOptions): ToolDefinition
 createWebhookNotifier	export declare function createWebhookNotifier(options: WebhookNotifierOptions): WebhookNotifier
-createWorkTools	export declare function createWorkTools(options: WorkToolsOptions): readonly ToolDefinition[]
 createWorkflowCheckpoints	export declare function createWorkflowCheckpoints(options: GenericWorkflowCheckpointOptions): WorkflowCheckpointAdapter
 createWorkflowCommands	export declare function createWorkflowCommands(input: CreateWorkflowCommandsInput): CommandDefinition[]
 createWorkflowCoordinator	export declare function createWorkflowCoordinator(options: WorkflowCoordinatorOptions): WorkflowCoordinator
@@ -976,7 +916,6 @@ deleteOAuthEntry	export declare function deleteOAuthEntry(vault: CredentialVault
 deliverA2APushEvent	export declare function deliverA2APushEvent(delivery: A2APushDelivery, config: A2APushConfig, event: A2ATaskEvent, options?: DeliverA2APushEventOptions): Promise<
 deriveKey	export declare function deriveKey(passphrase: string, salt: Buffer, params: ScryptParameters, maxMemoryBytes: number): Promise<Buffer>
 diffPromptRecords	export declare function diffPromptRecords(from: PromptRecord, to: PromptRecord, maxLines: number): PromptDiff
-draftCheckpointKey	export declare function draftCheckpointKey(provider: WorkProvider, draftId: string): string
 driveSaga	export declare function driveSaga(runtime: Runtime): Promise<SagaRunResult>
 encodeBoundedJson	export declare function encodeBoundedJson(value: unknown, maxBytes: number, label: string): string
 encodeBranchCursor	export declare function encodeBranchCursor(offset: number): string
@@ -1002,7 +941,6 @@ exactOwnershipKey	export declare function exactOwnershipKey(ownership?: Ownershi
 exactOwnershipMatches	export declare function exactOwnershipMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean
 executeScheduler	export declare function executeScheduler(state: SchedulerState, options: RunWorkflowOptions): Promise<WorkflowRunResult>
 exportPolicyDecisions	export declare function exportPolicyDecisions(options: ExportPolicyDecisionsOptions): AsyncGenerator<PersistencePage<PolicyDecisionRecord>, void, unknown>
-extractDraftRecipients	export declare function extractDraftRecipients(payload: JsonObject): readonly string[]
 extractSagaState	export declare function extractSagaState(record: WorkflowCheckpointRecord, options: NormalizedOptions, definition?: SagaDefinition): SagaCheckpointValue
 fanOutNode	export declare function fanOutNode(config: Omit<FanOutNodeDefinition, "kind">): FanOutNodeDefinition
 findReservation	export declare function findReservation(row: BudgetRow, reservationId: string, fencingToken: string): Reservation
@@ -1015,7 +953,6 @@ getOAuthEntry	export declare function getOAuthEntry(vault: CredentialVault, prov
 getWorkflowRun	export declare function getWorkflowRun(checkpoints: WorkflowCheckpointAdapter, input: WorkflowCheckpointLoadInput): Promise<WorkflowCheckpointRecord | null>
 hashPromptBody	export declare function hashPromptBody(body: string): string
 hashWorkflowDefinition	export declare function hashWorkflowDefinition(workflow: WorkflowDefinition): string
-identityKey	export declare function identityKey(identity: Pick<AgentIdentity, "tenantId" | "accountId" | "userId" | "principal">): string
 insertCircuit	export declare function insertCircuit(client: PoolClient, table: string, context: RouterContext, row: Omit<CircuitRow, "probeToken" | "probeExpiresAt"> & Pick<Partial<CircuitRow>, "probeToken" | "probeExpiresAt">): Promise<void>
 integer	export declare function integer(value: unknown, label: string, min: number, max: number): number
 isAbortError	export declare function isAbortError(error: unknown): boolean
@@ -1052,22 +989,14 @@ measureJsonBytes	export declare function measureJsonBytes(value: unknown): numbe
 mulberry32	export declare function mulberry32(seed: number): () => number
 narrowSupervisorLimits	export declare function narrowSupervisorLimits(parent: ResolvedSupervisorLimits, input?: SupervisorLimits): ResolvedSupervisorLimits
 normalizeBasePath	export declare function normalizeBasePath(value: string): string
-normalizeCalendarEvent	export declare function normalizeCalendarEvent(provider: WorkProvider, raw: unknown, citationId?: string): WorkCalendarEvent
-normalizeCalendarPage	export declare function normalizeCalendarPage(provider: WorkProvider, raw: unknown, nextCursor?: string): WorkPage<WorkCalendarEvent>
 normalizeConcurrency	export declare function normalizeConcurrency(concurrency: number | undefined): number
-normalizeFileItem	export declare function normalizeFileItem(provider: WorkProvider, raw: unknown, citationId?: string): WorkFileItem
-normalizeFilePage	export declare function normalizeFilePage(provider: WorkProvider, raw: unknown, nextCursor?: string): WorkPage<WorkFileItem>
 normalizeLabels	export declare function normalizeLabels(labels: readonly string[] | undefined, limits: PromptLimits): readonly string[]
-normalizeMailMessage	export declare function normalizeMailMessage(provider: WorkProvider, raw: unknown, citationId?: string): WorkMailMessage
-normalizeMailPage	export declare function normalizeMailPage(provider: WorkProvider, raw: unknown, nextCursor?: string): WorkPage<WorkMailMessage>
 normalizeOwnership	export declare function normalizeOwnership(input?: PromptOwnership, fallback?: PromptOwnership): NormalizedOwnership
 normalizePageLimit	export declare function normalizePageLimit(limit: number | undefined): number
 normalizeReconcileResult	export declare function normalizeReconcileResult(result: SagaReconcileStatus | SagaReconcileResult): SagaReconcileResult
 normalizeSampleRate	export declare function normalizeSampleRate(sampleRate: number | undefined): number
 normalizeStatuses	export declare function normalizeStatuses(status: WorkflowRunStatus | readonly WorkflowRunStatus[] | undefined): Set<WorkflowRunStatus> | undefined
 normalizeStoredPrompt	export declare function normalizeStoredPrompt(row:
-normalizeTaskItem	export declare function normalizeTaskItem(provider: WorkProvider, raw: unknown, citationId?: string): WorkTaskItem
-normalizeTaskPage	export declare function normalizeTaskPage(provider: WorkProvider, raw: unknown, nextCursor?: string): WorkPage<WorkTaskItem>
 nowIso	export declare function nowIso(): string
 oauthKey	export declare function oauthKey(provider: string, accountId?: string): string
 openEncryptedCredentialStore	export declare function openEncryptedCredentialStore(options: EncryptedCredentialStoreOptions): Promise<EncryptedCredentialStore>
@@ -1080,14 +1009,13 @@ ownerParams	export declare function ownerParams(owner: StoreOwner): [string, str
 ownershipExactlyMatches	export declare function ownershipExactlyMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean
 ownershipMatches	export declare function ownershipMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean
 ownershipScope	export declare function ownershipScope(input: OwnershipScope): OwnershipScope
+ownershipScopeMatches	export declare function ownershipScopeMatches(expected: OwnershipScope, actual: OwnershipScope): boolean
 packageName	export declare const packageName = "@arnilo/prism-core/validation/json-schema"
 pages	export declare function pages<T>(query: (cursor?: string) => Promise<
 parseA2AMessage	export declare function parseA2AMessage(value: unknown, limits: ResolvedA2ALimits, policy?: A2APartPolicy): Promise<A2AMessage>
 parseA2APart	export declare function parseA2APart(value: unknown, limits: ResolvedA2ALimits, policy?: A2APartPolicy): Promise<A2APart>
 parseAttributions	export declare function parseAttributions(value: unknown): Record<string, ModelRouterAttribution>
 parseCheckpointValue	export declare function parseCheckpointValue(value: unknown, definition: SagaDefinition | undefined, tenantId: string, runId: string, allowEmptyDefinition?: boolean): SagaCheckpointValue
-parseCliJson	export declare function parseCliJson(stdout: string, limits: ResolvedWorkLimits): unknown
-parseCliNdjson	export declare function parseCliNdjson(stdout: string, limits: ResolvedWorkLimits): unknown[]
 parseEncryptedEnvelope	export declare function parseEncryptedEnvelope(value: unknown, limits?: ResolvedEncryptedCredentialStoreLimits): EncryptedEnvelope
 parseRoute	export declare function parseRoute(request: Request, base: string): Route | undefined
 parseSessionMetadata	export declare function parseSessionMetadata(raw: string | null): Readonly<Record<string, unknown>> | undefined
@@ -1181,7 +1109,6 @@ resolvePromptPageLimit	export declare function resolvePromptPageLimit(value: num
 resolveScryptParameters	export declare function resolveScryptParameters(partial?: Partial<ScryptParameters>, maxMemoryBytes?: number): ScryptParameters
 resolveSupervisorLimits	export declare function resolveSupervisorLimits(input?: SupervisorLimits): ResolvedSupervisorLimits
 resolveTrialsConfig	export declare function resolveTrialsConfig(trials?: number, seed?: number): Omit<ExperimentTrials, "sampleCount" | "standardError">
-resolveWorkLimits	export declare function resolveWorkLimits(input?: WorkLimits): ResolvedWorkLimits
 resolveWorkloadScopes	export declare function resolveWorkloadScopes(map: Readonly<Record<string, WorkloadScopeBundle>>, base: readonly string[], capabilities: readonly string[], access: WorkloadScopeAccess): string[]
 resultFromRecord	export declare function resultFromRecord(workflowId: string, record: WorkflowCheckpointRecord): WorkflowRunResult
 resumeSaga	export declare function resumeSaga(definition: SagaDefinition, options: SagaResumeOptions): Promise<SagaRunResult>
@@ -1257,7 +1184,6 @@ type ActiveWorkflowRun	export { ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE, type ActiveW
 type CancelWorkflowRunInput	export { type CancelWorkflowRunInput, type CancelWorkflowRunResult, cancelWorkflowRun, getWorkflowRun, listWorkflowRuns, } from "./status.js"
 type CancelWorkflowRunResult	export { type CancelWorkflowRunInput, type CancelWorkflowRunResult, cancelWorkflowRun, getWorkflowRun, listWorkflowRuns, } from "./status.js"
 type CapabilityActorRef	export { type CapabilityActorRef, createProactiveScheduleCapabilities, type EnableCapabilityInput, type ProactiveScheduleCapabilities, type ProactiveScheduleCapabilitiesOptions, type ScheduleCapabilityEvent, type ScheduleCapabilityToken, } from "./schedule-capabilities.js"
-type CheckpointWorkDraftStoreOptions	export { type CheckpointWorkDraftStoreOptions, canonicalJson, computePayloadDigest, createCheckpointWorkDraftStore, createMemoryWorkDraftStore, draftCheckpointKey, extractDraftRecipients, type MemoryWorkDraftStoreOptions, validateApproval, WORK_DRAFT_CHECKPOINT_NAMESPACE, } from "./drafts.js"
 type ClosableNatsAgentEventSource	export { type ClosableNatsAgentEventSource, createNatsAgentEventSource, type NatsAgentEventSourceOptions, } from "./event-source.js"
 type ClosablePostgresAgentEventSource	export { type ClosablePostgresAgentEventSource, createPostgresAgentEventSource, type PostgresAgentEventSourceOptions, } from "./event-source.js"
 type CreateWorkflowCommandsInput	export { type CreateWorkflowCommandsInput, createWorkflowCommands, } from "./commands.js"
@@ -1268,15 +1194,12 @@ type EnableCapabilityInput	export { type CapabilityActorRef, createProactiveSche
 type EnqueueWorkflowOptions	export { createWorkflowCoordinator, type EnqueueWorkflowOptions, enqueueWorkflow, startWorkflowBackground, type WorkflowAdmissionDrain, type WorkflowAdmissionMetric, type WorkflowAdmissionPolicy, type WorkflowCoordinator, type WorkflowCoordinatorOptions, } from "./coordinator.js"
 type GenericWorkflowCheckpointOptions	export { createMemoryWorkflowCheckpoints, createWorkflowCheckpoints, type GenericWorkflowCheckpointOptions, redactCheckpointOutputs, } from "./checkpoints.js"
 type GoogleWorkspaceCapability	export { createGoogleWorkspaceOAuthProvider, GOOGLE_WORKSPACE_BASE_SCOPES, GOOGLE_WORKSPACE_SCOPE_BUNDLES, type GoogleWorkspaceCapability, type GoogleWorkspaceOAuthOptions, resolveGoogleWorkspaceScopes, } from "./google-workspace-oauth.js"
-type GoogleWorkspaceCliAdapterOptions	export { buildGoogleWorkspaceArgv, createGoogleWorkspaceCliAdapter, DEFAULT_GWS_OPS, GATED_GWS_OPS, type GoogleWorkspaceCliAdapterOptions, } from "./google-workspace.js"
 type GoogleWorkspaceOAuthOptions	export { createGoogleWorkspaceOAuthProvider, GOOGLE_WORKSPACE_BASE_SCOPES, GOOGLE_WORKSPACE_SCOPE_BUNDLES, type GoogleWorkspaceCapability, type GoogleWorkspaceOAuthOptions, resolveGoogleWorkspaceScopes, } from "./google-workspace-oauth.js"
 type GovernedInvocationSettlement	export { createGovernedProvider, type GovernedInvocationSettlement, type GovernedProvider, type GovernedProviderOptions, isGovernedProvider, } from "./invocation.js"
 type GovernedProvider	export { createGovernedProvider, type GovernedInvocationSettlement, type GovernedProvider, type GovernedProviderOptions, isGovernedProvider, } from "./invocation.js"
 type GovernedProviderOptions	export { createGovernedProvider, type GovernedInvocationSettlement, type GovernedProvider, type GovernedProviderOptions, isGovernedProvider, } from "./invocation.js"
-type MemoryWorkDraftStoreOptions	export { type CheckpointWorkDraftStoreOptions, canonicalJson, computePayloadDigest, createCheckpointWorkDraftStore, createMemoryWorkDraftStore, draftCheckpointKey, extractDraftRecipients, type MemoryWorkDraftStoreOptions, validateApproval, WORK_DRAFT_CHECKPOINT_NAMESPACE, } from "./drafts.js"
 type MermaidExportOptions	export { type DotExportOptions, type MermaidExportOptions, workflowGraphToDot, workflowGraphToMermaid, } from "./graph-export.js"
 type Microsoft365Capability	export { createMicrosoft365OAuthProvider, MICROSOFT365_BASE_SCOPES, MICROSOFT365_SCOPE_BUNDLES, type Microsoft365Capability, type Microsoft365OAuthOptions, resolveMicrosoft365Scopes, } from "./microsoft365-oauth.js"
-type Microsoft365CliAdapterOptions	export { buildMicrosoft365Argv, createMicrosoft365CliAdapter, DEFAULT_M365_OPS, GATED_M365_OPS, type Microsoft365CliAdapterOptions, } from "./microsoft365.js"
 type Microsoft365OAuthOptions	export { createMicrosoft365OAuthProvider, MICROSOFT365_BASE_SCOPES, MICROSOFT365_SCOPE_BUNDLES, type Microsoft365Capability, type Microsoft365OAuthOptions, resolveMicrosoft365Scopes, } from "./microsoft365-oauth.js"
 type ModelRouterErrorCode	export { MODEL_ROUTER_ERROR_CODES, ModelRouterError, type ModelRouterErrorCode } from "./errors.js"
 type NatsAgentEventSourceOptions	export { type ClosableNatsAgentEventSource, createNatsAgentEventSource, type NatsAgentEventSourceOptions, } from "./event-source.js"
@@ -1331,7 +1254,6 @@ usage	export declare function usage(value: unknown, label: string): number
 utf8ByteLength	export declare function utf8ByteLength(value: string): number
 validId	export declare function validId(value: string): boolean
 validateA2ATask	export declare function validateA2ATask(task: A2ATask, limits: ResolvedA2ALimits, policy?: A2APartPolicy): Promise<A2ATask>
-validateApproval	export declare function validateApproval(draft: WorkDraft, approval: WorkDraftApproval, options?:
 validateCredentialLimit	export declare function validateCredentialLimit(name: string, value: number, hardCap: number): number
 validateEvalManifest	export declare function validateEvalManifest(manifest: EvalManifest): void
 validateIdentifier	export declare function validateIdentifier(name: string): void

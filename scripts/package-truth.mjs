@@ -5,10 +5,11 @@
 // workspace glob that matches no directory.
 //
 //   node scripts/package-truth.mjs [--out scripts/package-truth.json] [--root <dir>]
-//   node scripts/package-truth.mjs --emit-docs   (also regenerate the docs tables)
+//   node scripts/package-truth.mjs --emit-docs   (also regenerate docs tables and package evidence)
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildPackageMap, generateMarkdown } from "./phase54-package-map.mjs";
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -16,7 +17,7 @@ const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // name-pattern separation from capability packages (e.g. prism-mcp), so the set
 // is explicit here; the docs tests assert it against the generated artifact.
 // Plan 054 Task 8: npm profile manifests are deleted; families only.
-export const PRISM_FAMILY = ["@arnilo/prism-coding-tools", "@arnilo/prism-core", "@arnilo/prism-providers"];
+export const PRISM_FAMILY = ["@arnilo/prism-channels", "@arnilo/prism-coding-tools", "@arnilo/prism-core", "@arnilo/prism-providers"];
 
 export function expandWorkspaceDirs(root, globs) {
   const dirs = [];
@@ -188,14 +189,16 @@ const flag = (name) => {
 export const PACKAGE_NOTES = {
   "@arnilo/prism": "core — runtime, CLI/RPC, templates, docs",
   "@arnilo/prism-coding-tools":
-    "family — /agent, /security, /document-reader, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths",
-  "@arnilo/prism-core": "family — /runtime, /sessions, /governance, /credentials, /enterprise, /work, /validation subpaths",
+    "family — /agent, /security, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths",
+  "@arnilo/prism-channels":
+    "family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal",
+  "@arnilo/prism-core": "family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths",
   "@arnilo/prism-providers": "family — all provider adapters as `/<adapter>` subpaths",
   "@arnilo/prism-acp-agent": "capability — ACP adapter",
   "@arnilo/prism-ag-ui": "capability — AG-UI/A2A/A2UI adapter",
   "@arnilo/prism-mcp": "capability — MCP client/server/OAuth interop",
   "@arnilo/prism-memory": "capability — memory plus /rag, /compaction/*, /fabric, /graft, /wiki subpaths",
-  "@arnilo/prism-office": "capability — /documents, /sheets, /diagrams subpaths",
+  "@arnilo/prism-work": "capability — /connectors, /documents, /sheets, /diagrams, /document-reader, /sandbox, /skills, /tools subpaths",
   "@arnilo/prism-web-tools": "capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths",
 };
 
@@ -261,6 +264,18 @@ export const DOC_BLOCK_TARGETS = {
   "docs/provider-packages.md": ["providers"],
 };
 
+export function renderGeneratedDocs(root, truth) {
+  const renderers = { inventory: renderInventoryBlock, providers: renderProvidersBlock };
+  const rendered = {};
+  for (const [file, types] of Object.entries(DOC_BLOCK_TARGETS)) {
+    let text = readFileSync(join(root, file), "utf8");
+    for (const type of types) text = applyGeneratedBlock(text, type, renderers[type](truth));
+    rendered[file] = text;
+  }
+  rendered["docs/_evidence/phase54-package-map.md"] = generateMarkdown(buildPackageMap(root));
+  return rendered;
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     const root = flag("--root") ?? DEFAULT_ROOT;
@@ -268,12 +283,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const truth = computePackageTruth(root);
     writeFileSync(out, `${JSON.stringify(truth, null, 2)}\n`);
     if (process.argv.includes("--emit-docs")) {
-      const renderers = { inventory: renderInventoryBlock, providers: renderProvidersBlock };
-      for (const [file, types] of Object.entries(DOC_BLOCK_TARGETS)) {
-        const path = join(root, file);
-        let text = readFileSync(path, "utf8");
-        for (const type of types) text = applyGeneratedBlock(text, type, renderers[type](truth));
-        writeFileSync(path, text);
+      for (const [file, text] of Object.entries(renderGeneratedDocs(root, truth))) {
+        writeFileSync(join(root, file), text);
         process.stderr.write(`package-truth: regenerated ${file}\n`);
       }
     }

@@ -101,8 +101,54 @@ export async function suspendDurable(
   });
 }
 
+/**
+ * Turn-boundary crash-recovery checkpoint (plan 084 Task 1). Called before each provider
+ * request when `checkpointPolicy: "every-turn"`; a no-op otherwise, so default-policy runs keep
+ * the 0.8.x checkpoint shape and write count unchanged. Pending-decision markers are dropped:
+ * at a turn boundary every gated call has been resolved or the run already suspended, and a
+ * stale marker must never replay. The recorded `checkpointPolicy` makes the cadence survive
+ * into a resumed run, and loop-local state rides along exactly as it does at suspension.
+ */
+export async function checkpointDurableTurn(
+  session: SessionHost,
+  input: { readonly runId: string; readonly model: ModelConfig; readonly limits: RunLimitTracker },
+): Promise<void> {
+  const durable = session.activeDurable;
+  if (durable?.options.checkpointPolicy !== "every-turn") return;
+  const loop = session.activeLoop;
+  const loopState = loop?.snapshot ? boundedLoopSnapshot(loop.name, loop.revision ?? "1", loop.snapshot()) : undefined;
+  const state =
+    durable.state ??
+    initialAgentRunState({
+      agent: session.agent,
+      options: durable.options,
+      runId: input.runId,
+      sessionId: session.id,
+      leafId: session.currentLeafId,
+      model: input.model,
+      counters: input.limits.snapshot(),
+      deadlineAt: input.limits.deadlineAt,
+      status: "running",
+      interruptBeforeTool: durable.options.interruptBeforeTool,
+    });
+  await persistDurable(session, {
+    ...state,
+    leafId: session.currentLeafId,
+    status: "running",
+    interruption: undefined,
+    // The input messages are already in the session store by the time a turn boundary is
+    // reached; keeping them would re-append them on a later resume.
+    input: undefined,
+    pending: undefined,
+    pendingCalls: undefined,
+    ...(loopState ? { loopState } : {}),
+    counters: input.limits.snapshot(),
+  });
+}
+
 export async function persistSucceeded(ctx: RoundContext, loopUsage: Usage | undefined): Promise<AgentRunResult> {
   const { session, runId, runUsage } = ctx;
+  const stop = ctx.runStop;
   const usage = runUsage.value() ?? loopUsage;
   if (usage && session.activeLedger) {
     const usageRecord: UsageRecord = {
@@ -121,12 +167,15 @@ export async function persistSucceeded(ctx: RoundContext, loopUsage: Usage | und
     ? await persistDurable(session, {
         ...session.activeDurable.state,
         status: "succeeded",
+        // Plan 084 Task 2: a host-policy stop is terminal for the run but leaves the frontier
+        // intact — the loop state is kept and the state is marked continuable.
+        ...(stop ? { stopReason: "host_policy" as const, leafId: session.currentLeafId } : {}),
         pending: undefined,
         pendingCalls: undefined,
         nestedRuns: undefined,
         stickyDecisions: undefined,
         interruption: undefined,
-        loopState: undefined,
+        ...(stop ? {} : { loopState: undefined }),
       })
     : undefined;
   session.emit({
@@ -135,8 +184,17 @@ export async function persistSucceeded(ctx: RoundContext, loopUsage: Usage | und
     runId,
     usage,
     ...(ctx.loopCtx.finishReason ? { finishReason: ctx.loopCtx.finishReason } : {}),
+    ...(stop?.detail ? { stopDetail: stop.detail } : {}),
   });
-  return session.buildRunResult({ runId, status: "succeeded", usage, runState });
+  const stopReason = ctx.runStop?.reason ?? ctx.loopCtx.finishReason;
+  return session.buildRunResult({
+    runId,
+    status: "succeeded",
+    usage,
+    runState,
+    ...(stopReason ? { stopReason } : {}),
+    ...(stop?.detail ? { stopDetail: stop.detail } : {}),
+  });
 }
 
 export async function cleanupRun(input: {
@@ -148,6 +206,9 @@ export async function cleanupRun(input: {
   startedAt: string;
   runStatus: AgentRunResult["status"];
   runError: ErrorInfo | undefined;
+  /** Clean stop taxonomy for the finish record; only written for a succeeded run (plan 084 Task 2). */
+  stopReason?: import("../../contracts.js").AgentFinishReason;
+  stopDetail?: string;
 }): Promise<void> {
   const { session, controller, cleanupSignal, runId, model, startedAt, runStatus, runError } = input;
   if (session.activeRun === controller) session.activeRun = undefined;
@@ -171,6 +232,8 @@ export async function cleanupRun(input: {
         status: runStatus,
         startedAt,
         finishedAt: new Date().toISOString(),
+        ...(input.runStatus === "succeeded" && input.stopReason ? { stopReason: input.stopReason } : {}),
+        ...(input.runStatus === "succeeded" && input.stopDetail ? { stopDetail: input.stopDetail } : {}),
         abortReason: controller.signal.aborted ? String(controller.signal.reason) : undefined,
         error: runError,
         ...(session.activePromptVersion ? { promptVersion: session.activePromptVersion } : {}),

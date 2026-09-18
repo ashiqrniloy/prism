@@ -39,7 +39,7 @@ import {
   wrapAgentWithFailureInjection,
 } from "@arnilo/prism-core/governance/evals";
 import { createTimelineFolder, summarizeTimeline } from "@arnilo/prism-core/governance/observability";
-import { createMemoryWorkDraftStore, validateApproval } from "@arnilo/prism-core/integrations/work";
+import { createMemoryWorkDraftStore, validateApproval } from "@arnilo/prism-work/connectors";
 import { createRealtimeVoiceBridge } from "@arnilo/prism-core/runtime/realtime";
 import { defineWorkflow, serializeWorkflowGraph, workflowGraphToMermaid } from "@arnilo/prism-core/runtime/workflows";
 import { createHashEmbedder, createMemory, revokedIdsAbsent } from "@arnilo/prism-memory";

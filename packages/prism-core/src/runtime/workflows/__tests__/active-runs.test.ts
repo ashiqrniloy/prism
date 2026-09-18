@@ -77,7 +77,9 @@ describe("owned active workflow runs", () => {
 
     await assert.rejects(
       cancelWorkflowRun({ workflowId: "owned", runId: "active", workflow, checkpoints, ownership: { tenantId: "tenant" } }),
-      WorkflowCheckpointError,
+      // Plan 080 Task 3: a foreign checkpoint is a miss, so cancellation reports a
+      // non-enumerating "not owned/active" instead of an ownership-existence error.
+      WorkflowRuntimeError,
     );
     assert.ok(getActiveWorkflowRun("owned", "active", victim));
     await assert.rejects(
@@ -97,7 +99,7 @@ describe("owned active workflow runs", () => {
     assert.equal(suspended.status, "suspended");
     await assert.rejects(
       cancelWorkflowRun({ workflowId: "durable", runId: "suspended", workflow: suspendedWorkflow, checkpoints, ownership: attacker }),
-      WorkflowCheckpointError,
+      WorkflowRuntimeError,
     );
     const changedDurable = defineWorkflow({ revision: "2", id: "durable", nodes: suspendedWorkflow.nodes });
     await assert.rejects(

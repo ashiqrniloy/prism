@@ -23,6 +23,7 @@ import type {
   SystemPromptConfig,
   ToolCallAuthority,
   ToolCallContent,
+  TurnPolicyOptions,
   Usage,
 } from "./contracts-core.js";
 import type { AgentRunInterruption, AgentRunStateOptions } from "./contracts-run-state.js";
@@ -126,6 +127,11 @@ export interface RunOptions {
   readonly runState?: AgentRunStateOptions;
   /** Prompt provenance: copied verbatim onto this run's start and finish ledger records. */
   readonly promptVersion?: PromptVersionRef;
+  /**
+   * Host turn policy (plan 084 Task 2): a clean turn cap and/or a synchronous stop callback
+   * evaluated before every provider request. Omitted → no callback runs.
+   */
+  readonly turnPolicy?: TurnPolicyOptions;
 }
 
 export interface ProviderTurnMetadata {
@@ -177,7 +183,8 @@ export interface DelegatedAgentStep {
   };
 }
 
-export type AgentFinishReason = "turn_limit" | "token_limit" | "refusal";
+/** Why a run stopped cleanly. `host_policy` is a `RunOptions.turnPolicy` stop; the rest are loop ceilings (F4). */
+export type AgentFinishReason = "turn_limit" | "token_limit" | "refusal" | "host_policy";
 
 export type AgentEvent =
   | { readonly type: "agent_started"; readonly sessionId: string; readonly runId: string }
@@ -186,8 +193,10 @@ export type AgentEvent =
       readonly sessionId: string;
       readonly runId: string;
       readonly usage?: Usage;
-      /** Why the loop stopped, when a limit/ceiling ended the run cleanly (F4). Absent = natural end. */
+      /** Why the loop stopped, when a limit/ceiling or a host turn policy ended the run cleanly (F4). Absent = natural end. */
       readonly finishReason?: AgentFinishReason;
+      /** Host stop detail from `TurnPolicyOptions.stop` (≤256 bytes, redacted). Present only with `finishReason: "host_policy"`. */
+      readonly stopDetail?: string;
     }
   | {
       readonly type: "agent_suspended";
@@ -516,6 +525,10 @@ export interface RunRecord extends OwnershipScope {
   readonly startedAt: string;
   readonly finishedAt?: string;
   readonly abortReason?: string;
+  /** Present when the loop stopped on a ceiling or host policy instead of a natural end. */
+  readonly stopReason?: AgentFinishReason;
+  /** Host stop detail from `TurnPolicyOptions.stop` (≤256 bytes, redacted). */
+  readonly stopDetail?: string;
   readonly error?: ErrorInfo;
   readonly metadata?: Readonly<Record<string, unknown>>;
   /** Provenance ref copied from `RunOptions.promptVersion` when the host supplied one. */

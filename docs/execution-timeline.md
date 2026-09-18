@@ -70,6 +70,8 @@ interface ExecutionTimeline {
   readonly workflowRevision?: string;
   readonly traceId?: string;
   readonly status: string;
+  readonly stopReason?: AgentFinishReason;
+  readonly stopDetail?: string;
   readonly startedAt: string;
   readonly finishedAt?: string;
   readonly input?: unknown;
@@ -151,6 +153,10 @@ const timeline = projectWorkflowTimeline(workflowEvents, {
 ```
 
 See runnable host demo in `examples/execution-timeline.ts` for offline workflow timeline projection, cockpit summary, and Mermaid diagram export.
+
+### Stop reasons
+
+Run-level `stopReason` mirrors `agent_finished.finishReason` when the loop stopped on a ceiling or a host turn policy (`"host_policy"`); `status` reads `finished:<stopReason>` for those runs and `succeeded` for a natural end. `stopDetail` carries the host's `turnPolicy.stop` reason, bounded to 256 bytes and redacted at the runtime boundary. See [Runs and usage ledger § Clean stops and stop reasons](runs-and-usage.md#clean-stops-and-stop-reasons).
 
 ## Bounds
 

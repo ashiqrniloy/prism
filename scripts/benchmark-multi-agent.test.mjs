@@ -61,13 +61,15 @@ describe("multi-agent runtime coverage and baselines", () => {
     const names = workspaceManifests();
     const hasCodingTools = names.includes("@arnilo/prism-coding-tools");
     const hasCore = names.includes("@arnilo/prism-core");
-    const hasOfficeFamily = existsSync(join(here, "../packages/office/src"));
+    const hasChannels = names.includes("@arnilo/prism-channels");
+    const hasWorkFamily = existsSync(join(here, "../packages/prism-work/src"));
     const hasProvidersFamily = existsSync(join(here, "../packages/prism-providers/src"));
-    const expectedCount = hasOfficeFamily ? 10 : hasProvidersFamily ? 17 : hasCodingTools ? 34 : hasCore ? 50 : 65;
+    const expectedCount = hasWorkFamily ? 11 : hasProvidersFamily ? 17 : hasCodingTools ? 34 : hasCore ? 50 : 65;
     assert.equal(names.length, expectedCount, `expected ${expectedCount} manifests, found ${names.length}`);
     const evidence = readFileSync(evidencePath, "utf8");
     for (const name of names) {
-      if (hasOfficeFamily && name === "@arnilo/prism-office") continue;
+      if (hasWorkFamily && name === "@arnilo/prism-work") continue;
+      if (hasChannels && name === "@arnilo/prism-channels") continue;
       if (hasCodingTools && (name === "@arnilo/prism-coding-tools" || name === "@arnilo/prism-core")) continue;
       if (hasCore && name === "@arnilo/prism-core") continue;
       assert.ok(evidence.includes(`| ${name} |`), `evidence missing ${name}`);

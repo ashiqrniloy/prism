@@ -27,7 +27,6 @@ describe("@arnilo/prism-core family conformance", () => {
       "./governance/observability",
       "./credentials/node",
       "./enterprise/postgres",
-      "./integrations/work",
       "./validation/json-schema",
     ];
 
@@ -119,12 +118,12 @@ describe("@arnilo/prism-core family conformance", () => {
     assert.equal(typeof modelRouter.createMemoryModelRouterStateStore, "function");
   });
 
-  it("work integrations export CLI adapters and approval structures", async () => {
-    const work = await import("../integrations/work/index.js");
-    assert.equal(typeof work.createWorkTools, "function");
-    assert.equal(typeof work.createMicrosoft365CliAdapter, "function");
-    assert.equal(typeof work.createGoogleWorkspaceCliAdapter, "function");
-    assert.equal(typeof work.createMemoryIdempotencyStore, "function");
+  it("does not export moved work integrations", () => {
+    const pkg = JSON.parse(readFileSync(join(coreSrcDir, "../package.json"), "utf8"));
+    assert.equal(pkg.exports["./integrations/work"], undefined);
+    assert.equal(pkg.exports["./integrations/work/microsoft365"], undefined);
+    assert.equal(pkg.exports["./integrations/work/google-workspace"], undefined);
+    assert.equal(pkg.exports["./integrations/work/drafts"], undefined);
   });
 
   it("validation subpath exports Ajv schema validator", async () => {

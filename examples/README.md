@@ -55,6 +55,7 @@ node examples/drive-rag-sync.ts
 node examples/scanned-document-rag.ts
 node examples/web-standard-server.ts
 node examples/mcp-server.ts
+node examples/connected-slack-mcp.ts
 node examples/workflow-research-and-review.ts
 node examples/workflow-multimodal-document.ts
 node examples/workflow-postgres-resume.ts # skips unless PRISM_TEST_POSTGRES_URL is set
@@ -67,6 +68,7 @@ node examples/coding-tools-capability-gaps.ts
 node examples/phase9-coding-intelligence.ts
 node examples/agent-durable-approval.ts
 node examples/durable-loops-and-approvals.ts
+node examples/durable-investigation.ts
 node examples/ag-ui-server.ts
 node examples/ag-ui-a2ui.ts
 node examples/ag-ui-mcp-apps.ts
@@ -95,11 +97,16 @@ Each demo prints a single JSON line with its result.
 - `governed-provider.ts` — **demo**: opt-in governed `AIProvider` adapter with admission, atomic budget reservation, streaming, and explicit settlement (network-free).
 - `server-deployment-seams.ts` — **demo**: health, drain, fair workflow admission, operator queue, rate-limit, and deployment lease (network-free).
 - `conversation-durable-replay.ts` — **demo**: durable conversation thread (sqlite `:memory:`) with mock-agent continue and reconnectable redacted replay.
+- `messaging-agent.ts` — **demo**: sqlite journal + mock agent through `createMessagingRuntime`; admit → drain → persisted reply → opt-in `notify` notice to the bound pair, then stop (network-free).
+- `messaging-outbox.ts` — **demo**: PostgreSQL ERP-outbox composition for the runtime `deliver` seam — `outbox.append` inside the host `BEGIN`/`COMMIT`, then `adapter.send` after commit; payload is correlation ids only and the tenant comes from the identity ownership scope (fake `pg` pool, network-free).
+- `telegram-agent.ts` — explicit host composition helper: polling via `startTelegramChannel`, webhook mount via `mountTelegramWebhook`; the caller supplies authorization, agent resolution, durable stores and Bot token source. `startTelegramChannel` wires the runtime's opt-in preview callback and media seam to the adapter, so `telegram.sendDrafts: true` is all a host needs for streaming drafts and `transcribe`/`extractDocumentText`/`maxAttachmentBytes` handle inbound voice and documents (override `runtime.onAssistantDelta`/`runtime.fetchAttachment` to compose your own).
+- `signal-agent.ts` — explicit host composition helper for an externally supervised pinned signal-cli socket: the caller supplies authorization, agent resolution, durable stores, socket/account and the operator policy attestation; calling it subscribes.
 - `artifact-review-delivery.ts` — **demo**: artifact attach/revise/approve review + expiring authorized delivery link over an in-memory checkpoint store.
 - `docker-process-session.ts` — **demo**: long-running process management inside a Docker sandbox with durable recovery, attested reconnect, and fail-closed isolation.
 - `hosted-sandbox.ts` — **demo**: fake E2B client through `createE2BSandbox` / `connectE2BSandbox` (filesystem-only pause, no auto-resume; network-free).
 - `agent-durable-approval.ts` — suspend before a tool side effect, then resume once with durable CAS approval.
 - `durable-loops-and-approvals.ts` — **demo**: durable custom-loop snapshot + parallel batch approvals (network-free).
+- `durable-investigation.ts` — **demo**: `checkpointPolicy: "every-turn"` turn checkpoints, simulated worker death, and `decision: "continue"` crash recovery with no tool re-dispatch (network-free).
 - `ag-ui-server.ts` — authorized Web `Request` → bounded AG-UI SSE run with a host-owned mock session.
 - `ag-ui-a2ui.ts` — opt-in A2UI painting middleware: tool-result `a2ui_operations` → `a2ui-surface` ACTIVITY_SNAPSHOT.
 - `ag-ui-mcp-apps.ts` — **demo**: authenticated single-bridge MCP Apps resource proxy plus separate-origin sandbox/CSP configuration (network-free).
@@ -122,6 +129,8 @@ Each demo prints a single JSON line with its result.
 - `realtime-voice-host.ts` — **demo**: governed realtime voice bridge over a mock `RealtimeSession` (barge-in before effect, no microphone, network-free).
 - `web-standard-server.ts` — optional framework-free authorized `Request -> Response` agent run using the offline mock provider.
 - `mcp-server.ts` — dual-era authorized Prism tool exposure: factory-based serving over in-memory (default), stdio (`--stdio`), and a commented modern HTTP wiring through SDK `createMcpHandler`.
+- `connected-slack-mcp.ts` — **demo**: network-free connected-app Slack MCP wrap with read/write effect classification and an exact allowlist.
+- `open-connector-sidecar.ts` — **demo**: network-free Open Connector sidecar admission — loopback `streamable-http` transport, exact `allowTools`, unclassified `execute_action`, and a denied `select` (recipe in [`open-connector-sidecar/`](open-connector-sidecar/README.md)).
 - `minimal-host-app.ts` — **demo**: canonical minimal host embed; stream events while a prompt runs via concurrent `Promise.all([drain, session.run])`.
 - `custom-builders.ts` — **demo**: replace the default InputBuilder and PromptBuilder to control input wrapping and final message ordering.
 - `custom-session-store.ts` — **demo**: implement the `SessionStore` contract (append + list) and pass it to `createAgentSession`; observe the entry kinds the runtime appends.

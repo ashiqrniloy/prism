@@ -1,8 +1,8 @@
-# Diagramming, draw.io embed client, and mxGraph XML validation (`@arnilo/prism-office/diagrams`)
+# Diagramming, draw.io embed client, and mxGraph XML validation (`@arnilo/prism-work/diagrams`)
 
 ## What it does
 
-The `@arnilo/prism-office/diagrams` package provides an origin-enforced draw.io / diagrams.net iframe embed client, XXE-safe mxGraph XML validation, and byte-stable deterministic XML canonicalization for content hashing and visual artifact workflows in Prism applications and agent runtimes.
+The `@arnilo/prism-work/diagrams` package provides an origin-enforced draw.io / diagrams.net iframe embed client, XXE-safe mxGraph XML validation, and byte-stable deterministic XML canonicalization for content hashing and visual artifact workflows in Prism applications and agent runtimes.
 
 ### Core Capabilities
 
@@ -17,7 +17,7 @@ The `@arnilo/prism-office/diagrams` package provides an origin-enforced draw.io 
 
 ## When to use it
 
-Use `@arnilo/prism-office/diagrams` when applications, host workspaces, or autonomous agents need to:
+Use `@arnilo/prism-work/diagrams` when applications, host workspaces, or autonomous agents need to:
 1. Embed an interactive, self-hosted draw.io / diagrams.net editor inside a web or Electron iframe with strictly enforced cross-origin security.
 2. Coordinate diagram editing lifecycles (`init` handshake, `load`, `save`, `autosave`, `merge`, and `export`).
 3. Execute save-with-preview workflows generating SVG (`xmlsvg`) or PNG (`xmlpng`) visual snapshots from the active editor session.
@@ -148,7 +148,7 @@ Outbound host-to-editor action postMessage:
 ## Implementation example
 
 ```ts
-import { createDrawioEmbed, validateDrawioXml, canonicalizeDrawioXml } from "@arnilo/prism-office/diagrams";
+import { createDrawioEmbed, validateDrawioXml, canonicalizeDrawioXml } from "@arnilo/prism-work/diagrams";
 
 // 1. Initialize embed client with strict origin binding
 const embed = createDrawioEmbed({
@@ -240,8 +240,8 @@ const summary = validateDrawioXml(xml, {
 
 ## Related APIs
 
-- [`@arnilo/prism-office/documents`](./documents.md): Specification-compliant OpenXML document generation and preview rendering for DOCX, XLSX, and PPTX.
-- [`@arnilo/prism-office/sheets`](./sheets.md): Spreadsheet and CSV parsing engine with strict financial decimal safety guarantees.
+- [`@arnilo/prism-work/documents`](./documents.md): Specification-compliant OpenXML document generation and preview rendering for DOCX, XLSX, and PPTX.
+- [`@arnilo/prism-work/sheets`](./sheets.md): Spreadsheet and CSV parsing engine with strict financial decimal safety guarantees.
 - [`@arnilo/prism-web-tools/browser`](./browser-automation.md): Browser automation tools and quarantine lifecycle.
 - [`@arnilo/prism-ag-ui`](./ag-ui.md): Agent-User Interface projection and timeline components.
 - [`@arnilo/prism-core/governance/observability`](./observability.md): OpenTelemetry instrumentation and trace adapters.

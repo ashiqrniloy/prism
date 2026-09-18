@@ -30,7 +30,7 @@ const source = readFileSync(SUMMARY, "utf8");
 const thresholds = JSON.parse(readFileSync(THRESHOLDS, "utf8"));
 
 // Mirrors coverage-summary.mjs's workspace discovery (any *.test.js under dist/,
-// recursively: acp-agent builds to dist/src/__tests__, office to dist/<area>/__tests__).
+// recursively: acp-agent builds to dist/src/__tests__, work to dist/<area>/__tests__).
 function hasTestJs(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
@@ -48,10 +48,20 @@ const hasDistTests = (name) => {
   return existsSync(dist) && hasTestJs(dist);
 };
 
-const workspaceNames = readdirSync(PACKAGES)
-  .filter((n) => existsSync(join(PACKAGES, n, "package.json")) && hasDistTests(n))
+const workspaceDirs = readdirSync(PACKAGES)
+  .filter((n) => existsSync(join(PACKAGES, n, "package.json")))
   .sort();
+const workspaceNames = workspaceDirs.filter(hasDistTests);
 const pkgName = (n) => JSON.parse(readFileSync(join(PACKAGES, n, "package.json"), "utf8")).name ?? n;
+const workspacePackageNames = workspaceDirs.map(pkgName).sort();
+
+function assertArtifactPackageNames(artifact) {
+  assert.deepEqual(
+    Object.keys(artifact.packages).sort(),
+    workspacePackageNames,
+    "coverage artifact package keys must exactly match live workspace manifests",
+  );
+}
 
 // Plan 070 Task 7: the live workspace graph from the manifest truth (root excluded —
 // @arnilo/prism is the core row, never a workspace row in the thresholds file).
@@ -100,6 +110,15 @@ test("thresholds JSON names only live workspace packages — no retired rows", (
   for (const name of Object.keys(thresholds.packages)) {
     assert.ok(liveWorkspaceNames.has(name), `${name} is not in the live workspace graph`);
   }
+});
+
+test("coverage artifact package keys match live workspace manifests", () => {
+  const artifact = JSON.parse(readFileSync(ARTIFACT, "utf8"));
+  assertArtifactPackageNames(artifact);
+  assert.throws(
+    () => assertArtifactPackageNames({ ...artifact, packages: { ...artifact.packages, "@arnilo/prism-office": {} } }),
+    /coverage artifact package keys must exactly match live workspace manifests/,
+  );
 });
 
 test("real artifact is well-formed and every non-protected package passes its gate", () => {

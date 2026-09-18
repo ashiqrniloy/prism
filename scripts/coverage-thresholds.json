@@ -1,5 +1,5 @@
 {
-  "captured": "2026-09-11",
+  "captured": "2026-09-17",
   "marginPp": 3,
   "packages": {
     "@arnilo/prism-acp-agent": {
@@ -11,6 +11,11 @@
       "lines": 87.46,
       "branches": 78.39,
       "functions": 94.46
+    },
+    "@arnilo/prism-channels": {
+      "lines": 86.13,
+      "branches": 75.92,
+      "functions": 87.9
     },
     "@arnilo/prism-coding-tools": {
       "lines": 83.11,
@@ -30,10 +35,10 @@
       "branches": 81.99,
       "functions": 91.04
     },
-    "@arnilo/prism-office": {
-      "lines": 83.55,
-      "branches": 79.9,
-      "functions": 84.96
+    "@arnilo/prism-work": {
+      "lines": 80.24,
+      "branches": 72.1,
+      "functions": 83.84
     },
     "@arnilo/prism-providers": {
       "lines": 92.04,
@@ -46,5 +51,5 @@
       "functions": 89.55
     }
   },
-  "note": "Freeze 2026-08-14: two back-to-back post-fix runs were byte-identical (max lines delta 0.000pp). Threshold = min(run1,run2) - 3pp on lines; branches/functions recorded from the freeze runs, not gated. Protected packages (durable legs needing PRISM_TEST_POSTGRES_URL, real NATS, or OS-capability legs that skip in the measuring environment) are exempt and shown separately. CI remediation 2026-08-14: @arnilo/prism-coding-security moved to protectedException — its native-sandbox legs probe `unshare --net` (NETNS) at load and skip on GitHub Actions runners (measured 72.80 lines there vs 80.18 on a host with NETNS; the 77.18 freeze threshold was host-captured). [2026-09-06] plan 064 Task 12 re-capture after plan-064 live-suite additions (repairs @arnilo/prism-providers missing branches/functions; dormant packages keep frozen thresholds). [2026-09-11] plan 070 Task 7: pruned 23 retired package rows; coverage-summary now discovers workspaces by dist test files (nested dist/src/__tests__ and dist/<area>/__tests__ included), so @arnilo/prism-acp-agent is measured (row added) and the @arnilo/prism-office placeholder (75/70/75) is replaced by measured evidence. Threshold = min(two back-to-back runs 2026-09-11) - 3pp; the two runs differed by <= 0.02pp on lines. Rows sorted by name."
+  "note": "Freeze 2026-08-14: two back-to-back post-fix runs were byte-identical (max lines delta 0.000pp). Threshold = min(run1,run2) - 3pp on lines; branches/functions recorded from the freeze runs, not gated. Protected packages (durable legs needing PRISM_TEST_POSTGRES_URL, real NATS, or OS-capability legs that skip in the measuring environment) are exempt and shown separately. CI remediation 2026-08-14: @arnilo/prism-coding-security moved to protectedException — its native-sandbox legs probe `unshare --net` (NETNS) at load and skip on GitHub Actions runners (measured 72.80 lines there vs 80.18 on a host with NETNS; the 77.18 freeze threshold was host-captured). [2026-09-06] plan 064 Task 12 re-capture after plan-064 live-suite additions (repairs @arnilo/prism-providers missing branches/functions; dormant packages keep frozen thresholds). [2026-09-11] plan 070 Task 7: pruned 23 retired package rows; coverage-summary now discovers workspaces by dist test files (nested dist/src/__tests__ and dist/<area>/__tests__ included), so @arnilo/prism-acp-agent is measured (row added) and the @arnilo/prism-work placeholder (75/70/75) is replaced by measured evidence. Threshold = min(two back-to-back runs 2026-09-11) - 3pp; the two runs differed by <= 0.02pp on lines. Rows sorted by name. [2026-09-16] plan 079 Task 4: @arnilo/prism-channels measured 89.13 lines / 75.92 branches / 87.90 functions in two local runs; its 86.13 line threshold is the standard 3pp margin. [2026-09-17] plan 085 Task 1: @arnilo/prism-work was re-captured after plan 083 consolidated the office family; two back-to-back runs measured 83.24 lines / 72.10 branches / 83.84 functions, so its 80.24 line threshold preserves the standard 3pp margin."
 }

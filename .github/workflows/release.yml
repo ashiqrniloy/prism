@@ -3,7 +3,7 @@ name: release
 on:
   push:
     branches: [main, master]
-    tags: ["v0.3.0", "v0.4.0", "v0.5.0", "v0.5.1", "v0.5.2", "v0.5.3", "v0.5.4", "v0.5.5", "v0.5.6", "v0.6.0", "v0.7.0", "@arnilo/*@*"]
+    tags: ["v0.3.0", "v0.4.0", "v0.5.0", "v0.5.1", "v0.5.2", "v0.5.3", "v0.5.4", "v0.5.5", "v0.5.6", "v0.6.0", "v0.7.0", "v0.8.0", "@arnilo/*@*"]
   pull_request:
   workflow_dispatch:
 
@@ -59,7 +59,7 @@ jobs:
             phase "npm test" npm test
             phase test:coverage npm run test:coverage
             phase pack:dry-run npm run pack:dry-run
-            PRISM_TEST_POSTGRES_URL="postgres://prism:prism@localhost:5432/prism" phase release:gate npm run release:gate
+            PRISM_TEST_POSTGRES_URL="postgres://prism:prism@localhost:5432/prism" PRISM_RELEASE_POSTGRES_JOB=1 phase release:gate npm run release:gate
             phase security:threat-suites npm run security:threat-suites
             echo "== sdk:ready all phases passed"
           } 2>&1 | tee sdk-ready.log
@@ -157,7 +157,7 @@ jobs:
 
   codeql-release:
     name: CodeQL release SAST
-    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || github.ref == 'refs/tags/v0.5.4' || github.ref == 'refs/tags/v0.5.5' || github.ref == 'refs/tags/v0.5.6' || github.ref == 'refs/tags/v0.6.0' || github.ref == 'refs/tags/v0.7.0' || startsWith(github.ref, 'refs/tags/@arnilo/')
+    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || github.ref == 'refs/tags/v0.5.4' || github.ref == 'refs/tags/v0.5.5' || github.ref == 'refs/tags/v0.5.6' || github.ref == 'refs/tags/v0.6.0' || github.ref == 'refs/tags/v0.7.0' || github.ref == 'refs/tags/v0.8.0' || startsWith(github.ref, 'refs/tags/@arnilo/')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -211,12 +211,12 @@ jobs:
       - name: install libreoffice headless
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-calc libreoffice-impress
       - name: run office golden validation
-        run: npm run test:office --workspace @arnilo/prism-office
+        run: npm run test:office --workspace @arnilo/prism-work
 
   publish:
     name: publish (deterministic, resumable, provenance)
     needs: [verify, node22-compat, postgres-integration, office-validation, codeql-release, supply-chain]
-    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || github.ref == 'refs/tags/v0.5.4' || github.ref == 'refs/tags/v0.5.5' || github.ref == 'refs/tags/v0.5.6' || github.ref == 'refs/tags/v0.6.0' || github.ref == 'refs/tags/v0.7.0' || startsWith(github.ref, 'refs/tags/@arnilo/')
+    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || github.ref == 'refs/tags/v0.5.4' || github.ref == 'refs/tags/v0.5.5' || github.ref == 'refs/tags/v0.5.6' || github.ref == 'refs/tags/v0.6.0' || github.ref == 'refs/tags/v0.7.0' || github.ref == 'refs/tags/v0.8.0' || startsWith(github.ref, 'refs/tags/@arnilo/')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -271,7 +271,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          if [ "$GITHUB_REF_NAME" = "v0.3.0" ] || [ "$GITHUB_REF_NAME" = "v0.4.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.1" ] || [ "$GITHUB_REF_NAME" = "v0.5.2" ] || [ "$GITHUB_REF_NAME" = "v0.5.3" ] || [ "$GITHUB_REF_NAME" = "v0.5.4" ] || [ "$GITHUB_REF_NAME" = "v0.5.5" ] || [ "$GITHUB_REF_NAME" = "v0.5.6" ] || [ "$GITHUB_REF_NAME" = "v0.6.0" ] || [ "$GITHUB_REF_NAME" = "v0.7.0" ]; then
+          if [ "$GITHUB_REF_NAME" = "v0.3.0" ] || [ "$GITHUB_REF_NAME" = "v0.4.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.1" ] || [ "$GITHUB_REF_NAME" = "v0.5.2" ] || [ "$GITHUB_REF_NAME" = "v0.5.3" ] || [ "$GITHUB_REF_NAME" = "v0.5.4" ] || [ "$GITHUB_REF_NAME" = "v0.5.5" ] || [ "$GITHUB_REF_NAME" = "v0.5.6" ] || [ "$GITHUB_REF_NAME" = "v0.6.0" ] || [ "$GITHUB_REF_NAME" = "v0.7.0" ] || [ "$GITHUB_REF_NAME" = "v0.8.0" ]; then
             npm run release:publish -- --lockstep --version "${GITHUB_REF_NAME#v}" --resume --report release-artifacts/publish-report.json
           else
             npm run release:publish -- --resume --report release-artifacts/publish-report.json

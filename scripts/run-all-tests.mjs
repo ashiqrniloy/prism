@@ -22,14 +22,14 @@ import { readManifest } from "./package-truth.mjs";
 const ROOT = join(import.meta.dirname, "..");
 
 // The gate segment, unchanged from the pre-runner chain (plan 070 Task 15) plus
-// this runner's own regression test. Retired `phase<N>-(freeze|release)` gates
+// this runner's own regression test. The timing-sensitive performance budget runs
+// alone below. Retired `phase<N>-(freeze|release)` gates
 // stay OUT: they are immutable release evidence, audited standalone (see
 // scripts/truth-current.test.mjs). scripts/run-all-tests.test.mjs asserts both
 // halves of that policy against this list, so it can never pass by being empty.
 export const GATE_FILES = [
   "scripts/release-gate.test.mjs",
   "scripts/tooling-gate.test.mjs",
-  "scripts/budget-gate.test.mjs",
   "scripts/run-all-tests.test.mjs",
   "scripts/phase8-conformance.test.mjs",
   "scripts/phase9-conformance.test.mjs",
@@ -59,6 +59,7 @@ export const GATE_FILES = [
   "scripts/phase54-package-map.test.mjs",
   "scripts/phase54-legacy-registry.test.mjs",
   "scripts/truth-current.test.mjs",
+  "scripts/scan-secrets.test.mjs",
   "scripts/packaging-current.test.mjs",
   "scripts/import-hygiene.test.mjs",
   "scripts/live-matrix.test.mjs",
@@ -94,6 +95,13 @@ function expandGlob(arg) {
 // its children acquire the real lock, which a parent holding it would deadlock.
 export const STAGES = [
   { name: "build", command: "npm", args: ["run", "build"] },
+  {
+    // The cold-import check cannot share Node's default parallel test worker pool:
+    // its absolute ceiling measures host contention, not Prism import work.
+    name: "performance budget",
+    command: process.execPath,
+    args: ["scripts/with-build-lock.mjs", process.execPath, "--test", "scripts/budget-gate.test.mjs"],
+  },
   {
     name: "root suites",
     command: process.execPath,
