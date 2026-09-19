@@ -305,7 +305,11 @@ describe("run limits", () => {
       event.closestOtherAxes.map((axis) => axis.usedRatio),
       [0.6, 0.6, 0.5],
     );
-    assert.ok(observed.findIndex((e) => e.type === "budget_exhausted") < observed.findIndex((e) => e.type === "error"));
+    const order = observed.map((event) => event.type);
+    assert.ok(
+      order.indexOf("run_limit_exceeded") < order.indexOf("budget_exhausted") && order.indexOf("budget_exhausted") < order.indexOf("error"),
+      "a limit death must deliver its breach, then its attribution, then the run's error",
+    );
   });
 
   it("names the run input budget axis when cumulative tokens die, and hashes tool-call arguments", async () => {

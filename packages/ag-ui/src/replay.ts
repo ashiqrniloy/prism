@@ -5,6 +5,7 @@ import type {
   OwnershipScope,
   ProductionPersistenceStore,
 } from "@arnilo/prism";
+import { isTerminalAgentEventType } from "@arnilo/prism";
 import { AgUiError } from "./errors.js";
 import type { ResolvedAgUiLimits } from "./limits.js";
 import type { AgUiRunReference, CoWorkContext, CoWorkEvent } from "./types.js";
@@ -70,18 +71,14 @@ export function createPersistenceAgUiReplay<Authorization>(
       if (page.nextCursor && Buffer.byteLength(page.nextCursor, "utf8") > limits.maxCursorBytes) {
         throw new AgUiError("ERR_PRISM_AG_UI_REPLAY", "Replay cursor is invalid");
       }
-      return { records: page.items, nextCursor: page.nextCursor, terminal: page.items.some((record) => terminal(record)), run };
+      return {
+        records: page.items,
+        nextCursor: page.nextCursor,
+        terminal: page.items.some((record) => isTerminalAgentEventType(record.event.type)),
+        run,
+      };
     },
   };
-}
-
-function terminal(record: AgentEventRecord): boolean {
-  return (
-    record.event.type === "agent_finished" ||
-    record.event.type === "agent_denied" ||
-    record.event.type === "run_limit_exceeded" ||
-    record.event.type === "error"
-  );
 }
 
 export interface AgentEventSourceAgUiReplayOptions<Authorization> {

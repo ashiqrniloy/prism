@@ -209,6 +209,7 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "assembleProviderInput",
   "assertDeclaredMediaTypeMatches",
   "assertAgentEventSourceConforms",
+  "isTerminalAgentEventType",
   "assertExecutionAllowed",
   "assertGuardrailsAllowed",
   "assertJsonObject",

@@ -8,7 +8,12 @@ import type {
   RunDecision,
   SecretRedactor,
 } from "@arnilo/prism";
-import { HARD_MAX_DECISION_REASON_BYTES, HARD_MAX_ELICITATION_BYTES, HARD_MAX_PENDING_DECISIONS } from "@arnilo/prism";
+import {
+  HARD_MAX_DECISION_REASON_BYTES,
+  HARD_MAX_ELICITATION_BYTES,
+  HARD_MAX_PENDING_DECISIONS,
+  isTerminalAgentEventType,
+} from "@arnilo/prism";
 import type { AgUiA2AAdapter } from "./a2a.js";
 import { type AgUiA2UiAction, type AgUiA2UiOptions, extractAgUiA2UiActions } from "./a2ui.js";
 import { type AgUiEventMapperOptions, createAgUiEventMapper } from "./ag-ui-mapper.js";
@@ -700,7 +705,7 @@ async function* filterRun(source: AsyncIterable<AgentEvent>, runId: string): Asy
   for await (const event of source) {
     if (!("runId" in event) || event.runId !== runId) continue;
     yield event;
-    if (event.type === "agent_finished" || event.type === "agent_denied" || event.type === "error") return;
+    if (isTerminalAgentEventType(event.type)) return;
   }
 }
 

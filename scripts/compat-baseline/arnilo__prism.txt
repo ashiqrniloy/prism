@@ -780,6 +780,7 @@ isSkillDisclosureError	export declare function isSkillDisclosureError(error: unk
 isSkillLoadError	export declare function isSkillLoadError(error: unknown): error is SkillLoadError
 isSteerSoftInterrupt	export declare function isSteerSoftInterrupt(error: unknown): boolean
 isSupportedThinkingLevel	export declare function isSupportedThinkingLevel(model: Pick<ModelConfig, "provider" | "compat" | "capabilities">, level: unknown): boolean
+isTerminalAgentEventType	export declare function isTerminalAgentEventType(type: AgentEvent["type"]): boolean
 isThinkingLevel	export declare function isThinkingLevel(value: unknown): value is ThinkingLevel
 isToolDisclosureError	export declare function isToolDisclosureError(error: unknown): error is ToolDisclosureError
 isTransientErrorInfo	export declare function isTransientErrorInfo(error: ErrorInfo, transientCodes?: ReadonlySet<string | number>): boolean

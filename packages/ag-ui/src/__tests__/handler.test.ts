@@ -1078,6 +1078,74 @@ describe("createAgUiHandler", () => {
     assert.equal(sessions, 0);
   });
 
+  it("keeps a durable AG-UI replay open across a limit breach and closes on the run's error", async () => {
+    const source = createMemoryAgentEventSource();
+    const owned = { tenantId: "tenant-1", userId: "user-1" };
+    const record = (id: string, event: AgentEventRecord["event"], timestamp: string): AgentEventRecord => ({
+      id,
+      sessionId: "session-1",
+      runId: "stored-run",
+      type: event.type,
+      timestamp,
+      event,
+      redacted: true,
+      ...owned,
+    });
+    await source.append(
+      record(
+        "event-limit",
+        {
+          type: "run_limit_exceeded",
+          sessionId: "session-1",
+          runId: "stored-run",
+          breach: { limit: "maxTurns", maximum: 1, observed: 2 },
+        },
+        "2026-07-22T00:00:00.000Z",
+      ),
+    );
+    await source.append(
+      record(
+        "event-attr",
+        {
+          type: "budget_exhausted",
+          sessionId: "session-1",
+          runId: "stored-run",
+          limit: "maxTurns",
+          consumed: { turns: 2, inputTokens: 0, providerAttempts: 1, requestBytes: 0 },
+          closestOtherAxes: [],
+          recentToolCalls: [],
+        },
+        "2026-07-22T00:00:01.000Z",
+      ),
+    );
+    const replay = createAgentEventSourceAgUiReplay(source, {
+      resolveRun: () => ({ ref: { sessionId: "session-1", runId: "stored-run" } }),
+      ownership: () => owned,
+    });
+    const request = { threadId: "thread-1", runId: "run-1", authorization };
+    const breached = await replay.page(request);
+    assert.deepEqual(
+      breached.records.map((item) => item.event.type),
+      ["run_limit_exceeded", "budget_exhausted"],
+    );
+    assert.equal(breached.terminal, false, "a limit breach must not end an AG-UI replay; the run's error follows");
+
+    assert.ok(replay.subscribe, "source-backed replay must expose a live subscription");
+    const live = replay.subscribe(request)[Symbol.asyncIterator]();
+    await source.append(
+      record(
+        "event-death",
+        { type: "error", sessionId: "session-1", runId: "stored-run", error: { message: "run limit exceeded" } },
+        "2026-07-22T00:00:02.000Z",
+      ),
+    );
+    assert.equal((await live.next()).value?.record.event.type, "run_limit_exceeded");
+    assert.equal((await live.next()).value?.record.event.type, "budget_exhausted");
+    assert.equal((await live.next()).value?.record.event.type, "error");
+    const closed = await replay.page(request);
+    assert.equal(closed.terminal, true, "the run's error ends the replay");
+  });
+
   it("replays one redacted terminal page without starting a new session", async () => {
     let queried: Record<string, unknown> | undefined;
     let sessions = 0;

@@ -1,5 +1,6 @@
 import { type AGUIEvent, EventType, type RunAgentInput } from "@ag-ui/core";
-import type { AgentEvent, AgentEventSource, AgentSession, SecretRedactor } from "@arnilo/prism";
+import type { AgentEventSource, AgentSession, SecretRedactor } from "@arnilo/prism";
+import { isTerminalAgentEventType } from "@arnilo/prism";
 import type {
   A2AAgentCard,
   A2AAgentEventTask,
@@ -401,7 +402,7 @@ async function* durableSubscribe(
     if (!item.record.redacted) throw new A2AError("Task event unavailable", 500, "ERR_PRISM_A2A_TASK");
     // A page may contain records appended after the terminal record (append-order sequences);
     // the stream contract ends at a terminal event, so stop there.
-    if (isTerminalRecord(item.record.event)) break;
+    if (isTerminalAgentEventType(item.record.event.type)) break;
     for (const agui of await mapper.map(item.record.event)) {
       const payload = mapAgUiToA2A(agui, id, resolved.task.contextId, a2aLimits, artifacts);
       if (payload) yield { eventId: item.cursor, ...payload };
@@ -425,10 +426,6 @@ async function* skipEvents(events: AsyncIterable<A2ATaskEvent>, afterEventId: st
 
 async function* oneTask(eventId: string, task: A2ATask): AsyncGenerator<A2ATaskEvent> {
   yield { eventId, task };
-}
-
-function isTerminalRecord(event: AgentEvent): boolean {
-  return event.type === "agent_finished" || event.type === "agent_denied" || event.type === "error";
 }
 
 function pageIndex(pageToken: string, A2AError: SupervisorA2AError): number {

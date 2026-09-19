@@ -1,6 +1,6 @@
 export { resolveAgentDefinition } from "./agent-definitions.js";
 export type { AgentEventSourceErrorCode } from "./agent-event-source.js";
-export { AgentEventSourceError, createMemoryAgentEventSource } from "./agent-event-source.js";
+export { AgentEventSourceError, createMemoryAgentEventSource, isTerminalAgentEventType } from "./agent-event-source.js";
 export {
   dispatchToolCallsInOrder,
   generateValidateReviseLoop,

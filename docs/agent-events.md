@@ -24,6 +24,8 @@ Event records preserve emission order within a run because the runtime drains pe
 
 `AgentEventSource` (`createMemoryAgentEventSource` / `persistence.events` on PostgreSQL) appends, pages, and subscribes with opaque ownership-bound cursors. `subscribe` registers wake interest before replaying history so replay-to-live handoff has no gap. Delivery is at-least-once; consumers dedupe `record.id`. PostgreSQL uses transactional sequence allocation plus `LISTEN`/`NOTIFY` wakeups with polling fallback. Transport adapters (server SSE `Last-Event-ID`, AG-UI, A2A `afterEventId`) map source envelopes only — they do not invent private replay loops. This is not exactly-once.
 
+Exactly three event types are terminal — `agent_finished`, `agent_denied`, and `error` — and one exported predicate answers the question for every consumer: `isTerminalAgentEventType(type)`. The memory, NATS, and Postgres sources, AG-UI replay, the A2A stream break, AG-UI `filterRun`, and conversation replay all route through it, so pages, subscriptions, and replays end on the same set. Attribution records such as `run_limit_exceeded` and `budget_exhausted` are not terminal (see [run limit events](#run-limit-events)).
+
 ### Placement (FR-7 answer, 0.0.26)
 
 The durable `AgentEventSource` **stays in `@arnilo/prism-core/sessions/postgres`** for the 0.0.26 line and is importable from the package root (FR-6):
@@ -155,8 +157,10 @@ Terminal attribution — see [Runs and usage § Run limits](runs-and-usage.md#ru
 | `budget_exhausted` | `sessionId`, `runId`, `limit: RunLimitName`, `consumed: { turns, inputTokens, providerAttempts, requestBytes }`, `closestOtherAxes: [{ axis, usedRatio }]`, `recentToolCalls: [{ id, name, argHash }]` |
 
 `budget_exhausted` is the terminal attribution for a run that died on a limit: it is emitted once per
-limit death, before the terminal `error` event and the finish `RunRecord`, so a subscriber that stops
-at the first terminal event still sees why the run died. `limit` names the axis that fired
+limit death, before the terminal `error` event and the finish `RunRecord`. A limit death therefore
+delivers three records in order — `run_limit_exceeded` (breach), `budget_exhausted` (attribution),
+then the terminal `error` — and a page, subscription, or replay stays open across the first two:
+keep reading until the stream ends rather than stopping at the first breach record. `limit` names the axis that fired
 (`maxTurns`, `maxInputTokens`, `maxCost`, …). `closestOtherAxes` is the three other finite product
 axes with the highest `used / cap` ratio, so a host can answer "how close was everything else";
 request/response byte axes stay out because their caps are per-frame, and `usedRatio` is clamped to

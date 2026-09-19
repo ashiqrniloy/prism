@@ -8,6 +8,7 @@ import {
   type AgentEventSourcePage,
   type AgentEventSourceRead,
   type DurableAgentEventRecord,
+  isTerminalAgentEventType,
   type OwnershipScope,
 } from "@arnilo/prism";
 import type { NatsJetStream, NatsJetStreamConsumer } from "./jetstream.js";
@@ -134,7 +135,7 @@ export function createNatsAgentEventSource(options: NatsAgentEventSourceOptions)
         return {
           items: selected,
           ...(hasMore && selected.length > 0 ? { nextCursor: selected.at(-1)!.cursor } : {}),
-          terminal: !hasMore && last !== undefined && isTerminal(last),
+          terminal: !hasMore && last !== undefined && isTerminalAgentEventType(last.type),
         } satisfies AgentEventSourcePage;
       } finally {
         await deleteConsumer(name);
@@ -246,7 +247,7 @@ export function createNatsAgentEventSource(options: NatsAgentEventSourceOptions)
           const envelope: AgentEventEnvelope = { record, cursor: encodeCursor(record) };
           yield envelope;
           message.ack();
-          if (isTerminal(record)) return;
+          if (isTerminalAgentEventType(record.type)) return;
         }
       }
     } finally {
@@ -433,12 +434,6 @@ function validCursor(value: unknown): value is Cursor {
     (cursor.sequence as number) > 0 &&
     typeof cursor.id === "string" &&
     cursor.id.length > 0
-  );
-}
-
-function isTerminal(record: DurableAgentEventRecord): boolean {
-  return (
-    record.type === "agent_finished" || record.type === "agent_denied" || record.type === "run_limit_exceeded" || record.type === "error"
   );
 }
 

@@ -8,6 +8,7 @@ import {
   type AgentEventSourcePage,
   type AgentEventSourceRead,
   type DurableAgentEventRecord,
+  isTerminalAgentEventType,
   type OwnershipScope,
 } from "@arnilo/prism";
 import type { Pool, PoolClient } from "pg";
@@ -249,7 +250,7 @@ export function createPostgresAgentEventSource(options: PostgresAgentEventSource
       return {
         items: selected.map((record) => ({ record, cursor: encodeCursor(record) })),
         ...(hasMore && selected.length > 0 ? { nextCursor: encodeCursor(selected.at(-1)!) } : {}),
-        terminal: !hasMore && last !== undefined && isTerminal(last),
+        terminal: !hasMore && last !== undefined && isTerminalAgentEventType(last.type),
       } satisfies AgentEventSourcePage;
     },
 
@@ -762,12 +763,6 @@ function validCursor(value: unknown): value is Cursor {
     (cursor.sequence as number) > 0 &&
     typeof cursor.id === "string" &&
     cursor.id.length > 0
-  );
-}
-
-function isTerminal(record: DurableAgentEventRecord): boolean {
-  return (
-    record.type === "agent_finished" || record.type === "agent_denied" || record.type === "run_limit_exceeded" || record.type === "error"
   );
 }
 

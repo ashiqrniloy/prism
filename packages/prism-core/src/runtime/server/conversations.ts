@@ -21,6 +21,7 @@ import {
   type RunOptions,
   type SecretRedactor,
   type SessionRecord,
+  isTerminalAgentEventType,
   trimTrailingSlashes,
 } from "@arnilo/prism";
 import type { PrismRequestHandler, PrismServerAuthorization } from "./types.js";
@@ -468,9 +469,7 @@ export function createConversationService(store: ConversationServiceStore, optio
       });
       if (page.items.length > limit) throw new ConversationError("Replay page exceeds limit", "limit_exceeded");
       const records = page.items.filter((record) => record.redacted);
-      const terminal = records.some(
-        (record) => record.event.type === "agent_finished" || record.event.type === "agent_denied" || record.event.type === "error",
-      );
+      const terminal = records.some((record) => isTerminalAgentEventType(record.event.type));
       if (page.nextCursor !== undefined) assertBytes(page.nextCursor, limits.cursorBytes, "cursor_too_large");
       return {
         records,

@@ -1,5 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type {
+  AgentEvent,
   AgentEventEnvelope,
   AgentEventRecord,
   AgentEventSource,
@@ -499,14 +500,19 @@ function positionAfter(records: readonly DurableAgentEventRecord[], cursor: Curs
 
 function terminalAt(records: readonly DurableAgentEventRecord[], after: Cursor | undefined): boolean {
   const last = records.at(-1);
-  if (!last || !isTerminal(last)) return false;
+  if (!last || !isTerminalAgentEventType(last.type)) return false;
   return after === undefined || after.sequence <= last.sequence;
 }
 
-function isTerminal(record: DurableAgentEventRecord): boolean {
-  return (
-    record.type === "agent_finished" || record.type === "agent_denied" || record.type === "run_limit_exceeded" || record.type === "error"
-  );
+/**
+ * Terminal-set membership for agent event streams: a run's stream ends on its outcome record.
+ *
+ * Attribution records — `run_limit_exceeded` and `budget_exhausted` — are delivered *before* that
+ * outcome (the `error` that follows a run-limit death), so a page, subscription, or replay must
+ * keep reading past them. Every stream-ending site routes through this one predicate.
+ */
+export function isTerminalAgentEventType(type: AgentEvent["type"]): boolean {
+  return type === "agent_finished" || type === "agent_denied" || type === "error";
 }
 
 function sameRecord(existing: DurableAgentEventRecord, input: NormalizedRecord): boolean {

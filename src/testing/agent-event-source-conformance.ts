@@ -37,6 +37,34 @@ export async function assertAgentEventSourceConforms(factory: AgentEventSourceCo
   equal(final.items.at(-1)?.record.id, terminal.id, "terminal page must include its terminal event");
   equal(final.terminal, true, "terminal event must close only after prior events are delivered");
 
+  // A limit death delivers its attribution before the run's outcome: the breach and budget records
+  // are not terminal, the `error` that follows them is.
+  const breached = { ...input, runId: "run-limit" };
+  await source.append(event("event-limit-before", "turn_started", breached, "2026-01-01T00:00:04.000Z"));
+  const beforeLimitItem = (await source.page({ ...breached, limit: 1 })).items[0];
+  if (!beforeLimitItem) throw new Error("limit-death precondition missing");
+  const beforeLimit = beforeLimitItem.cursor;
+  await source.append(event("event-limit", "run_limit_exceeded", breached, "2026-01-01T00:00:05.000Z"));
+  await source.append(event("event-attr", "budget_exhausted", breached, "2026-01-01T00:00:06.000Z"));
+  const breachPage = await source.page({ ...breached, after: beforeLimit, limit: 10 });
+  equal(breachPage.items.length, 2, "the breach and its attribution must page together");
+  equal(breachPage.terminal, false, "a limit breach must not close the stream; the run's error follows");
+  await source.append(event("event-limit-error", "error", breached, "2026-01-01T00:00:07.000Z"));
+  const deadPage = await source.page({ ...breached, after: beforeLimit, limit: 10 });
+  equal(deadPage.terminal, true, "the error after a limit breach closes the stream");
+  const death = source.subscribe(breached)[Symbol.asyncIterator]();
+  const delivered: string[] = [];
+  for (;;) {
+    const next = await death.next();
+    if (next.done) break;
+    delivered.push(next.value.record.type);
+  }
+  equal(
+    delivered.join(","),
+    "turn_started,run_limit_exceeded,budget_exhausted,error",
+    "a subscriber must read the breach and its attribution before the stream ends",
+  );
+
   await rejects(
     () => source.page({ ...input, ownership: { ...ownership, tenantId: "tenant-b" }, after: page.nextCursor }),
     "foreign cursor must fail closed",
@@ -50,7 +78,7 @@ export async function assertAgentEventSourceConforms(factory: AgentEventSourceCo
 
 function event(
   id: string,
-  type: "agent_started" | "agent_finished" | "turn_started",
+  type: "agent_started" | "agent_finished" | "turn_started" | "run_limit_exceeded" | "budget_exhausted" | "error",
   input: {
     readonly ownership: { readonly tenantId: string; readonly accountId: string; readonly userId: string };
     readonly sessionId: string;
@@ -58,10 +86,24 @@ function event(
   },
   timestamp = "2026-01-01T00:00:00.000Z",
 ): AgentEventRecord {
+  const scoped = { sessionId: input.sessionId, runId: input.runId };
   const event =
     type === "turn_started"
-      ? { type, sessionId: input.sessionId, runId: input.runId, turn: 1 }
-      : { type, sessionId: input.sessionId, runId: input.runId };
+      ? { type, ...scoped, turn: 1 }
+      : type === "run_limit_exceeded"
+        ? { type, ...scoped, breach: { limit: "maxTurns" as const, maximum: 1, observed: 2 } }
+        : type === "budget_exhausted"
+          ? {
+              type,
+              ...scoped,
+              limit: "maxTurns" as const,
+              consumed: { turns: 2, inputTokens: 0, providerAttempts: 1, requestBytes: 0 },
+              closestOtherAxes: [],
+              recentToolCalls: [],
+            }
+          : type === "error"
+            ? { type, ...scoped, error: { message: "run limit exceeded" } }
+            : { type, ...scoped };
   return { id, ...input.ownership, sessionId: input.sessionId, runId: input.runId, type, timestamp, event, redacted: true };
 }
 

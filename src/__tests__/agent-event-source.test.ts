@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AgentEventRecord, AgentEventSource } from "../contracts.js";
-import { AgentEventSourceError, createMemoryAgentEventSource } from "../index.js";
+import type { AgentEventRecord, AgentEventSource, AgentEventType } from "../contracts.js";
+import { AgentEventSourceError, createMemoryAgentEventSource, isTerminalAgentEventType } from "../index.js";
 import { assertAgentEventSourceConforms } from "../testing/agent-event-source-conformance.js";
 
 const ownership = { tenantId: "tenant-a", accountId: "account-a", userId: "user-a" };
@@ -116,6 +116,70 @@ describe("AgentEventSource", () => {
     await rejects(() => source.page({ ...input, after: cursor }), "RETENTION");
   });
 
+  it("classifies exactly the outcome records as terminal", () => {
+    // The table is exhaustive over `AgentEventType`: a new event member fails to compile here until
+    // it is classified, which is the point — one predicate decides every stream-ending site.
+    const expected: Record<AgentEventType, boolean> = {
+      agent_started: false,
+      agent_resumed: false,
+      agent_suspended: false,
+      agent_denied: true,
+      agent_finished: true,
+      error: true,
+      turn_started: false,
+      turn_finished: false,
+      deterministic_turn: false,
+      delegated_agent_step: false,
+      message_started: false,
+      message_delta: false,
+      message_finished: false,
+      provider_turn_started: false,
+      provider_turn_finished: false,
+      retry_scheduled: false,
+      compaction_started: false,
+      compaction_finished: false,
+      attention_compiled: false,
+      tool_narrowing_clamped: false,
+      tool_execution_started: false,
+      tool_execution_progress: false,
+      tool_execution_finished: false,
+      tool_execution_error: false,
+      tool_execution_blocked: false,
+      guardrail_decision: false,
+      steer_rejected: false,
+      run_limit_exceeded: false,
+      budget_exhausted: false,
+      queue_updated: false,
+      event_subscriber_overflow: false,
+      artifact_revision_started: false,
+      artifact_validation_started: false,
+      artifact_validation_finished: false,
+      artifact_finished: false,
+      artifact_failed: false,
+    };
+    const mismatched = Object.entries(expected)
+      .filter(([type, terminal]) => isTerminalAgentEventType(type as AgentEventType) !== terminal)
+      .map(([type]) => type);
+    assert.deepEqual(mismatched, []);
+    assert.equal(Object.values(expected).filter(Boolean).length, 3, "the terminal set is exactly three members");
+  });
+
+  it("ends a stream on the run's outcome, never on limit attribution", async () => {
+    const source = createMemoryAgentEventSource();
+    await source.append(record("event-limit", "run_limit_exceeded"));
+    assert.equal((await source.page(input)).terminal, false, "a limit breach must not close the stream");
+    await source.append(record("event-attr", "budget_exhausted", "2026-01-01T00:00:01.000Z"));
+    assert.equal((await source.page(input)).terminal, false, "budget attribution must not close the stream");
+    await source.append(record("event-death", "error", "2026-01-01T00:00:02.000Z"));
+    assert.equal((await source.page(input)).terminal, true, "the run's error closes the stream");
+
+    const iterator = source.subscribe(input)[Symbol.asyncIterator]();
+    assert.equal((await iterator.next()).value?.record.type, "run_limit_exceeded");
+    assert.equal((await iterator.next()).value?.record.type, "budget_exhausted");
+    assert.equal((await iterator.next()).value?.record.type, "error");
+    assert.equal((await iterator.next()).done, true, "the subscriber must end on the error, not on the breach");
+  });
+
   it("conforms through the dependency-free adapter helper", async () => {
     await assertAgentEventSourceConforms(() => createMemoryAgentEventSource());
   });
@@ -123,13 +187,27 @@ describe("AgentEventSource", () => {
 
 function record(
   id: string,
-  type: "agent_started" | "agent_finished" | "turn_started",
+  type: "agent_started" | "agent_finished" | "turn_started" | "run_limit_exceeded" | "budget_exhausted" | "error",
   timestamp = "2026-01-01T00:00:00.000Z",
 ): AgentEventRecord {
+  const scoped = { sessionId: input.sessionId, runId: input.runId };
   const event =
     type === "turn_started"
-      ? { type, sessionId: input.sessionId, runId: input.runId, turn: 1 }
-      : { type, sessionId: input.sessionId, runId: input.runId };
+      ? { type, ...scoped, turn: 1 }
+      : type === "run_limit_exceeded"
+        ? { type, ...scoped, breach: { limit: "maxTurns" as const, maximum: 1, observed: 2 } }
+        : type === "budget_exhausted"
+          ? {
+              type,
+              ...scoped,
+              limit: "maxTurns" as const,
+              consumed: { turns: 2, inputTokens: 0, providerAttempts: 1, requestBytes: 0 },
+              closestOtherAxes: [],
+              recentToolCalls: [],
+            }
+          : type === "error"
+            ? { type, ...scoped, error: { message: "run limit exceeded" } }
+            : { type, ...scoped };
   return { id, ...ownership, sessionId: input.sessionId, runId: input.runId, type, timestamp, event, redacted: true };
 }
 
