@@ -1,6 +1,6 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-09-18T14:51:16.806Z`
+Generated: `2026-09-19T17:23:45.533Z`
 Repository root version: `0.8.0`
 
 ## 1. Executive Summary & Counts
@@ -567,16 +567,16 @@ npm deprecate @arnilo/prism-antigravity-agent@"<0.4.0" "Legacy 0.3 package. Pris
 
 Total declared exports across all packages are frozen in `scripts/compat-baseline/*.txt`:
 
-| Package Name | Declared Public Exports | Snapshot Baseline File |
-|---|---|---|
-| `@arnilo/prism` | 1000 | `scripts/compat-baseline/arnilo__prism.txt` |
-| `@arnilo/prism-mcp` | 132 | `scripts/compat-baseline/arnilo__prism-mcp.txt` |
-| `@arnilo/prism-providers` | 496 | `scripts/compat-baseline/arnilo__prism-providers.txt` |
-| `@arnilo/prism-memory` | 779 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
-| `@arnilo/prism-work` | 328 | `scripts/compat-baseline/arnilo__prism-work.txt` |
-| `@arnilo/prism-core` | 1283 | `scripts/compat-baseline/arnilo__prism-core.txt` |
-| `@arnilo/prism-channels` | 91 | `scripts/compat-baseline/arnilo__prism-channels.txt` |
-| `@arnilo/prism-coding-tools` | 935 | `scripts/compat-baseline/arnilo__prism-coding-tools.txt` |
-| `@arnilo/prism-ag-ui` | 299 | `scripts/compat-baseline/arnilo__prism-ag-ui.txt` |
-| `@arnilo/prism-web-tools` | 294 | `scripts/compat-baseline/arnilo__prism-web-tools.txt` |
-| `@arnilo/prism-acp-agent` | 13 | `scripts/compat-baseline/arnilo__prism-acp-agent.txt` |
+| Package Name | Declared Public Exports (dist) | Budget-Gated Exports (src) | Snapshot Baseline File |
+|---|---|---|---|
+| `@arnilo/prism` | 1030 | 1445 | `scripts/compat-baseline/arnilo__prism.txt` |
+| `@arnilo/prism-mcp` | 132 | 139 | `scripts/compat-baseline/arnilo__prism-mcp.txt` |
+| `@arnilo/prism-providers` | 496 | 528 | `scripts/compat-baseline/arnilo__prism-providers.txt` |
+| `@arnilo/prism-memory` | 800 | 892 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
+| `@arnilo/prism-work` | 328 | 406 | `scripts/compat-baseline/arnilo__prism-work.txt` |
+| `@arnilo/prism-core` | 1291 | 1418 | `scripts/compat-baseline/arnilo__prism-core.txt` |
+| `@arnilo/prism-channels` | 91 | 106 | `scripts/compat-baseline/arnilo__prism-channels.txt` |
+| `@arnilo/prism-coding-tools` | 935 | 994 | `scripts/compat-baseline/arnilo__prism-coding-tools.txt` |
+| `@arnilo/prism-ag-ui` | 299 | 313 | `scripts/compat-baseline/arnilo__prism-ag-ui.txt` |
+| `@arnilo/prism-web-tools` | 294 | 304 | `scripts/compat-baseline/arnilo__prism-web-tools.txt` |
+| `@arnilo/prism-acp-agent` | 13 | 20 | `scripts/compat-baseline/arnilo__prism-acp-agent.txt` |

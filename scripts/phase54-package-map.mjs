@@ -7,6 +7,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
 import { baselineName, extractDeclaredSurface } from "./release-gates.mjs";
+import { measureExportCounts } from "./budget-gates.mjs";
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -805,6 +806,7 @@ export function buildPackageMap(rootDir = DEFAULT_ROOT) {
     activePackages: activeWithDetails,
     retiredPackages: retiredWithDetails,
     officeDrafts: officeDraftsWithDetails,
+    root: rootDir,
     manifests,
   };
 }
@@ -992,8 +994,14 @@ export function generateMarkdown(map) {
   lines.push("");
   lines.push("Total declared exports across all packages are frozen in `scripts/compat-baseline/*.txt`:");
   lines.push("");
-  lines.push("| Package Name | Declared Public Exports | Snapshot Baseline File |");
-  lines.push("|---|---|---|");
+  lines.push("| Package Name | Declared Public Exports (dist) | Budget-Gated Exports (src) | Snapshot Baseline File |");
+  lines.push("|---|---|---|---|");
+  // Plan 099 Task 0: the second count is the gate's own measurement
+  // (scripts/budget-gates.mjs measureExportCounts — declaration exports plus
+  // named re-exports, test files included), so the recorded number equals the
+  // `exportCounts` ceiling in scripts/budgets.json. The dist column stays the
+  // compat-baseline comparison.
+  const gateCounts = measureExportCounts(map.root ?? DEFAULT_ROOT);
   for (const m of map.manifests) {
     const bName = baselineName(m.pkg.name);
     const distDir = join(m.dir, "dist");
@@ -1001,7 +1009,7 @@ export function generateMarkdown(map) {
     if (existsSync(distDir)) {
       count = extractDeclaredSurface(distDir).size;
     }
-    lines.push(`| \`${m.pkg.name}\` | ${count} | \`scripts/compat-baseline/${bName}\` |`);
+    lines.push(`| \`${m.pkg.name}\` | ${count} | ${gateCounts[m.pkg.name] ?? 0} | \`scripts/compat-baseline/${bName}\` |`);
   }
   lines.push("");
 
