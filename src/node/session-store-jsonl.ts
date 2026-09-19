@@ -8,9 +8,9 @@ import {
   SESSION_ENTRY_SCHEMA_VERSION,
   SessionAppendConflictError,
   type SessionEntry,
-  SessionSearchUnsupportedError,
   type SessionStore,
 } from "../contracts.js";
+import { searchLinearSessions } from "../session-stores.js";
 import { isNodeErrorCode } from "./config.js";
 
 export interface JsonlSessionStoreOptions {
@@ -77,8 +77,20 @@ export function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStor
     async get(id) {
       return findEntry(path, id);
     },
-    async searchSessions() {
-      throw new SessionSearchUnsupportedError("JSONL session store does not support searchSessions");
+    async searchSessions(query) {
+      // ponytail: no index - every search reads and parses the file (O(corpus) time and memory), the
+      // recommended indexed paths are the SQLite/Postgres adapters. Corrupt lines are quarantined
+      // exactly as in list()/get(), and the contract linear caps bound entries/text scanned.
+      const { entries } = await readJsonlSessionEntries(path);
+      const bySession = new Map<string, SessionEntry[]>();
+      const leafBySession = new Map<string, string>();
+      for (const entry of entries) {
+        const sessionEntries = bySession.get(entry.sessionId);
+        if (sessionEntries) sessionEntries.push(entry);
+        else bySession.set(entry.sessionId, [entry]);
+        leafBySession.set(entry.sessionId, entry.id);
+      }
+      return searchLinearSessions(bySession, leafBySession, query);
     },
   };
 }

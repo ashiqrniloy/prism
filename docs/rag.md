@@ -28,6 +28,10 @@ Document lifecycle:
 | `deleteSource({ sourceId, store, scope })` | Deletes only matching IDs under exact tenant/resource/corpus scope. |
 | `replaceDocument({ uri, loader, parser, store, scope, ... })` | Loads through a host seam, parses, chunks, and atomically replaces. `sourceId` is required unless loader supplies one. |
 | `syncKnowledge({ connector, checkpoints, checkpoint, store, embedder, scope })` | Paged connector import; cursor CAS only after each committed page. See [Knowledge synchronization](knowledge-sync.md). |
+| `createDeletionPropagator({ scope, vectorStore, authorization })` | Privileged deletion orchestration: lineage-closed tombstone set + registered handlers. See [Deletion propagation](#deletion-propagation). |
+| `createRagDeletionHandler({ store, scope, statusStore? })` | The RAG layer's propagation handler: removes a deleted source's chunk rows and ingestion status. |
+| `createLocalReranker({ model?, runtime?, … })` | Zero-service default reranker: in-process cross-encoder behind the `LocalRerankRuntime` seam. See [Local reranker](#local-reranker). |
+| `resolveReranker(config)` | Declarative reranker config (`kind: "local" \| "tei" \| "openai-compatible" \| "voyage" \| "fake" \| "none"`) → `Reranker`. |
 | `createGoogleDriveConnector({ tokenProvider, resolveAccess })` | Drive `files.list` + `changes.list` connector. Host maps permissions; watch payloads are not authorization. |
 | `DocumentLoader` / `Parser` | Small host-replaceable seams. `@arnilo/prism-memory/rag/loaders` and `/rag/parsers` export reference adapters. |
 | `textParser` / `markdownParser` / `htmlParser` / `pdfParser` | UTF-8 text, Markdown, script/style-stripping HTML, and uncompressed-text PDF parsers. |
@@ -82,6 +86,98 @@ Default/hard ceilings include 1,000/16,384 chunk characters, 100/4,096 overlap, 
   }
 }
 ```
+
+## Deletion propagation
+
+`deleteSource()` removes one source's chunk rows. Derived artifacts (summaries, observational-memory entries, compiled wiki pages, host projections) are not chunk rows, so they need an explicit, privileged propagation pass:
+
+```ts
+import { createDeletionPropagator, createMemoryVectorStore } from "@arnilo/prism-memory";
+import { createRagDeletionHandler } from "@arnilo/prism-memory/rag";
+import { createWikiDeletionHandler } from "@arnilo/prism-memory/wiki";
+
+const store = createMemoryVectorStore();
+const propagator = createDeletionPropagator({
+  scope: { tenantId: "t1", resourceId: "docs", threadId: "handbook" },
+  vectorStore: store,
+  authorization: { tenantId: "t1", principalId: "p1", groupIds: ["eng"] }, // host-verified; ACL-store grants are enforced here
+});
+propagator.register(createRagDeletionHandler({ store, scope: ragScope }));
+propagator.register(createWikiDeletionHandler({ workspaceRoot }));
+
+const result = await propagator.propagate("doc:erp-lead");
+// { sourceId, ids, tombstoned, layers: { rag: 4, wiki: 1 }, batched: true }
+```
+
+- `propagate(sourceId)` expands the source through `_lineage.sourceIds` (`collectInvalidationIds`, depth 8) into a closed id set, tombstones **all** of it with reason `forgotten` inside one store transaction, then runs every registered handler with `{ sourceId, ids, scope, signal }`. Handlers return how many artifacts they removed (reported per `kind` in `layers`).
+- Tombstones, not deletions, for derived rows: rows stay for explainability (`recall({ explain: true })` reports the invalidation), and lineage links never dangle. Handlers own physical removal (chunk rows, files, ledger entries).
+- Retrieval is belt-and-suspenders: `retrieveContext()` reads per-scope invalidations before assembly and drops any candidate whose record id, `_lineage.sourceIds`, or `_rag.sourceId` is tombstoned — so a delete that lands after the query legs read rows still returns zero hits.
+- `HARD_PROPAGATION_EDGES` (4,096) is the one-pass privileged ceiling; over it the whole delete rejects (fail-closed), never a half-tombstoned document. Each store `invalidate` call carries at most `HARD_INVALIDATION_BATCH` (64) entries.
+- Deletion is privileged: `authorization` is required, tenant-checked, and enforced through the store's existing `checkSourceAccess` ACL when the store declares `authorization: "acl"` (missing grant → `MemoryScopeError` before anything is written). Retrieval paths never construct a propagator.
+
+## Grant recheck and re-pointing
+
+Retrieval never trusts a grant snapshot. `retrieveContext()` re-asks the store for **each distinct source** it is about to inject, on both sides of the reranker:
+
+```ts
+const result = await retrieveContext("approval policy", {
+  embedder,
+  store,
+  scope,
+  authorization: hostVerifiedPrincipal, // every query re-reads the live grant
+  onAccessDenied: (denial) => audit.write({ kind: "rag.acl_denied", ...denial }),
+});
+// mid-turn revoke → the source is gone from this and every later result
+await store.setSourceAccess(thread, [{ sourceId: "doc:payroll", principalIds: [], accessVersion: 2 }]);
+```
+
+- Candidate pre-filter and, when a reranker ran, a fresh post-rerank gate (`createAccessRecheck()`, one instance per query). The post-rerank gate re-reads on purpose: a grant revoked *while the reranker was running* must not leak its text into the prompt.
+- Cost is per source, not per hit: 200 candidates over 50 sources cost 50 lookups per gate, not 200. The in-memory hook does that inside the 5ms budget for 50 sources; a PostgreSQL store pays one indexed `checkSourceAccess` per source per gate.
+- Fail closed, never silently: an absent/revoked/version-mismatched grant and a **thrown** store error both withhold the hits, and every withheld source is reported once through `onAccessDenied` as `{ sourceId, scope, reason: "no_grant" | "check_failed", hits, error? }` (`error` is redacted and capped at 256 chars). The query still completes with the remaining hits. Abort still aborts — it is not reclassified as a denial.
+- There is no per-request off switch: passing `authorization` is what turns the gate on, and the only knob is the audit sink. A store that declares `authorization: "acl"` without `checkSourceAccess` fails closed before ranking.
+- The store's own query/lexical predicate remains the first line of defense (unauthorized text never leaves the store); the boundary recheck also covers stores whose query leg ignores grants, and revokes that land after the query legs have read.
+
+When a source's grant identity moves (`doc:a` → `doc:b`, a document re-filed under a new source id), `repointSource()` makes the derived artifacts follow **without re-embedding**:
+
+```ts
+import { repointSource } from "@arnilo/prism-memory";
+import { createWikiRepointHandler } from "@arnilo/prism-memory/wiki";
+
+const moved = await repointSource({
+  scope: { tenantId: "t1", resourceId: "docs", threadId: "handbook" },
+  vectorStore: store,
+  from: "doc:a",
+  to: "doc:b",
+  authorization: hostVerifiedPrincipal, // must admit BOTH ids on an ACL store
+  handlers: [createWikiRepointHandler({ workspaceRoot })],
+});
+// { from, to, movedChunks, rewrittenEdges, layers: { wiki: 1 }, batched: true }
+```
+
+- Chunk rows keep their text, embeddings, offsets, and generation: the row id (`doc:a#0001` → `doc:b#0001`), `_rag.sourceId`, and `_rag.citationId` are rewritten, old ids are deleted, and the whole move lands in one store transaction (`batched: true`) or not at all.
+- Lineage edges (`_lineage.sourceIds`) on derived rows move from `from` to `to` in the same pass, so `createDeletionPropagator()` stays correct afterwards: deleting `doc:b` still tombstones the derived rows, deleting `doc:a` no longer touches them.
+- Privileged like deletion propagation: on a store that declares `authorization: "acl"` the caller must pass an `authorization` that admits **both** the source and the destination, and re-point never creates or copies grants — grant the destination first or the move fails closed. `HARD_REPOINT_RECORDS` (4,096) bounds one pass; over the cap nothing moves.
+- Row ids that already exist at the destination (other than rows of the moved source) abort the move instead of overwriting (`MemoryValidationError`).
+- `createWikiRepointHandler()` moves the wiki projection: manifest `rawSources`/`anchors`, the `sourceFileHashes` entry, every page that names the old path, the index pages, and a `Repointed` log line — no recompilation. `pathsFor(sourceId → paths)` maps ids to paths when they differ.
+- Observational memory: `listInvalidatedIds(vectorStore, scope)` returns the ids a scope currently withholds (`corrected` sources stay) — pass them as `invalidatedIds` to `buildObservationalMemoryProjection()` / recall so already-emitted blocks that rest on a revoked source go stale on the next build instead of being re-injected.
+
+## Local reranker
+
+The default reranker runs in-process — no service, no credential, no per-query egress:
+
+```ts
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory";
+import { resolveReranker, retrieveContext } from "@arnilo/prism-memory/rag";
+
+const reranker = resolveReranker({ kind: "local" }); // Xenova/bge-reranker-base via transformers.js
+const result = await retrieveContext("How do approvals work?", { embedder, store, scope, reranker });
+```
+
+- `resolveReranker({ kind: "local" })` is the zero-config path. The model runtime is a host seam exactly like `Embedder`: `createLocalReranker({ model?, runtime?, onLoad?, cacheDir?, dtype?, device?, allowRemoteModels? })`. Pass `runtime: { load(model) → { id, score({ query, documents, signal }) } }` to inject a runtime the host already owns (transformers.js, onnxruntime-node, llama.cpp). With no `runtime`, the built-in loader resolves `@huggingface/transformers` at first use — the package declares no inference dependency (no new dependency name in any manifest) and nothing resolves it at build/install time.
+- Sizing trade-off: model download is one-time and host-cached, per-query latency is CPU-bound and grows with candidates × tokens. A bge-reranker-base class model (≈1.1 GB fp32 / ≈280 MB int8, `dtype: "q8"`) reranks top-50 in tens to low hundreds of ms on CPU dev hardware — measure it with your own runtime and weight cache, then keep `topK`/`queryCandidates` near what recall actually needs; the package guarantees the plumbing (one lazy load, one batched score call per rerank), not the model's speed. The hosted/TEI adapters stay for scale (higher throughput, no local RAM, no download).
+- Cheap by construction: the model loads lazily once per reranker instance, `score` is called once per rerank with every candidate (never one call per document), and `onLoad({ model, loadMs })` is the only opt-in observability — no document text is ever logged. Zero network after load; the built-in loader only touches the model registry at load time, and `allowRemoteModels: false` pins it to local files.
+- Failure is loud: a missing runtime, an unreachable model, or a runtime that returns no per-document scores throws a redacted `RagValidationError` naming the model and the install path (`npm i @huggingface/transformers` or pass `{ runtime }`). There is deliberately **no** silent lexical fallback.
+- `rerankHits` is unchanged and still owns the caps and the trust boundary: local scores reorder the same `RagHit` references (provenance/trust untouched), byte/ms/concurrency limits apply, and abort/timeout/malformed-score cases fail closed.
 
 ## Implementation example
 
@@ -159,11 +255,11 @@ const found = await retrieveContext("leave balance", {
 
 - Supply any Phase 7-conforming embedder/vector store, including the in-memory reference or PostgreSQL/pgvector adapter.
 - Metadata filtering is package-local after a bounded candidate query so existing vector contracts/adapters remain unchanged. Increase `queryCandidates` only when selective filters measurably need it. `filter` never grants document access.
-- Document ACL is opt-in via `authorization` on `retrieveContext` / `store.query` / `store.lexicalQuery`. Reference memory and PostgreSQL adapters declare `authorization: "acl"` and apply principal/group predicates **before** top-K. `setSourceAccess` replaces grants per source (empty principal+group lists revoke). Access version is independent of embedding generation; an unresolved `accessVersion` denies. Missing grants deny. Stores that omit the capability throw rather than claim protection. Group lists cap at 32.
+- Document ACL is opt-in via `authorization` on `retrieveContext` / `store.query` / `store.lexicalQuery`. Reference memory and PostgreSQL adapters declare `authorization: "acl"` and apply principal/group predicates **before** top-K. `setSourceAccess` replaces grants per source (empty principal+group lists revoke). Access version is independent of embedding generation; an unresolved `accessVersion` denies. Missing grants deny. Stores that omit the capability throw rather than claim protection. Group lists cap at 32. `onAccessDenied` observes the boundary recheck; it never disables it.
 - `Reranker` is a host seam, not a provider integration. Return each redacted candidate ID exactly once; Prism retains canonical hit/provenance/trust fields and exposes `retrievalRank` for diagnostics. Add a hosted reranker only when a host owns its credentials, quota, and retry policy.
 - `createTeiReranker({ baseUrl, model?, timeoutMs?, maxResponseBytes?, ssrf?, allowLoopback?, fetch? })` (`CreateTeiRerankerOptions`) adapts a Hugging Face TEI `POST <baseUrl>/rerank` endpoint (`{query, texts, raw_scores:false}` → `{results:[{index,score}]}`) into the `Reranker` seam. It returns a permutation-only reorder of the same hit objects, so provenance/trust move untouched. Response parsing is strict — short/duplicate/out-of-range indices, non-finite scores, HTTP errors, timeouts, and oversized bodies all fail closed; the `rerankHits` caps (`maxRerankBytes`, `maxRerankMs`, `rerankConcurrency`) still apply around it. The default transport is the core DNS-pinned `pinnedFetch` (redirect-free, byte-bounded to 65,536 by default); HTTPS is required unless `allowLoopback: true` (loopback dev/test) or the host supplies `ssrf`/`fetch` for cluster networking. The adapter validates URL shape only — SSRF policy enforcement stays host-side. No credentials are ever sent; there is no SaaS default URL.
 - Hosted rerank adapters over the same seam (plan 062): `createOpenAiCompatibleReranker({ baseUrl, model?, apiKey?, timeoutMs?, maxResponseBytes?, ssrf?, allowLoopback?, fetch? })` speaks the OpenAI-compatible `POST <baseUrl>/rerank` route (`{model, query, documents}` → `{results:[{index,relevance_score}]}`; pass the version segment in `baseUrl`, e.g. `https://api.jina.ai/v1`), and `createVoyageReranker({ baseUrl, model?, apiKey, … })` adapts Voyage AI (`…/v1/rerank` → `{data:[{index,relevance_score}]}`; `apiKey` required). Both send one request per rerank — no adapter-side batching — never send `top_k` (the retrieval seam owns top-K), return the same permutation-only reorder, and fail closed on the same malformed-response/HTTP/timeout/byte-bound cases. `apiKey` rides as `Authorization: Bearer …` and is never logged; errors carry status/host only. No SaaS default URL — hosts own credentials, quota, and retry policy.
-- `createFakeReranker()` is a network-free deterministic reranker (query-term-overlap scoring, stable ties) and `runRerankerConformance(createReranker)` is the shared network-free conformance for any `Reranker` implementation: empty input → `[]`, output is a permutation of the exact input references (provenance/trust untouched), repeated calls are deterministic.
+- `createFakeReranker()` is a network-free deterministic reranker (query-term-overlap scoring, stable ties) and `runRerankerConformance(createReranker)` is the shared network-free conformance for any `Reranker` implementation: empty input → `[]`, output is a permutation of the exact input references (provenance/trust untouched), repeated calls are deterministic. `createLocalReranker()` passes the same conformance; `resolveReranker({ kind: "local" })` is the zero-service default, and no reranker ever constructs itself from retrieval options (host config only).
 - Hybrid retrieval: pass `lexical: "fts"` (or `"bm25"` when the store supports it) to `retrieveContext()`; the two legs are fused with reciprocal-rank fusion (`fusion: "rrf"`, `rrfK` 60 default; the pure helper `fuseReciprocalRank()` returns `FusedCandidate[]` for custom orchestration). Stores advertise support via `lexicalModes?: readonly LexicalMode[]` and `tokenizeLexical()` is the shared tokenizer. Each hit's provenance `retrieval` field reports `vector`/`lexical`/`hybrid`; fusion internals expose `RetrievalLeg`.
 - Multi-scope retrieve: `scopes: RagScope[]` searches each exact scope against that scope's current generation, then runs **one** RRF over the union and **one** rerank. The query is embedded once. `queryCandidates` is per scope. Duplicate scopes are dropped. `HARD_RETRIEVE_SCOPE_CAP` is 8.
 - Embedder identity/drift guard: `Embedder.id` (memory contract) is stamped onto every vector record as `embedderId`. `retrieveContext()` fails closed with `ERR_PRISM_RAG_EMBEDDER_MISMATCH` when a stored record's `embedderId` or dimensions differ from the active embedder (for example after a model change) — re-index the source before retrieving. Legacy records without an `embedderId` also fail closed, naming the re-index path.
@@ -178,7 +274,8 @@ const found = await retrieveContext("leave balance", {
 ## Security and performance notes
 
 - Every index/query includes exact tenant/resource/corpus scope; returned records are rechecked and malformed/foreign records fail closed. `retrieveContext` accepts `scope` or `scopes` (never both, never neither). Empty `scopes` is the host “no allowed corpora” path — no embed, no search, no rerank. A hit whose stored scope is not in the requested list fails closed. Generation filters stay per scope.
-- When `authorization` is set, unauthorized text, titles, citations, counts, and reranker payloads never leave the store. Recheck runs after fusion (before rerank) and again after rerank before injection, so revocation between those steps drops the candidate. `authorization.tenantId` must match every retrieve scope.
+- When `authorization` is set, unauthorized text, titles, citations, counts, and reranker payloads never leave the store. Recheck runs after fusion (before rerank) and again after rerank before injection, so a revoke that lands between those steps drops the candidate; the post-rerank gate deliberately re-reads the live grant instead of reusing the pre-filter decision, and both gates dedupe to one lookup per distinct source. A thrown grant lookup withholds the source and reports `reason: "check_failed"` rather than failing open or aborting the query. `authorization.tenantId` must match every retrieve scope.
+- Re-pointing is the only path that can re-key a source's row ids; it is ACL-gated on both ends, transactional, capped, and refuses destination collisions. It changes identity metadata only — content, embeddings, provenance, and trust are copied verbatim, and no text is ever re-embedded or re-injected because of a move.
 - Embedding identity is a privacy/consistency boundary: records from a different embedder (or dimension) never silently mingle with new ones — retrieval fails closed and names the re-index path. Generation pointers are scope-scoped: a pointer row belongs to exactly one scope, and visibility is computed inside the store (SQL), never by post-filtering in JS.
 - Source IDs become citation/storage IDs and must be stable non-secret identifiers. Text and user metadata can be redacted before external embedding and persistence.
 - Heading metadata is document text only — it passes through the existing `maxMetadataBytes` cap as chunk metadata; no new content path is introduced.
@@ -187,6 +284,7 @@ const found = await retrieveContext("leave balance", {
 - Remote sources must pass existing resource/media trust, SSRF, MIME, and byte policies before their decoded text reaches this package.
 - `replaceSource()` stages every bounded embedding before opening the store transaction. It requires a source-aware transactional store and fails closed rather than pretending generic upserts are atomic. `createMemoryVectorStore()` supplies the reference `getBySource()` / transaction capability; durable stores must implement equivalent exact-scope behavior.
 - `deleteSource()` rechecks every returned record's tenant/resource/corpus and source metadata before delete. Same source IDs in another corpus remain untouched.
+- Deletion propagation reuses the existing memory ACL (`checkSourceAccess` plus the caller's host-verified `authorization`) and rejects unprivileged callers before writing any tombstone; it is only reachable from the explicit `createDeletionPropagator()` seam, never from `retrieveContext()` or any `filter`/query option. The retrieval-side tombstone guard is an exclusion only — it grants nothing.
 - Parsers enforce byte/page/time caps, abort before and after parsing, decode UTF-8 strictly, and strip HTML script/style content. Parsed and retrieved text remains untrusted inert context; it never gains tool authority.
 - Rerankers receive redacted input under byte/time/concurrency caps. Timeout, abort, unknown/duplicate/missing IDs, oversized input, and reranker failures fail closed; returned objects cannot overwrite Prism provenance/trust fields. The TEI adapter adds fail-closed response parsing (permutation completeness, finite scores) and honors the 65,536-byte response ceiling; SSRF/URL policy is host-side (see Extension notes). The hosted OpenAI-compatible and Voyage adapters carry the same guarantees and add Bearer credentials that are never logged and error messages that never contain document text or the API key.
 - Telemetry is a host-owned seam: `RagTelemetry` adapter (`createRagTelemetry()`) drops anything outside a fixed span-name set and `rag.*`-shaped attribute keys, so raw chunk text never reaches the tracer unless the host's own `attributeFilter` opts it in; when the seam is absent, instrumentation costs nothing.

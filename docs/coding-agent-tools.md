@@ -610,7 +610,7 @@ Every configurable value is a positive safe integer (context may be zero); Prism
 - [Language intelligence](language-intelligence.md): optional host-activated LSP contract (`createLanguageIntelligence`) — symbols/definitions/references/diagnostics/hover/rename.
 - [Process sessions](process-sessions.md): optional managed long-running processes (`createProcessSessions`) — start/output/input/wait/signal/kill/release.
 - [Forge integration](forge-integration.md): optional GitHub adapter (`createGitHubForge`) — issue context, authenticated push, PR create/update, review comments, checks, bounded handoff reconcile; effect-store idempotency, no duplicate PRs/comments on retry, tokens never in argv/logs/events.
-- [Tools](tools.md): the host-owned tool harness — `createToolRegistry`, `dispatchToolCall`, filtering, and the `ToolDefinition` contract these factories satisfy.
+- [Tools](tools.md): the host-owned tool harness — `createToolRegistry`, `dispatchToolCall`, filtering, `toolNarrowing` per-turn menus, and the `ToolDefinition` contract these factories satisfy.
 - [Public contracts](public-contracts.md): `ToolDefinition`, `ToolResult`, `ToolExecutionContext`, `ContentBlock`, and `JsonObject` shapes.
 - [Host security guide](host-security.md): fail-closed checklist for permission policies, tool validation, and trust boundaries that must gate these tools.
 - [Tool conformance](tool-conformance.md): assertions for the tool-dispatch blocked-reason matrix these tools participate in.

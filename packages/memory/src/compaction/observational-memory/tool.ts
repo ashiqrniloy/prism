@@ -2,6 +2,8 @@ import { type JsonObject, redactSecrets, type SessionEntry, type ToolDefinition,
 import { isMemoryId } from "./ids.js";
 import { DEFAULT_RECALL_PAGE_LIMIT } from "./limits.js";
 import { recallObservationalMemory, recallObservationalMemoryBranchPage } from "./recall.js";
+import { foldWorkScopeMap } from "./scopes.js";
+import { resolveSharedScopes, type SharedScopeAccessEvent, type SharedWorkScopeConfig } from "./shared-scopes.js";
 
 export type GetMemoryEntries = (sessionId: string) => Promise<readonly SessionEntry[]> | readonly SessionEntry[];
 
@@ -10,6 +12,9 @@ export interface RecallMemoryToolOptions {
   readonly getEntries: GetMemoryEntries;
   readonly secrets?: readonly (string | undefined)[];
   readonly pageLimit?: number;
+  /** Shared work scopes to merge into exact-id recall; branch paging stays current-branch only. */
+  readonly sharedScopes?: SharedWorkScopeConfig;
+  readonly onScopeAccess?: (event: SharedScopeAccessEvent) => void;
 }
 
 export function createRecallMemoryTool(options: RecallMemoryToolOptions): ToolDefinition {
@@ -68,8 +73,17 @@ export function createRecallMemoryTool(options: RecallMemoryToolOptions): ToolDe
             text: "Supplied entries include a different session id than the active tool session.",
           });
         }
+        const shared = await resolveSharedScopes({
+          scopes: options.sharedScopes,
+          principalId: context.sessionId,
+          map: foldWorkScopeMap(entries),
+          ...(options.onScopeAccess ? { onAccess: options.onScopeAccess } : {}),
+        });
         const value = JSON.parse(
-          redactSecrets(JSON.stringify(recallObservationalMemory(entries, id, options.secrets)), options.secrets ?? []),
+          redactSecrets(
+            JSON.stringify(recallObservationalMemory(entries, id, options.secrets, { ...(shared.length ? { shared } : {}) })),
+            options.secrets ?? [],
+          ),
         );
         return { toolCallId: context.toolCallId, name, value, content: [{ type: "text", text: value.text }] };
       }

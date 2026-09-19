@@ -72,6 +72,7 @@ const apiPages = [
   "docs/session-store-conformance.md",
   "docs/run-ledger-conformance.md",
   "docs/compaction-conformance.md",
+  "docs/prefix-stability-conformance.md",
   "docs/tool-conformance.md",
   "docs/extension-conformance.md",
   "docs/provider-packages.md",
@@ -2731,6 +2732,11 @@ describe("docs", () => {
         ["assertCompactionStrategyConforms", "secrets", "summary"],
       ],
       [
+        "docs/prefix-stability-conformance.md",
+        "@arnilo/prism/testing/prefix-stability-conformance",
+        ["runPrefixStabilityConformance", "skills", "minContinuity", "cache prefix"],
+      ],
+      [
         "docs/tool-conformance.md",
         "@arnilo/prism/testing/tool-conformance",
         ["assertToolDispatchConforms", "assertToolBlocked", "unknown_tool", "permission_denied", "validation_failed"],
@@ -2794,6 +2800,7 @@ describe("docs", () => {
     const middlewareTs = readFileSync("src/middleware.ts", "utf8");
     const docs = readFileSync("docs/middleware-hooks.md", "utf8");
     const supported = [
+      "beforeProviderTurn",
       "provider_request",
       "input_assembly",
       "prompt_build",
@@ -3502,6 +3509,11 @@ describe("docs", () => {
       "declarative `AgentDefinition.tools`",
       "PermissionPolicy",
       "Skills do not grant tool access",
+      "Per-turn tool narrowing",
+      "toolNarrowing",
+      "allowHiddenToolCalls",
+      "restrictive-only",
+      "tool_narrowing_clamped",
     ]) {
       assert.ok(tools.includes(phrase), `docs/tools.md missing ${phrase}`);
     }
@@ -3647,6 +3659,8 @@ describe("docs", () => {
       "attempt",
       "retry_scheduled",
       "tool_execution_blocked",
+      "tool_narrowing_clamped",
+      "idsHash",
       "redactAgentEvent",
       "recoverable",
       "budget exhausted",

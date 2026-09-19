@@ -380,6 +380,8 @@ export type WorkflowEvent =
       readonly workflowId: string;
       readonly runId: string;
       readonly resume: WorkflowResumeRecord;
+      /** Plan 094 Task 3: audit of the restore hooks that ran before this resume. */
+      readonly restore?: import("@arnilo/prism").CheckpointRestoreAudit;
       readonly timestamp: string;
       readonly sequence: number;
     }
@@ -505,6 +507,22 @@ export interface WorkflowRunResult extends WorkflowRunHandle {
   readonly lineage?: WorkflowReplayLineage;
 }
 
+/**
+ * Checkpoint handed to a workflow restore hook (plan 094 Task 3). `metadata` is the checkpoint's
+ * sidecar map (`WorkflowCheckpointValue.metadata`), written by the host on start/resume.
+ */
+export interface WorkflowCheckpointRestoreContext {
+  readonly workflowId: string;
+  readonly runId: string;
+  readonly version: number;
+  readonly status: WorkflowCheckpointValue["status"];
+  readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly checkpoint: WorkflowCheckpointRecord;
+}
+
+/** Host code restoring one external layer before a workflow resume applies. */
+export type WorkflowCheckpointRestoreHook = import("@arnilo/prism").CheckpointRestoreHook<WorkflowCheckpointRestoreContext>;
+
 export interface RunWorkflowOptions {
   readonly concurrency?: number;
   readonly checkpoints?: WorkflowCheckpointAdapter;
@@ -541,4 +559,12 @@ export interface RunWorkflowOptions {
   readonly nestedDepthLimit?: number;
   readonly failurePolicy?: "fail-fast";
   readonly metadata?: Readonly<Record<string, unknown>>;
+  /**
+   * Plan 094 Task 3: external-state restore hooks, run once per resume (including crash
+   * recovery) before the scheduler touches the checkpoint. The first failing or timing-out hook
+   * throws `CheckpointRestoreError`; nothing is written and the checkpoint stays resumable.
+   */
+  readonly restoreHooks?: readonly WorkflowCheckpointRestoreHook[];
+  /** Per-hook restore ceiling in ms; defaults to `DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS`. */
+  readonly restoreHookTimeoutMs?: number;
 }

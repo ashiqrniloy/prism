@@ -62,7 +62,7 @@ Useful exported types:
 - `InputAttachment`: already-loaded text/content blocks (including `audio`, `file`, and `document`) or an explicit URI loaded through a caller-provided `ResourceLoader`.
 - `PromptInstruction`: labeled system instruction text.
 - `DefaultPromptBuilder`: the default `PromptBuilder`; cache-aware by default and legacy-preserving when `inputLayout: "legacy"` is passed in its request.
-- `AssembleProviderInputOptions`: model, input, optional builders, context providers, selected skills, active tools, generic provider options, metadata, signal, and optional `contextBudget` (`maxInputTokens` / `maxInputBytes` / `reportOmissions` / `tokenEstimator`).
+- `AssembleProviderInputOptions`: model, input, optional builders, context providers, selected skills, active tools, generic provider options, metadata, signal, optional session-owned `tailSegments`, and optional `contextBudget` (`maxInputTokens` / `maxInputBytes` / `reportOmissions` / `tokenEstimator`).
 - `applyContextBudget` / `getContextBudgetReport` / `resolveContextBudget`: deterministic eviction + omission report helpers (estimate = UTF-16 code units ÷ 4, or the host's `tokenEstimator`).
 - `PromptTemplateOptions`: missing-variable behavior for `renderPromptTemplate()`.
 
@@ -81,10 +81,10 @@ The builder returns `readonly Message[]`.
 
 The default prompt builder preserves one composition path while honoring layout:
 
-- `cache_aware` (default): leading system messages from input assembly → resolved context blocks → selected/progressively disclosed skills → text tool declarations for text-only/unknown models → remaining input-builder messages (attachments/resources → summaries → history → tool results → current input).
+- `cache_aware` (default): leading system messages from input assembly → resolved context blocks → selected/progressively disclosed skill catalogs → text tool declarations for text-only/unknown models → remaining input-builder messages (attachments/resources → summaries → history → tool results → current input) → optional session tail.
 - `legacy`: context blocks → skills → text tool declarations → all input-builder messages (instructions → summaries → history → current input → attachments/resources → tool results).
 
-In cache-aware mode, leading system instructions form the stable boundary before dynamic context and skills. The provider `tools` field remains the host-supplied schema list; text declarations are only a fallback for models without declared tool support. Changing only current input changes the final suffix; changing context, loaded skills, resources, summaries, history, attachments, or tools changes that boundary or a later suffix. A stable prefix persists only while those stable inputs stay byte-stable; provider cache hits remain best-effort.
+In cache-aware mode, leading system instructions form the stable boundary before dynamic context and skill catalogs. The provider `tools` field remains the host-supplied schema list; text declarations are only a fallback for models without declared tool support. `RuntimeAgentSession` supplies a run-owned `tailSegments` map: URI resources and loaded skill bodies move to the final tail, while their catalog rows remain in place. First insertion fixes tail order (`resource:<uri>` / `skill:<name>`); re-derivation of an id replaces only that segment's bytes, making changed source content an explicit cache-invalidation boundary. Context-budget eviction can omit a tail segment. Custom prompt builders receive the tail in `messages` plus `tailSkillBodies`; a builder that independently renders `skills` must honor that flag. A stable prefix persists only while those stable inputs stay byte-stable; provider cache hits remain best-effort.
 - History is prepended before current input.
 - Instructions and summaries are system messages; compacted branch summaries from `rebuildSessionContext()` use the same path.
 - Text attachments and explicit text resources are user messages; inline `audio`/`file`/`document` blocks pass through unchanged on attachments with `content`.

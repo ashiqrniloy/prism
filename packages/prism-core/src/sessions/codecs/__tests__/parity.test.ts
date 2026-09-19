@@ -37,6 +37,21 @@ const entries: SessionEntry[] = [
     summary: "flaky login",
     metadata: { workspaceRoot: "/tmp/ws" },
   },
+  {
+    // Plan 096: a host-answered (no-model) turn keeps its provenance through every codec.
+    id: "e3",
+    sessionId: "s1",
+    parentId: "e2",
+    runId: "r1",
+    timestamp: "2026-01-01T00:00:02.000Z",
+    kind: "message",
+    message: {
+      id: "msg-1",
+      role: "assistant",
+      content: [{ type: "text", text: "The desk answers from local records." }],
+      metadata: { deterministic: { middleware: "desk" } },
+    },
+  },
 ];
 
 const runs: RunRecord[] = [

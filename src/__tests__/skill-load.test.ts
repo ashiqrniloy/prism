@@ -139,7 +139,9 @@ describe("skill load", () => {
       .join("\n");
     assert.match(firstText, /Skill brief: Answer briefly\./);
     assert.doesNotMatch(firstText, /Be very brief/);
+    assert.match(secondText, /Skill brief: Answer briefly\./, "catalog stays in its original prefix slot");
     assert.match(secondText, /Skill brief:\nBe very brief\./);
+    assert.deepEqual(requests[1]?.messages.at(-1)?.content[0], { type: "text", text: "Skill brief:\nBe very brief." });
   });
 
   it("skillPromptText reflects loaded set after tool success", () => {

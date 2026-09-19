@@ -173,8 +173,27 @@ export function orderScores(
     seen.add(index);
     scores[index] = score;
   }
+  return orderHitsByScores(hits, scores, label);
+}
+
+/**
+ * Reorder hits by per-hit score desc — the shared tail of every rerank adapter
+ * (local and HTTP): exactly one finite score per hit, ties keep input order, and
+ * the result is a frozen permutation of the same hit references.
+ */
+export function orderHitsByScores(hits: readonly RagHit[], scores: readonly number[], label: string): readonly RagHit[] {
+  if (scores.length !== hits.length) {
+    throw new RagValidationError(`${label} returned ${scores.length} scores for ${hits.length} hits`);
+  }
+  for (const score of scores) {
+    if (typeof score !== "number" || !Number.isFinite(score)) throw new RagValidationError(`${label} returned a non-finite score`);
+  }
   const ordered = hits
-    .map((hit, i) => ({ hit, score: scores[i]! }))
+    .map((hit, index) => {
+      const score = scores[index];
+      if (score === undefined) throw new RagValidationError(`${label} returned ${scores.length} scores for ${hits.length} hits`);
+      return { hit, score };
+    })
     .sort((a, b) => b.score - a.score)
     .map((entry) => entry.hit);
   return Object.freeze(ordered);

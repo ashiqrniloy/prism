@@ -1,7 +1,14 @@
 import { createHash } from "node:crypto";
-import { type PersistedAttentionStickyFrontier, parseAttentionStickyFrontier } from "./attention-compiler.js";
+import {
+  type PersistedAttentionFoldLedger,
+  type PersistedAttentionStickyFrontier,
+  parseAttentionStickyFrontier,
+  restoreAttentionFoldLedger,
+} from "./attention-compiler.js";
 import type {
   Agent,
+  AgentRunCheckpointMetadata,
+  AgentRunCheckpointMetadataSource,
   AgentRunInterruption,
   AgentRunRef,
   AgentRunState,
@@ -27,6 +34,8 @@ export const AGENT_RUN_STATE_NAMESPACE = "prism.agent-run";
 export const AGENT_RUN_STATE_SCHEMA_VERSION = 1 as const;
 export const DEFAULT_MAX_AGENT_RUN_STATE_BYTES = 256 * 1024;
 export const HARD_MAX_AGENT_RUN_STATE_BYTES = 1024 * 1024;
+/** Sidecar metadata ceiling per checkpoint record (not the run-state value). */
+export const MAX_AGENT_RUN_METADATA_BYTES = 4 * 1024;
 const MAX_DEPTH = 32;
 const MAX_PROPERTIES = 256;
 
@@ -68,6 +77,10 @@ export interface StoredAgentRunState extends AgentRunState {
     /** Plan 074 P3: sticky attention mutations (thinking hashes + tool-call ids), so a durable
      *  resume keeps its stubs instead of re-deciding on the first turn. Validated on load. */
     readonly attentionSticky?: PersistedAttentionStickyFrontier;
+    /** Plan 086 T3: folded bodies (`attention.compiler.durable`), so a resumed fold re-applies
+     *  the same stub bytes instead of re-summarizing. Written and restored independently of
+     *  `persistSessionState`. Validated on load. */
+    readonly attentionFold?: PersistedAttentionFoldLedger;
   };
   /** Per-run allow-list (Task 21). Absent = full registered set (legacy checkpoints). */
   readonly toolNames?: readonly string[];
@@ -187,7 +200,7 @@ export async function loadAgentRunState(
   checkpoints: CheckpointStore,
   ref: AgentRunRef,
   ownership?: OwnershipScope,
-): Promise<{ readonly record: CheckpointRecord; readonly state: StoredAgentRunState }> {
+): Promise<{ readonly record: CheckpointRecord; readonly state: StoredAgentRunState; readonly metadata?: AgentRunCheckpointMetadata }> {
   const record = await checkpoints.loadCheckpoint({ namespace: AGENT_RUN_STATE_NAMESPACE, key: ref.runId, ...ownership });
   if (!record) throw new AgentRunStateError(`No durable agent run ${ref.runId}`);
   if (
@@ -198,7 +211,56 @@ export async function loadAgentRunState(
   ) {
     throw new AgentRunStateError("Agent run session mismatch");
   }
-  return { record, state: parseAgentRunState(record.value, record.version) };
+  const metadata = readCheckpointMetadata(record.metadata);
+  return { record, state: parseAgentRunState(record.value, record.version), ...(metadata ? { metadata } : {}) };
+}
+
+/** Resolve a host metadata source. A throwing provider fails the checkpoint write (fail closed). */
+export function resolveCheckpointMetadata(
+  source: AgentRunCheckpointMetadataSource | undefined,
+): AgentRunCheckpointMetadata | undefined {
+  return typeof source === "function" ? source() : source;
+}
+
+function checkpointMetadataBytes(metadata: Readonly<Record<string, string>>): number {
+  return Buffer.byteLength(JSON.stringify(metadata), "utf8");
+}
+
+/**
+ * Redact + bound a sidecar metadata map for a checkpoint write. Values must be strings;
+ * redaction runs first so a replacement marker is still charged against the 4 KiB ceiling.
+ */
+export function boundCheckpointMetadata(
+  metadata: AgentRunCheckpointMetadata,
+  redactor?: SecretRedactor,
+): AgentRunCheckpointMetadata {
+  const redacted = redactor?.redact(metadata) ?? metadata;
+  if (!redacted || typeof redacted !== "object" || Array.isArray(redacted)) {
+    throw new AgentRunStateError("Checkpoint metadata must be an object");
+  }
+  const bounded: Record<string, string> = {};
+  for (const [key, value] of Object.entries(redacted)) {
+    if (typeof value !== "string") throw new AgentRunStateError(`Checkpoint metadata value for ${key} must be a string`);
+    bounded[key] = value;
+  }
+  if (checkpointMetadataBytes(bounded) > MAX_AGENT_RUN_METADATA_BYTES) {
+    throw new AgentRunStateError(`Checkpoint metadata exceeds ${MAX_AGENT_RUN_METADATA_BYTES} bytes`);
+  }
+  return Object.freeze(bounded);
+}
+
+/**
+ * Read-side normalization (legacy tolerance): absent, oversize, or non-string entries are
+ * dropped, never thrown — a malformed sidecar must not block a resume.
+ */
+export function readCheckpointMetadata(metadata: unknown): AgentRunCheckpointMetadata | undefined {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return undefined;
+  const bounded: Record<string, string> = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    if (typeof value === "string") bounded[key] = value;
+  }
+  if (Object.keys(bounded).length === 0 || checkpointMetadataBytes(bounded) > MAX_AGENT_RUN_METADATA_BYTES) return undefined;
+  return Object.freeze(bounded);
 }
 
 export async function saveAgentRunState(input: {
@@ -209,8 +271,10 @@ export async function saveAgentRunState(input: {
   readonly fencingToken?: number;
   readonly redactor?: SecretRedactor;
   readonly maxStateBytes?: number;
+  readonly metadata?: AgentRunCheckpointMetadata;
 }): Promise<{ readonly record: CheckpointRecord; readonly state: StoredAgentRunState }> {
   const bounded = boundState(input.redactor?.redact(input.state) ?? input.state, input.maxStateBytes ?? DEFAULT_MAX_AGENT_RUN_STATE_BYTES);
+  const metadata = input.metadata === undefined ? undefined : boundCheckpointMetadata(input.metadata, input.redactor);
   const record = await input.checkpoints.saveCheckpoint({
     namespace: AGENT_RUN_STATE_NAMESPACE,
     key: bounded.runId,
@@ -219,6 +283,7 @@ export async function saveAgentRunState(input: {
     fencingToken: input.fencingToken,
     value: bounded,
     category: "agent-run",
+    ...(metadata ? { metadata } : {}),
     ...input.ownership,
   });
   return { record, state: { ...bounded, version: record.version } };
@@ -431,10 +496,15 @@ function validateSessionState(sessionState: StoredAgentRunState["sessionState"])
     }
   }
   const attention = sessionState.attentionSticky;
-  if (attention === undefined) return;
   // Both arrays are capped by the parser, and a malformed frontier is dropped rather than
   // failing the resume: re-deciding a mutation is safe, refusing to resume is not.
-  if (parseAttentionStickyFrontier(attention) === undefined) {
+  if (attention !== undefined && parseAttentionStickyFrontier(attention) === undefined) {
     throw new AgentRunStateError("Malformed agent run attention frontier");
+  }
+  // Plan 086 T3: the fold ledger gets the same treatment — malformed entries are dropped by the
+  // parser, a malformed shape fails the load rather than the first provider turn.
+  const fold = sessionState.attentionFold;
+  if (fold !== undefined && restoreAttentionFoldLedger(fold) === undefined) {
+    throw new AgentRunStateError("Malformed agent run attention fold ledger");
   }
 }

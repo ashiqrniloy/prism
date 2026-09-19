@@ -281,7 +281,7 @@ describe("public contracts", () => {
       { provider: "mock", model: "priced", cost: { input: 10, cacheRead: 2, unit: "1M tokens", currency: "USD" } },
     );
 
-    assert.equal(report?.cacheWriteTokens, 0);
+    assert.equal(report?.cacheWriteTokens, undefined);
     assert.equal(report?.hitRate, 0.5);
     assert.equal(report?.currency, "USD");
   });

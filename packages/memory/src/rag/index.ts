@@ -1,3 +1,5 @@
+export { createAccessRecheck } from "./access-recheck.js";
+export type { AccessRecheck, CreateAccessRecheckOptions } from "./access-recheck.js";
 export { chunkMarkdown, chunkText } from "./chunk.js";
 export { evidenceFromRagCitation } from "./citations.js";
 export { runRerankerConformance } from "./conformance.js";
@@ -65,11 +67,20 @@ export {
   resolveRagLimits,
 } from "./limits.js";
 export { createResourceDocumentLoader, createWebFetchDocumentLoader } from "./loaders.js";
+export type {
+  CreateLocalRerankerOptions,
+  LocalRerankModel,
+  LocalRerankRuntime,
+  TransformersRerankRuntimeOptions,
+} from "./local-reranker.js";
+export { createLocalReranker, createTransformersRerankRuntime, DEFAULT_LOCAL_RERANK_MODEL } from "./local-reranker.js";
 export { htmlParser, markdownParser, pdfParser, textParser } from "./parsers.js";
 export { createFakeReranker } from "./rerank-fake.js";
+export type { RerankerConfig } from "./reranker-config.js";
+export { resolveReranker } from "./reranker-config.js";
 export { retrieveContext } from "./retrieve.js";
 export type { SourceMutationResult } from "./sources.js";
-export { deleteSource, replaceDocument, replaceSource } from "./sources.js";
+export { createRagDeletionHandler, deleteSource, replaceDocument, replaceSource } from "./sources.js";
 export type { KnowledgeChange, KnowledgeChangePage, KnowledgeConnector, SyncKnowledgeOptions, SyncKnowledgeResult } from "./sync.js";
 export {
   DEFAULT_SYNC_MAX_PAGES,
@@ -85,6 +96,8 @@ export { createTeiReranker } from "./tei-reranker.js";
 export type { RagTelemetry, RagTelemetryAttributeValue, RagTelemetrySpan } from "./telemetry.js";
 
 export type {
+  AccessDenial,
+  AccessDenialReason,
   Chunker,
   ChunkOptions,
   DeleteSourceOptions,

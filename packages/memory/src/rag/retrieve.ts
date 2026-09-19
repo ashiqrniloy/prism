@@ -1,7 +1,9 @@
 import { type JsonObject, resolveRedactor } from "@arnilo/prism";
 import { assertAccessConstraint } from "../acl.js";
 import { MemoryLimitError, MemoryValidationError } from "../errors.js";
-import type { MemoryVectorHit, RagAccessConstraint, VectorStore } from "../types.js";
+import { indexInvalidations, recordBlocked } from "../lineage.js";
+import type { MemoryInvalidationRecord, MemoryVectorHit, RagAccessConstraint, VectorStore } from "../types.js";
+import { createAccessRecheck } from "./access-recheck.js";
 import { RagError, RagLimitError, RagScopeError, RagValidationError } from "./errors.js";
 import { fuseReciprocalRankLists } from "./fusion.js";
 import { HARD_CHUNK_SIZE_CAP, HARD_RETRIEVE_SCOPE_CAP, resolveRagLimits } from "./limits.js";
@@ -72,6 +74,18 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
     "rag.lexical_mode": lexical,
     ...(authorization ? { "rag.acl": true, "rag.acl.principal_id": authorization.principalId } : {}),
   });
+  // One recheck per query, shared by every candidate gate below: a revoke landing while
+  // this query is in flight withholds the source from the result the caller gets. The
+  // post-rerank gate re-reads deliberately (see `allowsAfterRerank`).
+  const recheck = authorization
+    ? createAccessRecheck({
+        store: options.store,
+        authorization,
+        ...(options.onAccessDenied ? { onDenied: options.onAccessDenied } : {}),
+        ...(options.signal ? { signal: options.signal } : {}),
+        ...(redactor ? { redact: (value: string) => redactor.redact(value) } : {}),
+      })
+    : undefined;
   try {
     const safeQuery = redactor?.redact(query) ?? query;
     assertNotAborted(options.signal);
@@ -142,6 +156,11 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
       });
     }
 
+    // Tombstone guard: a source deleted after the query legs read rows (or a store that
+    // never physically purged them) must not reach assembly. Empty for stores without
+    // lineage support, so this is one extra indexed read per scope.
+    const tombstones = await loadScopeInvalidations(options.store, scopes, options.signal);
+
     const retrievedAt = new Date().toISOString();
     const retrieved: RagHit[] = [];
     const fused = await span(telemetry, "retrieval.fusion", undefined, root, (fusion) => {
@@ -155,6 +174,8 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
     });
     for (const { hit: candidate, retrieval } of fused) {
       assertRequestedScope(scopes, candidate);
+      const invalidations = tombstones.get(invalidationScopeKey(candidate));
+      if (invalidations && tombstoned(candidate, invalidations)) continue;
       if (candidate.embedderId === undefined) {
         throw new RagError(
           `stored record ${candidate.id} has no embedderId; re-index the source to stamp embedder identity`,
@@ -169,7 +190,7 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
       }
       const parsed = parseHit(candidate, retrieved.length, retrievedAt, retrieval);
       if (!matchesFilter(parsed.metadata, options.filter)) continue;
-      if (authorization && !(await checkHitAccess(options.store, parsed, authorization, options.signal))) continue;
+      if (recheck && !(await recheck.allows(parsed))) continue;
       retrieved.push(Object.freeze(redactor?.redact(parsed) ?? parsed));
     }
     const reranker = options.reranker;
@@ -196,7 +217,7 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
     let truncated = false;
     const assemblySpan = telemetry?.startSpan("prompt.assembly", undefined, root);
     for (const hit of ranked) {
-      if (authorization && reranker && !(await checkHitAccess(options.store, hit, authorization, options.signal))) continue;
+      if (recheck && reranker && !(await recheck.allowsAfterRerank(hit))) continue;
       if (hits.length >= limits.topK) break;
       const prefix = `[${hit.citationId}] `;
       const separator = rendered.length ? "\n\n" : "";
@@ -255,6 +276,21 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
     root?.recordError();
     throw error;
   } finally {
+    // Audit is flushed even when the query throws: withheld sources are security events.
+    if (recheck) {
+      const denials = recheck.report();
+      if (denials.length > 0) {
+        root?.setAttribute("rag.acl.denied_sources", denials.length);
+        for (const denial of denials) {
+          root?.addEvent("rag.acl_denied", {
+            "rag.acl.source_id": denial.sourceId,
+            "rag.acl.reason": denial.reason,
+            "rag.acl.denied_hits": denial.hits,
+            ...(denial.error === undefined ? {} : { "rag.acl.error": denial.error }),
+          });
+        }
+      }
+    }
     root?.end();
   }
 }
@@ -329,6 +365,41 @@ function parseHit(hit: MemoryVectorHit, retrievalRank: number, retrievedAt: stri
   } as RagHit;
 }
 
+function invalidationScopeKey(scope: { readonly tenantId: string; readonly resourceId: string; readonly threadId: string }): string {
+  return `${scope.tenantId}\u0000${scope.resourceId}\u0000${scope.threadId}`;
+}
+
+/** Record-id/lineage tombstone, plus the source-level tombstone a deleted document leaves for its chunks. */
+function tombstoned(hit: MemoryVectorHit, invalidations: ReadonlyMap<string, MemoryInvalidationRecord>): boolean {
+  if (recordBlocked(hit, invalidations)) return true;
+  const rag = hit.metadata?._rag;
+  return isJsonObject(rag) && typeof rag.sourceId === "string" && invalidations.has(rag.sourceId);
+}
+
+/** Per-scope tombstone maps; stores without lineage invalidation cost nothing. */
+async function loadScopeInvalidations(
+  store: VectorStore,
+  scopes: readonly RagScope[],
+  signal?: AbortSignal,
+): Promise<ReadonlyMap<string, ReadonlyMap<string, MemoryInvalidationRecord>>> {
+  const out = new Map<string, ReadonlyMap<string, MemoryInvalidationRecord>>();
+  if (store.lineage !== "invalidation" || typeof store.listInvalidated !== "function") return out;
+  for (const scope of scopes) {
+    assertNotAborted(signal);
+    const entries = await store.listInvalidated(
+      { tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId },
+      { signal },
+    );
+    if (entries.length > 0) {
+      out.set(
+        invalidationScopeKey({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }),
+        indexInvalidations(entries),
+      );
+    }
+  }
+  return out;
+}
+
 function resolveRetrieveScopes(options: RetrieveContextOptions): RagScope[] {
   const hasScope = options.scope !== undefined;
   const hasScopes = options.scopes !== undefined;
@@ -378,15 +449,6 @@ function assertStoreAuthorization(store: VectorStore): void {
   if (store.authorization !== "acl" || typeof store.checkSourceAccess !== "function") {
     throw new RagValidationError("authorization requested but the store does not declare ACL support");
   }
-}
-
-async function checkHitAccess(store: VectorStore, hit: RagHit, authorization: RagAccessConstraint, signal?: AbortSignal): Promise<boolean> {
-  return store.checkSourceAccess!(
-    { tenantId: hit.provenance.tenantId, resourceId: hit.provenance.resourceId, threadId: hit.provenance.corpusId },
-    hit.sourceId,
-    authorization,
-    { signal },
-  );
 }
 
 function emptyResult(query: string): RagContextResult {

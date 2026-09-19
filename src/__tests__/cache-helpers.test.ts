@@ -57,14 +57,12 @@ describe("cache helpers", () => {
     assert.equal(cacheSavings({ cacheReadTokens: 1 }, { provider: "mock", model: "free" }), undefined);
   });
 
-  it("reports cache usage for read-only provider accounting", () => {
+  it("reports only cache fields supplied by the provider", () => {
     assert.deepEqual(cacheUsageReport({ inputTokens: 1000, cacheReadTokens: 750 }), {
       cacheReadTokens: 750,
-      cacheWriteTokens: 0,
       hitRate: 0.75,
-      estimatedSavings: undefined,
-      currency: undefined,
     });
+    assert.equal(cacheUsageReport({ inputTokens: 1000 }), undefined);
     assert.equal(cacheUsageReport(undefined), undefined);
   });
 

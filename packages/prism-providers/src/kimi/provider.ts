@@ -18,6 +18,7 @@ import type {
 import {
   assertStructuredOutputRequestSupported,
   canonicalizeJsonSchema,
+  mapProviderStopReason,
   providerDone,
   providerError,
   providerTextDelta,
@@ -128,10 +129,12 @@ export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>, sig
   const blocks = new Map<number, PartialBlock>();
   let usage: Usage | undefined;
   let sawMessageStop = false;
+  let stopReason: string | undefined;
   for await (const data of readSseData(body, { signal })) {
     if (data === "[DONE]") break;
     const event = JSON.parse(data) as KimiEvent;
     if (event.type === "message_stop") sawMessageStop = true;
+    if (event.type === "message_delta" && event.delta?.stop_reason) stopReason = event.delta.stop_reason;
     if (event.type === "content_block_start" && event.content_block?.type === "tool_use")
       blocks.set(event.index ?? 0, { id: event.content_block.id, name: event.content_block.name, argumentsText: "" });
     if (event.type === "content_block_stop") {
@@ -169,7 +172,7 @@ export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>, sig
   for (const call of blocks.values()) {
     yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
   }
-  yield providerDone(usage);
+  yield providerDone(usage, stopReason === undefined ? undefined : mapProviderStopReason(stopReason));
 }
 
 async function toMessage(
@@ -306,6 +309,7 @@ interface KimiEvent {
     readonly thinking?: string;
     readonly reasoning?: string;
     readonly partial_json?: string;
+    readonly stop_reason?: string;
   };
   readonly message?: { readonly usage?: KimiUsage };
   readonly usage?: KimiUsage;

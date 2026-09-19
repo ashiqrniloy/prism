@@ -60,6 +60,28 @@ export interface RunLimitBreach {
   readonly currency?: string;
 }
 
+/** One dispatched host tool call, bounded to id + name + argument hash (plan 087 T2). */
+export interface ToolCallSummary {
+  readonly id: string;
+  readonly name: string;
+  /** `sha256:<64 hex>` over the canonicalized arguments; raw arguments never enter events. */
+  readonly argHash: string;
+}
+
+/** One run-limit axis and how close it came to its cap: `used / cap` in [0, 1] (plan 087 T2). */
+export interface BudgetAxisUsage {
+  readonly axis: RunLimitName;
+  readonly usedRatio: number;
+}
+
+/** Run counters at exhaustion (plan 087 T2): the axes a host reads first when attributing a death. */
+export interface BudgetConsumedCounters {
+  readonly turns: number;
+  readonly inputTokens: number;
+  readonly providerAttempts: number;
+  readonly requestBytes: number;
+}
+
 export type GuardrailStage = "input" | "output" | "tool_input" | "tool_output";
 export type GuardrailAction = "allow" | "block" | "tripwire" | "interrupt";
 

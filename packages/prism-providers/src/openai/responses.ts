@@ -17,6 +17,7 @@ import type {
 import {
   assertStructuredOutputRequestSupported,
   canonicalizeJsonSchema,
+  mapProviderStopReason,
   providerContinuationRequired,
   providerDone,
   providerError,
@@ -146,11 +147,14 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
 
           let responseId: string | undefined;
           let incomplete = false;
+          let nativeStopReason: string | undefined;
           for await (const data of readSseData(response.body, { signal: request.signal })) {
             if (data === "[DONE]") break;
             const event = JSON.parse(data) as OpenAIResponseEvent;
             if (event.response?.id) responseId = event.response.id;
             if (event.response?.status === "incomplete") incomplete = true;
+            if (event.response?.status) nativeStopReason = event.response.status;
+            if (event.response?.incomplete_details?.reason) nativeStopReason = event.response.incomplete_details.reason;
             if (typeof event.delta === "string" && event.type?.includes("output_text")) yield providerTextDelta(event.delta);
             if (typeof event.delta === "string" && event.type?.includes("reasoning")) yield providerThinkingDelta(event.delta);
 
@@ -248,7 +252,7 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
             cursor = nextCursor;
             continue;
           }
-          yield providerDone(usage);
+          yield providerDone(usage, nativeStopReason === undefined ? undefined : mapProviderStopReason(nativeStopReason));
           completed = true;
           break;
         }
@@ -490,7 +494,12 @@ interface OpenAIResponseEvent {
   readonly arguments?: unknown;
   readonly item?: unknown;
   readonly output_index?: number;
-  readonly response?: { readonly id?: string; readonly status?: string; readonly usage?: OpenAIUsage };
+  readonly response?: {
+    readonly id?: string;
+    readonly status?: string;
+    readonly incomplete_details?: { readonly reason?: string };
+    readonly usage?: OpenAIUsage;
+  };
   readonly usage?: OpenAIUsage;
 }
 

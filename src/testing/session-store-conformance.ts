@@ -12,6 +12,7 @@ import {
   HARD_MAX_SESSION_SEARCH_QUERY_BYTES,
   isSessionAppendConflict,
   resolveSessionSearchQuery,
+  type SessionSearchKind,
 } from "../contracts.js";
 
 export interface SessionStoreConformanceOptions {
@@ -26,8 +27,9 @@ export interface SessionStoreConformanceOptions {
    */
   readonly exerciseReadBranchPath?: boolean;
   /**
-   * When true, exercises optional `searchSessions` (empty page, limit cap,
-   * invalid limit/query rejection via `resolveSessionSearchQuery` semantics).
+   * When true, exercises optional `searchSessions`: invalid limit/query/kind rejection via
+   * `resolveSessionSearchQuery` semantics, empty page, limit cap, a written-message query
+   * round-trip (`entryId`/`runId`/`turn`/`snippet`), the `kind` filter, and ownership bounds.
    * Skipped when the store does not implement `searchSessions`.
    */
   readonly exerciseSearchSessions?: boolean;
@@ -203,6 +205,60 @@ async function assertSessionStoreSearchSessions(store: SessionStore): Promise<vo
     (error: unknown) => error instanceof TypeError,
     "searchSessions must reject oversize query string",
   );
+  await reject(
+    () => search({ kind: "not-an-entry-kind" as SessionSearchKind }),
+    (error: unknown) => error instanceof TypeError,
+    "searchSessions must reject an unknown kind",
+  );
+
+  // Query round-trip: a written message must be findable and the hit must point at it.
+  const searchSessionId = "conformance-search";
+  const token = "zzconformancesearchtoken";
+  const matchedEntry: SessionEntry = {
+    id: "conformance-search-entry",
+    sessionId: searchSessionId,
+    timestamp: "2026-01-01T00:00:05.000Z",
+    kind: "message",
+    runId: "conformance-run",
+    message: { role: "user", content: [{ type: "text", text: `${token} body text` }] },
+  };
+  await store.append(matchedEntry);
+  const found = await search({ query: token, limit: 5 });
+  const hit = found.items.find((item) => item.sessionId === searchSessionId);
+  if (!hit) {
+    throw new Error("searchSessions must find a session by matching message text");
+  }
+  if (hit.entryId !== matchedEntry.id) {
+    throw new Error(`searchSessions must point at the matched entry; got ${String(hit.entryId)}`);
+  }
+  if (hit.runId !== matchedEntry.runId) {
+    throw new Error("searchSessions must carry the matched entry runId");
+  }
+  if (typeof hit.snippet !== "string" || !hit.snippet.includes(token)) {
+    throw new Error("searchSessions snippet must contain the matched text");
+  }
+  if (!Number.isSafeInteger(hit.turn) || (hit.turn as number) < 1) {
+    throw new Error("searchSessions must carry a 1-based matched-entry turn index");
+  }
+  const annotationOnly = await search({ query: token, kind: "summary", limit: 5 });
+  if (annotationOnly.items.some((item) => item.sessionId === searchSessionId)) {
+    throw new Error("searchSessions kind filter must exclude non-matching entry kinds");
+  }
+
+  // One hit per session: a second matching entry must not add a second row for the same session.
+  await store.append({
+    id: "conformance-search-entry-2",
+    parentId: matchedEntry.id,
+    sessionId: searchSessionId,
+    timestamp: "2026-01-01T00:00:06.000Z",
+    kind: "summary",
+    summary: `${token} recap`,
+  });
+  const deduped = await search({ query: token, limit: 5 });
+  const sessionHits = deduped.items.filter((item) => item.sessionId === searchSessionId);
+  if (sessionHits.length !== 1) {
+    throw new Error(`searchSessions must return one hit per session; got ${sessionHits.length}`);
+  }
 
   const empty = await search(
     resolveSessionSearchQuery({

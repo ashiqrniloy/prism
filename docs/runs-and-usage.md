@@ -59,11 +59,48 @@ await session.run("Summarize", {
 });
 ```
 
-Defaults are the unconfigured fence (OWASP LLM10): turns 16, provider attempts 24, tool rounds 8, tool calls 32, wall time 120 seconds, request and response bytes 8 MiB each, input tokens 40,000, output tokens 10,000, total tokens 50,000. Hard process ceilings exist only for request/response bytes (64 MiB each), so a bug cannot OOM the host through a giant provider frame; those two axes reject `null` and are charged **per frame** (request payload, provider event), not as a run-lifetime sum — a 2 MiB prompt sent forty times is 2 MiB frames, not an 80 MiB parse. Snapshots still report the cumulative `requestBytes`/`responseBytes` counters for telemetry. Every other axis is host policy (0.5.4): omit a key for the default, set a positive safe integer sized to the workload, or set `null` to disable the axis — overnight sessions raise turns/wall/tokens, and a disabled wall still honors `RunOptions.signal`. Resolution stays narrowing-only: `RunOptions.limits` may lower `AgentConfig.limits`, `null` acts as +Infinity (agent 16 + run `null` → 16), and a raised/disabled `maxTurns` lifts an omitted `maxProviderAttempts` (default 24) to at least `maxTurns` so attempts cannot undercut turns; explicitly set attempts values are lifted only when both are finite. Cumulative token counters are billed usage across the whole run, not the context window (`contextBudget` governs window compaction). For production, prefer an explicit `maxCost`: cost needs a finite non-negative amount plus one currency, and when cost is limited, absent, non-finite, or mixed-currency provider cost fails closed. Vendors that omit usage charge zero to the token counters (local/Ollama report none), so a configured `maxCost` is the fail-closed envelope for usage-less vendors.
+Defaults are the unconfigured fence (OWASP LLM10): turns 16, provider attempts 24, tool rounds 8, tool calls 32, wall time 120 seconds, request and response bytes 8 MiB each, input tokens 40,000, output tokens 10,000, total tokens 50,000. Hard process ceilings exist only for request/response bytes (64 MiB each), so a bug cannot OOM the host through a giant provider frame; those two axes reject `null` and are charged **per frame** (request payload, provider event), not as a run-lifetime sum — a 2 MiB prompt sent forty times is 2 MiB frames, not an 80 MiB parse. Snapshots still report the cumulative `requestBytes`/`responseBytes` counters for telemetry. Every other axis is host policy (0.5.4): omit a key for the default, set a positive safe integer sized to the workload, or set `null` to disable the axis — overnight sessions raise turns/wall/tokens, and a disabled wall still honors `RunOptions.signal`. Resolution stays narrowing-only: `RunOptions.limits` may lower `AgentConfig.limits`, `null` acts as +Infinity (agent 16 + run `null` → 16), and a raised/disabled `maxTurns` lifts an omitted `maxProviderAttempts` (default 24) to at least `maxTurns` so attempts cannot undercut turns; explicitly set attempts values are lifted only when both are finite. Cumulative token counters are billed usage across the whole run, not the context window (`contextBudget` governs window compaction). For production, prefer an explicit `maxCost`: cost needs a finite non-negative amount plus one currency, and when cost is limited, absent, non-finite, or mixed-currency provider cost fails closed. Vendors that omit usage charge their
+labeled estimate (or zero with `usageEstimation: "off"`) to the token counters and never a
+price, so a configured `maxCost` stays the fail-closed envelope for usage-less vendors.
 
-Prism charges turns before assembly, provider attempts before generation, request bytes per request payload, response bytes per provider event (each frame must fit the byte cap on its own), tool rounds before a batch, tool calls before dispatch, and usage before another turn. A breach stops new work, aborts active work through the run signal, emits exactly one redacted `run_limit_exceeded` event/ledger row, and throws `AgentRunError` with `result.limit` (`limit`, `maximum`, `observed`, optional `currency`). Provider-reported token/cost totals arrive after generation, so that completed provider turn can be the unavoidable overshoot boundary.
+Prism charges turns before assembly, provider attempts before generation, request bytes per request payload, response bytes per provider event (each frame must fit the byte cap on its own), tool rounds before a batch, tool calls before dispatch, and usage before another turn. A breach stops new work, aborts active work through the run signal, emits exactly one redacted `run_limit_exceeded` event/ledger row, and throws `AgentRunError` with `result.limit` (`limit`, `maximum`, `observed`, optional `currency`). Just before the terminal `error`, the run also emits one `budget_exhausted` attribution event — the axis that fired, run counters at exhaustion, the three closest other axes, and hashes of the last ten dispatched tool calls ([Agent events § Run limit events](agent-events.md#run-limit-events)). Provider-reported token/cost totals arrive after generation, so that completed provider turn can be the unavoidable overshoot boundary.
 
 `createRunLimitTracker()` and `resolveRunLimits()` are public for adapters that need the same validation and accounting semantics. Workflow agent nodes forward `RunWorkflowOptions.limits`; supervisor delegation narrows its step/tool/token/timeout budget into core limits; MCP tool calls use a per-call tracker.
+
+## Token estimation (provider reports no usage)
+
+When a provider reports no usage, `estimateMessageTokens(messages, modelFamily)` returns a labeled `TokenEstimate` instead of a silent zero. An estimate is never provider truth: reported usage always wins and is never overwritten. The array form reuses the same message flattening as budget accounting and adds the family's per-message chat-template overhead; the single-message form `estimateMessageTokens(message)` remains the numeric budget heuristic used by `contextBudget`.
+
+```ts
+import { estimateMessageTokens, MODEL_FAMILY_TOKENS, resolveModelFamily } from "@arnilo/prism";
+
+const estimate = estimateMessageTokens(messages, "claude-sonnet-4.5"); // model id, provider id, or family name
+// { tokens: 41_200, confidence: "medium", lowConfidence: false }
+```
+
+`MODEL_FAMILY_TOKENS` holds the chars/token ratio, per-message overhead, and confidence label per family (`anthropic`, `openai`, `google`, `deepseek`, `openrouter-generic`, `mistral`, `unknown`). `resolveModelFamily(modelId)` maps a model id or provider id to a table key; unmatched input resolves to `unknown`, whose row is the most conservative (highest estimated token count) and carries `confidence: "low"` / `lowConfidence: true`. Estimates are heuristics, not tokenizers: prose, fenced code, and CJK content are weighted separately, and every calibrated family is `confidence: "medium"` because Prism ships no real tokenizer. The estimator is pure — no network, no I/O, and no content retention.
+
+### Automatic fallback (`AgentConfig.usageEstimation`)
+
+`usageEstimation` is `"fallback"` (default) or `"off"`. With the default, a provider turn that reports no usage records one labeled estimate at the existing usage seam — no adapter changes:
+
+- the `provider_turn_finished.usage` carries `{ inputTokens, estimated: true, confidence }`, and its `budgets.inputTokens`/`runInputUsed` use that estimate, so the attention axes and run limits from plans 086/087 work on non-reporting models;
+- ledger `appendUsage` rows (`scope: "provider_turn"` and the `run_total` aggregate) and `AgentRunResult.usage` keep `estimated: true` (plus `confidence`) — a billing surface can always tell an estimate from a report;
+- estimates are **never priced**: the cost catalog is not consulted, and estimated usage carries no `cost`/`currency`, so a `maxCost` limit still fails closed instead of blocking on invented numbers;
+- `"off"` leaves absent usage absent — no ledger row, no run total, never a zero.
+
+The estimate covers the turn's own request: messages plus tool declarations and context blocks, using the model id's family table.
+
+### `session.contextMeter()`
+
+One state read for host UIs (Clay's token meter, Synapta's model-router budgets):
+
+```ts
+const meter = session.contextMeter();
+// { inputTokens: 43_000, source: "estimated", inputCap: 200_000, runInputBudget: 500_000, usedRatio: 0.215 }
+```
+
+`inputTokens` is the latest provider turn's input tokens — `source: "reported"` when the provider reported them, `"estimated"` when they are the labeled fallback (or, before any provider turn in the session, an estimate of stored history, so a fresh non-reporting model still shows a working meter). `inputCap` is resolved exactly like `provider_turn_finished.budgets.inputCap` (model window minus output reserve minus `attentionCompiler.reserveTokens`), `runInputBudget` is `RunLimits.maxInputTokens` while a run is active, and `usedRatio` is `inputTokens / inputCap`. Cap/budget/ratio are omitted when the model or run cannot derive them. The meter is never billing and never rewrites reported usage; `compact()` drops the pre-compaction reading so the next read re-estimates.
 
 ## Clean stops and stop reasons
 
@@ -136,7 +173,7 @@ The adapter receives these record shapes:
 | `runId` / `sessionId` / `entryId` | Correlation ids. |
 | `scope` | `provider_turn` for billable source rows; `run_total` for the aggregate. Never sum both scopes. |
 | `turn` / `attempt` | Provider-turn attribution; absent on `run_total`. |
-| `usage` | `Usage` shape: input/output/total/cache tokens, cost, currency. |
+| `usage` | `Usage` shape: input/output/total/cache tokens, cost, currency. Cache fields stay absent when provider does not report them; an explicit provider zero remains `0`. |
 | `recordedAt` | ISO timestamp. |
 
 ## Cost/catalog freshness (host adapter)
@@ -272,7 +309,7 @@ const ledger: RunLedger = {
 
 const agent = createAgent({
   model: { provider: "mock", model: "demo" },
-  provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
+  provider: createMockProvider([providerTextDelta("Hello"), providerDone({ inputTokens: 1_000, cacheReadTokens: 800 })]),
   runLedger: ledger,
   ownership: { tenantId: "tenant_a", accountId: "account_a" },
   idempotencyKey: "agent-key",
@@ -290,7 +327,7 @@ console.log(runs.at(-1)?.status); // succeeded
 const billable = usageRows.filter((row) => row.scope === "provider_turn");
 const aggregate = usageRows.find((row) => row.scope === "run_total");
 console.log(cacheUsageReport(aggregate?.usage));
-// { cacheReadTokens: 0, cacheWriteTokens: 0, ... } when provider usage is present
+// { cacheReadTokens: 800, hitRate: 0.8 } — cacheWriteTokens stays absent when unreported
 ```
 
 ## Extension and configuration notes
@@ -310,7 +347,7 @@ console.log(cacheUsageReport(aggregate?.usage));
 - Adapters should treat appends as ordered within a `runId`: event and tool-call rows preserve emission order because the runtime serializes event ledger appends through one promise chain (concurrency 1), drains pending appends before writing the final `RunRecord`, and propagates append failures by rejecting run completion.
 - Billing queries must filter `scope = "provider_turn"`; presentation queries normally read the single `run_total`. `UsageQuery.scope`, `turn`, and `attempt` are explicit filters.
 - Adapters that need upsert semantics can use `RunRecord.id` (== `runId`) as the stable key.
-- Use `cacheUsageReport(record.usage, model)` for cache diagnostics from normalized usage. It works when a provider reports `cacheReadTokens` without `cacheWriteTokens`; missing write tokens are reported as `0`, and unavailable hit rate/savings stay `undefined`.
+- Use `cacheUsageReport(record.usage, model)` for cache diagnostics from normalized usage. It reports `cacheReadTokens` without `cacheWriteTokens` when that is all a provider supplies; neither token field nor hit rate is fabricated as zero. `provider_turn_finished.metadata.cache` carries that same per-attempt report, while `ExecutionTimeline.cacheHitRate` is the input-token-weighted run aggregate.
 - **Provider-specific telemetry is package-owned.** Core `Usage` carries token counts and `cost`/`currency`; it has no energy or detailed cost-breakdown fields. Providers that surface extra telemetry (e.g. `@arnilo/prism-providers/neuralwatt` exposes `neuralWattEventsWithTelemetry()`, `parseNeuralWattComment()`, and `mapNeuralWattTelemetry()` for `: energy`/`: cost` SSE comments and non-streaming top-level fields) keep that data in package-specific helpers/types. Telemetry never enters `RunLedger` usage rows unless the host explicitly copies it in; it carries usage/cost numbers only — never prompts, API keys, or headers. Account-level quota is likewise package-owned: `@arnilo/prism-providers/neuralwatt` exports an explicit `getNeuralWattQuota()` helper that the host calls on demand (never during generation); NeuralWatt rate-limits that endpoint to 1 request per second per customer, so the caller owns throttling.
 - **Governed provider lifecycle and reservation reconciliation.** For invocation-level accounting outside of or in addition to `RunLedger`, wrap providers with `createGovernedProvider` or `router.createGovernedProvider` from `@arnilo/prism-core/governance/model-router`. The adapter handles atomic admission reservations, bounds streaming, and guarantees explicit settlement: missing actual usage on an interrupted or EOF stream is committed as reserved liability (`unknownUsage: true`) rather than zero, avoiding budget leakages or unmetered oversubscriptions. See [Model routing](model-routing.md).
 - **Aggregate task/tenant accounting across all paid work.** Complex agent tasks often span retries, model fallbacks, delegated children, background compactions, embedding jobs, and paid tools. Passing `taskId` and `kind` (`"generation" | "embedding" | "compaction" | "tool"`) coordinates all related calls under a single atomic task-level reservation and budget scope. Committed usage decomposes into separate `byModel` and `byKind` attributions (`router.readBudget({ identity, taskId })`) while preventing double-charging across parent/child boundaries or replayed events. Long-running holds can be safely renewed via `router.renewBudget({ ... })` before expiry without prematurely releasing live liability. See [Model routing](model-routing.md) and [Enterprise PostgreSQL state](enterprise-postgres-state.md).

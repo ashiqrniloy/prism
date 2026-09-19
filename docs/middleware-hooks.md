@@ -14,7 +14,7 @@ APIs:
 
 Use middleware hooks when a host wants extension/package code to observe or transform a value at a named runtime boundary.
 
-Do not use middleware hooks as a provider adapter, prompt builder, retry policy, compaction strategy, tool dispatcher, permission system, or agent/session runtime.
+Do not use middleware hooks as a provider adapter, prompt builder, retry policy, compaction strategy, tool dispatcher, permission system, or agent/session runtime. Per-turn tool menus use `AgentConfig.toolNarrowing` / `RunOptions.toolNarrowing`, not a middleware hook — see [Tools](tools.md).
 
 ## Inputs / request
 
@@ -24,6 +24,7 @@ createMiddlewareRegistry(options?: MiddlewareRegistryOptions): MiddlewareRegistr
 
 Built-in hook names:
 
+- `beforeProviderTurn`
 - `provider_request`
 - `input_assembly`
 - `prompt_build`
@@ -47,7 +48,7 @@ Built-in hook names:
 
 ## Outputs / response / events
 
-`run()` returns the transformed value. If no middleware is registered for a hook, `run()` returns the original value. `assembleProviderInput()` calls Phase 5 hooks in this order when middleware is supplied: `input_assembly`, then `context`, then `prompt_build`. The `input_assembly` call is unconditional — it runs after whatever `InputBuilder` produced the messages, so host middleware at that hook cannot be skipped by a custom builder. The agent/session runtime applies configured provider request policies, then invokes `provider_request` once with the `ProviderRequest` before `AIProvider.generate()`, invokes `tool_call` and `tool_result` through `dispatchToolCall()` for complete provider tool calls, invokes `compaction` with `{ context, result }` after a compaction strategy returns and before the runtime appends its standard compaction entry, and invokes `retry` with `{ context, decision }` before scheduling a provider-turn retry. There is no `provider_response` hook; observing provider output belongs to the provider adapter or subscriber events.
+`run()` returns the transformed value. If no middleware is registered for a hook, `run()` returns the original value. `assembleProviderInput()` calls Phase 5 hooks in this order when middleware is supplied: `input_assembly`, then `context`, then `prompt_build`. The `input_assembly` call is unconditional — it runs after whatever `InputBuilder` produced the messages, so host middleware at that hook cannot be skipped by a custom builder. The agent/session runtime runs `beforeProviderTurn` once per turn after the request is assembled and before any provider-round work, then applies configured provider request policies, then invokes `provider_request` once with the `ProviderRequest` before `AIProvider.generate()`, invokes `tool_call` and `tool_result` through `dispatchToolCall()` for complete provider tool calls, invokes `compaction` with `{ context, result }` after a compaction strategy returns and before the runtime appends its standard compaction entry, and invokes `retry` with `{ context, decision }` before scheduling a provider-turn retry. There is no `provider_response` hook; observing provider output belongs to the provider adapter or subscriber events.
 
 With default `errorPolicy: "event"`, middleware errors become `extension_error` events when `onError` is provided, and later middleware still runs with the current value. With `errorPolicy: "throw"`, `run()` rejects on the first middleware error.
 
@@ -92,11 +93,45 @@ export const extension: Extension = {
 };
 ```
 
+## No-model turns (`beforeProviderTurn`)
+
+`beforeProviderTurn` lets the host answer a turn from data it already has — teaching empty states, canned flows, deterministic lookups — without any provider request. The payload is `BeforeProviderTurnPayload` (`sessionId`, `runId`, `turn`, `userText`) and middleware returns it unchanged or with `answer: DeterministicTurnAnswer` set:
+
+```ts
+export interface DeterministicTurnAnswer {
+  readonly content: readonly ContentBlock[];
+  readonly provenance: { readonly middleware: string };
+}
+```
+
+```ts
+import { createAgent, createMiddlewareRegistry, type BeforeProviderTurnPayload } from "@arnilo/prism";
+
+const DESK_ANSWERS = new Map([["what can you do?", "I answer from local records; ask about an order id."]]);
+const middleware = createMiddlewareRegistry();
+middleware.use<BeforeProviderTurnPayload>("beforeProviderTurn", (payload, next) => {
+  const text = DESK_ANSWERS.get(payload.userText);
+  return text ? { ...payload, answer: { content: [{ type: "text", text }], provenance: { middleware: "desk" } } } : next(payload);
+});
+
+const session = createAgent({ model, provider, middleware }).createSession();
+await session.run("what can you do?"); // no provider call; assistant message recorded
+```
+
+Contract:
+
+- Returning the payload without `answer` (or returning `undefined`) sends the turn to the provider exactly as if the hook were absent.
+- `answer.provenance.middleware` is mandatory and validated as a bounded id (1–64 chars: letters, digits, `.` `_` `:` `-`); a deterministic turn can never masquerade as model output.
+- `answer.content` accepts assistant-visible content blocks (`text`, `image`, `audio`, `file`, `document`, `video`, `thinking`). Tool-call blocks are rejected — no provider ran to authorize a call — and an empty block array throws `DeterministicTurnError` (`ERR_PRISM_DETERMINISTIC_TURN`), failing the run closed instead of falling through to the provider.
+- Content passes the same output guardrails as provider output and is charged against `maxResponseBytes`, but the turn records no usage: usage is absent, never zero, and the run timeline shows a `deterministic` step named after the answering middleware.
+- Provenance persists: the assistant message carries `metadata.deterministic = { middleware }`, so a transcript loaded back from any session store still proves the turn had no model behind it. `summarizeTimeline()`/`summarizeSession()` report `turns: { model, deterministic }`, and `createDeterministicTurnScorer()` (from `@arnilo/prism-core/governance/evals`) grades a trajectory for no-model coverage — failing a turn that both answered deterministically and still issued a provider request.
+
 ## Extension and configuration notes
 
 - Middleware registration is explicit through `createMiddlewareRegistry()` or `ExtensionAPI.use()`.
 - `provider_request` middleware sees generic `ProviderRequest.options` after request policies have run; do not add secrets unless a redactor/policy secret list covers that boundary.
 - Middleware runs only when the host/runtime calls `run()` or passes the registry to a helper that documents a call site.
+- `beforeProviderTurn` runs only for turns that reach the provider boundary; a turn already ended by a run limit, host turn policy, or durable suspension never reaches it, and host middleware is trusted code — it must not use the hook to bypass `RunLimits` or guardrails.
 - `compaction` middleware may adjust the compaction result summary/data, but runtime still owns session store append ordering and branch parent ids.
 - `retry` middleware may stop retrying or adjust delay, but runtime still owns retry event emission, abort-aware waiting, and provider-turn boundaries.
 - The registry does not discover packages, read manifests, load config, call providers, execute tools, read resources, or start sessions.
@@ -112,6 +147,7 @@ export const extension: Extension = {
 
 ## Related APIs
 
+- [Middlewares vs restore hooks](durable-runs.md#restore-hooks-all-or-nothing): middleware transforms payloads at named boundaries; `restoreHooks` restore external state before a durable resume and are not middleware.
 - [Extension kernel and event bus](extensions.md): `ExtensionAPI.use()` and shared error policy.
 - [Contribution registries](contribution-registries.md): direct contribution registration separate from middleware.
 - [Agent/session runtime](agent-session-runtime.md): provider request policy/middleware timing, bounded tool loop call site for `tool_call`/`tool_result` hooks, and runtime call sites for `compaction` and `retry`.

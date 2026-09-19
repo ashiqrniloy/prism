@@ -1,7 +1,7 @@
 /** Finalize/persist phase of runInternal (plan 059). */
 
 import type { PendingToolCall, StoredAgentRunState } from "../../agent-run-state.js";
-import { boundedLoopSnapshot, initialAgentRunState, publicState, saveAgentRunState } from "../../agent-run-state.js";
+import { boundedLoopSnapshot, initialAgentRunState, publicState, resolveCheckpointMetadata, saveAgentRunState } from "../../agent-run-state.js";
 import type { AgentRunResult, AgentRunState, ErrorInfo, Message, ModelConfig, NestedRunRef, Usage, UsageRecord } from "../../contracts.js";
 import { AgentRunStateError } from "../../contracts.js";
 import { redactRunLedgerRecord } from "../../redaction.js";
@@ -15,13 +15,16 @@ export async function persistDurable(session: SessionHost, state: StoredAgentRun
   const durable = session.activeDurable;
   if (!durable) throw new AgentRunStateError("Durable run state is not configured");
   const withGrant = session.activeToolNames !== undefined ? { ...state, toolNames: session.activeToolNames } : state;
-  const attentionSticky = session.serializedAttentionSticky();
-  const persisted = durable.options.persistSessionState
-    ? {
-        ...withGrant,
-        sessionState: {
+  const persistSessionState = durable.options.persistSessionState === true;
+  // Plan 086 T3: durable folding owns its two keys. A run that opted into `durable` writes the
+  // fold ledger and its frontier even when the broader session-state bag stays off; a run that
+  // did not keeps exactly today's bytes, where the frontier rides `persistSessionState`.
+  const attentionSticky = persistSessionState || session.attentionDurable ? session.serializedAttentionSticky() : undefined;
+  const attentionFold = session.attentionDurable ? session.serializedAttentionFold() : undefined;
+  const sessionState = {
+    ...(persistSessionState
+      ? {
           loadedSkillNames: session.loadedSkills.list(),
-          ...(attentionSticky ? { attentionSticky } : {}),
           ...(session.activatedTools.list().length ? { activatedToolNames: session.activatedTools.list() } : {}),
           ...(durable.options.includeSkillBodies
             ? {
@@ -34,9 +37,13 @@ export async function persistDurable(session: SessionHost, state: StoredAgentRun
                 ),
               }
             : {}),
-        },
-      }
-    : withGrant;
+        }
+      : {}),
+    ...(attentionSticky ? { attentionSticky } : {}),
+    ...(attentionFold ? { attentionFold } : {}),
+  };
+  const persisted = Object.keys(sessionState).length > 0 ? { ...withGrant, sessionState } : withGrant;
+  const metadata = resolveCheckpointMetadata(durable.options.checkpointMetadata) ?? durable.checkpointMetadata;
   const saved = await saveAgentRunState({
     checkpoints: durable.options.checkpoints,
     state: persisted,
@@ -45,6 +52,7 @@ export async function persistDurable(session: SessionHost, state: StoredAgentRun
     fencingToken: durable.options.fencingToken,
     redactor: session.activeRedactor,
     maxStateBytes: durable.options.maxStateBytes,
+    ...(metadata ? { metadata } : {}),
   });
   durable.state = saved.state;
   durable.version = saved.record.version;
@@ -113,8 +121,31 @@ export async function checkpointDurableTurn(
   session: SessionHost,
   input: { readonly runId: string; readonly model: ModelConfig; readonly limits: RunLimitTracker },
 ): Promise<void> {
+  if (session.activeDurable?.options.checkpointPolicy !== "every-turn") return;
+  await writeRunningCheckpoint(session, input);
+}
+
+/**
+ * Fold-boundary checkpoint (plan 086 T3). Called once per turn that added folded bodies — never
+ * per turn — when the resolved compiler is durable, so a crash after a fold resumes with the
+ * ledger and frontier already on disk. Independent of `checkpointPolicy`: the fold is the
+ * durability point that matters for a long single run, not the turn boundary.
+ */
+export async function checkpointDurableFold(
+  session: SessionHost,
+  input: { readonly runId: string; readonly model: ModelConfig; readonly limits: RunLimitTracker },
+): Promise<void> {
+  if (!session.attentionDurable) return;
+  await writeRunningCheckpoint(session, input);
+}
+
+/** Shared running-checkpoint write for the turn-boundary and fold-boundary triggers. */
+async function writeRunningCheckpoint(
+  session: SessionHost,
+  input: { readonly runId: string; readonly model: ModelConfig; readonly limits: RunLimitTracker },
+): Promise<void> {
   const durable = session.activeDurable;
-  if (durable?.options.checkpointPolicy !== "every-turn") return;
+  if (!durable) return;
   const loop = session.activeLoop;
   const loopState = loop?.snapshot ? boundedLoopSnapshot(loop.name, loop.revision ?? "1", loop.snapshot()) : undefined;
   const state =
@@ -255,6 +286,7 @@ export async function cleanupRun(input: {
     session.activeLimits?.dispose();
     session.activeToolNames = undefined;
     session.activeLimits = undefined;
+    session.activeRecentToolCalls = undefined;
     session.activeLimitOutputBuffer = false;
     session.activeRedactor = undefined;
     session.activeProvider = undefined;

@@ -1,4 +1,14 @@
-import type { ResolvedRunLimits, RunLimitBreach, RunLimitCounters, RunLimitName, RunLimits, Usage } from "./contracts.js";
+import type {
+  BudgetAxisUsage,
+  BudgetConsumedCounters,
+  ResolvedRunLimits,
+  RunLimitBreach,
+  RunLimitCounters,
+  RunLimitName,
+  RunLimits,
+  ToolCallSummary,
+  Usage,
+} from "./contracts.js";
 
 export const DEFAULT_RUN_LIMITS = Object.freeze({
   maxTurns: 16,
@@ -264,4 +274,61 @@ export class RunLimitTracker {
 
 export function createRunLimitTracker(limits: RunLimits | undefined, options?: RunLimitTrackerOptions): RunLimitTracker {
   return new RunLimitTracker(resolveRunLimits(undefined, limits), options);
+}
+
+/** Product axes reported as "how close was everything else" (plan 087 T2). Request/response bytes
+ *  stay out: their caps are per-frame, so a run-lifetime ratio would be meaningless. */
+const ATTRIBUTION_AXES: readonly { readonly axis: RunLimitName; readonly counter: keyof RunLimitCounters }[] = [
+  { axis: "maxTurns", counter: "turns" },
+  { axis: "maxProviderAttempts", counter: "providerAttempts" },
+  { axis: "maxToolRounds", counter: "toolRounds" },
+  { axis: "maxToolCalls", counter: "toolCalls" },
+  { axis: "maxWallTimeMs", counter: "wallTimeMs" },
+  { axis: "maxInputTokens", counter: "inputTokens" },
+  { axis: "maxOutputTokens", counter: "outputTokens" },
+  { axis: "maxTotalTokens", counter: "totalTokens" },
+  { axis: "maxCost", counter: "cost" },
+];
+const CLOSEST_AXIS_COUNT = 3;
+
+function axisCap(limits: Readonly<ResolvedRunLimits>, axis: RunLimitName): number | null | undefined {
+  if (axis === "maxCost") return limits.maxCost?.amount;
+  const value = limits[axis];
+  return typeof value === "number" ? value : null;
+}
+
+/**
+ * Build the `budget_exhausted` payload (plan 087 T2): which axis fired, the counters a host reads
+ * first, the closest other axes, and the last dispatched tool calls (hashes only).
+ */
+export function describeBudgetExhaustion(
+  tracker: RunLimitTracker,
+  breach: RunLimitBreach,
+  recentToolCalls: readonly ToolCallSummary[],
+): {
+  limit: RunLimitName;
+  consumed: BudgetConsumedCounters;
+  closestOtherAxes: BudgetAxisUsage[];
+  recentToolCalls: ToolCallSummary[];
+} {
+  const counters = tracker.snapshot();
+  const closestOtherAxes = ATTRIBUTION_AXES.filter(({ axis }) => axis !== breach.limit)
+    .flatMap(({ axis, counter }) => {
+      const cap = axisCap(tracker.limits, axis);
+      return typeof cap === "number" && cap > 0 ? [{ axis, cap, used: counters[counter] }] : [];
+    })
+    .map(({ axis, cap, used }) => ({ axis, usedRatio: Math.round(Math.min(1, used / cap) * 10_000) / 10_000 }))
+    .sort((a, b) => b.usedRatio - a.usedRatio)
+    .slice(0, CLOSEST_AXIS_COUNT);
+  return {
+    limit: breach.limit,
+    consumed: {
+      turns: counters.turns,
+      inputTokens: counters.inputTokens,
+      providerAttempts: counters.providerAttempts,
+      requestBytes: counters.requestBytes,
+    },
+    closestOtherAxes,
+    recentToolCalls: [...recentToolCalls],
+  };
 }

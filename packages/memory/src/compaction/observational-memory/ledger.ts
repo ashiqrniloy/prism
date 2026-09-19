@@ -66,6 +66,26 @@ export function activeObservations(ledger: ObservationalMemoryLedger): readonly 
   return ledger.observations.filter((observation) => !dropped.has(observation.id));
 }
 
+/**
+ * Union id-keyed ledgers (local + shared branches). Coverage cursors and drop cursors are per branch
+ * and are not merged; read-only consumers never use them.
+ */
+export function mergeObservationalMemoryLedgers(...ledgers: readonly ObservationalMemoryLedger[]): ObservationalMemoryLedger {
+  const observations = new Map<string, MemoryObservation>();
+  const reflections = new Map<string, MemoryReflection>();
+  const dropped = new Set<string>();
+  for (const ledger of ledgers) {
+    for (const observation of ledger.observations) if (!observations.has(observation.id)) observations.set(observation.id, observation);
+    for (const reflection of ledger.reflections) if (!reflections.has(reflection.id)) reflections.set(reflection.id, reflection);
+    for (const id of ledger.droppedObservationIds) dropped.add(id);
+  }
+  return {
+    observations: [...observations.values()],
+    reflections: [...reflections.values()],
+    droppedObservationIds: [...dropped],
+  };
+}
+
 export function observationBlockedByInvalidation(
   observation: Pick<MemoryObservation, "id" | "sourceEntryIds">,
   invalidated: ReadonlySet<string>,

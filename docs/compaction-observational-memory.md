@@ -87,6 +87,7 @@ Key exports:
 | `createFoldedMemoryDetails()` | Create JSON details for compaction `data.memory`. |
 | `renderObservationalMemory()` | Render reflections and observations into a prepared memory summary. |
 | `recallObservationalMemory()` | Recover source evidence for a known observation/reflection id from supplied current-branch entries. `invalidatedIds` withholds content (`reason: "revoked"`) without injecting derived text. |
+| `listInvalidatedIds()` (`@arnilo/prism-memory`) | Read the ids one exact scope currently withholds (`corrected` stays) and pass them as `invalidatedIds`, so blocks that rest on a source revoked mid-turn go stale on the next build. Empty for stores without lineage invalidation. |
 | `recallObservationalMemoryBranchPage()` | Page eligible user/assistant/tool messages around a cursor entry id (`forward`/`backward`, optional `detail: summary|full`). |
 | `createMemoryId()` / `isMemoryId()` | Create/check 12-character ids. |
 | `resolveObservationalMemorySettings()` | Merge `observational-memory` settings with defaults and overrides. |
@@ -94,7 +95,7 @@ Key exports:
 | `createObservationalMemoryRuntime()` | Low-level explicit flush for advanced hosts or tests. |
 | `createObservationalMemoryCompactionStrategy()` | Render existing folded memory as a standard Prism compaction summary with `data.memory`. |
 | `createObservationalMemoryExtension()` | Inert extension helper that registers the strategy contribution unless disabled. |
-| `createRecallMemoryTool()` | Optional `recall` tool factory: exact id lookup or current-branch message paging via host-supplied entries. |
+| `createRecallMemoryTool()` | Optional `recall` tool factory: exact id lookup (optionally merged with granted shared scopes) or current-branch message paging via host-supplied entries. |
 | `createMemoryStatusCommand()` / `createMemoryViewCommand()` | Optional `om:status` and `om:view` command factories. |
 | `createObservationalMemoryCommands()` | Convenience factory returning status and view commands. |
 
@@ -102,13 +103,39 @@ Pure utilities create no events, workers, tools, commands, credentials, or provi
 
 ### Work-scope index (opt-in)
 
-`WorkScope` is a host-named, append-only index over one observational-memory ledger. Without `om.scope.*` entries, the map has only its implicit `session` root, context renders the existing active pool, and the dropper keeps its existing behavior.
+`WorkScope` is a host-named, append-only index over one observational-memory ledger. Without `om.scope.*` entries, the map has only its implicit `session` root, context renders the existing active pool, and the dropper keeps its existing behavior. Shared work scopes extend that index across sessions under explicit grants — see "Shared work scopes (opt-in)" below.
 
-Use `createWorkScopeController({ session, appendEntry, secrets? })` to `open`, `close`, `enter`, `leave`, `bind`, or `unbind` scopes. Scope ids are host-defined (`[A-Za-z0-9._:/-]{1,128}`, no `..`); there are caps of 256 scopes, depth/stack 8, 4,096 binds per scope, and 512 characters for labels or kinds. Invalid ids, missing/closed parents, duplicate scopes, unknown record ids, and ownership mismatch fail closed. Labels and kinds receive the same secret redaction as observational-memory text.
+Use `createWorkScopeController({ session, appendEntry, secrets? })` to `open`, `close`, `enter`, `leave`, `bind`, `unbind`, `grant`, or `revoke` scopes. Scope ids are host-defined (`[A-Za-z0-9._:/-]{1,128}`, no `..`); there are caps of 256 scopes, depth/stack 8, 4,096 binds and 1,024 principals per scope, and 512 characters for labels or kinds. Invalid ids, missing/closed parents, duplicate scopes, unknown record ids, reserved/closed grant targets, and ownership mismatch fail closed. Labels and kinds receive the same secret redaction as observational-memory text.
 
 `projectWorkMemory(ledger, map, { from, include, closed?, kinds? })` returns a filtered observation/reflection view plus outline. `include` is `self`, `self+ancestors`, `self+descendants`, or `lineage`; `closed: "hide"` is the default, except closed ancestors of `from` remain available. Default attached context uses the current leaf with `self+ancestors`, rendering Scope Outline, Reflections, then Observations. The compaction summary — the layer the next run's pack starts from — renders the same projection, so the full ledger never rides into the prefix; the folded payload keeps every observation, so entering another scope can still surface what that summary hid. `recallObservationalMemory()` still reads the complete current branch by exact id.
 
 After a flush records new observations or reflections, it binds those ids once to the current leaf scope only. A host promotes relevant memory explicitly by binding it to an ancestor; a reflection whose bind sits on a **closed** scope can also graduate into durable semantic memory through the fabric's `remember({ kind: "fact" | "procedure", reflectionId })`. While any host scope exists, the runtime skips the observation dropper; the folded-payload byte cap remains a storage safety cap, not working-set garbage collection. `withWorkScope(controller, spec, fn)` opens `spec` if needed, enters it, runs `fn`, and leaves in `finally`; it never closes a scope. This index does not provide resource-scoped observational memory or budget-based dropping as a working-set mechanism.
+
+### Shared work scopes (opt-in)
+
+A shared work scope lets several sessions contribute to and read one scope under explicit owner grants. Declare it per participant in `attach()`:
+
+```ts
+const attached = om.attach(session, {
+  appendEntry: (entry, options) => store.append(entry, options),
+  sharedScopes: { "build-42": { ownerSessionId: "session-...", entries: (sessionId) => store.list(sessionId) } },
+  onScopeAccess: (event) => audit.info("om.scope.access", event),
+});
+```
+
+Requirements, all fail-closed:
+
+- The participant opens the scope in its own branch (`open`/`enter`) and binds its own observations/reflections to it. Only ids bound to that exact scope id are shared; memory bound to an ancestor, descendant, or other scope stays private.
+- The owner branch carries `om.scope.granted` / `om.scope.revoked` records (`controller.grant(scopeId, principalIds)` / `revoke`) and is the only grant authority; grants in any other branch are inert. A grant is symmetric read+write — use separate scopes for asymmetric visibility.
+- The host `entries(sessionId)` callback is the store/tenant boundary: the package checks grants, it cannot verify another branch's tenant. Keep the callback inside one `OwnershipScope`.
+- Absent, unknown, revoked, unreachable, or not-opened-locally scope state denies the read and reports `onScopeAccess({ granted: false, reason })`. `onScopeAccess` fires for every decision, granted or denied.
+- Revocation lands on the next read: each resolve re-reads the owner branch and re-folds the grant map. The local folded payload never contains foreign observations, so revocation also holds across local compaction.
+
+`resolveSharedScopes({ scopes, principalId, map, onAccess? })` reads the owner branch for grants, then the owner and every granted branch, folds each branch separately, and unions the id-keyed results (`mergeObservationalMemoryLedgers`). Raw entry lists are never concatenated across branches — coverage cursors and projection boundaries are positional per branch. Bound memory is merged into the context blocks, `recallObservationalMemory`, the `recall` tool (exact-id only; branch paging stays current-branch), and `om:view`; `om:status` counts stay session-local.
+
+Rendering still follows the work-scope projection: the reader needs the shared scope in its current leaf lineage (`enter`, or a host that keeps it entered) for the context block to include it. Recall by exact id does not depend on the leaf. The compaction strategy and its folded payload stay local, so a shared observation re-enters context from the provider rather than from the summary.
+
+Cost: one branch read and fold per participating branch per context resolve (and per `recall` call that resolves shared scopes) — not per observation. Cache per flush only if profiling demands it.
 
 ### Compact-when override
 
@@ -220,7 +247,7 @@ The runtime requires host-supplied `session`, an `appendEntry` callback bound to
 
 ## Cross-session / delegation-tree recall (opt-in pattern)
 
-Default is per-session: `attach()` + `appendEntry` bind one store/branch, and `recallObservationalMemory(entries, id)` / `createRecallMemoryTool({ getEntries })` see only the entries the host passes for that session. Supervisor children therefore produce observations the parent cannot recall. That is acceptable for v1 — the parent transcript already contains `delegate()` results, so parent OM covers milestones. There is no package primitive for a shared workspace scope (a namespaced multi-tenant store key is out of scope).
+Default is per-session: `attach()` + `appendEntry` bind one store/branch, and `recallObservationalMemory(entries, id)` / `createRecallMemoryTool({ getEntries })` see only the entries the host passes for that session. Supervisor children therefore produce observations the parent cannot recall. That is acceptable for v1 — the parent transcript already contains `delegate()` results, so parent OM covers milestones. When the host can read the participating branches, use a shared work scope instead (above); the funnel below remains the option when it cannot (a namespaced multi-tenant store key is still out of scope).
 
 Hosts that need parent recall of child *source* work compose it themselves: wrap the shared `SessionStore.append` so eligible child messages (`isEligibleObservationSourceEntry`) are copied onto a workspace (or parent) session with a **new entry id** and that session's `sessionId`/`parentId`. Parent OM then observes those copies and mints **new** observation ids. Child OM, if attached, stays on the child session with its own ids.
 
@@ -254,7 +281,7 @@ Wire the wrapped store into both the parent session and each supervisor child fa
 
 Rules that keep exact-id recall unambiguous:
 
-- Recall always takes **one** branch (`session.entries()` / `getEntries(sessionId)`). Never concatenate parent + child lists into one `recallObservationalMemory()` call.
+- Recall always takes **one** branch (`session.entries()` / `getEntries(sessionId)`). Never concatenate parent + child lists into one `recallObservationalMemory()` call. Shared work scopes are the supported exception: they union per-branch folded ledgers (id-keyed), never raw entry lists.
 - Copies mint a new `entry.id`. `createMemorySessionStore` rejects duplicate ids globally; JSONL/DB adapters do too.
 - Do **not** rewrite the child's OM `appendEntry` onto the workspace session. After each memory append the runtime checks the entry is visible at the **child** leaf and fails closed on a session/store mismatch. Funnel messages; let parent OM observe them.
 - Do **not** copy `om.*` custom entries across. Their `sourceEntryIds` point at the origin session and would dangle on the workspace branch.
@@ -262,7 +289,7 @@ Rules that keep exact-id recall unambiguous:
 
 Cost: the workspace branch grows with every funneled child message; parent `compactAfterTokens` / observation-pool caps still apply but fire sooner. Keep the per-session default unless parent recall of child sources is required.
 
-Ownership: funnel only within the `OwnershipScope` already on the parent agent/store. Child factories receive that ownership from the supervisor; do not share a store across tenants or identities. Observations never leave the store the host scoped.
+Ownership: funnel only within the `OwnershipScope` already on the parent agent/store. Child factories receive that ownership from the supervisor; do not share a store across tenants or identities. Observations never leave the store the host scoped — the same rule applies to shared work-scope grants.
 
 ## Security and performance notes
 

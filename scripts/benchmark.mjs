@@ -38,6 +38,7 @@ export const SCENARIOS = {
   "tool-search": { module: "benchmark-scenarios/tool-search.mjs", phase: 41, protected: false },
   redaction: { module: "benchmark-scenarios/redaction.mjs", phase: 70, protected: false },
   "attention-compiler": { module: "benchmark-scenarios/attention-compiler.mjs", phase: 74, protected: false },
+  "session-search": { module: "benchmark-scenarios/session-search.mjs", phase: 95, protected: false },
 };
 
 function main() {

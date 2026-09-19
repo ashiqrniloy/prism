@@ -1,5 +1,5 @@
 import type { Usage } from "@arnilo/prism";
-import type { ExecutionTimeline } from "./timeline-types.js";
+import type { ExecutionTimeline, TimelineExhaustion } from "./timeline-types.js";
 
 /** Maximum distinct tool names retained in a summary before overflowing to "other". */
 export const MAX_SUMMARY_DISTINCT_TOOLS = 64;
@@ -7,6 +7,8 @@ export const MAX_SUMMARY_DISTINCT_TOOLS = 64;
 export interface TimelineSummary {
   readonly durationMs: number;
   readonly turnCount: number;
+  /** Turn split by who answered (plan 096): provider turns vs host deterministic turns. Sums to `turnCount`. */
+  readonly turns: { readonly model: number; readonly deterministic: number };
   readonly toolCallCount: number;
   readonly toolCounts: Readonly<Record<string, number>>;
   readonly providerAttempts: number;
@@ -17,6 +19,12 @@ export interface TimelineSummary {
   readonly suspended: boolean;
   readonly status: string;
   readonly stepCount: number;
+  /**
+   * One renderable line for a run that died on a run limit, e.g.
+   * `"maxTurns exhausted (13/12); closest: maxInputTokens 0.6, maxToolCalls 0.6"` (plan 087 T3).
+   * Absent for runs that ended any other way.
+   */
+  readonly exhaustion?: string;
 }
 
 export interface SessionSummary {
@@ -24,6 +32,8 @@ export interface SessionSummary {
   readonly runCount: number;
   readonly durationMs: number;
   readonly turnCount: number;
+  /** Turn split by who answered, summed across runs (plan 096): model vs deterministic. */
+  readonly turns: { readonly model: number; readonly deterministic: number };
   readonly toolCallCount: number;
   readonly toolCounts: Readonly<Record<string, number>>;
   readonly providerAttempts: number;
@@ -134,6 +144,19 @@ function extractTimelineUsage(timeline: ExecutionTimeline): Usage | undefined {
 }
 
 /**
+ * Renders the terminal limit attribution as one bounded dashboard line: the axis that fired with
+ * `observed/maximum`, then the closest other axes by `used / cap`.
+ */
+function exhaustionLine(exhaustion: TimelineExhaustion): string {
+  const used = exhaustion.observed !== undefined ? String(exhaustion.observed) : undefined;
+  const cap = exhaustion.maximum !== undefined ? String(exhaustion.maximum) : undefined;
+  const amount = used !== undefined && cap !== undefined ? `${used}/${cap}` : (cap ?? used);
+  const closest = exhaustion.closestOtherAxes.map((axis) => `${axis.axis} ${axis.usedRatio}`).join(", ");
+  const head = `${exhaustion.limit} exhausted${amount !== undefined ? ` (${amount}${exhaustion.currency ? ` ${exhaustion.currency}` : ""})` : ""}`;
+  return closest ? `${head}; closest: ${closest}` : head;
+}
+
+/**
  * Summarizes a single ExecutionTimeline for cockpit dashboard cards and latency/cost attribution.
  */
 export function summarizeTimeline(timeline: ExecutionTimeline): TimelineSummary {
@@ -141,6 +164,7 @@ export function summarizeTimeline(timeline: ExecutionTimeline): TimelineSummary 
     timeline.startedAt && timeline.finishedAt ? Math.max(0, Date.parse(timeline.finishedAt) - Date.parse(timeline.startedAt) || 0) : 0;
 
   let turnCount = 0;
+  let deterministicTurns = 0;
   let toolCallCount = 0;
   const rawToolCounts: Record<string, number> = {};
   let providerAttempts = 0;
@@ -151,6 +175,8 @@ export function summarizeTimeline(timeline: ExecutionTimeline): TimelineSummary 
   for (const step of timeline.steps) {
     if (step.kind === "turn") {
       turnCount++;
+    } else if (step.kind === "deterministic") {
+      deterministicTurns++;
     } else if (step.kind === "tool") {
       toolCallCount++;
       rawToolCounts[step.name] = (rawToolCounts[step.name] ?? 0) + 1;
@@ -185,6 +211,7 @@ export function summarizeTimeline(timeline: ExecutionTimeline): TimelineSummary 
   return Object.freeze({
     durationMs,
     turnCount,
+    turns: { model: Math.max(0, turnCount - deterministicTurns), deterministic: deterministicTurns },
     toolCallCount,
     toolCounts: capToolCounts(rawToolCounts),
     providerAttempts,
@@ -195,6 +222,7 @@ export function summarizeTimeline(timeline: ExecutionTimeline): TimelineSummary 
     suspended,
     status: timeline.status,
     stepCount: timeline.steps.length,
+    ...(timeline.exhaustion ? { exhaustion: exhaustionLine(timeline.exhaustion) } : {}),
   });
 }
 
@@ -207,6 +235,8 @@ export function summarizeSession(timelines: readonly ExecutionTimeline[], option
 
   let totalDurationMs = 0;
   let totalTurnCount = 0;
+  let totalModelTurns = 0;
+  let totalDeterministicTurns = 0;
   let totalToolCallCount = 0;
   const mergedToolCounts: Record<string, number> = {};
   let totalProviderAttempts = 0;
@@ -220,6 +250,8 @@ export function summarizeSession(timelines: readonly ExecutionTimeline[], option
     const summary = runs[i]!;
     totalDurationMs += summary.durationMs;
     totalTurnCount += summary.turnCount;
+    totalModelTurns += summary.turns.model;
+    totalDeterministicTurns += summary.turns.deterministic;
     totalToolCallCount += summary.toolCallCount;
     totalProviderAttempts += summary.providerAttempts;
     aggregatedUsage = addUsage(aggregatedUsage, summary.usage);
@@ -256,6 +288,7 @@ export function summarizeSession(timelines: readonly ExecutionTimeline[], option
     runCount: timelines.length,
     durationMs: totalDurationMs,
     turnCount: totalTurnCount,
+    turns: { model: totalModelTurns, deterministic: totalDeterministicTurns },
     toolCallCount: totalToolCallCount,
     toolCounts: capToolCounts(mergedToolCounts),
     providerAttempts: totalProviderAttempts,

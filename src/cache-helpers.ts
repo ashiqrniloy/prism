@@ -14,8 +14,10 @@ export type CacheControlledContentBlock = ContentBlock & { readonly cache_contro
 export type CacheControlledMessage = Omit<Message, "content"> & { readonly content: readonly CacheControlledContentBlock[] };
 
 export interface CacheUsageReport {
-  readonly cacheReadTokens: number;
-  readonly cacheWriteTokens: number;
+  /** Present only when the provider reported cache-read usage; never fabricated as zero. */
+  readonly cacheReadTokens?: number;
+  /** Present only when the provider reported cache-write usage; never fabricated as zero. */
+  readonly cacheWriteTokens?: number;
   readonly hitRate?: number;
   readonly estimatedSavings?: number;
   readonly currency?: string;
@@ -102,14 +104,16 @@ export function cacheSavings(usage: Usage | undefined, model: ModelConfig): numb
 }
 
 export function cacheUsageReport(usage: Usage | undefined, model?: ModelConfig): CacheUsageReport | undefined {
-  if (!usage) return undefined;
+  if (!usage || (usage.cacheReadTokens === undefined && usage.cacheWriteTokens === undefined)) return undefined;
   const estimatedSavings = model ? cacheSavings(usage, model) : undefined;
+  const currency = estimatedSavings === undefined ? usage.currency : (model?.cost?.currency ?? usage.currency);
+  const hitRate = cacheHitRate(usage);
   return {
-    cacheReadTokens: usage.cacheReadTokens ?? 0,
-    cacheWriteTokens: usage.cacheWriteTokens ?? 0,
-    hitRate: cacheHitRate(usage),
-    estimatedSavings,
-    currency: estimatedSavings === undefined ? usage.currency : (model?.cost?.currency ?? usage.currency),
+    ...(usage.cacheReadTokens === undefined ? {} : { cacheReadTokens: usage.cacheReadTokens }),
+    ...(usage.cacheWriteTokens === undefined ? {} : { cacheWriteTokens: usage.cacheWriteTokens }),
+    ...(hitRate === undefined ? {} : { hitRate }),
+    ...(estimatedSavings === undefined ? {} : { estimatedSavings }),
+    ...(currency === undefined ? {} : { currency }),
   };
 }
 

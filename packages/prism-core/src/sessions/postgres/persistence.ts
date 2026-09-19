@@ -860,6 +860,20 @@ async function searchPostgresSessions(
     filters.push(sql.replace("?", `$${params.length}`));
   };
 
+  // Full-text match plus kind filter, if any; text-query params come first (the CTE is emitted
+  // ahead of the WHERE clause), so ownership/date/filter params keep positional numbering.
+  let ftsParam: string | undefined;
+  let kindFilter = "";
+  if (q.query) {
+    params.push(q.query);
+    ftsParam = `$${params.length}`;
+    if (q.kind) {
+      const first = params.length + 1;
+      params.push(...q.kind);
+      kindFilter = `AND e.kind IN (${q.kind.map((_, index) => `$${first + index}`).join(", ")})`;
+    }
+  }
+
   if (q.tenantId) add("s.tenant_id = ?", q.tenantId);
   if (q.accountId) add("s.account_id = ?", q.accountId);
   if (q.userId) add("s.user_id = ?", q.userId);
@@ -880,16 +894,8 @@ async function searchPostgresSessions(
   if (q.model) {
     add(`EXISTS (SELECT 1 FROM ${tables.runs} r WHERE r.session_id = s.id AND r.model::jsonb ->> 'model' = ?)`, q.model);
   }
-  if (q.query) {
-    params.push(q.query);
-    const ftsParam = `$${params.length}`;
-    filters.push(
-      `s.id IN (
-         SELECT session_id FROM ${tables.searchTable}
-         WHERE search_vector @@ plainto_tsquery('english', ${ftsParam})
-         LIMIT ${DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES}
-       )`,
-    );
+  if (!q.query && q.kind) {
+    add(`EXISTS (SELECT 1 FROM ${tables.entries} k WHERE k.session_id = s.id AND k.kind = ANY(?::text[]))`, q.kind);
   }
 
   const order = q.order === "asc" ? "ASC" : "DESC";
@@ -910,7 +916,8 @@ async function searchPostgresSessions(
   const limitParam = `$${params.length}`;
   const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
   const result = await pool.query(
-    `SELECT s.id AS session_id, s.updated_at, s.metadata,
+    `${buildPostgresSearchCte(tables, ftsParam, kindFilter)}
+     SELECT s.id AS session_id, s.updated_at, s.metadata,
        (
          SELECT e.label FROM ${tables.entries} e
          WHERE e.session_id = s.id AND e.label IS NOT NULL
@@ -920,8 +927,26 @@ async function searchPostgresSessions(
          SELECT e.summary FROM ${tables.entries} e
          WHERE e.session_id = s.id AND e.summary IS NOT NULL
          ORDER BY e.timestamp DESC, e.id DESC LIMIT 1
-       ) AS summary
-     FROM ${tables.sessions} s
+       ) AS summary${
+         q.query
+           ? `,
+       m.entry_id AS entry_id,
+       m.score AS score,
+       m.snippet AS match_snippet,
+       me.run_id AS run_id,
+       (
+         SELECT COUNT(*) FROM ${tables.entries} t
+         WHERE t.session_id = s.id AND (t.timestamp, t.id) <= (me.timestamp, me.id)
+       ) AS turn`
+           : ""
+}
+     FROM ${tables.sessions} s${
+       q.query
+         ? `
+     JOIN best m ON m.session_id = s.id
+     JOIN ${tables.entries} me ON me.id = m.entry_id`
+         : ""
+}
      ${where}
      ORDER BY s.updated_at ${order}, s.id ${order}
      LIMIT ${limitParam}`,
@@ -935,6 +960,11 @@ async function searchPostgresSessions(
     metadata: string | null;
     label: string | null;
     summary: string | null;
+    entry_id?: string | null;
+    score?: number | string | null;
+    match_snippet?: string | null;
+    run_id?: string | null;
+    turn?: number | string | null;
   }>;
   const hasMore = rows.length > q.limit;
   const pageRows = hasMore ? rows.slice(0, q.limit) : rows;
@@ -946,8 +976,12 @@ async function searchPostgresSessions(
       updatedAt: row.updated_at,
       label: row.label ?? undefined,
       summary: row.summary ?? undefined,
-      snippet: clipSearchSnippet(row.label ?? row.summary ?? undefined),
+      snippet: clipSearchSnippet(row.match_snippet ?? row.label ?? row.summary ?? undefined),
       metadata: safeSearchMetadata(parseSessionMetadata(row.metadata)),
+      entryId: row.entry_id ?? undefined,
+      runId: row.run_id ?? undefined,
+      turn: row.turn === null || row.turn === undefined ? undefined : Number(row.turn),
+      score: row.score === null || row.score === undefined ? undefined : Number(row.score),
     });
   }
   const last = pageRows.at(-1);
@@ -955,6 +989,36 @@ async function searchPostgresSessions(
     items,
     nextCursor: hasMore && last ? encodeEntryCursor(last.updated_at, last.session_id) : undefined,
   };
+}
+
+function buildPostgresSearchCte(
+  tables: { entries: string; searchTable: string },
+  ftsParam: string | undefined,
+  kindFilter: string,
+): string {
+  if (ftsParam === undefined) return "";
+  return `WITH ranked AS (
+       SELECT sr.session_id AS session_id, sr.entry_id AS entry_id,
+              ts_rank_cd(sr.search_vector, plainto_tsquery('english', ${ftsParam})) AS score,
+              ts_headline('english',
+                CASE
+                  WHEN to_tsvector('english', coalesce(sr.label, '')) @@ plainto_tsquery('english', ${ftsParam}) THEN sr.label
+                  WHEN to_tsvector('english', coalesce(sr.summary, '')) @@ plainto_tsquery('english', ${ftsParam}) THEN sr.summary
+                  ELSE sr.body
+                END,
+                plainto_tsquery('english', ${ftsParam}),
+                'StartSel="", StopSel="", MaxWords=12, MinWords=6') AS snippet
+       FROM ${tables.searchTable} sr
+       JOIN ${tables.entries} e ON e.id = sr.entry_id
+       WHERE sr.search_vector @@ plainto_tsquery('english', ${ftsParam}) ${kindFilter}
+       ORDER BY score DESC, sr.entry_id
+       LIMIT ${DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES}
+     ),
+     best AS (
+       SELECT DISTINCT ON (session_id) session_id, entry_id, score, snippet
+       FROM ranked
+       ORDER BY session_id, score DESC, entry_id
+     )`;
 }
 
 function buildOwnershipFilters(

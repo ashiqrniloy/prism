@@ -43,8 +43,10 @@ export type {
   ExecutionStepStatus,
   ExecutionTimeline,
   TimelineContentPolicy,
+  TimelineExhaustion,
   TimelineFolder,
   TimelineProjectionOptions,
+  TimelineTurn,
   WorkflowTimelineFolder,
   WorkflowTimelineProjectionOptions,
 } from "./timeline-types.js";

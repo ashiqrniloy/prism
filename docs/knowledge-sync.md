@@ -29,6 +29,10 @@ Use it when a host must keep a RAG corpus aligned with an enterprise file source
 
 No tools, no watch-channel authorization, no events.
 
+## Delete contract
+
+A connector `delete` change calls `deleteSource()` for that source only: the connector's own chunk rows and ingestion status go away, under exact tenant/resource/corpus scope. Connector payloads are never authorization, so sync cannot reach beyond the corpus it owns — derived artifacts (summaries, observational-memory entries, compiled wiki pages, host projections) survive sync deletes by design. Removing those is a separate privileged pass through `createDeletionPropagator().propagate(sourceId)` (see [RAG deletion propagation](rag.md#deletion-propagation)), driven by the host, not by the connector.
+
 ## Request/response example
 
 ```json

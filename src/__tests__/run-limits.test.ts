@@ -10,11 +10,14 @@ import {
   HARD_RUN_LIMITS,
   providerDone,
   providerTextDelta,
+  providerToolCall,
   providerUsage,
   type RunLimitBreach,
   RunLimitError,
   RunLimitTracker,
   resolveRunLimits,
+  type ToolDefinition,
+  toolCallContent,
 } from "../index.js";
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
@@ -249,5 +252,99 @@ describe("run limits", () => {
       observed.some((event) => event.type === "run_limit_exceeded"),
       false,
     );
+    assert.equal(
+      observed.some((event) => event.type === "budget_exhausted"),
+      false,
+    );
+  });
+
+  it("attributes a maxTurns death with counters, closest axes, and the last ten tool calls", async () => {
+    let turn = 0;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate() {
+        turn += 1;
+        yield providerToolCall(toolCallContent(`call-${turn}`, "echo", { i: turn }));
+        yield providerDone({ inputTokens: 5, outputTokens: 1 });
+      },
+    };
+    const echo: ToolDefinition = {
+      name: "echo",
+      parameters: { type: "object", properties: { i: { type: "number" } } },
+      execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ok" }),
+    };
+    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] });
+    const session = agent.createSession();
+    const events = collect(session.subscribe());
+    await assert.rejects(session.run("hi", { limits: { maxTurns: 12, maxToolRounds: 20, maxToolCalls: 20 } }), (error: unknown) => {
+      assert.ok(error instanceof AgentRunError);
+      assert.equal(error.result.limit?.limit, "maxTurns");
+      return true;
+    });
+    const observed = await events;
+    const exhausted = observed.filter((event) => event.type === "budget_exhausted");
+    assert.equal(exhausted.length, 1, "exactly one attribution event per limit death");
+    const [event] = exhausted;
+    assert.ok(event);
+    assert.equal(event.limit, "maxTurns");
+    assert.equal(event.consumed.turns, 13);
+    assert.equal(event.consumed.inputTokens, 60);
+    assert.equal(event.consumed.providerAttempts, 12);
+    assert.ok(event.consumed.requestBytes > 0);
+    // Ring buffer: 12 dispatches, the last 10 survive, in order, hashes only.
+    assert.deepEqual(
+      event.recentToolCalls.map((call) => call.id),
+      Array.from({ length: 10 }, (_, index) => `call-${index + 3}`),
+    );
+    assert.ok(event.recentToolCalls.every((call) => call.name === "echo" && /^sha256:[a-f0-9]{64}$/.test(call.argHash)));
+    assert.deepEqual(
+      event.closestOtherAxes.map((axis) => axis.axis),
+      ["maxToolRounds", "maxToolCalls", "maxProviderAttempts"],
+    );
+    assert.deepEqual(
+      event.closestOtherAxes.map((axis) => axis.usedRatio),
+      [0.6, 0.6, 0.5],
+    );
+    assert.ok(observed.findIndex((e) => e.type === "budget_exhausted") < observed.findIndex((e) => e.type === "error"));
+  });
+
+  it("names the run input budget axis when cumulative tokens die, and hashes tool-call arguments", async () => {
+    const secret = "sk-live-do-not-leak";
+    let turn = 0;
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate() {
+        turn += 1;
+        yield providerToolCall(toolCallContent(`call-${turn}`, "echo", { token: secret }));
+        yield providerUsage({ inputTokens: 6 });
+        yield providerDone();
+      },
+    };
+    const echo: ToolDefinition = {
+      name: "echo",
+      parameters: { type: "object", properties: { token: { type: "string" } } },
+      execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ok" }),
+    };
+    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] });
+    const session = agent.createSession();
+    const events = collect(session.subscribe());
+    await assert.rejects(session.run("hi", { limits: { maxInputTokens: 10 } }), (error: unknown) => {
+      assert.ok(error instanceof AgentRunError);
+      assert.equal(error.result.limit?.limit, "maxInputTokens");
+      return true;
+    });
+    const observed = await events;
+    const exhausted = observed.filter((event) => event.type === "budget_exhausted");
+    assert.equal(exhausted.length, 1);
+    const [event] = exhausted;
+    assert.ok(event);
+    assert.equal(event.limit, "maxInputTokens");
+    assert.equal(event.consumed.inputTokens, 12);
+    assert.equal(event.consumed.turns, 2);
+    assert.equal(event.recentToolCalls.length, 1);
+    const [call] = event.recentToolCalls;
+    assert.ok(call);
+    assert.match(call.argHash, /^sha256:[a-f0-9]{64}$/);
+    assert.equal(JSON.stringify(event).includes(secret), false, "raw arguments never enter the attribution event");
   });
 });

@@ -87,6 +87,11 @@ await runEmbeddingsConformance({
   bridge structurally (`createAlibabaEmbedder` remains assignable to `Embedder`
   without importing it). The contract is a superset: it adds usage and per-item
   error mapping.
+- The same host-seam posture covers local inference in retrieval: the RAG local
+  reranker (`resolveReranker({ kind: "local" })` / `createLocalReranker`) runs a
+  cross-encoder in the host process through a `LocalRerankRuntime`, so no
+  inference dependency name enters any manifest — see
+  [RAG local reranker](rag.md#local-reranker).
 - Adapters never auto-chunk: a batch over the provider cap rejects with
   `batch_too_large`, so `embedBatched`-style callers own batching and preserve
   per-item error attribution.

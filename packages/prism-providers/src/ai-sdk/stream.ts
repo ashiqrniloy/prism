@@ -1,6 +1,7 @@
 import type { LanguageModelV4StreamPart, LanguageModelV4Usage } from "@ai-sdk/provider";
 import type { ProviderEvent, SecretRedactor, ToolCallAuthority, Usage } from "@arnilo/prism";
 import {
+  mapProviderStopReason,
   providerDone,
   providerError,
   providerTextDelta,
@@ -76,7 +77,10 @@ export const AI_SDK_STREAM_PART_MAPPINGS = {
   "response-metadata": (part) => (part.id ? [{ type: "message_start", messageId: part.id }] : []),
   finish: (part) => {
     const usage = mapUsage(part.usage);
-    return usage ? [providerUsage(usage), providerDone(usage)] : [providerDone()];
+    // V4 finish reasons are `{ unified, raw }`; tolerate a bare string from older providers.
+    const unified = typeof part.finishReason === "string" ? part.finishReason : part.finishReason?.unified;
+    const stopReason = unified ? mapProviderStopReason(unified) : undefined;
+    return usage ? [providerUsage(usage), providerDone(usage, stopReason)] : [providerDone(undefined, stopReason)];
   },
   error: (part, state) => [toErrorEvent(part.error, state.redactor)],
   raw: () => [], // Transport diagnostics are neither normalized content nor safe telemetry.

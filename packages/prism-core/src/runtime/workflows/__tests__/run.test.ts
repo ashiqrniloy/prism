@@ -645,6 +645,147 @@ describe("runWorkflow", () => {
     assert.equal(executions, 1);
   });
 
+  it("runs restore hooks before a resume applies and audits them on workflow_resumed", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const events: WorkflowEvent[] = [];
+    let executions = 0;
+    const publish: ToolDefinition = {
+      name: "publish",
+      parameters: {},
+      async execute() {
+        executions += 1;
+        return { toolCallId: "publish-restore", name: "publish", value: "published" };
+      },
+    };
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "restore-hooks",
+      nodes: {
+        publish: toolNode({
+          tool: publish,
+          args: async () => ({ artifactId: "a1" }),
+          approval: { reason: "publish release" },
+        }),
+      },
+    });
+    const suspended = await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "restore-hooks-run",
+      metadata: { gitCommit: "commit-1", docVersion: "v12" },
+    });
+    assert.equal(suspended.status, "suspended");
+
+    const order: string[] = [];
+    const seen: unknown[] = [];
+    const resumed = await resumeWorkflow(
+      workflow,
+      { runId: suspended.runId },
+      {
+        checkpoints,
+        resume: { decision: "approve", expectedVersion: suspended.version },
+        onEvent: (event) => events.push(event),
+        restoreHooks: [
+          async function restoreGit(context) {
+            seen.push(context);
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            order.push("git");
+          },
+          function restoreDocs() {
+            order.push("docs");
+          },
+        ],
+      },
+    );
+
+    assert.deepEqual(order, ["git", "docs"]);
+    assert.equal(seen.length, 1);
+    const context = seen[0] as {
+      workflowId: string;
+      runId: string;
+      version: number;
+      status: string;
+      metadata?: Record<string, unknown>;
+      checkpoint: { value: { metadata?: unknown } };
+    };
+    assert.equal(context.workflowId, "restore-hooks");
+    assert.equal(context.runId, suspended.runId);
+    assert.equal(context.version, suspended.version);
+    assert.equal(context.status, "suspended");
+    assert.deepEqual(context.metadata, { gitCommit: "commit-1", docVersion: "v12" });
+    assert.deepEqual(context.checkpoint.value.metadata, { gitCommit: "commit-1", docVersion: "v12" });
+    assert.equal(resumed.status, "succeeded");
+    assert.equal(executions, 1);
+    const audit = events.find((event) => event.type === "workflow_resumed");
+    assert.ok(audit && audit.type === "workflow_resumed");
+    assert.deepEqual(
+      audit.restore?.hooks.map((entry) => entry.hook),
+      ["restoreGit", "restoreDocs"],
+    );
+    // The sidecar map is not re-stated by the host and survives the resume.
+    const stored = await getWorkflowRun(checkpoints, { workflowId: "restore-hooks", runId: suspended.runId });
+    assert.deepEqual(stored?.value.metadata, { gitCommit: "commit-1", docVersion: "v12" });
+  });
+
+  it("aborts a workflow resume when a restore hook fails, leaving the checkpoint untouched", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    let executions = 0;
+    const publish: ToolDefinition = {
+      name: "publish",
+      parameters: {},
+      async execute() {
+        executions += 1;
+        return { toolCallId: "publish-restore-fail", name: "publish", value: "published" };
+      },
+    };
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "restore-hooks-fail",
+      nodes: {
+        publish: toolNode({
+          tool: publish,
+          args: async () => ({ artifactId: "a1" }),
+          approval: { reason: "publish release" },
+        }),
+      },
+    });
+    const suspended = await runWorkflow(workflow, null, { checkpoints, runId: "restore-hooks-fail-run" });
+    assert.equal(suspended.status, "suspended");
+
+    const order: string[] = [];
+    await assert.rejects(
+      resumeWorkflow(
+        workflow,
+        { runId: suspended.runId },
+        {
+          checkpoints,
+          resume: { decision: "approve", expectedVersion: suspended.version },
+          restoreHooks: [
+            function restoreGit() {
+              order.push("git");
+            },
+            function restoreDocs() {
+              throw new Error("docs store unavailable");
+            },
+            function neverRuns() {
+              order.push("never");
+            },
+          ],
+        },
+      ),
+      (error: unknown) =>
+        error instanceof Error &&
+        "code" in error &&
+        (error as { code: string }).code === "ERR_PRISM_CHECKPOINT_RESTORE" &&
+        (error as { hook?: string }).hook === "restoreDocs" &&
+        /docs store unavailable/.test(error.message),
+    );
+    assert.deepEqual(order, ["git"]);
+    assert.equal(executions, 0);
+    const after = await getWorkflowRun(checkpoints, { workflowId: "restore-hooks-fail", runId: suspended.runId });
+    assert.equal(after?.value.status, "suspended");
+    assert.equal(after?.version, suspended.version);
+  });
+
   it("checkpoints and resumes within process after failure", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     let shouldFail = true;

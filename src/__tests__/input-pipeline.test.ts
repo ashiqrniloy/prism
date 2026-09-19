@@ -594,6 +594,80 @@ describe("context resolution and prompt composition", () => {
     assert.equal(text(full.messages.at(-1)!)!, "Ask");
   });
 
+  it("keeps late skill bodies append-only and reuses their segment positions", async () => {
+    const loaded = createLoadedSkillSet();
+    const tailSegments = new Map<string, Message>();
+    const alpha = { name: "alpha", description: "Alpha catalog", instructions: "Alpha body" };
+    const beta = { name: "beta", description: "Beta catalog", instructions: "Beta body" };
+    const common = {
+      model: { provider: "mock", model: "demo", capabilities: { tools: true } },
+      input: "Ask",
+      skills: [alpha, beta],
+      skillsDisclosure: "progressive" as const,
+      loadedSkills: loaded,
+      tailSegments,
+    };
+    const catalog = await assembleProviderInput(common);
+    loaded.add("beta");
+    const betaLoaded = await assembleProviderInput(common);
+    loaded.add("alpha");
+    const bothLoaded = await assembleProviderInput(common);
+    const upgraded = await assembleProviderInput({ ...common, skills: [alpha, { ...beta, instructions: "Beta body v2" }] });
+    const bodyIndexes = (messages: readonly Message[]) =>
+      messages.flatMap((message, index) => (text(message)?.includes(" body") ? [index] : []));
+    const bodyTexts = (messages: readonly Message[]) =>
+      messages.flatMap((message) => {
+        const value = text(message);
+        return value?.includes(" body") ? [value] : [];
+      });
+
+    assert.equal(bodyIndexes(catalog.messages).length, 0);
+    assert.deepEqual(
+      betaLoaded.messages.slice(0, bodyIndexes(betaLoaded.messages)[0]),
+      bothLoaded.messages.slice(0, bodyIndexes(bothLoaded.messages)[0]),
+      "loading alpha appends after beta instead of replacing its prompt position",
+    );
+    assert.deepEqual(bodyTexts(bothLoaded.messages), ["Skill beta:\nBeta body", "Skill alpha:\nAlpha body"]);
+    assert.deepEqual(
+      bodyTexts(upgraded.messages),
+      ["Skill beta:\nBeta body v2", "Skill alpha:\nAlpha body"],
+      "re-derivation replaces only beta's existing segment",
+    );
+    assert.equal(tailSegments.size, 2, "reloading a segment never grows the tail");
+  });
+
+  it("moves URI resources into their reusable tail segment", async () => {
+    const tailSegments = new Map<string, Message>();
+    let body = "first body";
+    const resourceLoader: ResourceLoader = {
+      async load(uri) {
+        return { uri, text: body };
+      },
+    };
+    const common = {
+      model: { provider: "mock", model: "demo" },
+      input: "Ask",
+      resourceUris: ["package://demo/reference.md"],
+      resourceLoader,
+      tailSegments,
+    };
+    const first = await assembleProviderInput(common);
+    body = "second body";
+    const updated = await assembleProviderInput(common);
+    const resourceIndex = (messages: readonly Message[]) =>
+      messages.findIndex((message) => text(message)?.startsWith("Resource package://demo/reference.md"));
+    const firstIndex = resourceIndex(first.messages);
+    const updatedIndex = resourceIndex(updated.messages);
+
+    assert.equal(firstIndex, first.messages.length - 1);
+    assert.equal(updatedIndex, firstIndex);
+    assert.deepEqual(first.messages.slice(0, firstIndex), updated.messages.slice(0, updatedIndex));
+    const updatedMessage = updated.messages[updatedIndex];
+    assert.ok(updatedMessage, "updated resource message must exist in the tail");
+    assert.match(text(updatedMessage) ?? "", /second body/);
+    assert.equal(tailSegments.size, 1);
+  });
+
   it("legacy prompt layout preserves prior whole-prompt ordering", async () => {
     const tool: ToolDefinition = { name: "echo", execute: () => ({ toolCallId: "c", name: "echo" }) };
     const request = await assembleProviderInput({

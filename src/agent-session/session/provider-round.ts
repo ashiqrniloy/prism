@@ -1,25 +1,33 @@
 /** Provider-round phase of runInternal (plan 059). */
 
+import { resolveInputCap } from "../../attention-compiler.js";
+import { cacheUsageReport } from "../../cache-helpers.js";
+import { estimateMessageTokens } from "../../context-budget.js";
 import type {
   ContentBlock,
   CostCatalog,
+  Message,
   ModelConfig,
   ProviderEvent,
   ProviderRequest,
+  ProviderStopReason,
   ProviderTurnMetadata,
   ProviderTurnResult,
   RetryMiddlewarePayload,
   RunOptions,
   ToolCallContent,
   ToolResult,
+  TurnBudgets,
   Usage,
   UsageRecord,
 } from "../../contracts.js";
 import { assertGuardrailsAllowed, GuardrailError, runGuardrails } from "../../guardrails.js";
+import { type BeforeProviderTurnPayload, validateDeterministicTurnAnswer } from "../../middleware.js";
 import { createProviderTurnMetadata, readProviderHttpStatus } from "../../observability.js";
 import { providerError, providerToolCallDeltaContent } from "../../provider-events.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets } from "../../redaction.js";
 import { createDefaultRetryPolicy, waitForRetry } from "../../retry.js";
+import { estimateTextTokensForFamily } from "../../usage-estimation.js";
 import {
   bridgeAbort,
   errorFromInfo,
@@ -52,6 +60,49 @@ function pushCoalescedContent(content: ContentBlock[], block: ContentBlock): voi
   content.push(block);
 }
 
+/** Resolve the per-request input cap for turn-budget metadata (plan 087 T1). A model without a
+ *  derivable cap (or a bad attention setting on an unrelated run) omits the field instead of
+ *  failing an emitting turn; the attention compiler, when enabled, is the cap authority. */
+export function resolveTurnInputCap(session: SessionHost, model: ModelConfig): number | undefined {
+  const setting = session.agent.config.attentionCompiler;
+  const options = typeof setting === "object" && setting !== null ? setting : undefined;
+  try {
+    return resolveInputCap(options ? { maxInputTokens: options.maxInputTokens, reserveTokens: options.reserveTokens } : {}, model);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Effective budget snapshot at turn end (plan 087 T1): O(1) from the run limit tracker. */
+function turnBudgets(session: SessionHost, model: ModelConfig, usage: Usage | undefined): TurnBudgets | undefined {
+  const tracker = session.activeLimits;
+  if (!tracker) return undefined;
+  const snapshot = tracker.snapshot();
+  const inputCap = resolveTurnInputCap(session, model);
+  const runInputBudget = tracker.limits.maxInputTokens;
+  return {
+    ...(usage?.inputTokens === undefined ? {} : { inputTokens: usage.inputTokens }),
+    ...(inputCap === undefined ? {} : { inputCap }),
+    ...(runInputBudget === null ? {} : { runInputBudget }),
+    runInputUsed: snapshot.inputTokens,
+    turns: snapshot.turns,
+    maxTurns: tracker.limits.maxTurns,
+  };
+}
+
+function cacheMetadata(usage: Usage | undefined) {
+  const cache = cacheUsageReport(usage);
+  return cache === undefined ? {} : { cache };
+}
+
+/** Native reason wins, except a generic `end_turn` on a turn that produced tool calls: protocols
+ *  with one generic completion value (Google `STOP`) are tool-call turns by content (plan 087 T1). */
+function normalizeTurnStopReason(native: ProviderStopReason | undefined, calls: readonly ToolCallContent[]): ProviderStopReason {
+  if (native === undefined) return calls.length > 0 ? "tool_calls" : "end_turn";
+  if (native === "end_turn" && calls.length > 0) return "tool_calls";
+  return native;
+}
+
 /**
  * Plan 062: price usage through the host's {@link CostCatalog} when the provider
  * did not report a cost itself. Stale/unknown quotes, catalog failures, or
@@ -75,15 +126,27 @@ async function withCatalogCost(catalog: CostCatalog | undefined, model: ModelCon
   }
 }
 
-export async function recordProviderUsage(ctx: RoundContext, turnUsage: Usage | undefined, turn: number, attempt: number): Promise<void> {
+export async function recordProviderUsage(
+  ctx: RoundContext,
+  turnUsage: Usage | undefined,
+  turn: number,
+  attempt: number,
+  request?: ProviderRequest,
+): Promise<Usage | undefined> {
   const { session, limits, runUsage, runId } = ctx;
-  const usage = turnUsage
-    ? await withCatalogCost(session.agent.config.costCatalog, ctx.model, turnUsage, ctx.controller.signal)
-    : undefined;
-  limits.recordUsage(usage);
-  if (!usage) return;
-  runUsage.add(usage);
-  if (!session.activeLedger) return;
+  const usage = turnUsage ?? estimateTurnUsage(session, ctx.model, request);
+  // An estimate is never priced: a catalog quote on estimated tokens would invent billing.
+  const effective =
+    usage && usage.estimated !== true
+      ? await withCatalogCost(session.agent.config.costCatalog, ctx.model, usage, ctx.controller.signal)
+      : usage;
+  limits.recordUsage(effective);
+  if (!effective) return undefined;
+  if (effective.inputTokens !== undefined) {
+    session.activeInputMeter = { tokens: effective.inputTokens, source: effective.estimated === true ? "estimated" : "reported" };
+  }
+  runUsage.add(effective);
+  if (!session.activeLedger) return effective;
   const usageRecord: UsageRecord = {
     id: randomId("usage"),
     sessionId: session.id,
@@ -91,11 +154,111 @@ export async function recordProviderUsage(ctx: RoundContext, turnUsage: Usage | 
     scope: "provider_turn",
     turn,
     attempt,
-    usage,
+    usage: effective,
     recordedAt: new Date().toISOString(),
     ...session.activeOwnership,
   };
   await session.activeLedger.appendUsage(redactRunLedgerRecord(usageRecord, session.activeRedactor));
+  return effective;
+}
+
+/**
+ * Plan 091 T2 missing-usage fallback: when the provider reported nothing and the
+ * agent did not turn estimation off, label an estimate of the turn's own request
+ * (messages + tool declarations + context blocks). Returns `undefined` when
+ * estimation is off or the request is unavailable — absent stays absent.
+ */
+function estimateTurnUsage(session: SessionHost, model: ModelConfig, request: ProviderRequest | undefined): Usage | undefined {
+  if (!request || session.agent.config.usageEstimation === "off") return undefined;
+  const estimate = estimateMessageTokens(request.messages, model.model);
+  const extras =
+    request.tools?.length || request.context?.length ? JSON.stringify({ tools: request.tools, context: request.context }) : undefined;
+  return {
+    inputTokens: estimate.tokens + (extras === undefined ? 0 : estimateTextTokensForFamily(extras, model.model)),
+    estimated: true,
+    confidence: estimate.confidence,
+  };
+}
+
+/** Latest user-role text in the assembled request; steered messages included. */
+function lastUserText(messages: readonly Message[]): string {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (message?.role !== "user") continue;
+    return message.content.map((block) => (block.type === "text" ? block.text : "")).join("");
+  }
+  return "";
+}
+
+/**
+ * Plan 096: host middleware may answer the turn deterministically at the `beforeProviderTurn` seam —
+ * no provider request, no usage, mandatory provenance. `undefined` sends the turn to the provider
+ * unchanged; a malformed answer fails the run closed instead of falling through to the provider.
+ */
+export async function resolveDeterministicTurn(
+  session: SessionHost,
+  request: ProviderRequest,
+  runId: string,
+  turn: number,
+  signal: AbortSignal,
+  toolResults: readonly ToolResult[] = [],
+): Promise<ProviderTurnResult | undefined> {
+  const middleware = session.agent.config.middleware;
+  if (!middleware) return undefined;
+  const payload = await middleware.run<BeforeProviderTurnPayload>("beforeProviderTurn", {
+    sessionId: session.id,
+    runId,
+    turn,
+    userText: lastUserText(request.messages),
+  });
+  const answer = payload?.answer;
+  if (answer === undefined) return undefined;
+  const validated = validateDeterministicTurnAnswer(answer);
+  throwIfAborted(signal);
+  const messageId = randomId("msg");
+  // Same response-byte axis as provider output: a host answer must not bypass a run ceiling.
+  session.activeLimits?.charge("maxResponseBytes", jsonBytes(validated.content));
+  if (session.activeGuardrails?.output?.length) {
+    assertGuardrailsAllowed(
+      await runGuardrails({
+        stage: "output",
+        guardrails: session.activeGuardrails,
+        value: { content: validated.content, calls: [], messageId, started: true, usage: undefined },
+        context: {
+          sessionId: session.id,
+          runId,
+          metadata: session.activeMetadata ?? {},
+          signal,
+          toolResults,
+        },
+        redactor: session.activeRedactor,
+        emit: (event) => session.emit(event),
+      }),
+    );
+  }
+  session.emit({
+    type: "deterministic_turn",
+    sessionId: session.id,
+    runId,
+    turn,
+    middleware: validated.provenance.middleware,
+  });
+  session.emit({
+    type: "message_started",
+    sessionId: session.id,
+    runId,
+    message: { id: messageId, role: "assistant", content: [] },
+  });
+  for (const block of validated.content) session.emit({ type: "message_delta", sessionId: session.id, runId, content: block });
+  // Provenance rides the message into the store (plan 096 Task 2): the transcript alone proves no model ran.
+  return {
+    content: validated.content,
+    calls: [],
+    messageId,
+    started: true,
+    usage: undefined,
+    metadata: { deterministic: validated.provenance },
+  };
 }
 
 export async function generateWithRetry(
@@ -106,7 +269,7 @@ export async function generateWithRetry(
   signal: AbortSignal,
   requestSecrets: readonly (string | undefined)[] = [],
   turn = 1,
-  recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<void>,
+  recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<Usage | undefined>,
   toolResults: readonly ToolResult[] = [],
 ): Promise<ProviderTurnResult> {
   const retry = mergeRetry(session.agent.config.retry, options.retry);
@@ -143,7 +306,7 @@ export async function generateProviderTurn(
   secrets: readonly (string | undefined)[] = [],
   turn = 1,
   attempt = 1,
-  recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<void>,
+  recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<Usage | undefined>,
   toolResults: readonly ToolResult[] = [],
 ): Promise<ProviderTurnResult> {
   session.activeLimits!.charge("maxProviderAttempts");
@@ -165,17 +328,21 @@ export async function generateProviderTurn(
   let messageId: string | undefined;
   let started = false;
   let usage: Usage | undefined;
+  let nativeStopReason: ProviderStopReason | undefined;
   let usageRecorded = false;
+  let effectiveUsage: Usage | undefined;
   const bufferedOutput: import("../../contracts.js").AgentEvent[] = [];
   const bufferOutput = Boolean(session.activeGuardrails?.output?.length || session.activeLimitOutputBuffer);
   const emitOutput = (event: import("../../contracts.js").AgentEvent) => {
     if (bufferOutput) bufferedOutput.push(event);
     else session.emit(event);
   };
-  const recordTurnUsage = async () => {
-    if (usageRecorded) return;
+  const recordTurnUsage = async (): Promise<Usage | undefined> => {
+    if (usageRecorded) return effectiveUsage;
     usageRecorded = true;
-    await recordUsage?.(usage, turn, attempt);
+    // The seam may return a labeled estimate (plan 091 T2); without a callback the reported value stands.
+    effectiveUsage = (await recordUsage?.(usage, turn, attempt)) ?? usage;
+    return effectiveUsage;
   };
   const turnAbort = new AbortController();
   const cleanupTurn = bridgeAbort(signal, turnAbort);
@@ -194,6 +361,7 @@ export async function generateProviderTurn(
       if (event.type === "usage") usage = event.usage;
       if (event.type === "done") {
         usage = event.usage ?? usage;
+        nativeStopReason = event.stopReason;
         break;
       }
       if (event.type === "message_start") {
@@ -249,10 +417,15 @@ export async function generateProviderTurn(
       sessionId: session.id,
       runId,
       turn,
-      metadata: buildMetadata({ latencyMs }),
-      usage,
+      metadata: buildMetadata({
+        latencyMs,
+        stopReason: normalizeTurnStopReason(nativeStopReason, calls),
+        budgets: turnBudgets(session, request.model, effectiveUsage),
+        ...cacheMetadata(effectiveUsage),
+      }),
+      usage: effectiveUsage,
     });
-    return { content, calls, messageId, started, usage };
+    return { content, calls, messageId, started, usage: effectiveUsage };
   } catch (error) {
     if (isSteerSoftInterrupt(error) || isSteerSoftInterrupt(turnAbort.signal.reason)) {
       await recordTurnUsage();
@@ -262,8 +435,13 @@ export async function generateProviderTurn(
         sessionId: session.id,
         runId,
         turn,
-        metadata: buildMetadata({ latencyMs }),
-        usage,
+        metadata: buildMetadata({
+          latencyMs,
+          stopReason: "abort",
+          budgets: turnBudgets(session, request.model, effectiveUsage),
+          ...cacheMetadata(effectiveUsage),
+        }),
+        usage: effectiveUsage,
       });
       throw new SteerSoftInterrupt();
     }
@@ -275,8 +453,14 @@ export async function generateProviderTurn(
       sessionId: session.id,
       runId,
       turn,
-      metadata: buildMetadata({ latencyMs, httpStatus: readProviderHttpStatus(info) }),
-      usage,
+      metadata: buildMetadata({
+        latencyMs,
+        httpStatus: readProviderHttpStatus(info),
+        stopReason: signal.aborted || turnAbort.signal.aborted ? "abort" : "provider_error",
+        budgets: turnBudgets(session, request.model, effectiveUsage),
+        ...cacheMetadata(effectiveUsage),
+      }),
+      usage: effectiveUsage,
       error: info,
     });
     if (error instanceof GuardrailError || error instanceof ProviderTurnFailure) throw error;

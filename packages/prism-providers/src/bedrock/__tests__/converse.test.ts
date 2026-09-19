@@ -159,6 +159,8 @@ describe("@arnilo/prism-providers/bedrock native Converse route", () => {
     });
 
     const events = await assertProviderStreamConforms({ provider, request: textRequest({ tools: [weatherTool] }) });
+    const streamDone = events.at(-1);
+    assert.equal(streamDone?.type === "done" ? streamDone.stopReason : undefined, "tool_calls");
     assert.equal(
       seen.url,
       "https://vpce-123.bedrock-runtime.eu-west-1.vpce.amazonaws.com/model/us.anthropic.claude-haiku-4-5-20251001-v1%3A0/converse-stream",
@@ -257,6 +259,8 @@ describe("@arnilo/prism-providers/bedrock native Converse route", () => {
       events.some((event) => event.type === "content_delta" && event.content.type === "thinking" && event.content.signature === "sig"),
     );
     assert.ok(events.some((event) => event.type === "tool_call" && event.call.id === "tu_2"));
+    const responseDone = events.at(-1);
+    assert.equal(responseDone?.type === "done" ? responseDone.stopReason : undefined, "tool_calls");
     assertUsageAccounting(events, { inputTokens: 5, outputTokens: 6 });
   });
 

@@ -234,6 +234,11 @@ export interface RetrieveContextOptions {
   readonly filter?: JsonObject;
   /** Host-verified ACL. Not `filter`. Unsupported stores fail closed. */
   readonly authorization?: RagAccessConstraint;
+  /**
+   * Audit sink for fail-closed ACL denials (revoked/absent grants and store errors).
+   * The per-query recheck itself is not optional: this only observes it.
+   */
+  readonly onAccessDenied?: (denial: AccessDenial) => void;
   readonly maxResultBytes?: number;
   readonly maxContextTokens?: number;
   readonly maxMetadataBytes?: number;
@@ -254,6 +259,20 @@ export interface RagContextResult {
   readonly hits: readonly RagHit[];
   readonly citations: readonly RagCitation[];
   readonly truncated: boolean;
+}
+
+/** Why retrieval dropped a source at the ACL gate: `no_grant` also covers revoked and version-mismatched grants (the store boolean cannot separate them). */
+export type AccessDenialReason = "no_grant" | "check_failed";
+
+export interface AccessDenial {
+  readonly sourceId: string;
+  /** Exact scope whose grant was checked, in `MemoryScope` shape. */
+  readonly scope: { readonly tenantId: string; readonly resourceId: string; readonly threadId: string };
+  readonly reason: AccessDenialReason;
+  /** Hits this query withheld for the source (pre-filter plus post-rerank drops). */
+  readonly hits: number;
+  /** Redacted store error, present only when reason is `check_failed`. */
+  readonly error?: string;
 }
 
 export interface RagContextProviderOptions extends Omit<RetrieveContextOptions, "signal"> {

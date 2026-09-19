@@ -175,6 +175,13 @@
         ],
         "mode": ""
       },
+      "./testing/prefix-stability-conformance": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/prefix-stability-conformance.test.ts"
+        ],
+        "mode": ""
+      },
       "./testing/tool-conformance": {
         "suites": [
           "scripts/e2e-full-surface.test.mjs",

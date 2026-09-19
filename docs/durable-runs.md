@@ -26,6 +26,47 @@ For approval suspension and batch decisions, see [Agent/session runtime § Durab
 | `persistSessionState` | Also carries loaded-skill names and the attention sticky frontier into each turn checkpoint. |
 | `includeSkillBodies` | Alongside `persistSessionState`, carries exact skill instructions. |
 | `maxStateBytes` | Save-side byte ceiling (default 256 KB, hard 1 MB). Applies to every turn checkpoint identically. |
+| `checkpointMetadata` | Sidecar map (`Record<string, string>`, ≤ 4 KB, redacted) written with every checkpoint record — never inside the state value, so it costs no `maxStateBytes` budget. A function is resolved at each write, so a host closure can pin state that moves mid-run (git commit, document version). |
+
+```ts
+let head = "commit-1";
+await session.run("investigate", {
+  runState: {
+    checkpoints,
+    definitionRevision: "2026-09-19.1",
+    checkpointMetadata: () => ({ gitCommit: head, docVersion: "v12" }),
+  },
+});
+head = "commit-2"; // the next checkpoint records the new commit
+```
+
+`AgentRunLifecycle.status()` and `loadAgentRunState()` return the record's `metadata`; `resume` accepts `checkpointMetadata` to annotate the claim write, and without it the recorded map is preserved byte-for-byte across the claim and every later write. Legacy records without metadata read as `undefined` — an oversize or non-string map reads as absent rather than failing the resume.
+
+### Restore hooks (all-or-nothing)
+
+`resume` also accepts `restoreHooks`: host code that puts each external layer recorded in `checkpointMetadata` back where the checkpoint says it was. Hooks run sequentially before the claim write, each receiving the checkpoint context (`runId`, `version`, `status`, the redacted `metadata` map, and the raw `checkpoint` record) plus an `AbortSignal` that fires on host abort or the per-hook timeout.
+
+```ts
+await lifecycle.resume(ref, { decision: "approve", expectedVersion }, {
+  restoreHooks: [
+    async function restoreGit(cp) {
+      await git.reset(cp.metadata?.gitCommit);
+    },
+    async function restoreDocs(cp) {
+      await docs.restoreVersion(cp.metadata?.docVersion);
+    },
+  ],
+  restoreHookTimeoutMs: 10_000, // default, per hook
+});
+```
+
+All-or-nothing:
+
+- The first hook that throws or overruns `restoreHookTimeoutMs` (default 10 s, `DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS`) aborts the resume with `CheckpointRestoreError` — `code: "ERR_PRISM_CHECKPOINT_RESTORE"`, `hook` naming the layer, `cause` the original error. Later hooks do not run.
+- The claim write and the conversation replay happen only after every hook succeeds, so a failed restore leaves the checkpoint byte-for-byte as it was — still resumable — instead of claiming a half-restored world. The server maps the failure to `409`/`ERR_PRISM_CHECKPOINT_RESTORE`.
+- Hooks run on claiming resumes only; `deny` and resuspend paths never call them.
+- The claim's `agent_resumed` event carries the audit: `restore: { hooks: [{ hook, durationMs }], durationMs }`.
+- Register once on the lifecycle (`createAgentRunLifecycle({ restoreHooks })`) or per resume; lifecycle-registered hooks run first. No hooks ⇒ no call, no overhead, no `restore` field.
 
 Resume uses `resumeAgentRun` / `resumeAgentRunStream` with `{ expectedVersion, decision: "continue" }`. The checkpoint records its own cadence, so a continued run keeps writing turn checkpoints without the host repeating `checkpointPolicy`.
 
@@ -82,6 +123,7 @@ The complete network-free demo — one tool execution across the crash, resumed 
 ## Security and performance notes
 
 - `"continue"` is a host-API action only. Prism's AG-UI interrupt resolution accepts `approve`/`deny` only, channel adapters resume with `deny`, and there is no server route that forwards an untrusted `continue`; adding one would create an approval-bypass path.
+- Restore hooks are trusted host code running outside the sandbox: they see the checkpoint's (already redacted) sidecar map and are bounded only by their timeout. Because they run before the claim write, a timeout cannot leave a claimed checkpoint pointing at un-restored external state.
 - Every gate that protects a suspension protects a continue resume: exact ownership, fencing token, fingerprint, revision, CAS version, and the absence of unresolved work. A running checkpoint is a recovery point, never an authorization.
 - Cost is one bounded checkpoint write per provider turn (same redaction and `maxStateBytes` ceiling as suspension writes). A 40-turn investigation under `"every-turn"` therefore writes 40 checkpoint rows plus the terminal save, while the default `"decision"` policy writes at most one row per approval or suspension. Each row carries the run frontier, counters, run limits, and loop snapshot — not the message history, which stays in the session store and is pointed at by `leafId` — so the store grows with turns, not with turns × transcript; a state that would exceed `maxStateBytes` (default 256 KiB, `DEFAULT_MAX_AGENT_RUN_STATE_BYTES`) fails closed rather than truncating. Pick `"every-turn"` when a worker restart must cost at most one turn of thinking, and leave the default for runs with many cheap turns.
 - Checkpoints never contain provider objects, callbacks, signals, credentials, or raw secrets; the payload is bounded and redacted like any other durable state.

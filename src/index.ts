@@ -17,14 +17,25 @@ export type {
   AgentRunLifecycleStreamRequest,
 } from "./agent-run-lifecycle.js";
 export { createAgentRunLifecycle } from "./agent-run-lifecycle.js";
+export type {
+  CheckpointRestoreAudit,
+  CheckpointRestoreAuditEntry,
+  CheckpointRestoreHook,
+  RunCheckpointRestoreHooksOptions,
+} from "./checkpoint-restore.js";
+export { CheckpointRestoreError, DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS, runCheckpointRestoreHooks } from "./checkpoint-restore.js";
 export type { PendingToolCall, StoredAgentRunState } from "./agent-run-state.js";
 export {
   AGENT_RUN_STATE_NAMESPACE,
   AGENT_RUN_STATE_SCHEMA_VERSION,
   agentFingerprint,
+  boundCheckpointMetadata,
   DEFAULT_MAX_AGENT_RUN_STATE_BYTES,
   HARD_MAX_AGENT_RUN_STATE_BYTES,
   loadAgentRunState,
+  MAX_AGENT_RUN_METADATA_BYTES,
+  readCheckpointMetadata,
+  resolveCheckpointMetadata,
 } from "./agent-run-state.js";
 export { createAgent, createAgentSession, resumeAgentRun, resumeAgentRunStream } from "./agents.js";
 export type {
@@ -189,7 +200,9 @@ export type {
   AttentionReport,
   CompactionTrigger,
   CompactionTriggerContext,
+  ContextMeter,
   DecisionScope,
+  ModelFamily,
   NestedRunApproval,
   NestedRunOutcome,
   NestedRunRef,
@@ -209,6 +222,8 @@ export type {
   RunLimitName,
   SecureAgentOptions,
   StickyDecision,
+  TokenEstimate,
+  TokenEstimateConfidence,
   ToolCallAuthority,
   ToolEffectClassifier,
   ToolEffectDeclaration,
@@ -427,10 +442,22 @@ export {
   FieldPolicyError,
 } from "./field-policy.js";
 export type {
+  GuardrailPackRow,
   GuardrailRunResult,
   RunGuardrailsOptions,
 } from "./guardrails.js";
-export { assertGuardrailsAllowed, GuardrailError, MAX_GUARDRAIL_CONCURRENCY, runGuardrails } from "./guardrails.js";
+export {
+  assertGuardrailsAllowed,
+  compileGuardrailPacks,
+  describeGuardrailPacks,
+  GuardrailError,
+  GuardrailPackError,
+  MAX_GUARDRAIL_CONCURRENCY,
+  MAX_GUARDRAIL_PACK_RULES,
+  MAX_GUARDRAIL_PACKS,
+  runGuardrails,
+} from "./guardrails.js";
+export { BUILT_IN_GUARDRAIL_PACK_IDS } from "./guardrail-packs/index.js";
 export type {
   AgentIdentity,
   AssertIdentityActiveOptions,
@@ -477,8 +504,17 @@ export { resolveInstructionInjectors, runInstructionInjectors } from "./instruct
 export { createMemoryLeaseStore, LEASE_CONFLICT_CODE, LeaseConflictError } from "./leases.js";
 export type { ManifestContributionDeclaration, ManifestContributionKind, ManifestResourceDeclaration, PrismManifest } from "./manifests.js";
 export { definePrismManifest, parsePrismManifest } from "./manifests.js";
-export type { Middleware, MiddlewareHookName, MiddlewareNext, MiddlewareRegistry, MiddlewareRegistryOptions } from "./middleware.js";
-export { createMiddlewareRegistry } from "./middleware.js";
+export type {
+  BeforeProviderTurnPayload,
+  DeterministicTurnAnswer,
+  DeterministicTurnProvenance,
+  Middleware,
+  MiddlewareHookName,
+  MiddlewareNext,
+  MiddlewareRegistry,
+  MiddlewareRegistryOptions,
+} from "./middleware.js";
+export { createMiddlewareRegistry, DeterministicTurnError } from "./middleware.js";
 export type { MockProviderOptions } from "./mock-provider.js";
 export { createMockProvider } from "./mock-provider.js";
 export type { ModelRegistry, ModelRegistryOptions } from "./models.js";
@@ -529,6 +565,7 @@ export {
   resolvePinnedAddress,
 } from "./pinned-fetch.js";
 export {
+  mapProviderStopReason,
   providerContentDelta,
   providerContinuationRequired,
   providerDone,
@@ -757,6 +794,8 @@ export type {
 } from "./tools.js";
 export { createToolParameterValidator, createToolRegistry, dispatchToolCall, filterTools } from "./tools.js";
 export { trimTrailingSlashes } from "./trim-trailing-slashes.js";
+export type { ModelFamilyTokens } from "./usage-estimation.js";
+export { MODEL_FAMILY_TOKENS, resolveModelFamily } from "./usage-estimation.js";
 export type {
   ResolvedUseCaseModel,
   ResolveUseCaseModelInput,

@@ -24,6 +24,7 @@ node examples/provider-registration.ts
 node examples/provider-resolver.ts
 node examples/cache-aware-prompt-assembly.ts
 node examples/attention-compiler.ts
+node examples/attention-budget-axes.ts
 node examples/neuralwatt-agent-run.ts
 node examples/observational-memory-recall-status-view.ts
 node examples/observational-memory-lifecycle.ts
@@ -32,6 +33,7 @@ node examples/caveman-ponytail.ts
 node examples/graft-extension.ts
 node examples/distributed-events-and-tool-effects.ts
 node examples/external-app-db-backed.ts
+node examples/session-search.ts
 node examples/minimal-host-app.ts
 node examples/custom-builders.ts
 node examples/custom-session-store.ts
@@ -150,7 +152,9 @@ Each demo prints a single JSON line with its result.
 - `openrouter-model-cache-override.ts` — per-model routing/cache overrides.
 - `cache-aware-prompt-assembly.ts` — **demo**: cache-aware stable-prefix assembly and hit-rate reporting across OpenRouter explicit cache hints and NeuralWatt implicit prefix caching, using mocked SSE responses.
 - `attention-compiler.ts` — **demo**: opt-in attention compiler — an under-ratio assembly identical to a compiler-off one, then a stub plus the `attention_compiled` report once the request crosses the ratio (network-free).
+- `attention-budget-axes.ts` — **demo**: budget-capped long run — a 1M window under a 500k run input budget for 24 turns, where the window ratio is unreachable and the cumulative `run_input_ratio` axis opens the fold gate on spend (network-free).
 - `neuralwatt-agent-run.ts` — **demo**: NeuralWatt agent run with tools, reasoning controls, streamed usage cache tokens, and mocked energy/cost telemetry.
+- `tool-narrowing-planes.ts` — **demo**: plane-switched `toolNarrowing` (knowledge/metric/scenario/objects) on one continuing session; `metadata.tools` count + `idsHash` (network-free).
 - `tools.ts` — host-owned tool registry: allow/deny filter + dispatch.
 - `context.ts` — ordered context-provider pipeline.
 - `skills.ts` — skill registry + progressive disclosure activation.
@@ -166,6 +170,7 @@ Each demo prints a single JSON line with its result.
 - `discover-skills.ts` — compile-checked opt-in contribution discovery and registration.
 - `instruction-injection.ts` — compile-checked host-selected instruction injector wiring.
 - `jsonl-stores-branching.ts` — in-memory store + branching; JSONL persistence.
+- `session-search.ts` — **demo**: workspace-scoped session search — SQLite FTS5 hit pointers (`entryId`/`runId`/`turn`/`score`/snippet), annotation search via `kind`, and the JSONL linear-scan fallback returning the same hits (network-free).
 - `compaction.ts` — **demo**: LLM compaction with a mock summarizer provider.
 - `coding-compaction.ts` — **demo**: coding-focused LLM compaction preset with a mock summarizer; raw history remains intact.
 - `observational-memory-recall-status-view.ts` — **demo**: recall tool +

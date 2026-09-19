@@ -1,4 +1,15 @@
-import type { AgentFinishReason, ErrorInfo, SecretRedactor, Usage } from "@arnilo/prism";
+import type {
+  AgentFinishReason,
+  BudgetAxisUsage,
+  BudgetConsumedCounters,
+  ErrorInfo,
+  ProviderStopReason,
+  RunLimitName,
+  TurnBudgets,
+  SecretRedactor,
+  ToolCallSummary,
+  Usage,
+} from "@arnilo/prism";
 import type { WorkflowCheckpointValue, WorkflowEvent } from "../../runtime/workflows/types.js";
 
 // ─── Content-capture policy ───────────────────────────────────────────────────
@@ -19,6 +30,7 @@ export type TimelineContentPolicy = "metadata" | "redacted_io" | "full_io";
 export type ExecutionStepKind =
   | "run"
   | "turn"
+  | "deterministic"
   | "provider"
   | "tool"
   | "guardrail"
@@ -58,6 +70,45 @@ export interface ExecutionStep {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+// ─── Per-turn trace + limit attribution ───────────────────────────────────────
+
+/**
+ * One entry per `turn` step: turn number, timing, provider attempts, cache hit rate, budget snapshot,
+ * and the stop reason of the last provider attempt (`provider_turn_finished` metadata).
+ */
+export interface TimelineTurn {
+  readonly turn: number;
+  readonly status: ExecutionStepStatus;
+  readonly startedAt: string;
+  readonly finishedAt?: string;
+  readonly durationMs?: number;
+  /** Provider attempts folded into this turn, retries included. */
+  readonly providerAttempts: number;
+  /** Cache reads ÷ input tokens across this turn's provider attempts; absent when cache usage is unknown. */
+  readonly cacheHitRate?: number;
+  /** Last provider attempt's recorded O(1) run-budget snapshot; absent on legacy events. */
+  readonly budgets?: TurnBudgets;
+  readonly stopReason?: ProviderStopReason;
+}
+
+/**
+ * Terminal limit attribution (plan 087 T2), joined from `run_limit_exceeded` (`maximum`/`observed`)
+ * and `budget_exhausted` (`consumed`, `closestOtherAxes`, `recentToolCalls`). Present only when the
+ * run died on a run limit; `consumed` and the axes are absent on traces that only recorded the
+ * breach.
+ */
+export interface TimelineExhaustion {
+  readonly limit: RunLimitName;
+  readonly maximum?: number;
+  readonly observed?: number;
+  readonly currency?: string;
+  readonly consumed?: BudgetConsumedCounters;
+  /** Other finite product axes by closeness to their cap, highest `used / cap` first. */
+  readonly closestOtherAxes: readonly BudgetAxisUsage[];
+  /** Last dispatched host tool calls (id + name + `sha256:` argument hash), newest last. */
+  readonly recentToolCalls: readonly ToolCallSummary[];
+}
+
 // ─── ExecutionTimeline ────────────────────────────────────────────────────────
 
 export interface ExecutionTimeline {
@@ -66,6 +117,8 @@ export interface ExecutionTimeline {
   readonly sessionId?: string;
   readonly workflowId?: string;
   readonly workflowRevision?: string;
+  /** Workflow checkpoint sidecar metadata (`WorkflowCheckpointValue.metadata`), present only when projected with a checkpoint. */
+  readonly workflowMetadata?: Readonly<Record<string, unknown>>;
   readonly traceId?: string;
   readonly status: string;
   /** Clean-stop taxonomy when the run stopped on a ceiling or host turn policy (`agent_finished.finishReason`). */
@@ -80,8 +133,14 @@ export interface ExecutionTimeline {
   readonly result?: unknown;
   /** Aggregated run-total usage. */
   readonly usage?: Usage;
+  /** Cache reads ÷ input tokens across all provider attempts; absent when cache usage is unknown. */
+  readonly cacheHitRate?: number;
   /** Flat ordered step array. Tree via parentId. */
   readonly steps: readonly ExecutionStep[];
+  /** Per-turn trace (turn number, timing, attempts, stop reason); absent for workflow timelines. */
+  readonly turns?: readonly TimelineTurn[];
+  /** Terminal limit attribution, present only when the run died on a run limit. */
+  readonly exhaustion?: TimelineExhaustion;
   /** True when at least one step's I/O was omitted due to policy or oversize. */
   readonly redacted: boolean;
   readonly content: TimelineContentPolicy;

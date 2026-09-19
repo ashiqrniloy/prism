@@ -27,7 +27,9 @@ export function errorResponse(error: unknown, limits: ResolvedPrismServerLimits,
             ? { status: 404, code: workflowCode, message: "Not found" }
             : workflowCode === "ERR_PRISM_WORKFLOW_CHECKPOINT"
               ? { status: 409, code: workflowCode, message: "Workflow checkpoint operation rejected" }
-              : workflowCode?.startsWith("ERR_PRISM_DECISION_")
+              : workflowCode === "ERR_PRISM_CHECKPOINT_RESTORE"
+                ? { status: 409, code: workflowCode, message: error instanceof Error ? error.message : "Restore hook failed" }
+                : workflowCode?.startsWith("ERR_PRISM_DECISION_")
                 ? { status: 400, code: workflowCode, message: error instanceof Error ? error.message : "Invalid decision" }
                 : undefined;
   const known = error instanceof PrismServerError;

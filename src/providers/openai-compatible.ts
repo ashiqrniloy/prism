@@ -1,6 +1,7 @@
 import type { AIProvider, JsonObject, Message, ProviderEvent, ProviderRequest, Usage } from "../contracts.js";
 import { type CredentialValueSource, resolveCredentialValue } from "../credentials.js";
 import {
+  mapProviderStopReason,
   providerDone,
   providerError,
   providerTextDelta,
@@ -77,6 +78,7 @@ export async function* openAIChatEvents(
   let usage: Usage | undefined;
   let sawDoneMarker = false;
   let sawFinishReason = false;
+  let finishReason: string | undefined;
   for await (const sseEvent of readSseEvents(body, { signal: options.signal })) {
     if (options.onComment && sseEvent.comments?.length) {
       for (const text of sseEvent.comments) {
@@ -105,7 +107,10 @@ export async function* openAIChatEvents(
     }
 
     for (const choice of parsed.choices ?? []) {
-      if (choice.finish_reason) sawFinishReason = true;
+      if (choice.finish_reason) {
+        sawFinishReason = true;
+        finishReason = choice.finish_reason;
+      }
       const delta = choice.delta ?? {};
       if (typeof delta.content === "string" && delta.content) yield providerTextDelta(delta.content);
       const thinking = delta.reasoning ?? delta.reasoning_content;
@@ -148,7 +153,10 @@ export async function* openAIChatEvents(
   for (const call of tools.values()) {
     yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
   }
-  yield providerDone((options.strictCompletion ?? true) || options.doneUsage ? usage : undefined);
+  yield providerDone(
+    (options.strictCompletion ?? true) || options.doneUsage ? usage : undefined,
+    finishReason === undefined ? undefined : mapProviderStopReason(finishReason),
+  );
 }
 
 interface ToolAccumulator {

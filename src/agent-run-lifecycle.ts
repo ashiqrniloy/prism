@@ -1,11 +1,16 @@
 import { assertValidAgentRunResume, pendingDecisionsOf, resolveRunDecisions } from "./agent-approval.js";
 import type { StoredAgentRunState } from "./agent-run-state.js";
-import { agentFingerprint, loadAgentRunState, publicState, saveAgentRunState } from "./agent-run-state.js";
+import { agentFingerprint, loadAgentRunState, publicState, resolveCheckpointMetadata, saveAgentRunState } from "./agent-run-state.js";
 import { RuntimeAgentSession, throwIfAbortedSignal } from "./agent-session.js";
-import { parseAttentionStickyFrontier } from "./attention-compiler.js";
+import { parseAttentionStickyFrontier, restoreAttentionFoldLedger } from "./attention-compiler.js";
+import type { CheckpointRestoreAudit } from "./checkpoint-restore.js";
+import { runCheckpointRestoreHooks } from "./checkpoint-restore.js";
 import type {
   Agent,
+  AgentCheckpointRestoreHook,
   AgentEvent,
+  AgentRunCheckpointMetadata,
+  AgentRunCheckpointMetadataSource,
   AgentRunRef,
   AgentRunResult,
   AgentRunResume,
@@ -34,6 +39,14 @@ export interface AgentRunLifecycleOptions {
     readonly signal?: AbortSignal;
   }) => AgentRunLifecycleAgent | Promise<AgentRunLifecycleAgent>;
   readonly fencingToken?: number;
+  /**
+   * Plan 094 Task 3: external-state restore hooks, run on every claiming resume before the
+   * checkpoint is claimed. Registered once here because a resume builds its session from the
+   * stored state (there is no live session to register against beforehand).
+   */
+  readonly restoreHooks?: readonly AgentCheckpointRestoreHook[];
+  /** Per-hook restore ceiling in ms; defaults to `DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS`. */
+  readonly restoreHookTimeoutMs?: number;
 }
 
 export interface AgentRunLifecycleRequest {
@@ -45,6 +58,12 @@ export interface AgentRunLifecycleRequest {
   readonly persistSessionState?: boolean;
   /** Opt-in (plan 018 Task 6): restore persisted loaded-skill bodies on resume (requires `persistSessionState` too). */
   readonly includeSkillBodies?: boolean;
+  /** Checkpoint sidecar metadata applied on resume (and to the resumed run's later checkpoints). */
+  readonly checkpointMetadata?: AgentRunCheckpointMetadataSource;
+  /** Plan 094 Task 3: restore hooks for this resume; the lifecycle's own hooks are used when omitted. */
+  readonly restoreHooks?: readonly AgentCheckpointRestoreHook[];
+  /** Per-hook restore ceiling in ms; defaults to `DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS`. */
+  readonly restoreHookTimeoutMs?: number;
 }
 
 /** Bounded live-event options for a durable lifecycle resume. */
@@ -60,15 +79,28 @@ function assertAgentId(actual: string, expected: string | undefined): void {
   if (expected !== undefined && actual !== expected) throw new AgentRunStateError("Agent run capability mismatch");
 }
 
+/** Lifecycle-registered hooks run first, then per-request ones; either timeout setting wins for both. */
+function restoreHookOptions(
+  lifecycle: AgentRunLifecycleOptions,
+  request: AgentRunLifecycleRequest,
+): Pick<AgentRunResumeOptions, "restoreHooks" | "restoreHookTimeoutMs"> {
+  const hooks = [...(lifecycle.restoreHooks ?? []), ...(request.restoreHooks ?? [])];
+  const timeoutMs = request.restoreHookTimeoutMs ?? lifecycle.restoreHookTimeoutMs;
+  return {
+    ...(hooks.length > 0 ? { restoreHooks: hooks } : {}),
+    ...(timeoutMs === undefined ? {} : { restoreHookTimeoutMs: timeoutMs }),
+  };
+}
+
 /** Host capability for durable agent status/resume. Adapters supply authorized ownership only. */
 export function createAgentRunLifecycle(options: AgentRunLifecycleOptions): AgentRunLifecycle {
   return {
     async status(ref, request = {}) {
       request.signal?.throwIfAborted();
-      const { state, record } = await loadAgentRunState(options.checkpoints, ref, request.ownership);
+      const { state, record, metadata } = await loadAgentRunState(options.checkpoints, ref, request.ownership);
       assertAgentId(state.agentId, request.agentId);
       request.signal?.throwIfAborted();
-      return { state: publicState({ ...state, version: record.version }), version: record.version };
+      return { state: publicState({ ...state, version: record.version }), version: record.version, ...(metadata ? { metadata } : {}) };
     },
     async resume(ref, resume, request = {}) {
       request.signal?.throwIfAborted();
@@ -84,6 +116,8 @@ export function createAgentRunLifecycle(options: AgentRunLifecycleOptions): Agen
         signal: request.signal,
         persistSessionState: request.persistSessionState,
         includeSkillBodies: request.includeSkillBodies,
+        ...(request.checkpointMetadata === undefined ? {} : { checkpointMetadata: request.checkpointMetadata }),
+        ...restoreHookOptions(options, request),
       });
     },
     async *resumeStream(ref, resume, request = {}) {
@@ -102,6 +136,8 @@ export function createAgentRunLifecycle(options: AgentRunLifecycleOptions): Agen
         overflow: request.overflow,
         persistSessionState: request.persistSessionState,
         includeSkillBodies: request.includeSkillBodies,
+        ...(request.checkpointMetadata === undefined ? {} : { checkpointMetadata: request.checkpointMetadata }),
+        ...restoreHookOptions(options, request),
       });
     },
   };
@@ -171,6 +207,10 @@ type PreparedAgentRunResume =
       readonly runState: AgentRunStateOptions;
       readonly decisions?: ReadonlyMap<string, RunDecision>;
       readonly ownership?: OwnershipScope;
+      /** Sidecar seed for writes after the claim when the run options configure no provider. */
+      readonly checkpointMetadata?: AgentRunCheckpointMetadata;
+      /** Audit of the restore hooks that ran before this claim; emitted on `agent_resumed`. */
+      readonly restore?: CheckpointRestoreAudit;
     };
 
 /**
@@ -196,7 +236,10 @@ async function prepareAgentRunResume(
   // and malformed untyped batches fail closed here instead of falling through to approval.
   assertValidAgentRunResume(resume);
   const continuing = resume.decision === "continue";
-  const { record, state } = await loadAgentRunState(options.checkpoints, ref, options.ownership);
+  const { record, state, metadata: recordMetadata } = await loadAgentRunState(options.checkpoints, ref, options.ownership);
+  // Sidecar metadata: a resume-time source wins; otherwise the record's existing map is
+  // preserved on every write below, so a non-durable resume cannot wipe it.
+  const checkpointMetadata = resolveCheckpointMetadata(options.checkpointMetadata) ?? recordMetadata;
   if (
     state.definitionRevision !== options.definitionRevision ||
     state.agentId !== (agent.config.id ?? agent.config.name) ||
@@ -234,6 +277,20 @@ async function prepareAgentRunResume(
   if (options.persistSessionState && state.sessionState?.attentionSticky) {
     const frontier = parseAttentionStickyFrontier(state.sessionState.attentionSticky);
     if (frontier) session.restoreAttentionSticky(frontier);
+  }
+  // Plan 086 T3: durable folding writes its own ledger (with the frontier it belongs to), so it
+  // is restored whenever the checkpoint carries one — the `durable` opt-in was the host's
+  // consent, and a run without it never has this key. Without the frontier the ledger's rows
+  // would not be re-applied on an under-ratio turn, so the two ride together.
+  if (state.sessionState?.attentionFold) {
+    const ledger = restoreAttentionFoldLedger(state.sessionState.attentionFold);
+    if (ledger) {
+      session.restoreAttentionFold(ledger);
+      if (!options.persistSessionState && state.sessionState.attentionSticky) {
+        const frontier = parseAttentionStickyFrontier(state.sessionState.attentionSticky);
+        if (frontier) session.restoreAttentionSticky(frontier);
+      }
+    }
   }
   // Plan 018 Task 6 (closeout `checkpoint-bodies`): restore exact instructions so the
   // resumed session renders them registry-independently (no load_skill round-trip).
@@ -329,6 +386,7 @@ async function prepareAgentRunResume(
       expectedVersion: record.version,
       ownership: options.ownership,
       fencingToken: options.fencingToken,
+      ...(checkpointMetadata ? { metadata: checkpointMetadata } : {}),
     });
     return {
       kind: "deny",
@@ -356,6 +414,25 @@ async function prepareAgentRunResume(
     throw new AgentRunStateError("Agent durable run-state configuration mismatch on resume");
   }
   throwIfAbortedSignal(signal);
+  // Plan 094 Task 3: restore external state (git commit, document versions) before the claim
+  // write. Every hook must succeed — a throw here leaves the checkpoint exactly as it was, and
+  // the conversation restore below never runs, so no half-restored world is claimed as resumed.
+  const restoreHooks = options.restoreHooks ?? [];
+  const restore = restoreHooks.length
+    ? await runCheckpointRestoreHooks(
+        restoreHooks,
+        {
+          runId: state.runId,
+          sessionId: state.sessionId,
+          version: record.version,
+          status: state.status,
+          ...(recordMetadata ? { metadata: recordMetadata } : {}),
+          checkpoint: record,
+        },
+        { timeoutMs: options.restoreHookTimeoutMs, signal },
+      )
+    : undefined;
+  throwIfAbortedSignal(signal);
   const claimed = await saveAgentRunState({
     checkpoints: options.checkpoints,
     state: {
@@ -367,6 +444,7 @@ async function prepareAgentRunResume(
     expectedVersion: record.version,
     ownership: options.ownership,
     fencingToken: options.fencingToken,
+    ...(checkpointMetadata ? { metadata: checkpointMetadata } : {}),
   });
   return {
     kind: "claim",
@@ -374,6 +452,9 @@ async function prepareAgentRunResume(
     state: claimed.state,
     decisions: resolved?.decisionsById,
     ownership: options.ownership,
+    // The configured object must be passed by identity (agent-session assemble rejects a
+    // replaced config); its own `checkpointMetadata` provider wins, and the resolved map rides
+    // the session as a seed so later writes preserve a record's existing sidecar.
     runState: configured ?? {
       checkpoints: options.checkpoints,
       definitionRevision: options.definitionRevision,
@@ -384,6 +465,8 @@ async function prepareAgentRunResume(
       // turn checkpoints without the host repeating the option on resume.
       ...(state.checkpointPolicy ? { checkpointPolicy: state.checkpointPolicy } : {}),
     },
+    ...(checkpointMetadata ? { checkpointMetadata } : {}),
+    ...(restore ? { restore } : {}),
   };
 }
 
@@ -397,5 +480,8 @@ async function executePreparedAgentRunResume(prepared: PreparedAgentRunResume, s
     await prepared.session.recordDurableResumption(prepared.result.runId, prepared.interruption, prepared.version, prepared.ownership);
     return prepared.result;
   }
-  return prepared.session.resumeDurable(prepared.state, prepared.runState, prepared.ownership, signal, prepared.decisions);
+  return prepared.session.resumeDurable(prepared.state, prepared.runState, prepared.ownership, signal, prepared.decisions, {
+    ...(prepared.checkpointMetadata ? { checkpointMetadata: prepared.checkpointMetadata } : {}),
+    ...(prepared.restore ? { restore: prepared.restore } : {}),
+  });
 }

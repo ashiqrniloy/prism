@@ -340,3 +340,59 @@ describe("createSpawnAgentTool", () => {
     assert.equal(supervisor.activeChildren, 0);
   });
 });
+
+describe("createSpawnAgentTool lifetime and report policy", () => {
+  it("passes only the legacy request fields when the new options are omitted", async () => {
+    const supervisor = createSupervisor({ ownership, children: { research: { createAgent: () => doneAgent() } } });
+    const realDelegate = supervisor.delegate;
+    let captured: Record<string, unknown> | undefined;
+    (supervisor as unknown as { delegate: typeof realDelegate }).delegate = ((request: Parameters<typeof realDelegate>[0]) => {
+      captured = request as unknown as Record<string, unknown>;
+      return realDelegate(request);
+    }) as typeof realDelegate;
+    const result = await execute(createSpawnAgentTool({ supervisor }), { childId: "research", input: "x" });
+    assert.equal(result.error, undefined);
+    assert.deepEqual(Object.keys(captured ?? {}).sort(), ["childId", "input", "signal"]);
+  });
+
+  it("fails closed on malformed lifetime, report, milestone, and share args", async () => {
+    const supervisor = createSupervisor({ ownership, children: { research: { createAgent: () => doneAgent() } } });
+    const spawn = createSpawnAgentTool({ supervisor });
+    assert.match((await execute(spawn, { childId: "research", input: "x", lifetime: "forever" })).error?.message ?? "", /lifetime/);
+    assert.match((await execute(spawn, { childId: "research", input: "x", report: "all" })).error?.message ?? "", /report/);
+    assert.match(
+      (await execute(spawn, { childId: "research", input: "x", milestone: { everyTurns: 0 } })).error?.message ?? "",
+      /everyTurns/,
+    );
+    assert.match((await execute(spawn, { childId: "research", input: "x", budgetShare: 1.5 })).error?.message ?? "", /budgetShare/);
+    assert.equal(supervisor.activeChildren, 0);
+  });
+
+  it("starts session-lifetime spawns as async handles even when mode is sync", async () => {
+    const supervisor = createSupervisor({
+      ownership,
+      children: { research: { policy: { lifetime: "session" }, createAgent: () => doneAgent() } },
+    });
+    const result = await execute(createSpawnAgentTool({ supervisor }), { childId: "research", input: "x", lifetime: "session" });
+    const handle = result.value as { readonly delegationId: string; readonly status: string };
+    assert.equal(result.error, undefined);
+    assert.equal(handle.status, "running");
+    const joined = await supervisor.wait(handle.delegationId);
+    assert.equal(joined.status, "succeeded");
+  });
+
+  it("does not enable child-event passthrough the host did not opt into", async () => {
+    const supervisor = createSupervisor({ ownership, children: { research: { createAgent: () => doneAgent() } } });
+    const events = supervisor.subscribe()[Symbol.asyncIterator]();
+    const result = await execute(createSpawnAgentTool({ supervisor }), { childId: "research", input: "x", report: "stream" });
+    assert.equal(result.error, undefined);
+    const types: string[] = [];
+    for (;;) {
+      const next = await events.next();
+      if (next.done) break;
+      types.push(next.value.type);
+      if (next.value.type === "delegation_finished") break;
+    }
+    assert.deepEqual(types, ["delegation_started", "delegation_finished"]);
+  });
+});

@@ -1,10 +1,12 @@
 import type {
   AgentSessionCloneOptions,
   AgentSessionForkOptions,
+  CheckpointRecord,
   CheckpointStore,
   CompactionOptions,
   CompactionResult,
   ContentBlock,
+  ContextMeter,
   ErrorInfo,
   JsonObject,
   JsonValue,
@@ -18,6 +20,7 @@ import type {
   Usage,
 } from "./contracts-core.js";
 import type { AgentEvent, AgentFinishReason, RunOptions, ToolEffectKind } from "./contracts-protocol.js";
+import type { CheckpointRestoreHook } from "./checkpoint-restore.js";
 
 export type AgentRunStatus = "succeeded" | "failed" | "aborted" | "suspended" | "denied";
 
@@ -174,6 +177,16 @@ export const MAX_ATTRIBUTION_DEPTH = 8;
 export const MAX_ACTION_CONSTRAINT_BYTES = 4 * 1024;
 export const HARD_MAX_ACTION_CONSTRAINT_BYTES = 16 * 1024;
 
+/**
+ * Opaque host sidecar pinned to one checkpoint *record* (git commit, document version,
+ * workspace fingerprint) — never part of the run-state value, so it costs no `maxStateBytes`
+ * budget and is invisible to state parsing. Bounded to `MAX_AGENT_RUN_METADATA_BYTES` (4 KiB)
+ * and redacted like the state value at every write.
+ */
+export type AgentRunCheckpointMetadata = Readonly<Record<string, string>>;
+/** Host source for checkpoint sidecar metadata: a fixed map or a live provider resolved per write. */
+export type AgentRunCheckpointMetadataSource = AgentRunCheckpointMetadata | (() => AgentRunCheckpointMetadata | undefined);
+
 export interface AgentRunStateOptions {
   readonly checkpoints: CheckpointStore;
   /** Host-authored immutable revision required for durable runs. */
@@ -191,6 +204,12 @@ export interface AgentRunStateOptions {
   readonly checkpointPolicy?: "decision" | "every-turn";
   /** Suspend every tool call before its side effect. */
   readonly interruptBeforeTool?: boolean;
+  /**
+   * Sidecar metadata written with every checkpoint of this run (and carried into a resumed
+   * run). A provider is resolved at each checkpoint write, so a host closure can pin state
+   * that moves mid-run (e.g. the current git commit). Absent = records stay byte-identical.
+   */
+  readonly checkpointMetadata?: AgentRunCheckpointMetadataSource;
   readonly maxStateBytes?: number;
   readonly fencingToken?: number;
   /** Enables sticky auto-apply when a nested suspension first surfaces during this run. */
@@ -242,6 +261,25 @@ export interface AgentRunResume {
   readonly decisions?: readonly RunDecision[];
 }
 
+/**
+ * Checkpoint handed to a restore hook (plan 094 Task 3). `checkpoint.value` is the raw stored
+ * run-state value; `metadata` is the redacted, bounded sidecar map hosts write via
+ * `AgentRunStateOptions.checkpointMetadata`.
+ */
+export interface AgentCheckpointRestoreContext {
+  readonly runId: string;
+  readonly sessionId: string;
+  /** Version of the checkpoint being claimed; a hook may pass it to an external system's own CAS. */
+  readonly version: number;
+  /** State being claimed: `running` for crash recovery, `suspended` for a decision resume. */
+  readonly status: AgentRunStatus | "running";
+  readonly metadata?: AgentRunCheckpointMetadata;
+  readonly checkpoint: CheckpointRecord;
+}
+
+/** Host code restoring one external layer before a durable resume applies. */
+export type AgentCheckpointRestoreHook = CheckpointRestoreHook<AgentCheckpointRestoreContext>;
+
 export interface AgentRunResumeOptions {
   readonly checkpoints: CheckpointStore;
   /** Current host-authored revision; must exactly match the checkpoint. */
@@ -262,6 +300,20 @@ export interface AgentRunResumeOptions {
   readonly persistSessionState?: boolean;
   /** Opt-in (plan 018 Task 6): restore persisted loaded-skill bodies (requires `persistSessionState` too). */
   readonly includeSkillBodies?: boolean;
+  /**
+   * Checkpoint sidecar metadata for the claim write (and the resumed run's later checkpoints).
+   * Absent = the record's existing metadata is preserved unchanged.
+   */
+  readonly checkpointMetadata?: AgentRunCheckpointMetadataSource;
+  /**
+   * Plan 094 Task 3: external-state restore hooks. Every hook must succeed (sequentially, each
+   * within `restoreHookTimeoutMs`) before the claim write and the conversation restore apply;
+   * the first failure throws `CheckpointRestoreError` naming the hook and leaves the checkpoint
+   * suspended. Hosts that register hooks on the lifecycle instead pass them once there.
+   */
+  readonly restoreHooks?: readonly AgentCheckpointRestoreHook[];
+  /** Per-hook restore ceiling in ms; defaults to `DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS`. */
+  readonly restoreHookTimeoutMs?: number;
 }
 
 /** Bounded live-event options for `resumeAgentRunStream()`; `signal` is inherited from the base resume options. */
@@ -275,6 +327,8 @@ export interface AgentRunRef {
 export interface AgentRunStatusResult {
   readonly state: AgentRunState;
   readonly version: number;
+  /** Checkpoint sidecar metadata; absent when the record carries none (or carries only malformed entries). */
+  readonly metadata?: AgentRunCheckpointMetadata;
 }
 
 export class AgentRunStateError extends Error {
@@ -376,6 +430,12 @@ export interface AgentSession {
   abort(reason?: unknown): void;
   entries(): Promise<readonly SessionEntry[]>;
   checkout(leafId?: string): Promise<void>;
+  /**
+   * Context-fill read (plan 091 T2): latest provider turn's input tokens
+   * (reported or labeled estimate) plus the resolved per-request cap, run input
+   * budget, and used ratio. Before any provider turn it estimates stored history.
+   */
+  contextMeter(): ContextMeter;
   fork(options?: AgentSessionForkOptions): AgentSession;
   clone(options?: AgentSessionCloneOptions): Promise<AgentSession>;
 }

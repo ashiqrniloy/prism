@@ -11,6 +11,7 @@ import type { ToolValidator } from "../tools.js";
 import type { CompactionOptions, RetryOptions } from "./compaction.js";
 import type { ContentBlock, ErrorInfo, JsonObject, Message, ModelConfig } from "./content.js";
 import type { ExtensionAPI, ProviderRequestPolicy, SystemPromptConfig } from "./extensions.js";
+import type { GuardrailPackRef } from "./guardrail-packs.js";
 import type { AgentLoopOptions, AgentLoopStrategy, LoopContext } from "./loop.js";
 import type { OwnershipScope } from "./persistence.js";
 import type { AIProvider, ProviderRequestOptions, ProviderResolver } from "./provider.js";
@@ -51,6 +52,19 @@ export interface AgentDefinitionResolutionContext {
   readonly overrides?: Partial<AgentConfig>;
 }
 
+/** Per-turn tool menu. Called at `loopCtx.assemble` before each provider request. */
+export interface ToolNarrowingContext {
+  /** 1-based provider turn this assemble precedes. */
+  readonly turn: number;
+  /** Text of the latest assistant message, when any. */
+  readonly lastAssistantText?: string;
+  /** Run-grant tool names (R11 snapshot, including generated `search_tools` when disclosure is search). */
+  readonly toolIds: readonly string[];
+}
+
+/** Host callback: return a subset of `toolIds`. Superset names are clamped; throw fails the turn. */
+export type ToolNarrowing = (ctx: ToolNarrowingContext) => readonly string[] | Promise<readonly string[]>;
+
 export interface AgentConfig {
   readonly id?: string;
   readonly name?: string;
@@ -68,11 +82,21 @@ export interface AgentConfig {
   /** Tools disclosure: "all" (default) sends every active tool schema; "search" sends top-k + the generated `search_tools` tool. */
   readonly toolsDisclosure?: import("../tool-search.js").ToolsDisclosure;
   readonly toolsSearch?: import("../tool-search.js").ToolsSearchOptions;
+  /** Per-turn restrictive allow-list over the run grant. RunOptions override. */
+  readonly toolNarrowing?: ToolNarrowing;
+  /** Opt-in: tools hidden this turn stay callable by name (default off). */
+  readonly allowHiddenToolCalls?: true;
   /** Opt-in projection-only fold for aged large tool results in provider view; store untouched. */
   readonly toolResultFold?: import("../tool-result-fold.js").ToolResultFoldOptions;
   /** Opt-in attention compiler (plan 074): `true` for defaults, an object to tune ratios/depth.
    *  Omitted keeps today's request bytes; per-run options may only relax this setting. */
   readonly attentionCompiler?: import("./attention.js").AttentionCompilerSetting;
+  /**
+   * Missing-usage fallback (plan 091 T2): `"fallback"` (default) records a labeled
+   * estimate when a provider turn reports no usage; `"off"` leaves usage absent —
+   * never zero. Estimates are marked `Usage.estimated` and are never priced.
+   */
+  readonly usageEstimation?: "fallback" | "off";
   readonly inputBuilder?: InputBuilder;
   readonly promptBuilder?: PromptBuilder;
   readonly middleware?: MiddlewareRegistry;
@@ -145,6 +169,12 @@ export interface AgentSessionConfig {
   readonly store?: SessionStore;
   readonly leafId?: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  /**
+   * Restrictive-only guardrail packs compiled once per session onto the existing tool interception
+   * seams (plan 092). Built-in ids are versioned; an input object with `rules` is an inline pack.
+   * Compiled rules can only deny or tripwire — they never grant permissions.
+   */
+  readonly guardrailPacks?: readonly GuardrailPackRef[];
   /**
    * TTL of the in-memory `session.snapshot()` branch cache in milliseconds.
    * Default `DEFAULT_SNAPSHOT_CACHE_TTL_MS`; `0` disables the cache (every snapshot read
@@ -309,6 +339,8 @@ export interface PromptBuildRequest {
   readonly skills?: readonly Skill[];
   readonly skillsDisclosure?: import("../skill-disclosure.js").SkillsDisclosure;
   readonly loadedSkills?: import("../skill-disclosure.js").LoadedSkillSet;
+  /** Loaded skill bodies already appended to `messages` by the session tail allocator; render catalog entries only. */
+  readonly tailSkillBodies?: boolean;
   /** Tools disclosure: "all" (default) sends every active tool schema; "search" sends top-k + the generated `search_tools` tool. */
   readonly toolsDisclosure?: import("../tool-search.js").ToolsDisclosure;
   readonly toolsSearch?: import("../tool-search.js").ToolsSearchOptions;

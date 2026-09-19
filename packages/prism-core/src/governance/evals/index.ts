@@ -74,7 +74,9 @@ export { assertEvaluationThreshold, EvalThresholdError, serializeEvaluationRepor
 export { createPersistenceTraceResolver } from "./trace.js";
 export type {
   ApprovalBeforeEffectScorerOptions,
+  DeterministicTurnScorerOptions,
   ErrorClassScorerOptions,
+  GuardrailPackScorerOptions,
   NoLoopScorerOptions,
   SchemaScorerOptions,
   StepBudgetScorerOptions,
@@ -84,12 +86,15 @@ export type {
 } from "./trajectory.js";
 export {
   createApprovalBeforeEffectScorer,
+  createDeterministicTurnScorer,
   createErrorClassScorer,
+  createGuardrailPackScorer,
   createNoLoopScorer,
   createSchemaScorer,
   createStepBudgetScorer,
   createToolCallMatchScorer,
   DEFAULT_MAX_EXPECTED_CALLS,
+  DEFAULT_PACK_RULE_PREFIX,
   HARD_MAX_EXPECTED_CALLS,
 } from "./trajectory.js";
 export type {

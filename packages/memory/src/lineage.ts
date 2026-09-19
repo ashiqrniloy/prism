@@ -11,7 +11,7 @@ import type {
   MemoryVectorRecord,
   VectorStore,
 } from "./types.js";
-import { requireNonEmptyString } from "./util.js";
+import { requireNonEmptyString, requireScope } from "./util.js";
 
 export const LINEAGE_META_KEY = "_lineage";
 export const LINEAGE_SCHEMA_VERSION = 1 as const;
@@ -136,6 +136,23 @@ export function indexInvalidations(entries: readonly MemoryInvalidationRecord[])
   return map;
 }
 
+/**
+ * Plan 089 Task 3: the ids one exact scope currently withholds — everything but
+ * `corrected`, which keeps its source. Feed this to observational-memory
+ * `invalidatedIds` / recall so derived blocks whose source was revoked mid-turn stop
+ * being injected on the next build. Stores without lineage invalidation return empty.
+ */
+export async function listInvalidatedIds(
+  vectorStore: VectorStore,
+  scope: MemoryScope,
+  options: { readonly signal?: AbortSignal } = {},
+): Promise<readonly string[]> {
+  if (vectorStore.lineage !== "invalidation" || typeof vectorStore.listInvalidated !== "function") return Object.freeze([]);
+  const exact = requireScope(scope, true) as Required<MemoryScope>;
+  const entries = await vectorStore.listInvalidated(exact, { signal: options.signal });
+  return Object.freeze(entries.filter((entry) => entry.reason !== "corrected").map((entry) => entry.id));
+}
+
 /** Query-time exclude. Corrected sources stay; anything listing them in `_lineage.sourceIds` does not. Corrupt lineage denies. */
 export function recordBlocked(
   record: Pick<MemoryVectorRecord, "id" | "metadata">,
@@ -155,11 +172,21 @@ export function recordBlocked(
 /**
  * Roots plus same-thread records that list a marked id in `_lineage.sourceIds`.
  * Caps fail closed (throw) rather than leave unmarked descendants injectable.
+ * `maxEdges` defaults to the interactive cap; privileged callers (deletion
+ * propagation) may raise it explicitly and stay bounded.
  */
-export function collectInvalidationIds(records: readonly MemoryVectorRecord[], roots: readonly string[]): readonly string[] {
+export function collectInvalidationIds(
+  records: readonly MemoryVectorRecord[],
+  roots: readonly string[],
+  options: { readonly maxEdges?: number } = {},
+): readonly string[] {
+  const maxEdges = options.maxEdges ?? HARD_LINEAGE_EDGES;
+  if (!Number.isInteger(maxEdges) || maxEdges < 1) {
+    throw new MemoryValidationError("maxEdges must be a positive integer");
+  }
   const marked = new Set<string>();
   for (const root of roots) marked.add(requireId(root, "id"));
-  if (marked.size > HARD_LINEAGE_EDGES) throw new MemoryLimitError(`lineage walk exceeds edge cap ${HARD_LINEAGE_EDGES}`);
+  if (marked.size > maxEdges) throw new MemoryLimitError(`lineage walk exceeds edge cap ${maxEdges}`);
   let depth = 0;
   let changed = true;
   while (changed) {
@@ -173,8 +200,8 @@ export function collectInvalidationIds(records: readonly MemoryVectorRecord[], r
       if (parsed.sourceIds.some((id) => id !== record.id && marked.has(id))) {
         marked.add(record.id);
         changed = true;
-        if (marked.size > HARD_LINEAGE_EDGES) {
-          throw new MemoryLimitError(`lineage walk exceeds edge cap ${HARD_LINEAGE_EDGES}`);
+        if (marked.size > maxEdges) {
+          throw new MemoryLimitError(`lineage walk exceeds edge cap ${maxEdges}`);
         }
       }
     }

@@ -94,6 +94,17 @@ describe("@arnilo/prism-providers/anthropic", () => {
     assert.equal(events.at(-1)?.type, "done");
   });
 
+  it("maps_stop_reason_to_taxonomy", async () => {
+    const provider = createAnthropicMessagesProvider({
+      apiKey: "fake-anthropic-key",
+      fetch: mockFetch(sse([{ type: "message_delta", delta: { stop_reason: "max_tokens" } }, { type: "message_stop" }])),
+    });
+    const events = await collectProviderEvents(provider, request);
+    const done = events.at(-1);
+    assert.equal(done?.type, "done");
+    assert.equal(done?.type === "done" ? done.stopReason : undefined, "max_output_tokens");
+  });
+
   it("preserves_thinking_blocks_and_maps_max_tokens_thinking_effort", async () => {
     let body: any;
     let url = "";

@@ -1,9 +1,10 @@
 import type { SessionEntry } from "@arnilo/prism";
 import { isEligibleObservationSourceEntry } from "./coverage-helpers.js";
-import { foldObservationalMemoryLedger } from "./ledger.js";
+import { foldObservationalMemoryLedger, mergeObservationalMemoryLedgers } from "./ledger.js";
 import { HARD_MAX_RECALL_PAGE_LIMIT, resolveRecallPageLimit } from "./limits.js";
 import { renderRecentMessageWindow } from "./recent-messages.js";
 import { serializeSourceEntries } from "./serialize.js";
+import { mergeSharedScopes, type SharedScopeMemory } from "./shared-scopes.js";
 import { isMemoryId, type MemoryObservation, type MemoryReflection } from "./types.js";
 
 export type RecallKind = "observation" | "reflection";
@@ -45,15 +46,34 @@ export interface RecallBranchPageResult {
   readonly reason?: "invalid_cursor" | "cursor_not_found" | "cursor_not_message" | "limit_exceeded";
 }
 
+export interface RecallMemoryOptions {
+  readonly invalidatedIds?: readonly string[];
+  /**
+   * Resolved shared-scope memory (see `resolveSharedScopes`). Only scope-bound ids enter the merged
+   * ledger, so a granted branch's private observations stay unrecallable; its entries are used for
+   * source-evidence resolution only.
+   */
+  readonly shared?: readonly SharedScopeMemory[];
+}
+
 export function recallObservationalMemory(
   entries: readonly SessionEntry[],
   id: string,
   secrets: readonly (string | undefined)[] = [],
-  options?: { readonly invalidatedIds?: readonly string[] },
+  options?: RecallMemoryOptions,
 ): MemoryRecallResult {
   if (!isMemoryId(id)) return { found: false, id, reason: "invalid_id", text: "Invalid memory id; expected 12 lowercase hex characters." };
-  const ledger = foldObservationalMemoryLedger(entries);
+  const shared = options?.shared ?? [];
+  const merged = shared.length ? mergeSharedScopes(shared) : undefined;
+  const ledger = merged
+    ? mergeObservationalMemoryLedgers(foldObservationalMemoryLedger(entries), {
+        observations: merged.observations,
+        reflections: merged.reflections,
+        droppedObservationIds: merged.droppedObservationIds,
+      })
+    : foldObservationalMemoryLedger(entries);
   const entryById = new Map(entries.map((entry) => [entry.id, entry]));
+  if (merged) for (const entry of merged.entries) if (!entryById.has(entry.id)) entryById.set(entry.id, entry);
   const dropped = new Set(ledger.droppedObservationIds);
   const invalidated = new Set(options?.invalidatedIds ?? []);
   const observation = ledger.observations.find((item) => item.id === id);

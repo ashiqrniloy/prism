@@ -43,6 +43,8 @@ describe("observational memory package skeleton", () => {
       "Work-scope index",
       "projectWorkMemory",
       "withWorkScope",
+      "Shared work scopes",
+      "onScopeAccess",
       "resource-scoped observational memory",
       "storage safety cap",
     ])

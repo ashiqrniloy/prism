@@ -145,15 +145,15 @@ export function filterTools(tools: readonly ToolDefinition[], filter?: ToolFilte
 export const HARD_RUN_TOOL_NAMES = 1024;
 const MAX_RUN_TOOL_NAME_CHARS = 256;
 
-function assertRunToolNames(names: readonly string[]): readonly string[] {
+function assertRunToolNames(names: readonly string[], label = "RunOptions.toolNames"): readonly string[] {
   if (names.length > HARD_RUN_TOOL_NAMES) {
-    throw new TypeError(`RunOptions.toolNames exceeds ${HARD_RUN_TOOL_NAMES} entries`);
+    throw new TypeError(`${label} exceeds ${HARD_RUN_TOOL_NAMES} entries`);
   }
   const out: string[] = [];
   const seen = new Set<string>();
   for (const name of names) {
     if (typeof name !== "string" || name.length === 0 || name.length > MAX_RUN_TOOL_NAME_CHARS) {
-      throw new TypeError(`RunOptions.toolNames entries must be non-empty strings of at most ${MAX_RUN_TOOL_NAME_CHARS} characters`);
+      throw new TypeError(`${label} entries must be non-empty strings of at most ${MAX_RUN_TOOL_NAME_CHARS} characters`);
     }
     if (!seen.has(name)) {
       seen.add(name);
@@ -161,6 +161,18 @@ function assertRunToolNames(names: readonly string[]): readonly string[] {
     }
   }
   return out;
+}
+
+/** Restrictive clamp: keep listed order; names outside the grant are dropped (not thrown). */
+export function clampTurnToolNames(
+  listed: readonly ToolDefinition[],
+  requested: readonly string[],
+): { readonly tools: readonly ToolDefinition[]; readonly dropped: readonly string[] } {
+  const names = assertRunToolNames(requested, "toolNarrowing");
+  const grant = new Set(listed.map((tool) => tool.name));
+  const dropped = names.filter((name) => !grant.has(name));
+  const allow = names.filter((name) => grant.has(name));
+  return { tools: allow.length === 0 ? [] : filterTools(listed, { allow }), dropped };
 }
 
 /**

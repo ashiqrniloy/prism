@@ -72,12 +72,15 @@ The `AgentEvent` union (grouped by concern):
 | --- | --- |
 | Agent lifecycle | `agent_started`, `agent_suspended`, `agent_resumed`, `agent_denied`, `agent_finished` |
 | Turns | `turn_started`, `turn_finished` |
+| Deterministic turns | `deterministic_turn` |
 | Provider turns | `provider_turn_started`, `provider_turn_finished` |
 | Assistant messages | `message_started`, `message_delta`, `message_finished` |
 | Delegated agents | `delegated_agent_step` |
 | Tool execution | `tool_execution_started`, `tool_execution_progress`, `tool_execution_finished`, `tool_execution_error`, `tool_execution_blocked` |
+| Tool narrowing | `tool_narrowing_clamped` |
 | Guardrails | `guardrail_decision` |
 | Queue/subscribers | `queue_updated`, `event_subscriber_overflow`, `steer_rejected` |
+| Run limits | `run_limit_exceeded`, `budget_exhausted` |
 | Compaction | `compaction_started`, `compaction_finished` |
 | Retry | `retry_scheduled` |
 | Artifacts | `artifact_validation_started`, `artifact_validation_finished`, `artifact_revision_started`, `artifact_finished`, `artifact_failed` |
@@ -107,6 +110,8 @@ Adapters should call `createDelegatedAgentStep({ sessionId, runId, adapterId, ex
 
 Coding hosts call `observeSupervisorLifecycle(supervisor, { onEvent, delegatedAgentStep })` to turn supervisor milestones into `subagent_started` / `subagent_stopped` coding lifecycle events. Both carry only redacted `childId`, `delegationId`, and `depth`; stopped events add terminal `AgentRunStatus`. Supplying `delegatedAgentStep` emits the bounded `delegated_agent_step` records AG-UI already maps. Child inputs, outputs, paths, and delegation error text never cross either bridge.
 
+Supervisor child reporting is opt-in per child (`SupervisorChild.policy.report` ceiling; a request can only lower it). With `report: "milestones"` the supervisor publishes `child_milestone` (`childId`, `delegationId`, `depth`, `turn`, redacted `childEvent`) at the configured `milestone.everyTurns` cadence or host predicate; with `report: "stream"` it publishes `delegation_child_event` for every per-turn provider/tool/turn child event (never per-token `message_delta`). Both are redacted, count/byte-capped, and rate-coalesced (`delegation_child_events_coalesced` reports dropped events); the cap marker is `delegation_child_events_capped`. `child_failed` carries failure attribution for any child that died on an error or a limit: the redacted `reason`, the terminal `status`/`stopReason`, and the plan-086/087 `RunLimitBreach` in `limit` when a configured ceiling fired. Host cancels, policy denials, and hook rejections are not failures and never emit it. Hosts that want recovery counters rather than events read `supervisor.summary()` (`attempts`, `retries`, `failures`, `failureRadius`, `outcome` per child). Child events stay on the supervisor stream unless the host passes `childEventSink`, which receives the identical payload tagged with `child: { childId, delegationId, depth }` (`ChildEventOrigin`) for routing onto a parent session stream; they are not native `AgentEvent`s of the parent session, and hosts that surface them there re-attach the parent `sessionId`/`runId` themselves if needed.
+
 `message_delta.content.type === "tool_call_delta"` carries `{ index, id?, name?, argumentsText? }`. Treat it as a streaming fragment. The runtime reconstructs and persists a final `tool_call` before executing tools. Deltas missing `id`/`name` at stream end fail the provider turn with `ErrorInfo.code: "incomplete_delta"` (typed `ProviderTransportError`); they never throw a bare `Error`. Malformed JSON with id+name present recovers as a blocked tool result (`invalid_json_arguments`) instead.
 
 Tool execution events:
@@ -118,6 +123,7 @@ Tool execution events:
 | `tool_execution_finished` | `sessionId`, `runId`, `result: ToolResult`, `metadata: ToolExecutionMetadata` |
 | `tool_execution_error` | `sessionId`, `runId`, `call: ToolCallContent`, `error: ErrorInfo`, `metadata: ToolExecutionMetadata` |
 | `tool_execution_blocked` | `sessionId`, `runId`, `toolCallId`, `name`, `reason: string`, `error: ErrorInfo`, `metadata: ToolExecutionMetadata` |
+| `tool_narrowing_clamped` | `sessionId`, `runId`, `turn`, `dropped: readonly string[]` (names the host returned outside the run grant; no tool args) |
 
 Guardrail events:
 
@@ -139,12 +145,69 @@ Queue / subscriber / compaction / retry / provider events:
 | `attention_compiled` | `sessionId`, `runId?`, `used: number`, `usedAfter: number`, `inputCap: number`, `triggerRatio: number`, `droppedThinkingTurns: number`, `stubbedToolResults: number`, `stubbedBytes: number`, `truncated: boolean` — one per mutated turn of the opt-in [attention compiler](attention-compiler.md); counts only, never message text |
 | `retry_scheduled` | `sessionId`, `runId`, `attempt: number`, `delayMs: number`, `error: ErrorInfo` |
 
+### Run limit events
+
+Terminal attribution — see [Runs and usage § Run limits](runs-and-usage.md#run-limits).
+
+| Variant | Fields |
+| --- | --- |
+| `run_limit_exceeded` | `sessionId`, `runId`, `breach: RunLimitBreach` (`limit`, `maximum`, `observed`, optional `currency`) — emitted once, when an axis first exceeds its cap |
+| `budget_exhausted` | `sessionId`, `runId`, `limit: RunLimitName`, `consumed: { turns, inputTokens, providerAttempts, requestBytes }`, `closestOtherAxes: [{ axis, usedRatio }]`, `recentToolCalls: [{ id, name, argHash }]` |
+
+`budget_exhausted` is the terminal attribution for a run that died on a limit: it is emitted once per
+limit death, before the terminal `error` event and the finish `RunRecord`, so a subscriber that stops
+at the first terminal event still sees why the run died. `limit` names the axis that fired
+(`maxTurns`, `maxInputTokens`, `maxCost`, …). `closestOtherAxes` is the three other finite product
+axes with the highest `used / cap` ratio, so a host can answer "how close was everything else";
+request/response byte axes stay out because their caps are per-frame, and `usedRatio` is clamped to
+`[0, 1]`. `recentToolCalls` holds the last ten host tool calls dispatched in this run (in dispatch
+order, reset at run start and after a durable resume) as id, name, and `argHash` —
+`sha256:<64 hex>` over the canonicalized arguments, never the arguments themselves. `consumed`
+counters are the run-lifetime tracker snapshot at exhaustion. Events stay counts and hashes only, so
+no new redaction class is introduced. Both events project onto the [execution timeline](execution-timeline.md)
+as `timeline.exhaustion` plus the `turns[i].stopReason` badges, with a one-line summary on
+`summarizeTimeline().exhaustion`.
+
 Provider turn events (metadata only — see [Observability](observability.md)):
 
 | Variant | Fields |
 | --- | --- |
+| `deterministic_turn` | `sessionId`, `runId`, `turn`, `middleware` — host middleware answered this turn without a provider request ([Middleware hooks](middleware-hooks.md#no-model-turns-beforeproviderturn)). Carries no `usage` key: provider accounting stays absent, never zero-filled. The same provenance reaches the persisted transcript as `message.metadata.deterministic = { middleware }` on the assistant `message_finished` message. |
 | `provider_turn_started` | `sessionId`, `runId`, `turn`, `metadata: ProviderTurnMetadata` |
-| `provider_turn_finished` | `sessionId`, `runId`, `turn`, `metadata` (includes `latencyMs` on finish), `usage?`, `error?` |
+| `provider_turn_finished` | `sessionId`, `runId`, `turn`, `metadata` (includes `latencyMs`, `stopReason`, `budgets`, `tools`, and provider-reported `cache` metrics on finish), `usage?`, `error?` |
+
+`provider_turn_finished.metadata.stopReason` names why that provider turn stopped, from one closed
+taxonomy. Adapters map native wire values (`finish_reason`, `stop_reason`, `finishReason`, Converse
+`stopReason`) through the shared `mapProviderStopReason` table, so a new provider value degrades to
+`unknown` instead of failing a run; the normalized `done` provider event carries the same mapped
+value when the adapter saw a native reason.
+
+| `stopReason` | Meaning |
+| --- | --- |
+| `end_turn` | Model finished its answer (native `stop`, `end_turn`, `stop_sequence`, `STOP`, `completed`) |
+| `tool_calls` | Turn requested host tools; also what a generic `end_turn` becomes when the turn produced tool calls |
+| `max_output_tokens` | Output truncated at the provider's token cap (native `length`, `max_tokens`, `MAX_TOKENS`) |
+| `content_filter` | Provider safety/refusal path (native `content_filter`, `refusal`, `SAFETY`, `guardrail_intervened`) |
+| `abort` | The run or turn was aborted (host abort, steer soft interrupt) |
+| `provider_error` | The turn failed with a provider error |
+| `unknown` | Unmapped or absent native reason |
+
+`provider_turn_finished.metadata.budgets` is an O(1) snapshot from the run limit tracker:
+`{ inputTokens?, inputCap?, runInputBudget?, runInputUsed, turns, maxTurns }` — current-turn
+provider-reported input tokens against the resolved per-request input cap, cumulative run input
+against `limits.maxInputTokens`, and provider turns against `limits.maxTurns` (`null` when
+disabled). Optional fields are absent when the provider reported no usage or no input cap can be
+derived; hosts that ignore the fields are unaffected.
+
+`provider_turn_started` / `provider_turn_finished` metadata includes `tools: { count, idsHash }` for the
+effective menu sent on that request (after run scoping, per-turn `toolNarrowing`, and disclosure).
+`idsHash` is `sha256:` plus 64 lowercase hex over `JSON.stringify(names)` in request order. Count and
+hash only — never tool args, schemas, or descriptions. Identical consecutive subsets keep the same hash.
+
+`provider_turn_finished.metadata.cache` is present only when the provider reported
+`cacheReadTokens` or `cacheWriteTokens`: `{ cacheReadTokens?, cacheWriteTokens?, hitRate? }`.
+`hitRate` is cache reads divided by reported input tokens. Unknown cache usage is absent, never
+zero-filled; it contains counts only, never cache keys or prompt content.
 
 Artifact validation/refinement events (emitted only by `generateValidateReviseLoop`; `singleShotLoop` emits zero artifact events):
 

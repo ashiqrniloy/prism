@@ -203,7 +203,7 @@ The default strategy does not call a provider. Hosts that need model-generated s
 - [Session stores and branching](session-stores-and-branching.md): branch entries, compaction entries, and `rebuildSessionContext()` behavior.
 - [Input and prompt assembly](input-and-prompt-assembly.md): compacted summaries become default summary messages for provider input.
 - [Agent/session runtime](agent-session-runtime.md): `session.compact()`, opt-in auto-compaction, `RunOptions.retry`, and `retry_scheduled` runtime behavior.
-- [Attention compiler](attention-compiler.md): resolves the same input cap and shrinks an over-ratio request before compaction is considered.
+- [Attention compiler](attention-compiler.md): resolves the same input cap and shrinks an over-ratio request before compaction is considered; with `attention.compiler.durable` the fold ledger and frontier are checkpointed per fold, so a run that dies mid-investigation resumes already folded instead of replaying the pre-fold tail.
 - Example: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) — task-boundary compact after each iteration.
 - [Middleware hooks](middleware-hooks.md): `compaction` and `retry` middleware payload timing.
 - [Contribution registries](contribution-registries.md): compaction strategy and retry policy contributions.

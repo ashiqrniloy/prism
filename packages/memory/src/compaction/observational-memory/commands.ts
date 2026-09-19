@@ -1,8 +1,15 @@
 import type { CommandDefinition, JsonObject, SessionEntry } from "@arnilo/prism";
-import { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
+import {
+  activeObservations,
+  foldObservationalMemoryLedger,
+  mergeObservationalMemoryLedgers,
+  reflectionBlockedByInvalidation,
+} from "./ledger.js";
 import { buildObservationalMemoryProjection } from "./projection.js";
 import { renderObservationalMemory } from "./render.js";
+import { foldWorkScopeMap } from "./scopes.js";
 import { type ObservationalMemorySettingsInput, resolveObservationalMemorySettings } from "./settings.js";
+import { mergeSharedScopes, resolveSharedScopes, type SharedScopeAccessEvent, type SharedWorkScopeConfig } from "./shared-scopes.js";
 import { estimateEntryTokens } from "./tokens.js";
 import type { GetMemoryEntries } from "./tool.js";
 
@@ -11,6 +18,9 @@ export interface MemoryCommandOptions {
   readonly secrets?: readonly (string | undefined)[];
   readonly settings?: ObservationalMemorySettingsInput;
   readonly runtimeStatus?: () => { readonly inFlight: boolean; readonly lastError?: string };
+  /** Shared work scopes merged into `om:view` (status counts stay session-local). */
+  readonly sharedScopes?: SharedWorkScopeConfig;
+  readonly onScopeAccess?: (event: SharedScopeAccessEvent) => void;
 }
 
 export function createMemoryStatusCommand(options: MemoryCommandOptions): CommandDefinition {
@@ -66,10 +76,35 @@ export function createMemoryViewCommand(options: MemoryCommandOptions): CommandD
           error: { message: "Usage: /om:view [full]" },
           content: [{ type: "text", text: "Usage: /om:view [full]" }],
         };
-      const entries = await requireEntries(options, context.sessionId);
+      const sessionId = context.sessionId;
+      const entries = await requireEntries(options, sessionId);
       const projection = buildObservationalMemoryProjection(entries);
-      const observations = mode === "full" ? activeObservations(projection.full) : projection.observations;
-      const reflections = mode === "full" ? projection.full.reflections : projection.reflections;
+      const shared = sessionId
+        ? await resolveSharedScopes({
+            scopes: options.sharedScopes,
+            principalId: sessionId,
+            map: foldWorkScopeMap(entries),
+            ...(options.onScopeAccess ? { onAccess: options.onScopeAccess } : {}),
+          })
+        : [];
+      const merged = shared.length ? mergeSharedScopes(shared) : undefined;
+      const ledger = mergeObservationalMemoryLedgers(
+        mode === "full"
+          ? projection.full
+          : {
+              observations: projection.observations,
+              reflections: projection.reflections,
+              droppedObservationIds: projection.droppedObservationIds,
+            },
+        ...(merged
+          ? [{ observations: merged.observations, reflections: merged.reflections, droppedObservationIds: merged.droppedObservationIds }]
+          : []),
+      );
+      const observations = activeObservations(ledger);
+      const reflections =
+        mode === "full"
+          ? ledger.reflections
+          : ledger.reflections.filter((reflection) => !reflectionBlockedByInvalidation(reflection, new Set(ledger.droppedObservationIds)));
       const text = renderObservationalMemory(reflections, observations, options.secrets);
       return {
         name: "om:view",

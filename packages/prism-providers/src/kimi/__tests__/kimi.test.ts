@@ -631,6 +631,16 @@ describe("@arnilo/prism-providers/kimi", () => {
     assert(!events.some((event) => event.type === "done"));
   });
 
+  it("kimi_anthropic_route_maps_stop_reason_to_taxonomy", async () => {
+    const provider = createKimiCodingProvider({
+      apiKey: "fake-kimi-key",
+      fetch: mockFetch(sse([{ type: "message_delta", delta: { stop_reason: "max_tokens" } }, { type: "message_stop" }])),
+    });
+    const events = await assertProviderStreamConforms({ provider, request });
+    const done = events.at(-1);
+    assert.equal(done?.type === "done" ? done.stopReason : undefined, "max_output_tokens");
+  });
+
   it("moonshot_route_fails_truncated_stream_without_done_or_finish_reason", async () => {
     const truncated = new ReadableStream<Uint8Array>({
       start(controller) {

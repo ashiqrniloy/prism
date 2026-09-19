@@ -125,6 +125,7 @@ Run `npm run clean` explicitly after deleting source files or switching branches
 | `@arnilo/prism/testing/state-concurrency-conformance` | `dist/testing/state-concurrency-conformance.{js,d.ts}` |
 | `@arnilo/prism/testing/session-store-conformance` | `dist/testing/session-store-conformance.{js,d.ts}` |
 | `@arnilo/prism/testing/compaction-conformance` | `dist/testing/compaction-conformance.{js,d.ts}` |
+| `@arnilo/prism/testing/prefix-stability-conformance` | `dist/testing/prefix-stability-conformance.{js,d.ts}` |
 | `@arnilo/prism/testing/tool-conformance` | `dist/testing/tool-conformance.{js,d.ts}` |
 | `@arnilo/prism/testing/tool-effect-store-conformance` | `dist/testing/tool-effect-store-conformance.{js,d.ts}` |
 | `@arnilo/prism/testing/extension-conformance` | `dist/testing/extension-conformance.{js,d.ts}` |

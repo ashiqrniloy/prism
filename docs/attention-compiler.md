@@ -48,16 +48,17 @@ await session.run("cheap run", { attentionCompiler: { triggerRatio: 0.95, compac
 The agent setting is resolved with the run's model at run start, before any provider turn, so a malformed setting or a widening overlay fails the run immediately instead of on the turn that crosses the ratio:
 
 - **Allowed in the overlay:** `triggerRatio` / `compactRatio` at or above the agent setting, `keepLast` / `thinkingKeepTurns` at or below it, and extra `excludeTools` (unioned with the agent list, never removed).
-- **Rejected:** a lower gate ratio, more protected rows, and `maxInputTokens` / `reserveTokens` — cap inputs are agent-config only, because moving the cap moves the gate itself. Raising `triggerRatio` at or above the agent's `compactRatio` needs `compactRatio` raised in the same overlay.
+- **Rejected:** a lower gate ratio, more protected rows, and `maxInputTokens` / `reserveTokens` / `trigger` — cap inputs and fold axes are agent-config only, because moving either moves the gate itself. Raising `triggerRatio` at or above the agent's `compactRatio` needs `compactRatio` raised in the same overlay.
 - **Enabling from a run is rejected:** a run may disable or relax the compiler, never switch it on where the agent config left it off.
 
-The **sticky frontier is session-owned and created lazily** the first time an enabled run assembles a request: one `{ thinking, toolCallIds }` set pair per session, shared across runs, provider rounds, and branches, so a stub or strip made once stays applied even on a later under-ratio turn. It lives in memory only — a resumed process simply re-decides from the ratio it sees.
+The **sticky frontier is session-owned and created lazily** the first time an enabled run assembles a request: one `{ thinking, toolCallIds }` set pair per session, shared across runs, provider rounds, and branches, so a stub or strip made once stays applied even on a later under-ratio turn. A durable run with `persistSessionState: true` writes its bounded snapshot into the checkpoint and restores it on resume, so a resumed process keeps its stubs instead of re-deciding its first turn from the ratio.
 
 `AttentionCompilerOptions` (all optional):
 
 | Field | Type | Default | Meaning |
 | --- | --- | --- | --- |
-| `triggerRatio` | `number` | `0.75` | Fraction of `inputCap` that enables mutation; must be in `(0, 1)` (exclusive). |
+| `triggerRatio` | `number` | `0.75` | Fraction of `inputCap` that enables mutation; must be in `(0, 1)` (exclusive). The reference ratio the report carries and `compactRatio` is checked against. |
+| `trigger` | `AttentionTriggerInput` | — | Fold axes (plan 086 T2). **Replaces** the `triggerRatio` axis when set; omitted keeps it alone, so behavior is unchanged. See [Trigger axes](#trigger-axes). |
 | `compactRatio` | `number` | `0.9` | Where compaction should fire relative to the compiler; must exceed `triggerRatio`. |
 | `thinkingKeepTurns` | `number` | `1` | Newest thinking-bearing assistant turns kept intact. |
 | `keepLast` | `number` | `3` | Newest tool results kept full. |
@@ -71,8 +72,9 @@ The **sticky frontier is session-owned and created lazily** the first time an en
 | --- | --- | --- |
 | `model` | `{ limits?: ModelLimits }` | Source of `contextWindow` / `maxOutputTokens` when `maxInputTokens` is absent. |
 | `compactionTrigger` | `CompactionTrigger` | Optional: validated here so an unknown trigger `type` fails at create time, not on the first turn. An `input_ratio` trigger must exceed `triggerRatio`. |
+| `runInputBudget` | `number \| null` | Cumulative run input budget the `run_input_ratio` axis folds against — pass the resolved `RunLimits.maxInputTokens`. `null` or omitted means the run declares no budget, so that axis falls back to the input cap. Distinct from `maxInputTokens`, which caps a single request. |
 
-**Public surface.** `createAttentionCompiler(options?: AttentionCompilerOptions, context?)` is the factory; `AttentionCompilerOptions` carries the gate ratios, sticky-stage tuning (`thinkingKeepTurns`, `keepLast`), `excludeTools`, and `reserveTokens`. `resolveInputCap(options?: AttentionInputCapOptions, model?)` is the cap resolver, `compileAttention(options: AttentionCompileOptions)` is the per-turn call `assembleProviderInput` makes (`AttentionCompileOptions` also carries `fold`, `frontier`, `redactor`, `signal`, and the `turn`/`sessionId`/`runId` telemetry ids), and `createAttentionTruncationTrigger(options?: AttentionTruncationTriggerOptions)` builds the host-programmable compaction trigger.
+**Public surface.** `createAttentionCompiler(options?: AttentionCompilerOptions, context?)` is the factory; `AttentionCompilerOptions` carries the gate ratios, the optional `trigger` axes, sticky-stage tuning (`thinkingKeepTurns`, `keepLast`), `excludeTools`, and `reserveTokens`. `resolveInputCap(options?: AttentionInputCapOptions, model?)` is the cap resolver, `compileAttention(options: AttentionCompileOptions)` is the per-turn call `assembleProviderInput` makes (`AttentionCompileOptions` also carries `fold`, `frontier`, `redactor`, `signal`, `runInputTokens`, and the `turn`/`sessionId`/`runId` telemetry ids), and `createAttentionTruncationTrigger(options?: AttentionTruncationTriggerOptions)` builds the host-programmable compaction trigger. The frozen handle carries the normalized `trigger` axes, the resolved `runInputBudget`, and `durable`, so a caller can never resolve one and evaluate against another.
 
 Input cap resolution: `maxInputTokens` when set, otherwise `contextWindow - (maxOutputTokens ?? 0) - reserveTokens`. Both `resolveInputCap(options?, model?)` and the compiler fail closed with a `TypeError` when neither source is present, when a declared limit is malformed, or when the computed cap is not positive.
 
@@ -82,9 +84,55 @@ Turn options, passed to `assembleProviderInput`:
 | --- | --- | --- |
 | `attentionCompiler` | `AttentionCompilerOptions \| AttentionCompiler` | Raw options are validated for that call; a resolved handle reuses one validation. The session passes the run's resolved handle so a tuning typo fails before the first provider turn. |
 | `attentionSticky` | `AttentionStickyFrontier` | `{ thinking, toolCallIds }` sets from `createAttentionStickyFrontier()`. The session supplies its own; a direct `assembleProviderInput` caller owns it, and omitting it makes each call mutate for its turn only. |
+| `runInputTokens` | `number` | Run input tokens already charged by provider usage this run (default 0), so the cumulative `run_input_ratio` axis can project this turn onto the spend. The session passes the run limit counter. |
 | `onAttentionReport` | `(report: AttentionReport) => void` | Called once per **mutated** turn, before `input_assembly` middleware; silent under the ratio. The session uses it to emit `attention_compiled`. |
 
 `attentionCompiler` and `contextBudget` are **mutually exclusive** — a compiler-on turn that is still over throws `AttentionBudgetError` rather than evicting through the budget, so passing both fails closed with a `TypeError`.
+
+### Trigger axes
+
+`trigger` replaces `triggerRatio` as the gate (plan 086 T2). It takes one axis, one predicate function, or an array of them; an array is **any-of**, and the first axis that fires is the one attributed on the report.
+
+| Kind | Fires when | Folds to | Fails closed? |
+| --- | --- | --- | --- |
+| `{ kind: "input_ratio", ratio }` | the assembled request reaches `ratio × inputCap` — the legacy `triggerRatio` axis | `ratio × inputCap` | yes |
+| `{ kind: "run_input_ratio", ratio }` | `runInputTokens + estimatedInputTokens` reaches `ratio × runInputBudget`, so a run capped below the model window folds before the cap kills it | every eligible row (a cumulative gate has no per-request target) | **no** — the spend is already booked; folding only slows the counter, and the run limit owns the cap |
+| `{ kind: "token_floor", tokens }` | the assembled request reaches `tokens` tokens, whatever the cap | `tokens` | yes |
+| `{ kind: "predicate", shouldFold }` (or a bare function) | `shouldFold(state)` returns `true` | every eligible row | yes |
+
+```ts
+// The synapta Plan 118 shape: a 1M-window model under a 500k run input cap, where the legacy
+// 0.75 × window gate (745k) could never open before the run died at its cap.
+const compiler = createAttentionCompiler(
+  { trigger: { kind: "run_input_ratio", ratio: 0.75 }, keepLast: 3 },
+  { model, runInputBudget: 500_000 },
+);
+
+// Any-of, attributed in order: the floor is reported when both would fire.
+createAttentionCompiler({ trigger: [{ kind: "token_floor", tokens: 120_000 }, { kind: "input_ratio", ratio: 0.9 }] }, { model });
+
+// Host predicate: synchronous, evaluated at most twice per turn (once to decide, once to
+// confirm the stages settled it) with a frozen `AttentionTriggerState`.
+createAttentionCompiler(
+  { trigger: (state) => state.estimatedInputTokens > 150_000 && state.turn > 5 },
+  { model },
+);
+```
+
+`AttentionTriggerState` is frozen and carries estimates only: `estimatedInputTokens` (this turn's assembled request), `inputCapTokens`, `runInputBudgetTokens` (absent when the run declares none), `runInputTokens` (charged spend so far), and `turn`. A predicate that returns a non-boolean — including a `Promise` from an `async` function — fails closed with a `TypeError` naming the option, rather than silently never firing.
+
+Predicate axes run **host-supplied code**, under the same trust as `CompactionTrigger.custom`: the compiler passes host data in and takes a boolean out, never credentials or payloads. Keep them synchronous and side-effect free; they see token estimates and ids, never message text.
+
+Rules that hold for every axis:
+
+- **Config-time validation.** Unknown kinds, a ratio outside `(0, 1)`, a non-positive `token_floor.tokens`, an empty array, and a predicate that is not a function all throw a `TypeError` naming the option (`attentionCompiler.trigger`, or `attentionCompiler.trigger[1]` inside an array).
+- **Gate is agent-config only.** A run overlay may not set `trigger`, `maxInputTokens`, or `reserveTokens` — the gate and the cap move together, so moving either belongs in the agent config.
+- **One evaluation per turn.** The axes are evaluated at turn start against the measured request and once more after the stages. The per-row loop then compares numbers, so a predicate costs two calls a turn no matter how many rows are eligible.
+- **Sticky and monotonic as ever.** An axis only decides *whether* to fold; the stages still stop as soon as a target is reached, and mutations stay applied on later under-gate turns.
+- **`run_input_ratio` needs its budget.** With `compactAfterTokens`-style run limits declared (`RunLimits.maxInputTokens`, which defaults to `40_000` and kills the run cumulatively), pass the resolved value as `runInputBudget`. Without one the axis is the per-request `input_ratio` comparison.
+- **`triggerRatio` stays the reference.** Omitted alongside `trigger`, it takes the first `input_ratio` axis's ratio so `compactRatio` and the report still describe the real fold point; with no `input_ratio` axis it keeps the default `0.75` as the compaction reference.
+
+Runnable end to end: [`examples/attention-budget-axes.ts`](../examples/attention-budget-axes.ts) runs the scenario both axes exist for — a 1M window, a 500k run budget, 24 provider turns. The window axis would need 743k tokens and never gets near (`maxUsed` ≈ 7k, so it never fires); cumulative spend crosses 1 % of the budget on turn 6, the gate opens there, and the run finishes having spent 36k of its 500k with the newest 2 rows raw and every older body a stub. `src/__tests__/attention-compiler-budget.test.ts` asserts the same numbers, including that the first fold could only be explained by carried-over spend.
 
 ## Outputs / response / events
 
@@ -97,10 +145,12 @@ Turn options, passed to `assembleProviderInput`:
 | `used` | `number` | Estimated tokens measured before this turn's mutation. |
 | `usedAfter` | `number` | Estimated tokens of the same request after the mutation, so `used` → `usedAfter` is the per-turn cost curve. |
 | `inputCap` | `number` | Resolved cap the ratio was compared against. |
-| `triggerRatio` | `number` | Configured ratio. |
+| `triggerRatio` | `number` | Configured ratio — the reference axis, whether or not a `trigger` replaced the gate. |
+| `firedAxis` | `AttentionTriggerKind?` | Axis that opened the gate on this turn, in configured order; absent on an under-gate turn. Plan 087 attribution reads this. |
 | `droppedThinkingTurns` | `number` | Thinking turns absent from this request — rows re-applied from the sticky frontier count again. |
 | `stubbedToolResults` | `number` | Tool results stubbed in this request — re-applied rows count again. |
 | `stubbedBytes` | `number` | Payload bytes those stubs took out of the request (message bytes minus the stub header). |
+| `newFoldedBodies` | `number` | Folded bodies this turn added to the ledger: the `summarize` calls the cache saved, and the durable-fold checkpoint signal. `0` on a turn that only re-applied stored bodies. |
 | `truncated` | `boolean` | `true` when the gate stopped with eligible rows left, so the sticky frontier is partial. |
 | `runId` / `sessionId` | `string?` | Owning run/session when known. |
 
@@ -119,7 +169,7 @@ Tool result read_file [call_1]: omitted 41_982 bytes (sha256 3f9a1c2b4d5e6f70a1b
 
 Never stubbed: rows named in `excludeTools`, tool **errors**, results stamped as a decision/approval payload (`approval`, `approvalId`, `prismApproval`, `decision`, `decisions`, `pendingDecisions`, `elicitation` metadata), rows the host fold's own age/byte gates exclude, and any row whose stub would cost more than the payload it replaces. When `toolResultFold.summarize` is configured, that function produces the stub body for the rows the compiler picked (capped by its `maxSummaryBytes`); otherwise the deterministic digest above is used.
 
-`compileAttention({ compiler, groups, context?, skills?, tools?, fold?, frontier?, redactor?, signal?, turn?, sessionId?, runId? })` is what `assembleProviderInput` calls; it returns `{ groups, mutated, report }`. Under the ratio it returns the **same groups object** it was given; when it mutates it returns new `history` / `toolResults` arrays and never writes into the caller's arrays.
+`compileAttention({ compiler, groups, context?, skills?, tools?, fold?, frontier?, attentionFold?, redactor?, signal?, turn?, runInputTokens?, sessionId?, runId? })` is what `assembleProviderInput` calls; it returns `{ groups, mutated, report }`. Under the ratio it returns the **same groups object** it was given; when it mutates it returns new `history` / `toolResults` arrays and never writes into the caller's arrays.
 
 Errors:
 
@@ -137,6 +187,7 @@ Errors:
   "keepLast": 3,
   "excludeTools": ["submit_payment"],
   "reserveTokens": 1024,
+  "durable": false,
   "compaction": {
     "trigger": {
       "type": "custom",
@@ -244,10 +295,39 @@ See [Compaction and retry policies](compaction-and-retry.md) for the trigger uni
 - `excludeTools` is fail closed: entries are validated as non-empty bounded strings, de-duplicated, and frozen; a named tool is never stubbed even when the request stays over the ratio.
 - The compiler never orchestrates other levers: `toolResultFold.summarize` still wins for fold-eligible rows when a host supplies it, `applyContextBudget` keeps working unchanged for compiler-off agents, and compaction stays a task-boundary operation (`session.compact()` still throws while a run is in flight).
 - Sticky means sticky: a stripped thinking turn is never restored and a stubbed call id is never un-stubbed, even on a later under-ratio turn — restoring either would rewrite the cached prefix. Pass no `attentionSticky` for one-shot assemblies.
-- The frontier is bounded (256 thinking keys, 256 tool-call ids, newest kept) and lives on the session, so it survives turns and runs. A durable run with `persistSessionState: true` also writes it into the checkpoint (`sessionState.attentionSticky`) and restores it on resume, so a resumed run keeps its stubs instead of re-deciding its first turn from the ratio; a malformed or hand-edited frontier is dropped entry by entry, never fatal to a resume.
+- The frontier is bounded (256 thinking keys, 256 tool-call ids, newest kept) and lives on the session, so it survives turns and runs. A durable run with `persistSessionState: true`, or any run with `durable: true`, also writes it into the checkpoint (`sessionState.attentionSticky`) and restores it on resume, so a resumed run keeps its stubs instead of re-deciding its first turn from the ratio; a malformed or hand-edited frontier is dropped entry by entry, never fatal to a resume.
 - A compiler-on turn assembles from the default message groups (instructions, summaries, history, input, attachments, tool results) exactly like a `contextBudget` turn, so a custom `inputBuilder` is not consulted while the compiler is on.
 - Compaction timing is programmable per agent through `CompactionOptions.trigger` (`threshold_entries` | `input_ratio` | `custom`); omitting it keeps today's `thresholdEntries` gate. `assertCompactionTrigger(trigger)` validates a trigger independently of the compiler.
 - The gate is opt-in per agent/run; omit the option for current assembly bytes.
+
+### Durable folding
+
+`durable: true` puts the fold state on disk (plan 086 T3), so a run that dies mid-investigation resumes
+with the rows it had already folded instead of re-deciding them from the ratio.
+
+```ts
+const agent = createAgent({
+  // ...
+  attentionCompiler: {
+    trigger: { kind: "run_input_ratio", ratio: 0.75 },
+    keepLast: 2,
+    durable: true,
+  },
+  runState: { checkpoints, definitionRevision: "1" }, // the write target; `persistSessionState` not required
+  toolResultFold: { summarize: hostSummarize },        // optional: bodies become durable too
+});
+
+// After a crash the worker resumes where the fold left off:
+await resumeAgentRun(agent, { runId, sessionId }, { decision: "continue", expectedVersion }, { checkpoints, definitionRevision: "1" });
+```
+
+- **One write per fold, never per turn.** The checkpoint is written after the turn's request is assembled and before the provider sees it, only on turns that added folded bodies. A turn that re-applies what the ledger already holds writes nothing.
+- **The fold ledger.** Each folded body is stored once, keyed by tool call id (newest 64, 4 KiB each), and re-applied on every later turn: the host `summarize` runs once per row instead of once per turn, and a sticky row stays byte-identical for the provider cache. Bodies are already redacted and capped by the fold that produced them.
+- **Independent of `persistSessionState`.** That option governs skill and tool-activation state. `durable` is its own opt-in for the fold ledger plus its sticky frontier (`sessionState.attentionFold` / `attentionSticky`), because a resumed run needs both: the frontier decides *what* stays folded, the ledger decides *what body* it was folded to.
+- **Restore is fault-tolerant.** A malformed ledger shape starts from an empty ledger, and a malformed entry is dropped one by one — the row simply re-folds on the next over-gate turn. A hand-edited checkpoint never blocks a resume.
+- **Sizing.** Off by default. On, it costs one checkpoint write per fold turn plus `bodies × (body ≤ maxSummaryBytes)` bytes in the run state (default cap: 64 bodies), and it makes the fold the run's first crash-recovery point when `checkpointPolicy` is `"decision"`.
+- **Requires a durable run.** `durable: true` without `runState` (a checkpoint store) throws `AgentRunStateError` at run start, before the first provider turn. A run overlay may not set `durable`.
+- **Still projection-only.** Durability changes *where the projection is remembered*, not what the store holds: the session store, observational-memory ledger, and semantic stores keep every original payload for recall, branching, and audit.
 
 ## Security and performance notes
 
@@ -264,9 +344,10 @@ See [Compaction and retry policies](compaction-and-retry.md) for the trigger uni
 
 - [`assembleProviderInput`](input-and-prompt-assembly.md): the compose path the compiler pre-passes when enabled.
 - [`toolResultFold`](input-and-prompt-assembly.md): host summarizer that wins over the deterministic stub for eligible rows.
-- [`CompactionOptions`](compaction-and-retry.md): `trigger` is the host compact-when seam; `thresholdEntries` remains the default gate.
+- [`CompactionOptions`](compaction-and-retry.md): `trigger` is the host compact-when seam; `thresholdEntries` remains the default gate. For fold state that outlives a crash, see [Durable folding](#durable-folding).
 - [`observational-memory`](compaction-observational-memory.md): host `shouldCompact` / trigger overrides `compactAfterTokens` for post-run compaction.
 - [`provider caching`](provider-caching.md): why mutations are monotonic and in-place.
 - [`AttentionReport` measurements](_evidence/phase74-attention-measurements.md): the hermetic fixture behind the savings, cache, resume, and truncation numbers.
+- Example: [`examples/attention-budget-axes.ts`](../examples/attention-budget-axes.ts) — budget-capped long run where only the cumulative axis can open the gate.
 - [Memory fabric](memory-fabric.md): a context source whose blocks are measured like any other (`working-memory` / `semantic-memory` tags, no layer id).
 - [`thinking and reasoning`](thinking-and-reasoning.md): the `thinking` blocks the first stage strips.

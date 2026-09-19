@@ -54,12 +54,24 @@ export {
   invalidateAcrossLayers,
   LINEAGE_META_KEY,
   LINEAGE_SCHEMA_VERSION,
+  listInvalidatedIds,
   parseLineage,
   recordBlocked,
   revokedIdsAbsent,
   stampLineage,
 } from "./lineage.js";
 export { createMemory } from "./memory.js";
+export type {
+  DeletionPropagationContext,
+  DeletionPropagationHandler,
+  DeletionPropagationResult,
+  DeletionPropagationStore,
+  DeletionPropagator,
+  DeletionPropagatorOptions,
+} from "./propagation.js";
+export { createDeletionPropagator, DELETION_REASON, HARD_PROPAGATION_EDGES } from "./propagation.js";
+export type { RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore } from "./repoint.js";
+export { HARD_REPOINT_RECORDS, repointSource } from "./repoint.js";
 export type {
   PostgresMemoryStores,
   PostgresMemoryStoresOptions,

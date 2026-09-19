@@ -16,6 +16,7 @@ import type {
 import {
   assertStructuredOutputRequestSupported,
   canonicalizeJsonSchema,
+  mapProviderStopReason,
   providerDone,
   providerError,
   providerTextDelta,
@@ -75,10 +76,12 @@ export async function* anthropicMessagesEvents(body: ReadableStream<Uint8Array>,
   const blocks = new Map<number, PartialBlock>();
   let usage: Usage | undefined;
   let sawMessageStop = false;
+  let stopReason: string | undefined;
   for await (const data of readSseData(body, { signal })) {
     if (data === "[DONE]") break;
     const event = JSON.parse(data) as AnthropicEvent;
     if (event.type === "message_stop") sawMessageStop = true;
+    if (event.type === "message_delta" && event.delta?.stop_reason) stopReason = event.delta.stop_reason;
     if (event.type === "content_block_start" && event.content_block?.type === "tool_use") {
       blocks.set(event.index ?? 0, { id: event.content_block.id, name: event.content_block.name, argumentsText: "" });
     }
@@ -116,7 +119,7 @@ export async function* anthropicMessagesEvents(body: ReadableStream<Uint8Array>,
   for (const call of blocks.values()) {
     yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
   }
-  yield providerDone(usage);
+  yield providerDone(usage, stopReason === undefined ? undefined : mapProviderStopReason(stopReason));
 }
 
 async function toMessage(
@@ -247,7 +250,13 @@ interface AnthropicEvent {
   readonly type?: string;
   readonly index?: number;
   readonly content_block?: { readonly type?: string; readonly id?: string; readonly name?: string };
-  readonly delta?: { readonly type?: string; readonly text?: string; readonly thinking?: string; readonly partial_json?: string };
+  readonly delta?: {
+    readonly type?: string;
+    readonly text?: string;
+    readonly thinking?: string;
+    readonly partial_json?: string;
+    readonly stop_reason?: string;
+  };
   readonly message?: { readonly usage?: AnthropicUsage };
   readonly usage?: AnthropicUsage;
 }

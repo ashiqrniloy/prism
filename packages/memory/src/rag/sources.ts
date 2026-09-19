@@ -1,4 +1,5 @@
 import { type JsonObject, resolveRedactor } from "@arnilo/prism";
+import type { DeletionPropagationHandler } from "../propagation.js";
 import type { MemoryVectorRecord } from "../types.js";
 import { chunkText } from "./chunk.js";
 import { RagScopeError, RagValidationError } from "./errors.js";
@@ -7,6 +8,8 @@ import { indexChunkBatches } from "./indexing.js";
 import { ingestionStatus } from "./ingestion-status.js";
 import type {
   DeleteSourceOptions,
+  IngestionStatusStore,
+  RagScope,
   ReplaceDocumentOptions,
   ReplaceSourceOptions,
   SourceVectorStore,
@@ -165,6 +168,31 @@ export async function deleteSource(options: DeleteSourceOptions): Promise<Source
     : 0;
   await options.statusStore?.delete(scope, sourceId);
   return Object.freeze({ sourceId, deleted, indexed: 0 });
+}
+
+/**
+ * Plan 089 Task 1: the RAG layer's propagation handler. Register this on a
+ * `createDeletionPropagator` so a deleted source removes its chunk rows (and
+ * ingestion status) in the same propagation pass that tombstones derived rows.
+ */
+export function createRagDeletionHandler(options: {
+  readonly store: SourceVectorStore;
+  readonly scope: RagScope;
+  readonly statusStore?: IngestionStatusStore;
+}): DeletionPropagationHandler {
+  return {
+    kind: "rag",
+    async delete({ sourceId, signal }) {
+      const result = await deleteSource({
+        sourceId,
+        store: options.store,
+        scope: options.scope,
+        ...(options.statusStore ? { statusStore: options.statusStore } : {}),
+        ...(signal ? { signal } : {}),
+      });
+      return result.deleted;
+    },
+  };
 }
 
 export async function replaceDocument(options: ReplaceDocumentOptions): Promise<SourceMutationResult> {

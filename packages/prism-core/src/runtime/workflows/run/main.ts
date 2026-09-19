@@ -1,6 +1,7 @@
 /** main (0.2.5 plan 025 Task 1 split). Moved verbatim from run.ts; public surface unchanged behind the barrel. */
 
 import type { JsonObject } from "@arnilo/prism";
+import { runCheckpointRestoreHooks } from "@arnilo/prism";
 import { buildGraph } from "../define.js";
 import { WorkflowCheckpointError, WorkflowRuntimeError } from "../errors.js";
 import {
@@ -62,6 +63,8 @@ export interface SchedulerState {
   conditionalSkip: Map<string, Set<string>>;
   suspension?: WorkflowSuspensionDescriptor;
   resume?: WorkflowResumeRecord;
+  /** Plan 094 Task 3: audit of the restore hooks that ran before this scheduler took over. */
+  restore?: import("@arnilo/prism").CheckpointRestoreAudit;
   resumeInput?: unknown;
   state: JsonObject;
   stateVersion: number;
@@ -249,6 +252,25 @@ export async function resumeWorkflow(
   }
   ready.sort((a, b) => a.localeCompare(b));
 
+  // Plan 094 Task 3: restore external state (git commit, document versions) before the scheduler
+  // writes anything. Hooks see the checkpoint's sidecar map and must all succeed; a failure throws
+  // and leaves the checkpoint untouched, resumable, and never half-applied.
+  const restoreHooks = options.restoreHooks ?? [];
+  const restore = restoreHooks.length
+    ? await runCheckpointRestoreHooks(
+        restoreHooks,
+        {
+          workflowId,
+          runId: record.runId,
+          version: record.version,
+          status: record.value.status,
+          ...(record.value.metadata ? { metadata: record.value.metadata } : {}),
+          checkpoint: record,
+        },
+        { timeoutMs: options.restoreHookTimeoutMs, signal: options.signal },
+      )
+    : undefined;
+
   const state: SchedulerState = {
     workflow,
     runId: record.runId,
@@ -269,6 +291,7 @@ export async function resumeWorkflow(
     conditionalSkip: new Map(),
     suspension: resumeRecord?.decision === "approve" ? undefined : record.value.suspension,
     resume: redactValue(resumeRecord ?? record.value.resume, options.redactor),
+    ...(restore ? { restore } : {}),
     resumeInput: resumeRecord?.input ?? record.value.resume?.input,
     state: cloneState(record.value.state ?? {}),
     stateVersion: record.value.stateVersion ?? 0,
@@ -280,6 +303,9 @@ export async function resumeWorkflow(
 
   const result = await executeScheduler(state, {
     ...options,
+    // Plan 094 Task 2: the sidecar map survives a resume the host does not re-state, mirroring
+    // agent-run records (checkpoint writes would otherwise drop it).
+    metadata: options.metadata ?? record.value.metadata,
     fencingToken: options.fencingToken ?? record.fencingToken,
   });
   if (resumeRecord?.decision === "deny") {

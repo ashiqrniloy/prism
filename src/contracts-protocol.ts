@@ -2,6 +2,8 @@ import type {
   AgentLoopOptions,
   AgentLoopStrategy,
   ArtifactValidation,
+  BudgetAxisUsage,
+  BudgetConsumedCounters,
   CompactionOptions,
   ContentBlock,
   ErrorInfo,
@@ -15,17 +17,23 @@ import type {
   ProviderRequestOptions,
   ProviderRequestPolicy,
   ProviderResolver,
+  ProviderStopReason,
   RetryOptions,
   RunLimitBreach,
+  RunLimitName,
   RunLimits,
   Skill,
   SubscriberOverflowPolicy,
   SystemPromptConfig,
   ToolCallAuthority,
   ToolCallContent,
+  ToolCallSummary,
+  TurnBudgets,
   TurnPolicyOptions,
   Usage,
 } from "./contracts-core.js";
+import type { CacheUsageReport } from "./cache-helpers.js";
+import type { CheckpointRestoreAudit } from "./checkpoint-restore.js";
 import type { AgentRunInterruption, AgentRunStateOptions } from "./contracts-run-state.js";
 import type { SecretRedactor } from "./redaction.js";
 import type { ToolValidator } from "./tools.js";
@@ -44,7 +52,7 @@ export type ProviderEvent =
   | { readonly type: "tool_call"; readonly call: ToolCallContent }
   | { readonly type: "usage"; readonly usage: Usage }
   | { readonly type: "continuation_required"; readonly cursor: string; readonly reason?: string }
-  | { readonly type: "done"; readonly usage?: Usage }
+  | { readonly type: "done"; readonly usage?: Usage; readonly stopReason?: ProviderStopReason }
   | { readonly type: "error"; readonly error: ErrorInfo };
 
 export type RealtimeEvent =
@@ -110,6 +118,10 @@ export interface RunOptions {
   readonly toolNames?: readonly string[];
   /** Tools disclosure: "all" (default) sends every active tool schema; "search" sends top-k + the generated `search_tools` tool. */
   readonly toolsDisclosure?: import("./tool-search.js").ToolsDisclosure;
+  /** Per-turn restrictive allow-list over the run grant. Overrides `AgentConfig.toolNarrowing`. */
+  readonly toolNarrowing?: import("./contracts-core/agent.js").ToolNarrowing;
+  /** Opt-in: tools hidden this turn stay callable by name (default off). Overrides agent config. */
+  readonly allowHiddenToolCalls?: true;
   readonly toolsSearch?: import("./tool-search.js").ToolsSearchOptions;
   /** Opt-in projection-only fold for aged large tool results in provider view; store untouched. */
   readonly toolResultFold?: import("./tool-result-fold.js").ToolResultFoldOptions;
@@ -143,6 +155,17 @@ export interface ProviderTurnMetadata {
   readonly httpStatus?: number;
   readonly rateLimitRemaining?: number;
   readonly rateLimitResetMs?: number;
+  /** Why the provider turn stopped (plan 087 T1); present on `provider_turn_finished` only. */
+  readonly stopReason?: ProviderStopReason;
+  /** Effective budget state at turn end (plan 087 T1); present on `provider_turn_finished` only. */
+  readonly budgets?: TurnBudgets;
+  /** Provider-reported cache usage and derived hit rate; absent when cache usage is unknown. */
+  readonly cache?: CacheUsageReport;
+  /** Effective tool menu this turn. Names hashed in request order; never includes args. */
+  readonly tools?: {
+    readonly count: number;
+    readonly idsHash: string;
+  };
 }
 
 export interface ToolExecutionMetadata {
@@ -186,7 +209,19 @@ export interface DelegatedAgentStep {
 /** Why a run stopped cleanly. `host_policy` is a `RunOptions.turnPolicy` stop; the rest are loop ceilings (F4). */
 export type AgentFinishReason = "turn_limit" | "token_limit" | "refusal" | "host_policy";
 
-export type AgentEvent =
+/**
+ * Origin of an agent event forwarded from a delegated child (supervisor child-event passthrough).
+ * Present only on child events routed onto a parent stream; absent on a session's own events.
+ */
+export interface ChildEventOrigin {
+  readonly childId: string;
+  readonly delegationId: string;
+  /** Delegation depth: 1 is a direct child of the hosting supervisor. */
+  readonly depth: number;
+}
+
+/** Payload union of every agent event; the exported `AgentEvent` adds the optional child origin tag. */
+type AgentEventPayload =
   | { readonly type: "agent_started"; readonly sessionId: string; readonly runId: string }
   | {
       readonly type: "agent_finished";
@@ -205,7 +240,14 @@ export type AgentEvent =
       readonly interruption: AgentRunInterruption;
       readonly version: number;
     }
-  | { readonly type: "agent_resumed"; readonly sessionId: string; readonly runId: string; readonly version: number }
+  | {
+      readonly type: "agent_resumed";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly version: number;
+      /** Plan 094 Task 3: audit of the external-state restore hooks that ran before this claim. */
+      readonly restore?: CheckpointRestoreAudit;
+    }
   | {
       readonly type: "agent_denied";
       readonly sessionId: string;
@@ -215,6 +257,18 @@ export type AgentEvent =
     }
   | { readonly type: "turn_started"; readonly sessionId: string; readonly runId: string; readonly turn: number }
   | { readonly type: "turn_finished"; readonly sessionId: string; readonly runId: string; readonly turn: number }
+  | {
+      /**
+       * Host middleware completed this turn without a provider request (plan 096). No `usage` field:
+       * a deterministic turn has no provider cost, so accounting must never zero-fill one.
+       */
+      readonly type: "deterministic_turn";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly turn: number;
+      /** Answering middleware id (provenance); ids only, never free host code. */
+      readonly middleware: string;
+    }
   | {
       readonly type: "provider_turn_started";
       readonly sessionId: string;
@@ -271,6 +325,14 @@ export type AgentEvent =
       readonly metadata: ToolExecutionMetadata;
     }
   | {
+      /** Host `toolNarrowing` asked for names outside the run grant; those names were dropped. */
+      readonly type: "tool_narrowing_clamped";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly turn: number;
+      readonly dropped: readonly string[];
+    }
+  | {
       readonly type: "guardrail_decision";
       readonly sessionId: string;
       readonly runId: string;
@@ -279,6 +341,17 @@ export type AgentEvent =
       readonly record: GuardrailRecord;
     }
   | { readonly type: "run_limit_exceeded"; readonly sessionId: string; readonly runId: string; readonly breach: RunLimitBreach }
+  | {
+      /** Terminal attribution for a run that died on a run limit (plan 087 T2): which axis fired,
+       *  counters at exhaustion, how close the other axes were, and hashes of recent tool calls. */
+      readonly type: "budget_exhausted";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly limit: RunLimitName;
+      readonly consumed: BudgetConsumedCounters;
+      readonly closestOtherAxes: readonly BudgetAxisUsage[];
+      readonly recentToolCalls: readonly ToolCallSummary[];
+    }
   | { readonly type: "queue_updated"; readonly sessionId: string; readonly runId: string; readonly size: number }
   | {
       /** A steered message was dropped by a terminal input guardrail; the run continues without it. */
@@ -362,6 +435,13 @@ export type AgentEvent =
       readonly attempt: number;
       readonly result: ArtifactValidation;
     };
+
+/**
+ * One agent event. `child` is set only when the event was forwarded from a delegated child
+ * (e.g. supervisor `report: "stream"` passthrough), so hosts can route it onto a parent stream
+ * without per-event-type special cases. It never replaces the event's own `sessionId`/`runId`.
+ */
+export type AgentEvent = AgentEventPayload & { readonly child?: ChildEventOrigin };
 
 export type ToolEffectKind = "none" | "local_mutation" | "external_mutation";
 
@@ -682,4 +762,10 @@ export interface ProviderTurnResult {
   readonly messageId?: string;
   readonly started: boolean;
   readonly usage?: Usage;
+  /**
+   * Provenance for turns that did not come from the provider (plan 096):
+   * `{ deterministic: { middleware } }`. Copied onto the assistant `Message.metadata`, so it
+   * serializes with the transcript and survives replay. Absent for provider turns.
+   */
+  readonly metadata?: Readonly<Record<string, unknown>>;
 }

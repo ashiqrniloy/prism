@@ -223,6 +223,22 @@ Canonical contract: [Thinking and reasoning](thinking-and-reasoning.md).
 
 Canonical contract: [AI SDK provider adapter](providers/ai-sdk.md).
 
+## Stop-reason checklist
+
+Every adapter that parses a native completion reason must map it through the shared
+`mapProviderStopReason` table and emit it on the normalized `done` event
+(`providerDone(usage, mapped)`); `provider_turn_finished.metadata.stopReason` then carries it to
+hosts (see [Agent events](agent-events.md#outputs--response--events)). Cover:
+
+1. **One mapped native reason per protocol** — a fake stream whose wire reason means truncation
+   (`finish_reason: "length"`, `stop_reason: "max_tokens"`, `finishReason: "MAX_TOKENS"`,
+   Converse `stopReason: "max_tokens"`) reaches `done.stopReason === "max_output_tokens"`.
+2. **Tool-call turns** — a native tool reason (`tool_calls` / `tool_use` / `tool-calls`) maps to
+   `tool_calls`; a generic completion reason on a turn that produced tool calls is normalized to
+   `tool_calls` by the session, not the adapter.
+3. **Unknown degrades** — a new or unmapped wire value yields `unknown` and never fails the stream.
+4. **No extra fields** — the adapter adds nothing else to `done`; redaction and bounds are unchanged.
+
 ## Extension and configuration notes
 
 The helpers are a testing subpath only. Provider packages can use them with their own mocked fetch/transport or `createMockProvider()`. Live provider tests should stay opt-in and env-gated outside Prism's default test suite.

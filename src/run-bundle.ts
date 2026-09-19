@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { agentFingerprint, BUILT_IN_LOOP_REVISIONS } from "./agent-run-state.js";
 import type { Agent, AgentSessionConfig, GuardrailStage, Guardrails, RunOptions, ToolDefinition } from "./contracts.js";
+import { describeGuardrailPacks } from "./guardrails.js";
 import { describeStorage } from "./host-composition.js";
 import { canonicalizeJsonSchema } from "./providers/schema.js";
 import type { SecretRedactor } from "./redaction.js";
@@ -121,7 +122,7 @@ export function snapshotRunBundle(input: RunBundleSnapshotInput): RunBundleSnaps
       effect: tool.effect === undefined ? null : typeof tool.effect === "function" ? "classifier" : tool.effect.kind,
     })),
     activeSkills: run?.activeSkills ?? null,
-    guardrails: guardrailRows(config.guardrails, run?.guardrails),
+    guardrails: [...guardrailRows(config.guardrails, run?.guardrails), ...describeGuardrailPacks(input.config?.guardrailPacks)],
     loop: loopIdentity(effectiveLoop),
     thinkingLevel: run?.thinkingLevel ?? config.thinkingLevel ?? null,
     limits: resolveRunLimits(config.limits, run?.limits),

@@ -31,6 +31,7 @@ Use this package when a host needs offline quality checks or sampled live scorin
 | `createSchemaScorer` | Validates final result or named step output against JSON schema |
 | `createErrorClassScorer` | Fails closed if denied error codes or blocked executions appear on timeline |
 | `createApprovalBeforeEffectScorer` | Verifies explicit approval occurred on timeline prior to sensitive tool effect |
+| `createDeterministicTurnScorer` | Requires host-answered (no-model) turns with intact provenance: `minTurns` deterministic steps, optionally from one `middleware`, and no provider request inside those turns |
 | `createCitationIntegrityScorer` | Invariant 0 on missing source, hash/span mismatch, or revoked ACL. Reads `environment.citations[]`. Ignores semantic `support`. |
 | `runComparison` | immutable dataset, 2–8 named candidates by default, pairwise scorers |
 | `assertEvaluationThreshold` / `serializeEvaluationReport` | mean/failure/per-scorer gates, hard invariant enforcement, and bounded redacted JSON |
@@ -266,6 +267,10 @@ The spawn pack (`@arnilo/prism-core/governance/evals` `spawn-pack.test.ts`) grad
 - `spawn.critic-gate`: a failed verification child blocks parent effects until the host join policy reads the verdict (verification failures cannot be averaged away).
 
 Negative controls wire deliberately vulnerable host compositions — uncatalogued spawn, skipped reservation, model-supplied scope escalation, leaky child tool list, non-aborting cancel, ungated ship — and assert the matching grader reports `0` naming the violation.
+
+## Guardrail-pack trajectory scenarios (plan 092)
+
+`guardrail-pack-scenarios.test.ts` gives every built-in [guardrail pack](guardrails.md#guardrail-packs) a violating and a compliant trajectory, graded by `createGuardrailPackScorer()` on the projected timeline: a denying guardrail step scores `0` and names `metadata.guardrail` (`pack:<pack>/<rule>`), a compliant trajectory scores `1` with no pack denial, and a `forbidTools` call that executed fails as an enforcement escape instead of passing vacuously. Each scenario runs `runScenario({ agent, turns, sessionConfig: { guardrailPacks: [...] }, timeline: "metadata" })` against a scripted mock provider; a pack-absent control re-runs the destructive script with no packs to prove the blocked calls were blocked by the pack.
 
 ## PostgreSQL enterprise state (0.0.23)
 

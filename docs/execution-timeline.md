@@ -68,6 +68,8 @@ interface ExecutionTimeline {
   readonly sessionId?: string;
   readonly workflowId?: string;
   readonly workflowRevision?: string;
+  /** Workflow checkpoint sidecar metadata (`WorkflowCheckpointValue.metadata`); present only when projected with a checkpoint. */
+  readonly workflowMetadata?: Readonly<Record<string, unknown>>;
   readonly traceId?: string;
   readonly status: string;
   readonly stopReason?: AgentFinishReason;
@@ -77,7 +79,10 @@ interface ExecutionTimeline {
   readonly input?: unknown;
   readonly result?: unknown;
   readonly usage?: Usage;
+  readonly cacheHitRate?: number;
   readonly steps: readonly ExecutionStep[];
+  readonly turns?: readonly TimelineTurn[];
+  readonly exhaustion?: TimelineExhaustion;
   readonly redacted: boolean;
   readonly content: TimelineContentPolicy;
 }
@@ -104,9 +109,53 @@ interface ExecutionStep {
 }
 ```
 
-Step kinds: `"run"`, `"turn"`, `"provider"`, `"tool"`, `"guardrail"`, `"delegation"`, `"compaction"`, `"attention"`, `"retry"`, `"hitl"`, `"artifact"`, `"workflow_node"`, `"loop_iteration"`, `"nested_workflow"`.
+Step kinds: `"run"`, `"turn"`, `"deterministic"`, `"provider"`, `"tool"`, `"guardrail"`, `"delegation"`, `"compaction"`, `"attention"`, `"retry"`, `"hitl"`, `"artifact"`, `"workflow_node"`, `"loop_iteration"`, `"nested_workflow"`.
+
+### `TimelineTurn` and `TimelineExhaustion`
+
+```ts
+interface TimelineTurn {
+  readonly turn: number;
+  readonly status: ExecutionStepStatus;
+  readonly startedAt: string;
+  readonly finishedAt?: string;
+  readonly durationMs?: number;
+  readonly providerAttempts: number;
+  readonly cacheHitRate?: number;
+  readonly budgets?: TurnBudgets;
+  readonly stopReason?: ProviderStopReason;
+}
+
+interface TimelineExhaustion {
+  readonly limit: RunLimitName;
+  readonly maximum?: number;
+  readonly observed?: number;
+  readonly currency?: string;
+  readonly consumed?: BudgetConsumedCounters;
+  readonly closestOtherAxes: readonly BudgetAxisUsage[];
+  readonly recentToolCalls: readonly ToolCallSummary[];
+}
+```
+
+`turns` is the per-turn trace, derived in one pass over folded provider steps: turn number, status,
+timing, attempts (retries included), input-token-weighted `cacheHitRate`, the last provider
+attempt's recorded `budgets`, and its stop reason. Cache rate is absent when cache usage is unknown;
+`budgets` is copied verbatim from `provider_turn_finished.metadata.budgets` and is absent on legacy
+events. `ExecutionTimeline.cacheHitRate` is the same input-token-weighted calculation across all
+provider attempts. The stop reason also rides the `provider` step's metadata (`metadata.stopReason`),
+so a flat renderer can badge attempts without walking `turns`. `turns` is absent on timelines with
+no turn steps (workflow timelines).
+
+`exhaustion` is the terminal limit attribution, present only when the run died on a run limit. It
+joins `run_limit_exceeded` (`limit`, `maximum`, `observed`, `currency`) with `budget_exhausted`
+(`consumed`, `closestOtherAxes`, `recentToolCalls`); a trace that recorded only the breach carries the
+first group and empty axes. Argument hashes only — `recentToolCalls` never contains raw arguments.
 
 `attention_compiled` folds into a one-step `"attention"` entry (status `succeeded`) whose metadata carries the measured counts (`used`, `usedAfter`, `inputCap`, `triggerRatio`, `droppedThinkingTurns`, `stubbedToolResults`, `stubbedBytes`, `truncated`); under-ratio turns emit no event, so they add no step.
+
+`deterministic_turn` folds into a `"deterministic"` step whose `name` is the answering middleware id and whose metadata carries `{ turn, middleware }`. A deterministic turn has no provider step, no `usage`, and no `stopReason`, so a host-answered turn can never be read as model output; its `turns` entry carries `providerAttempts: 0`, and `summarizeTimeline()`/`summarizeSession()` split the turn count into `turns: { model, deterministic }`. The same provenance is copied onto the assistant message as `message.metadata.deterministic = { middleware }`, so the persisted transcript alone proves the turn had no model behind it.
+
+`guardrail_decision` folds into a `"guardrail"` step whose `name` is the stage (`input`/`output`/`tool_input`/`tool_output`) and whose metadata carries `action`, the rule identity `metadata.guardrail` (compiled packs name it `pack:<pack>/<rule>`, other guardrails their configured name), and `toolName`/`toolCallId` when the decision is tool-scoped. A denying action (`deny`, `block`, `tripwire`) sets status `denied`; the free-text guardrail reason stays on the event, not the step.
 
 Step statuses: `"running"`, `"succeeded"`, `"failed"`, `"blocked"`, `"skipped"`, `"suspended"`, `"denied"`, `"aborted"`.
 
@@ -138,6 +187,7 @@ const timeline = projectTraceTimeline(trace, {
   redactor: createSecretRedactor(secrets),
 });
 // timeline.steps.map(s => [s.order, s.kind, s.name, s.status])
+// timeline.turns.map(t => [t.turn, t.cacheHitRate, t.budgets, t.stopReason])
 ```
 
 ### Workflow fold with checkpoint outputs
@@ -157,6 +207,33 @@ See runnable host demo in `examples/execution-timeline.ts` for offline workflow 
 ### Stop reasons
 
 Run-level `stopReason` mirrors `agent_finished.finishReason` when the loop stopped on a ceiling or a host turn policy (`"host_policy"`); `status` reads `finished:<stopReason>` for those runs and `succeeded` for a natural end. `stopDetail` carries the host's `turnPolicy.stop` reason, bounded to 256 bytes and redacted at the runtime boundary. See [Runs and usage ledger § Clean stops and stop reasons](runs-and-usage.md#clean-stops-and-stop-reasons).
+
+Per-turn stop reasons are a separate, closed taxonomy (`ProviderStopReason`: `end_turn`, `tool_calls`,
+`max_output_tokens`, `content_filter`, `abort`, `provider_error`, `unknown`) because they answer a
+different question — why the *provider* returned, not why the loop ended. Each `provider_turn_finished`
+badges its turn (`timeline.turns[i].stopReason`) and its provider step (`metadata.stopReason`). See
+[Agent events](agent-events.md) § Provider turn events.
+
+A run that died on a run limit packs its attribution into the timeline and the summary line:
+
+```ts
+import { projectTraceTimeline, summarizeTimeline } from "@arnilo/prism-core/governance/observability";
+
+const timeline = projectTraceTimeline(trace);
+// timeline.turns.map(t => [t.turn, t.stopReason]);
+//   [[1, "tool_calls"], [2, "end_turn"]]
+// timeline.exhaustion;
+//   { limit: "maxTurns", maximum: 12, observed: 13,
+//     consumed: { turns: 13, inputTokens: 41_200, providerAttempts: 13, requestBytes: 1_048_576 },
+//     closestOtherAxes: [{ axis: "maxToolCalls", usedRatio: 0.625 }],
+//     recentToolCalls: [{ id: "tc_91", name: "searchCodebase", argHash: "sha256:9f.." }] }
+
+summarizeTimeline(timeline).exhaustion;
+// "maxTurns exhausted (13/12); closest: maxToolCalls 0.625"
+```
+
+`summarizeTimeline().exhaustion` is one renderable dashboard line; runs that ended any other way omit
+it, and `summarizeSession()` keeps each run's line in its `runs` array.
 
 ## Bounds
 

@@ -780,6 +780,8 @@ describe("@arnilo/prism-providers/opencode-go", () => {
     });
     const completeEvents = await assertProviderStreamConforms({ provider: complete, request: { ...baseRequest, model: anthropicModel } });
     assert.equal(completeEvents.at(-1)?.type, "done");
+    const completeDone = completeEvents.at(-1);
+    assert.equal(completeDone?.type === "done" ? completeDone.stopReason : undefined, "tool_calls");
     assert(completeEvents.some((e) => e.type === "tool_call"));
   });
 

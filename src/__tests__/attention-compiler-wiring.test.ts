@@ -91,6 +91,10 @@ describe("resolveRunAttentionCompiler", () => {
       thinkingKeepTurns: 1,
       keepLast: 3,
       excludeTools: [],
+      // Plan 086 T2: no `trigger` configured leaves the single legacy ratio axis.
+      trigger: [{ kind: "input_ratio", ratio: 0.75 }],
+      // Plan 086 T3: durable folding is opt-in.
+      durable: false,
     });
 
     assert.equal(
@@ -134,8 +138,10 @@ describe("resolveRunAttentionCompiler", () => {
       [{ compactRatio: 0.85 }, /compactRatio \(0.85\) must not be more aggressive/],
       [{ keepLast: 4 }, /keepLast \(4\) must not protect more/],
       [{ thinkingKeepTurns: 2 }, /thinkingKeepTurns \(2\) must not protect more/],
-      [{ maxInputTokens: 1 }, /must not set maxInputTokens or reserveTokens/],
-      [{ reserveTokens: 1 }, /must not set maxInputTokens or reserveTokens/],
+      [{ maxInputTokens: 1 }, /must not set maxInputTokens, reserveTokens, trigger, or durable/],
+      [{ reserveTokens: 1 }, /must not set maxInputTokens, reserveTokens, trigger, or durable/],
+      [{ trigger: { kind: "token_floor", tokens: 1 } }, /must not set maxInputTokens, reserveTokens, trigger, or durable/],
+      [{ durable: true }, /must not set maxInputTokens, reserveTokens, trigger, or durable/],
     ] as const;
     for (const [overlay, pattern] of widening) {
       assert.throws(() => resolveRunAttentionCompiler(base, overlay, model), pattern);

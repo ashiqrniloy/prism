@@ -186,6 +186,8 @@ export function createUsageAccumulator(): { add(usage: Usage): void; value(): Us
   const sums = new Map<keyof Usage, number>();
   let costCurrency: string | undefined;
   let costCompatible = true;
+  let estimated = false;
+  let confidence: Usage["confidence"];
 
   return {
     add(usage) {
@@ -204,14 +206,24 @@ export function createUsageAccumulator(): { add(usage: Usage): void; value(): Us
         else if (usage.currency !== costCurrency) costCompatible = false;
         if (costCompatible) sums.set("cost", (sums.get("cost") ?? 0) + usage.cost);
       }
+      // Run totals keep estimate provenance (plan 091 T2): one estimated turn
+      // labels the total, and the weakest confidence wins.
+      if (usage.estimated === true) {
+        estimated = true;
+        if (usage.confidence !== undefined && (confidence === undefined || usage.confidence === "low")) confidence = usage.confidence;
+      }
     },
     value() {
       if (sums.size === 0) return undefined;
-      const usage: Record<string, number | string> = {};
+      const usage: Record<string, number | string | boolean> = {};
       for (const [key, value] of sums) {
         if (key !== "cost" || costCompatible) usage[key] = value;
       }
       if (costCompatible && sums.has("cost") && costCurrency !== undefined) usage.currency = costCurrency;
+      if (estimated) {
+        usage.estimated = true;
+        if (confidence !== undefined) usage.confidence = confidence;
+      }
       return Object.keys(usage).length > 0 ? (usage as Usage) : undefined;
     },
   };

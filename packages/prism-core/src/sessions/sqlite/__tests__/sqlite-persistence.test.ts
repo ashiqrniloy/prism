@@ -327,6 +327,7 @@ describe("createSqlitePersistence", () => {
       key: "wf/run",
       version: 1,
       value: { status: "running" },
+      metadata: { gitCommit: "abc123", docVersion: "v12" },
       tenantId: "tenant-a",
     });
     first.close();
@@ -335,6 +336,10 @@ describe("createSqlitePersistence", () => {
     assert.deepEqual((await reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-a" }))?.value, {
       status: "running",
     });
+    assert.deepEqual(
+      (await reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-a" }))?.metadata,
+      { gitCommit: "abc123", docVersion: "v12" },
+    );
     // Plan 080 Task 3: a foreign scope is a miss and a foreign write is a generic
     // CAS conflict; neither distinguishes "other tenant owns this key" from "missing".
     assert.equal(await reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-b" }), null);
@@ -453,6 +458,7 @@ describe("createSqlitePersistence", () => {
       sessionId: "search-session",
       timestamp: "2026-01-01T00:00:00.000Z",
       kind: "message",
+      runId: "search-run",
       label: "auth-flake",
       summary: "flaky login",
       message: { role: "user", content: [{ type: "text", text: "fix flaky auth test timeout" }] },
@@ -486,7 +492,61 @@ describe("createSqlitePersistence", () => {
     assert.equal(byLabel.items[0]?.leafId, "search-root");
 
     const byFts = await persistence.searchSessions!({ query: "flaky auth", limit: 10 });
-    assert.ok(byFts.items.some((hit) => hit.sessionId === "search-session"));
+    const ftsHit = byFts.items.find((hit) => hit.sessionId === "search-session");
+    assert.ok(ftsHit);
+    assert.equal(ftsHit.entryId, "search-root");
+    assert.equal(ftsHit.runId, "search-run");
+    assert.equal(ftsHit.turn, 1);
+    assert.ok((ftsHit.score ?? 0) > 0);
+    assert.match(ftsHit.snippet ?? "", /flaky auth/);
+
+    // Kind filter: the match is a message entry, so annotation-only search misses it.
+    const annotationOnly = await persistence.searchSessions!({ query: "flaky auth", kind: ["label", "summary"], limit: 10 });
+    assert.equal(annotationOnly.items.length, 0);
+    const annotationList = await persistence.searchSessions!({ kind: "label", limit: 10 });
+    assert.deepEqual(
+      annotationList.items.map((hit) => hit.sessionId),
+      ["other-session"],
+    );
+    await assert.rejects(() => persistence.searchSessions!({ kind: "bogus" as never }), TypeError);
+
+    // Transcript-text-only: tool result payloads are never indexed (redaction posture by omission).
+    await persistence.append({
+      id: "tool-root",
+      sessionId: "tool-session",
+      timestamp: "2026-01-01T00:00:03.000Z",
+      kind: "message",
+      message: {
+        role: "tool",
+        content: [{ type: "tool_result", toolCallId: "call-1", name: "read_file", result: { text: "unindexed-tool-secret" } }],
+      },
+    });
+    const toolHits = await persistence.searchSessions!({ query: "unindexed-tool-secret", limit: 10 });
+    assert.equal(toolHits.items.length, 0);
+
+    // Workspace isolation: the same query text in another workspace never leaks across.
+    await persistence.append({
+      id: "other-ws-root",
+      sessionId: "other-ws-session",
+      timestamp: "2026-01-01T00:00:04.000Z",
+      kind: "message",
+      message: { role: "user", content: [{ type: "text", text: "fix flaky auth test timeout" }] },
+    });
+    const otherDb = new Database(filename);
+    otherDb
+      .prepare("UPDATE prism_sessions SET metadata = ? WHERE id = ?")
+      .run(JSON.stringify({ workspaceRoot: "/elsewhere" }), "other-ws-session");
+    otherDb.close();
+    const scoped = await persistence.searchSessions!({ query: "flaky auth", workspaceRoot: "/repo", limit: 10 });
+    assert.deepEqual(
+      scoped.items.map((hit) => hit.sessionId),
+      ["search-session"],
+    );
+    const elsewhere = await persistence.searchSessions!({ query: "flaky auth", workspaceRoot: "/elsewhere", limit: 10 });
+    assert.deepEqual(
+      elsewhere.items.map((hit) => hit.sessionId),
+      ["other-ws-session"],
+    );
 
     const byWorkspace = await persistence.searchSessions!({ workspaceRoot: "/repo", limit: 10 });
     assert.deepEqual(
@@ -512,6 +572,22 @@ describe("createSqlitePersistence", () => {
 
     await assert.rejects(() => persistence.searchSessions!({ limit: 0 }), TypeError);
     await assert.rejects(() => persistence.searchSessions!({ query: "x".repeat(16 * 1024 + 1) }), TypeError);
+
+    // One hit per session: a second matching entry in the same session ranks behind the best
+    // match and must not add a second row (Postgres `DISTINCT ON` and the linear stores agree).
+    await persistence.append({
+      id: "search-summary",
+      sessionId: "search-session",
+      parentId: "search-root",
+      timestamp: "2026-01-01T00:00:05.000Z",
+      kind: "summary",
+      summary: "flaky login fixed",
+    });
+    const deduped = await persistence.searchSessions!({ query: "flaky", limit: 10 });
+    const searchSessionHits = deduped.items.filter((hit) => hit.sessionId === "search-session");
+    assert.equal(searchSessionHits.length, 1);
+    assert.ok(searchSessionHits[0]?.entryId === "search-root" || searchSessionHits[0]?.entryId === "search-summary");
+    assert.ok((searchSessionHits[0]?.score ?? 0) > 0);
 
     persistence.close();
   });

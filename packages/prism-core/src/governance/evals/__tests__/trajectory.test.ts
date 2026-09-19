@@ -1,15 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Agent, AgentRunResult } from "@arnilo/prism";
+import type { Agent, AgentRunResult, AIProvider, BeforeProviderTurnPayload } from "@arnilo/prism";
+import { createAgent, createMiddlewareRegistry, providerDone } from "@arnilo/prism";
 import type { ExecutionStep, ExecutionTimeline } from "../../observability/timeline-types.js";
 import { defineDataset } from "../dataset.js";
 import { runExperiment } from "../experiment.js";
 import { createModelJudge } from "../judge.js";
+import { runScenario } from "../scenarios.js";
 import { scoreRun } from "../score.js";
 import { defineScorer } from "../scorer.js";
 import { assertEvaluationThreshold, EvalThresholdError } from "../threshold.js";
 import {
   createApprovalBeforeEffectScorer,
+  createDeterministicTurnScorer,
   createErrorClassScorer,
   createNoLoopScorer,
   createSchemaScorer,
@@ -494,4 +497,114 @@ test("error class scorer flags denied error codes", async () => {
   });
   assert.equal(resDenied.score, 0);
   assert.ok(resDenied.reason?.includes("ERR_SECURITY_DENIED"));
+});
+
+// ─── Deterministic (no-model) turn coverage scorer (plan 096) ────────────────
+
+test("deterministic turn scorer: passes on host-answered coverage, fails on model-only and provenance lies", async () => {
+  const scorer = createDeterministicTurnScorer({ middleware: "desk" });
+  const modelOnly = await scorer.score({
+    result: makeRunResult(),
+    timeline: makeTimeline([
+      { id: "turn-1", kind: "turn", name: "turn-1", order: 1, status: "succeeded", startedAt: "2026-01-01T00:00:00Z" },
+      {
+        id: "provider-1",
+        parentId: "turn-1",
+        kind: "provider",
+        name: "gpt-4",
+        order: 2,
+        status: "succeeded",
+        startedAt: "2026-01-01T00:00:00Z",
+      },
+    ]),
+  });
+  assert.equal(modelOnly.score, 0);
+  assert.match(modelOnly.reason ?? "", /expected at least 1 deterministic turn/);
+  assert.deepEqual(modelOnly.metadata, { invariant: true, deterministicTurns: 0, modelTurns: 1 });
+
+  const answered = await scorer.score({
+    result: makeRunResult(),
+    timeline: makeTimeline([
+      { id: "turn-1", kind: "turn", name: "turn-1", order: 1, status: "succeeded", startedAt: "2026-01-01T00:00:00Z" },
+      {
+        id: "deterministic-1",
+        parentId: "turn-1",
+        kind: "deterministic",
+        name: "desk",
+        order: 2,
+        status: "succeeded",
+        startedAt: "2026-01-01T00:00:00Z",
+        metadata: { turn: 1, middleware: "desk" },
+      },
+    ]),
+  });
+  assert.equal(answered.score, 1);
+  assert.deepEqual(answered.metadata, { invariant: true, deterministicTurns: 1, modelTurns: 0 });
+
+  // Same turn both answered deterministically and called the provider: provenance lie, not a pass.
+  const lie = await scorer.score({
+    result: makeRunResult(),
+    timeline: makeTimeline([
+      { id: "turn-1", kind: "turn", name: "turn-1", order: 1, status: "succeeded", startedAt: "2026-01-01T00:00:00Z" },
+      {
+        id: "deterministic-1",
+        parentId: "turn-1",
+        kind: "deterministic",
+        name: "desk",
+        order: 2,
+        status: "succeeded",
+        startedAt: "2026-01-01T00:00:00Z",
+        metadata: { turn: 1, middleware: "desk" },
+      },
+      {
+        id: "provider-1",
+        parentId: "turn-1",
+        kind: "provider",
+        name: "gpt-4",
+        order: 3,
+        status: "succeeded",
+        startedAt: "2026-01-01T00:00:00Z",
+      },
+    ]),
+  });
+  assert.equal(lie.score, 0);
+  assert.match(lie.reason ?? "", /provenance violated/);
+});
+
+test("deterministic turn scorer: a real no-model scenario scores 1, the provider control scores 0", async () => {
+  let providerCalls = 0;
+  const provider: AIProvider = {
+    id: "desk-mock",
+    async *generate() {
+      providerCalls += 1;
+      yield providerDone();
+    },
+  };
+  const middleware = createMiddlewareRegistry();
+  middleware.use<BeforeProviderTurnPayload>("beforeProviderTurn", (payload) => ({
+    ...payload,
+    answer: { content: [{ type: "text", text: "answered from local records" }], provenance: { middleware: "desk" } },
+  }));
+
+  const answered = await runScenario({
+    agent: createAgent({ model: { provider: "mock", model: "desk-mock" }, provider, middleware }),
+    turns: [{ user: "what is the desk?", assertReply: (text) => assert.equal(text, "answered from local records") }],
+    scorers: [createDeterministicTurnScorer()],
+    timeline: "metadata",
+  });
+  assert.equal(answered.status, "succeeded");
+  assert.equal(providerCalls, 0, "the answered scenario must not reach the provider");
+  assert.equal(answered.evaluations[0]?.status, "scored");
+  assert.equal(answered.evaluations[0]?.score, 1, answered.evaluations[0]?.reason);
+  assert.deepEqual(answered.evaluations[0]?.metadata, { invariant: true, deterministicTurns: 1, modelTurns: 0 });
+
+  const control = await runScenario({
+    agent: createAgent({ model: { provider: "mock", model: "desk-mock" }, provider }),
+    turns: ["what is the desk?"],
+    scorers: [createDeterministicTurnScorer()],
+    timeline: "metadata",
+  });
+  assert.equal(providerCalls, 1);
+  assert.equal(control.evaluations[0]?.score, 0);
+  assert.match(control.evaluations[0]?.reason ?? "", /expected at least 1 deterministic turn/);
 });

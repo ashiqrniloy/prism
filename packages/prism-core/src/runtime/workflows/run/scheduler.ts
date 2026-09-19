@@ -121,6 +121,7 @@ async function executeSchedulerBody(state: SchedulerState, options: RunWorkflowO
       workflowId: state.workflow.id,
       runId: state.runId,
       resume: state.resume,
+      ...(state.restore ? { restore: state.restore } : {}),
       timestamp: nowIso(),
     });
   }

@@ -299,6 +299,25 @@ export function bindChargeToolRound(ctx: RoundContext): LoopContext["chargeToolR
   };
 }
 
+/** Last-N dispatched tool calls kept for `budget_exhausted` attribution (plan 087 T2); the hash
+ *  is the same canonical arguments hash the effect store uses, so raw args never enter events. */
+const RECENT_TOOL_CALL_LIMIT = 10;
+
+function recordRecentToolCall(session: SessionHost, call: ToolCallContent): void {
+  const recent = (session.activeRecentToolCalls ??= []);
+  recent.push({ id: call.id, name: call.name, argHash: `sha256:${toolEffectArgumentsHash(call.arguments)}` });
+  if (recent.length > RECENT_TOOL_CALL_LIMIT) recent.shift();
+}
+
+function dispatchFilter(ctx: RoundContext): { filter: { allow: readonly string[] } | { deny: readonly string[] } } | Record<string, never> {
+  const hiddenOk = ctx.options.allowHiddenToolCalls ?? ctx.session.agent.config.allowHiddenToolCalls;
+  if (hiddenOk || ctx.turnAllow === undefined) {
+    return ctx.tools.length > 0 ? { filter: { allow: ctx.tools.map((tool) => tool.name) } } : {};
+  }
+  if (ctx.turnAllow.length > 0) return { filter: { allow: ctx.turnAllow } };
+  return ctx.tools.length > 0 ? { filter: { deny: ctx.tools.map((tool) => tool.name) } } : {};
+}
+
 export function bindDispatchToolCall(ctx: RoundContext): LoopContext["dispatchToolCall"] {
   return async (call) => {
     const sticky = matchStickyDecision(ctx.session, call, ctx.registry);
@@ -313,6 +332,7 @@ export function bindDispatchToolCall(ctx: RoundContext): LoopContext["dispatchTo
       return { toolCallId: call.id, name: call.name, metadata: { approvalPending: true } };
     }
     ctx.toolCalls += 1;
+    recordRecentToolCall(ctx.session, call);
     try {
       const result = await dispatchToolCall({
         call,
@@ -340,7 +360,7 @@ export function bindDispatchToolCall(ctx: RoundContext): LoopContext["dispatchTo
         ownership: ctx.session.activeOwnership,
         identity: ctx.session.activeIdentity,
         guardrails: ctx.session.activeGuardrails,
-        ...(ctx.tools.length > 0 ? { filter: { allow: ctx.tools.map((tool) => tool.name) } } : {}),
+        ...dispatchFilter(ctx),
         limitTracker: ctx.limits,
         beforeExecute: async (mediatedCall) => {
           const durable = ctx.session.activeDurable;

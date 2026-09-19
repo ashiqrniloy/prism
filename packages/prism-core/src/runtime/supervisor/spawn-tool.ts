@@ -1,6 +1,7 @@
 import type { AgentRunResult, JsonObject, ToolDefinition, ToolResult } from "@arnilo/prism";
 import { SupervisorError } from "./errors.js";
-import type { DelegationWaitResult, Supervisor } from "./types.js";
+import { HARD_MILESTONE_EVERY_TURNS } from "./limits.js";
+import type { ChildReportPolicy, DelegationWaitResult, Supervisor } from "./types.js";
 
 export interface CreateSpawnAgentToolOptions {
   readonly supervisor: Supervisor;
@@ -29,6 +30,14 @@ export function createSpawnAgentTool(options: CreateSpawnAgentToolOptions): Tool
         input: { type: "string" },
         threadId: { type: "string" },
         mode: { type: "string", enum: ["sync", "async"] },
+        lifetime: { type: "string", enum: ["task", "session"] },
+        report: { type: "string", enum: ["on-complete", "milestones", "stream"] },
+        milestone: {
+          type: "object",
+          properties: { everyTurns: { type: "integer", minimum: 1, maximum: HARD_MILESTONE_EVERY_TURNS } },
+          additionalProperties: false,
+        },
+        budgetShare: { type: "number", exclusiveMinimum: 0, maximum: 1 },
       },
       required: ["childId", "input"],
       additionalProperties: false,
@@ -38,6 +47,10 @@ export function createSpawnAgentTool(options: CreateSpawnAgentToolOptions): Tool
       const input = args.input;
       const threadId = args.threadId;
       const mode = args.mode ?? "sync";
+      const lifetime = args.lifetime ?? "task";
+      const report = args.report;
+      const milestone = args.milestone;
+      const budgetShare = args.budgetShare;
       if (
         typeof childId !== "string" ||
         typeof input !== "string" ||
@@ -46,11 +59,39 @@ export function createSpawnAgentTool(options: CreateSpawnAgentToolOptions): Tool
       ) {
         return toolError(name, context.toolCallId, "childId and input must be strings; mode must be sync or async");
       }
+      if (lifetime !== "task" && lifetime !== "session") return toolError(name, context.toolCallId, "lifetime must be task or session");
+      if (report !== undefined && report !== "on-complete" && report !== "milestones" && report !== "stream") {
+        return toolError(name, context.toolCallId, "report must be on-complete, milestones, or stream");
+      }
+      const everyTurns = milestone === undefined || typeof milestone !== "object" || milestone === null ? undefined : (milestone as JsonObject).everyTurns;
+      if (
+        everyTurns !== undefined &&
+        (!Number.isSafeInteger(everyTurns) || (everyTurns as number) < 1 || (everyTurns as number) > HARD_MILESTONE_EVERY_TURNS)
+      ) {
+        return toolError(
+          name,
+          context.toolCallId,
+          `milestone.everyTurns must be a positive integer at most ${HARD_MILESTONE_EVERY_TURNS}`,
+        );
+      }
+      if (budgetShare !== undefined && (typeof budgetShare !== "number" || !Number.isFinite(budgetShare) || budgetShare <= 0 || budgetShare > 1)) {
+        return toolError(name, context.toolCallId, "budgetShare must be a number greater than 0 and at most 1");
+      }
       if (!childIds.includes(childId)) return toolError(name, context.toolCallId, "Unknown child id");
 
       try {
-        const request = { childId, input, ...(threadId !== undefined ? { threadId } : {}), signal: context.signal };
-        if (mode === "async") {
+        const request = {
+          childId,
+          input,
+          ...(threadId !== undefined ? { threadId } : {}),
+          ...(lifetime === "session" ? { lifetime: "session" as const } : {}),
+          ...(report !== undefined ? { report: report as ChildReportPolicy } : {}),
+          ...(everyTurns !== undefined ? { milestone: { everyTurns: everyTurns as number } } : {}),
+          ...(budgetShare !== undefined ? { budgetShare } : {}),
+          signal: context.signal,
+        };
+        // Session-lifetime children are background by construction: never block the parent turn.
+        if (mode === "async" || lifetime === "session") {
           const handle = await options.supervisor.delegateAsync(request);
           return { toolCallId: context.toolCallId, name, content: [], value: { childId, ...handle } };
         }

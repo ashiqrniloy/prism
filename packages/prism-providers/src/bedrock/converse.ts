@@ -18,6 +18,7 @@ import {
   applyCacheControl,
   assertStructuredOutputRequestSupported,
   canonicalizeJsonSchema,
+  mapProviderStopReason,
   providerDone,
   providerError,
   providerTextDelta,
@@ -382,6 +383,7 @@ export function bedrockConverseResponseEvents(response: unknown): readonly Provi
   const body = response as {
     readonly output?: { readonly message?: { readonly content?: readonly ConverseContentBlock[] } };
     readonly usage?: ConverseUsage;
+    readonly stopReason?: string;
   };
   const usage = toUsage(body.usage);
   const events: ProviderEvent[] = [];
@@ -396,7 +398,7 @@ export function bedrockConverseResponseEvents(response: unknown): readonly Provi
     }
   }
   if (usage) events.push(providerUsage(usage));
-  events.push(providerDone(usage));
+  events.push(providerDone(usage, body.stopReason === undefined ? undefined : mapProviderStopReason(body.stopReason)));
   return events;
 }
 
@@ -412,6 +414,7 @@ export async function* bedrockConverseStreamEvents(body: ReadableStream<Uint8Arr
   const blocks = new Map<number, PartialBlock>();
   let usage: Usage | undefined;
   let sawMessageStop = false;
+  let nativeStopReason: string | undefined;
 
   for await (const message of readAwsEventStream(body, { signal })) {
     const messageType = eventStreamHeader(message, ":message-type");
@@ -453,7 +456,10 @@ export async function* bedrockConverseStreamEvents(body: ReadableStream<Uint8Arr
       const current = blocks.get(view.contentBlockIndex ?? 0);
       if (current) current.complete = true;
     }
-    if (eventType === "messageStop") sawMessageStop = true;
+    if (eventType === "messageStop") {
+      sawMessageStop = true;
+      if (view.stopReason) nativeStopReason = view.stopReason;
+    }
     // The metadata event payload IS the `ConverseStreamMetadataEvent` shape (Smithy event
     // streams serialize the union member's target); also tolerate a `{ metadata: ... }` wrapper.
     usage = toUsage(view.usage ?? view.metadata?.usage) ?? usage;
@@ -474,7 +480,7 @@ export async function* bedrockConverseStreamEvents(body: ReadableStream<Uint8Arr
   for (const call of blocks.values()) {
     yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
   }
-  yield providerDone(usage);
+  yield providerDone(usage, nativeStopReason === undefined ? undefined : mapProviderStopReason(nativeStopReason));
 }
 
 function parseFramePayload(payload: Uint8Array): unknown {
@@ -488,6 +494,7 @@ function parseFramePayload(payload: Uint8Array): unknown {
 interface ConverseStreamEvent {
   readonly contentBlockIndex?: number;
   readonly start?: { readonly toolUse?: { readonly toolUseId?: string; readonly name?: string } };
+  readonly stopReason?: string;
   readonly delta?: {
     readonly text?: string;
     readonly reasoningContent?: { readonly text?: string; readonly signature?: string };

@@ -14,6 +14,7 @@ import {
   type PersistencePage,
   type ProductionPersistenceStore,
   prepareRunFeedback,
+  type ResolvedSessionSearchQuery,
   type RetentionPolicyQuery,
   RunFeedbackError,
   type RunFeedbackQuery,
@@ -888,15 +889,11 @@ function searchSqliteSessions(db: Database.Database, query: SessionSearchQuery):
     filters.push("EXISTS (SELECT 1 FROM prism_runs r WHERE r.session_id = s.id AND json_extract(r.model, '$.model') = ?)");
     params.push(q.model);
   }
-  if (q.query) {
+  if (q.query === undefined && q.kind) {
     filters.push(
-      `s.id IN (
-         SELECT session_id FROM prism_session_search_fts
-         WHERE prism_session_search_fts MATCH ?
-         LIMIT ${DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES}
-       )`,
+      `EXISTS (SELECT 1 FROM prism_session_entries k WHERE k.session_id = s.id AND k.kind IN (${q.kind.map(() => "?").join(", ")}))`,
     );
-    params.push(fts5Phrase(q.query));
+    params.push(...q.kind);
   }
 
   const order = q.order === "asc" ? "ASC" : "DESC";
@@ -911,45 +908,73 @@ function searchSqliteSessions(db: Database.Database, query: SessionSearchQuery):
   }
 
   const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+  // Display fields (latest label/summary, branch leaf, turn) are fetched per returned page row:
+  // correlated subqueries in this SELECT are evaluated for every candidate session before LIMIT.
   const rows = db
     .prepare(
-      `SELECT s.id AS session_id, s.updated_at, s.metadata,
-       (
-         SELECT e.label FROM prism_session_entries e
-         WHERE e.session_id = s.id AND e.label IS NOT NULL
-         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1
-       ) AS label,
-       (
-         SELECT e.summary FROM prism_session_entries e
-         WHERE e.session_id = s.id AND e.summary IS NOT NULL
-         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1
-       ) AS summary
-     FROM prism_sessions s
+      `${buildSqliteSearchCte(q)}
+     SELECT s.id AS session_id, s.updated_at, s.metadata${
+       q.query
+         ? `,
+       m.entry_id AS entry_id,
+       m.score AS score,
+       m.snippet AS match_snippet,
+       me.run_id AS run_id,
+       me.timestamp AS match_timestamp,
+       me.id AS match_entry_id`
+         : ""
+}
+     FROM prism_sessions s${q.query ? "\n     JOIN best m ON m.session_id = s.id\n     JOIN prism_session_entries me ON me.id = m.entry_id" : ""}
      ${where}
      ORDER BY s.updated_at ${order}, s.id ${order}
      LIMIT ?`,
     )
-    .all(...params, q.limit + 1) as Array<{
+    .all(...matchParams(q), ...params, q.limit + 1) as Array<{
     session_id: string;
     updated_at: string;
     metadata: string | null;
-    label: string | null;
-    summary: string | null;
+    entry_id?: string | null;
+    score?: number | null;
+    match_snippet?: string | null;
+    run_id?: string | null;
+    match_timestamp?: string | null;
+    match_entry_id?: string | null;
   }>;
 
   q.signal?.throwIfAborted();
   const hasMore = rows.length > q.limit;
   const pageRows = hasMore ? rows.slice(0, q.limit) : rows;
+  const selectDisplay = db.prepare(
+    `SELECT
+       (SELECT e.label FROM prism_session_entries e
+         WHERE e.session_id = ? AND e.label IS NOT NULL
+         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1) AS label,
+       (SELECT e.summary FROM prism_session_entries e
+         WHERE e.session_id = ? AND e.summary IS NOT NULL
+         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1) AS summary`,
+  );
+  const selectTurn = db.prepare(
+    `SELECT COUNT(*) AS turn FROM prism_session_entries
+      WHERE session_id = ? AND (timestamp < ? OR (timestamp = ? AND id <= ?))`,
+  );
   const items: SessionSearchHit[] = pageRows.map((row) => {
-    const metadata = parseSessionMetadata(row.metadata);
+    const display = selectDisplay.get(row.session_id, row.session_id) as { label: string | null; summary: string | null };
+    const turn =
+      row.match_timestamp === undefined || row.match_timestamp === null
+        ? undefined
+        : (selectTurn.get(row.session_id, row.match_timestamp, row.match_timestamp, row.match_entry_id) as { turn: number }).turn;
     const hit: SessionSearchHit = {
       sessionId: row.session_id,
       leafId: findLatestLeafId(db, row.session_id),
       updatedAt: row.updated_at,
-      label: row.label ?? undefined,
-      summary: row.summary ?? undefined,
-      snippet: clipSearchSnippet(row.label ?? row.summary ?? undefined),
-      metadata: safeSearchMetadata(metadata),
+      label: display.label ?? undefined,
+      summary: display.summary ?? undefined,
+      snippet: clipSearchSnippet(row.match_snippet ?? display.label ?? display.summary ?? undefined),
+      metadata: safeSearchMetadata(parseSessionMetadata(row.metadata)),
+      entryId: row.entry_id ?? undefined,
+      runId: row.run_id ?? undefined,
+      turn,
+      score: row.score ?? undefined,
     };
     return hit;
   });
@@ -962,6 +987,46 @@ function searchSqliteSessions(db: Database.Database, query: SessionSearchQuery):
 
 function fts5Phrase(query: string): string {
   return `"${query.replaceAll('"', '""')}"`;
+}
+
+/** FTS5 snippet window (words of context around the match). */
+const SESSION_SEARCH_SNIPPET_TOKENS = 12;
+
+/**
+ * Best-matching entry per session for a text query: bounded FTS candidate rows, ranked by
+ * bm25 (lower = better), then one row per session. `kind` filters which entries may match.
+ */
+function buildSqliteSearchCte(q: ResolvedSessionSearchQuery): string {
+  if (!q.query) return "";
+  const kindFilter = q.kind
+    ? `JOIN prism_session_entries matched ON matched.id = prism_session_search_fts.entry_id
+       WHERE prism_session_search_fts MATCH ? AND matched.kind IN (${q.kind.map(() => "?").join(", ")})`
+    : `WHERE prism_session_search_fts MATCH ?`;
+  return `WITH ranked AS (
+       SELECT prism_session_search_fts.session_id AS session_id,
+              prism_session_search_fts.entry_id AS entry_id,
+              bm25(prism_session_search_fts) AS rank,
+              snippet(prism_session_search_fts, -1, '', '', '…', ${SESSION_SEARCH_SNIPPET_TOKENS}) AS snippet
+       FROM prism_session_search_fts
+       ${kindFilter}
+       ORDER BY rank, prism_session_search_fts.entry_id
+       LIMIT ${DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES}
+     ),
+     best AS (
+       SELECT session_id, entry_id, score, snippet
+       FROM (
+         SELECT session_id, entry_id, -rank AS score, snippet,
+                row_number() OVER (PARTITION BY session_id ORDER BY rank, entry_id) AS rn
+         FROM ranked
+       )
+       WHERE rn = 1
+     )`;
+}
+
+/** Parameters consumed by `buildSqliteSearchCte`, in SQL text order. */
+function matchParams(q: ResolvedSessionSearchQuery): unknown[] {
+  if (!q.query) return [];
+  return [fts5Phrase(q.query), ...(q.kind ?? [])];
 }
 
 function buildOwnershipFilters(scope: { tenantId?: string; accountId?: string; userId?: string }): string[] {

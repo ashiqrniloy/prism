@@ -20,6 +20,10 @@ export const DEFAULT_MAX_CHILD_EVENTS_PER_DELEGATION = 256;
 export const HARD_MAX_CHILD_EVENTS_PER_DELEGATION = 4096;
 export const DEFAULT_MAX_CHILD_EVENT_BYTES = 32 * 1024;
 export const HARD_MAX_CHILD_EVENT_BYTES = 256 * 1024;
+export const DEFAULT_MAX_CHILD_EVENTS_PER_SECOND = 10;
+export const HARD_MAX_CHILD_EVENTS_PER_SECOND = 1_000;
+/** Ceiling for a host/model milestone cadence (`milestone.everyTurns`). */
+export const HARD_MILESTONE_EVERY_TURNS = 10_000;
 
 export interface SupervisorLimits {
   readonly maxDepth?: number;
@@ -34,6 +38,8 @@ export interface SupervisorLimits {
   readonly maxChildEventsPerDelegation?: number;
   /** Serialized byte ceiling for one projected child event. */
   readonly maxChildEventBytes?: number;
+  /** Child events projected per second, per child (rate coalescing; default 10/s). */
+  readonly maxChildEventsPerSecond?: number;
 }
 
 export interface ResolvedSupervisorLimits {
@@ -47,6 +53,7 @@ export interface ResolvedSupervisorLimits {
   readonly maxQueuedEvents: number;
   readonly maxChildEventsPerDelegation: number;
   readonly maxChildEventBytes: number;
+  readonly maxChildEventsPerSecond: number;
 }
 
 const SPECS = {
@@ -60,6 +67,7 @@ const SPECS = {
   maxQueuedEvents: [DEFAULT_MAX_SUPERVISOR_QUEUED_EVENTS, HARD_MAX_SUPERVISOR_QUEUED_EVENTS],
   maxChildEventsPerDelegation: [DEFAULT_MAX_CHILD_EVENTS_PER_DELEGATION, HARD_MAX_CHILD_EVENTS_PER_DELEGATION],
   maxChildEventBytes: [DEFAULT_MAX_CHILD_EVENT_BYTES, HARD_MAX_CHILD_EVENT_BYTES],
+  maxChildEventsPerSecond: [DEFAULT_MAX_CHILD_EVENTS_PER_SECOND, HARD_MAX_CHILD_EVENTS_PER_SECOND],
 } as const;
 
 export function resolveSupervisorLimits(input: SupervisorLimits = {}): ResolvedSupervisorLimits {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { appendFile, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -53,6 +53,41 @@ describe("node jsonl session store", () => {
 
     assert.deepEqual(await store.list("s1"), []);
     assert.equal(await store.get?.("e1"), undefined);
+  });
+
+  it("searchSessions scans the persisted file and quarantines invalid lines", async () => {
+    const path = await tempPath();
+    const writer = createJsonlSessionStore(path);
+    await writer.append(
+      createSessionEntry({
+        id: "e1",
+        sessionId: "s1",
+        timestamp: "2026-01-01T00:00:01.000Z",
+        kind: "message",
+        label: "auth-flake",
+        message: { role: "user", content: [{ type: "text", text: "fix flaky auth" }] },
+        metadata: { workspaceRoot: "/repo" },
+      }),
+    );
+    await writer.append(
+      createSessionEntry({ id: "e2", sessionId: "s2", timestamp: "2026-01-01T00:00:02.000Z", kind: "label", label: "elsewhere" }),
+    );
+    await appendFile(path, "{not json\n", "utf8");
+
+    // A fresh instance searches the file; search is a linear scan (O(corpus)), not an index.
+    const hits = await createJsonlSessionStore(path).searchSessions!({
+      workspaceRoot: "/repo",
+      query: "flaky auth",
+      limit: 10,
+    });
+    assert.deepEqual(
+      hits.items.map((hit) => [hit.sessionId, hit.entryId, hit.turn]),
+      [["s1", "e1", 1]],
+    );
+    assert.match(hits.items[0]?.snippet ?? "", /flaky auth/);
+    // The corrupt line stays quarantined (list/get semantics), it does not fail the whole search.
+    assert.equal((await createJsonlSessionStore(path).searchSessions!({ query: "flaky auth", limit: 10 })).items.length, 1);
+    assert.equal((await createJsonlSessionStore(path).searchSessions!({ query: "missing", limit: 10 })).items.length, 0);
   });
 
   it("quarantines invalid json line and returns usable entries", async () => {

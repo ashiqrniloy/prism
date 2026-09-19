@@ -46,12 +46,14 @@ export const singleShotLoop: AgentLoopStrategy = {
       ctx.emit({ type: "turn_started", sessionId: ctx.sessionId, runId: ctx.runId, turn });
       const request = await ctx.assemble(nextInput, undefined, turn);
       throwIfAborted(ctx.signal);
-      const { content, calls, messageId, started, usage: turnUsage } = await ctx.generate(request);
+      const { content, calls, messageId, started, usage: turnUsage, metadata: turnMetadata } = await ctx.generate(request);
       usage = turnUsage ?? usage;
 
       if (turn === 1) ctx.history.push(...ctx.inputMessages);
       if (started) {
-        const message: Message = { id: messageId, role: "assistant", content };
+        // Turn provenance (plan 096): a deterministic answer carries `{ deterministic: { middleware } }`
+        // so the persisted transcript proves the turn had no model behind it.
+        const message: Message = { id: messageId, role: "assistant", content, ...(turnMetadata ? { metadata: turnMetadata } : {}) };
         ctx.history.push(message);
         await ctx.appendMessage(message);
         ctx.emit({ type: "message_finished", sessionId: ctx.sessionId, runId: ctx.runId, message });
@@ -171,7 +173,7 @@ export function generateValidateReviseLoop(opts: {
           }
         }
         throwIfAborted(ctx.signal);
-        const { content, calls, messageId, started, usage: turnUsage } = await ctx.generate(request);
+        const { content, calls, messageId, started, usage: turnUsage, metadata: turnMetadata } = await ctx.generate(request);
         usage = turnUsage ?? usage;
 
         if (pendingHistory.length > 0) {
@@ -180,7 +182,8 @@ export function generateValidateReviseLoop(opts: {
         }
         if (turn === 1) ctx.history.push(...ctx.inputMessages);
         if (started) {
-          const message: Message = { id: messageId, role: "assistant", content };
+          // Same provenance contract as singleShotLoop (plan 096).
+          const message: Message = { id: messageId, role: "assistant", content, ...(turnMetadata ? { metadata: turnMetadata } : {}) };
           ctx.history.push(message);
           await ctx.appendMessage(message);
           ctx.emit({ type: "message_finished", sessionId: ctx.sessionId, runId: ctx.runId, message });

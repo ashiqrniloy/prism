@@ -79,6 +79,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 - [Observational memory compaction subpath](compaction-observational-memory.md): source-backed observations/reflections, an optional work-scope index for the current working set, and exact-id recall; `invalidatedIds` withhold derived injection.
 - [Working and semantic memory](working-and-semantic-memory.md): working-memory store, semantic recall, pgvector path, consent lifecycle, lineage invalidation, parent-child share grants.
 - [Memory fabric](memory-fabric.md): opt-in typed notes (fact/procedure/file/working/episode) with validity windows over the existing vector and working stores.
+- [Scoped agent memory design concept](scoped-agent-memory.md): workspace-scoped persistent memory — gated writes, promotion ladder, decay-based reads; case study and research basis.
 - [Session stores](session-stores.md): `SessionStore` contract, append options, branches, bounded search — start here for persistence.
 - [Conversations](conversations.md): durable user-scoped threads with versioned metadata and legal-hold-aware deletion.
 - [Work artifacts and review](work-artifacts-and-review.md): artifact attach, revision compare, evidence-bound citations, approve/reject, expiring delivery links.
@@ -213,6 +214,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 - [Session store conformance](session-store-conformance.md): assert append/idempotency/conflict/branch invariants for any store.
 - [Run ledger conformance](run-ledger-conformance.md): assert durable run/usage writes and reopen survival.
 - [Compaction conformance](compaction-conformance.md): assert redacted non-empty summaries and abort observation.
+- [Prefix stability conformance](prefix-stability-conformance.md): assert progressive disclosure keeps the provider cache prefix stable.
 - [Tool conformance](tool-conformance.md): assert blocked-reason matrix and success-path dispatch behavior.
 - [Extension conformance](extension-conformance.md): assert inert contributions and redacted setup errors.
 - `examples/`: compile-checked typed examples ([`conversation-durable-replay.ts`](../examples/conversation-durable-replay.ts), [`artifact-review-delivery.ts`](../examples/artifact-review-delivery.ts), [`enterprise-identity.ts`](../examples/enterprise-identity.ts), [`enterprise-policy-audit.ts`](../examples/enterprise-policy-audit.ts), [`enterprise-work-connectors.ts`](../examples/enterprise-work-connectors.ts), [`connected-slack-mcp.ts`](../examples/connected-slack-mcp.ts), [`server-deployment-seams.ts`](../examples/server-deployment-seams.ts), [`neuralwatt-agent-run.ts`](../examples/neuralwatt-agent-run.ts), [`cache-aware-prompt-assembly.ts`](../examples/cache-aware-prompt-assembly.ts), [`ag-ui-server.ts`](../examples/ag-ui-server.ts), [`acp-coding-host.ts`](../examples/acp-coding-host.ts), [`telegram-agent.ts`](../examples/telegram-agent.ts), [`signal-agent.ts`](../examples/signal-agent.ts), [`messaging-agent.ts`](../examples/messaging-agent.ts), and more), plus runnable mock demos.

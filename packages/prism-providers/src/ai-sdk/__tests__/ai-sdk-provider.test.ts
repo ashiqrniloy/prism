@@ -174,6 +174,8 @@ describe("createAiSdkProvider", () => {
       cacheWriteTokens: 1,
     });
     assert.equal(events.at(-1)?.type, "done");
+    const doneEvent = events.at(-1);
+    assert.equal(doneEvent?.type === "done" ? doneEvent.stopReason : undefined, "tool_calls");
   });
 
   it("maps structured-output options and rejects unsupported content before model invocation", async () => {

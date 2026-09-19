@@ -630,14 +630,16 @@ describe("nested-agent approval propagation", () => {
     assert.equal(completion.text, "writer done");
   });
 
-  it("caps resumed child events with one overflow marker", async () => {
+  it("caps resumed child events with one overflow marker per pump attempt", async () => {
     const h = harness({ childEvents: true, limits: { maxChildEventsPerDelegation: 2 } });
     const iterator = h.supervisor.subscribe()[Symbol.asyncIterator]();
     await suspendThenResume(h, "s8");
 
     const events = await pullUntil(iterator, (event) => event.type === "delegation_finished");
     const capped = events.filter((event) => event.type === "delegation_child_events_capped");
-    assert.equal(capped.length, 1, "resume emits the overflow marker exactly once");
+    // Plan 093 T3: the stream projection now carries per-turn events too, so the live attempt
+    // (which stops at the gate) and the resume attempt each surface their own marker.
+    assert.equal(capped.length, 2, "live and resume each emit the overflow marker exactly once");
     const [marker] = capped;
     assert.ok(marker && marker.type === "delegation_child_events_capped");
     assert.equal(marker.maxChildEvents, 2);

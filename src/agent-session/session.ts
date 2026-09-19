@@ -1,18 +1,22 @@
 /** session (0.2.5 plan 025 Task 1 split). Moved verbatim from agent-session.ts; public surface unchanged behind the barrel. */
 
-import { ActiveDurableRun } from "../agent-approval.js";
+import { ActiveDurableRun, ActiveDurableRunExtras } from "../agent-approval.js";
 import type { PendingToolCall, StoredAgentRunState } from "../agent-run-state.js";
 import { policyList } from "../agent-tool-dispatch.js";
 import {
+  type AttentionFoldLedger,
   type AttentionStickyFrontier,
+  createAttentionFoldLedger,
   createAttentionStickyFrontier,
+  type PersistedAttentionFoldLedger,
   type PersistedAttentionStickyFrontier,
   resolveInputCap,
   restoreAttentionStickyFrontier,
+  serializeAttentionFoldLedger,
   serializeAttentionStickyFrontier,
 } from "../attention-compiler.js";
 import { createDefaultCompactionStrategy, isCompactionEntryData } from "../compaction.js";
-import { estimateAssemblyTokens, estimateTextTokens } from "../context-budget.js";
+import { estimateAssemblyTokens, estimateMessageTokens, estimateTextTokens } from "../context-budget.js";
 import type {
   Agent,
   AgentEvent,
@@ -26,7 +30,9 @@ import type {
   CompactionMiddlewarePayload,
   CompactionOptions,
   CompactionResult,
+  ContextMeter,
   ErrorInfo,
+  GuardrailPackRef,
   Guardrails,
   Message,
   OwnershipScope,
@@ -42,6 +48,7 @@ import type {
   Skill,
   SteerOptions,
   SubscribeOptions,
+  ToolCallSummary,
   ToolDefinition,
   ToolEffectStore,
   Usage,
@@ -53,7 +60,7 @@ import {
   HARD_MAX_SNAPSHOT_CACHE_TTL_MS,
   resolveShouldCompact,
 } from "../contracts.js";
-import { GuardrailError, runGuardrails } from "../guardrails.js";
+import { compileGuardrailPacks, GuardrailError, runGuardrails } from "../guardrails.js";
 import type { AgentIdentity } from "../identity.js";
 import type { AgentInput } from "../input.js";
 import {
@@ -109,9 +116,18 @@ export class RuntimeAgentSession implements AgentSession {
   activeIdentity?: AgentIdentity;
   private activeIdempotencyKey?: string;
   private activeGuardrails?: Guardrails;
+  /** Plan 092 Task 2: guardrail packs compiled once in the constructor; merged into every run's `activeGuardrails`. */
+  readonly packGuardrails?: Guardrails;
+  /** Original pack refs, carried into `fork()`/`clone()` so a branch cannot silently lose its policy. */
+  private readonly guardrailPackRefs?: readonly GuardrailPackRef[];
   activeMetadata?: Readonly<Record<string, unknown>>;
   activePromptVersion?: PromptVersionRef;
   activeLimits?: RunLimitTracker;
+  /** Plan 091 T2: input tokens of the latest provider turn plus whether the provider reported
+   *  them; set by the usage seam, read by `contextMeter()`. */
+  activeInputMeter?: { readonly tokens: number; readonly source: "reported" | "estimated" };
+  /** Bounded last-N tool-call summaries of the active run (plan 087 T2): ids, names, arg hashes. */
+  activeRecentToolCalls?: ToolCallSummary[];
   activeLimitOutputBuffer = false;
   activeDurable?: ActiveDurableRun;
   activeLoop?: import("../contracts.js").AgentLoopStrategy;
@@ -119,6 +135,8 @@ export class RuntimeAgentSession implements AgentSession {
   activeGatedRound?: Map<string, { entry: PendingToolCall; decision: PendingDecision }>;
   activeLoopTurn = 1;
   private readonly loadedSkills = createLoadedSkillSet();
+  /** Run-owned only: loaded bodies and URI resources retain first insertion order within one provider loop. */
+  readonly tailSegments = new Map<string, Message>();
   /** Tools activated via `search_tools` this session (plan 041); names-only in persistence. */
   readonly activatedTools = createActiveToolSet();
   /** Plan 018 Task 6 (closeout `checkpoint-bodies`): persisted exact instructions, registry-independent. */
@@ -149,6 +167,28 @@ export class RuntimeAgentSession implements AgentSession {
    *  stubs instead of re-deciding its first turn from the ratio. */
   restoreAttentionSticky(persisted: PersistedAttentionStickyFrontier): void {
     this.attentionSticky = restoreAttentionStickyFrontier(persisted);
+  }
+
+  /** Session-owned folded bodies (plan 086 T3); created on first use like the frontier, so a
+   *  compiler-off session allocates nothing. */
+  private attentionFold?: AttentionFoldLedger;
+  /** Set per run from the resolved compiler: `durable: true` opts the fold ledger and its
+   *  frontier into checkpoints even when `persistSessionState` is off. */
+  attentionDurable = false;
+
+  attentionFoldFor(): AttentionFoldLedger {
+    this.attentionFold ??= createAttentionFoldLedger();
+    return this.attentionFold;
+  }
+
+  /** Plan 086 T3: bounded ledger snapshot for a durable checkpoint; `undefined` before any fold. */
+  serializedAttentionFold(): PersistedAttentionFoldLedger | undefined {
+    return this.attentionFold && this.attentionFold.bodies.size > 0 ? serializeAttentionFoldLedger(this.attentionFold) : undefined;
+  }
+
+  /** Plan 086 T3: adopt a ledger validated at checkpoint load, so a resumed fold is byte-identical. */
+  restoreAttentionFold(ledger: AttentionFoldLedger): void {
+    this.attentionFold = ledger;
   }
 
   /** Plan 015 Task 4: re-add persisted loaded-skill names (names only; bodies re-resolve on demand). */
@@ -190,10 +230,46 @@ export class RuntimeAgentSession implements AgentSession {
     this.store = config.store ?? config.agent.config.store ?? createMemorySessionStore();
     this.currentLeafId = config.leafId;
     this.snapshotCacheTtlMs = resolveSnapshotCacheTtlMs(config.snapshotCacheTtlMs);
+    this.packGuardrails = compileGuardrailPacks(config.guardrailPacks);
+    this.guardrailPackRefs = config.guardrailPacks;
+    const usageEstimation = config.agent.config.usageEstimation;
+    if (usageEstimation !== undefined && usageEstimation !== "fallback" && usageEstimation !== "off") {
+      throw new TypeError('usageEstimation must be "fallback" or "off"');
+    }
   }
 
   get leafId(): string | undefined {
     return this.currentLeafId;
+  }
+
+  /**
+   * Context-fill read (plan 091 T2): the latest provider turn's input tokens —
+   * provider-reported when it reported, else a labeled estimate — plus the
+   * per-request cap and cumulative run input budget, resolved exactly as
+   * `provider_turn_finished.budgets` resolves them. Before any provider turn in
+   * this session it estimates stored history, so a non-reporting model still
+   * shows a working meter instead of zero. Never billing; estimates are labeled.
+   */
+  contextMeter(): ContextMeter {
+    const model = this.agent.config.model;
+    const inputTokens = this.activeInputMeter?.tokens ?? estimateMessageTokens(this.history, model.model).tokens;
+    const source = this.activeInputMeter?.source ?? "estimated";
+    let inputCap: number | undefined;
+    try {
+      const setting = this.agent.config.attentionCompiler;
+      const options = typeof setting === "object" && setting !== null ? setting : undefined;
+      inputCap = resolveInputCap(options ? { maxInputTokens: options.maxInputTokens, reserveTokens: options.reserveTokens } : {}, model);
+    } catch {
+      inputCap = undefined; // undialed model: omit instead of throwing a state read
+    }
+    const runInputBudget = this.activeLimits?.limits.maxInputTokens ?? undefined;
+    return {
+      inputTokens,
+      source,
+      ...(inputCap === undefined ? {} : { inputCap }),
+      ...(runInputBudget == null ? {} : { runInputBudget }),
+      ...(inputCap === undefined ? {} : { usedRatio: inputTokens / inputCap }),
+    };
   }
 
   subscribe(options: SubscribeOptions = {}): AsyncIterable<AgentEvent> {
@@ -233,12 +309,14 @@ export class RuntimeAgentSession implements AgentSession {
     ownership?: OwnershipScope,
     signal?: AbortSignal,
     decisions?: ReadonlyMap<string, RunDecision>,
+    extras?: ActiveDurableRunExtras,
   ): Promise<AgentRunResult> {
     return this.runInternal(state.input ?? [], { runState, ownership, signal }, state.runId, {
       options: runState,
       state,
       version: state.version!,
       decisions,
+      ...extras,
     });
   }
 
@@ -349,7 +427,10 @@ export class RuntimeAgentSession implements AgentSession {
 
   async compact(options: CompactionOptions = {}): Promise<CompactionResult> {
     if (this.activeRun) throw new Error("Agent session already has an active run");
-    return this.compactBranch(options, undefined, options.signal, "manual");
+    const result = await this.compactBranch(options, undefined, options.signal, "manual");
+    // Plan 091 T2: history changed, so a pre-compaction meter reading would overstate the context.
+    this.activeInputMeter = undefined;
+    return result;
   }
 
   abort(reason?: unknown): void {
@@ -376,6 +457,7 @@ export class RuntimeAgentSession implements AgentSession {
       store: this.store,
       leafId: options.leafId ?? this.currentLeafId,
       metadata: this.metadata,
+      ...(this.guardrailPackRefs ? { guardrailPacks: this.guardrailPackRefs } : {}),
     });
   }
 
@@ -399,6 +481,7 @@ export class RuntimeAgentSession implements AgentSession {
       store: this.store,
       leafId: branch.length ? remap.get(branch[branch.length - 1]!.id) : undefined,
       metadata: this.metadata,
+      ...(this.guardrailPackRefs ? { guardrailPacks: this.guardrailPackRefs } : {}),
     });
   }
 

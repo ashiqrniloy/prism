@@ -254,7 +254,7 @@ describe("RunLedger runtime wiring", () => {
     assert.equal(blocked?.result?.error?.message, "blocked by test validator");
   });
 
-  it("persists one provider row per turn and one aggregate run total", async () => {
+  it("persists cache fields per provider turn and aggregate run total", async () => {
     const { ledger, usage } = createMemoryLedger();
     let calls = 0;
     const agent = createAgent({
@@ -266,7 +266,9 @@ describe("RunLedger runtime wiring", () => {
           if (calls === 1) yield providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: {} });
           else yield providerTextDelta("done");
           yield providerDone(
-            calls === 1 ? { inputTokens: 10, outputTokens: 1, totalTokens: 11 } : { inputTokens: 20, outputTokens: 2, totalTokens: 22 },
+            calls === 1
+              ? { inputTokens: 10, outputTokens: 1, totalTokens: 11, cacheReadTokens: 8, cacheWriteTokens: 2 }
+              : { inputTokens: 20, outputTokens: 2, totalTokens: 22 },
           );
         },
       },
@@ -278,11 +280,18 @@ describe("RunLedger runtime wiring", () => {
     await session.run("count tokens", { limits: { maxToolRounds: 1 } });
 
     assert.deepEqual(
-      usage.map(({ scope, turn, attempt, usage }) => ({ scope, turn, attempt, total: usage.totalTokens })),
+      usage.map(({ scope, turn, attempt, usage }) => ({
+        scope,
+        turn,
+        attempt,
+        total: usage.totalTokens,
+        cacheReadTokens: usage.cacheReadTokens,
+        cacheWriteTokens: usage.cacheWriteTokens,
+      })),
       [
-        { scope: "provider_turn", turn: 1, attempt: 1, total: 11 },
-        { scope: "provider_turn", turn: 2, attempt: 1, total: 22 },
-        { scope: "run_total", turn: undefined, attempt: undefined, total: 33 },
+        { scope: "provider_turn", turn: 1, attempt: 1, total: 11, cacheReadTokens: 8, cacheWriteTokens: 2 },
+        { scope: "provider_turn", turn: 2, attempt: 1, total: 22, cacheReadTokens: undefined, cacheWriteTokens: undefined },
+        { scope: "run_total", turn: undefined, attempt: undefined, total: 33, cacheReadTokens: 8, cacheWriteTokens: 2 },
       ],
     );
   });

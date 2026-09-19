@@ -11,6 +11,8 @@ export * from "./extension.js";
 export * from "./heading.js";
 export * from "./ingest.js";
 export * from "./manifest.js";
+export * from "./retire.js";
+export * from "./repoint.js";
 export * from "./profiles/codebase.js";
 export * from "./profiles/hybrid.js";
 export * from "./profiles/pkm.js";

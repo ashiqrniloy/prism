@@ -1,4 +1,13 @@
-import type { ContentBlock, ErrorInfo, JsonObject, ProviderEvent, ToolCallContent, ToolCallDeltaContent, Usage } from "./contracts.js";
+import type {
+  ContentBlock,
+  ErrorInfo,
+  JsonObject,
+  ProviderEvent,
+  ProviderStopReason,
+  ToolCallContent,
+  ToolCallDeltaContent,
+  Usage,
+} from "./contracts.js";
 import { classifyProviderFailure, ProviderTransportError, tryParseJsonObjectArguments } from "./providers/transport.js";
 import { errorToErrorInfo } from "./redaction.js";
 
@@ -60,8 +69,67 @@ export function providerUsage(usage: Usage): ProviderEvent {
   return { type: "usage", usage };
 }
 
-export function providerDone(usage?: Usage): ProviderEvent {
-  return { type: "done", usage };
+/**
+ * One shared native → taxonomy table (plan 087 T1). Every adapter routes its wire reason
+ * through `mapProviderStopReason`, so hosts switch on one closed union instead of per-provider
+ * strings. Keys are lowercased wire values; `unknown` never appears here — it is the fallback.
+ */
+const PROVIDER_STOP_REASONS: Readonly<Record<string, ProviderStopReason>> = Object.freeze({
+  // OpenAI Chat Completions (`finish_reason`) and generic OpenAI-compatible routes.
+  stop: "end_turn",
+  length: "max_output_tokens",
+  tool_calls: "tool_calls",
+  function_call: "tool_calls",
+  content_filter: "content_filter",
+  // Messages-style `stop_reason` routes and Bedrock Converse (`stopReason`).
+  end_turn: "end_turn",
+  stop_sequence: "end_turn",
+  pause_turn: "end_turn",
+  tool_use: "tool_calls",
+  max_tokens: "max_output_tokens",
+  refusal: "content_filter",
+  // Google generateContent (`finishReason`).
+  safety: "content_filter",
+  recitation: "content_filter",
+  blocklist: "content_filter",
+  prohibited_content: "content_filter",
+  spii: "content_filter",
+  image_safety: "content_filter",
+  language: "content_filter",
+  malformed_function_call: "provider_error",
+  unexpected_tool_call: "provider_error",
+  // OpenAI Responses (status / `incomplete_details.reason`).
+  completed: "end_turn",
+  failed: "provider_error",
+  cancelled: "abort",
+  canceled: "abort",
+  // Bedrock Converse guarded routes.
+  content_filtered: "content_filter",
+  guardrail_intervened: "content_filter",
+  malformed_model_output: "provider_error",
+  malformed_tool_use: "provider_error",
+  // AI SDK unified finish reasons (hyphenated).
+  "content-filter": "content_filter",
+  "tool-calls": "tool_calls",
+  error: "provider_error",
+  other: "unknown",
+  unknown: "unknown",
+  abort: "abort",
+  aborted: "abort",
+});
+
+/**
+ * Map a native provider stop/finish reason onto the closed taxonomy. A missing, non-string, or
+ * unmapped value returns `"unknown"` rather than throwing, so a new wire value can never fail a
+ * run (plan 087 T1).
+ */
+export function mapProviderStopReason(native: string | null | undefined): ProviderStopReason {
+  if (typeof native !== "string") return "unknown";
+  return PROVIDER_STOP_REASONS[native.trim().toLowerCase()] ?? "unknown";
+}
+
+export function providerDone(usage?: Usage, stopReason?: ProviderStopReason): ProviderEvent {
+  return { type: "done", usage, ...(stopReason === undefined ? {} : { stopReason }) };
 }
 
 export function providerError(error: unknown, secrets: readonly (string | undefined)[] = []): Extract<ProviderEvent, { type: "error" }> {

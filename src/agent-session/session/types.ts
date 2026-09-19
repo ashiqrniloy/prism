@@ -2,7 +2,12 @@
 
 import type { ActiveDurableRun } from "../../agent-approval.js";
 import type { PendingToolCall } from "../../agent-run-state.js";
-import type { AttentionStickyFrontier, PersistedAttentionStickyFrontier } from "../../attention-compiler.js";
+import type {
+  AttentionFoldLedger,
+  AttentionStickyFrontier,
+  PersistedAttentionFoldLedger,
+  PersistedAttentionStickyFrontier,
+} from "../../attention-compiler.js";
 import type {
   Agent,
   AgentEvent,
@@ -24,6 +29,7 @@ import type {
   SessionEntry,
   SessionStore,
   Skill,
+  ToolCallSummary,
   ToolDefinition,
   ToolEffectStore,
   ToolRegistry,
@@ -61,15 +67,24 @@ export type SessionHost = {
   activeIdentity?: AgentIdentity;
   activeIdempotencyKey?: string;
   activeGuardrails?: Guardrails;
+  /** Plan 092 Task 2: packs compiled once at session construction; read-only for phases. */
+  readonly packGuardrails?: Guardrails;
   activeMetadata?: Readonly<Record<string, unknown>>;
   activePromptVersion?: PromptVersionRef;
   activeLimits?: RunLimitTracker;
+  /** Plan 091 T2: input tokens of the latest provider turn plus whether the
+   *  provider reported them. Set by the usage seam; read by `contextMeter()`. */
+  activeInputMeter?: { readonly tokens: number; readonly source: "reported" | "estimated" };
+  /** Bounded last-N tool-call summaries of the active run (plan 087 T2): ids, names, arg hashes. */
+  activeRecentToolCalls?: ToolCallSummary[];
   activeLimitOutputBuffer: boolean;
   activeDurable?: ActiveDurableRun;
   activeLoop?: AgentLoopStrategy;
   activeGatedRound?: Map<string, { entry: PendingToolCall; decision: PendingDecision }>;
   activeLoopTurn: number;
   readonly loadedSkills: LoadedSkillSet;
+  /** Run-owned monotonic prompt tail; cleared before each new run. */
+  readonly tailSegments: Map<string, Message>;
   readonly activatedTools: ActiveToolSet;
   restoredSkillBodies: readonly LoadedSkillBodiesEntry[];
   activeRunSkills: readonly Skill[];
@@ -82,6 +97,15 @@ export type SessionHost = {
   serializedAttentionSticky(): PersistedAttentionStickyFrontier | undefined;
   /** Plan 074 P3: restore a frontier that was validated when the checkpoint was loaded. */
   restoreAttentionSticky(persisted: PersistedAttentionStickyFrontier): void;
+  /** Folded bodies for this session (plan 086 T3); session-owned so a resumed fold re-applies
+   *  the same stub bytes instead of calling the host `summarize` again. Lazily created. */
+  attentionFoldFor(): AttentionFoldLedger;
+  /** Plan 086 T3: bounded ledger snapshot for a durable checkpoint (undefined before any fold). */
+  serializedAttentionFold(): PersistedAttentionFoldLedger | undefined;
+  /** Plan 086 T3: adopt a ledger validated when the checkpoint was loaded. */
+  restoreAttentionFold(ledger: AttentionFoldLedger): void;
+  /** Plan 086 T3: `attention.compiler.durable` for the current run; set by the run assembler. */
+  attentionDurable: boolean;
   invalidateSnapshot(): void;
   resolveRunProvider(options: RunOptions): void;
   emit(event: AgentEvent): void;
@@ -146,6 +170,8 @@ export type RoundContext = {
   loop: AgentLoopStrategy;
   toolConcurrency: number;
   toolsDisclosure: import("../../tool-search.js").ToolsDisclosure;
+  /** Per-turn dispatch overlay; undefined when `toolNarrowing` is unset. */
+  turnAllow?: readonly string[];
   assembledTurn: boolean;
   artifactFinished: boolean;
   artifactFailedInfo: { message: string; code?: string | number } | undefined;

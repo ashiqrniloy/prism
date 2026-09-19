@@ -12,6 +12,7 @@ The agent/session runtime adds the minimal shared SDK surface for running provid
 - `session.prompt(input, options)` → `AgentRunResult`
 - `session.stream(input, options)` → owned-run `AsyncIterable<AgentEvent>`
 - `session.compact(options?)`
+- `session.contextMeter()` → `ContextMeter` (latest provider-turn input tokens, reported or labeled estimate, with cap/budget/ratio)
 - `session.subscribe(options?)`
 - `session.abort()`
 - `session.entries()`

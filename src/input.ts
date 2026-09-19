@@ -1,4 +1,4 @@
-import { type AttentionStickyFrontier, compileAttention, createAttentionCompiler } from "./attention-compiler.js";
+import { type AttentionFoldLedger, type AttentionStickyFrontier, compileAttention, createAttentionCompiler } from "./attention-compiler.js";
 import { assertMessagesSupportModelCapabilities } from "./content.js";
 import { applyContextBudget, CONTEXT_BUDGET_REPORT_METADATA_KEY, type ContextBudget, type ContextBudgetReport } from "./context-budget.js";
 import type {
@@ -32,7 +32,14 @@ import { applyDefaultProviderRequestOptions } from "./provider-request-policy.js
 import type { SecretRedactor } from "./redaction.js";
 import { redactMessage } from "./redaction.js";
 import { loadTextResource } from "./resources.js";
-import { skillMessages as buildSkillMessages, type LoadedSkillSet, type SkillsDisclosure } from "./skill-disclosure.js";
+import {
+  capSkillCatalog,
+  selectSkillsForPrompt,
+  skillHasRenderableBody,
+  skillMessages as buildSkillMessages,
+  type LoadedSkillSet,
+  type SkillsDisclosure,
+} from "./skill-disclosure.js";
 import { composeSystemPrompt } from "./system-prompts.js";
 import { foldToolResultHistory, foldToolResults, type ResolvedToolResultFoldOptions } from "./tool-result-fold.js";
 import { selectDisclosedTools, type ToolsDisclosure, type ToolsSearchOptions } from "./tool-search.js";
@@ -107,6 +114,8 @@ export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
   readonly skills?: readonly Skill[];
   readonly skillsDisclosure?: SkillsDisclosure;
   readonly loadedSkills?: LoadedSkillSet;
+  /** Run-owned append-only segments. Omit outside a session to retain existing assembly exactly. */
+  readonly tailSegments?: Map<string, Message>;
   readonly tools?: readonly ToolDefinition[];
   /** Tools disclosure: "search" narrows the disclosed tool list (activated ∪ top-k); default "all" is unchanged. */
   readonly toolsDisclosure?: ToolsDisclosure;
@@ -126,9 +135,14 @@ export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
   readonly attentionCompiler?: AttentionCompilerOptions | AttentionCompiler;
   /** Per-session-leaf sticky frontier; omit for one-shot assemblies (no cross-turn stickiness). */
   readonly attentionSticky?: AttentionStickyFrontier;
+  /** Per-session folded bodies; omit to re-summarize every folded row on every turn. */
+  readonly attentionFold?: AttentionFoldLedger;
   /** Called once per *mutated* turn with the report, so a host can emit telemetry: under-ratio
    *  turns never call it, and it runs before `input_assembly` middleware. */
   readonly onAttentionReport?: (report: AttentionReport) => void;
+  /** Run input tokens already charged this run; feeds the `run_input_ratio` axis projection
+   *  (default 0). The run budget itself rides the resolved `AttentionCompiler` handle. */
+  readonly runInputTokens?: number;
 }
 
 export function createDefaultInputBuilder(): DefaultInputBuilder {
@@ -170,11 +184,19 @@ export function createDefaultPromptBuilder(): DefaultPromptBuilder {
       // text-only (or unknown-capability) models — duplicating it doubles tool tokens per turn.
       const tools = request.model?.capabilities?.tools === true ? undefined : request.tools;
       const context = contextMessages(request.context);
-      const skills = buildSkillMessages(request.skills, {
-        disclosure: request.skillsDisclosure,
-        loaded: request.loadedSkills,
-        demotedBodies: request.demotedSkillBodies?.length ? new Set(request.demotedSkillBodies) : undefined,
-      });
+      const skills = buildSkillMessages(
+        request.skills,
+        request.tailSkillBodies
+          ? {
+              disclosure: "progressive",
+              demotedBodies: request.demotedSkillBodies?.length ? new Set(request.demotedSkillBodies) : undefined,
+            }
+          : {
+              disclosure: request.skillsDisclosure,
+              loaded: request.loadedSkills,
+              demotedBodies: request.demotedSkillBodies?.length ? new Set(request.demotedSkillBodies) : undefined,
+            },
+      );
       const declarations = toolMessages(tools);
       if ((request.inputLayout ?? "cache_aware") === "legacy") {
         return [...context, ...skills, ...declarations, ...request.messages];
@@ -282,9 +304,11 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
       tools,
       fold: options.toolResultFold,
       frontier: options.attentionSticky,
+      attentionFold: options.attentionFold,
       redactor: options.redactor,
       signal: options.signal,
       turn,
+      runInputTokens: options.runInputTokens,
       sessionId: options.sessionId,
       runId: options.runId,
     });
@@ -333,6 +357,15 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     });
   }
 
+  const tailSegments = options.tailSegments;
+  const tailSkillBodies = tailSegments !== undefined;
+  if (tailSegments) {
+    const activeTailSegments = new Set<string>();
+    messages = moveResourceMessagesToTail(messages, options, tailSegments, activeTailSegments);
+    appendSkillTailSegments(tailSegments, activeTailSegments, skills, options.skillsDisclosure, options.loadedSkills, demotedSkillBodies);
+    messages = [...messages, ...tailMessages(tailSegments, activeTailSegments)];
+  }
+
   const promptBuilder = options.promptBuilder ?? createDefaultPromptBuilder();
   const promptRequest = options.middleware
     ? await options.middleware.run("prompt_build", {
@@ -342,6 +375,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
         skills,
         skillsDisclosure: options.skillsDisclosure,
         loadedSkills: options.loadedSkills,
+        tailSkillBodies,
         demotedSkillBodies,
         tools,
         metadata: options.metadata,
@@ -354,6 +388,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
         skills,
         skillsDisclosure: options.skillsDisclosure,
         loadedSkills: options.loadedSkills,
+        tailSkillBodies,
         demotedSkillBodies,
         tools,
         metadata: options.metadata,
@@ -534,6 +569,67 @@ function contextMessages(context: readonly ContextBlock[] | undefined): Message[
   return (context ?? []).map((block) =>
     textMessage("system", `${block.title ? `${block.title}:\n` : "Context:\n"}${blockText(block)}`, block.metadata),
   );
+}
+
+function moveResourceMessagesToTail(
+  messages: readonly Message[],
+  options: AssembleProviderInputOptions,
+  tailSegments: Map<string, Message>,
+  activeTailSegments: Set<string>,
+): readonly Message[] {
+  const resourceUris = new Set([
+    ...(options.resourceUris ?? []),
+    ...(options.attachments ?? []).flatMap((attachment) =>
+      attachment.uri !== undefined && attachment.text === undefined && attachment.content === undefined ? [attachment.uri] : [],
+    ),
+  ]);
+  if (resourceUris.size === 0) return messages;
+  return messages.filter((message) => {
+    const uri = message.metadata?.uri;
+    if (message.role !== "user" || typeof uri !== "string" || !resourceUris.has(uri)) return true;
+    appendTailSegment(tailSegments, activeTailSegments, `resource:${uri}`, message);
+    return false;
+  });
+}
+
+function appendSkillTailSegments(
+  tailSegments: Map<string, Message>,
+  activeTailSegments: Set<string>,
+  skills: readonly Skill[] | undefined,
+  disclosure: SkillsDisclosure | undefined,
+  loaded: LoadedSkillSet | undefined,
+  demotedSkillBodies: readonly string[] | undefined,
+): void {
+  const renderContext = {
+    disclosure,
+    loaded,
+    demotedBodies: demotedSkillBodies?.length ? new Set(demotedSkillBodies) : undefined,
+  };
+  const selected = capSkillCatalog(selectSkillsForPrompt(skills ?? [], renderContext));
+  const byName = new Map(selected.map((skill) => [skill.name, skill]));
+  const ordered =
+    disclosure === "eager"
+      ? selected
+      : (loaded?.list() ?? []).flatMap((name) => {
+          const skill = byName.get(name);
+          return skill === undefined ? [] : [skill];
+        });
+
+  for (const skill of ordered) {
+    if (!skillHasRenderableBody(skill, renderContext)) continue;
+    const message = buildSkillMessages([skill], renderContext)[0];
+    if (message) appendTailSegment(tailSegments, activeTailSegments, `skill:${skill.name}`, message);
+  }
+}
+
+/** Map#set retains first-insertion order, so re-derivation replaces only this segment's bytes. */
+function appendTailSegment(tailSegments: Map<string, Message>, activeTailSegments: Set<string>, id: string, message: Message): void {
+  tailSegments.set(id, message);
+  activeTailSegments.add(id);
+}
+
+function tailMessages(tailSegments: Map<string, Message>, activeTailSegments: ReadonlySet<string>): Message[] {
+  return [...tailSegments].flatMap(([id, message]) => (activeTailSegments.has(id) ? [message] : []));
 }
 
 function toolMessages(tools: readonly ToolDefinition[] | undefined): Message[] {

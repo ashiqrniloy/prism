@@ -2,13 +2,20 @@ import type {
   AgentEvent,
   AgentEventRecord,
   AgentFinishReason,
+  BudgetAxisUsage,
+  BudgetConsumedCounters,
   ErrorInfo,
+  ProviderStopReason,
+  RunLimitBreach,
+  RunLimitName,
   SecretRedactor,
   ToolCallRecord,
+  ToolCallSummary,
+  TurnBudgets,
   Usage,
   UsageRecord,
 } from "@arnilo/prism";
-import { resolveRedactor } from "@arnilo/prism";
+import { cacheUsageReport, resolveRedactor } from "@arnilo/prism";
 import type { WorkflowEvent } from "../../runtime/workflows/types.js";
 import type { EvaluationTrace } from "../evals/types.js";
 import type {
@@ -17,8 +24,10 @@ import type {
   ExecutionStepStatus,
   ExecutionTimeline,
   TimelineContentPolicy,
+  TimelineExhaustion,
   TimelineFolder,
   TimelineProjectionOptions,
+  TimelineTurn,
   WorkflowTimelineFolder,
   WorkflowTimelineProjectionOptions,
 } from "./timeline-types.js";
@@ -160,6 +169,14 @@ interface FoldState {
   maxIoBytes: number;
   traceId?: string;
   instrumentation?: { traceId(runId: string): string | undefined };
+  // Terminal limit breach (`run_limit_exceeded`) and attribution payload (`budget_exhausted`).
+  breach?: RunLimitBreach;
+  attribution?: {
+    limit: RunLimitName;
+    consumed: BudgetConsumedCounters;
+    closestOtherAxes: readonly BudgetAxisUsage[];
+    recentToolCalls: readonly ToolCallSummary[];
+  };
   // Tool call records indexed by toolCallId for joining on persistence projections.
   toolCallIndex?: Map<string, ToolCallRecord>;
 }
@@ -277,6 +294,23 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
       state.currentProviderStep = undefined;
       return;
     }
+    case "deterministic_turn": {
+      // Plan 096: host middleware answered without a provider request. No usage is ever attached —
+      // absent, never a zero-filled model turn.
+      const startedAt = now();
+      addStep(state, {
+        id: `deterministic:${event.runId}:${event.turn}`,
+        parentId: state.currentTurnStep?.id ?? state.runStep?.id,
+        kind: "deterministic",
+        name: event.middleware,
+        order: state.order++,
+        status: "succeeded",
+        startedAt,
+        finishedAt: startedAt,
+        metadata: { turn: event.turn, middleware: event.middleware },
+      });
+      return;
+    }
     case "provider_turn_started": {
       const modelName =
         typeof event.metadata.model === "string" ? event.metadata.model : (event.metadata.model as { model?: string } | undefined)?.model;
@@ -304,6 +338,14 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
         state.currentProviderStep.finishedAt = finished;
         state.currentProviderStep.durationMs = durationMs(state.currentProviderStep.startedAt, finished);
         state.currentProviderStep.usage = event.usage;
+        if (event.metadata.stopReason || event.metadata.budgets || event.metadata.cache) {
+          state.currentProviderStep.metadata = {
+            ...state.currentProviderStep.metadata,
+            ...(event.metadata.stopReason ? { stopReason: event.metadata.stopReason } : {}),
+            ...(event.metadata.budgets ? { budgets: event.metadata.budgets } : {}),
+            ...(event.metadata.cache ? { cache: event.metadata.cache } : {}),
+          };
+        }
         if (event.error) state.currentProviderStep.error = event.error;
       }
       state.totalUsage = addUsage(state.totalUsage, event.usage);
@@ -408,6 +450,8 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
         startedAt: now(),
         metadata: {
           action: event.record.action,
+          // Rule identity only: `metadata` stays low-cardinality, so the free-text reason is not projected (plan 092 T1).
+          ...(typeof event.record.guardrail === "string" ? { guardrail: event.record.guardrail } : {}),
           ...(event.toolName ? { toolName: event.toolName } : {}),
           ...(event.toolCallId ? { toolCallId: event.toolCallId } : {}),
         },
@@ -523,12 +567,24 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
       });
       return;
     }
+    case "run_limit_exceeded": {
+      state.breach = event.breach;
+      return;
+    }
+    case "budget_exhausted": {
+      state.attribution = {
+        limit: event.limit,
+        consumed: event.consumed,
+        closestOtherAxes: event.closestOtherAxes,
+        recentToolCalls: event.recentToolCalls,
+      };
+      return;
+    }
     // Events that do not produce timeline steps — ignored, never thrown.
     case "message_started":
     case "message_delta":
     case "message_finished":
     case "tool_execution_progress":
-    case "run_limit_exceeded":
     case "queue_updated":
     case "steer_rejected":
     case "event_subscriber_overflow":
@@ -539,8 +595,72 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
   }
 }
 
+interface MutableTurn {
+  turn: number;
+  status: ExecutionStepStatus;
+  startedAt: string;
+  finishedAt?: string;
+  durationMs?: number;
+  providerAttempts: number;
+  budgets?: TurnBudgets;
+  stopReason?: ProviderStopReason;
+  usage?: Usage;
+}
+
+/** Derive the per-turn trace from folded provider steps in one O(steps) pass. */
+function projectTurns(steps: readonly MutableStep[]): readonly TimelineTurn[] {
+  const index = new Map<string, MutableTurn>();
+  const turns: MutableTurn[] = [];
+  for (const step of steps) {
+    if (step.kind === "turn") {
+      const entry: MutableTurn = {
+        turn: typeof step.metadata?.turn === "number" ? step.metadata.turn : turns.length + 1,
+        status: step.status,
+        startedAt: step.startedAt,
+        providerAttempts: 0,
+      };
+      if (step.finishedAt !== undefined) entry.finishedAt = step.finishedAt;
+      if (step.durationMs !== undefined) entry.durationMs = step.durationMs;
+      index.set(step.id, entry);
+      turns.push(entry);
+      continue;
+    }
+    if (step.kind !== "provider" || !step.parentId) continue;
+    const parent = index.get(step.parentId);
+    if (!parent) continue;
+    parent.providerAttempts += 1;
+    parent.usage = addUsage(parent.usage, step.usage);
+    const reason = step.metadata?.stopReason;
+    if (typeof reason === "string") parent.stopReason = reason as ProviderStopReason;
+    if (step.metadata?.budgets) parent.budgets = step.metadata.budgets as TurnBudgets;
+  }
+  return Object.freeze(
+    turns.map(({ usage, ...turn }) => {
+      const cacheHitRate = cacheUsageReport(usage)?.hitRate;
+      return Object.freeze({ ...turn, ...(cacheHitRate === undefined ? {} : { cacheHitRate }) });
+    }),
+  );
+}
+
+/** Join the breach (`run_limit_exceeded`) and the attribution payload (`budget_exhausted`). */
+function projectExhaustion(state: FoldState): TimelineExhaustion | undefined {
+  const limit = state.attribution?.limit ?? state.breach?.limit;
+  if (!limit) return undefined;
+  return Object.freeze({
+    limit,
+    ...(state.breach ? { maximum: state.breach.maximum, observed: state.breach.observed } : {}),
+    ...(state.breach?.currency ? { currency: state.breach.currency } : {}),
+    ...(state.attribution ? { consumed: state.attribution.consumed } : {}),
+    closestOtherAxes: state.attribution?.closestOtherAxes ?? [],
+    recentToolCalls: state.attribution?.recentToolCalls ?? [],
+  });
+}
+
 function buildTimeline(state: FoldState): ExecutionTimeline {
   const resolvedTraceId = state.traceId ?? (state.instrumentation && state.runId ? state.instrumentation.traceId(state.runId) : undefined);
+  const turns = state.steps.some((step) => step.kind === "turn") ? projectTurns(state.steps) : undefined;
+  const exhaustion = projectExhaustion(state);
+  const cacheHitRate = cacheUsageReport(state.totalUsage)?.hitRate;
   return Object.freeze({
     schemaVersion: 1 as const,
     runId: state.runId,
@@ -554,7 +674,10 @@ function buildTimeline(state: FoldState): ExecutionTimeline {
     ...(state.runInput !== undefined ? { input: state.runInput } : {}),
     ...(state.runResult !== undefined ? { result: state.runResult } : {}),
     ...(state.totalUsage ? { usage: state.totalUsage } : {}),
+    ...(cacheHitRate === undefined ? {} : { cacheHitRate }),
     steps: Object.freeze(state.steps.map(freezeStep)),
+    ...(turns ? { turns } : {}),
+    ...(exhaustion ? { exhaustion } : {}),
     redacted: state.anyRedacted,
     content: state.content,
   });
@@ -804,6 +927,9 @@ export function projectWorkflowTimeline(
     ...(state.sessionId ? { sessionId: state.sessionId } : {}),
     ...(checkpoint ? { workflowId: checkpoint.workflowId } : {}),
     ...(checkpoint ? { workflowRevision: checkpoint.definitionHash } : {}),
+    ...(checkpoint?.metadata
+      ? { workflowMetadata: redactor ? redactor.redact(checkpoint.metadata) : checkpoint.metadata }
+      : {}),
     ...((state.traceId ?? (state.instrumentation && state.runId ? state.instrumentation.traceId(state.runId) : undefined))
       ? { traceId: state.traceId ?? (state.instrumentation && state.runId ? state.instrumentation.traceId(state.runId) : undefined) }
       : {}),

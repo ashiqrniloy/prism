@@ -76,6 +76,40 @@ export interface AIProvider {
   generate(request: ProviderRequest): AsyncIterable<ProviderEvent>;
 }
 
+/**
+ * Closed taxonomy for why a provider turn stopped (plan 087 T1). Adapters map native wire
+ * reasons (`finish_reason`, `stop_reason`, `finishReason`, Converse `stopReason`) through the
+ * shared `mapProviderStopReason` table; `unknown` is the escape hatch for a new wire value.
+ */
+export type ProviderStopReason =
+  | "end_turn"
+  | "tool_calls"
+  | "max_output_tokens"
+  | "content_filter"
+  | "abort"
+  | "provider_error"
+  | "unknown";
+
+/**
+ * Effective budget snapshot at provider-turn end (plan 087 T1): current-turn input tokens
+ * against the per-request input cap, cumulative run input against its budget, and the turn
+ * axis, so a host can see which limit was closest without instrumenting the session.
+ */
+export interface TurnBudgets {
+  /** Provider-reported input tokens for this turn; absent when the provider reported none. */
+  readonly inputTokens?: number;
+  /** Resolved per-request input cap (attention compiler when enabled); absent when no cap derivable. */
+  readonly inputCap?: number;
+  /** Cumulative run input budget (`RunLimits.maxInputTokens`); absent when the axis is disabled. */
+  readonly runInputBudget?: number;
+  /** Cumulative input tokens charged this run (all provider turns). */
+  readonly runInputUsed: number;
+  /** Provider turns started this run (1-based current turn at turn end). */
+  readonly turns: number;
+  /** Resolved clean turn cap; `null` when disabled. */
+  readonly maxTurns: number | null;
+}
+
 export type ProviderResolver = (model: ModelConfig) => AIProvider | undefined;
 
 /** Realtime audio/session event. Realtime is a bidirectional session, not a request/response

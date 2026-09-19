@@ -45,6 +45,7 @@ describe("@arnilo/prism-providers/openai responses", () => {
           {
             type: "response.completed",
             response: {
+              status: "completed",
               usage: {
                 input_tokens: 10,
                 output_tokens: 3,
@@ -68,6 +69,8 @@ describe("@arnilo/prism-providers/openai responses", () => {
       ),
     );
     assertToolCallDeltasReconstruct(events, [{ index: 0, id: "call_1", name: "lookup", arguments: { q: "x" } }]);
+    const done = events.at(-1);
+    assert.equal(done?.type === "done" ? done.stopReason : undefined, "end_turn");
   });
 
   it("openai_responses_http_error_carries_status_code_and_retry_after_hint", async () => {

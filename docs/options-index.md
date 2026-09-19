@@ -18,7 +18,7 @@ Field-level detail (defaults, bounds, failure modes) lives on the owning page â€
 | --- | --- | --- |
 | `AgentConfig` | The reusable agent: provider, model, tools, skills, stores, retry, compaction, prompts, limits | [Agent/session runtime](agent-session-runtime.md) |
 | `RunOptions` | One run's overrides: model, limits, thinking level, skills, middleware, metadata, signal | [Agent/session runtime](agent-session-runtime.md) |
-| `AgentSessionConfig` | Session creation: id, agent, store, branch leaf, snapshot cache TTL | [Agent/session runtime](agent-session-runtime.md) |
+| `AgentSessionConfig` | Session creation: id, agent, store, branch leaf, snapshot cache TTL, guardrail packs | [Agent/session runtime](agent-session-runtime.md) |
 | `ModelConfig` | A registered model record: capabilities, limits, cost, cache and thinking metadata | [Model registry](model-registry.md) |
 | `ProviderRequestOptions` | Per-request provider hints: session/cache/header/compat/extra, applied after host policies | [Provider layer](provider-layer.md) |
 
@@ -45,6 +45,7 @@ Field-level detail (defaults, bounds, failure modes) lives on the owning page â€
 | `snapshotRunBundle(...)` â†’ `RunBundleSnapshot` | Inspectable digest projection of the effective run bundle (prompt/skill/tool/guardrail digests, limits, storage kinds) | [Run bundle](run-bundle.md) |
 | `createClaimGroundingGuardrail` (`ClaimGroundingGuardrailOptions`) | `"output"`-stage guardrail that blocks or flags numeric claims no tool result or host evidence supports | [Guardrails](guardrails.md) |
 | `ErrorInfo.failureClass` (`ProviderFailureClass`) | Typed provider failure on run outcomes, ledger rows, and tool results (`quota`, `rate_limited`, `auth`, `transient`, `permanent`) | [Runs and usage](runs-and-usage.md) |
+| `AgentConfig.usageEstimation` | `"fallback"` (default) records a labeled estimate when a provider reports no usage; `"off"` leaves usage absent; estimates are never priced | [Runs and usage](runs-and-usage.md#automatic-fallback-agentconfigusageestimation) |
 | `ModelConfig.capabilities.toolCallStrictness` | Advisory tool-call reliability (`"strict"` \| `"lenient"` \| `"legacy"`); catalog conformance, not a promise | [Model registry](model-registry.md) |
 
 ## Agent/session runtime

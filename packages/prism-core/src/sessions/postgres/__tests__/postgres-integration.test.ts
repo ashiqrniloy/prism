@@ -97,12 +97,17 @@ describeIntegration("createPostgresPersistence integration", () => {
       key: "wf/run",
       version: 1,
       value: { status: "running" },
+      metadata: { gitCommit: "abc123", docVersion: "v12" },
       tenantId: "tenant-a",
     });
     const reopened = await createPostgresPersistence({ pool, schema });
     assert.deepEqual((await reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-a" }))?.value, {
       status: "running",
     });
+    assert.deepEqual(
+      (await reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-a" }))?.metadata,
+      { gitCommit: "abc123", docVersion: "v12" },
+    );
     // Plan 080 Task 3: a foreign scope is a miss and a foreign write is a generic
     // CAS conflict; neither distinguishes "other tenant owns this key" from "missing".
     assert.equal(await reopened.checkpoints.loadCheckpoint({ namespace: "workflow", key: "wf/run", tenantId: "tenant-b" }), null);

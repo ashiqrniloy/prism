@@ -1,4 +1,4 @@
-import type { ContextBlock, InputAssemblyLayout, Message, ProviderRequest, Skill, ToolDefinition } from "./contracts.js";
+import type { ContextBlock, InputAssemblyLayout, Message, ProviderRequest, Skill, TokenEstimate, ToolDefinition } from "./contracts.js";
 import {
   capSkillCatalog,
   type LoadedSkillSet,
@@ -8,6 +8,7 @@ import {
   skillHasRenderableBody,
   skillPromptText,
 } from "./skill-disclosure.js";
+import { estimateTextTokensForFamily, MODEL_FAMILY_TOKENS, resolveModelFamily } from "./usage-estimation.js";
 
 /**
  * Host-supplied token estimator. Budget-only: it never reaches billing, provider
@@ -91,8 +92,34 @@ export function estimateTextBytes(text: string): number {
   return Buffer.byteLength(text, "utf8");
 }
 
-export function estimateMessageTokens(message: Message, estimateTokens: TokenEstimator = estimateTextTokens): number {
-  return estimateTokens(messageText(message));
+export function estimateMessageTokens(message: Message, estimateTokens?: TokenEstimator): number;
+export function estimateMessageTokens(messages: readonly Message[], modelFamily?: string): TokenEstimate;
+/**
+ * Single message → flattened text → estimator (budget accounting, never billing).
+ *
+ * Plan 091 Task 1 overload: a message array plus a model id, provider id, or
+ * family name returns a labeled {@link TokenEstimate}. It reuses this same
+ * per-message flattening and adds the family's per-message chat-template
+ * overhead; `unknown` families fall back to the conservative table with
+ * `lowConfidence: true`.
+ */
+export function estimateMessageTokens(
+  input: Message | readonly Message[],
+  estimatorOrFamily?: TokenEstimator | string,
+): number | TokenEstimate {
+  if (isMessageArray(input)) {
+    const family = resolveModelFamily(estimatorOrFamily as string | undefined);
+    const table = MODEL_FAMILY_TOKENS[family];
+    let tokens = table.perMessageOverhead * input.length;
+    for (const message of input) tokens += estimateTextTokensForFamily(messageText(message), family);
+    return { tokens, confidence: table.confidence, lowConfidence: table.confidence === "low" };
+  }
+  const estimateTokens = typeof estimatorOrFamily === "function" ? estimatorOrFamily : estimateTextTokens;
+  return estimateTokens(messageText(input));
+}
+
+function isMessageArray(value: Message | readonly Message[]): value is readonly Message[] {
+  return Array.isArray(value);
 }
 
 export function estimateMessageBytes(message: Message): number {

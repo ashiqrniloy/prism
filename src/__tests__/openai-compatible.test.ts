@@ -72,7 +72,7 @@ describe("openai-compatible provider", () => {
     assert.deepEqual(await collect(provider), [
       { type: "content_delta", content: { type: "text", text: "Hel" } },
       { type: "content_delta", content: { type: "text", text: "lo" } },
-      { type: "done", usage: undefined },
+      { type: "done", usage: undefined, stopReason: "end_turn" },
     ]);
   });
 
@@ -96,7 +96,11 @@ describe("openai-compatible provider", () => {
 
     assert.deepEqual(await collect(provider), [
       { type: "usage", usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3, cacheReadTokens: 4, cacheWriteTokens: 5 } },
-      { type: "done", usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3, cacheReadTokens: 4, cacheWriteTokens: 5 } },
+      {
+        type: "done",
+        usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3, cacheReadTokens: 4, cacheWriteTokens: 5 },
+        stopReason: "end_turn",
+      },
     ]);
   });
 
@@ -108,7 +112,7 @@ describe("openai-compatible provider", () => {
 
     assert.deepEqual(await collect(provider), [
       { type: "content_delta", content: { type: "thinking", text: "think", signature: undefined } },
-      { type: "done", usage: undefined },
+      { type: "done", usage: undefined, stopReason: "end_turn" },
     ]);
   });
 
@@ -129,7 +133,7 @@ describe("openai-compatible provider", () => {
       { type: "tool_call_delta", index: 0, id: "call_1", name: "lookup", argumentsText: '{"id"' },
       { type: "tool_call_delta", index: 0, id: undefined, name: undefined, argumentsText: ':"1"}' },
       { type: "tool_call", call: { type: "tool_call", id: "call_1", name: "lookup", arguments: { id: "1" } } },
-      { type: "done", usage: undefined },
+      { type: "done", usage: undefined, stopReason: "end_turn" },
     ]);
   });
 

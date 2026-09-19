@@ -24,7 +24,7 @@ import type { SessionStore, SessionEntry } from "@arnilo/prism";
 | `list(sessionId)` | Return all entries for one session in stored order. Development fallback for branch reads. |
 | `get?(id)` | Return one entry by id, if present. Optional. |
 | `readBranchPath?(query)` | Optional DB-friendly branch read. Return one branch's ancestor chain as a `PersistencePage<SessionEntry>` so the runtime can avoid `list(sessionId)`. |
-| `searchSessions?(query)` | Optional bounded session search (`SessionSearchQuery` → `PersistencePage<SessionSearchHit>`). SQLite/Postgres implement FTS + metadata filters; memory default is linear; JSONL throws `SessionSearchUnsupportedError`. |
+| `searchSessions?(query)` | Optional bounded session search (`SessionSearchQuery` → `PersistencePage<SessionSearchHit>`). SQLite/Postgres implement FTS + metadata filters; memory and JSONL scan linearly (JSONL re-reads its file per query). |
 
 Public helpers:
 
@@ -110,9 +110,13 @@ Recognize it with `isSessionAppendConflict(error)`, not message text. Built-in s
 - Branch semantics are parent links plus a leaf id. External UIs should keep branch handles as `(sessionId, leafId)`; RPC exposes an additional `handleId` for active handles.
 - Development stores can omit `readBranchPath`; the runtime falls back to `list(sessionId)` and the pure in-memory branch walk. Database-backed stores should implement `readBranchPath` so `entries()`, `clone()`, and context rebuild read only the selected ancestor chain.
 
-## Session search (0.0.11)
+## Session search
 
-Bounded `SessionIndex` / `searchSessions` lists sessions by optional `workspaceRoot` (`metadata.workspaceRoot`), provider/model, label/summary, time range, ownership, and optional text `query` (FTS on SQLite/Postgres; case-sensitive substring on memory linear). Hits require `sessionId` and may include `leafId` for `checkout`; never credentials or whole transcripts.
+Bounded `SessionIndex` / `searchSessions` lists sessions by optional `workspaceRoot` (`metadata.workspaceRoot`), provider/model, label/summary, time range, ownership, and optional text `query`. SQLite/Postgres run indexed full-text search; the memory and JSONL stores scan linearly (case-sensitive substring, capped by the contract linear caps; JSONL re-reads and parses its file per query, see [Node JSONL session store](node-jsonl-session-store.md)). Hits require `sessionId` and may include `leafId` for `checkout`; never credentials or whole transcripts.
+
+When a text `query` matches, the hit points at one matched entry per session (the store's best-ranked match on the indexed SQLite/Postgres paths, the first match in transcript order on the linear memory/JSONL paths): `entryId`, `runId`, and a 1-based `turn` (transcript position, `(timestamp, id)` order) locate it, `score` is the store relevance where the store has an index (higher is better; SQLite bm25 negated, Postgres `ts_rank_cd`; absent on linear stores; a non-discriminative term can legitimately score 0, so test for presence, not `> 0`), and `snippet` is bounded context around the match in that entry. Hits stay ordered by session `updatedAt` with cursor pagination, so hosts rank by `score` client-side when they want relevance order.
+
+`SessionSearchQuery.kind` restricts which entry kinds the query may match (one kind or a list; omitted or `"any"` = all). Annotation search is `kind: ["label", "summary", "metadata", "custom"]`; `kind: "label"` without a `query` lists sessions that carry an annotation entry. Unknown kinds fail closed with `TypeError`. Indexed text is transcript message text plus label/summary - tool arguments and tool results are never indexed, so they cannot leak through search.
 
 ```ts
 import { createMemorySessionStore, resolveSessionSearchQuery } from "@arnilo/prism";
@@ -121,32 +125,28 @@ const store = createMemorySessionStore([], { sessionSearchMode: "linear" });
 const page = await store.searchSessions!({
   workspaceRoot: "/repo",
   query: "flake",
+  kind: "any",
   limit: 20,
 });
+// [{ sessionId, leafId, entryId, runId, turn, score, snippet, ... }]  // score is absent on linear stores
 // Opt out: createMemorySessionStore([], { sessionSearchMode: "unsupported" })
 // Raise the in-process scan caps for a small but large-query session set (defaults are the contract caps):
 const wide = createMemorySessionStore([], { search: { maxLinearSessions: 5_000, maxLinearEntries: 50_000 } });
 ```
 
-Finite caps (defaults / hard): page 20/100; query string 4 KiB/16 KiB; snippet 512 B/4 KiB; cursor 1 KiB/4 KiB; memory linear sessions 1000/5000, entries 10000/50000, bytes 8 MiB/64 MiB; DB FTS candidates 1000/5000. Overflow fails closed via `resolveSessionSearchQuery`. See [Phase 6 evidence](_evidence/review-coverage-2026-07-22-phase-6.md).
-
-## Session search (0.0.11)
-
-Bounded `SessionIndex` / `searchSessions` lists sessions by optional `workspaceRoot` (`metadata.workspaceRoot`), provider/model, label/summary, time range, ownership, and optional text `query` (FTS on SQLite/Postgres; case-sensitive substring on memory linear). Hits require `sessionId` and may include `leafId` for `checkout`; never credentials or whole transcripts.
+The JSONL store exposes the same `searchSessions` contract through the same matcher, with no index:
 
 ```ts
-import { createMemorySessionStore, resolveSessionSearchQuery } from "@arnilo/prism";
+import { createJsonlSessionStore } from "@arnilo/prism/node/session-store-jsonl";
 
-const store = createMemorySessionStore([], { sessionSearchMode: "linear" });
-const page = await store.searchSessions!({
-  workspaceRoot: "/repo",
-  query: "flake",
-  limit: 20,
-});
-// Opt out: createMemorySessionStore([], { sessionSearchMode: "unsupported" })
+const store = createJsonlSessionStore("./sessions.jsonl");
+const page = await store.searchSessions!({ workspaceRoot: "/repo", query: "flake", limit: 20 });
+// Every query reads and parses the file: O(corpus) time and memory, caps default to the linear caps.
 ```
 
-Finite caps (defaults / hard): page 20/100; query string 4 KiB/16 KiB; snippet 512 B/4 KiB; cursor 1 KiB/4 KiB; memory linear sessions 1000/5000, entries 10000/50000, bytes 8 MiB/64 MiB; DB FTS candidates 1000/5000. Overflow fails closed via `resolveSessionSearchQuery`. See [Phase 6 evidence](_evidence/review-coverage-2026-07-22-phase-6.md).
+Finite caps (defaults / hard): page 20/100; query string 4 KiB/16 KiB; snippet 512 B/4 KiB; cursor 1 KiB/4 KiB; memory linear sessions 1000/5000, entries 10000/50000, bytes 8 MiB/64 MiB (also the JSONL scan caps); DB FTS candidates 1000/5000. Overflow fails closed via `resolveSessionSearchQuery`.
+
+Sizing (plan 095): SQLite FTS5 and the Postgres `tsvector` column are maintained additively at append time (no background job). On the 100k-turn fixture in `scripts/benchmark-scenarios/session-search.mjs` (stored tool output, which is never indexed), the index is 18.8% of transcript page bytes and query p95 is 38 ms (`node scripts/benchmark.mjs --scenario session-search`; ceiling 100 ms). Stores receive already-redacted entries, so the index inherits the same redaction as session reads. Unindexed stores (memory, JSONL) trade that cost for O(corpus) per query — see `examples/session-search.ts` for both paths side by side.
 
 ## Security and performance notes
 

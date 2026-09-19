@@ -183,7 +183,7 @@ export interface CreateMemorySessionStoreOptions {
 }
 
 /** Resolved bounds for the capped linear session scan. */
-interface LinearSearchCaps {
+export interface LinearSearchCaps {
   readonly sessions: number;
   readonly entries: number;
   readonly bytes: number;
@@ -246,7 +246,7 @@ export function createMemorySessionStore(
     },
     async searchSessions(query) {
       if (mode === "unsupported") throw new SessionSearchUnsupportedError();
-      return searchMemorySessionsLinear(bySession, leafBySession, query, searchCaps);
+      return searchLinearSessions(bySession, leafBySession, query, searchCaps);
     },
   };
 
@@ -288,11 +288,15 @@ export function createMemorySessionStore(
   }
 }
 
-function searchMemorySessionsLinear(
+/**
+ * Shared linear (unindexed) session search over already-grouped entries: the memory store's default
+ * mode and the JSONL store's implementation. `caps` defaults to the contract linear caps.
+ */
+export function searchLinearSessions(
   bySession: Map<string, SessionEntry[]>,
   leafBySession: Map<string, string>,
   query: SessionSearchQuery,
-  caps: LinearSearchCaps,
+  caps: LinearSearchCaps = resolveLinearSearchCaps(undefined),
 ): PersistencePage<SessionSearchHit> {
   const q = resolveSessionSearchQuery(query);
   q.signal?.throwIfAborted();
@@ -321,12 +325,18 @@ function searchMemorySessionsLinear(
     let matchedQuery = false;
     let matchedProvider = false;
     let matchedModel = false;
+    let matchedKind = false;
+    let matchedEntry: { entry: SessionEntry; turn: number } | undefined;
     let snippetSource: string | undefined;
+    let turn = 0;
 
     for (const entry of entries) {
       if (entriesScanned >= caps.entries) break;
       if (bytesScanned >= caps.bytes) break;
       entriesScanned += 1;
+      turn += 1;
+      const kindMatches = q.kind === undefined || q.kind.includes(entry.kind);
+      if (kindMatches) matchedKind = true;
       const text = entrySearchText(entry);
       bytesScanned += utf8Bytes(text) + utf8Bytes(entry.label) + utf8Bytes(entry.summary);
 
@@ -344,11 +354,12 @@ function searchMemorySessionsLinear(
       }
       if (q.label && entry.label?.includes(q.label)) matchedLabel = true;
       if (q.summary && entry.summary?.includes(q.summary)) matchedSummary = true;
-      if (q.query) {
+      if (q.query && kindMatches) {
         const hay = `${entry.label ?? ""}\n${entry.summary ?? ""}\n${text}`;
         if (hay.includes(q.query)) {
           matchedQuery = true;
-          snippetSource ??= entry.label ?? entry.summary ?? text;
+          matchedEntry ??= { entry, turn };
+          snippetSource ??= [entry.label, entry.summary, text].find((part) => part?.includes(q.query as string)) ?? hay;
         }
       }
       if (q.provider && (entry.model?.provider === q.provider || metaProvider(entry) === q.provider)) matchedProvider = true;
@@ -362,6 +373,7 @@ function searchMemorySessionsLinear(
     if (q.label && !matchedLabel) continue;
     if (q.summary && !matchedSummary) continue;
     if (q.query && !matchedQuery) continue;
+    if (q.kind && (q.query ? matchedEntry === undefined : !matchedKind)) continue;
     if (q.provider && !matchedProvider) continue;
     if (q.model && !matchedModel) continue;
     if (q.fromUpdatedAt && updatedAt < q.fromUpdatedAt) continue;
@@ -370,6 +382,9 @@ function searchMemorySessionsLinear(
     matches.push({
       sessionId,
       leafId: leafBySession.get(sessionId),
+      entryId: matchedEntry?.entry.id,
+      runId: matchedEntry?.entry.runId,
+      turn: matchedEntry?.turn,
       updatedAt: updatedAt || undefined,
       label,
       summary,

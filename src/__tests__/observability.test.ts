@@ -25,6 +25,21 @@ describe("observability helpers", () => {
 
     const fromSession = createProviderTurnMetadata({ model, messages: [], options: { sessionId: "sess_1" } } as ProviderRequest, "mock");
     assert.equal(fromSession.requestId, "sess_1");
+    assert.equal(fromSession.tools?.count, 0);
+    assert.match(fromSession.tools?.idsHash ?? "", /^sha256:[0-9a-f]{64}$/);
+  });
+
+  it("hashes request tool names in order and never stores args", () => {
+    const model = { provider: "mock", model: "demo" };
+    const echo = { name: "echo", parameters: { type: "object" as const, properties: {} }, execute() { return { toolCallId: "x", name: "echo" }; } };
+    const secret = { name: "secret", parameters: { type: "object" as const, properties: {} }, execute() { return { toolCallId: "x", name: "secret" }; } };
+    const first = createProviderTurnMetadata({ model, messages: [], tools: [echo, secret] }, "mock");
+    const same = createProviderTurnMetadata({ model, messages: [], tools: [echo, secret] }, "mock");
+    const swapped = createProviderTurnMetadata({ model, messages: [], tools: [secret, echo] }, "mock");
+    assert.equal(first.tools?.count, 2);
+    assert.equal(first.tools?.idsHash, same.tools?.idsHash);
+    assert.notEqual(first.tools?.idsHash, swapped.tools?.idsHash);
+    assert.equal(JSON.stringify(first.tools).includes("arguments"), false);
   });
 
   it("readProviderHttpStatus reads numeric error codes", () => {

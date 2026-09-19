@@ -25,56 +25,7 @@ export type { ObservationalMemoryExtensionOptions } from "./extension.js";
 export { createObservationalMemoryExtension } from "./extension.js";
 export { createMemoryId, isMemoryId } from "./ids.js";
 export type { ObservationalMemoryLedger } from "./ledger.js";
-export { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
-export type {
-  WorkBindRef,
-  WorkScope,
-  WorkScopeBoundData,
-  WorkScopeClosedData,
-  WorkScopeController,
-  WorkScopeControllerOptions,
-  WorkScopeEnteredData,
-  WorkScopeEntryData,
-  WorkScopeId,
-  WorkScopeLeftData,
-  WorkScopeMap,
-  WorkScopeOpenedData,
-  WorkScopeSpec,
-  WorkScopeUnboundData,
-} from "./scopes.js";
-export {
-  createWorkScopeController,
-  foldWorkScopeMap,
-  withWorkScope,
-  isWorkBindRef,
-  isWorkScopeBoundData,
-  isWorkScopeClosedData,
-  isWorkScopeEnteredData,
-  isWorkScopeId,
-  isWorkScopeLeftData,
-  isWorkScopeOpenedData,
-  isWorkScopeUnboundData,
-  MAX_WORK_SCOPE_BINDS,
-  MAX_WORK_SCOPE_DEPTH,
-  MAX_WORK_SCOPE_LABEL_CHARS,
-  MAX_WORK_SCOPE_STACK,
-  MAX_WORK_SCOPES,
-  SESSION_WORK_SCOPE_ID,
-  WORK_SCOPE_BOUND,
-  WORK_SCOPE_CLOSED,
-  WORK_SCOPE_ENTERED,
-  WORK_SCOPE_LEFT,
-  WORK_SCOPE_OPENED,
-  WORK_SCOPE_UNBOUND,
-} from "./scopes.js";
-export type {
-  ProjectWorkMemoryOptions,
-  WorkMemoryProjection,
-  WorkScopeClosed,
-  WorkScopeInclude,
-  WorkScopeOutline,
-} from "./scopes-project.js";
-export { projectWorkMemory } from "./scopes-project.js";
+export { activeObservations, foldObservationalMemoryLedger, mergeObservationalMemoryLedgers } from "./ledger.js";
 export type { MemoryWorkerLimitOptions, ResolvedMemoryWorkerLimits } from "./limits.js";
 export {
   DEFAULT_MAX_WORKER_ARGUMENT_BYTES,
@@ -105,6 +56,7 @@ export type {
   RecallBranchPageRequest,
   RecallBranchPageResult,
   RecallKind,
+  RecallMemoryOptions,
   RecallPageDetail,
   RecallPageDirection,
 } from "./recall.js";
@@ -128,6 +80,65 @@ export type {
   ObservationalMemoryWorkerRuntimeConfig,
 } from "./runtime.js";
 export { createObservationalMemoryRuntime } from "./runtime.js";
+export type {
+  WorkBindRef,
+  WorkScope,
+  WorkScopeBoundData,
+  WorkScopeClosedData,
+  WorkScopeController,
+  WorkScopeControllerOptions,
+  WorkScopeEnteredData,
+  WorkScopeEntryData,
+  WorkScopeGrantedData,
+  WorkScopeId,
+  WorkScopeLeftData,
+  WorkScopeMap,
+  WorkScopeOpenedData,
+  WorkScopeRevokedData,
+  WorkScopeSpec,
+  WorkScopeUnboundData,
+} from "./scopes.js";
+export {
+  createWorkScopeController,
+  foldWorkScopeGrants,
+  foldWorkScopeMap,
+  isWorkBindRef,
+  isWorkPrincipalId,
+  isWorkScopeBoundData,
+  isWorkScopeClosedData,
+  isWorkScopeEnteredData,
+  isWorkScopeGrantedData,
+  isWorkScopeId,
+  isWorkScopeLeftData,
+  isWorkScopeOpenedData,
+  isWorkScopeRevokedData,
+  isWorkScopeUnboundData,
+  MAX_WORK_PRINCIPAL_ID_CHARS,
+  MAX_WORK_SCOPE_BINDS,
+  MAX_WORK_SCOPE_DEPTH,
+  MAX_WORK_SCOPE_LABEL_CHARS,
+  MAX_WORK_SCOPE_PRINCIPALS,
+  MAX_WORK_SCOPE_STACK,
+  MAX_WORK_SCOPES,
+  SESSION_WORK_SCOPE_ID,
+  WORK_SCOPE_BOUND,
+  WORK_SCOPE_CLOSED,
+  WORK_SCOPE_ENTERED,
+  WORK_SCOPE_GRANTED,
+  WORK_SCOPE_LEFT,
+  WORK_SCOPE_OPENED,
+  WORK_SCOPE_REVOKED,
+  WORK_SCOPE_UNBOUND,
+  withWorkScope,
+} from "./scopes.js";
+export type {
+  ProjectWorkMemoryOptions,
+  WorkMemoryProjection,
+  WorkScopeClosed,
+  WorkScopeInclude,
+  WorkScopeOutline,
+} from "./scopes-project.js";
+export { projectWorkMemory } from "./scopes-project.js";
 export { serializeSessionEntry, serializeSourceEntries } from "./serialize.js";
 export type {
   ObservationalMemoryContextSettings,
@@ -145,6 +156,16 @@ export type {
   ObservationalMemorySettingsInput,
 } from "./settings.js";
 export { defaultObservationalMemorySettings, resolveObservationalMemorySettings } from "./settings.js";
+export type {
+  MergedSharedScopes,
+  ResolveSharedScopesOptions,
+  SharedScopeAccessEvent,
+  SharedScopeAccessReason,
+  SharedScopeMemory,
+  SharedWorkScopeConfig,
+  SharedWorkScopeConfigEntry,
+} from "./shared-scopes.js";
+export { mergeSharedScopes, resolveSharedScopes } from "./shared-scopes.js";
 export type { ObservationalMemoryCompactionStrategyOptions } from "./strategy.js";
 export { createObservationalMemoryCompactionStrategy } from "./strategy.js";
 export { estimateEntryTokens, estimateMessageTokens, estimateTextTokens } from "./tokens.js";

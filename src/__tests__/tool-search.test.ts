@@ -284,7 +284,11 @@ describe("tool-accuracy fixtures (pick correct tool among distractors, plan 041 
         toolsSearch: { topK: 16 },
         tools: fixtureTools(toolCount, "cap"),
       });
-      await agent.createSession({ id: `accuracy-${mode}-${toolCount}-${subject}` }).run(query);
+      // Pick accuracy, not budget accounting: this fixture provider reports no usage, so the
+      // plan 091 fallback estimate would charge the default run input budget across subjects.
+      await agent
+        .createSession({ id: `accuracy-${mode}-${toolCount}-${subject}` })
+        .run(query, { limits: { maxInputTokens: null, maxTotalTokens: null } });
       assert.ok(picked);
     }
     return { picks, correct };

@@ -10,12 +10,16 @@ export const WORK_SCOPE_ENTERED = "om.scope.entered";
 export const WORK_SCOPE_LEFT = "om.scope.left";
 export const WORK_SCOPE_BOUND = "om.scope.bound";
 export const WORK_SCOPE_UNBOUND = "om.scope.unbound";
+export const WORK_SCOPE_GRANTED = "om.scope.granted";
+export const WORK_SCOPE_REVOKED = "om.scope.revoked";
 
 export const MAX_WORK_SCOPES = 256;
 export const MAX_WORK_SCOPE_DEPTH = 8;
 export const MAX_WORK_SCOPE_STACK = 8;
 export const MAX_WORK_SCOPE_BINDS = 4096;
 export const MAX_WORK_SCOPE_LABEL_CHARS = 512;
+export const MAX_WORK_SCOPE_PRINCIPALS = 1024;
+export const MAX_WORK_PRINCIPAL_ID_CHARS = 256;
 
 export type WorkScopeId = string;
 export type WorkBindRef = `om:${string}` | `reflection:${string}`;
@@ -61,13 +65,28 @@ export interface WorkScopeUnboundData {
   readonly refs: readonly WorkBindRef[];
 }
 
+/** Append-only sharing grant; the scope owner's branch is the only grant authority (`resolveSharedScopes`). */
+export interface WorkScopeGrantedData {
+  readonly type: typeof WORK_SCOPE_GRANTED;
+  readonly scopeId: WorkScopeId;
+  readonly principalIds: readonly string[];
+}
+
+export interface WorkScopeRevokedData {
+  readonly type: typeof WORK_SCOPE_REVOKED;
+  readonly scopeId: WorkScopeId;
+  readonly principalIds: readonly string[];
+}
+
 export type WorkScopeEntryData =
   | WorkScopeOpenedData
   | WorkScopeClosedData
   | WorkScopeEnteredData
   | WorkScopeLeftData
   | WorkScopeBoundData
-  | WorkScopeUnboundData;
+  | WorkScopeUnboundData
+  | WorkScopeGrantedData
+  | WorkScopeRevokedData;
 
 export interface WorkScopeMap {
   readonly scopes: ReadonlyMap<WorkScopeId, WorkScope>;
@@ -86,6 +105,8 @@ export interface WorkScopeController {
   readonly leave: () => Promise<void>;
   readonly bind: (scopeId: WorkScopeId, refs: readonly WorkBindRef[]) => Promise<void>;
   readonly unbind: (scopeId: WorkScopeId, refs: readonly WorkBindRef[]) => Promise<void>;
+  readonly grant: (scopeId: WorkScopeId, principalIds: readonly string[]) => Promise<void>;
+  readonly revoke: (scopeId: WorkScopeId, principalIds: readonly string[]) => Promise<void>;
   readonly has: (scopeId: WorkScopeId) => Promise<boolean>;
   readonly leaf: () => Promise<WorkScopeId>;
 }
@@ -123,6 +144,41 @@ export function isWorkScopeBoundData(value: unknown): value is WorkScopeBoundDat
 
 export function isWorkScopeUnboundData(value: unknown): value is WorkScopeUnboundData {
   return isWorkScopeRefsData(value, WORK_SCOPE_UNBOUND);
+}
+
+export function isWorkScopeGrantedData(value: unknown): value is WorkScopeGrantedData {
+  return isWorkScopePrincipalsData(value, WORK_SCOPE_GRANTED);
+}
+
+export function isWorkScopeRevokedData(value: unknown): value is WorkScopeRevokedData {
+  return isWorkScopePrincipalsData(value, WORK_SCOPE_REVOKED);
+}
+
+/**
+ * Append-only sharing grants folded per scope. Revocation removes immediately at fold time, so a
+ * revoked principal is excluded from the next read; an absent, unknown, or unreadable grant denies.
+ */
+export function foldWorkScopeGrants(entries: readonly SessionEntry[]): ReadonlyMap<WorkScopeId, ReadonlySet<string>> {
+  const grants = new Map<WorkScopeId, Set<string>>();
+  for (const entry of entries) {
+    const data = entry.data;
+    if (isWorkScopeGrantedData(data)) {
+      const next = grants.get(data.scopeId) ?? new Set<string>();
+      for (const principalId of data.principalIds) {
+        if (next.size >= MAX_WORK_SCOPE_PRINCIPALS) break;
+        next.add(principalId);
+      }
+      if (next.size) grants.set(data.scopeId, next);
+      continue;
+    }
+    if (isWorkScopeRevokedData(data)) {
+      const current = grants.get(data.scopeId);
+      if (!current) continue;
+      for (const principalId of data.principalIds) current.delete(principalId);
+      if (!current.size) grants.delete(data.scopeId);
+    }
+  }
+  return new Map([...grants].map(([scopeId, principals]) => [scopeId, new Set(principals)]));
 }
 
 export function foldWorkScopeMap(entries: readonly SessionEntry[]): WorkScopeMap {
@@ -255,6 +311,26 @@ export function createWorkScopeController(options: WorkScopeControllerOptions): 
       if (removed.length) await append({ type: WORK_SCOPE_UNBOUND, scopeId: id, refs: removed });
     },
 
+    async grant(scopeId, principalIds) {
+      const principals = assertWorkPrincipalIds(principalIds);
+      const entries = await options.session.entries();
+      const id = assertShareableScopeId(scopeId, foldWorkScopeMap(entries));
+      const current = foldWorkScopeGrants(entries).get(id) ?? new Set<string>();
+      const fresh = principals.filter((principalId) => !current.has(principalId));
+      if (current.size + fresh.length > MAX_WORK_SCOPE_PRINCIPALS)
+        throw new RangeError(`Work scope grant limit is ${MAX_WORK_SCOPE_PRINCIPALS}`);
+      if (fresh.length) await append({ type: WORK_SCOPE_GRANTED, scopeId: id, principalIds: fresh });
+    },
+
+    async revoke(scopeId, principalIds) {
+      const principals = assertWorkPrincipalIds(principalIds);
+      const entries = await options.session.entries();
+      const id = assertShareableScopeId(scopeId, foldWorkScopeMap(entries));
+      const granted = foldWorkScopeGrants(entries).get(id) ?? new Set<string>();
+      const removed = principals.filter((principalId) => granted.has(principalId));
+      if (removed.length) await append({ type: WORK_SCOPE_REVOKED, scopeId: id, principalIds: removed });
+    },
+
     async has(scopeId) {
       return (await map()).scopes.has(assertWorkScopeId(scopeId, "scope id"));
     },
@@ -295,6 +371,32 @@ function isWorkScopeRefsData<T extends typeof WORK_SCOPE_BOUND | typeof WORK_SCO
 ): value is T extends typeof WORK_SCOPE_BOUND ? WorkScopeBoundData : WorkScopeUnboundData {
   return (
     isRecord(value) && value.type === type && isWorkScopeId(value.scopeId) && Array.isArray(value.refs) && value.refs.every(isWorkBindRef)
+  );
+}
+
+function isWorkScopePrincipalsData<T extends typeof WORK_SCOPE_GRANTED | typeof WORK_SCOPE_REVOKED>(
+  value: unknown,
+  type: T,
+): value is T extends typeof WORK_SCOPE_GRANTED ? WorkScopeGrantedData : WorkScopeRevokedData {
+  return (
+    isRecord(value) &&
+    value.type === type &&
+    isWorkScopeId(value.scopeId) &&
+    Array.isArray(value.principalIds) &&
+    value.principalIds.length > 0 &&
+    value.principalIds.length <= MAX_WORK_SCOPE_PRINCIPALS &&
+    value.principalIds.every(isWorkPrincipalId)
+  );
+}
+
+/** Principal ids are session ids (or host-defined equivalents): printable, trimmed, bounded. */
+export function isWorkPrincipalId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= MAX_WORK_PRINCIPAL_ID_CHARS &&
+    value.trim() === value &&
+    !/[\u0000-\u001f\u007f]/.test(value)
   );
 }
 
@@ -361,6 +463,21 @@ function assertWorkBindRefs(refs: unknown): readonly WorkBindRef[] {
   if (!Array.isArray(refs) || refs.length === 0 || !refs.every(isWorkBindRef))
     throw new TypeError("Work scope refs must be non-empty OM references");
   return [...new Set(refs)];
+}
+
+function assertWorkPrincipalIds(principalIds: unknown): readonly string[] {
+  if (!Array.isArray(principalIds) || principalIds.length === 0 || !principalIds.every(isWorkPrincipalId))
+    throw new TypeError("Work scope principals must be non-empty principal ids");
+  return [...new Set(principalIds)];
+}
+
+function assertShareableScopeId(scopeId: unknown, map: WorkScopeMap): WorkScopeId {
+  const id = assertWorkScopeId(scopeId, "scope id");
+  if (id === SESSION_WORK_SCOPE_ID) throw new Error("Work scope session is reserved");
+  const scope = map.scopes.get(id);
+  if (!scope) throw new Error(`Unknown work scope ${id}`);
+  if (scope.status !== "open") throw new Error(`Work scope ${id} must be open`);
+  return id;
 }
 
 function assertKnownWorkBindRefs(refs: readonly WorkBindRef[], entries: readonly SessionEntry[]): void {

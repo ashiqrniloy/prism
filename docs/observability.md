@@ -41,7 +41,7 @@ New agent event variants (metadata only):
 | Variant | When | Key fields |
 | --- | --- | --- |
 | `provider_turn_started` | Before each provider `generate()` attempt | `turn`, `metadata: ProviderTurnMetadata` |
-| `provider_turn_finished` | After success or failure of that attempt | `metadata` (includes `latencyMs`, optional `httpStatus`), `usage?`, `error?` |
+| `provider_turn_finished` | After success or failure of that attempt | `metadata` (includes `latencyMs`, optional `httpStatus`, `stopReason`, `budgets`, `cache`), `usage?`, `error?` |
 
 `ToolExecutionMetadata` on terminal tool events:
 
@@ -91,6 +91,7 @@ Provider turn metadata fields:
 | `latencyMs` | Set on `provider_turn_finished` |
 | `httpStatus` | Numeric `ErrorInfo.code` when present |
 | `rateLimitRemaining` / `rateLimitResetMs` | Reserved for provider adapters (optional) |
+| `cache` | Provider-reported `{ cacheReadTokens?, cacheWriteTokens?, hitRate? }`; absent when cache usage is unknown. |
 
 OpenTelemetry mapping (when enabled):
 
@@ -190,8 +191,8 @@ const found = await retrieveContext("policy", { embedder, store, scope, telemetr
 
 Host cockpits and dashboard cards need fast aggregate summaries of an execution without re-walking every raw event or risking prompt/secret leaks:
 
-- `summarizeTimeline(timeline)`: rolls up an `ExecutionTimeline` into a `TimelineSummary` containing duration, turn count, tool call counts, provider attempts, total tokens, cost, error counts, and suspension state.
-- `summarizeSession(timelines)`: rolls up an array of `ExecutionTimeline`s for a session/conversation into a `SessionSummary` with aggregated tokens, costs, run counts, and duration.
+- `summarizeTimeline(timeline)`: rolls up an `ExecutionTimeline` into a `TimelineSummary` containing duration, turn count (split into model vs deterministic turns), tool call counts, provider attempts, total tokens, cost, error counts, suspension state, and — for a run that died on a run limit — an `exhaustion` line (`"maxTurns exhausted (13/12); closest: maxToolCalls 0.625"`).
+- `summarizeSession(timelines)`: rolls up an array of `ExecutionTimeline`s for a session/conversation into a `SessionSummary` with aggregated tokens, costs, run counts, duration, and the same model/deterministic turn split.
 
 ```ts
 import { summarizeTimeline, summarizeSession } from "@arnilo/prism-core/governance/observability";
@@ -201,6 +202,7 @@ const summary = summarizeTimeline(timeline);
 // {
 //   durationMs: 1250,
 //   turnCount: 2,
+//   turns: { model: 1, deterministic: 1 },
 //   toolCallCount: 3,
 //   toolCounts: { search: 2, lookup: 1 },
 //   providerAttempts: 2,
@@ -210,6 +212,7 @@ const summary = summarizeTimeline(timeline);
 //   blockedToolCount: 0,
 //   suspended: false,
 //   status: "succeeded",
+//   exhaustion: "maxTurns exhausted (13/12); closest: maxToolCalls 0.625", // only when a limit fired
 // }
 
 const sessionSummary = summarizeSession([run1Timeline, run2Timeline]);
@@ -218,6 +221,7 @@ const sessionSummary = summarizeSession([run1Timeline, run2Timeline]);
 
 Cardinality and correctness guarantees:
 - **Bounded cardinality**: `toolCounts` is capped to `MAX_SUMMARY_DISTINCT_TOOLS = 64` distinct tool names. If more tools are invoked, lowest-frequency tool names overflow into an `"other"` bucket.
+- **Honest turn attribution**: `turns.model` counts turns with a provider step; `turns.deterministic` counts turns answered by host middleware (plan 096, `deterministic` step kind). A no-model turn is never rolled into model counts, and its usage stays absent rather than zero.
 - **No double counting**: Token usage is derived from the root run's `run_total` (or aggregated across `turn` / `provider` steps if no run-level total exists), avoiding double counting between provider turn steps and run totals. Costs are rounded to 6 decimal places to prevent floating-point drift.
 - **Payload-free**: Summaries contain counts, durations, status codes, and usage metrics only — zero prompt text, tool arguments, or credentials.
 

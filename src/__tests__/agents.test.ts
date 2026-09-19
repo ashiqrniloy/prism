@@ -2368,7 +2368,7 @@ describe("agent session runtime", () => {
     assert.equal(request.metadata?.middleware, true);
   });
 
-  it("usage supports cache read and write tokens", async () => {
+  it("usage carries provider-reported cache fields into finish metadata", async () => {
     const session = createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerUsage({ inputTokens: 10, cacheReadTokens: 4, cacheWriteTokens: 2 }), providerDone()]),
@@ -2377,9 +2377,16 @@ describe("agent session runtime", () => {
 
     await session.run("Hi");
 
-    const finished = (await reader).find((event) => event.type === "agent_finished");
+    const events = await reader;
+    const finished = events.find((event) => event.type === "agent_finished");
+    const providerTurn = events.find((event) => event.type === "provider_turn_finished");
     assert.equal(finished?.type === "agent_finished" ? finished.usage?.cacheReadTokens : undefined, 4);
     assert.equal(finished?.type === "agent_finished" ? finished.usage?.cacheWriteTokens : undefined, 2);
+    assert.deepEqual(providerTurn?.type === "provider_turn_finished" ? providerTurn.metadata.cache : undefined, {
+      cacheReadTokens: 4,
+      cacheWriteTokens: 2,
+      hitRate: 0.4,
+    });
   });
 
   it("request policy redacts secret from provider errors", async () => {

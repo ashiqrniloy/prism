@@ -159,6 +159,23 @@ await session.run(input, { toolNames: ["web_search"] });
 
 Scope the active `ToolRegistry` (or declarative `AgentDefinition.tools`) at agent construction. `PermissionPolicy` / `RunOptions.validate` still fail closed at dispatch; `toolNames` only intersects that host-active set.
 
+### Per-turn tool narrowing
+
+`toolNarrowing` on `AgentConfig` / `RunOptions` (run wins) is an optional host callback invoked at `loopCtx.assemble` before each provider turn. It receives `{ turn, lastAssistantText?, toolIds }` and must return a subset of the run grant (`toolIds`). Unknown or extra names are dropped (restrictive-only); the runtime emits `tool_narrowing_clamped` with the dropped names and continues with the clamped set. A throw fails the turn — no partial schema is sent.
+
+This is not a middleware hook and not `RunOptions.tools`. `filterTools` on the run snapshot preserves run order, so identical consecutive subsets keep schema bytes identical (prompt-cache prefixes stay stable). Changing the subset rewrites tool schemas; pair with `toolsDisclosure: "search"` when the run set is large.
+
+Tools hidden this turn are not in the provider schema. They stay callable-by-name only when `allowHiddenToolCalls: true` (default off); otherwise dispatch blocks them with `tool_denied`. Each provider turn records `metadata.tools: { count, idsHash }` (hash of names in request order; no args) — see [Agent events](agent-events.md).
+
+```ts
+const agent = createAgent({
+  model, provider, tools,
+  toolNarrowing: async ({ turn, lastAssistantText, toolIds }) =>
+    plane === "knowledge" ? toolIds.filter((id) => id.startsWith("wiki.")) : toolIds,
+});
+await session.run(input, { toolNarrowing: async ({ toolIds }) => toolIds.slice(0, 4) });
+```
+
 ### Artifact-loop tools
 
 `generate-validate-revise` treats provider tools as inert by default. Set `loop.toolCalls: "bounded"` and `RunOptions.limits.maxToolRounds` only when an artifact needs a host-owned lookup before its next candidate. Each response with one-or-more calls consumes one shared round, dispatches calls sequentially through this exact `dispatchToolCall()` path, persists assistant-call then result transcript rows, and skips artifact parsing/validation for that response. A post-limit call executes nothing; the loop emits `artifact_failed` with `metadata.reason: "tool_round_limit"`. Tools do not consume `maxRevisions`, and tool schemas/context never grant authority.

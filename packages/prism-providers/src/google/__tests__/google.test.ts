@@ -186,6 +186,16 @@ describe("@arnilo/prism-providers/google", () => {
     assert.equal(events.at(-1)?.type, "done");
   });
 
+  it("maps_finish_reason_to_taxonomy", async () => {
+    const provider = createGoogleGenerateContentProvider({
+      apiKey: "fake-google-key",
+      fetch: mockFetch(sse([{ candidates: [{ finishReason: "MAX_TOKENS" }] }])),
+    });
+    const events = await assertProviderStreamConforms({ provider, request });
+    const done = events.at(-1);
+    assert.equal(done?.type === "done" ? done.stopReason : undefined, "max_output_tokens");
+  });
+
   it("preserves_thinking_blocks_and_maps_max_tokens_thinking_config", async () => {
     let body: any;
     let url = "";

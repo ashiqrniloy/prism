@@ -17,7 +17,7 @@ Maps five Prism answers for "more than one agent" onto one decision table. All f
 | In-session handoff | One host, one ongoing conversation; the model decides **when** to transfer; specialists are alternate definitions of the same app | One continuous transcript chain (same store, session id, `leafId`) | Same session scope; give the specialist its own identity via its definition (`AgentConfig.identity` / `RunOptions.identity`) | Attribution is per-run: each `session.run()`'s events/result belong to the active definition — record the swap in host bookkeeping; no `delegated_agent_step` event exists for in-process swaps |
 | Hierarchical crew | A goal requires dynamic decomposition by a manager LLM, parallel execution by role specialists, host aggregation, and conditional validation/revision loop | Workflow DAG execution — each specialist executes a bounded child task session; final deliverable returns to host | Workflow tenant/ownership scopes propagate; specialists activate only their own narrowed `tools` | Workflow node events (`node_started`/`node_finished`/`agent_event`); task attribution per role in the aggregated deliverable |
 | Supervisor delegation | Host code dynamically selects a bounded child run | Separate runs; child result returns to the host | Parent identity/effectStore propagate; child factories receive derived resource/thread ids and AND-composed permission | Dedicated `delegation_started/finished/rejected/error` events, projectable through observability `handleDelegation()`; opt-in `delegation_child_event` passthrough |
-| In-process spawn tool | Parent model needs an allow-listed child as a non-exclusive tool call | Separate runs; sync result returns through `spawn_agent`, async handle joins through `wait_agent` | Host owns catalog, tools, scopes, limits, and local handles; schema accepts only child ID/input/thread ID/mode | Same supervisor `delegation_*` events |
+| In-process spawn tool | Parent model needs an allow-listed child as a non-exclusive tool call | Separate runs; sync result returns through `spawn_agent`, async handle joins through `wait_agent` | Host owns catalog, tools, scopes, limits, and local handles; schema accepts only child ID/input/thread ID/mode plus policy args the host ceiling allows | Same supervisor `delegation_*` events; with host opt-in, `child_milestone` / `delegation_child_event` (redacted, capped, rate-coalesced) |
 | A2A 1.0 | The other agent is owned by a **different service/deployment**; cross-org or cross-cluster; needs durable task lifecycle, push configs, streaming | Protocol boundary (JSON-RPC/HTTPS agent card); replay/reconnect via host-owned task adapter | Exact-origin verified client, `A2AAuthorization` per operation, principal-scoped push configs | Host-owned task adapter records the remote lifecycle; Prism creates no worker/store |
 
 Rule of thumb: same conversation → handoff; dynamic task decomposition + parallel execution → hierarchical crew; host-selected same-process subtask → supervisor delegation; model-requested allow-listed subtask → in-process spawn tool; different deployment/trust boundary → A2A.
@@ -151,6 +151,29 @@ Live demo: [`examples/crew-hierarchy.ts`](../examples/crew-hierarchy.ts) — man
 
 Live demo: [`examples/spawn-agent-tool.ts`](../examples/spawn-agent-tool.ts) — a narrowed read-only explore child spawned twice in parallel, an uncatalogued child refused, and both handles joined.
 
+### Background agents (session lifetime)
+
+A host can start a background child at session open that reports without occupying the conversation:
+
+```ts
+const supervisor = createSupervisor({
+  ownership,
+  signal: sessionAbort.signal, // host session end stops every child and closes the stream
+  children: {
+    researcher: {
+      policy: { lifetime: "session", report: "milestones", milestone: { everyTurns: 5 }, budgetShare: 0.2 },
+      createAgent: ({ resourceId, threadId, permission, signal, delegate }) => createResearchAgent(/* ... */),
+    },
+  },
+});
+
+// Host code or the parent model (spawn_agent routes session lifetime to the async path):
+const handle = await supervisor.delegateAsync({ childId: "researcher", input: "watch the build", lifetime: "session" });
+await supervisor.wait(handle.delegationId); // join later; cancel(handle.delegationId) ends it explicitly
+```
+
+Session-lifetime children detach from the caller and ancestor-child abort signals, hold one `activeChildren` slot until they end, and stop on `cancel_agent` / `cancel(delegationId)` or the supervisor `signal`. `budgetShare` scales the inherited steps/tool-calls/tokens/timeout limits — never above the parent or host ceiling. Reporting stays host-opt-in and redacted: `milestones` emits `child_milestone` every N turns or on a host predicate, `stream` forwards every per-turn provider/tool/turn event (never token deltas), and both are rate-coalesced at `limits.maxChildEventsPerSecond` (10/s per child default) with a `delegation_child_events_coalesced` marker. To surface them on a parent session stream, pass `childEventSink` — it receives the same redacted payload tagged `child: { childId, delegationId, depth }`, so the parent subscriber only reads `event.child`.
+
 ## Where Prism is stronger
 
 - **Durable Human-in-the-Loop (HITL)**: Prism workflows support durable pause and resume via [`suspend()`](workflows.md#durable-suspension-and-resumption) and [`resumeWorkflow()`](workflows.md) across worker restarts or approval gates ([Agent durable approval](agent-session-runtime.md)).
@@ -166,7 +189,7 @@ Live demo: [`examples/spawn-agent-tool.ts`](../examples/spawn-agent-tool.ts) —
 - **Narrowing on transfer, never widening.** If the specialist needs the caller's verified identity, project it through `narrowIdentity` / `assertIdentityPropagation` ([Agent identity](agent-identity.md)) so scopes and tenant cannot widen across the swap. For delegation the same discipline is built in (`narrowIdentity`, AND-composed policies); for A2A the exact-origin client plus per-operation authorization is the boundary.
 - **Manager-generated task plans are untrusted model output.** Manager plan outputs are validated against the typed schema via `ArtifactValidator` before being persisted to workflow state or dispatched to `fan_out`. Malformed or invalid plans trigger the artifact repair loop or fail closed before any specialist is invoked.
 - **Redaction of carried context.** Handoff carries the raw transcript by design — same rows a human replay would read. Apply the session egress seams on the way out: `redactSessionEntry` / `redactMessage` with a host field policy (see [Data classification](data-classification.md)) and `AgentConfig.redactor`; for durable replay across tenants reuse the redacted transcript seam discipline used by ACP `sessions.transcript` ([ACP interop](acp.md)).
-- **Telemetry attribution.** Which agent produced which turn is not stored on message entries; the host knows (it performed the swap or aggregated fan-out results) and should pin it per run via `RunOptions.identity` (principal kind `agent`) so `identityTelemetryAttributes` (`prism.identity.*`) carries redacted attribution on telemetry, or via observability metadata. Supervisor runs emit dedicated `delegation_*` events; an in-process definition swap has no session seam to emit one, so the host records attribution.
+- **Telemetry attribution.** Which agent produced which turn is not stored on message entries; the host knows (it performed the swap or aggregated fan-out results) and should pin it per run via `RunOptions.identity` (principal kind `agent`) so `identityTelemetryAttributes` (`prism.identity.*`) carries redacted attribution on telemetry, or via observability metadata. Supervisor runs emit dedicated `delegation_*` events plus `child_failed` attribution (terminal `status`/`stopReason`, plan-086/087 `RunLimitBreach` when a ceiling fired), and `supervisor.summary()` reports per-child `attempts`/`retries`/`failures`/`failureRadius`/`outcome` — the recovery and cascade-radius counters a host cannot reconstruct from totals alone. An in-process definition swap has no session seam to emit one, so the host records attribution.
 - **Performance.** The swap performs zero provider calls; it costs one registry resolution plus one session open (~sub-millisecond in the example fixture). The transferred turn costs what any tool round costs.
 
 ## Extension and configuration notes

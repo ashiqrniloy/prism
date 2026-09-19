@@ -18,6 +18,8 @@ import {
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
   type SessionIndex,
   type SessionSearchHit,
+  type SessionSearchKind,
+  type SessionSearchQuery,
   SessionSearchUnsupportedError,
   type SessionStore,
 } from "../index.js";
@@ -53,13 +55,11 @@ describe("SessionIndex contracts", () => {
     assert.equal(page.items[0]?.sessionId, "s1");
     assert.equal(page.items[0]?.leafId, "leaf-1");
 
-    const base = createMemorySessionStore(undefined, { sessionSearchMode: "unsupported" });
+    const base = createMemorySessionStore();
     const store: SessionStore = {
       append: (entry, options) => base.append(entry, options),
       list: (sessionId) => base.list(sessionId),
-      async searchSessions(query) {
-        return index.search(query);
-      },
+      searchSessions: (query) => base.searchSessions!(query),
     };
     await store.append(createSessionEntry({ sessionId: "s1", kind: "label", label: "auth" }));
     await assertSessionStoreConforms(store, { exerciseSearchSessions: true });
@@ -97,6 +97,19 @@ describe("SessionIndex contracts", () => {
 
     const byQuery = await store.searchSessions!({ query: "flaky auth", limit: 10 });
     assert.ok(byQuery.items.some((hit) => hit.sessionId === "search-session"));
+    assert.equal(byQuery.items[0]?.entryId, "search-root");
+    assert.equal(byQuery.items[0]?.turn, 1);
+    assert.match(byQuery.items[0]?.snippet ?? "", /flaky auth/);
+
+    // Kind filter: the message matched the query, so an annotation-only search must miss it.
+    const annotationOnly = await store.searchSessions!({ query: "flaky auth", kind: ["label", "summary"], limit: 10 });
+    assert.equal(annotationOnly.items.length, 0);
+    const annotationList = await store.searchSessions!({ kind: "label", limit: 10 });
+    assert.deepEqual(
+      annotationList.items.map((hit) => hit.sessionId),
+      ["other-session"],
+    );
+    await assert.rejects(() => store.searchSessions!({ kind: "bogus" as SessionSearchKind }), TypeError);
 
     const byWorkspace = await store.searchSessions!({ workspaceRoot: "/repo", limit: 10 });
     assert.deepEqual(
@@ -210,12 +223,57 @@ describe("SessionIndex contracts", () => {
     );
   });
 
-  it("JSONL searchSessions throws unsupported", async () => {
+  it("JSONL linear search returns the same hits as the memory store for the same corpus", async () => {
     const path = join(await mkdtemp(join(tmpdir(), "prism-jsonl-search-")), "sessions.jsonl");
-    const store = createJsonlSessionStore(path);
-    await assert.rejects(
-      () => store.searchSessions!({ limit: 10 }),
-      (error: unknown) => isSessionSearchUnsupported(error),
-    );
+    const entries = [
+      createSessionEntry({
+        id: "jsonl-root",
+        sessionId: "jsonl-session",
+        timestamp: "2026-01-01T00:00:02.000Z",
+        kind: "message",
+        label: "auth-flake",
+        summary: "flaky login",
+        message: { role: "user", content: [{ type: "text", text: "fix flaky auth test timeout" }] },
+        metadata: { workspaceRoot: "/repo", tenantId: "tenant-a" },
+      }),
+      createSessionEntry({
+        id: "jsonl-other",
+        sessionId: "jsonl-other-session",
+        timestamp: "2026-01-01T00:00:01.000Z",
+        kind: "label",
+        label: "unrelated",
+      }),
+    ];
+    const jsonl = createJsonlSessionStore(path);
+    for (const entry of entries) await jsonl.append(entry);
+    const memory = createMemorySessionStore(entries);
+
+    // One matcher, two stores: every query must produce identical pages, pointer fields included.
+    const queries: SessionSearchQuery[] = [
+      { query: "flaky auth", limit: 10 },
+      { label: "unrelated", limit: 10 },
+      { kind: "label", limit: 10 },
+      { query: "flaky auth", kind: ["label", "summary"], limit: 10 },
+      { workspaceRoot: "/repo", limit: 10 },
+      { workspaceRoot: "/elsewhere", limit: 10 },
+      { tenantId: "tenant-a", limit: 1, order: "asc" },
+    ];
+    for (const query of queries) {
+      assert.deepEqual(
+        await jsonl.searchSessions!(query),
+        await memory.searchSessions!(query),
+        `JSONL and memory search diverged for ${JSON.stringify(query)}`,
+      );
+    }
+
+    const hits = await jsonl.searchSessions!({ query: "flaky auth", limit: 10 });
+    assert.equal(hits.items[0]?.entryId, "jsonl-root");
+    assert.equal(hits.items[0]?.turn, 1);
+    assert.match(hits.items[0]?.snippet ?? "", /flaky auth/);
+
+    // Persisted corpus: a fresh instance searches the file, and the search contract conforms.
+    const reopened = createJsonlSessionStore(path);
+    assert.deepEqual(await reopened.searchSessions!({ query: "flaky auth", limit: 10 }), hits);
+    await assertSessionStoreConforms(reopened, { exerciseSearchSessions: true });
   });
 });

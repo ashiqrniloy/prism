@@ -54,8 +54,8 @@ export interface SessionStore {
   /**
    * Optional bounded session search. Prefer implementing this **or** returning a companion
    * `SessionIndex` from the adapter factory — hosts must not need both. Call
-   * `resolveSessionSearchQuery` before scan/query. Memory defaults to capped linear
-   * search (`sessionSearchMode: "unsupported"` throws). JSONL throws unsupported.
+   * `resolveSessionSearchQuery` before scan/query. Memory and JSONL default to capped linear
+   * search (memory `sessionSearchMode: "unsupported"` throws); DB adapters index.
    */
   searchSessions?(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>>;
 }
@@ -80,11 +80,19 @@ export const HARD_MAX_SESSION_SEARCH_LINEAR_BYTES = 64 * 1024 * 1024;
 export const DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES = 1_000;
 export const HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES = 5_000;
 
+/** Entry-kind filter for `SessionSearchQuery.kind`; `"any"` (the default) matches every kind. */
+export type SessionSearchKind = SessionEntryKind | "any";
+
 /** Bounded session search filters. Workspace matches host-written `metadata.workspaceRoot`. */
 export interface SessionSearchQuery extends PersistenceQuery, OwnershipScope {
   readonly workspaceRoot?: string;
   /** Optional full-text / message+summary query (adapter-defined matching). */
   readonly query?: string;
+  /**
+   * Restrict the text `query` to entries of these kinds (one kind or a list). Omitted or `"any"`
+   * matches every kind. Annotation search is `kind: ["label", "summary", "metadata", "custom"]`.
+   */
+  readonly kind?: SessionSearchKind | readonly SessionSearchKind[];
   readonly provider?: string;
   readonly model?: string;
   readonly label?: string;
@@ -96,11 +104,20 @@ export interface SessionSearchQuery extends PersistenceQuery, OwnershipScope {
 
 /**
  * Safe search hit for resume/checkout. Never includes credentials or raw full transcripts.
- * `leafId` is the branch tip for `session.checkout` when known.
+ * `leafId` is the branch tip for `session.checkout` when known; when a text `query` matched,
+ * `entryId`/`runId`/`turn`/`score` point at the matched entry and `snippet` is its matched text.
  */
 export interface SessionSearchHit {
   readonly sessionId: string;
   readonly leafId?: string;
+  /** Transcript entry that matched the text `query` (absent for filter-only searches). */
+  readonly entryId?: string;
+  /** Run that wrote the matched entry. */
+  readonly runId?: string;
+  /** 1-based position of the matched entry in the session transcript (`(timestamp, id)` order). */
+  readonly turn?: number;
+  /** Matched-entry relevance from the store's full-text index; higher is better (0 is a valid score). */
+  readonly score?: number;
   readonly updatedAt?: string;
   readonly label?: string;
   readonly summary?: string;
@@ -114,10 +131,12 @@ export interface SessionIndex {
   search(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>>;
 }
 
-/** Validated search query with finite `limit` / `order` filled in. */
+/** Validated search query with finite `limit` / `order` filled in and `kind` normalized. */
 export interface ResolvedSessionSearchQuery extends SessionSearchQuery {
   readonly limit: number;
   readonly order: "asc" | "desc";
+  /** Concrete kinds to match, or `undefined` for "any". */
+  readonly kind?: readonly SessionEntryKind[];
 }
 
 /**
@@ -145,7 +164,23 @@ export function resolveSessionSearchQuery(query: SessionSearchQuery): ResolvedSe
   assertSearchStringBytes(query.userId, "userId", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
   assertSearchStringBytes(query.fromUpdatedAt, "fromUpdatedAt", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
   assertSearchStringBytes(query.toUpdatedAt, "toUpdatedAt", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
-  return { ...query, limit, order };
+  return { ...query, limit, order, kind: resolveSessionSearchKinds(query.kind) };
+}
+
+/** Normalize `kind` to concrete entry kinds (`undefined` = any). Unknown or mixed `"any"` fails closed. */
+function resolveSessionSearchKinds(kind: SessionSearchQuery["kind"]): readonly SessionEntryKind[] | undefined {
+  if (kind === undefined || kind === "any") return undefined;
+  const values: readonly SessionSearchKind[] = typeof kind === "string" ? [kind] : kind;
+  const kinds: SessionEntryKind[] = [];
+  for (const value of values) {
+    if (value === "any") throw new TypeError('SessionSearchQuery.kind cannot mix "any" with entry kinds');
+    if (!isSessionEntryKind(value)) {
+      throw new TypeError(`SessionSearchQuery.kind must be a session entry kind or "any"; got ${JSON.stringify(value)}`);
+    }
+    if (!kinds.includes(value)) kinds.push(value);
+  }
+  if (kinds.length === 0) throw new TypeError("SessionSearchQuery.kind must name at least one entry kind");
+  return kinds;
 }
 
 function assertSearchStringBytes(value: string | undefined, name: string, hardMax: number): void {
@@ -162,7 +197,7 @@ function assertSearchStringBytes(value: string | undefined, name: string, hardMa
 
 export const SESSION_SEARCH_UNSUPPORTED_CODE = "session_search_unsupported" as const;
 
-/** Thrown when a store opts out of `searchSessions` (memory `unsupported`, JSONL). */
+/** Thrown when a store opts out of `searchSessions` (memory `sessionSearchMode: "unsupported"`). */
 export class SessionSearchUnsupportedError extends Error {
   readonly code = SESSION_SEARCH_UNSUPPORTED_CODE;
   constructor(message = "session search is unsupported by this store") {

@@ -88,10 +88,15 @@ All workflow limits and runtime `concurrency` reject non-safe integers, zero, ne
 | `runId` | Caller-supplied id; otherwise generated (`wfr_…`) |
 | `resume` | For suspended runs: `{ decision: "approve" | "deny", input?, expectedVersion }`; version is mandatory for an exact-once CAS claim |
 | `validateResume` | Host validator for resume input; required when `suspend()` declares `resumeSchema` |
+| `metadata` | Sidecar map (`Record<string, unknown>`) persisted on the checkpoint value; a resume that does not re-state it keeps the recorded map |
+| `restoreHooks` | External-state restore hooks (`CheckpointRestoreHook`) run sequentially on every resume before the scheduler writes; the first failure/timeout throws `CheckpointRestoreError` (`ERR_PRISM_CHECKPOINT_RESTORE`) and leaves the checkpoint untouched |
+| `restoreHookTimeoutMs` | Per-hook restore ceiling in ms; defaults to `DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS` (10 s) |
 | `validateState` | Host validator for every initial/restored/updated state; required when workflow declares `state.schema` |
 | `initialState` | Optional host initial state override; nested workflows receive parent state automatically |
 
 A function node returns `suspend({ reason, data?, resumeSchema? })` to persist `status: "suspended"`. Its next invocation receives `ctx.resume` only after an approved resume. `resumeWorkflow(workflow, { runId }, options)` validates schema/version/ownership/`definitionHash`, claims the checkpoint before node execution, and continues the suspended node. Denial persists terminal `denied` status without invoking it. Existing failed/aborted checkpoint resume remains available without a human decision.
+
+Restore hooks make the resume all-or-nothing across layers: workflow checkpoints carry the host's `metadata` (git commit, document version, workspace fingerprint), `restoreHooks` put each recorded layer back, and only when every hook succeeds does the scheduler claim the checkpoint and continue. Each hook receives `{ workflowId, runId, version, status, metadata, checkpoint }` and an `AbortSignal`; the successful run's `workflow_resumed` event carries `restore: { hooks: [{ hook, durationMs }], durationMs }`. No hooks ⇒ no hook call and no `restore` field.
 
 > **Contract — resume-aware nodes.** After an approved resume, the **same** node's `execute` is re-invoked with `ctx.resume`. Returning `suspend(...)` unconditionally re-suspends silently; downstream nodes never run. Branch on `ctx.resume`:
 >

@@ -15,6 +15,7 @@ import type {
 import {
   assertStructuredOutputRequestSupported,
   canonicalizeJsonSchema,
+  mapProviderStopReason,
   providerDone,
   providerError,
   providerTextDelta,
@@ -71,6 +72,7 @@ export async function googleGenerateContentBody(request: ProviderRequest): Promi
 export async function* googleGenerateContentEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
   let usage: Usage | undefined;
   let sawFinishReason = false;
+  let finishReason: string | undefined;
   let toolIndex = 0;
   const emittedToolIds = new Set<string>();
 
@@ -89,7 +91,10 @@ export async function* googleGenerateContentEvents(body: ReadableStream<Uint8Arr
     usage = toUsage(chunk.usageMetadata) ?? usage;
 
     for (const candidate of chunk.candidates ?? []) {
-      if (candidate.finishReason) sawFinishReason = true;
+      if (candidate.finishReason) {
+        sawFinishReason = true;
+        finishReason = candidate.finishReason;
+      }
       for (const part of candidate.content?.parts ?? []) {
         if (part.functionCall?.name) {
           const id = part.functionCall.id ?? `google_tool_${toolIndex}`;
@@ -115,7 +120,7 @@ export async function* googleGenerateContentEvents(body: ReadableStream<Uint8Arr
     yield providerError(new Error("Google generateContent stream ended without completion evidence (finishReason missing)"));
     return;
   }
-  yield providerDone(usage);
+  yield providerDone(usage, finishReason === undefined ? undefined : mapProviderStopReason(finishReason));
 }
 
 async function toContent(

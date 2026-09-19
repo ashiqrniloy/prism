@@ -17,10 +17,18 @@ function sourceFiles(dir: string, predicate: (path: string) => boolean): string[
   });
 }
 
-// Core runtime source excludes the openai-compatible shim (a sanctioned provider seam).
+// Core runtime source excludes the openai-compatible shim (a sanctioned provider seam)
+// and the plan 091 model-family ratio table. That table is the one sanctioned home for
+// provider-family names in core: they are chars/token keys and model-id patterns, never
+// behavior branches, and every other core file stays literal-free.
+const PROVIDER_LITERAL_SEAMS = new Set(["src/contracts-core/usage.ts", "src/usage-estimation.ts"]);
 const runtimeFiles = sourceFiles(
   "src",
-  (path) => path.endsWith(".ts") && !path.includes("src/__tests__") && !path.includes("src/providers/openai-compatible"),
+  (path) =>
+    path.endsWith(".ts") &&
+    !path.includes("src/__tests__") &&
+    !path.includes("src/providers/openai-compatible") &&
+    !PROVIDER_LITERAL_SEAMS.has(path),
 );
 const runtimeText = runtimeFiles.map((path) => readFileSync(path, "utf8")).join("\n");
 const runtimeTextLower = runtimeText.toLowerCase();

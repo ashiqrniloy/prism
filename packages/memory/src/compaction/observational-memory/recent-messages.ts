@@ -1,11 +1,14 @@
 import type { ContentBlock, ContextBlock, Message, SessionEntry } from "@arnilo/prism";
 import { redactSecrets } from "@arnilo/prism";
+import { mergeObservationalMemoryLedgers, observationBlockedByInvalidation, reflectionBlockedByInvalidation } from "./ledger.js";
 import { truncateWorkerText } from "./limits.js";
 import { buildObservationalMemoryProjection } from "./projection.js";
-import { projectWorkMemory } from "./scopes-project.js";
-import { foldWorkScopeMap } from "./scopes.js";
 import { renderObservationalMemory } from "./render.js";
+import { foldWorkScopeMap } from "./scopes.js";
+import { projectWorkMemory } from "./scopes-project.js";
+import { mergeSharedScopes, type SharedScopeMemory } from "./shared-scopes.js";
 import { estimateEntryTokens } from "./tokens.js";
+import type { MemoryObservation, MemoryReflection } from "./types.js";
 
 export const DEFAULT_KEEP_RECENT_ENTRIES = 8;
 export const HARD_MAX_RECENT_MESSAGE_RENDER_BYTES = 512 * 1024;
@@ -19,6 +22,8 @@ export interface RecentMessageWindowOptions {
 
 export interface ObservationalMemoryContextOptions extends RecentMessageWindowOptions {
   readonly invalidatedIds?: readonly string[];
+  /** Resolved shared-scope memory (see `resolveSharedScopes`); read-only union with the local memory. */
+  readonly shared?: readonly SharedScopeMemory[];
 }
 
 export function selectRecentMessageEntryIds(entries: readonly SessionEntry[], keepRecentEntries: number): readonly string[] {
@@ -61,18 +66,31 @@ export function buildObservationalMemoryContextBlocks(
     invalidatedIds: options.invalidatedIds,
   });
   const secrets = options.secrets ?? [];
-  const workScopes = foldWorkScopeMap(entries);
+  const shared = options.shared ?? [];
+  let observations: readonly MemoryObservation[] = projection.observations;
+  let reflections: readonly MemoryReflection[] = projection.reflections;
+  let droppedObservationIds: readonly string[] = projection.droppedObservationIds;
+  let workScopes = foldWorkScopeMap(entries);
+  if (shared.length) {
+    const merged = mergeSharedScopes(shared);
+    const union = mergeObservationalMemoryLedgers(
+      { observations, reflections, droppedObservationIds },
+      { observations: merged.observations, reflections: merged.reflections, droppedObservationIds: merged.droppedObservationIds },
+    );
+    const invalidated = new Set(options.invalidatedIds ?? []);
+    droppedObservationIds = union.droppedObservationIds;
+    const blocked = new Set([...droppedObservationIds, ...invalidated]);
+    observations = union.observations.filter((observation) => !observationBlockedByInvalidation(observation, invalidated));
+    reflections = union.reflections.filter((reflection) => !reflectionBlockedByInvalidation(reflection, blocked));
+    workScopes = { ...workScopes, binds: new Map([...workScopes.binds, ...merged.binds]) };
+  }
   const scoped =
     workScopes.scopes.size > 1
-      ? projectWorkMemory(
-          {
-            observations: projection.observations,
-            reflections: projection.reflections,
-            droppedObservationIds: projection.droppedObservationIds,
-          },
-          workScopes,
-          { from: workScopes.stack.at(-1)!, include: "self+ancestors", closed: "hide" },
-        )
+      ? projectWorkMemory({ observations, reflections, droppedObservationIds }, workScopes, {
+          from: workScopes.stack.at(-1)!,
+          include: "self+ancestors",
+          closed: "hide",
+        })
       : undefined;
   const blocks: ContextBlock[] = [];
   const memory = scoped

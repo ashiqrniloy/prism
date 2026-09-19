@@ -12,6 +12,7 @@ import type {
   AttentionReport,
   ErrorInfo,
   LoopContext,
+  Message,
   PromptVersionRef,
   ResolvedRunLimits,
   RunOptions,
@@ -26,7 +27,7 @@ import { identityTelemetryAttributes, ownershipFromIdentity, resolveRunIdentity 
 import type { AgentInput } from "../../input.js";
 import { assembleProviderInput } from "../../input.js";
 import { errorToErrorInfo, redactRunLedgerRecord } from "../../redaction.js";
-import { RunLimitError, RunLimitTracker, resolveRunLimits } from "../../run-limits.js";
+import { describeBudgetExhaustion, RunLimitError, RunLimitTracker, resolveRunLimits } from "../../run-limits.js";
 import { createSessionEntry } from "../../session-stores.js";
 import { resolveSkillsDisclosure } from "../../skill-disclosure.js";
 import { applyRestoredSkillBodies } from "../../skill-load.js";
@@ -34,7 +35,7 @@ import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } fro
 import { composeSystemPrompt, mergeSystemPromptConfig } from "../../system-prompts.js";
 import { resolveToolResultFold } from "../../tool-result-fold.js";
 import { createSearchToolsTool, createToolSearchState, resolveToolsDisclosure } from "../../tool-search.js";
-import { createToolRegistry, selectRunTools } from "../../tools.js";
+import { clampTurnToolNames, createToolRegistry, selectRunTools } from "../../tools.js";
 import {
   bridgeAbort,
   createUsageAccumulator,
@@ -44,8 +45,8 @@ import {
   mergeGuardrails,
   throwIfAborted,
 } from "../helpers.js";
-import { checkpointDurableTurn, cleanupRun, persistDurable, persistSucceeded, suspendDurable } from "./persist.js";
-import { generateWithRetry, recordProviderUsage } from "./provider-round.js";
+import { checkpointDurableFold, checkpointDurableTurn, cleanupRun, persistDurable, persistSucceeded, suspendDurable } from "./persist.js";
+import { generateWithRetry, recordProviderUsage, resolveDeterministicTurn } from "./provider-round.js";
 import {
   bindChargeToolRound,
   bindDispatchToolCall,
@@ -59,6 +60,16 @@ const PROMPT_VERSION_MAX_NAME_BYTES = 256;
 const PROMPT_VERSION_HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
 /** Cap on the host stop detail that reaches the result, ledger, and timeline (plan 084 Task 2). */
 const TURN_STOP_DETAIL_MAX_BYTES = 256;
+
+function lastAssistantText(history: readonly Message[]): string | undefined {
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    const message = history[i];
+    if (message?.role !== "assistant") continue;
+    const text = message.content.map((block) => (block.type === "text" ? block.text : "")).join("");
+    if (text) return text;
+  }
+  return undefined;
+}
 
 /**
  * `RunOptions.turnPolicy` stopped the run at a turn boundary (plan 084 Task 2). Internal control
@@ -181,7 +192,14 @@ async function assembleRoundContext(params: {
   session.resolveRunProvider(options);
   throwIfAborted(controller.signal);
   session.emit({ type: "agent_started", sessionId: session.id, runId });
-  if (resumed) session.emit({ type: "agent_resumed", sessionId: session.id, runId, version: resumed.version });
+  if (resumed)
+    session.emit({
+      type: "agent_resumed",
+      sessionId: session.id,
+      runId,
+      version: resumed.version,
+      ...(resumed.restore ? { restore: resumed.restore } : {}),
+    });
 
   const startRecord: RunRecord = {
     id: runId,
@@ -220,6 +238,7 @@ async function assembleRoundContext(params: {
   const tools = searchTool ? [...activeToolList, searchTool] : activeToolList;
   const activeSkills = session.resolveRunSkills(options, tools);
   session.activeRunSkills = activeSkills;
+  session.tailSegments.clear();
   if (options.model && JSON.stringify(options.model) !== JSON.stringify(session.agent.config.model)) {
     await session.appendEntry(
       createSessionEntry({
@@ -262,16 +281,33 @@ async function assembleRoundContext(params: {
   assertStructuredOutputRequestSupported(options.model ?? session.agent.config.model, providerOptions);
   const validate = options.validate ?? session.agent.config.validator;
   // Resolved once per run, before any provider turn: a bad setting or a widening run overlay
-  // fails here rather than on the turn that happens to cross the ratio (plan 074 C12).
+  // fails here rather than on the turn that happens to cross the ratio (plan 074 C12). The
+  // resolved run input budget rides the handle so `run_input_ratio` folds against the same cap
+  // the run limit enforces (plan 086 T2); `null` (disabled) leaves that axis on the input cap.
   const attentionCompiler = resolveRunAttentionCompiler(
     session.agent.config.attentionCompiler,
     options.attentionCompiler,
     options.model ?? session.agent.config.model,
+    limits.limits.maxInputTokens,
   );
+  // Plan 086 T3: durable folding writes the fold ledger to the run checkpoint, so it needs a
+  // durable run (the session's durable state is set before this call). Fail at run start, before
+  // any provider turn, rather than folding into memory only. The fold state rides that
+  // checkpoint independently of `persistSessionState`.
+  if (attentionCompiler?.durable && !session.activeDurable) {
+    throw new AgentRunStateError(
+      "attentionCompiler.durable requires a durable run: set AgentConfig or RunOptions runState with a checkpoint store",
+    );
+  }
+  session.attentionDurable = attentionCompiler?.durable === true;
   // Telemetry seam (plan 074 T6): one `attention_compiled` per mutated turn, counts and the
   // measured ratio inputs only. Under-ratio turns and compiler-off runs emit nothing.
+  // Plan 086 T3: a turn that folded new bodies is the fold-boundary durability signal, so it is
+  // remembered here (the callback is synchronous) and checkpointed by the assembler below.
+  let foldCheckpointPending = false;
   const onAttentionReport = attentionCompiler
-    ? (report: AttentionReport) =>
+    ? (report: AttentionReport) => {
+        if (report.newFoldedBodies > 0) foldCheckpointPending = true;
         session.emit({
           type: "attention_compiled",
           sessionId: session.id,
@@ -284,7 +320,8 @@ async function assembleRoundContext(params: {
           stubbedToolResults: report.stubbedToolResults,
           stubbedBytes: report.stubbedBytes,
           truncated: report.truncated,
-        })
+        });
+      }
     : undefined;
   const instructionInjectors = options.instructionInjectors ?? session.agent.config.instructionInjectors ?? [];
   const inputLayout = options.inputLayout ?? session.agent.config.inputLayout;
@@ -326,6 +363,9 @@ async function assembleRoundContext(params: {
     loopCtx: undefined as unknown as LoopContext,
   } as RoundContext;
 
+  const toolNarrowing = options.toolNarrowing ?? session.agent.config.toolNarrowing;
+  let narrowedForTurn: { turn: number; tools: typeof tools } | undefined;
+
   const loopCtx: LoopContext = {
     sessionId: session.id,
     runId,
@@ -339,6 +379,35 @@ async function assembleRoundContext(params: {
     restoredLoopState: resumed?.state?.loopState?.snapshot,
     assemble: async (nextInput, toolResults, turn) => {
       limits.charge("maxTurns");
+      const turnIndex = turn ?? 1;
+      let turnTools = tools;
+      if (toolNarrowing) {
+        if (typeof toolNarrowing !== "function") throw new TypeError("toolNarrowing must be a function");
+        if (narrowedForTurn?.turn === turnIndex) {
+          turnTools = narrowedForTurn.tools;
+        } else {
+          const assistant = lastAssistantText(session.history);
+          const requested = await toolNarrowing({
+            turn: turnIndex,
+            toolIds: tools.map((tool) => tool.name),
+            ...(assistant !== undefined ? { lastAssistantText: assistant } : {}),
+          });
+          if (!Array.isArray(requested)) throw new TypeError("toolNarrowing must return a string array");
+          const clamped = clampTurnToolNames(tools, requested);
+          if (clamped.dropped.length > 0) {
+            session.emit({
+              type: "tool_narrowing_clamped",
+              sessionId: session.id,
+              runId,
+              turn: turnIndex,
+              dropped: clamped.dropped,
+            });
+          }
+          turnTools = clamped.tools;
+          narrowedForTurn = { turn: turnIndex, tools: turnTools };
+        }
+        ctx.turnAllow = turnTools.map((tool) => tool.name);
+      }
       const request = await assembleProviderInput({
         model: options.model ?? session.agent.config.model,
         input: nextInput,
@@ -362,9 +431,16 @@ async function assembleRoundContext(params: {
         // Session-owned: a stub made earlier stays applied even on a later under-ratio turn, so
         // the prompt-cache prefix is not rewritten (C10). Undefined when the compiler is off.
         attentionSticky: attentionCompiler ? session.attentionStickyFor() : undefined,
+        // Folded bodies (plan 086 T3): a row summarized once is re-applied, never re-summarized,
+        // so sticky rows stay byte-identical and a resumed run reuses the persisted bodies.
+        attentionFold: attentionCompiler ? session.attentionFoldFor() : undefined,
+        // Charge-so-far for the `run_input_ratio` axis: the counter only holds completed turns,
+        // so the axis projects this turn's estimate onto it.
+        runInputTokens: limits.snapshot().inputTokens,
         onAttentionReport,
         loadedSkills: session.loadedSkills,
-        tools,
+        tailSegments: session.tailSegments,
+        tools: turnTools,
         resourceLoader: session.agent.config.resourceLoader,
         permission: session.agent.config.permission,
         trust: session.agent.config.trust,
@@ -377,6 +453,13 @@ async function assembleRoundContext(params: {
         signal: controller.signal,
       });
       ctx.assembledTurn = true;
+      if (foldCheckpointPending) {
+        foldCheckpointPending = false;
+        // Fold-boundary durability (plan 086 T3): one write per turn that added folded bodies,
+        // after the request is assembled and before the provider sees it, so a crash during this
+        // turn resumes with the same ledger. No-op unless the compiler is durable.
+        await checkpointDurableFold(session, { runId, model, limits });
+      }
       return request;
     },
     chargeToolRound: bindChargeToolRound(ctx),
@@ -398,6 +481,17 @@ async function assembleRoundContext(params: {
       if (session.activeDurable?.options.checkpointPolicy === "every-turn") {
         await checkpointDurableTurn(session, { runId, model, limits });
       }
+      // Deterministic no-model turn (plan 096): host middleware answers at the provider boundary,
+      // before any provider-round work. No answer → provider path unchanged.
+      const deterministic = await resolveDeterministicTurn(
+        session,
+        request,
+        runId,
+        session.activeLoopTurn,
+        controller.signal,
+        ctx.toolResults,
+      );
+      if (deterministic) return deterministic;
       const policyResult = await session.applyProviderRequestPolicies(request, runId, options, metadata, controller.signal);
       const middlewareRequest =
         (await session.agent.config.middleware?.run("provider_request", policyResult.request)) ?? policyResult.request;
@@ -410,7 +504,7 @@ async function assembleRoundContext(params: {
           controller.signal,
           policyResult.secrets,
           session.activeLoopTurn,
-          (turnUsage, turn, attempt) => recordProviderUsage(ctx, turnUsage, turn, attempt),
+          (turnUsage, turn, attempt) => recordProviderUsage(ctx, turnUsage, turn, attempt, middlewareRequest),
           ctx.toolResults,
         );
       } catch (error) {
@@ -504,8 +598,11 @@ export async function executeRun(
   session.activeIdentity = resolveRunIdentity(options.identity, session.agent.config.identity, session.activeOwnership);
   if (session.activeIdentity && !session.activeOwnership) session.activeOwnership = ownershipFromIdentity(session.activeIdentity);
   session.activeIdempotencyKey = options.idempotencyKey ?? session.agent.config.idempotencyKey;
-  session.activeGuardrails = mergeGuardrails(session.agent.config.guardrails, options.guardrails);
+  session.activeGuardrails = mergeGuardrails(mergeGuardrails(session.agent.config.guardrails, session.packGuardrails), options.guardrails);
   session.activeDurable = resumed ?? (durableOptions ? { options: durableOptions, version: 0 } : undefined);
+  // Plan 086 T3: reset here, so a suspension before the compiler is resolved (input guardrail)
+  // cannot inherit the previous run's durable-folding flag. `assembleRoundContext` sets it true.
+  session.attentionDurable = false;
   session.activeGatedRound = undefined;
   if (resumed) session.invalidateSnapshot();
 
@@ -535,6 +632,7 @@ export async function executeRun(
     deadlineAt: resumed?.state?.deadlineAt,
   });
   session.activeLimits = limits;
+  session.activeRecentToolCalls = [];
   const hasFiniteTokenCap = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value);
   session.activeLimitOutputBuffer = [session.agent.config.limits, requestedLimits].some(
     (value) => hasFiniteTokenCap(value?.maxOutputTokens) || hasFiniteTokenCap(value?.maxTotalTokens) || value?.maxCost !== undefined,
@@ -592,8 +690,18 @@ export async function executeRun(
       return session.buildRunResult({ runId, status: "suspended", runState: error.state, interruption: error.interruption });
     }
     runError = errorToErrorInfo(error);
-    session.emit({ type: "error", sessionId: session.id, runId, error: runError });
     const breach = error instanceof RunLimitError ? error.breach : limits.breach;
+    // Terminal attribution before the terminal `error`/finish records, so a subscriber that stops
+    // at the first terminal event still sees why the run died (plan 087 T2).
+    if (breach) {
+      session.emit({
+        type: "budget_exhausted",
+        sessionId: session.id,
+        runId,
+        ...describeBudgetExhaustion(limits, breach, session.activeRecentToolCalls ?? []),
+      });
+    }
+    session.emit({ type: "error", sessionId: session.id, runId, error: runError });
     runStatus = breach ? "failed" : controller.signal.aborted ? "aborted" : "failed";
     const runState = session.activeDurable?.state
       ? await persistDurable(session, {

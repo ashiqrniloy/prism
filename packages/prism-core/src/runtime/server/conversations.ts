@@ -404,10 +404,12 @@ export function createConversationService(store: ConversationServiceStore, optio
         // Rows from runs without a redactor are never served (fail-closed skip, not throw).
         const records = page.items.filter((record) => record.redacted);
         const pageBytes = records.reduce((sum, record) => sum + Buffer.byteLength(JSON.stringify(record), "utf8"), 0);
-        // Page-granular byte backstop: stop before a page that would exceed the cap and hand
-        // back the cursor to that page. ponytail: a single page larger than exportBytes cannot
-        // be exported (no finer store cursor exists); raise exportBytes or stream via replay.
-        if (bytes + pageBytes > limits.exportBytes && (bytes > 0 || pageCursor !== undefined)) {
+        // Page-granular byte backstop: stop after the pages already collected and hand back the
+        // cursor to the first refused page. Always taking one page per call is what makes the
+        // cursor converge: the store has no finer cursor, so refusing a page that is itself
+        // larger than exportBytes would hand back the same cursor forever (a live-lock; raise
+        // exportBytes or stream via replay for finer granularity).
+        if (bytes > 0 && bytes + pageBytes > limits.exportBytes) {
           truncated = true;
           nextCursor = pageCursor;
           break;

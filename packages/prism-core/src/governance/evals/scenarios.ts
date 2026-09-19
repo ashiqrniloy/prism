@@ -3,6 +3,7 @@ import type {
   AgentConfig,
   AgentRunResult,
   AgentSession,
+  AgentSessionConfig,
   JsonObject,
   Message,
   OwnershipScope,
@@ -70,6 +71,8 @@ export interface RunScenarioOptions {
   readonly agent: Agent;
   readonly turns: readonly (string | ScenarioTurn)[];
   readonly scorers?: readonly Scorer[];
+  /** Session options for the scenario's single session (e.g. `guardrailPacks`); omitted = agent defaults. */
+  readonly sessionConfig?: AgentSessionConfig;
   readonly maxTurns?: number;
   readonly redactor?: SecretRedactor;
   readonly ownership?: OwnershipScope;
@@ -124,7 +127,7 @@ export async function collectWhileRunning<T>(
 export async function runScenario(options: RunScenarioOptions): Promise<ScenarioResult> {
   const maxTurns = Math.min(options.maxTurns ?? DEFAULT_MAX_SCENARIO_TURNS, HARD_MAX_SCENARIO_TURNS);
   const turns = options.turns.slice(0, maxTurns);
-  const session = options.agent.createSession();
+  const session = options.agent.createSession(options.sessionConfig);
   const shouldProject = options.timeline && options.timeline !== "off";
   const folder: TimelineFolder | undefined = shouldProject
     ? createTimelineFolder({ content: options.timeline, redactor: options.redactor })
@@ -135,22 +138,24 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
   let scenarioError: ReturnType<typeof toErrorInfo> | undefined;
 
   try {
-    await collectWhileRunning(session, folder, async () => {
-      for (const turn of turns) {
-        options.signal?.throwIfAborted();
-        const input = typeof turn === "string" ? turn : turn.user;
-        const result = await session.run(input, {
+    // One subscription per turn: subscribers close when a run settles (documented for `runStream`), so a
+    // single subscription around several runs would silently score a timeline missing every later turn.
+    for (const turn of turns) {
+      options.signal?.throwIfAborted();
+      const input = typeof turn === "string" ? turn : turn.user;
+      const result = await collectWhileRunning(session, folder, () =>
+        session.run(input, {
           signal: options.signal,
           ownership: options.ownership,
           redactor: options.redactor,
-        });
-        lastResult = result;
-        turnsCompleted++;
-        if (typeof turn === "object" && turn.assertReply) {
-          turn.assertReply(result.text, result);
-        }
+        }),
+      );
+      lastResult = result;
+      turnsCompleted++;
+      if (typeof turn === "object" && turn.assertReply) {
+        turn.assertReply(result.text, result);
       }
-    });
+    }
   } catch (err) {
     scenarioError = toErrorInfo(err);
   }

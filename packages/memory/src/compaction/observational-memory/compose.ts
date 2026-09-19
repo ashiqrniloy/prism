@@ -14,10 +14,13 @@ import type {
 } from "@arnilo/prism";
 import { assertCompactionTrigger, resolveInputCap, resolveShouldCompact, resumeAgentRun, resumeAgentRunStream } from "@arnilo/prism";
 import type { ObservationalMemoryAppendOptions } from "./append-custom.js";
+
 export type { ObservationalMemoryAppendOptions } from "./append-custom.js";
+
 import { buildObservationalMemoryContextBlocks } from "./recent-messages.js";
 import type { ObservationalMemoryFlushOptions, ObservationalMemoryRuntime, ObservationalMemoryWorkerRuntimeConfig } from "./runtime.js";
 import { createObservationalMemoryRuntime } from "./runtime.js";
+import { foldWorkScopeMap } from "./scopes.js";
 import {
   assertNoRemovedFlatKeys,
   defaultObservationalMemorySettings,
@@ -27,6 +30,7 @@ import {
   type ObservationalMemorySettingsInput,
   resolveObservationalMemorySettings,
 } from "./settings.js";
+import { resolveSharedScopes, type SharedScopeAccessEvent, type SharedWorkScopeConfig } from "./shared-scopes.js";
 import { createObservationalMemoryCompactionStrategy, type ObservationalMemoryCompactionStrategyOptions } from "./strategy.js";
 import { estimateEntryTokens } from "./tokens.js";
 
@@ -92,6 +96,13 @@ export interface ObservationalMemoryAttachOptions {
   readonly credentialRequest?: CredentialRequest;
   readonly requireExplicitModel?: boolean;
   readonly signal?: AbortSignal;
+  /**
+   * Shared work scopes this session participates in. The scope owner's branch carries the grants;
+   * this session must open the scope locally before any granted branch is read.
+   */
+  readonly sharedScopes?: SharedWorkScopeConfig;
+  /** Audit sink for shared-scope access decisions (granted and denied). */
+  readonly onScopeAccess?: (event: SharedScopeAccessEvent) => void;
 }
 
 export interface AttachedObservationalMemorySession {
@@ -174,10 +185,18 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
           const entries = await session.entries();
           const settings = await resolveObservationalMemorySettings(options.settings, settingsOverrides);
           settingsHolder.value = settings;
+          // ponytail: one branch read + fold per granted branch per resolve; cache per flush if profiling demands.
+          const shared = await resolveSharedScopes({
+            scopes: attachOptions.sharedScopes,
+            principalId: session.id,
+            map: foldWorkScopeMap(entries),
+            ...(attachOptions.onScopeAccess ? { onAccess: attachOptions.onScopeAccess } : {}),
+          });
           return buildObservationalMemoryContextBlocks(entries, {
             keepRecentEntries: settings.context.recentMessages,
             maxTokens: settings.context.recentMessageMaxTokens,
             secrets: options.secrets,
+            ...(shared.length ? { shared } : {}),
           });
         },
       };
@@ -258,6 +277,8 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
         abort: (reason) => session.abort(reason),
         entries: () => session.entries(),
         checkout: (leafId) => session.checkout(leafId),
+        // Plan 091 T2: meter reads pass through untouched — the wrapper proxies state, it does not own it.
+        contextMeter: () => session.contextMeter(),
         fork: (forkOptions) => memory.attach(session.fork(forkOptions), attachOptions).session,
         clone: async (cloneOptions) => {
           const cloned = await session.clone(cloneOptions);

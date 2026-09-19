@@ -1,10 +1,12 @@
 // Approval / pending-decision helpers split from agents.ts at 0.1.4 (verbatim move; internal, not public API).
 import { createHash } from "node:crypto";
+import type { CheckpointRestoreAudit } from "./checkpoint-restore.js";
 import type { StoredAgentRunState } from "./agent-run-state.js";
 import { activeTools, validateElicitationPayload } from "./agent-tool-dispatch.js";
 import {
   Agent,
   AgentDecisionError,
+  AgentRunCheckpointMetadata,
   AgentRunResume,
   AgentRunState,
   AgentRunStateOptions,
@@ -301,7 +303,16 @@ export function nestedOutcomeToolResult(
     : { toolCallId, name, error: { code: outcome.code, message: outcome.message } };
 }
 
-export interface ActiveDurableRun {
+/**
+ * Non-state extras carried into a resumed run: the sidecar metadata seed (so later checkpoint
+ * writes preserve the record's map) and the restore audit emitted on `agent_resumed`.
+ */
+export interface ActiveDurableRunExtras {
+  readonly checkpointMetadata?: AgentRunCheckpointMetadata;
+  readonly restore?: CheckpointRestoreAudit;
+}
+
+export interface ActiveDurableRun extends ActiveDurableRunExtras {
   readonly options: AgentRunStateOptions;
   state?: StoredAgentRunState;
   version: number;

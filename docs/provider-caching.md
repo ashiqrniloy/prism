@@ -66,11 +66,11 @@ Cache helpers return plain data:
 | `canonicalizeJsonSchema(value)` | Clone with sorted object keys and `required` names; semantic arrays stay ordered. Used by first-party tool serializers. |
 | `cacheHitRate(usage)` | Cached input ratio or `undefined`. |
 | `cacheSavings(usage, model)` | Estimated read-token savings or `undefined` without pricing. |
-| `cacheUsageReport(usage, model?)` | Normalized read/write tokens, hit rate, estimated savings, and currency when available; `undefined` when no usage is supplied. |
+| `cacheUsageReport(usage, model?)` | Normalized reported read/write tokens, hit rate, estimated savings, and currency when available; `undefined` when no cache token field is reported. Missing fields stay absent, never become `0`. |
 
-Provider events do not change. Cache accounting stays in normalized `Usage.cacheReadTokens` and `Usage.cacheWriteTokens`.
+Cache accounting stays in normalized `Usage.cacheReadTokens` and `Usage.cacheWriteTokens`. Terminal `provider_turn_finished.metadata.cache` carries the same numeric report for a reporting provider; unavailable cache usage stays absent.
 
-For stable-prefix payloads, `inputLayout: "cache_aware"` is the default on the default input builder, `assembleProviderInput()`, `AgentConfig`, and `RunOptions`; set `inputLayout: "legacy"` to restore the prior order. The default prompt builder's cache-aware order is leading system instructions → resolved context blocks → selected/progressively disclosed skills → fallback text tool declarations → attachments/resources → summaries → prior history → pending tool results → current input. Declared tool schemas remain in `ProviderRequest.tools` and are never granted by prompt middleware. First-party tool serializers run `canonicalizeJsonSchema` so property insertion order cannot break that prefix. Changing only current input preserves the serialized message prefix before the final user suffix; changing dynamic context or loaded skills changes only from its own boundary onward, while tool schemas remain independently stable. The prefix is byte-stable only when those stable inputs are unchanged; Prism still does not guarantee provider cache hits.
+For stable-prefix payloads, `inputLayout: "cache_aware"` is the default on the default input builder, `assembleProviderInput()`, `AgentConfig`, and `RunOptions`; set `inputLayout: "legacy"` to restore the prior order. The default prompt builder's cache-aware order is leading system instructions → resolved context blocks → selected/progressively disclosed skill catalogs → fallback text tool declarations → attachments/resources → summaries → prior history → pending tool results → current input → optional session tail. `RuntimeAgentSession` uses that tail for URI resources and loaded skill bodies: first insertion fixes `resource:<uri>` / `skill:<name>` order, so a later skill load appends instead of rewriting its catalog slot. Re-deriving the same id keeps its position; changed bytes explicitly invalidate from that tail segment. Declared tool schemas remain in `ProviderRequest.tools` and are never granted by prompt middleware. First-party tool serializers run `canonicalizeJsonSchema` so property insertion order cannot break that prefix. Context-budget eviction, custom builders/middleware, `toolResultFold`, and attention compilation are explicit invalidation boundaries; folding cannot move to an append-only tail without retaining the raw payload it exists to remove. The prefix is byte-stable only when those stable inputs are unchanged; Prism still does not guarantee provider cache hits.
 
 ## Request/response example
 
@@ -128,7 +128,7 @@ const retention = mapCacheRetention(hints.retention, model);
 const stamped = applyCacheControl(messages, hints.breakpoints ?? [], { maxBreakpoints: model.cache?.maxBreakpoints });
 const hitRate = cacheHitRate({ inputTokens: 1000, cacheReadTokens: 800 });
 const report = cacheUsageReport({ inputTokens: 1000, cacheReadTokens: 800 }, model);
-// { cacheReadTokens: 800, cacheWriteTokens: 0, hitRate: 0.8, ... }
+// { cacheReadTokens: 800, hitRate: 0.8, ... }
 
 await session.run("Explain this", { inputLayout: "cache_aware" });
 ```

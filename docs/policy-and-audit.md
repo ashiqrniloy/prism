@@ -107,7 +107,19 @@ for await (const page of exportPolicyDecisions({
 
 ## Extension and configuration notes
 
-Policy is optional. Hosts wire `record*` helpers or `evaluateAndAppend` at permission/guardrail/tool-approval/router/connector boundaries. Model-router and work-connector packages (later Phase 8 tasks) may call the same store when configured. Replace file/memory adapters with host WORM/KMS without changing record shape.
+Policy is optional. Hosts wire `record*` helpers or `evaluateAndAppend` at permission/guardrail/tool-approval/router/connector boundaries. Model-router and work-connector packages (later Phase 8 tasks) may call the same store when configured. Replace file/memory adapters with host WORM/KMS without changing record shape. Guardrail-pack denials record through `recordGuardrailDecision` like any other guardrail: the target id is the rule identity `pack:<pack>/<rule>`, `block`/`tripwire` map to outcome `deny`, and the evidence ref is `guardrail:pack:<pack>/<rule>:<stage>`. Pack config appears in run bundles as identity rows (`pack:<pack>/<rule>`, stage, `pack@version`) — never inline predicate code or tool arguments.
+
+## Memory retrieval ACL denials and re-pointing (plan 089)
+
+Memory retrieval keeps its own audit events next to policy decisions; hosts forward them to the same append-only sink:
+
+| Event | Shape | When |
+| --- | --- | --- |
+| `rag.acl_denied` | `{ sourceId, scope: { tenantId, resourceId, threadId }, reason: "no_grant" \| "check_failed", hits, error? }` via `retrieveContext({ onAccessDenied })` | A source was withheld at the retrieval boundary: revoked/absent/version-mismatched grant, or the grant lookup threw (`error` is redacted, capped at 256 chars) |
+| `Repointed` log line + result | `repointSource()` → `{ from, to, movedChunks, rewrittenEdges, layers, batched }` | A source's grant identity moved and derived artifacts followed |
+| Invalidation rows | `store.invalidate()` rows (`{ id, reason: "corrected" \| "revoked" \| "forgotten" \| "legal_hold", at }`) read back by `listInvalidatedIds()` | A source was revoked/forgotten/held; tombstones stay for explainability |
+
+Events are per *source*, not per hit, and are emitted once per query. They never contain document text, grant contents, or credentials; `check_failed` messages pass through the same redactor as retrieved content. Denials are fail-closed: a source is excluded whether the grant is absent, revoked, or the lookup failed, and the query returns the remaining hits. Aborts are not denials and are never recorded as such.
 
 ## Security and performance notes
 

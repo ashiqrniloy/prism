@@ -24,7 +24,6 @@ function makeTimeline(steps: ExecutionStep[], overrides: Partial<ExecutionTimeli
 }
 
 // ─── Test 1: Tool counts cap at 64 + other ─────────────────────────────────────
-
 test("summary toolCounts caps at 64 + other", () => {
   // Create 70 distinct tools with varying call frequencies:
   // tool_0 called 1 time, tool_1 called 2 times, ..., tool_69 called 70 times.
@@ -164,6 +163,8 @@ test("session summary sums two runs' tokens, does not double-count run_total + p
   assert.equal(session.runCount, 2);
   assert.equal(session.durationMs, 1300);
   assert.equal(session.turnCount, 2);
+  // Plan 096: provider-answered fixtures count as model turns.
+  assert.deepEqual(session.turns, { model: 2, deterministic: 0 });
   assert.equal(session.toolCallCount, 1);
   assert.equal(session.providerAttempts, 3);
 
@@ -300,4 +301,45 @@ test("Timeline traceId filled from onTraceReference when host passes instrumenta
   });
 
   assert.equal(timeline.traceId, expectedTraceId, "timeline.traceId must match telemetry traceId");
+});
+
+// ─── Test: deterministic (no-model) turns split the turn count (plan 096) ─────
+
+test("summary turns split model vs deterministic turns", () => {
+  const steps: ExecutionStep[] = [
+    { id: "turn-1", kind: "turn", name: "turn-1", order: 1, status: "succeeded", startedAt: "2026-01-01T00:00:00.000Z" },
+    {
+      id: "provider-1",
+      parentId: "turn-1",
+      kind: "provider",
+      name: "gpt-4",
+      order: 2,
+      status: "succeeded",
+      startedAt: "2026-01-01T00:00:00.000Z",
+    },
+    { id: "turn-2", kind: "turn", name: "turn-2", order: 3, status: "succeeded", startedAt: "2026-01-01T00:00:00.500Z" },
+    {
+      id: "deterministic-2",
+      parentId: "turn-2",
+      kind: "deterministic",
+      name: "desk",
+      order: 4,
+      status: "succeeded",
+      startedAt: "2026-01-01T00:00:00.500Z",
+      metadata: { turn: 2, middleware: "desk" },
+    },
+  ];
+
+  const summary = summarizeTimeline(makeTimeline(steps));
+  assert.equal(summary.turnCount, 2);
+  assert.deepEqual(summary.turns, { model: 1, deterministic: 1 });
+  assert.equal(summary.providerAttempts, 1);
+
+  // A deterministic step that never landed under a turn step cannot turn into a model turn.
+  const orphan = summarizeTimeline(
+    makeTimeline([
+      { id: "deterministic-1", kind: "deterministic", name: "desk", order: 1, status: "succeeded", startedAt: "2026-01-01T00:00:00.000Z" },
+    ]),
+  );
+  assert.deepEqual(orphan.turns, { model: 0, deterministic: 1 });
 });

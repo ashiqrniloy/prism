@@ -50,6 +50,10 @@
       "types": "./dist/testing/compaction-conformance.d.ts",
       "default": "./dist/testing/compaction-conformance.js"
     },
+    "./testing/prefix-stability-conformance": {
+      "types": "./dist/testing/prefix-stability-conformance.d.ts",
+      "default": "./dist/testing/prefix-stability-conformance.js"
+    },
     "./testing/tool-conformance": {
       "types": "./dist/testing/tool-conformance.d.ts",
       "default": "./dist/testing/tool-conformance.js"

@@ -2,6 +2,7 @@
  * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */
 import type { AudioContent, DocumentContent, FileContent } from "../content.js";
 import type { ModelCacheCapabilities } from "./provider.js";
+import type { TokenEstimateConfidence } from "./usage.js";
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
@@ -209,6 +210,15 @@ export interface Usage {
   readonly cacheWriteTokens?: number;
   readonly cost?: number;
   readonly currency?: string;
+  /**
+   * True when these token counts are a harness estimate, never provider truth
+   * (plan 091 T2). Estimated usage is never priced, and every accounting export
+   * (ledger rows, run totals, turn events) keeps this flag so a billing surface
+   * can always tell an estimate from a report. Absent means reported.
+   */
+  readonly estimated?: boolean;
+  /** Confidence label of an estimated usage; absent on reported usage. */
+  readonly confidence?: TokenEstimateConfidence;
 }
 
 /**
