@@ -45,31 +45,26 @@ describe("createLocalReranker", () => {
     await runRerankerConformance(() => createLocalReranker({ runtime }));
   });
 
-  it("loads once, lazily, and scores all 50 candidates in one batched call with no network", async () => {
+  it("loads once, lazily, and scores all 50 candidates in one batched call with no network", async (t) => {
     const state = { loads: 0, scores: 0, batched: [] as readonly number[] };
     let fetches = 0;
-    const realFetch = globalThis.fetch;
-    globalThis.fetch = (() => {
+    // Node's own mock seam: the network-free guard rejects hand-patching the
+    // global fetch in a non-live suite, and this restores the original for us.
+    t.mock.method(globalThis, "fetch", () => {
       fetches += 1;
       throw new Error("local reranker must not touch the network");
-    }) as typeof globalThis.fetch;
-    try {
-      const reranker = createLocalReranker({ runtime: overlapRuntime(state) });
-      assert.equal(state.loads, 0, "model load is lazy");
-      const candidates = Array.from({ length: 50 }, (_, index) =>
-        reliefHit(`src#${String(index + 1).padStart(4, "0")}`, index / 50, index),
-      );
-      const ordered = await reranker.rerank({ query: "alpha", hits: candidates });
-      await reranker.rerank({ query: "alpha", hits: candidates });
-      assert.equal(state.loads, 1, "model load is memoized");
-      assert.equal(state.scores, 2, "one batched score call per rerank");
-      assert.equal(state.batched.length, 50, "every candidate is scored in that one call");
-      assert.equal(ordered.length, 50);
-      for (const hit of ordered) assert.ok(candidates.includes(hit), "same hit references move");
-      assert.equal(fetches, 0);
-    } finally {
-      globalThis.fetch = realFetch;
-    }
+    });
+    const reranker = createLocalReranker({ runtime: overlapRuntime(state) });
+    assert.equal(state.loads, 0, "model load is lazy");
+    const candidates = Array.from({ length: 50 }, (_, index) => reliefHit(`src#${String(index + 1).padStart(4, "0")}`, index / 50, index));
+    const ordered = await reranker.rerank({ query: "alpha", hits: candidates });
+    await reranker.rerank({ query: "alpha", hits: candidates });
+    assert.equal(state.loads, 1, "model load is memoized");
+    assert.equal(state.scores, 2, "one batched score call per rerank");
+    assert.equal(state.batched.length, 50, "every candidate is scored in that one call");
+    assert.equal(ordered.length, 50);
+    for (const hit of ordered) assert.ok(candidates.includes(hit), "same hit references move");
+    assert.equal(fetches, 0);
   });
 
   it("reranks a top-50 candidate set well inside the 300ms median budget on the adapter path", async () => {

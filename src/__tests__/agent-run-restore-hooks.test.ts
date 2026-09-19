@@ -137,11 +137,7 @@ describe("checkpoint restore hooks", () => {
     assert.deepEqual((await loadAgentRunState(checkpoints, ref)).record.metadata, { gitCommit: "commit-1" });
 
     // The failed restore left a working checkpoint: a clean resume still succeeds.
-    await lifecycle.resume(
-      ref,
-      { decision: "approve", expectedVersion: after.version },
-      { agentId: "restore-fail" },
-    );
+    await lifecycle.resume(ref, { decision: "approve", expectedVersion: after.version }, { agentId: "restore-fail" });
     assert.equal((await lifecycle.status(ref, { agentId: "restore-fail" })).state.status, "succeeded");
   });
 
@@ -198,9 +194,13 @@ describe("checkpoint restore hooks", () => {
 
     const plain = await suspend("restore-none");
     const events = [];
-    for await (const event of plain.lifecycle.resumeStream(plain.ref, { decision: "approve", expectedVersion: plain.status.version }, {
-      agentId: "restore-none",
-    }))
+    for await (const event of plain.lifecycle.resumeStream(
+      plain.ref,
+      { decision: "approve", expectedVersion: plain.status.version },
+      {
+        agentId: "restore-none",
+      },
+    ))
       events.push(event);
     const resumed = events.find((event) => event.type === "agent_resumed");
     assert.ok(resumed && resumed.type === "agent_resumed");

@@ -927,9 +927,7 @@ export function projectWorkflowTimeline(
     ...(state.sessionId ? { sessionId: state.sessionId } : {}),
     ...(checkpoint ? { workflowId: checkpoint.workflowId } : {}),
     ...(checkpoint ? { workflowRevision: checkpoint.definitionHash } : {}),
-    ...(checkpoint?.metadata
-      ? { workflowMetadata: redactor ? redactor.redact(checkpoint.metadata) : checkpoint.metadata }
-      : {}),
+    ...(checkpoint?.metadata ? { workflowMetadata: redactor ? redactor.redact(checkpoint.metadata) : checkpoint.metadata } : {}),
     ...((state.traceId ?? (state.instrumentation && state.runId ? state.instrumentation.traceId(state.runId) : undefined))
       ? { traceId: state.traceId ?? (state.instrumentation && state.runId ? state.instrumentation.traceId(state.runId) : undefined) }
       : {}),

@@ -133,7 +133,8 @@ export function createDeletionPropagator(options: DeletionPropagatorOptions): De
     }));
     const write = async (target: VectorStore): Promise<void> => {
       const writeTarget = target.invalidate;
-      if (typeof writeTarget !== "function") throw new MemoryScopeError("deletion propagation requires a lineage-capable vector store (getByThread/invalidate)");
+      if (typeof writeTarget !== "function")
+        throw new MemoryScopeError("deletion propagation requires a lineage-capable vector store (getByThread/invalidate)");
       for (let offset = 0; offset < entries.length; offset += HARD_INVALIDATION_BATCH) {
         await writeTarget.call(target, scope, entries.slice(offset, offset + HARD_INVALIDATION_BATCH), { signal });
       }

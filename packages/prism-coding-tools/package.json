@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-coding-tools",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Unified coding agent tools, security sandboxing, OpenAPI tools, Linux desktop integration, Dev inspector, and persona extensions for Prism.",
   "type": "module",
   "main": "./dist/agent/index.js",
@@ -62,11 +62,11 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@arnilo/prism-core": "^0.8.0",
+    "@arnilo/prism-core": "^0.9.0",
     "diff": "^9.0.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.8.0",
+    "@arnilo/prism": "^0.9.0",
     "@dietrichgebert/ponytail": "^4.9.0",
     "e2b": "2.49.1"
   },

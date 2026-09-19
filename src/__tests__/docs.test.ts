@@ -3325,6 +3325,7 @@ describe("docs", () => {
         "examples/open-connector-sidecar.ts",
         "examples/observational-memory-recall-status-view.ts",
         "examples/observational-memory-lifecycle.ts",
+        "examples/shared-work-scope.ts",
         "examples/skills-progressive-disclosure.ts",
         "examples/caveman-ponytail.ts",
         "examples/graft-extension.ts",
@@ -4073,17 +4074,21 @@ describe("docs", () => {
   });
 
   it("085_release_0_8_0_contract_is_documented", () => {
+    // Plan 085's cut test, kept version-agnostic by the 0.9.0 cut the same way
+    // 071_release_0_6_0_contract_is_documented survived 0.7.0/0.8.0: the index
+    // banner check tracks the root manifest, so a later bump keeps this gate
+    // instead of bypassing it, and the 0.8.0 blurbs move into the index's
+    // carried sections as newer lines land.
     const index = readFileSync("docs/index.md", "utf8");
     const guide = readFileSync("docs/migrate-to-0.8.md", "utf8");
     const migration = readFileSync("docs/migration.md", "utf8");
     const changelog = readFileSync("CHANGELOG.md", "utf8");
     const version = JSON.parse(readFileSync("package.json", "utf8")).version as string;
-    assert.equal(version, "0.8.0");
     assert.ok(index.includes("(migrate-to-0.8.md)"), "docs/index.md missing the 0.8.0 migration navigation entry");
     assert.ok(index.includes(`Current line (${version})`), `docs/index.md current line must be ${version}`);
-    const currentLine = index.split("## Current line (0.8.0)")[1]?.split("### Carried")[0] ?? "";
-    assert.ok(currentLine.includes("Messaging channels"), "0.8.0 current-line missing messaging channels");
-    assert.ok(!currentLine.includes("plan 0"), "0.8.0 current-line blurbs must not include plan numbers");
+    const currentLine = index.split(`## Current line (${version})`)[1]?.split("### Carried")[0] ?? "";
+    assert.ok(index.includes("Messaging channels"), "docs/index.md missing the 0.8.0 messaging-channels blurb");
+    assert.ok(!currentLine.includes("plan 0"), "docs/index.md current-line blurbs must not include plan numbers");
     for (const phrase of [
       "@arnilo/prism-work",
       "@arnilo/prism-office",

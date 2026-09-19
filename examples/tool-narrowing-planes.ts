@@ -1,11 +1,4 @@
-import {
-  type AgentEvent,
-  createAgent,
-  createAgentSession,
-  providerDone,
-  providerTextDelta,
-  type ToolDefinition,
-} from "@arnilo/prism";
+import { type AgentEvent, createAgent, createAgentSession, providerDone, providerTextDelta, type ToolDefinition } from "@arnilo/prism";
 
 type Plane = "knowledge" | "metric" | "scenario" | "objects";
 

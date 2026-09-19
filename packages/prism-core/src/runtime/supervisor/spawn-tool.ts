@@ -63,18 +63,18 @@ export function createSpawnAgentTool(options: CreateSpawnAgentToolOptions): Tool
       if (report !== undefined && report !== "on-complete" && report !== "milestones" && report !== "stream") {
         return toolError(name, context.toolCallId, "report must be on-complete, milestones, or stream");
       }
-      const everyTurns = milestone === undefined || typeof milestone !== "object" || milestone === null ? undefined : (milestone as JsonObject).everyTurns;
+      const everyTurns =
+        milestone === undefined || typeof milestone !== "object" || milestone === null ? undefined : (milestone as JsonObject).everyTurns;
       if (
         everyTurns !== undefined &&
         (!Number.isSafeInteger(everyTurns) || (everyTurns as number) < 1 || (everyTurns as number) > HARD_MILESTONE_EVERY_TURNS)
       ) {
-        return toolError(
-          name,
-          context.toolCallId,
-          `milestone.everyTurns must be a positive integer at most ${HARD_MILESTONE_EVERY_TURNS}`,
-        );
+        return toolError(name, context.toolCallId, `milestone.everyTurns must be a positive integer at most ${HARD_MILESTONE_EVERY_TURNS}`);
       }
-      if (budgetShare !== undefined && (typeof budgetShare !== "number" || !Number.isFinite(budgetShare) || budgetShare <= 0 || budgetShare > 1)) {
+      if (
+        budgetShare !== undefined &&
+        (typeof budgetShare !== "number" || !Number.isFinite(budgetShare) || budgetShare <= 0 || budgetShare > 1)
+      ) {
         return toolError(name, context.toolCallId, "budgetShare must be a number greater than 0 and at most 1");
       }
       if (!childIds.includes(childId)) return toolError(name, context.toolCallId, "Unknown child id");

@@ -216,9 +216,7 @@ export async function loadAgentRunState(
 }
 
 /** Resolve a host metadata source. A throwing provider fails the checkpoint write (fail closed). */
-export function resolveCheckpointMetadata(
-  source: AgentRunCheckpointMetadataSource | undefined,
-): AgentRunCheckpointMetadata | undefined {
+export function resolveCheckpointMetadata(source: AgentRunCheckpointMetadataSource | undefined): AgentRunCheckpointMetadata | undefined {
   return typeof source === "function" ? source() : source;
 }
 
@@ -230,10 +228,7 @@ function checkpointMetadataBytes(metadata: Readonly<Record<string, string>>): nu
  * Redact + bound a sidecar metadata map for a checkpoint write. Values must be strings;
  * redaction runs first so a replacement marker is still charged against the 4 KiB ceiling.
  */
-export function boundCheckpointMetadata(
-  metadata: AgentRunCheckpointMetadata,
-  redactor?: SecretRedactor,
-): AgentRunCheckpointMetadata {
+export function boundCheckpointMetadata(metadata: AgentRunCheckpointMetadata, redactor?: SecretRedactor): AgentRunCheckpointMetadata {
   const redacted = redactor?.redact(metadata) ?? metadata;
   if (!redacted || typeof redacted !== "object" || Array.isArray(redacted)) {
     throw new AgentRunStateError("Checkpoint metadata must be an object");

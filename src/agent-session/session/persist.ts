@@ -1,7 +1,13 @@
 /** Finalize/persist phase of runInternal (plan 059). */
 
 import type { PendingToolCall, StoredAgentRunState } from "../../agent-run-state.js";
-import { boundedLoopSnapshot, initialAgentRunState, publicState, resolveCheckpointMetadata, saveAgentRunState } from "../../agent-run-state.js";
+import {
+  boundedLoopSnapshot,
+  initialAgentRunState,
+  publicState,
+  resolveCheckpointMetadata,
+  saveAgentRunState,
+} from "../../agent-run-state.js";
 import type { AgentRunResult, AgentRunState, ErrorInfo, Message, ModelConfig, NestedRunRef, Usage, UsageRecord } from "../../contracts.js";
 import { AgentRunStateError } from "../../contracts.js";
 import { redactRunLedgerRecord } from "../../redaction.js";

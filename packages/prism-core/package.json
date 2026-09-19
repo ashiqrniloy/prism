@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-core",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Core runtime, sessions, governance, credentials, and enterprise state family package for Prism.",
   "type": "module",
   "exports": {
@@ -102,8 +102,8 @@
     "ajv": "^8.17.1"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.8.0",
-    "@arnilo/prism-memory": "^0.8.0",
+    "@arnilo/prism": "^0.9.0",
+    "@arnilo/prism-memory": "^0.9.0",
     "@nats-io/jetstream": "^3.4.0",
     "@nats-io/transport-node": "^3.4.0",
     "better-sqlite3": "^13.0.3",

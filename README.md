@@ -162,17 +162,17 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 
 | package | version | notes |
 | --- | --- | --- |
-| `@arnilo/prism` | 0.8.0 | core — runtime, CLI/RPC, templates, docs |
-| `@arnilo/prism-channels` | 0.8.0 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
-| `@arnilo/prism-coding-tools` | 0.8.0 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths |
-| `@arnilo/prism-core` | 0.8.0 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths |
-| `@arnilo/prism-providers` | 0.8.0 | family — all provider adapters as `/<adapter>` subpaths |
-| `@arnilo/prism-acp-agent` | 0.8.0 | capability — ACP adapter |
-| `@arnilo/prism-ag-ui` | 0.8.0 | capability — AG-UI/A2A/A2UI adapter |
-| `@arnilo/prism-mcp` | 0.8.0 | capability — MCP client/server/OAuth interop |
-| `@arnilo/prism-memory` | 0.8.0 | capability — memory plus /rag, /compaction/*, /fabric, /graft, /wiki subpaths |
-| `@arnilo/prism-web-tools` | 0.8.0 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
-| `@arnilo/prism-work` | 0.8.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-reader, /sandbox, /skills, /tools subpaths |
+| `@arnilo/prism` | 0.9.0 | core — runtime, CLI/RPC, templates, docs |
+| `@arnilo/prism-channels` | 0.9.0 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
+| `@arnilo/prism-coding-tools` | 0.9.0 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths |
+| `@arnilo/prism-core` | 0.9.0 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths |
+| `@arnilo/prism-providers` | 0.9.0 | family — all provider adapters as `/<adapter>` subpaths |
+| `@arnilo/prism-acp-agent` | 0.9.0 | capability — ACP adapter |
+| `@arnilo/prism-ag-ui` | 0.9.0 | capability — AG-UI/A2A/A2UI adapter |
+| `@arnilo/prism-mcp` | 0.9.0 | capability — MCP client/server/OAuth interop |
+| `@arnilo/prism-memory` | 0.9.0 | capability — memory plus /rag, /compaction/*, /fabric, /graft, /wiki subpaths |
+| `@arnilo/prism-web-tools` | 0.9.0 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
+| `@arnilo/prism-work` | 0.9.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-reader, /sandbox, /skills, /tools subpaths |
 <!-- generated:package-truth:inventory end -->
 
 ## Scripts
