@@ -1,9 +1,9 @@
 # 0.9.0 Release Cut
 
-Release: 0.9.0 (this plan). Ships plans 086–098 plus plan 100 (live stream terminal semantics, which delivers this line's `budget_exhausted` attribution to live subscribers). Plan [101](101-Cache-Stability-Follow-Ups.md) is a post-cut follow-up to 088 and is deliberately **not** part of this cut. Precedent: plan 085's 0.8.0 cut.
+Release: 0.9.0 (this plan). Ships plans 086–096, 098, plus plan 100 (live stream terminal semantics, which delivers this line's `budget_exhausted` attribution to live subscribers). Plan [097](097-Trajectory-Export-For-Co-Training.md) was **deferred to 0.10.0** at this cut — its versioned on-disk export format is unimplemented (0/2) and freezing it inside a publish task was the worse of the two honest options; the scope sentence is amended here rather than the docs claiming a format that does not exist. Plan [101](101-Cache-Stability-Follow-Ups.md) is a post-cut follow-up to 088 and is deliberately **not** part of this cut. Precedent: plan 085's 0.8.0 cut.
 
 ## Objectives
-- Cut @arnilo/prism 0.9.0 with all 086–098 features behind their documented options, defaults preserving 0.8 behavior.
+- Cut @arnilo/prism 0.9.0 with all 086–096, 098, and 100 features behind their documented options, defaults preserving 0.8 behavior (097 deferred to 0.10.0).
 - Green `release:gate` with a deliberately regenerated compatibility baseline (plans 086–098 add public symbols; no removals are planned — any that appear must be listed here first).
 - Migration notes, CHANGELOG, docs index consistent before publish.
 

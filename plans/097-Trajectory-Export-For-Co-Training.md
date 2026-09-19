@@ -1,6 +1,6 @@
 # Trajectory Export for Co-Training
 
-Release: 0.9.0 (P2). Freezes an export format over the existing eval trace curation (R07) suitable for rejection-sampled fine-tuning of harness trajectories.
+Release: 0.10.0 (deferred from 0.9.0, P2). Freezes an export format over the existing eval trace curation (R07) suitable for rejection-sampled fine-tuning of harness trajectories. Deferred at the 0.9.0 cut (099 Task 4) so the versioned on-disk contract gets its own reviewed implementation rather than shipping unstarted against a publish deadline; folds into the 0.10.0 line (105).
 
 ## Objectives
 - One documented, versioned export format: curated session trajectories → training-ready JSONL (messages, tool calls/results, outcomes, redaction state).

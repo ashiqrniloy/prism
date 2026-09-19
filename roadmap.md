@@ -1,14 +1,14 @@
-# Prism Roadmap — Release 0.8.0
+# Prism Roadmap — Release 0.9.0
 
-Updated: **2026-09-18**
+Updated: **2026-09-20**
 
-Released baseline: **0.7.0** — shipped 2026-09-15 as the six-plan host-completeness line ([072](plans/072-Host-Eval-And-Observability-Cockpit.md)–[078](plans/078-Host-Owned-Subagent-Spawn-And-Parallel-Agents.md)), Node `>=22`, ten publishable manifests.
+Released baseline: **0.8.0** — shipped 2026-09-18 as the seven-plan messaging/connected-apps/work-family line ([079](plans/079-Prism-Messaging-Channels-Telegram-Signal.md)–[085](plans/085-Honesty-Gates-Runtime-Split-And-0-8-0-Cut.md)), eleven publishable manifests.
 
-Current release: **0.8.0** — eleven publishable manifests. Messaging channels (`@arnilo/prism-channels`), connected apps, `@arnilo/prism-work` replacing `@arnilo/prism-office`, durable long-run surfaces, and honesty gates. Cut owned by [085](plans/085-Honesty-Gates-Runtime-Split-And-0-8-0-Cut.md) (supersedes [080](plans/080-Messaging-Channel-Followons-And-0-8-0-Cut.md) Task 10). Registry/tag writes stay operator-authorized.
+Current release: **0.9.0** — eleven publishable manifests. Attention budget axes, cache-stable progressive disclosure, turn traces and exhaustion attribution, per-turn tool narrowing, guardrail packs, background child agents, checkpoint sidecar metadata, bounded session search, deterministic no-model turns, shared work scopes, retrieval revocation with a local reranker, and one live-stream terminal predicate so a limit death delivers its attribution before the stream ends. Cut owned by [099](plans/099-Prism-0-9-0-Release-Cut.md), with [100](plans/100-Live-Stream-Terminal-Semantics-And-Limit-Death-Delivery.md) folded in; [097](plans/097-Trajectory-Export-For-Co-Training.md) was deferred to 0.10.0 rather than held unstarted against the cut.
 
-Status: **verified 2026-09-18** (085 Task 8). Registry/tag writes stay operator-authorized.
+Status: **published 2026-09-20** (099 Task 4; registry write operator-authorized).
 
-Next: R09 delegated coding runtimes, R12 native Vertex, and R13 remote clients remain later-release items if demand returns.
+Next: [097](plans/097-Trajectory-Export-For-Co-Training.md) trajectory export folds into the 0.10.0 line ([105](plans/105-Scoped-Agent-Memory-And-Release-0-10-0.md)); R09 delegated coding runtimes, R12 native Vertex, and R13 remote clients remain later-release items if demand returns.
 
 This roadmap replaces the previous historical roadmap in full. It preserves the rationale and priorities from the 2026-09-13 review for future reference. Historical implementation evidence remains in [plans](plans/README.md), [CHANGELOG](CHANGELOG.md), and [documentation history](docs/history/README.md); it is not repeated here.
 

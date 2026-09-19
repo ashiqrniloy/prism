@@ -1,6 +1,6 @@
 ## [Unreleased]
 
-## [0.9.0] - 2026-09-19 (attention budget axes, turn traces, cache-stable disclosure, tool narrowing, guardrail packs, background agents, session search, deterministic turns, shared scopes)
+## [0.9.0] - 2026-09-20 (attention budget axes, turn traces, cache-stable disclosure, tool narrowing, guardrail packs, background agents, session search, deterministic turns, shared scopes)
 
 > **Eleven publishable packages.** All 086–098 features ship behind their documented options, joined by the live-stream terminal fix (plan 100). Predecessor published line is **0.8.0**. Registry/tag writes stay operator-authorized.
 

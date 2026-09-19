@@ -4,12 +4,28 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 
 ## Current line (0.9.0)
 
+- **Attention budget axes**: `attentionCompiler.trigger` accepts one axis, a predicate, or an any-of array (`input_ratio`, `run_input_ratio`, `token_floor`), and `durable: true` keeps the fold ledger and sticky frontier in the checkpoint across a resume.
+- **Turn traces and exhaustion attribution**: `provider_turn_finished` carries a closed `stopReason`, a `budgets` snapshot, the effective tool menu (`count` / `idsHash`), and provider cache counts; `agent_finished` carries the run outcome, and the execution timeline adds per-turn stop reasons plus `exhaustion`.
+- **Cache-stable disclosure**: late-expanding context (skill bodies, deferred schemas, loaded references) lands at the request tail instead of rewriting the prefix, cache read/write telemetry rides usage records, and `runPrefixStabilityConformance` asserts a shared-prefix floor against a host's own assembly.
+- **Per-turn tool narrowing**: a host callback receives the turn and the run grant and returns the effective subset; out-of-grant names are dropped and reported as `tool_narrowing_clamped`.
+- **Usage estimation and the context meter**: labeled token estimates for providers that report no usage (reported usage always wins, and `usageEstimation: "off"` restores zero-for-no-usage), plus `session.contextMeter()` for cap and spend ratios.
+- **Guardrail packs**: four built-in restrictive packs (`coding-standard`, `destructive-commands`, `validation-respect`, `secrets-hygiene`) compiled onto existing tool stages, each with a trajectory scorer.
+- **Background child agents**: session-lifetime children with milestone or streamed reports, narrowed budget shares, and rate-coalesced child events.
+- **Checkpoint sidecar metadata**: a redacted ≤4 KiB map attached to every checkpoint record without charging `maxStateBytes`, plus restore hooks that revert external layers before a resume claims the run.
+- **Bounded session search**: `store.searchSessions(query)` over workspace/time/provider/label/kind/ownership filters, indexed at append time (SQLite FTS5, Postgres `tsvector`) with a bounded linear matcher for JSONL and memory stores.
+- **Deterministic turns**: the `beforeProviderTurn` middleware hook answers a turn from host data with no provider request, recorded as `deterministic` on the timeline and in usage.
+- **Shared work scopes**: explicitly granted observational-memory scopes shared across sessions, deny-by-default, audited, and revocable at the next read; session-private scopes stay the default.
+- **Retrieval revocation and local reranking**: deletion and revocation propagate through derived vector/wiki artifacts under bounded walks, and an in-process cross-encoder reranker ships with no declared inference dependency.
+- **Live-stream terminal semantics**: one `isTerminalAgentEventType` predicate (`agent_finished` / `agent_denied` / `error`) shared by every source, so a limit death delivers `run_limit_exceeded` → `budget_exhausted` → `error` before a stream or replay ends.
+- **11 publishable packages** at current **0.9.0** lockstep, with the migration guide reachable from the release section below — inventory below.
+
+### Carried from the 0.8.0 line
+
 - **Messaging channels**: `@arnilo/prism-channels` transport-neutral runtime with deny-by-default authorization, owned bindings, one-use durable approvals, official Telegram (private DMs, opt-in granted groups/topics, drafts, bounded media/voice, opt-in notices) and experimental pinned signal-cli Signal.
 - **Connected apps**: identity-bound MCP server sessions admit host-selected transports and register prefixed tools; Google Workspace and Microsoft 365 HTTP adapters live under `@arnilo/prism-work/connectors`.
 - **Work family**: `@arnilo/prism-work` replaces `@arnilo/prism-office` — connectors, documents, sheets, diagrams, document-reader, sandbox, and vendored office skills. No pre-1.0 shim.
 - **Durable long runs**: turn-boundary checkpoints with host-only `decision: "continue"`, turn-stop policy, frozen run-bundle snapshots, claim-grounding guardrail, and typed provider failure classes.
 - **Honesty surfaces**: Postgres release evidence is this-commit, channel lease release stays held until the store acknowledges, and observational-memory workers ignore non-tool events on purpose.
-- **11 publishable packages** at current **0.9.0** lockstep, with the migration guide reachable from the release section below — inventory below.
 
 ### Carried from the 0.7.0 line
 
