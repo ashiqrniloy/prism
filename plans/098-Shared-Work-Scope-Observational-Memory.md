@@ -97,7 +97,7 @@ Release: 0.9.0 (P2). Extends R16 per-session work scopes with an explicitly gran
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 3: Cross-session recall example
+- [x] Task 3: Cross-session recall example
   - Acceptance Criteria:
     - Functional: `examples/shared-work-scope.ts` demonstrates grant → two sessions contributing → recall in a third; prints recalled observations.
     - Performance: Example CI budget.
@@ -115,14 +115,26 @@ Release: 0.9.0 (P2). Extends R16 per-session work scopes with an explicitly gran
     - References: clay build-loop phases.
   - Test Cases to Write:
     - Example doubles as integration test via existing example-runner conventions.
+  - Outcome (complete 2026-09-19): shipped and wired into the docs-test demo runner (`src/__tests__/docs.test.ts` demos list, next to `observational-memory-lifecycle.ts`), so CI executes it instead of only typechecking it.
+    - `examples/shared-work-scope.ts`: mock providers only; owner opens `release:0.9`, grants `builder` + `reviewer`, contributes one scope-bound observation plus one bound to a private child scope; builder opens the scope locally and contributes via `withWorkScope`; reviewer enters the scope and reads through the attached `contextProvider` (asserts both shared facts render, private aside absent), then recalls the builder's observation by exact id through `createRecallMemoryTool` with `sharedScopes` (asserts found + foreign source evidence), then the owner revokes `builder` and a re-resolve drops that branch.
+    - Printed summary: `{ scope, branches: [builder, owner], sharedObservationIds, branchesAfterRevoke: [owner], recalled: { id, content }, audits: [[scope, true]] }`.
+    - `examples/README.md`: bullet; `docs/compaction-observational-memory.md`: example pointer in the shared-scopes section.
+    - Evidence: `node examples/shared-work-scope.ts` exit 0; `npx tsc -p examples --noEmit` clean; biome clean; `npm run build` + root `docs.test.js` 155 pass (example included in the emit + run loop).
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: no — example.
-    - Docs pages to create/edit: `none` — linked from Task 2's section.
+    - Docs pages to create/edit: `examples/README.md` bullet (required: the docs test asserts every `examples/*.ts` is listed) + `docs/compaction-observational-memory.md` example pointer; `src/__tests__/docs.test.ts` demos list so CI runs it.
     - `docs/index.md` update: no.
     - Documentation structure reference: n/a.
 
 ## Compromises Made
-- To be filled after tasks are completed and tests pass.
+- Shared (foreign) observations never enter the local folded payload, so they do not survive as text inside a local compaction summary; they re-enter context from the provider after compaction. Chosen because a copied payload outlives the grant and makes revocation unenforceable.
+- Grants are symmetric read+write per scope and never expire — no read-only capability and no TTL; a host that needs asymmetric visibility uses two scopes.
+- No resolve cache: each context build / recall tool call reads and folds every granted branch. Cost is O(participating branches), not O(observations), but it is per-call store I/O.
+- Rendering still requires the shared scope in the reader's leaf lineage (`enter`); exact-id recall does not. Fail-closed rather than special-cased.
+- The owner branch is read on every resolve (it is the grant authority), including denied ones; the reader cannot distinguish "no grant" from "owner unreachable" except through `onScopeAccess.reason`.
 
 ## Further Actions
-- To be filled after task completion with improvements, rationale, and priority.
+- P2: revocation-safe shared summary — if a host runs shared OM without a context provider, re-resolve grants at compaction time and store shared observation *ids* (not content) so the summary can be invalidated instead of carrying foreign text.
+- P3: resolve cache keyed by owner branch tip + grant version + granted branch tips (perf only; not needed at current branch counts).
+- P3: per-principal capability (`read` vs `read+write`) if a host needs asymmetric grants without splitting scopes.
+- P3: shared counts in `om:status` (currently session-local by design) if operators ask for cross-session visibility totals.

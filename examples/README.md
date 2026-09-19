@@ -178,6 +178,7 @@ Each demo prints a single JSON line with its result.
 - `observational-memory-lifecycle.ts` — **demo**: `createObservationalMemory().attach()` →
   turn → projection/recall/branch page (mock workers, no network).
 - `work-scopes-coding-loop.ts` — **demo**: nested work scopes with `withWorkScope`, leaf-only auto-bind, projection (task memory hidden until an ancestor bind promotes it), and closed-scope inclusion (network-free).
+- `shared-work-scope.ts` — **demo**: one shared work scope across sessions — owner-branch grants, bound contributions from two sessions, the attached context provider + exact-id recall reading the merged per-branch ledger, a private child scope staying hidden, and revocation taking effect on the next read (network-free).
 - `memory-fabric.ts` — **demo**: typed notes (fact/procedure/working) over the existing stores, in-place folding + supersession, `attach(session)` gating the `memory.*` tools and the linker, and the `memory-fabric` context provider registered for `AgentDefinition.context` (network-free).
 - `host-artifact-loop.ts` — **demo**: third-party host mixing first-party
   and own providers/tools/skills, `AGENTS.md`/`SYSTEM.md` system prompts, and the

@@ -113,7 +113,7 @@ After a flush records new observations or reflections, it binds those ids once t
 
 ### Shared work scopes (opt-in)
 
-A shared work scope lets several sessions contribute to and read one scope under explicit owner grants. Declare it per participant in `attach()`:
+A shared work scope lets several sessions contribute to and read one scope under explicit owner grants. Declare it per participant in `attach()`; see `examples/shared-work-scope.ts` for a runnable grant → contribute → recall → revoke demo:
 
 ```ts
 const attached = om.attach(session, {
