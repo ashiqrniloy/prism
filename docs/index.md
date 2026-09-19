@@ -233,6 +233,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 ## Release and install
 
 - [Release and install](release-and-install.md): install rules, package graph, and deterministic resumable publication.
+- [Migrate 0.8 → 0.9](migrate-to-0.9.md): the four behavior deltas inside existing surfaces (limit-death stream order, turn-trace metadata, cache-stable disclosure, labeled usage estimates), every new option with its sizing line, and 0.9.0 host migration steps.
 - [Migrate 0.7 → 0.8](migrate-to-0.8.md): work-family import map, messaging channels, connected apps, durable runs, and 0.8.0 host migration steps.
 - [Migrate 0.6 → 0.7](migrate-to-0.7.md): ACP MCP allow-list URL normalization, model router facade fail-closed governance, and 0.7.0 host migration steps.
 - [Migrate 0.5 → 0.6](migrate-to-0.6.md): Node 22 floor, folded 0.5.7 host delta, third-party floors, and upgrade/rollback steps.

@@ -1,5 +1,18 @@
 # Migration guide
 
+## 0.8.0 → 0.9.0 (attention budget axes, turn traces, tool narrowing, guardrail packs, background agents, session search, deterministic turns, shared scopes)
+
+**Prism 0.9.0 is a lockstep minor for all eleven publishable packages.** Node `>=22` stays the floor. Nothing was removed: no import path moved, no export was dropped, and every new surface defaults to 0.8 behavior. The full guide — the four deltas inside existing surfaces, every new option with its sizing line, upgrade steps, and rollback — is [migrate-to-0.9.md](migrate-to-0.9.md).
+
+What a 0.8.0 host must check before upgrading:
+
+- **A limit death no longer ends a stream early.** `run_limit_exceeded` and `budget_exhausted` are not terminal; keep reading until `error` (or `isTerminalAgentEventType(type)` is true) to see the breach, its attribution, and the run's outcome in order.
+- **`provider_turn_finished` metadata grew** (`stopReason`, `budgets`, `tools`, `cache`), and `agent_finished` now carries `finishReason` / `stopDetail`; consumers that deep-equal `metadata` must allow the new fields.
+- **`AgentConfig.usageEstimation` defaults to `"fallback"`**: a provider that reports no usage is charged one labeled estimate (`estimated: true` + `confidence`) instead of zero. Set `"off"` for the old behavior; billing code must read the label.
+- **Progressive disclosure is cache-stable**: skill bodies and deferred schemas append at the tail instead of rewriting the prefix. Defaults keep 0.8 bytes for hosts that never load late context.
+- **One type-level change**: the `recordUsage` callback of `generateProviderTurn` / `generateWithRetry` returns `Promise<Usage | undefined>` instead of `Promise<void>`.
+- **Additive, inert by default**: attention `trigger` axes and `durable` folding, per-turn `toolNarrowing`, `guardrailPacks`, session-lifetime child agents with child-event passthrough, `checkpointMetadata` / `restoreHooks`, `searchSessions`, `beforeProviderTurn` deterministic turns, observability shared work scopes, deletion propagation, and the local reranker. One additive migration (004) adds the session-search index; no existing table or column changes.
+
 ## 0.7.0 → 0.8.0 (messaging channels, connected apps, work family, durable runs)
 
 **Prism 0.8.0 is a lockstep minor for all eleven publishable packages.** Node `>=22` stays the floor. The only import-map break is `@arnilo/prism-office` → `@arnilo/prism-work` (plus the work/document-reader subpath moves). A host that never imported those paths upgrades by moving every `@arnilo/*` dependency and peer to `^0.8.0`. The full guide — per-item actions, opt-in activation, and rollback — is [migrate-to-0.8.md](migrate-to-0.8.md).
