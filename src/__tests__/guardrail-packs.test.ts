@@ -205,8 +205,10 @@ describe("guardrail packs", () => {
       "pack:secrets-hygiene/no-secret-material-in-arguments",
     );
     assert.equal(await deny({ path: "a.txt", content: "key sk-abcdefghijklmnop" }), "pack:secrets-hygiene/no-secret-material-in-arguments");
+    // Split so this fixture does not trip the tracked-tree secret scan (scripts/scan-secrets.mjs);
+    // the runtime value is the exact PEM header the pack matches. Same convention as install-smoke.test.ts.
     assert.equal(
-      await deny({ path: "a.txt", content: "-----BEGIN RSA PRIVATE KEY-----" }),
+      await deny({ path: "a.txt", content: ["-----BEGIN ", "RSA PRIVATE KEY-----"].join("") }),
       "pack:secrets-hygiene/no-secret-material-in-arguments",
     );
 
