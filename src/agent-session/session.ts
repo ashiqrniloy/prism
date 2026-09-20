@@ -1,7 +1,7 @@
 /** session (0.2.5 plan 025 Task 1 split). Moved verbatim from agent-session.ts; public surface unchanged behind the barrel. */
 
 import { ActiveDurableRun, ActiveDurableRunExtras } from "../agent-approval.js";
-import type { PendingToolCall, StoredAgentRunState } from "../agent-run-state.js";
+import type { PendingToolCall, PersistedGuardrailPacks, StoredAgentRunState } from "../agent-run-state.js";
 import { policyList } from "../agent-tool-dispatch.js";
 import {
   type AttentionFoldLedger,
@@ -60,7 +60,8 @@ import {
   HARD_MAX_SNAPSHOT_CACHE_TTL_MS,
   resolveShouldCompact,
 } from "../contracts.js";
-import { compileGuardrailPacks, GuardrailError, runGuardrails } from "../guardrails.js";
+import { compileGuardrailPacksWithState, GuardrailError, GuardrailPackError, runGuardrails } from "../guardrails.js";
+import { AgentRunStateError } from "../contracts.js";
 import type { AgentIdentity } from "../identity.js";
 import type { AgentInput } from "../input.js";
 import {
@@ -117,9 +118,15 @@ export class RuntimeAgentSession implements AgentSession {
   private activeIdempotencyKey?: string;
   private activeGuardrails?: Guardrails;
   /** Plan 092 Task 2: guardrail packs compiled once in the constructor; merged into every run's `activeGuardrails`. */
-  readonly packGuardrails?: Guardrails;
+  packGuardrails?: Guardrails;
+  /** Plan 104 Task 3: `ask` rules as the durable charge-time gate (a match records `interrupt`). */
+  packAskGate?: Guardrails;
+  /** Plan 104 Task 3: the same `ask` rules as plain blocks for a run that cannot suspend. */
+  packAskBlocks?: Guardrails;
   /** Original pack refs, carried into `fork()`/`clone()` so a branch cannot silently lose its policy. */
-  private readonly guardrailPackRefs?: readonly GuardrailPackRef[];
+  private packRefs?: readonly GuardrailPackRef[];
+  /** Plan 104 Task 2: compiled refs + live pack state, replaced by `restoreGuardrailPacks` on resume. */
+  private compiledGuardrailPacks?: ReturnType<typeof compileGuardrailPacksWithState>;
   activeMetadata?: Readonly<Record<string, unknown>>;
   activePromptVersion?: PromptVersionRef;
   activeLimits?: RunLimitTracker;
@@ -212,6 +219,39 @@ export class RuntimeAgentSession implements AgentSession {
     this.restoredSkillBodies = bodies;
     for (const entry of bodies) this.loadedSkills.add(entry.name);
   }
+
+  /** Plan 104 T2: the refs this session actually enforces (restored ones after a resume). */
+  get guardrailPackRefs(): readonly GuardrailPackRef[] | undefined {
+    return this.packRefs;
+  }
+
+  /** Plan 104 T2: pack refs + live pack-owned state for a durable checkpoint (opt-in with `persistSessionState`). */
+  serializedGuardrailPackState(): PersistedGuardrailPacks | undefined {
+    const compiled = this.compiledGuardrailPacks;
+    if (!compiled || compiled.packs.length === 0) return undefined;
+    const state = compiled.snapshotState();
+    return { packs: compiled.packs, ...(state ? { state } : {}) };
+  }
+
+  /**
+   * Plan 104 T2: recompile checkpoint packs before the resumed run's first turn. `state` present
+   * (even empty) marks a restore, so unknown ids, version mismatches, and codec-less state fail
+   * closed as `AgentRunStateError` — never a session that silently enforces less than it did.
+   */
+  restoreGuardrailPacks(refs: readonly GuardrailPackRef[], state?: Readonly<Record<string, unknown>>): void {
+    let compiled: ReturnType<typeof compileGuardrailPacksWithState>;
+    try {
+      compiled = compileGuardrailPacksWithState(refs, undefined, state ?? {});
+    } catch (error) {
+      if (error instanceof GuardrailPackError) throw new AgentRunStateError(`Cannot restore guardrail packs: ${error.message}`);
+      throw error;
+    }
+    this.compiledGuardrailPacks = compiled;
+    this.packGuardrails = compiled.guardrails;
+    this.packAskGate = compiled.askGate;
+    this.packAskBlocks = compiled.askBlocks;
+    this.packRefs = refs;
+  }
   private ledgerChain: Promise<void> = Promise.resolve();
   private ledgerFailure: unknown;
   private snapshotGeneration = 0;
@@ -222,6 +262,21 @@ export class RuntimeAgentSession implements AgentSession {
     readonly value: SessionContextSnapshot;
   };
   private readonly snapshotCacheTtlMs: number;
+  /**
+   * Plan 103 T4: identity-keyed meter cache. Holds only the last public meter value
+   * plus the identity of everything the cold read consumed (`snapshotGeneration`,
+   * leaf, active meter/limits, and the history array reference + length, which catches
+   * in-place `history.push` during a run) — never history content, never an estimator.
+   */
+  private meterCache?: {
+    readonly leafId?: string;
+    readonly generation: number;
+    readonly meter?: { readonly tokens: number; readonly source: "reported" | "estimated" };
+    readonly limits?: RunLimitTracker;
+    readonly history: readonly Message[];
+    readonly historyLength: number;
+    readonly value: ContextMeter;
+  };
 
   constructor(config: AgentSessionConfig & { readonly agent: Agent }) {
     this.id = config.id ?? randomId("session");
@@ -230,11 +285,14 @@ export class RuntimeAgentSession implements AgentSession {
     this.store = config.store ?? config.agent.config.store ?? createMemorySessionStore();
     this.currentLeafId = config.leafId;
     this.snapshotCacheTtlMs = resolveSnapshotCacheTtlMs(config.snapshotCacheTtlMs);
-    this.packGuardrails = compileGuardrailPacks(config.guardrailPacks);
-    this.guardrailPackRefs = config.guardrailPacks;
+    this.compiledGuardrailPacks = compileGuardrailPacksWithState(config.guardrailPacks);
+    this.packGuardrails = this.compiledGuardrailPacks.guardrails;
+    this.packAskGate = this.compiledGuardrailPacks.askGate;
+    this.packAskBlocks = this.compiledGuardrailPacks.askBlocks;
+    this.packRefs = config.guardrailPacks;
     const usageEstimation = config.agent.config.usageEstimation;
-    if (usageEstimation !== undefined && usageEstimation !== "fallback" && usageEstimation !== "off") {
-      throw new TypeError('usageEstimation must be "fallback" or "off"');
+    if (usageEstimation !== undefined && usageEstimation !== "fallback" && usageEstimation !== "off" && usageEstimation !== "strict") {
+      throw new TypeError('usageEstimation must be "fallback", "off", or "strict"');
     }
   }
 
@@ -249,8 +307,40 @@ export class RuntimeAgentSession implements AgentSession {
    * `provider_turn_finished.budgets` resolves them. Before any provider turn in
    * this session it estimates stored history, so a non-reporting model still
    * shows a working meter instead of zero. Never billing; estimates are labeled.
+   *
+   * Plan 103 T4: reads are cached until the history generation, leaf, history
+   * length, or active-run identity changes, so a per-frame poll pays one estimate
+   * per mutation instead of one per read. The cached value is frozen and is
+   * identical (`===`) to the previous read while nothing changed.
    */
   contextMeter(): ContextMeter {
+    const cached = this.meterCache;
+    if (
+      cached &&
+      cached.leafId === this.currentLeafId &&
+      cached.generation === this.snapshotGeneration &&
+      cached.meter === this.activeInputMeter &&
+      cached.limits === this.activeLimits &&
+      cached.history === this.history &&
+      cached.historyLength === this.history.length
+    ) {
+      return cached.value;
+    }
+    const value = Object.freeze(this.measureContextMeter());
+    this.meterCache = {
+      leafId: this.currentLeafId,
+      generation: this.snapshotGeneration,
+      meter: this.activeInputMeter,
+      limits: this.activeLimits,
+      history: this.history,
+      historyLength: this.history.length,
+      value,
+    };
+    return value;
+  }
+
+  /** Cold path of `contextMeter()`: one estimate over stored history plus cap/budget resolution. */
+  private measureContextMeter(): ContextMeter {
     const model = this.agent.config.model;
     const inputTokens = this.activeInputMeter?.tokens ?? estimateMessageTokens(this.history, model.model).tokens;
     const source = this.activeInputMeter?.source ?? "estimated";
@@ -272,7 +362,18 @@ export class RuntimeAgentSession implements AgentSession {
     };
   }
 
+  /**
+   * Live events for this session. A run-scoped subscriber (the default) is closed when the run ends,
+   * suspends, or is denied; `SubscribeOptions.acrossRuns: true` keeps one subscriber open across runs
+   * of the same session until the host closes it, the session tears it down, or its bounded queue
+   * overflows under the default policy. Subscribe before `run()`; the consumer loop and `run()` must
+   * run concurrently, since events are only emitted during a live run.
+   */
   subscribe(options: SubscribeOptions = {}): AsyncIterable<AgentEvent> {
+    return this.createSubscriber(options);
+  }
+
+  private createSubscriber(options: SubscribeOptions): EventSubscriber {
     const subscriber = new EventSubscriber(this.id, options, () => this.subscribers.delete(subscriber));
     this.subscribers.add(subscriber);
     return subscriber;
@@ -336,7 +437,7 @@ export class RuntimeAgentSession implements AgentSession {
       this.activeLedger = undefined;
       this.activeOwnership = undefined;
       this.activeRedactor = undefined;
-      this.closeSubscribers();
+      this.closeRunSubscribers();
     }
   }
 
@@ -356,7 +457,7 @@ export class RuntimeAgentSession implements AgentSession {
       this.activeLedger = undefined;
       this.activeOwnership = undefined;
       this.activeRedactor = undefined;
-      this.closeSubscribers();
+      this.closeRunSubscribers();
     }
   }
 
@@ -370,14 +471,18 @@ export class RuntimeAgentSession implements AgentSession {
 
   async *stream(input: AgentInput, options: RunOptions & SubscribeOptions = {}): AsyncGenerator<AgentEvent> {
     const { maxQueuedEvents, overflow, ...runOptions } = options;
-    const subscription = this.subscribe({ maxQueuedEvents, overflow });
+    const subscriber = this.createSubscriber({ maxQueuedEvents, overflow });
     let runOwnedId: string | undefined;
     let settled = false;
+    // This subscription is stream()'s own, so it does not depend on the run-end close: settling the
+    // run closes it too, which also unblocks the consumer loop when the run fails before it ever
+    // emits (a pre-flight validation rejection returns before run-end cleanup).
     const runPromise = this.run(input, runOptions).finally(() => {
       settled = true;
+      subscriber.close();
     });
     try {
-      for await (const event of subscription) {
+      for await (const event of subscriber) {
         if ("runId" in event && typeof event.runId === "string") {
           if (runOwnedId === undefined && event.type === "agent_started") runOwnedId = event.runId;
           if (runOwnedId !== undefined && event.runId !== runOwnedId) continue;
@@ -386,6 +491,7 @@ export class RuntimeAgentSession implements AgentSession {
       }
       await runPromise;
     } finally {
+      subscriber.close();
       if (!settled) {
         this.abort(new Error("stream consumer closed"));
         await runPromise.catch(() => undefined);
@@ -457,7 +563,7 @@ export class RuntimeAgentSession implements AgentSession {
       store: this.store,
       leafId: options.leafId ?? this.currentLeafId,
       metadata: this.metadata,
-      ...(this.guardrailPackRefs ? { guardrailPacks: this.guardrailPackRefs } : {}),
+      ...(this.packRefs ? { guardrailPacks: this.packRefs } : {}),
     });
   }
 
@@ -481,7 +587,7 @@ export class RuntimeAgentSession implements AgentSession {
       store: this.store,
       leafId: branch.length ? remap.get(branch[branch.length - 1]!.id) : undefined,
       metadata: this.metadata,
-      ...(this.guardrailPackRefs ? { guardrailPacks: this.guardrailPackRefs } : {}),
+      ...(this.packRefs ? { guardrailPacks: this.packRefs } : {}),
     });
   }
 
@@ -540,6 +646,14 @@ export class RuntimeAgentSession implements AgentSession {
         }
       });
     }
+  }
+
+  /**
+   * Run end (finish, suspension, or denial): closes the run-scoped subscribers only. Subscribers that
+   * opted into `SubscribeOptions.acrossRuns` stay open for the next run of this session.
+   */
+  closeRunSubscribers(): void {
+    for (const subscriber of this.subscribers) if (!subscriber.acrossRuns) subscriber.close();
   }
 
   closeSubscribers(): void {

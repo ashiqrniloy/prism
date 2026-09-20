@@ -15,6 +15,7 @@ import type {
   MemoryVectorOrder,
   MemoryVectorRecord,
   RagAccessConstraint,
+  StoreDenial,
   VectorDeleteFilter,
   VectorQuery,
   VectorStore,
@@ -313,13 +314,8 @@ interface VectorTableDeps {
   readonly lexical: boolean;
 }
 
-function authorizationPredicate(
-  authorization: RagAccessConstraint | undefined,
-  aclTable: string,
-  tenantId: string,
-  params: unknown[],
-): string {
-  if (!authorization) return "";
+/** The grant predicate itself, so the reporting statement can negate it without rewriting it. */
+function authorizationExists(authorization: RagAccessConstraint, aclTable: string, tenantId: string, params: unknown[]): string {
   const auth = assertAccessConstraint(authorization);
   assertAuthorizationTenant(auth, tenantId);
   params.push(auth.principalId);
@@ -328,7 +324,7 @@ function authorizationPredicate(
   const groups = params.length;
   params.push(auth.accessVersion ?? null);
   const version = params.length;
-  return ` AND EXISTS (
+  return `EXISTS (
     SELECT 1 FROM ${aclTable} a
     WHERE a.tenant_id = t.tenant_id
       AND a.resource_id = t.resource_id
@@ -337,6 +333,16 @@ function authorizationPredicate(
       AND (a.principal_id = $${principal} OR (cardinality($${groups}::text[]) > 0 AND a.group_id = ANY($${groups}::text[])))
       AND ($${version}::int IS NULL OR a.access_version = $${version})
   )`;
+}
+
+function authorizationPredicate(
+  authorization: RagAccessConstraint | undefined,
+  aclTable: string,
+  tenantId: string,
+  params: unknown[],
+): string {
+  if (!authorization) return "";
+  return ` AND ${authorizationExists(authorization, aclTable, tenantId, params)}`;
 }
 
 function invalidationPredicate(invalidationTable: string): string {
@@ -361,6 +367,80 @@ function idsPredicate(ids: readonly string[] | undefined, params: unknown[]): st
   if (ids.length > HARD_LINEAGE_EDGES) throw new MemoryValidationError(`query ids exceed hard cap ${HARD_LINEAGE_EDGES}`);
   params.push([...ids]);
   return ` AND t.id = ANY($${params.length}::text[])`;
+}
+
+/** Grant lookup for the reporting statement's reason column, at any version or exactly one. */
+function grantLookup(aclTable: string, principal: number, groups: number, version?: number): string {
+  const atVersion = version === undefined ? "" : `\n           AND a.access_version = $${version}`;
+  return `SELECT 1 FROM ${aclTable} a
+         WHERE a.tenant_id = t.tenant_id
+           AND a.resource_id = t.resource_id
+           AND a.thread_id = t.thread_id
+           AND a.source_id = t.metadata->'_rag'->>'sourceId'
+           AND (a.principal_id = $${principal} OR (cardinality($${groups}::text[]) > 0 AND a.group_id = ANY($${groups}::text[])))${atVersion}`;
+}
+
+/** Mirrors the per-leg filters of `query`/`lexicalQuery`; the leg's own ACL predicate is the negated one. */
+interface DeniedSourcesQuery {
+  readonly q: Queryable;
+  readonly deps: VectorTableDeps;
+  readonly scope: { readonly tenantId: string; readonly resourceId: string; readonly threadId: string };
+  readonly authorization: RagAccessConstraint;
+  readonly ids: readonly string[] | undefined;
+  /** Lexical leg only: the same full-text filter the main statement applies. */
+  readonly text?: string;
+}
+
+/**
+ * Plan 102 Task 6: one grouped statement naming the sources the store's ACL predicate withheld for this
+ * query, with the rule that withheld them. Runs only when the caller opted in through `onDeniedSources`:
+ * the main leg keeps its predicate untouched, so a query without the callback is byte-identical and one
+ * statement cheaper (pinned by `postgres-vector.integration.test.ts`).
+ */
+async function reportDeniedSources(options: DeniedSourcesQuery): Promise<readonly StoreDenial[]> {
+  const { q, deps, scope, authorization, ids, text } = options;
+  const params: unknown[] = [scope.tenantId, scope.resourceId, scope.threadId];
+  let search = "";
+  if (text !== undefined) {
+    requireNonEmptyString(text, "text");
+    params.push(text);
+    search = `\n           AND text_tsv @@ websearch_to_tsquery('english', $${params.length})`;
+  }
+  // `authorizationExists` pushed exactly [principal, groups, version] last, so the CASE reuses its indices.
+  const acl = authorizationExists(authorization, deps.aclTable, scope.tenantId, params);
+  const classPrincipal = params.length - 2;
+  const classGroups = params.length - 1;
+  const classVersion = params.length;
+  const idsSql = idsPredicate(ids, params);
+  const inv = invalidationPredicate(deps.invalidationTable);
+  const source = "t.metadata->'_rag'->>'sourceId'";
+  const result = await q.query(
+    `SELECT ${source} AS source_id,
+            CASE
+              WHEN NOT EXISTS (
+                ${grantLookup(deps.aclTable, classPrincipal, classGroups)}
+              ) THEN 'no_grant'
+              WHEN $${classVersion}::int IS NOT NULL AND NOT EXISTS (
+                ${grantLookup(deps.aclTable, classPrincipal, classGroups, classVersion)}
+              ) THEN 'version_mismatch'
+              ELSE 'unknown'
+            END AS reason
+     FROM ${deps.table} t
+     WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3
+       AND (generation IS NULL OR generation = COALESCE(
+             (SELECT current_generation FROM ${deps.generationsTable}
+              WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3), generation))${search}
+       AND ${source} IS NOT NULL AND ${source} <> ''
+       AND NOT (${acl})${idsSql}${inv}
+     GROUP BY 1, 2`,
+    params,
+  );
+  return result.rows.map((row) =>
+    Object.freeze({
+      sourceId: String((row as { source_id: string }).source_id),
+      reason: (row as { reason: StoreDenial["reason"] }).reason,
+    }),
+  );
 }
 
 /** All vector statements bound to one Queryable — pool for direct use, PoolClient inside transactions. */
@@ -440,6 +520,11 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
          LIMIT $5`,
         params,
       );
+      if (query.onDeniedSources) {
+        query.onDeniedSources(
+          query.authorization ? await reportDeniedSources({ q, deps, scope, authorization: query.authorization, ids: query.ids }) : [],
+        );
+      }
       return result.rows.map((row) => mapVectorRow(row, Number(row.score))) as MemoryVectorHit[];
     },
 
@@ -757,6 +842,21 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
          LIMIT $5`,
         params,
       );
+      // `topK < 1` mirrors the memory adapter, which returns before it reads any row: nothing considered, nothing reported.
+      if (lexicalQuery.onDeniedSources && lexicalQuery.topK >= 1) {
+        lexicalQuery.onDeniedSources(
+          lexicalQuery.authorization
+            ? await reportDeniedSources({
+                q,
+                deps,
+                scope,
+                authorization: lexicalQuery.authorization,
+                ids: lexicalQuery.ids,
+                text: lexicalQuery.text,
+              })
+            : [],
+        );
+      }
       return result.rows.map((row) => mapVectorRow(row, Number(row.score))) as MemoryVectorHit[];
     },
   };

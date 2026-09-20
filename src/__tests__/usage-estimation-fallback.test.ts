@@ -87,6 +87,7 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
     assert.equal(turn.usage?.confidence, "medium", "calibrated family tables are medium confidence");
     assert.ok((turn.usage?.inputTokens ?? 0) > 0);
     assert.equal(turn.metadata.budgets?.inputTokens, turn.usage?.inputTokens, "the estimate feeds the turn budget snapshot");
+    assert.equal(turn.metadata.budgets?.inputTokensSource, "estimated", "the fallback labels the budget figure's provenance");
     assert.equal(turn.metadata.budgets?.runInputUsed, turn.usage?.inputTokens, "the estimate charges the run input budget");
 
     assert.equal(rows.length, 2, "provider-turn and run-total usage rows");
@@ -131,6 +132,7 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
 
     const turn = finished(events);
     assert.deepEqual(turn.usage, { inputTokens: 500, outputTokens: 7, totalTokens: 507 }, "reported usage is never overwritten");
+    assert.equal(turn.metadata.budgets?.inputTokensSource, "reported", "a provider report is labeled as such");
     assert.equal(meters.get(1)?.source, "reported");
     assert.equal(meters.get(1)?.inputTokens, 500);
     assert.equal(result?.usage?.estimated, undefined);
@@ -154,6 +156,7 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
     const turn = finished(events);
     assert.equal(turn.usage, undefined, "off means absent, never zero");
     assert.equal(turn.metadata.budgets?.inputTokens, undefined);
+    assert.equal(turn.metadata.budgets?.inputTokensSource, undefined, "no figure means no provenance label");
     assert.equal(turn.metadata.budgets?.runInputUsed, 0);
     assert.equal(rows.length, 0, "nothing estimated into the ledger");
     assert.equal(result?.usage, undefined);

@@ -216,6 +216,35 @@ const SCENARIOS: readonly PackScenario[] = [
     expectExecuted: ["shell", "write"],
   },
   {
+    // Plan 104 Task 3: an `ask` rule in a run that cannot suspend is an ordinary refusal, so the
+    // trajectory is graded as a pack denial rather than a generic tool error.
+    id: "ask-rule/non-durable-block",
+    sessionConfig: {
+      guardrailPacks: [
+        {
+          id: "approval-policy",
+          rules: [
+            {
+              id: "ask-outside-roots",
+              tool: "write",
+              argPath: "path",
+              pattern: "^/etc/",
+              action: "ask",
+              reason: "Writing outside the workspace needs approval",
+            },
+          ],
+        },
+      ],
+    },
+    script: [[toolCall("c1", "write", { path: "/etc/hosts", content: "x" }), providerDone()], FINISH],
+    turns: ["patch the host config"],
+    tools: (executed) => [writeTool(executed)],
+    forbidTools: ["write"],
+    expectScore: 0,
+    expectRules: [`${DEFAULT_PACK_RULE_PREFIX}approval-policy/ask-outside-roots`],
+    expectExecuted: [],
+  },
+  {
     id: "no-pack/control",
     sessionConfig: {},
     script: [[toolCall("c1", "shell", { command: "rm -rf ./build" }), providerDone()], FINISH],

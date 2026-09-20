@@ -1,0 +1,28 @@
+{
+  "helps": [
+    {
+      "id": "ssh-port",
+      "query": "alphazebra uniquequeryxyz which port",
+      "expected": "2222",
+      "notes": [
+        {
+          "id": "aaaaaaaaaaaa",
+          "content": "alphazebra uniquequeryxyz which port 2222"
+        }
+      ]
+    }
+  ],
+  "cannot": [
+    {
+      "id": "swallow",
+      "query": "unladenswallow airspeed",
+      "expected": "africanoreuropean",
+      "notes": [
+        {
+          "id": "bbbbbbbbbbbb",
+          "content": "alphazebra uniquequeryxyz which port 2222"
+        }
+      ]
+    }
+  ]
+}

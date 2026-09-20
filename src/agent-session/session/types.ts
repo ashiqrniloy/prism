@@ -38,6 +38,7 @@ import type {
 } from "../../contracts.js";
 import type { AgentIdentity } from "../../identity.js";
 import type { AgentInput } from "../../input.js";
+import type { PersistedGuardrailPacks } from "../../agent-run-state.js";
 import type { SecretRedactor } from "../../redaction.js";
 import type { RunLimitTracker } from "../../run-limits.js";
 import type { SessionContextSnapshot } from "../../session-stores.js";
@@ -69,6 +70,12 @@ export type SessionHost = {
   activeGuardrails?: Guardrails;
   /** Plan 092 Task 2: packs compiled once at session construction; read-only for phases. */
   readonly packGuardrails?: Guardrails;
+  /** Plan 104 T3: `ask` rules as the durable charge-time gate (`interrupt` records) and as plain
+   *  blocks for a run that cannot suspend. */
+  readonly packAskGate?: Guardrails;
+  readonly packAskBlocks?: Guardrails;
+  /** Plan 104 T2: pack refs + live pack-owned state for a durable checkpoint. */
+  serializedGuardrailPackState(): PersistedGuardrailPacks | undefined;
   activeMetadata?: Readonly<Record<string, unknown>>;
   activePromptVersion?: PromptVersionRef;
   activeLimits?: RunLimitTracker;
@@ -135,7 +142,10 @@ export type SessionHost = {
     readonly runState?: import("../../contracts.js").AgentRunState;
     readonly interruption?: import("../../contracts.js").AgentRunInterruption;
   }): AgentRunResult;
+  /** Session teardown: close every subscriber, run-scoped and `acrossRuns` alike. */
   closeSubscribers(): void;
+  /** Run end (finish, suspend, or deny): close only the subscribers that do not opt into `acrossRuns`. */
+  closeRunSubscribers(): void;
   snapshot(): Promise<SessionContextSnapshot>;
 };
 

@@ -10,7 +10,7 @@ Events are emitted by the runtime and by loops through `LoopContext.emit`, both 
 
 ## When to use it
 
-Subscribe via `session.stream()` for a single owned run, or `session.subscribe()` when a host needs a long-lived observer across runs: render streamed assistant text in a UI, react to tool execution, drive observability/telemetry, or audit artifact validation outcomes. Do not parse provider stream events directly for these — `AgentEvent` is the stable, normalized surface across providers and loops.
+Subscribe via `session.stream()` for a single owned run, or `session.subscribe({ acrossRuns: true })` when a host needs a long-lived observer across runs (a default `session.subscribe()` is run-scoped: run end — finish, suspension, or denial — closes it): render streamed assistant text in a UI, react to tool execution, drive observability/telemetry, or audit artifact validation outcomes. Do not parse provider stream events directly for these — `AgentEvent` is the stable, normalized surface across providers and loops.
 
 Do not use live `session.subscribe()` for cross-replica reconnect — use durable `AgentEventSource` below. Live subscribe remains process-local.
 
@@ -124,7 +124,7 @@ Tool execution events:
 | `tool_execution_progress` | `sessionId`, `runId`, `toolCallId`, `name`, `progress?`, `metadata?` |
 | `tool_execution_finished` | `sessionId`, `runId`, `result: ToolResult`, `metadata: ToolExecutionMetadata` |
 | `tool_execution_error` | `sessionId`, `runId`, `call: ToolCallContent`, `error: ErrorInfo`, `metadata: ToolExecutionMetadata` |
-| `tool_execution_blocked` | `sessionId`, `runId`, `toolCallId`, `name`, `reason: string`, `error: ErrorInfo`, `metadata: ToolExecutionMetadata` |
+| `tool_execution_blocked` | `sessionId`, `runId`, `toolCallId`, `name`, `reason: string` (machine code, e.g. `guardrail_blocked`), `error: ErrorInfo` (model-visible text — for a pack rule `Blocked by guardrail rule pack:<pack>/<rule>`, bounded and redacted), `metadata: ToolExecutionMetadata` |
 | `tool_narrowing_clamped` | `sessionId`, `runId`, `turn`, `dropped: readonly string[]` (names the host returned outside the run grant; no tool args) |
 
 Guardrail events:
@@ -197,11 +197,13 @@ value when the adapter saw a native reason.
 | `unknown` | Unmapped or absent native reason |
 
 `provider_turn_finished.metadata.budgets` is an O(1) snapshot from the run limit tracker:
-`{ inputTokens?, inputCap?, runInputBudget?, runInputUsed, turns, maxTurns }` — current-turn
-provider-reported input tokens against the resolved per-request input cap, cumulative run input
-against `limits.maxInputTokens`, and provider turns against `limits.maxTurns` (`null` when
-disabled). Optional fields are absent when the provider reported no usage or no input cap can be
-derived; hosts that ignore the fields are unaffected.
+`{ inputTokens?, inputTokensSource?, inputCap?, runInputBudget?, runInputUsed, turns, maxTurns }` —
+current-turn charged input tokens (provider-reported, or the labeled fallback estimate when the
+provider reported none) against the resolved per-request input cap, cumulative run input against
+`limits.maxInputTokens`, and provider turns against `limits.maxTurns` (`null` when disabled).
+`inputTokensSource` is `"reported"` or `"estimated"` and is absent together with `inputTokens`.
+Optional fields are absent when the provider reported no usage or no input cap can be derived; hosts
+that ignore the fields are unaffected.
 
 `provider_turn_started` / `provider_turn_finished` metadata includes `tools: { count, idsHash }` for the
 effective menu sent on that request (after run scoping, per-turn `toolNarrowing`, and disclosure).

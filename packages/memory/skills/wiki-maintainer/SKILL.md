@@ -68,4 +68,11 @@ Run periodically to verify wiki integrity:
 - **Broken Links**: Check unresolved relative markdown links; flag leftover `[[wikilinks]]` as non-OKF.
 - **OKF frontmatter**: Concept pages need `type`; `generated.at` must be ISO 8601 UTC.
 - **Orphan Pages**: Identify entity pages with no inbound links from other pages or `index.md`.
+- **Pruned Sources**: `prunedSources` lists entity pages whose raw sources are gone (`retireWikiSources` pruned them, a re-point target does not exist, or the raw file was deleted out-of-band). This is maintainer work, not a broken wiki: lint stays `ok` and exits 0.
 - **Gaps**: Identify frequently referenced symbols or concepts lacking dedicated entity pages.
+
+When a pruned-source report names a page:
+1. Re-read the remaining sources listed in that page's `## Raw Sources` section (and its anchors) — the page is a projection of those, not of the pruned path.
+2. Re-file the page: `wiki-refresh` re-compiles it from surviving sources, or rewrite it yourself and drop the pruned path from the source list and prose.
+3. When no sources remain, delete the page and its `entities/index.md` entry; a fully retired entity is already removed by `retireWikiSources`, so leftovers mean the page outlived its manifest entry.
+4. Never restore a pruned source by copying its content into the wiki — a revoked source stays revoked.

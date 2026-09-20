@@ -111,9 +111,46 @@ const result = await propagator.propagate("doc:erp-lead");
 
 - `propagate(sourceId)` expands the source through `_lineage.sourceIds` (`collectInvalidationIds`, depth 8) into a closed id set, tombstones **all** of it with reason `forgotten` inside one store transaction, then runs every registered handler with `{ sourceId, ids, scope, signal }`. Handlers return how many artifacts they removed (reported per `kind` in `layers`).
 - Tombstones, not deletions, for derived rows: rows stay for explainability (`recall({ explain: true })` reports the invalidation), and lineage links never dangle. Handlers own physical removal (chunk rows, files, ledger entries).
-- Retrieval is belt-and-suspenders: `retrieveContext()` reads per-scope invalidations before assembly and drops any candidate whose record id, `_lineage.sourceIds`, or `_rag.sourceId` is tombstoned — so a delete that lands after the query legs read rows still returns zero hits.
-- `HARD_PROPAGATION_EDGES` (4,096) is the one-pass privileged ceiling; over it the whole delete rejects (fail-closed), never a half-tombstoned document. Each store `invalidate` call carries at most `HARD_INVALIDATION_BATCH` (64) entries.
+- Retrieval is belt-and-suspenders: `retrieveContext()` reads per-scope invalidations before assembly and drops any candidate whose record id, `_lineage.sourceIds`, or `_rag.sourceId` is tombstoned — so a delete that lands after the query legs read rows still returns zero hits. The split matters for direct store users: the store's own SQL predicate filters by record id and `_lineage` edge, while a source's *own* chunk rows are covered by the `_rag.sourceId` rule at the retrieval boundary (or removed physically by the `rag` handler) — a raw `store.query()` is not a recall path.
+- `HARD_PROPAGATION_EDGES` (4,096) is the one-pass privileged ceiling; over it the whole delete rejects (fail-closed), never a half-tombstoned document. Each store `invalidate` call carries at most `HARD_INVALIDATION_BATCH` (64) entries. On a durable store that shape holds: PostgreSQL/pgvector tombstones 1,001 rows (1,000 derived chunk rows + the source root) in **one transaction and 22 statements** (16 of them `HARD_INVALIDATION_BATCH`-sized `INSERT`s), measured at **29–155 ms** across runs on an AMD Ryzen 9 PRO 7940HS against `pgvector/pgvector:pg16` (more under parallel load) — the durable counterpart of the in-memory suite's 1k-under-2s check, and evidence rather than a gate. Re-run it with `PRISM_TEST_POSTGRES_URL=… npm run test:postgres` (`packages/memory/src/__tests__/postgres-propagation.integration.test.ts`); the leg also proves the store's own SQL predicate hides the tombstoned rows, not only the in-app guard, and that a denied propagation opens no transaction at all.
 - Deletion is privileged: `authorization` is required, tenant-checked, and enforced through the store's existing `checkSourceAccess` ACL when the store declares `authorization: "acl"` (missing grant → `MemoryScopeError` before anything is written). Retrieval paths never construct a propagator.
+- Observational memory registers its own leg: `createObservationalMemoryDropHandler({ session, appendEntry })` (from `@arnilo/prism-memory/compaction/observational-memory`) folds the session ledger once per propagation and writes one `om.observations.dropped` entry for the observations that rest on a tombstoned record id; see [observational memory](compaction-observational-memory.md).
+
+### One wiring, every layer (host recipe)
+
+A host composes the legs itself — no facade ships until a host asks for one, because the propagator already owns handler registration, privilege, and the lineage-closed id set:
+
+```ts
+import { createDeletionPropagator, createMemoryVectorStore, listInvalidatedIds } from "@arnilo/prism-memory";
+import { createRagDeletionHandler } from "@arnilo/prism-memory/rag";
+import { createWikiDeletionHandler } from "@arnilo/prism-memory/wiki";
+import { buildObservationalMemoryContextBlocks, createObservationalMemoryDropHandler } from "@arnilo/prism-memory/compaction/observational-memory";
+import { createFabricRepointHandler } from "@arnilo/prism-memory/fabric";
+
+const store = createMemoryVectorStore();
+const propagator = createDeletionPropagator({
+  scope,
+  vectorStore: store,
+  authorization: hostVerifiedPrincipal, // required by the type; must match the scope's tenant
+  handlers: [
+    createRagDeletionHandler({ store, scope: ragScope }),
+    createWikiDeletionHandler({ workspaceRoot }),
+    createObservationalMemoryDropHandler({ session, appendEntry }),
+    createFabricRepointHandler({ scope, vectorStore: store }),
+  ],
+});
+const result = await propagator.propagate("docs/policy.md");
+// { sourceId, ids: ["docs/policy.md", "summary:docs/policy.md"], tombstoned: 2, layers: { rag: 1, wiki: 1, observational: 1, fabric: 1 }, batched: true }
+
+// Write path: the drop entry is the ledger's record of what the revocation retired (one append, ids only).
+// Read path: a projection whose ledger was never written passes the same tombstones instead.
+const blocked = await listInvalidatedIds(store, scope);
+const blocks = buildObservationalMemoryContextBlocks(entries, { invalidatedIds: blocked });
+```
+
+- Both paths keep a revoked observation out of memory, in the same rendered order: the drop entry retires every active observation whose id or `sourceEntryIds` intersect the tombstone set (`om.observations.dropped`, ids only — never observation text), and `invalidatedIds` withholds them at build time. So an id is withheld whether or not the physical drop ran, and a projection built from an older snapshot matches the post-drop one.
+- One `listInvalidatedIds` read per projection build (one scope read, `corrected` entries stay), and the recipe adds no work beyond the propagator: the same `layers` result already answers per-leg counts, so nothing is re-read to report it.
+- The fabric leg is the one that cannot be left out: a note names its document by `metadata.path`, so no `_lineage` edge exists to walk and a deleted path would otherwise keep being served. `createFabricRepointHandler()` tombstones the notes recorded against the deleted id in the same pass (plan 102 Task 11), and the same handler follows a `repointSource()` move — see the re-point section below.
 
 ## Grant recheck and re-pointing
 
@@ -136,6 +173,7 @@ await store.setSourceAccess(thread, [{ sourceId: "doc:payroll", principalIds: []
 - Fail closed, never silently: an absent/revoked/version-mismatched grant and a **thrown** store error both withhold the hits, and every withheld source is reported once through `onAccessDenied` as `{ sourceId, scope, reason: "no_grant" | "check_failed", hits, error? }` (`error` is redacted and capped at 256 chars). The query still completes with the remaining hits. Abort still aborts — it is not reclassified as a denial.
 - There is no per-request off switch: passing `authorization` is what turns the gate on, and the only knob is the audit sink. A store that declares `authorization: "acl"` without `checkSourceAccess` fails closed before ranking.
 - The store's own query/lexical predicate remains the first line of defense (unauthorized text never leaves the store); the boundary recheck also covers stores whose query leg ignores grants, and revokes that land after the query legs have read.
+- Sources the store filtered *inside* its own predicate no longer go unaudited (plan 102 Task 6). An `authorization: "acl"` store reports what it withheld per query when the caller opts in — `onDeniedSources: (denials) => …` on `query`/`lexicalQuery`, carrying `{ sourceId, reason: "no_grant" | "version_mismatch" | "unknown" }` (ids and reasons only) — and `retrieveContext()` passes that report into the same `onAccessDenied` path, so a store-filtered source produces one event per query with `hits: 0`. The report never widens the predicate, and without the callback the store's SQL is unchanged: PostgreSQL/pgvector then issues no extra statement, or exactly one grouped anti-join with it (1.2–1.4ms on the 23-row protected fixture).
 
 When a source's grant identity moves (`doc:a` → `doc:b`, a document re-filed under a new source id), `repointSource()` makes the derived artifacts follow **without re-embedding**:
 
@@ -151,15 +189,63 @@ const moved = await repointSource({
   authorization: hostVerifiedPrincipal, // must admit BOTH ids on an ACL store
   handlers: [createWikiRepointHandler({ workspaceRoot })],
 });
-// { from, to, movedChunks, rewrittenEdges, layers: { wiki: 1 }, batched: true }
+// { from, to, movedChunks, rewrittenEdges, layers: { wiki: 1 }, batched: true }  (add `cursor` for the next page)
 ```
 
-- Chunk rows keep their text, embeddings, offsets, and generation: the row id (`doc:a#0001` → `doc:b#0001`), `_rag.sourceId`, and `_rag.citationId` are rewritten, old ids are deleted, and the whole move lands in one store transaction (`batched: true`) or not at all.
+- Chunk rows keep their text, embeddings, offsets, and generation: the row id (`doc:a#0001` → `doc:b#0001`), `_rag.sourceId`, and `_rag.citationId` are rewritten, old ids are deleted, and the page lands in one store transaction (`batched: true`) or not at all — never a half-written page, and never a re-embed. A durable store keeps that promise: PostgreSQL/pgvector re-keys the chunk rows and rewrites the lineage edges in **one transaction per page**, and the grant check for both ids runs before the first transaction opens. The protected leg measures the small fixture (1 chunk row + 3 lineage edges, 3–8 ms); the 1k-row durable cost above is the propagation number.
 - Lineage edges (`_lineage.sourceIds`) on derived rows move from `from` to `to` in the same pass, so `createDeletionPropagator()` stays correct afterwards: deleting `doc:b` still tombstones the derived rows, deleting `doc:a` no longer touches them.
-- Privileged like deletion propagation: on a store that declares `authorization: "acl"` the caller must pass an `authorization` that admits **both** the source and the destination, and re-point never creates or copies grants — grant the destination first or the move fails closed. `HARD_REPOINT_RECORDS` (4,096) bounds one pass; over the cap nothing moves.
+- Privileged like deletion propagation: on a store that declares `authorization: "acl"` the caller must pass an `authorization` that admits **both** the source and the destination, and re-point never creates or copies grants — grant the destination first or the move fails closed.
+- **One call moves one page.** `HARD_REPOINT_RECORDS` (4,096) is the default `pageSize`, not a ceiling on the scope: a bigger scope returns a `cursor` and the host continues from it. Each page re-keys and rewrites inside its own transaction, so a page is atomic; the ACL check runs once per call (a resumed call re-validates rather than trusting a cached decision), and the whole scope is read per page because no store exposes a ranged read — the bound is on the write, which is where the cost was.
+
+```ts
+let cursor: string | undefined;
+let movedChunks = 0;
+do {
+  const page = await repointSource({
+    scope,
+    vectorStore: store,
+    from: "doc:a",
+    to: "doc:b",
+    authorization: hostVerifiedPrincipal,
+    handlers: [createWikiRepointHandler({ workspaceRoot })],
+    pageSize: 1_000, // ≤ HARD_REPOINT_RECORDS if you want the documented ceiling
+    ...(cursor === undefined ? {} : { cursor }),
+  });
+  movedChunks += page.movedChunks;
+  cursor = page.cursor; // present while records past the page still need moving
+} while (cursor !== undefined);
+```
+
+- The cursor is an opaque token that names the last record **id** the page considered, ascending. Records an earlier page already moved no longer touch `from`, so a **stale cursor is a no-op** (no transaction opens, no handler runs, `movedChunks: 0`), and a cursor from another scope or source pair is rejected with a validation error before the store is read — a partial move is never silently completed as a different one. Re-running a completed move with the final page's cursor reports `movedChunks: 0`.
+- Pages are id-ordered, not store-ordered, so a resume is deterministic even for a store that returns rows in an unstable order. A destination collision fails closed on whichever page it appears in (`MemoryValidationError`, before that page's write).
+- Passing `maxRecords` keeps the plan 089 all-or-nothing posture: over that many records in the scope the call rejects instead of paging. Use it when a partial move is worse than no move; `pageSize` alone is the paged mode.
 - Row ids that already exist at the destination (other than rows of the moved source) abort the move instead of overwriting (`MemoryValidationError`).
 - `createWikiRepointHandler()` moves the wiki projection: manifest `rawSources`/`anchors`, the `sourceFileHashes` entry, every page that names the old path, the index pages, and a `Repointed` log line — no recompilation. `pathsFor(sourceId → paths)` maps ids to paths when they differ.
 - Observational memory: `listInvalidatedIds(vectorStore, scope)` returns the ids a scope currently withholds (`corrected` sources stay) — pass them as `invalidatedIds` to `buildObservationalMemoryProjection()` / recall so already-emitted blocks that rest on a revoked source go stale on the next build instead of being re-injected.
+- Fabric notes (`@arnilo/prism-memory/fabric`): `createFabricRepointHandler({ scope, vectorStore })` is the same handler on **both** seams — registered for a move it rewrites `metadata.fabric.path` on `kind: "file"` notes recorded against `from` (id, text, embedding, `sourceEntryIds`, and every other field reused verbatim, so nothing is re-embedded and no `_lineage` field is invented), and registered on `createDeletionPropagator()` it tombstones the notes of a deleted path through the store's own invalidation path. Notes are store-backed metadata, not derived chunk rows, so this handler is the only path that reaches them; it reads the scope once per leg, selects on `metadata.fabric.path` (never on content), only ever touches its own scope, and reports its count as the `fabric` layer.
+
+### Renaming in batches
+
+```ts
+import { applySourceRenames } from "@arnilo/prism-memory";
+
+const { results, failures } = await applySourceRenames({
+  scope,
+  vectorStore: store,
+  authorization: hostVerifiedPrincipal,
+  renames: [
+    { from: "doc:a", to: "doc:b" },
+    { from: "doc:c", to: "doc:d" },
+  ],
+  handlers: [createWikiRepointHandler({ workspaceRoot })],
+  onRenamed: (event) => audit.write({ kind: "rag.repointed", ...event }),
+});
+```
+
+- A thin, audited loop over `repointSource()`: no second re-key path and no new store method. Every pair is handed over as-is, so `repointSource` re-checks its own ACLs (both ids) — nothing is cached or pre-authorized across renames — and each rename walks its own page loop, so a pair above one page still moves completely while every page keeps its one ACL check, one transaction, and one handler pass. The counts folded into the audit event are the rename's totals across pages, and a rename's result carries no `cursor`: a batch is all pages or an error.
+- The batch is validated as a **set before the first store read**: duplicate ids, a chained move (`a→b` then `b→c`), an overlapping move, `from === to`, or an empty id rejects the whole call with `MemoryValidationError` and writes nothing. An empty list is a no-op, not an error.
+- Fail fast by default: the first failing pair writes nothing, later pairs never start, and its original error propagates. `continueOnError: true` records it in `failures` — `{ from, to, error }` — and keeps going.
+- `onRenamed` is the audit sink, called once per rename when it settles: `{ from, to, outcome: "moved", movedChunks, rewrittenEdges, layers }`, or `{ from, to, outcome: "failed", error }` — ids and counts only, never rows or text, and `error` passes through the optional `redact` before it is capped at 256 chars. A pair a fail-fast run never started is not audited; an abort stops the batch and is never recorded as a rename failure.
 
 ## Local reranker
 
@@ -174,7 +260,8 @@ const result = await retrieveContext("How do approvals work?", { embedder, store
 ```
 
 - `resolveReranker({ kind: "local" })` is the zero-config path. The model runtime is a host seam exactly like `Embedder`: `createLocalReranker({ model?, runtime?, onLoad?, cacheDir?, dtype?, device?, allowRemoteModels? })`. Pass `runtime: { load(model) → { id, score({ query, documents, signal }) } }` to inject a runtime the host already owns (transformers.js, onnxruntime-node, llama.cpp). With no `runtime`, the built-in loader resolves `@huggingface/transformers` at first use — the package declares no inference dependency (no new dependency name in any manifest) and nothing resolves it at build/install time.
-- Sizing trade-off: model download is one-time and host-cached, per-query latency is CPU-bound and grows with candidates × tokens. A bge-reranker-base class model (≈1.1 GB fp32 / ≈280 MB int8, `dtype: "q8"`) reranks top-50 in tens to low hundreds of ms on CPU dev hardware — measure it with your own runtime and weight cache, then keep `topK`/`queryCandidates` near what recall actually needs; the package guarantees the plumbing (one lazy load, one batched score call per rerank), not the model's speed. The hosted/TEI adapters stay for scale (higher throughput, no local RAM, no download).
+- Sizing trade-off: the download is one-time and host-cached, and per-query latency is CPU-bound and grows with candidates × tokens, so keep `topK`/`queryCandidates` near what recall actually needs — the reranker reorders what retrieval returned, it cannot recover a chunk the candidate pool never returned. Measured on the phase 102 corpus (24 queries / 96 chunks: one answering chunk + three mention-only chunks per query, k=5, `Xenova/bge-reranker-base` q8 on x86 CPU, deterministic lexical `createHashEmbedder` baseline, vector-only): recall@5 **0.21 → 0.79**, top-50 median **119–289 ms**, and at the package default 20-candidate pool recall@20 was 0.63 before reranking — corpus, misses, pool-bound numbers, latency, and cache state live in [`docs/_evidence/phase102-local-rerank-latency.md`](_evidence/phase102-local-rerank-latency.md), regenerated by `PRISM_TEST_LOCAL_RERANK=1 npm run test:live`. Treat the numbers as one data point on one machine, not a ceiling: dtype, device, and the embedder move them (a semantic embedder starts higher and gains less). The package guarantees the plumbing (one lazy load, one batched score call per rerank), not the model's speed. The hosted/TEI adapters stay for scale (higher throughput, no local RAM, no download).
+- Host defaults: `dtype: "q8"` with `device: "cpu"` on x86 — fp32 weights are roughly 4× the download for no measurable ranking gain in this size class, and fp16/GPU is worth opting into only when the host already provisions it. Weights are cached per host: pass one `cacheDir` (e.g. `~/.cache/prism/models`) and the runtime lays out one subdirectory per model id, so a second model or a second process reuses the same files — point local embedders running through the same runtime at that directory too. With `cacheDir` omitted the runtime's own default cache applies (inside the installed package). On a cache miss the model is downloaded once into that directory and later runs stay on disk: add `allowRemoteModels: false` on an offline host to fail instead of reaching the model registry, which is exactly what the live leg's second pass proves.
 - Cheap by construction: the model loads lazily once per reranker instance, `score` is called once per rerank with every candidate (never one call per document), and `onLoad({ model, loadMs })` is the only opt-in observability — no document text is ever logged. Zero network after load; the built-in loader only touches the model registry at load time, and `allowRemoteModels: false` pins it to local files.
 - Failure is loud: a missing runtime, an unreachable model, or a runtime that returns no per-document scores throws a redacted `RagValidationError` naming the model and the install path (`npm i @huggingface/transformers` or pass `{ runtime }`). There is deliberately **no** silent lexical fallback.
 - `rerankHits` is unchanged and still owns the caps and the trust boundary: local scores reorder the same `RagHit` references (provenance/trust untouched), byte/ms/concurrency limits apply, and abort/timeout/malformed-score cases fail closed.

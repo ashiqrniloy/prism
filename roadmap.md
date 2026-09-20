@@ -8,7 +8,7 @@ Current release: **0.9.0** — eleven publishable manifests. Attention budget ax
 
 Status: **published 2026-09-20** (099 Task 4; registry write operator-authorized).
 
-Next: [097](plans/097-Trajectory-Export-For-Co-Training.md) trajectory export folds into the 0.10.0 line ([105](plans/105-Scoped-Agent-Memory-And-Release-0-10-0.md)); R09 delegated coding runtimes, R12 native Vertex, and R13 remote clients remain later-release items if demand returns.
+Next: [097](plans/097-Trajectory-Export-For-Co-Training.md) trajectory export folds into the 0.10.0 line ([106](plans/106-Hook-Lifecycle-Completion.md) owns the cut; [105](plans/105-Scoped-Agent-Memory-And-Release-0-10-0.md) scoped memory already shipped); R09 delegated coding runtimes, R12 native Vertex, and R13 remote clients remain later-release items if demand returns.
 
 This roadmap replaces the previous historical roadmap in full. It preserves the rationale and priorities from the 2026-09-13 review for future reference. Historical implementation evidence remains in [plans](plans/README.md), [CHANGELOG](CHANGELOG.md), and [documentation history](docs/history/README.md); it is not repeated here.
 

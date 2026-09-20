@@ -39,6 +39,29 @@ const MAX_ARG_STRING_BYTES = 16 * 1024;
 const MAX_PACK_NAME_BYTES = 128;
 const OBSERVE_RULE_ID = "observe";
 
+/** Bytes allowed for a rule-naming refusal line, so no rule text can grow a model or host message. */
+const MAX_GUARDRAIL_REFUSAL_BYTES = 200;
+
+/**
+ * Plan 104 T4/T6: the bounded, redacted refusal line for a terminal record that came from a compiled
+ * pack rule — `<prefix> by guardrail rule pack:<pack>/<rule>`, plus the pack's own reason when it set
+ * one — or `undefined` for any other guardrail, so the caller keeps its own neutral text. Only the
+ * compiler writes the `pack`/`rule` metadata, so a host-written guardrail named `pack:…` is never
+ * presented as a pack rule. Reasons are redacted where the record is built, pack names are
+ * compiler-bounded to 128 bytes (the identity always survives the cap), and a long reason is
+ * truncated, so the same derivation serves the tool refusal and decision-time revalidation.
+ */
+export function guardrailRefusalText(record: GuardrailRecord, prefix = "Blocked"): string | undefined {
+  const pack = record.metadata?.pack;
+  const rule = record.metadata?.rule;
+  if (typeof pack !== "string" || typeof rule !== "string") return undefined;
+  const line = `${prefix} by guardrail rule ${record.guardrail}`;
+  // The compiler synthesizes `guardrail pack rule <pack>/<rule>` when the rule set no reason; the
+  // identity already implies it, so only a real reason is appended.
+  const text = record.reason && record.reason !== `guardrail pack rule ${pack}/${rule}` ? `${line}: ${record.reason}` : line;
+  return boundText(text, MAX_GUARDRAIL_REFUSAL_BYTES);
+}
+
 export class GuardrailError extends Error {
   readonly code: string;
   readonly record: GuardrailRecord;
@@ -122,6 +145,32 @@ export interface GuardrailPackRow {
   readonly revision: string | null;
 }
 
+/** Plan 104 Task 2: one replayable pack row of a durable checkpoint (`id`, resolved version, host options). */
+interface GuardrailPackRefRow {
+  readonly id: string;
+  readonly version: number;
+  /** Host options the pack was compiled with, replayed verbatim on resume so enforcement is identical. */
+  readonly options?: Readonly<Record<string, unknown>>;
+  /**
+   * Plan 104 T3: the host's own rule list for an inline pack. Patterns are data and ride the
+   * checkpoint; a `deny` predicate or a `RegExp` pattern cannot round-trip and is refused at save.
+   */
+  readonly rules?: readonly GuardrailRule[];
+}
+
+/** Plan 104 Task 2: a compile result that can round-trip through a durable checkpoint. */
+interface CompiledGuardrailPacks {
+  readonly guardrails: Guardrails | undefined;
+  /** Rows a durable checkpoint replays; empty when no packs are configured. */
+  readonly packs: readonly GuardrailPackRefRow[];
+  /** Plan 104 T3: `ask` rules as the charge-time durable gate — a match records `interrupt`. */
+  readonly askGate?: Guardrails;
+  /** Plan 104 T3: the same rules as plain blocks, merged into a run that cannot suspend. */
+  readonly askBlocks?: Guardrails;
+  /** Pack-owned state snapshot (`{ <packId>: <pack state> }`); `undefined` when nothing needs persisting. */
+  readonly snapshotState: () => Record<string, Readonly<Record<string, unknown>>> | undefined;
+}
+
 interface ResolvedRule {
   readonly rule: GuardrailRule;
   readonly action: GuardrailRuleAction;
@@ -135,7 +184,16 @@ interface ResolvedPack {
   readonly version: number;
   readonly rules: readonly ResolvedRule[];
   readonly observe?: GuardrailPackRules["observe"];
+  /** Live pack-local state record shared by this pack's rules and observer. */
+  readonly state: Record<string, unknown>;
+  readonly stateCodec?: NonNullable<GuardrailPackRules["state"]>;
+  /** Checkpoint row for this pack. */
+  readonly row: GuardrailPackRefRow;
+  /** Inline-rule packs cannot be replayed from a checkpoint and refuse to snapshot. */
+  readonly inline: boolean;
 }
+
+const EMPTY_COMPILED_PACKS: CompiledGuardrailPacks = { guardrails: undefined, packs: [], snapshotState: () => undefined };
 
 /**
  * Compiles `guardrailPacks` config onto the existing tool interception seams: one `tool_input`
@@ -147,16 +205,64 @@ export function compileGuardrailPacks(
   refs: readonly GuardrailPackRef[] | undefined,
   registry: ReadonlyMap<string, import("./guardrail-packs/types.js").GuardrailPackDefinition> = BUILT_IN_GUARDRAIL_PACKS,
 ): Guardrails | undefined {
-  const packs = resolveGuardrailPacks(refs, registry);
-  if (packs.length === 0) return undefined;
+  return compileGuardrailPacksWithState(refs, registry).guardrails;
+}
+
+/**
+ * Plan 104 Task 2: the internal compile entry behind `compileGuardrailPacks`. Passing `initial`
+ * marks a durable restore — rows must then come from the installed registry, match its version, and
+ * parse through the pack's own state codec, so a mismatch fails closed instead of restoring a
+ * weaker policy. `snapshotState` is the checkpoint-side counterpart.
+ */
+export function compileGuardrailPacksWithState(
+  refs: readonly GuardrailPackRef[] | undefined,
+  registry: ReadonlyMap<string, import("./guardrail-packs/types.js").GuardrailPackDefinition> = BUILT_IN_GUARDRAIL_PACKS,
+  initial?: Readonly<Record<string, unknown>>,
+): CompiledGuardrailPacks {
+  const packs = resolveGuardrailPacks(refs, registry, initial);
+  if (packs.length === 0) return EMPTY_COMPILED_PACKS;
   const toolInput: Guardrail<"tool_input">[] = [];
   const toolOutput: Guardrail<"tool_output">[] = [];
+  const askGate: Guardrail<"tool_input">[] = [];
+  const askBlocks: Guardrail<"tool_input">[] = [];
   for (const pack of packs) {
-    const state: Record<string, unknown> = {};
-    if (pack.observe) toolOutput.push(observeGuardrail(pack, pack.observe, state));
-    for (const resolved of pack.rules) toolInput.push(ruleGuardrail(pack, resolved, state));
+    if (pack.observe) toolOutput.push(observeGuardrail(pack, pack.observe, pack.state));
+    for (const resolved of pack.rules) {
+      if (resolved.action === "ask") {
+        // Plan 104 T3: `ask` is not an ordinary stage decision. A run that can suspend gates the
+        // call at charge time (`interrupt` is the record meaning "awaiting a decision"), while a run
+        // that cannot suspend evaluates the same rule as a plain block through `activeGuardrails`.
+        askGate.push(ruleGuardrail(pack, resolved, pack.state, "interrupt"));
+        askBlocks.push(ruleGuardrail(pack, resolved, pack.state, "block"));
+        continue;
+      }
+      toolInput.push(ruleGuardrail(pack, resolved, pack.state));
+    }
   }
-  return toolOutput.length > 0 ? { toolInput, toolOutput } : { toolInput };
+  return {
+    guardrails: toolOutput.length > 0 ? { toolInput, toolOutput } : { toolInput },
+    packs: packs.map((pack) => pack.row),
+    ...(askGate.length > 0 ? { askGate: { toolInput: askGate }, askBlocks: { toolInput: askBlocks } } : {}),
+    snapshotState: () => {
+      const state: Record<string, Readonly<Record<string, unknown>>> = {};
+      for (const pack of packs) {
+        // Plan 104 T3: an inline pack now rides the checkpoint as rules, so only the rule shapes
+        // that cannot round-trip matter: a closure has no JSON form, and a `RegExp` serializes to
+        // `{}`, which would restore as an invalid (or, worse, absent) pattern.
+        const unpersistable = pack.inline
+          ? pack.rules.find((resolved) => resolved.rule.deny !== undefined || resolved.rule.pattern instanceof RegExp)
+          : undefined;
+        if (unpersistable) {
+          throw new GuardrailPackError(
+            `guardrail pack "${pack.id}" rule "${unpersistable.rule.id}" cannot be persisted (deny predicate or RegExp pattern); use a pattern string or a registered pack id when \`persistSessionState\` is on`,
+          );
+        }
+        const snapshot = pack.stateCodec?.snapshot(pack.state);
+        if (snapshot !== undefined) state[pack.id] = snapshot;
+      }
+      return Object.keys(state).length > 0 ? state : undefined;
+    },
+  };
 }
 
 /** Stable identity rows for the same config `compileGuardrailPacks` accepts (no state, no guardrails built). */
@@ -184,10 +290,12 @@ function packRuleName(packId: string, ruleId: string): string {
 function resolveGuardrailPacks(
   refs: readonly GuardrailPackRef[] | undefined,
   registry: ReadonlyMap<string, import("./guardrail-packs/types.js").GuardrailPackDefinition>,
+  initial?: Readonly<Record<string, unknown>>,
 ): readonly ResolvedPack[] {
   if (refs === undefined) return [];
   if (!Array.isArray(refs)) throw new GuardrailPackError("guardrailPacks must be an array of pack ids or pack input objects");
   if (refs.length > MAX_GUARDRAIL_PACKS) throw new GuardrailPackError(`guardrailPacks accepts at most ${MAX_GUARDRAIL_PACKS} packs`);
+  const restoring = initial !== undefined;
   const seenPacks = new Set<string>();
   return refs.map((ref) => {
     const input: GuardrailPackInput = (typeof ref === "string" ? { id: ref } : ref) ?? {};
@@ -201,14 +309,30 @@ function resolveGuardrailPacks(
     }
     const definition = registry.get(input.id);
     if (definition === undefined && input.rules === undefined) {
-      throw new GuardrailPackError(`unknown guardrail pack "${input.id}"; known packs: ${[...registry.keys()].join(", ") || "none"}`);
+      throw unknownGuardrailPack(input.id, registry);
+    }
+    // A restored checkpoint replays rows, so a registered id must still match its installed version
+    // while an inline pack needs its pattern rules back (a closure cannot ride a checkpoint, and a
+    // pack replaying without it would enforce less than it did).
+    if (restoring) {
+      if (input.rules === undefined) {
+        if (definition === undefined) throw unknownGuardrailPack(input.id, registry);
+        if (input.version !== definition.version) {
+          throw new GuardrailPackError(
+            `guardrail pack "${input.id}" was persisted at version ${input.version} but the installed version is ${definition.version}`,
+          );
+        }
+      } else if (input.rules.some((rule) => rule?.deny !== undefined)) {
+        throw new GuardrailPackError(`persisted guardrail pack "${input.id}" carries a deny predicate; only pattern rules can be restored`);
+      }
     }
     let built: GuardrailPackRules;
     if (input.rules !== undefined) {
       if (input.options !== undefined) throw new GuardrailPackError(`inline guardrail pack "${input.id}" cannot set options`);
       built = { rules: input.rules };
     } else {
-      built = definition!.build(Object.freeze({ ...input.options }));
+      if (definition === undefined) throw unknownGuardrailPack(input.id, registry);
+      built = definition.build(Object.freeze({ ...input.options }));
     }
     if (!built || !Array.isArray(built.rules) || built.rules.length === 0) {
       throw new GuardrailPackError(`guardrail pack "${input.id}" must declare at least one rule`);
@@ -219,18 +343,43 @@ function resolveGuardrailPacks(
     if (built.observe !== undefined && typeof built.observe !== "function") {
       throw new GuardrailPackError(`guardrail pack "${input.id}" observe must be a function`);
     }
+    if (built.state !== undefined && (typeof built.state.snapshot !== "function" || typeof built.state.parse !== "function")) {
+      throw new GuardrailPackError(`guardrail pack "${input.id}" state codec must declare snapshot and parse`);
+    }
     const seenRules = new Set<string>();
     const rules = built.rules.map((rule) => resolveRule(input.id, rule, seenRules));
     if (built.observe && byteLength(packRuleName(input.id, OBSERVE_RULE_ID)) > MAX_PACK_NAME_BYTES) {
       throw new GuardrailPackError(`guardrail pack "${input.id}" name exceeds ${MAX_PACK_NAME_BYTES} bytes`);
     }
+    const version = input.version ?? definition?.version ?? 1;
+    const state: Record<string, unknown> = {};
+    const persisted = initial === undefined ? undefined : initial[input.id];
+    if (persisted !== undefined) {
+      if (built.state === undefined) {
+        throw new GuardrailPackError(`guardrail pack "${input.id}" has persisted state but declares no state codec`);
+      }
+      Object.assign(state, built.state.parse(persisted));
+    }
     return {
       id: input.id,
-      version: input.version ?? definition?.version ?? 1,
+      version,
       rules,
+      state,
+      inline: input.rules !== undefined,
+      row: {
+        id: input.id,
+        version,
+        ...(input.options !== undefined ? { options: input.options } : {}),
+        ...(input.rules !== undefined ? { rules: input.rules } : {}),
+      },
       ...(built.observe ? { observe: built.observe } : {}),
+      ...(built.state !== undefined ? { stateCodec: built.state } : {}),
     };
   });
+}
+
+function unknownGuardrailPack(id: string, registry: ReadonlyMap<string, unknown>): GuardrailPackError {
+  return new GuardrailPackError(`unknown guardrail pack "${id}"; known packs: ${[...registry.keys()].join(", ") || "none"}`);
 }
 
 function resolveRule(packId: string, rule: GuardrailRule, seenRules: Set<string>): ResolvedRule {
@@ -241,8 +390,13 @@ function resolveRule(packId: string, rule: GuardrailRule, seenRules: Set<string>
   if (seenRules.has(rule.id)) throw new GuardrailPackError(`${where} has a duplicate rule id "${rule.id}"`);
   seenRules.add(rule.id);
   const action = rule.action ?? "deny";
-  if (action !== "deny" && action !== "tripwire") {
-    throw new GuardrailPackError(`${where} rule "${rule.id}" action must be "deny" or "tripwire" ("ask" has no deterministic seam)`);
+  if (action !== "deny" && action !== "tripwire" && action !== "ask") {
+    throw new GuardrailPackError(`${where} rule "${rule.id}" action must be "deny", "tripwire", or "ask"`);
+  }
+  if (action === "ask" && rule.deny !== undefined) {
+    throw new GuardrailPackError(
+      `${where} rule "${rule.id}" action "ask" requires "pattern": an opaque deny predicate cannot raise an approval`,
+    );
   }
   const hasPattern = rule.pattern !== undefined;
   const hasDeny = rule.deny !== undefined;
@@ -290,7 +444,12 @@ function compileRulePattern(packId: string, ruleId: string, pattern: string | Re
   }
 }
 
-function ruleGuardrail(pack: ResolvedPack, resolved: ResolvedRule, state: Record<string, unknown>): Guardrail<"tool_input"> {
+function ruleGuardrail(
+  pack: ResolvedPack,
+  resolved: ResolvedRule,
+  state: Record<string, unknown>,
+  askAction: "interrupt" | "block" = "interrupt",
+): Guardrail<"tool_input"> {
   return {
     name: packRuleName(pack.id, resolved.rule.id),
     revision: packRevision(pack),
@@ -303,8 +462,8 @@ function ruleGuardrail(pack: ResolvedPack, resolved: ResolvedRule, state: Record
         : patternMatches(resolved.regex!, argumentStrings(args, resolved.rule.argPath));
       if (!matched) return { action: "allow" };
       return {
-        // Pack vocabulary is `deny`; the core guardrail action for a denial is `block`.
-        action: resolved.action === "deny" ? "block" : "tripwire",
+        // Pack vocabulary is `deny`/`ask`; the core guardrail actions are `block`/`interrupt`.
+        action: resolved.action === "deny" ? "block" : resolved.action === "ask" ? askAction : "tripwire",
         reason: resolved.reason,
         metadata: { pack: pack.id, rule: resolved.rule.id, version: pack.version },
       };

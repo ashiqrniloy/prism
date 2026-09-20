@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { agentFingerprint, BUILT_IN_LOOP_REVISIONS } from "./agent-run-state.js";
-import type { Agent, AgentSessionConfig, GuardrailStage, Guardrails, RunOptions, ToolDefinition } from "./contracts.js";
+import type { Agent, AgentSessionConfig, GuardrailPackRef, GuardrailStage, Guardrails, RunOptions, ToolDefinition } from "./contracts.js";
 import { describeGuardrailPacks } from "./guardrails.js";
 import { describeStorage } from "./host-composition.js";
 import { canonicalizeJsonSchema } from "./providers/schema.js";
@@ -74,6 +74,11 @@ export interface RunBundleSnapshotInput {
   readonly run?: RunOptions;
   /** Optional memory store instance; only its kind/durability label is read, never its contents. */
   readonly memory?: unknown;
+  /**
+   * Plan 104 Task 2: effective pack refs (`session.guardrailPackRefs`) to report instead of the
+   * caller-supplied `config.guardrailPacks` — a resumed session's enforced rows.
+   */
+  readonly packs?: readonly GuardrailPackRef[];
 }
 
 /**
@@ -122,7 +127,10 @@ export function snapshotRunBundle(input: RunBundleSnapshotInput): RunBundleSnaps
       effect: tool.effect === undefined ? null : typeof tool.effect === "function" ? "classifier" : tool.effect.kind,
     })),
     activeSkills: run?.activeSkills ?? null,
-    guardrails: [...guardrailRows(config.guardrails, run?.guardrails), ...describeGuardrailPacks(input.config?.guardrailPacks)],
+    guardrails: [
+      ...guardrailRows(config.guardrails, run?.guardrails),
+      ...describeGuardrailPacks(input.packs ?? input.config?.guardrailPacks),
+    ],
     loop: loopIdentity(effectiveLoop),
     thinkingLevel: run?.thinkingLevel ?? config.thinkingLevel ?? null,
     limits: resolveRunLimits(config.limits, run?.limits),

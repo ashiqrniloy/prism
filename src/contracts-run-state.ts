@@ -8,6 +8,7 @@ import type {
   ContentBlock,
   ContextMeter,
   ErrorInfo,
+  GuardrailPackRef,
   JsonObject,
   JsonValue,
   Message,
@@ -53,6 +54,13 @@ export interface PendingDecision {
   readonly reason: string;
   /** Typed payload contract for elicitation decisions. */
   readonly elicitationSchema?: JsonObject;
+  /**
+   * Plan 104 T3: pack `ask` rule that gated this call as `pack:<pack>/<rule>` (bounded by the
+   * compile-time id limits), present only when a pack rule raised the decision.
+   */
+  readonly guardrail?: string;
+  /** Plan 104 T3: machine-readable ids behind `guardrail`, so a host never parses the name. */
+  readonly guardrailRule?: { readonly pack: string; readonly rule: string };
   /** Delegation chain, root-first; core-written, never client-supplied. */
   readonly attribution?: { readonly path: readonly string[] };
 }
@@ -63,6 +71,8 @@ export interface AgentRunInterruption {
   readonly reason: string;
   readonly toolCallId?: string;
   readonly toolName?: string;
+  /** Plan 104 T3: the pack rule that raised this suspension (`pack:<pack>/<rule>`), when one did. */
+  readonly guardrail?: string;
   /** All unresolved approval requests of this suspension; absent for legacy single approvals. */
   readonly pendingDecisions?: readonly PendingDecision[];
 }
@@ -412,6 +422,12 @@ export interface SteerOptions {
 
 export interface AgentSession {
   readonly id: string;
+  /**
+   * Plan 104 Task 2: guardrail pack refs this session enforces (the restored rows after a durable
+   * resume); `undefined` when it enforces none. Pass to `snapshotRunBundle({ packs })` for the
+   * recorded identity that matches enforcement.
+   */
+  readonly guardrailPackRefs?: readonly GuardrailPackRef[];
   /** Current branch leaf entry id; advances on every append/run and is re-pointed by `checkout`.
    *  Undefined until the first entry lands (a fresh session with no history). */
   readonly leafId: string | undefined;
@@ -423,9 +439,18 @@ export interface AgentSession {
    * Fails closed when no run is active or the pending queue exceeds caps.
    */
   steer(input: string | Message | readonly Message[], options?: SteerOptions): void;
-  /** Subscribe first, then start exactly one run and yield only that run's events until it terminates. */
+  /**
+   * Subscribe first, then start exactly one run and yield only that run's events until it terminates.
+   * This subscription belongs to `stream()`: it is closed when the owned run settles (so a pre-flight
+   * rejection unblocks the consumer instead of parking it behind a run that never emits).
+   */
   stream(input: string | Message | readonly Message[], options?: RunOptions & SubscribeOptions): AsyncIterable<AgentEvent>;
   compact(options?: CompactionOptions): Promise<CompactionResult>;
+  /**
+   * Subscribe to this session's live events. A run-scoped subscriber (default) is closed when the run
+   * ends, suspends, or is denied; `SubscribeOptions.acrossRuns: true` keeps it open across runs until
+   * `subscription.close()`, `closeSubscribers()`, or a queue overflow closes it.
+   */
   subscribe(options?: SubscribeOptions): AsyncIterable<AgentEvent>;
   abort(reason?: unknown): void;
   entries(): Promise<readonly SessionEntry[]>;

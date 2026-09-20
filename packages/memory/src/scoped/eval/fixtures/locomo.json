@@ -1,0 +1,12 @@
+{
+  "notes": [
+    {
+      "id": "dddddddddddd",
+      "content": "tuesdaysession wiki lives in docs wiki md not scoped facts"
+    }
+  ],
+  "questions": [
+    { "query": "tuesdaysession wiki lives where", "expectedId": "dddddddddddd" },
+    { "query": "tuesdaysession wiki lives where", "expectedId": "eeeeeeeeeeee" }
+  ]
+}

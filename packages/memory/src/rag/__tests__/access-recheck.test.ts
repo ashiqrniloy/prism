@@ -10,7 +10,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createHashEmbedder, createMemoryVectorStore, type MemoryScope, type RagAccessConstraint, type VectorStore } from "../../index.js";
-import { type AccessDenial, chunkText, createAccessRecheck, indexChunks, type Reranker, type RagHit, retrieveContext } from "../index.js";
+import { type AccessDenial, chunkText, createAccessRecheck, indexChunks, type RagHit, type Reranker, retrieveContext } from "../index.js";
+
 const scope = { tenantId: "tenant-a", resourceId: "docs", corpusId: "handbook" };
 const thread: Required<MemoryScope> = { tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId };
 const alice: RagAccessConstraint = { principalId: "alice", tenantId: scope.tenantId };
@@ -113,6 +114,87 @@ describe("mid-turn source-grant recheck", () => {
     assert.equal(denials[0]!.reason, "no_grant");
     assert.ok(denials[0]!.hits >= 1);
     assert.equal(denials[0]!.scope.threadId, scope.corpusId);
+  });
+
+  it("raises the boundary's own denial event for a source the store's predicate withheld", async () => {
+    const embedder = createHashEmbedder({ dimensions: 8 });
+    const store = createMemoryVectorStore();
+    await indexChunks({
+      chunks: [
+        ...chunkText(Array.from({ length: 20 }, (_, index) => `revoked row ${index + 1} about the approval policy`).join(" "), {
+          sourceId: "doc:b",
+        }),
+        ...chunkText("approval policy handbook for engineers", { sourceId: "doc:a" }),
+      ],
+      embedder,
+      store,
+      scope,
+    });
+    await store.setSourceAccess(thread, [{ sourceId: "doc:a", principalIds: ["alice"], accessVersion: 1 }]);
+
+    // Store-filtered: both legs withhold doc:b inside their own predicate, so the boundary never sees a
+    // hit for it. 20 withheld rows of one source are one event, not one per row or one per leg.
+    const events: AccessDenial[] = [];
+    const found = await retrieveContext("approval policy handbook", {
+      embedder,
+      store,
+      scope,
+      lexical: "fts",
+      authorization: alice,
+      onAccessDenied: (denial) => events.push(denial),
+    });
+    assert.ok(found.hits.some((hit) => hit.sourceId === "doc:a"));
+    assert.equal(
+      found.hits.some((hit) => hit.sourceId === "doc:b"),
+      false,
+    );
+    assert.equal(events.length, 1);
+    const [event] = events;
+    assert.ok(event);
+    assert.equal(event.sourceId, "doc:b");
+    assert.equal(event.reason, "no_grant");
+    assert.equal(event.hits, 0, "no hit existed for the boundary to withhold");
+    assert.equal(event.scope.threadId, scope.corpusId);
+    assert.equal("error" in event, false);
+
+    // Parity: a store that filters nothing raises the same event for the same source at the boundary.
+    const lexicalQuery = store.lexicalQuery;
+    assert.ok(lexicalQuery);
+    const blind: VectorStore = {
+      ...store,
+      async query(input) {
+        return store.query({ ...input, authorization: undefined });
+      },
+      async lexicalQuery(input) {
+        return lexicalQuery({ ...input, authorization: undefined });
+      },
+    };
+    const boundary: AccessDenial[] = [];
+    await retrieveContext("approval policy handbook", {
+      embedder,
+      store: blind,
+      scope,
+      lexical: "fts",
+      authorization: alice,
+      onAccessDenied: (denial) => boundary.push(denial),
+    });
+    assert.equal(boundary.length, 1);
+    const [boundaryEvent] = boundary;
+    assert.ok(boundaryEvent);
+    assert.ok(boundaryEvent.hits > 0);
+    assert.deepEqual({ ...boundaryEvent, hits: 0 }, event, "only the withheld-hit count can differ");
+
+    // Opt-in: without an audit sink the store is never asked for a report, so it pays nothing for one.
+    const asked: unknown[] = [];
+    const watched: VectorStore = {
+      ...store,
+      async query(input) {
+        asked.push(input.onDeniedSources);
+        return store.query(input);
+      },
+    };
+    await retrieveContext("approval policy handbook", { embedder, store: watched, scope, lexical: "off", authorization: alice });
+    assert.deepEqual(asked, [undefined]);
   });
 
   it("rechecks again after rerank, so a revoke during rerank cannot leak the hit", async () => {

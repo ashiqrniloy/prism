@@ -10,6 +10,8 @@ import type {
   MemoryVectorOrder,
   MemoryVectorRecord,
   RagAccessConstraint,
+  StoreDenial,
+  StoreDenialReason,
   VectorDeleteFilter,
   VectorQuery,
   VectorStore,
@@ -141,6 +143,37 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
     return grant !== undefined && grantAllows(grant, authorization);
   }
 
+  /**
+   * Plan 102 Task 6: the store-level denial report. The reference store already sees every row, so it
+   * classifies what its own ACL check refused by construction — `no_grant` when no grant covers this
+   * principal, `version_mismatch` when one exists at another `accessVersion`. Rows without a
+   * `_rag.sourceId` cannot be attributed to a source and are left out of the report.
+   */
+  function createDenialReporter(
+    grants: Map<string, StoredGrant>,
+    scope: { readonly tenantId: string; readonly resourceId: string; readonly threadId: string },
+    authorization: RagAccessConstraint | undefined,
+    onDenied: ((denials: readonly StoreDenial[]) => void) | undefined,
+  ): { note(record: MemoryVectorRecord): void; flush(): void } | undefined {
+    if (!authorization || !onDenied) return undefined;
+    const denials = new Map<string, StoreDenialReason>();
+    return {
+      note(record: MemoryVectorRecord): void {
+        const sourceId = sourceIdFromRecord(record);
+        if (!sourceId || denials.has(sourceId)) return;
+        const grant = grants.get(grantKey(scope.tenantId, scope.resourceId, scope.threadId, sourceId));
+        const reason: StoreDenialReason =
+          grant !== undefined && authorization.accessVersion !== undefined && grant.accessVersion !== authorization.accessVersion
+            ? "version_mismatch"
+            : "no_grant";
+        denials.set(sourceId, reason);
+      },
+      flush(): void {
+        onDenied(Object.freeze([...denials].map(([sourceId, reason]) => Object.freeze({ sourceId, reason }))));
+      },
+    };
+  }
+
   function createStore(
     target: Map<string, MemoryVectorRecord>,
     pointers: Map<string, bigint | number>,
@@ -185,6 +218,7 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
         const authorization = query.authorization ? assertAccessConstraint(query.authorization) : undefined;
         if (authorization) assertAuthorizationTenant(authorization, scope.tenantId);
         const blocked = scopeInvalidations(invTable, scope.tenantId, scope.resourceId, scope.threadId);
+        const denied = createDenialReporter(grants, scope, authorization, query.onDeniedSources);
         const hits: MemoryVectorHit[] = [];
         for (const record of target.values()) {
           if (record.tenantId !== scope.tenantId || record.resourceId !== scope.resourceId || record.threadId !== scope.threadId) continue;
@@ -192,10 +226,14 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
           // Generation visibility: legacy rows stay retrievable; generated rows only at the current generation.
           if (currentValue !== undefined && record.generation !== undefined && Number(record.generation) !== currentValue) continue;
           if (!idsAllowed(query.ids, record.id)) continue;
-          if (!recordAllowed(record, scope.tenantId, scope.resourceId, scope.threadId, authorization, grants)) continue;
           if (recordBlocked(record, blocked)) continue;
+          if (!recordAllowed(record, scope.tenantId, scope.resourceId, scope.threadId, authorization, grants)) {
+            denied?.note(record);
+            continue;
+          }
           hits.push({ ...record, score: cosineSimilarity(query.embedding, record.embedding) });
         }
+        denied?.flush();
         hits.sort((a, b) => b.score - a.score || a.sequence - b.sequence || a.id.localeCompare(b.id));
         return hits.slice(0, query.topK);
       },
@@ -283,20 +321,25 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
         const authorization = lexicalQuery.authorization ? assertAccessConstraint(lexicalQuery.authorization) : undefined;
         if (authorization) assertAuthorizationTenant(authorization, required.tenantId);
         const blocked = scopeInvalidations(invTable, required.tenantId, required.resourceId, required.threadId);
+        const denied = createDenialReporter(grants, required, authorization, lexicalQuery.onDeniedSources);
         const scored: MemoryVectorHit[] = [];
         for (const record of target.values()) {
           if (record.tenantId !== required.tenantId || record.resourceId !== required.resourceId || record.threadId !== required.threadId) {
             continue;
           }
           if (!idsAllowed(lexicalQuery.ids, record.id)) continue;
-          if (!recordAllowed(record, required.tenantId, required.resourceId, required.threadId, authorization, grants)) continue;
           if (recordBlocked(record, blocked)) continue;
           const recordTerms = tokenizeLexical(record.text);
           let matches = 0;
           for (const term of terms) if (recordTerms.has(term)) matches += 1;
           if (matches === 0) continue;
+          if (!recordAllowed(record, required.tenantId, required.resourceId, required.threadId, authorization, grants)) {
+            denied?.note(record);
+            continue;
+          }
           scored.push({ ...record, score: matches / terms.size });
         }
+        denied?.flush();
         scored.sort((a, b) => b.score - a.score || a.sequence - b.sequence || a.id.localeCompare(b.id));
         return scored.slice(0, lexicalQuery.topK);
       },

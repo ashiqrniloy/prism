@@ -266,6 +266,7 @@ describe("packaging guard", () => {
       "./rag",
       "./rag/loaders",
       "./rag/parsers",
+      "./scoped",
       "./wiki",
     ]);
     const peers = memory.peerDependencies as Record<string, string>;

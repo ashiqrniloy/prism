@@ -83,7 +83,10 @@ export function createTransformersRerankRuntime(options: TransformersRerankRunti
         id: model,
         async score({ query, documents, signal }): Promise<readonly number[]> {
           assertNotAborted(signal);
-          const inputs = await tokenizer(query, { text_pair: documents, padding: true, truncation: true });
+          const inputs = await tokenizer(
+            documents.map(() => query),
+            { text_pair: documents, padding: true, truncation: true },
+          );
           const outputs = await crossEncoder(inputs);
           assertNotAborted(signal);
           const data = outputs?.logits?.data;
@@ -105,7 +108,7 @@ interface TransformersModule {
 }
 
 type TransformersTokenizer = (
-  query: string,
+  texts: readonly string[],
   options: { readonly text_pair: readonly string[]; readonly padding: boolean; readonly truncation: boolean },
 ) => Promise<unknown>;
 

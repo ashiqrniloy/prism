@@ -74,11 +74,25 @@ export interface BrokenLink {
   readonly target: string;
 }
 
+/** An entity page whose raw sources are gone: the projection outlived its inputs. */
+export interface PrunedSource {
+  /** Entity page path relative to the wiki root, e.g. `entities/acme.md`. */
+  readonly page: string;
+  /** Workspace-relative source paths that no longer exist on disk, sorted. */
+  readonly missing: readonly string[];
+}
+
 export interface LintReport {
   readonly deadAnchors: readonly DeadAnchor[];
   readonly brokenLinks: readonly BrokenLink[];
   readonly orphans: readonly string[];
   readonly gaps: readonly string[];
+  /**
+   * Entity pages whose `rawSources` (manifest) or listed sources (`## Raw Sources`) are missing
+   * on disk or were pruned by `retireWikiSources`/`repointWikiSources`. Non-fatal: re-filing a
+   * pruned page is maintainer work, so `ok` ignores this list.
+   */
+  readonly prunedSources: readonly PrunedSource[];
   readonly ok: boolean;
 }
 

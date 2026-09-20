@@ -138,8 +138,9 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
   let scenarioError: ReturnType<typeof toErrorInfo> | undefined;
 
   try {
-    // One subscription per turn: subscribers close when a run settles (documented for `runStream`), so a
-    // single subscription around several runs would silently score a timeline missing every later turn.
+    // One subscription per turn: by default a subscriber is run-scoped and closes when the run settles
+    // (`SubscribeOptions.acrossRuns` opts out of that close), so a single default subscription around
+    // several runs would silently score a timeline missing every later turn.
     for (const turn of turns) {
       options.signal?.throwIfAborted();
       const input = typeof turn === "string" ? turn : turn.user;

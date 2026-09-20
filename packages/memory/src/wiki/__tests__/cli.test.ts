@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
-import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { runCli } from "../cli.js";
+import { initWiki } from "../index.js";
 
 const TEST_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-cli-"));
 
@@ -44,6 +45,44 @@ describe("prism-wiki CLI runner", () => {
 
     const lintCode = await runCli(["node", "prism-wiki", "lint", "--wiki-root", wikiDir, "--workspace-root", TEST_DIR]);
     assert.equal(lintCode, 0);
+  });
+
+  it("cli_lint_prints_pruned_sources_and_still_exits_0", async () => {
+    const wikiRoot = ".wiki-pruned-cli";
+    await initWiki({ workspaceRoot: TEST_DIR, wikiRoot, profile: "codebase" });
+
+    const manifestPath = join(TEST_DIR, wikiRoot, ".manifest.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    manifest.entities = {
+      ...manifest.entities,
+      ghost: {
+        id: "ghost",
+        title: "Ghost",
+        category: "entity",
+        tags: [],
+        rawSources: ["src/gone.ts"],
+        anchors: [],
+        lastCompiledAt: new Date().toISOString(),
+      },
+    };
+    await writeFile(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
+    await writeFile(join(TEST_DIR, wikiRoot, "entities/ghost.md"), "# Ghost\n\n## Raw Sources\n- `src/gone.ts`\n", "utf8");
+
+    const lines: string[] = [];
+    const original = console.log;
+    console.log = (...values: unknown[]) => lines.push(values.join(" "));
+    let code = 1;
+    try {
+      code = await runCli(["node", "prism-wiki", "lint", "--wiki-root", wikiRoot, "--workspace-root", TEST_DIR]);
+    } finally {
+      console.log = original;
+    }
+    const output = lines.join("\n");
+
+    assert.equal(code, 0, "pruned sources are maintainer work, not a failing health check");
+    assert.ok(output.includes("1 entity page(s) need re-filing after source pruning"), output);
+    assert.ok(output.includes("entities/ghost.md lists missing source(s): src/gone.ts"), output);
+    assert.ok(!output.includes(TEST_DIR), "CLI output stays workspace-relative");
   });
 
   it("cli_ingest_path_exit_0", async () => {

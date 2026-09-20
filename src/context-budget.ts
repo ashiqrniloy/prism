@@ -388,7 +388,7 @@ function measureAll(
   for (const message of groups.attachments) addMessage(message);
   for (const message of groups.toolResults) addMessage(message);
   for (const block of context) {
-    const text = `${block.title ? `${block.title}:\n` : "Context:\n"}${contextBlockText(block)}`;
+    const text = contextBlockMeasureText(block);
     tokens += estimateTokens(text);
     bytes += estimateTextBytes(text);
   }
@@ -398,11 +398,36 @@ function measureAll(
     bytes += estimateTextBytes(text);
   }
   if (tools?.length) {
-    const text = `Available tools:\n${tools.map((tool) => `- ${tool.name}${tool.description ? `: ${tool.description}` : ""}`).join("\n")}`;
+    const text = toolsMeasureText(tools);
     tokens += estimateTokens(text);
     bytes += estimateTextBytes(text);
   }
   return { tokens, bytes };
+}
+
+/** Plan 103 T6: the host's `contextBudget.tokenEstimator`, validated exactly like the budget pass
+ * validates it (a non-function, or a non-finite/negative count, fails closed with `TypeError`).
+ * `undefined` when no host estimator is configured, so callers can fall through to the built-in
+ * heuristic. Exported for the usage seam (`provider-round.ts`) — deliberately not re-exported by
+ * `src/index.ts`, so the public surface is unchanged. */
+export function resolveHostTokenEstimator(budget: ContextBudget | undefined): TokenEstimator | undefined {
+  if (budget?.tokenEstimator === undefined) return undefined;
+  return resolveTokenEstimator(budget);
+}
+
+/** Plan 103 T6: tool declarations and context blocks projected with the assembler's own
+ * `measureAll` text shapes, so the usage-fallback estimate and the budget pass cannot drift
+ * (never `JSON.stringify` of the raw schemas). Exported for the usage seam — deliberately not
+ * re-exported by `src/index.ts`. */
+export function estimateRequestExtrasTokens(
+  tools: readonly ToolDefinition[] | undefined,
+  context: readonly ContextBlock[] | undefined,
+  estimateTokens: TokenEstimator,
+): number {
+  let tokens = 0;
+  if (context?.length) for (const block of context) tokens += estimateTokens(contextBlockMeasureText(block));
+  if (tools?.length) tokens += estimateTokens(toolsMeasureText(tools));
+  return tokens;
 }
 
 function overBudget(cost: { tokens: number; bytes: number }, budget: ContextBudget): boolean {
@@ -477,4 +502,14 @@ function contextBlockText(block: ContextBlock): string {
       return "[content]";
     })
     .join("\n");
+}
+
+/** The context block exactly as `measureAll` measures it (plan 103 T6 shares this shape with the usage seam). */
+function contextBlockMeasureText(block: ContextBlock): string {
+  return `${block.title ? `${block.title}:\n` : "Context:\n"}${contextBlockText(block)}`;
+}
+
+/** The tool list exactly as `measureAll` measures it (plan 103 T6 shares this shape with the usage seam). */
+function toolsMeasureText(tools: readonly ToolDefinition[]): string {
+  return `Available tools:\n${tools.map((tool) => `- ${tool.name}${tool.description ? `: ${tool.description}` : ""}`).join("\n")}`;
 }

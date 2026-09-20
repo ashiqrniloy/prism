@@ -144,6 +144,7 @@ describe("provider stop-reason taxonomy (plan 087 T1)", () => {
     assert.equal(metadata?.stopReason, "end_turn");
     assert.deepEqual(metadata?.budgets, {
       inputTokens: 500,
+      inputTokensSource: "reported",
       inputCap: 98_976,
       runInputBudget: 1000,
       runInputUsed: 500,

@@ -1,3 +1,4 @@
+export type { CustomEntryAppendOptions } from "./append-custom.js";
 export type { MemoryCommandOptions } from "./commands.js";
 export { createMemoryStatusCommand, createMemoryViewCommand, createObservationalMemoryCommands } from "./commands.js";
 export type {
@@ -21,6 +22,7 @@ export {
   observationsUncoveredByReflection,
   unscannedEntries,
 } from "./coverage-helpers.js";
+export { createObservationalMemoryDropHandler } from "./drop-invalidated.js";
 export type { ObservationalMemoryExtensionOptions } from "./extension.js";
 export { createObservationalMemoryExtension } from "./extension.js";
 export { createMemoryId, isMemoryId } from "./ids.js";

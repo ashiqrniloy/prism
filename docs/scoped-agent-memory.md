@@ -1,6 +1,6 @@
 # Scoped persistent agent memory — design concept
 
-Status: **concept/proposal**. This page describes a system design for workspace-scoped persistent agent memory — durable facts and procedures that are recorded, updated, and used automatically during agentic work. Nothing here is implemented as a package yet; it is the reference description for the approach. Terminology deliberately aligns with the existing Prism memory surfaces ([memory fabric](memory-fabric.md), [observational memory](compaction-observational-memory.md), [working and semantic memory](working-and-semantic-memory.md)) — see [Relationship to existing Prism memory surfaces](#relationship-to-existing-prism-memory-surfaces).
+Status: **concept**. The implemented contract is [Scoped memory](scoped-memory.md) (`@arnilo/prism-memory/scoped`). This page is the design rationale for workspace-scoped persistent agent memory — durable facts and procedures that are recorded, updated, and used automatically during agentic work. Terminology deliberately aligns with the existing Prism memory surfaces ([memory fabric](memory-fabric.md), [observational memory](compaction-observational-memory.md), [working and semantic memory](working-and-semantic-memory.md)) — see [Relationship to existing Prism memory surfaces](#relationship-to-existing-prism-memory-surfaces).
 
 ## Problem and goals
 
@@ -98,7 +98,7 @@ links: [rec_deploy_rollback, rec_pg_pool]
 
 Rationale: human override and review are non-negotiable for professional work — diffs, blame, and PR review come free. This mirrors the Hermes `journey edit/delete` lesson (users *must* be able to prune) and generalizes it to full version control.
 
-**Prism realization.** In the composed Prism stack (next section) the [memory fabric](memory-fabric.md) is the source of truth for records and the session store/observational ledger owns episodes; `<workspace>/.memory/` becomes a **git audit mirror** — a rendered export of fabric notes for diff/review — not a second storage engine. One write path, two views.
+**Prism realization.** In the composed Prism stack (next section) the [memory fabric](memory-fabric.md) is the source of truth for records and the session store/observational ledger owns episodes; usage/status/staging live in a gitignored JSON ledger (`<workspace>/.memory/state.json`); `<workspace>/.memory/` markdown is a **git audit mirror** — a rendered export of fabric notes + ledger counters for diff/review — not a second storage engine. One write path, two views.
 
 ### Write path — reflect, adjudicate, gate
 
@@ -132,7 +132,8 @@ An idle/nightly consolidation pass (cheap model, off the interaction path):
 
 ### Trust boundary
 
-- **Injection/exfiltration scanning** of record content before any prompt injection (patterns, invisible Unicode) — Hermes does this for `MEMORY.md`; extend to all records.
+- **Secret redaction** of record content via the shipped needle redactor (`createSecretRedactor` / observational `secrets` / working-memory `redactJson`).
+- **Injection/exfiltration scanning** of record content before any prompt injection (patterns, invisible Unicode) — Hermes does this for `MEMORY.md`; extend to all records. This is a new scoped primitive (`scanScopedMemoryContent`); it is not the secret redactor.
 - **Staged approval.** Writes may be staged for human review (`write_approval`-style). Default: off for personal scopes, on for team/professional scopes.
 - **Scope isolation.** Records never leak across workspace roots; the global user layer is opt-in per record.
 - **Provenance on every record.** Any memory-driven decision can be traced to the session and turn that produced the record (same philosophy as observational memory's source-backed ids and the recall path).
@@ -171,15 +172,18 @@ The placement principle: **the scoped layer is a policy and lifecycle layer, not
 | Episodic ledger | [Observational memory](compaction-observational-memory.md) | source-backed observations/reflections (12-hex ids, `sourceEntryIds`), exact-id recall and branch pages, optional work-scope index; observer/reflector/dropper workers are the only writers | no semantic retrieval, no wholesale prompt injection, no downstream re-observation |
 | Memory engines | [Working and semantic memory](working-and-semantic-memory.md) | `Embedder`/vector/working-store contracts, consent lifecycle, lineage invalidation, importance, recall scoring | no policy |
 | Durable records | [Memory fabric](memory-fabric.md) | typed notes (`fact`/`procedure`/`file`/`working`/`episode`), validity windows, consolidation folding, linker/evolution workers, five governed tools, file jail, context provider, `forget`/legal hold | no autonomy — every write is an explicit caller decision |
-| Policy + lifecycle | **Scoped memory (this concept)** | conservative post-run writer, promotion ladder, usage-decay GC, abstain floor + activation budget, workspace-root scope identity, git audit mirror | no store, no engine, no context-block type, no second write path |
+| Policy + lifecycle | [Scoped memory](scoped-memory.md) (`@arnilo/prism-memory/scoped`) | conservative post-run writer, promotion ladder, usage-decay GC, abstain floor + activation budget, workspace-root scope identity, git audit mirror, usage/status/staging JSON ledger | no store, no engine, no context-block type, no second write path |
+| Knowledge compiler | [LLM wiki](wiki.md) (`@arnilo/prism-memory/wiki`) | regenerable `.wiki/` pages with line-anchored citations over raw sources; `wiki_ingest` / `wiki_record_insight` | session-derived experience (that is scoped memory); it is not a memory store |
+
+**Wiki boundary / routing.** Wiki compiles *source-cited knowledge* (files, docs, papers — regenerable, `file://…#Lxx-Lyy`). Scoped memory holds *session-derived experience* (primary fabric records, provenance `sourceEntryIds`). No storage overlap: wiki writes `.wiki/` + `raw/ingest/`; scoped writes fabric notes + `<scopeRoot>/.memory/state.json` + the git mirror. Route source-cited material to wiki; route session-derived experience to scoped policy. The post-run reviewer must not file a wiki-pageable insight as a scoped fact.
 
 Two invariants carry over unchanged: observational memory stays **episodic** (promotion out of the ledger is an explicit host write — fabric's `promotedFrom` over a closed work scope), and the fabric never widens consent or visibility.
 
 ### Ideal composition for a persistent-memory agent
 
 ```ts
-// 1. Engines — workspace root becomes the silo identity
-const memory = createMemory({ tenantId: host, resourceId: workspaceRoot, embedder, stores });
+// 1. Engines — workspace root is resourceId; threadId is a stable silo id (not the session id)
+const memory = createMemory({ tenantId: host, resourceId: workspaceRoot, threadId: "scoped", embedder, stores });
 // 2. Durable records — folding, links, evolution on by policy
 const fabric = createMemoryFabric({ memory, observational, consolidate: { threshold: 0.85 },
                                     linker: { enabled: true }, evolution: { enabled: true } });
@@ -188,7 +192,8 @@ om.attach(session);
 // 4. Gate fabric tools + workers to this session
 fabric.attach(session);
 // 5. Injection: ONLY the bounded working facts block reaches the prompt
-registries.contextProviders.register("memory-fabric", fabric.createContextProvider());
+registries.contextProviders.register("memory-fabric",
+  fabric.createContextProvider({ includeWorking: true, includeSemantic: false }));
 const agent = await resolveAgentDefinition(
   { name: "assistant", model, context: ["memory-fabric"], tools: ["memory.recall"] },
   { registries, providerSource });
@@ -212,7 +217,7 @@ End-to-end flow:
 | Adjudicate ADD/UPDATE/supersede | fabric consolidation folding (cosine threshold 0.85) |
 | Close contradicted facts | fabric `validTo` + `supersedes` |
 | Link + evolve neighbors | fabric linker/evolution workers |
-| Status `candidate`, staging/approval | scoped policy |
+| Status `candidate`, usage counters, staging/approval | scoped JSON ledger (`<scopeRoot>/.memory/state.json`) — not fabric note metadata |
 
 | Read-path step | Owner |
 | --- | --- |
@@ -240,6 +245,8 @@ How the research findings land on shipped surfaces versus policy added by this c
 | Off-path consolidation | Letta sleep-time | — (idle-job placement) | GC/promotion/facts consolidation on a cheap model |
 | Tiny always-loaded layer, disclosure on demand | Anthropic skills | recall tools + working block only | abstain floor + top-3 activation budget |
 | Hybrid BM25 + cosine + graph walk | Zep/Graphiti | partial: embedding score + link traversal; lexical on branch search | fusing lexical into one recall — open question |
+| Known-secret redaction | runtime / OM | `createSecretRedactor`, observational `secrets`, working `redactJson` | — |
+| Injection / exfil / invisible Unicode scan | Hermes MEMORY.md | — (redactor is needle-only) | `scanScopedMemoryContent` (pure patterns) |
 
 ### Deliberate deviations
 
@@ -258,5 +265,6 @@ How the research findings land on shipped surfaces versus policy added by this c
 
 - Exact promotion thresholds (N reuses, decay τ, similarity floors) — must be empirically tuned per workload class (coding vs. research vs. professional ops).
 - Whether the global user-profile layer reuses the working-memory store or a separate facts silo.
-- Evaluation harness: reuse the existing evaluations/trajectory tooling vs. a purpose-built memory replay suite.
 - Team-scope semantics: per-user silos sharing one workspace root, or one shared silo with author-attributed records.
+
+Closed at primitive review: evaluation harness reuses `@arnilo/prism-core/governance/evals` scorer/dataset contracts and adds only scoped fixtures + `runScopedMemoryEval`.

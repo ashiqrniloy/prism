@@ -427,6 +427,7 @@ async function assembleRoundContext(params: {
         toolsSearch: session.agent.config.toolsSearch,
         activatedTools: session.activatedTools,
         toolResultFold: resolveToolResultFold(options.toolResultFold, session.agent.config.toolResultFold),
+        contextBudget: session.agent.config.contextBudget,
         attentionCompiler,
         // Session-owned: a stub made earlier stays applied even on a later under-ratio turn, so
         // the prompt-cache prefix is not rewritten (C10). Undefined when the compiler is off.
@@ -598,8 +599,13 @@ export async function executeRun(
   session.activeIdentity = resolveRunIdentity(options.identity, session.agent.config.identity, session.activeOwnership);
   if (session.activeIdentity && !session.activeOwnership) session.activeOwnership = ownershipFromIdentity(session.activeIdentity);
   session.activeIdempotencyKey = options.idempotencyKey ?? session.agent.config.idempotencyKey;
-  session.activeGuardrails = mergeGuardrails(mergeGuardrails(session.agent.config.guardrails, session.packGuardrails), options.guardrails);
   session.activeDurable = resumed ?? (durableOptions ? { options: durableOptions, version: 0 } : undefined);
+  // Plan 104 T3: an `ask` rule is gated at charge time when the run can suspend; a run that cannot
+  // suspend enforces the same rule as a plain block, so it joins the ordinary stage guardrails.
+  const packGuardrails = session.activeDurable
+    ? session.packGuardrails
+    : mergeGuardrails(session.packGuardrails, session.packAskBlocks);
+  session.activeGuardrails = mergeGuardrails(mergeGuardrails(session.agent.config.guardrails, packGuardrails), options.guardrails);
   // Plan 086 T3: reset here, so a suspension before the compiler is resolved (input guardrail)
   // cannot inherit the previous run's durable-folding flag. `assembleRoundContext` sets it true.
   session.attentionDurable = false;

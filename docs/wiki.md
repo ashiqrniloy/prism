@@ -45,7 +45,7 @@ The Karpathy LLM Wiki pattern is structured into 3 distinct tiers:
 
 - `/wiki-init`: Scaffolds `.wiki/`, instantiates `SCHEMA.md`, `index.md`, and `log.md`, deploys skills, and adds the `qmd` collection.
 - `/wiki-refresh`: Detects modified source files via SHA-256 Merkle diffing, compiles updates to affected entity pages, reconciles contradictions in `log.md`, and runs `qmd update`.
-- `/wiki-lint`: Checks OKF frontmatter (`type`, ISO `generated.at`), leftover `[[wikilinks]]`, unresolved relative markdown links, dead line anchors, and orphan pages.
+- `/wiki-lint`: Checks OKF frontmatter (`type`, ISO `generated.at`), leftover `[[wikilinks]]`, unresolved relative markdown links, dead line anchors, orphan pages, and pruned sources (an entity page whose raw sources were retired or deleted — reported for re-filing, never a failure).
 - `/wiki-ingest`: `{ text?, path?, url?, title? }` — stages one external source into `raw/ingest/<utc>-<slug>/` (`source.*` original + `extract.md`), then returns a brief (staged paths, extract preview, source URL when applicable, Karpathy filing checklist). When the host injects `drivers`, the command calls `drivers.startRun(brief, { activeSkills: ["wiki-maintainer"] })` so the maintainer skill files the source into the wiki; without drivers it stages only and reports `runStarted: false`. Results are labeled `metadata.trust: "untrusted_external"`.
 
 ### Standalone CLI Commands
@@ -57,7 +57,7 @@ npx prism-wiki init --profile codebase
 # Refresh wiki after code edits
 npx prism-wiki refresh
 
-# Check wiki health and dead anchors
+# Check wiki health: dead anchors, broken links, orphans, pruned sources
 npx prism-wiki lint
 
 # Search wiki from terminal
@@ -70,6 +70,8 @@ npx prism-wiki ingest --path notes/paper.pdf --title "Paper"
 # the wiki package never fetches — URL ingest needs a host fetchUrl hook
 npx prism-wiki ingest --url https://example.com/rfc.pdf   # → exit 1
 ```
+
+Lint output is one summary line plus per-issue detail, and the report shape is `{ deadAnchors, brokenLinks, orphans, gaps, prunedSources, ok }`. **Pruned sources are not a failure**: a page whose raw sources were retired (`retireWikiSources`), re-pointed to a path that does not exist, or deleted out-of-band is maintainer work, so it is reported as `prunedSources` entries (`{ page, missing }`, both workspace-relative, capped to the first few paths in command/CLI text) while the health check stays `ok` and the CLI exits 0. The `wiki-maintainer` skill covers the response: re-read the surviving sources and re-file the page, or delete it when none remain.
 
 ## Outputs / response / events
 

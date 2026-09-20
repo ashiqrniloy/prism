@@ -128,7 +128,7 @@ describe("guardrail packs", () => {
 
     const denied = await dispatch({ name: "write", args: { path: "/etc/passwd" }, guardrails, tools: [write] });
     assert.equal(denied.result.value, undefined);
-    assert.equal(denied.result.error?.message, "Tool call blocked by guardrail");
+    assert.equal(denied.result.error?.message, "Blocked by guardrail rule pack:my-pack/no-etc");
     assert.deepEqual(denied.executed, []);
     const [record] = decisions(denied.events);
     assert.equal(record?.record.guardrail, "pack:my-pack/no-etc");
@@ -288,7 +288,8 @@ describe("guardrail packs", () => {
       ["no rules", [{ id: "inline", rules: [] }]],
       ["both pattern and deny", [{ id: "inline", rules: [{ id: "r", pattern: "a", deny: () => true }] }]],
       ["neither pattern nor deny", [{ id: "inline", rules: [{ id: "r" }] }]],
-      ["ask action", [{ id: "inline", rules: [{ id: "r", pattern: "a", action: "ask" }] }]],
+      ["ask with a deny predicate", [{ id: "inline", rules: [{ id: "r", deny: () => true, action: "ask" }] }]],
+      ["unknown action", [{ id: "inline", rules: [{ id: "r", pattern: "a", action: "permit" }] }]],
       ["invalid pattern", [{ id: "inline", rules: [{ id: "r", pattern: "([unclosed" }] }]],
       [
         "duplicate rule id",

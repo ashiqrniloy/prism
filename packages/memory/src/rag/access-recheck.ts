@@ -12,8 +12,8 @@
  * and fail closed: `false` and thrown store errors both withhold the hits, recorded once
  * per source in the audit sink instead of aborting the whole query. Abort stays an abort.
  */
-import type { RagAccessConstraint, VectorStore } from "../types.js";
-import type { AccessDenial, RagHit } from "./types.js";
+import type { RagAccessConstraint, StoreDenial, StoreDenialReason, VectorStore } from "../types.js";
+import type { AccessDenial, RagHit, RagScope } from "./types.js";
 import { assertNotAborted } from "./util.js";
 
 /** Store errors are audit text, not payloads: cap before they reach the sink. */
@@ -30,11 +30,23 @@ export interface CreateAccessRecheckOptions {
   readonly redact?: (value: string) => string;
 }
 
+/** Scope a grant was checked in: `MemoryScope` shape, the vocabulary `checkSourceAccess` and `AccessDenial` use. */
+interface GrantScope {
+  readonly tenantId: string;
+  readonly resourceId: string;
+  readonly threadId: string;
+}
+
 export interface AccessRecheck {
   /** Pre-filter gate. One lookup per distinct source, reused across that gate's hits. */
   allows(hit: RagHit): Promise<boolean>;
   /** Post-rerank gate: always re-reads, so a grant change during rerank still excludes. */
   allowsAfterRerank(hit: RagHit): Promise<boolean>;
+  /**
+   * Plan 102 Task 6: what the store's own ACL predicate withheld before any hit existed. These sources
+   * join the same per-source report, so a source filtered inside SQL produces one denial event.
+   */
+  noteStoreDenials(scope: RagScope, denials: readonly StoreDenial[]): void;
   /** Per-source denials for this query, emitted to `onDenied` exactly once. */
   report(): readonly AccessDenial[];
 }
@@ -44,18 +56,26 @@ const AFTER_RERANK = 1;
 
 interface RecheckEntry {
   readonly sourceId: string;
-  readonly scope: { readonly tenantId: string; readonly resourceId: string; readonly threadId: string };
+  readonly scope: GrantScope;
   readonly hitIds: Set<string>;
   phase: number;
   decision?: Promise<boolean>;
   allowed?: boolean;
   error?: string;
+  /** Set when the store's own predicate reported this source (plan 102 Task 6). */
+  storeReason?: StoreDenialReason;
 }
 
+/**
+ * A store-filtered source is reported with the boundary's own vocabulary: for a source the store
+ * withheld, the boundary's `checkSourceAccess` would have failed too, so the event is the one a
+ * boundary denial produces. Hosts that need the finer store rule read `VectorQuery.onDeniedSources`.
+ */
+const STORE_DENIAL_REASON = "no_grant" as const;
+
 /** `\0` cannot appear in a validated tenant/resource/thread/source id. */
-function sourceKey(hit: RagHit): string {
-  const { tenantId, resourceId, corpusId } = hit.provenance;
-  return `${tenantId}\u0000${resourceId}\u0000${corpusId}\u0000${hit.sourceId}`;
+function sourceKey(scope: RagScope, sourceId: string): string {
+  return `${scope.tenantId}\u0000${scope.resourceId}\u0000${scope.corpusId}\u0000${sourceId}`;
 }
 
 export function createAccessRecheck(options: CreateAccessRecheckOptions): AccessRecheck {
@@ -80,7 +100,7 @@ export function createAccessRecheck(options: CreateAccessRecheckOptions): Access
   }
 
   function check(hit: RagHit, phase: number): Promise<boolean> {
-    const key = sourceKey(hit);
+    const key = sourceKey(hit.provenance, hit.sourceId);
     let entry = entries.get(key);
     if (!entry) {
       entry = {
@@ -114,18 +134,39 @@ export function createAccessRecheck(options: CreateAccessRecheckOptions): Access
     allowsAfterRerank(hit: RagHit): Promise<boolean> {
       return check(hit, AFTER_RERANK);
     },
+    noteStoreDenials(scope: RagScope, denials: readonly StoreDenial[]): void {
+      for (const denial of denials) {
+        const key = sourceKey(scope, denial.sourceId);
+        const existing = entries.get(key);
+        if (existing) {
+          existing.storeReason ??= denial.reason;
+          continue;
+        }
+        entries.set(key, {
+          sourceId: denial.sourceId,
+          scope: Object.freeze({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }),
+          hitIds: new Set(),
+          phase: PRE_FILTER,
+          storeReason: denial.reason,
+        });
+      }
+    },
     report(): readonly AccessDenial[] {
       if (reported) return reported;
       const denials: AccessDenial[] = [];
       for (const entry of entries.values()) {
-        if (entry.allowed !== false) continue;
+        const boundaryDenied = entry.allowed === false;
+        // A store report stands only while the boundary has not answered for that source: a boundary
+        // allow means the caller got hits, so there is nothing withheld to audit.
+        if (!boundaryDenied && !(entry.allowed === undefined && entry.storeReason !== undefined)) continue;
+        const failed = boundaryDenied && entry.error !== undefined;
         denials.push(
           Object.freeze({
             sourceId: entry.sourceId,
             scope: entry.scope,
-            reason: entry.error === undefined ? ("no_grant" as const) : ("check_failed" as const),
+            reason: failed ? ("check_failed" as const) : STORE_DENIAL_REASON,
             hits: entry.hitIds.size,
-            ...(entry.error === undefined ? {} : { error: entry.error }),
+            ...(failed ? { error: entry.error } : {}),
           }),
         );
       }

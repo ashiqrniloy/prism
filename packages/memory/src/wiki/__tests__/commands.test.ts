@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { createExtensionKernel } from "@arnilo/prism";
-import { createWikiExtension, createWikiIngestCommand, initWiki, lintWiki, refreshWiki } from "../index.js";
+import { createWikiExtension, createWikiIngestCommand, createWikiLintCommand, initWiki, lintWiki, refreshWiki } from "../index.js";
 
 const TEST_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-commands-"));
 
@@ -63,6 +63,38 @@ describe("prism-wiki commands & lifecycle hooks", () => {
     assert.equal(report.ok, true);
     assert.equal(report.deadAnchors.length, 0);
     assert.equal(report.brokenLinks.length, 0);
+  });
+
+  it("wiki_lint_command_surfaces_pruned_sources_without_failing_the_wiki", async () => {
+    const wikiRoot = ".wiki-pruned-cmd";
+    await initWiki({ workspaceRoot: TEST_DIR, wikiRoot, profile: "codebase" });
+
+    // A page whose compiled source is gone: the manifest and the page body still list it.
+    const manifestPath = join(TEST_DIR, wikiRoot, ".manifest.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    manifest.entities = {
+      ...manifest.entities,
+      ghost: {
+        id: "ghost",
+        title: "Ghost",
+        category: "entity",
+        tags: [],
+        rawSources: ["src/gone.ts"],
+        anchors: [],
+        lastCompiledAt: new Date().toISOString(),
+      },
+    };
+    await writeFile(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
+    await writeFile(join(TEST_DIR, wikiRoot, "entities/ghost.md"), "# Ghost\n\n## Raw Sources\n- `src/gone.ts`\n", "utf8");
+
+    const result = await createWikiLintCommand({ workspaceRoot: TEST_DIR, wikiRoot }).execute({}, { sessionId: "s1", runId: "r1" });
+    const text = result.content?.[0]?.type === "text" ? result.content[0].text : "";
+
+    assert.ok(text.includes("passed"), `pruned sources must not fail the wiki: ${text}`);
+    assert.ok(text.includes("1 entity page(s) need re-filing after source pruning"), text);
+    assert.ok(text.includes("entities/ghost.md (src/gone.ts)"), text);
+    assert.ok(!text.includes(TEST_DIR), "report paths stay workspace-relative");
+    assert.deepEqual(result.metadata?.trust, "untrusted_external");
   });
 
   it("commands_execute_via_prism_extension_kernel", async () => {

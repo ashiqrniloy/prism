@@ -263,6 +263,12 @@ async function prepareAgentRunResume(
   // Plan 078 Task 7: hand the reconstructed session to an observer (supervisor child-event pump)
   // before any event flows. Called for every resume outcome; a throw fails closed.
   options.onSession?.(session);
+  // Plan 104 T2: pack enforcement rides the checkpoint. A run without `persistSessionState` never
+  // writes the key, so its presence is the host's opt-in — restore before any turn (and before the
+  // pending-decision block, which may re-run input guardrails) or fail closed on a pack mismatch.
+  if (state.sessionState?.guardrailPacks) {
+    session.restoreGuardrailPacks(state.sessionState.guardrailPacks.packs, state.sessionState.guardrailPacks.state);
+  }
   // Opt-in session-state restore (plan 015 Task 4): names only; bodies re-resolve from
   // the live registry the next time the model (re)loads them via load_skill.
   if (options.persistSessionState && state.sessionState?.loadedSkillNames) {
@@ -298,17 +304,24 @@ async function prepareAgentRunResume(
     session.restoreLoadedSkillBodies(state.sessionState.loadedSkillBodies);
   }
   const pendingDecisions = pendingDecisionsOf(state);
+  // Plan 104 T6: pack rules revalidate modified arguments at decision time. The set is the session's
+  // restored deny/tripwire rules plus its `ask` rules compiled as blocks — an approval that edits
+  // arguments into *any* pack-violating state is refused instead of becoming a run-wide allowance.
+  // Passed explicitly (never read from agent config), so a checkpoint that carried packs fails closed.
+  const sessionGuardrails = { toolInput: [...(session.packGuardrails?.toolInput ?? []), ...(session.packAskBlocks?.toolInput ?? [])] };
+  const decisionGuardrails = sessionGuardrails.toolInput.length > 0 ? sessionGuardrails : undefined;
   // Legacy approve maps to allow-once on every pending decision; legacy deny keeps its
   // terminal-denied behavior. Batch decisions are validated and applied atomically below.
   const resolved =
     resume.decisions !== undefined
-      ? await resolveRunDecisions({ agent, state, decisions: resume.decisions, signal })
+      ? await resolveRunDecisions({ agent, state, decisions: resume.decisions, signal, guardrails: decisionGuardrails })
       : resume.decision === "approve" && pendingDecisions
         ? await resolveRunDecisions({
             agent,
             state,
             decisions: pendingDecisions.map((pending) => ({ approvalId: pending.approvalId, outcome: "allow_once" as const })),
             signal,
+            guardrails: decisionGuardrails,
           })
         : undefined;
   if (resolved && resolved.remaining.length > 0) {

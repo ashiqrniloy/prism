@@ -96,8 +96,13 @@ export type ProviderStopReason =
  * axis, so a host can see which limit was closest without instrumenting the session.
  */
 export interface TurnBudgets {
-  /** Provider-reported input tokens for this turn; absent when the provider reported none. */
+  /** Input tokens charged for this turn: provider-reported, or a labeled fallback estimate when the
+   *  provider reported none; absent when neither exists. See `inputTokensSource`. */
   readonly inputTokens?: number;
+  /** Provenance of `inputTokens`: `"reported"` from the provider, `"estimated"` from the
+   *  `usageEstimation: "fallback"` seam. Absent together with `inputTokens`; `usage.estimated` stays
+   *  the authoritative label for the turn's usage. */
+  readonly inputTokensSource?: "reported" | "estimated";
   /** Resolved per-request input cap (attention compiler when enabled); absent when no cap derivable. */
   readonly inputCap?: number;
   /** Cumulative run input budget (`RunLimits.maxInputTokens`); absent when the axis is disabled. */

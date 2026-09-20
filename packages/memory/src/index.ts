@@ -70,8 +70,18 @@ export type {
   DeletionPropagatorOptions,
 } from "./propagation.js";
 export { createDeletionPropagator, DELETION_REASON, HARD_PROPAGATION_EDGES } from "./propagation.js";
-export type { RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore } from "./repoint.js";
-export { HARD_REPOINT_RECORDS, repointSource } from "./repoint.js";
+export type {
+  ApplySourceRenamesOptions,
+  ApplySourceRenamesResult,
+  RepointContext,
+  RepointHandler,
+  RepointSourceOptions,
+  RepointSourceResult,
+  RepointStore,
+  SourceRename,
+  SourceRenameEvent,
+} from "./repoint.js";
+export { applySourceRenames, HARD_REPOINT_RECORDS, repointSource } from "./repoint.js";
 export type {
   PostgresMemoryStores,
   PostgresMemoryStoresOptions,

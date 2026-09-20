@@ -1,12 +1,12 @@
-# Scoped Agent Memory and 0.10.0 Release Cut
+# Scoped Agent Memory
 
 Implements the concept in `docs/scoped-agent-memory.md` in full as a new opt-in policy
-subpath of `@arnilo/prism-memory` (`@arnilo/prism-memory/scoped`), then cuts release
-**0.10.0**.
+subpath of `@arnilo/prism-memory` (`@arnilo/prism-memory/scoped`). Lands in the **0.10.0**
+line; the version bump, compat baseline, and publish are [106](106-Hook-Lifecycle-Completion.md)
+Tasks 8–10 (moved there after Tasks 1–9 shipped).
 
-Precondition: the 0.9.0 cut (plans 099/100) has landed; this plan is the 0.10.0 phase and
-bumps versions from 0.9.x. Nothing here changes default behavior of any existing session —
-the scoped layer activates only when a host creates it.
+Precondition: the 0.9.0 cut (plans 099/100) has landed. Nothing here changes default
+behavior of any existing session — the scoped layer activates only when a host creates it.
 
 ## Objectives
 
@@ -18,7 +18,7 @@ the scoped layer activates only when a host creates it.
   reflections, working/semantic stores) — the scoped layer adds policy, not a new store.
 - Add the evaluation harness the concept doc declares non-negotiable: win-rate A/B,
   retrieval precision@3, health metrics.
-- Cut and publish release 0.10.0 with regenerated compatibility baseline.
+- 0.10.0 cut (bump, baseline, publish) lives on plan 106, not here.
 
 ## Expected Outcome
 
@@ -27,17 +27,16 @@ the scoped layer activates only when a host creates it.
   (scope guard → recall floor/budget → post-run candidate write → promotion → GC → mirror).
 - `docs/scoped-memory.md` documents the composed memory-management pattern for hosts;
   `docs/index.md` and `docs/scoped-agent-memory.md` cross-link it.
-- All packages at 0.10.0, `release:gate` green on a regenerated baseline, CHANGELOG entry,
-  published artifacts verified.
+- 0.10.0 bump / `release:gate` / publish: plan 106 Tasks 8–10.
 
 ## Tasks
 
-- [ ] Task 1: Primitive review — map every concept mechanism to a shipped primitive or a named new one
+- [x] Task 1: Primitive review — map every concept mechanism to a shipped primitive or a named new one
   - Acceptance Criteria:
     - Functional: An inventory table (concept mechanism → shipped primitive → new code required) is recorded in this task's completion notes and confirms or corrects the maps in `docs/scoped-agent-memory.md` (layered architecture, read/write paths, research leverage). Every planned API below is either justified by a gap or dropped. The inventory includes the **wiki boundary**: `@arnilo/prism-memory/wiki` (docs/wiki.md) is a knowledge *compiler* over raw sources (regenerable, line-anchored citations) while scoped memory holds session-derived *experience* (primary records, provenance `sourceEntryIds`) — the inventory confirms no storage overlap and states the routing rule: source-cited knowledge → wiki (`wiki_record_insight`/ingest), session-derived experience → scoped memory.
     - Performance: No new runtime dependency packages; scoped layer must compose existing `createMemory`/`createMemoryFabric`/observational instances.
     - Code Quality: The review names where usage state, status metadata, and approval staging live (see Options below) before any implementation task starts.
-    - Security: Review confirms the injection/exfiltration scanning primitive to reuse (observational `secrets` redaction paths, working-memory redactor) rather than writing a new scanner.
+    - Security: Review splits two primitives: reuse observational `secrets` / working-memory `redactJson` / `createSecretRedactor` for known-secret redaction; name a new pure scanner `scanScopedMemoryContent` for injection/exfil/invisible-Unicode (no shipped scanner exists).
   - Approach:
     - Documentation Reviewed:
       - `docs/scoped-agent-memory.md` (concept; storage, write/read paths, lifecycle, trust boundary)
@@ -48,9 +47,9 @@ the scoped layer activates only when a host creates it.
       - `docs/wiki.md` (LLM wiki compiler — boundary + routing rule; `wiki_record_insight` is the overlapping tool surface)
     - Options Considered:
       - Usage counter stored as note metadata rewritten on every recall — rejected: rewrites vector-store rows on every read, churns embeddings and folding identity.
-      - Usage counter in a separate small ledger keyed by note id — chosen: reads never mutate notes; the mirror renders ledger values into exported frontmatter.
-      - Status (`candidate`/`verified`/`archived`) in fabric note metadata (`metadata.scoped`) — chosen: survives folding (annotations union), needs no fabric change.
-    - Chosen Approach: Separate usage/staging ledger (JSON file in a scoped data dir, gitignored) + `metadata.scoped` status on notes; all writes go through existing fabric APIs.
+      - Status in fabric note metadata (`metadata.fabric` / `metadata.scoped`) — rejected: `parseMemoryNoteMetadata` is fail-closed and drops unknown fields; `mergeNoteMetadata` rebuilds only known fabric keys; `MemoryFabricRememberInput` has no metadata bag, so a policy cannot stamp sibling keys without a fabric API change.
+      - One JSON ledger keyed by note id for usage + status + staging — chosen: reads never mutate notes; promotion is a ledger flip (id unchanged, folding identity untouched); mirror joins ledger into frontmatter.
+    - Chosen Approach: One gitignored ledger `<scopeRoot>/.memory/state.json` (usage, status, staging). All note writes go through existing fabric APIs. Scope identity is `memory.scope.resourceId === scopeRoot` plus a stable `threadId` (not the session id). Secrets reuse `createSecretRedactor` / observational `secrets` / working `redactJson`. Injection/exfil/invisible-Unicode is a **named new** pure scanner (`scanScopedMemoryContent`) — nothing shipped scans those classes.
     - API Notes and Examples:
       ```ts
       // surface confirmed by this task
@@ -62,13 +61,45 @@ the scoped layer activates only when a host creates it.
     - n/a (review task; its correctness check is Task 2–8 acceptance).
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: no (review only).
-    - Docs pages to create/edit: `docs/scoped-agent-memory.md` — only if the review corrects a mapping.
+    - Docs pages to create/edit: `docs/scoped-agent-memory.md` — mapping corrections (wiki boundary, ledger location, scan vs redaction, composition `threadId` + `includeSemantic: false`).
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion notes:
+    - State lives in one ledger `<scopeRoot>/.memory/state.json` (gitignored): `notes[id].{uses,lastUsedAt,status,promotedAt,createdAt}` + `pending[]`. Not on fabric notes.
+    - Wiki boundary: `@arnilo/prism-memory/wiki` compiles source-cited knowledge into `.wiki/` (regenerable, line anchors). Scoped memory holds session-derived experience in fabric notes (`sourceEntryIds`). Routing: source-cited → wiki (`wiki_ingest` / `wiki_record_insight`); session-derived → scoped. No storage overlap.
+    - Inventory (concept → shipped → new):
+      | Mechanism | Shipped | New |
+      | --- | --- | --- |
+      | Workspace silo | `createMemory` tenant/resource/thread isolation | Policy binds `scopeRoot` to `memory.scope.resourceId`; require stable `threadId` (fail closed if missing or if `resourceId` ≠ `scopeRoot`). |
+      | Scope guard | fabric file jail; `fabric.attach` observational-session match | Create-time identity assert; wrap file/mirror paths. No per-note scope stamp. |
+      | Typed records | fabric kinds `fact`/`procedure`/`working`/`episode`/`file` | Concept `note`/`insight` → `fact`. Status is ledger, not a kind. |
+      | Validity / supersede / fold | `validFrom`/`validTo`/`asOf`; `planMemoryConsolidation` insert/update/supersede | none |
+      | MERGE near-duplicates | — | GC pass |
+      | Links / evolution | fabric linker + evolution workers | none |
+      | Episodes / provenance | OM ledger, `searchConversation`, `sourceEntryIds`/`reflectionId` | none |
+      | Always-on facts | working block + context provider | `rememberFact` 2200-char budget (engine cap is `maxEntryTextChars`); host sets `includeSemantic: false` |
+      | Query routing | `fabric.recall` kinds/asOf/budget/explain + similarity/recency/importance | wrapper: abstain floor, top-3, `scoreScopedHit` |
+      | Usage × decay | — | ledger + `scoreScopedHit` |
+      | Promotion ladder | — | `promotionPass` ledger status flip (no fabric rewrite) |
+      | Post-run writer | compaction-llm provider call; use-case model bind; OM digest/reflections | `reviewSession` + noop-biased prompt + JSON schema |
+      | Staging / approval | — | ledger `pending[]` |
+      | Facts overflow | `appendFabricBlock` throws over `maxEntryTextChars` | tighter 2200 + consolidate-first listing |
+      | Secret redaction | `createSecretRedactor`/`redactSecrets`; `createMemory({redactor,secrets})`; OM `secrets`; working `redactJson` | reuse on writes + mirror |
+      | Injection / exfil / invisible Unicode | **none** (redactor is needle-only) | **`scanScopedMemoryContent`** |
+      | List notes (mirror/GC) | `memory.exportMemory` paging (`consent.visible`, skips `recordBlocked`) | policy stamps visible consent on writes; no `Memory.list` |
+      | legal_hold | `fabric.forget({hold:true})`; invalidate preserves hold | GC skips ids absent from export |
+      | Git mirror | file jail | deterministic renderer over export + ledger |
+      | Health / A/B / precision@3 | `@arnilo/prism-core/governance/evals` `defineScorer` / step-budget / datasets | scoped fixtures + `runScopedMemoryEval` |
+      | LoCoMo episodic | OM exact-id recall | probe fixtures |
+      | Wiki compiler | `@arnilo/prism-memory/wiki` | routing rule only |
+    - Planned APIs kept (gap): `createScopedMemoryPolicy`, `policy.recall`, `scoreScopedHit`, `reviewSession`, `promotionPass`/`gcPass`/`health`, `rememberFact`, `approve`/`reject`/`pending`, `renderMirror`, `scanScopedMemoryContent`, `runScopedMemoryEval`.
+    - Dropped: `metadata.scoped` on notes; fabric rewrite on promotion; treating redactor as an injection scanner; `Memory.list` / fabric metadata bag; hybrid lexical+vector fusion (still deferred).
+    - No new runtime dependency packages. Compose existing `createMemory` / `createMemoryFabric` / observational instances.
+    - Duplication-rate health: fabric.remember does not return the fold plan; count “returned id already in ledger” as a fold.
 
-- [ ] Task 2: Scope identity and scope guard — `createScopedMemoryPolicy()` core
+- [x] Task 2: Scope identity and scope guard — `createScopedMemoryPolicy()` core
   - Acceptance Criteria:
-    - Functional: `createScopedMemoryPolicy(options)` binds a workspace root to a `createMemory()`/`createMemoryFabric()` pair (`memory`, `fabric`, `scopeRoot` required). Wrapped recall/write tools fail closed when a target note's scope does not match the bound scope root. Unattached policy is inert (no timers, no workers) — mirroring fabric's attach gate.
+    - Functional: `createScopedMemoryPolicy(options)` binds a workspace root to a `createMemory()`/`createMemoryFabric()` pair (`memory`, `fabric`, `scopeRoot` required). Throws when `memory.scope.resourceId` ≠ resolved `scopeRoot` or `threadId` is missing. Unattached policy is inert (no timers, no workers) — mirroring fabric's attach gate.
     - Performance: Scope check is O(1) per call (compare stored scope string), no extra store round-trip.
     - Code Quality: Options validated like fabric inputs (throw on missing `memory`/`fabric`/`scopeRoot`, on a fabric whose `observational` session mismatch — fail closed, no partial state).
     - Security: No path from the policy to files outside `scopeRoot` except the explicit mirror render (Task 7, which uses the fabric file-jail rules).
@@ -76,8 +107,9 @@ the scoped layer activates only when a host creates it.
     - Documentation Reviewed: Task 1 inventory; `docs/memory-fabric.md` (attach gate, file jail, validation patterns); `docs/working-and-semantic-memory.md` (`tenantId`/`resourceId` isolation).
     - Options Considered:
       - Enforce scope by convention only (host passes the right `resourceId`) — rejected: the concept's headline guarantee is the silo boundary; convention is not a guard.
-      - Wrap fabric operations with an explicit scope assertion — chosen: smallest guard, one place, all later tasks route through it.
-    - Chosen Approach: Policy holds `{ scopeRoot }`, stamps/validates `metadata.scoped.scope` on every write and rejects out-of-scope ids on every read.
+      - Stamp `metadata.scoped.scope` on every note — rejected: fabric remember has no metadata bag and the fabric schema strips unknown fields (Task 1).
+      - Create-time identity assert on the bound `memory` instance — chosen: vector isolation already silos by resource/thread; one throw at create is the guard.
+    - Chosen Approach: Policy holds `{ scopeRoot }`. Create throws unless `memory.scope.resourceId` equals the resolved `scopeRoot` and `memory.scope.threadId` is a non-empty stable silo id (not the agent session id — `fabric.attach` gates the session separately). Create does not attach and does not write files. Observational session mismatch stays on `fabric.attach` (fabric does not expose the bound observational id). File/mirror paths (Tasks 6–7) use the fabric file jail. No per-note scope stamp.
     - API Notes and Examples:
       ```ts
       const policy = createScopedMemoryPolicy({
@@ -93,10 +125,11 @@ the scoped layer activates only when a host creates it.
       - `packages/memory/src/scoped/policy.ts`: `createScopedMemoryPolicy`, option types, defaults.
       - `packages/memory/src/scoped/__tests__/policy.test.ts`.
       - `packages/memory/package.json`: `./scoped` subpath export.
+      - Freeze companions: `src/__tests__/packaging.test.ts`, `src/__tests__/install-smoke.test.ts`, `scripts/e2e-coverage.json`, `scripts/budgets.json` (+6 export names).
     - References: concept "Scope model"; fabric attach/file-jail fail-closed patterns.
   - Test Cases to Write:
     - Missing required options throw; defaults applied for omitted policy knobs.
-    - Out-of-scope note id rejected on wrapped recall/write (fail closed).
+    - `resourceId` mismatch or missing `threadId` throws at create (fail closed).
     - Inert when created (no side effects until a method is called).
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — new package subpath `@arnilo/prism-memory/scoped`.
@@ -104,7 +137,7 @@ the scoped layer activates only when a host creates it.
     - `docs/index.md` update: yes, in Task 9 together with the API page.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 3: Read policy — abstain floor, activation budget, decay/usage-weighted scoring, usage ledger
+- [x] Task 3: Read policy — abstain floor, activation budget, decay/usage-weighted scoring, usage ledger
   - Acceptance Criteria:
     - Functional: `policy.recall(query, opts)` wraps `fabric.recall`: applies `activation.topK` (default 3) and drops every hit below `activation.minSimilarity`; if the best hit is below the floor it returns an explicit empty result (`{ hits: [], abstained: true }`), never a weak hit. Ranking multiplies fabric score by `exp(-ageDays/tauDays) × (1 + ln(1 + uses))` using the usage ledger. Every returned hit increments `uses`/`lastUsedAt` in the ledger.
     - Performance: Recall overhead ≤ 1 ledger read + 1 ledger write (single JSON file, bounded by note count); no model calls.
@@ -115,7 +148,7 @@ the scoped layer activates only when a host creates it.
     - Options Considered:
       - Extend fabric `recall` with new options — rejected: fabric stays mechanism-only; the floor is policy.
       - Wrapper that post-filters and re-ranks fabric hits — chosen: no fabric change, deterministic, testable in isolation.
-    - Chosen Approach: Wrapper + exported pure scorer + JSON usage ledger (`<scopeRoot>/.memory/state/usage.json`, gitignored by mirror renderer).
+    - Chosen Approach: Wrapper + exported pure scorer + one JSON ledger (`<scopeRoot>/.memory/state.json`, gitignored): usage counters live here (and status/staging from Tasks 4–6). Fetch oversamples with `RECALL_OVERSAMPLE` then clamps to `activation.topK`. Similarity floor uses `hit.similarity ?? hit.score`. Corrupt JSON → empty ledger (zero uses), no logger. Ledger rows preserve `status`/`pending` for later tasks; writes never include note content. Last-write-wins rename (no lock).
     - API Notes and Examples:
       ```ts
       const { hits, abstained } = await policy.recall("deploy without downtime",
@@ -123,22 +156,24 @@ the scoped layer activates only when a host creates it.
       ```
     - Files to Create/Edit:
       - `packages/memory/src/scoped/read-policy.ts`.
-      - `packages/memory/src/scoped/usage-ledger.ts`.
+      - `packages/memory/src/scoped/ledger.ts`.
       - `packages/memory/src/scoped/__tests__/read-policy.test.ts`.
+      - `packages/memory/src/scoped/policy.ts` / `index.ts`: `policy.recall`, `scoreScopedHit`.
+      - `scripts/budgets.json`: export ceiling 909 → 917.
     - References: Generative Agents scoring; Hermes issue #22620 measured decay fix; concept "Read path".
   - Test Cases to Write:
     - All hits below floor → `abstained: true`, empty hits, no usage increments.
     - topK clamp: 10 fabric hits → ≤ 3 returned, ranked by combined score not raw similarity.
-    - Ledger increments once per returned hit; corrupt ledger fails closed (treat as zero uses, log).
+    - Ledger increments once per returned hit; corrupt ledger fails closed (treat as zero uses).
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — `policy.recall` behavior.
     - Docs pages to create/edit: `docs/scoped-memory.md` (Task 9).
     - `docs/index.md` update: yes (Task 9).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 4: Post-run conservative reviewer — candidate writes through the fabric
+- [x] Task 4: Post-run conservative reviewer — candidate writes through the fabric
   - Acceptance Criteria:
-    - Functional: `policy.reviewSession(digest | sessionEntries, { reviewer })` runs a host-supplied reviewer hook (model-neutral, same shape as compaction-llm provider calls; bind the model via use-case model selection) with a noop-biased prompt: default output is zero writes; write triggers limited to user correction, error→recovery, a technique reused within the session, or explicit "remember this". Accepted outputs become `fabric.remember` calls — kind `fact`/`procedure`, `metadata.scoped.status = "candidate"`, `sourceEntryIds` provenance from the digest — so fabric folding, linker, and evolution all fire on the same write path.
+    - Functional: `policy.reviewSession(digest | sessionEntries, { reviewer })` runs a host-supplied reviewer hook (model-neutral, same shape as compaction-llm provider calls; bind the model via use-case model selection) with a noop-biased prompt: default output is zero writes; write triggers limited to user correction, error→recovery, a technique reused within the session, or explicit "remember this". Accepted outputs become `fabric.remember` calls — kind `fact`/`procedure`, `consent.visible`, `sourceEntryIds` provenance from the digest — so fabric folding, linker, and evolution all fire on the same write path. Ledger row `status: "candidate"` is upserted on the returned note id (fold reuse keeps the id).
     - Performance: One reviewer call per session run (not per turn); input is a bounded digest (recent turns verbatim + summarized tail), reviewer model chosen by the host.
     - Code Quality: Reviewer output is a validated JSON array of proposed writes; anything unparseable or off-schema is dropped whole (fail closed to noop), never partially applied.
     - Security: Proposals carry no content beyond what the digest supplied; if `approval.default = "staged"`, proposals queue in the staging ledger instead of writing (Task 6 gates the flush).
@@ -167,19 +202,25 @@ the scoped layer activates only when a host creates it.
     - Docs pages to create/edit: `docs/scoped-memory.md` (Task 9) including the one-line cost trade-off: one extra reviewer call per session run (opt-in, off unless the host calls it).
     - `docs/index.md` update: yes (Task 9).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion notes:
+    - `policy.reviewSession(digest, { reviewer, prompt? })` — one host hook call. Digest is a string or entry list (last 8 verbatim, earlier `[id] kind`, cap 24k chars). Default prompt is noop-biased; `prompt` overrides.
+    - Reviewer output coerced from JSON / fenced JSON / already-parsed value. Must be an array of `{kind,content,sourceEntryIds}` with no extra keys. Unparseable, off-schema, mixed-valid, or thrown hook → `{proposed:0,written:0,staged:0}` and no ledger/fabric writes (no throw past the call). Missing `reviewer` throws.
+    - `approval.default: "off"` → `fabric.remember({kind, content, sourceEntryIds, consent:{visible:true,source:"agent"}})` then ledger upsert `status:"candidate"` on the returned id (fold reuse keeps id/createdAt/uses). `"staged"` appends `{kind:"review", proposal, createdAt}` to `pending[]`; fabric untouched (Task 6 flushes).
+    - No `reflectionId` path this task (content + `sourceEntryIds` only). Scan/redact is Task 6.
+    - Exports +3 (`reviewScopedSession`, `ScopedMemoryReviewer`, `ScopedMemoryReviewResult`); budget 917 → 920.
 
-- [ ] Task 5: Promotion ladder and usage-decay GC passes
+- [x] Task 5: Promotion ladder and usage-decay GC passes
   - Acceptance Criteria:
-    - Functional: `policy.promotionPass()` flips `candidate` → `verified` (fabric rewrite in place, same id, `metadata.scoped.status` + `promotedAt`) for notes whose ledger shows ≥ `promotion.reuseThreshold` uses since creation (default 2). `policy.gcPass()` archives: candidates unused for `candidateArchiveDays` (default 30) and notes whose decay score `uses × exp(-ageDays/tauDays)` falls below a floor — archive = proposal entry in the staging ledger (recommend-then-delete); nothing is deleted silently, `fabric.forget` runs only on host approval. `policy.health()` returns the concept's health metrics: duplication rate (fold-rewrite share of writes), candidate→verified conversion, activation rate (used hits / returned hits), note counts by status.
+    - Functional: `policy.promotionPass()` flips ledger `candidate` → `verified` (same note id, `promotedAt`; no fabric rewrite — status is not a fabric field) for notes whose ledger shows ≥ `promotion.reuseThreshold` uses since creation (default 2). `policy.gcPass()` archives: candidates unused for `candidateArchiveDays` (default 30) and notes whose decay score `uses × exp(-ageDays/tauDays)` falls below a floor — archive = `pending[]` proposal (recommend-then-delete); nothing is deleted silently, `fabric.forget` runs only on host approval. Skip ids absent from `memory.exportMemory` (held/forgotten). `policy.health()` returns the concept's health metrics: duplication rate (remember returned an id already in the ledger), candidate→verified conversion, activation rate (used hits / returned hits), note counts by status.
     - Performance: Both passes are O(n) over notes with no model calls; safe to run as an idle job (Letta sleep-time placement).
-    - Code Quality: Status rewrites go through fabric's same-note fold path so createdAt/consent/links survive; an archived note keeps `validTo` untouched (archive is status, not temporal invalidation).
+    - Code Quality: Promotion does not rewrite fabric rows, so createdAt/consent/links are untouched; an archived note keeps `validTo` untouched (archive is ledger status, not temporal invalidation).
     - Security: GC proposals never bypass approval; `legal_hold` notes are never proposed for archive.
   - Approach:
     - Documentation Reviewed: `docs/memory-fabric.md` (rewrite-in-place fold, `forget`/`legal_hold`), concept "Lifecycle — metabolism", Task 3 ledger.
     - Options Considered:
       - Delete outright below threshold — rejected: concept trust boundary ("GC proposes, humans dispose").
       - Staged archive proposals — chosen; also gives the promotion/GC audit trail the mirror renders.
-    - Chosen Approach: Two idempotent passes + `health()`; thresholds are the documented tuning knobs.
+    - Chosen Approach: Two idempotent ledger passes + `health()`; thresholds are the documented tuning knobs. Catalog of policy notes is the ledger; live/held filter is `exportMemory`.
     - API Notes and Examples:
       ```ts
       await policy.promotionPass(); // { promoted: 1 }
@@ -191,18 +232,23 @@ the scoped layer activates only when a host creates it.
       - `packages/memory/src/scoped/__tests__/lifecycle.test.ts`.
     - References: Voyager verification-before-permanence; Hermes #12877 §1/§2; Letta sleep-time consolidation.
   - Test Cases to Write:
-    - Candidate with 2 uses promotes once and not again (idempotent).
+    - Candidate with 2 uses promotes once and not again (idempotent); fabric row unchanged.
     - Stale candidate → GC proposal; approval runs `forget`; disapproval leaves the note live.
-    - `legal_hold` note never proposed; fold on rewrite preserves `createdAt`/links.
+    - `legal_hold` note never proposed (absent from export); a reviewer fold keeps `createdAt`/links (Task 4).
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — `promotionPass`/`gcPass`/`health`.
     - Docs pages to create/edit: `docs/scoped-memory.md` (Task 9).
     - `docs/index.md` update: yes (Task 9).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion notes:
+    - `policy.promotionPass()` flips live ledger `candidate` → `verified` + `promotedAt` when `uses >= reuseThreshold` (default 2). Same note id; no fabric rewrite. Idempotent. Ids absent from `memory.exportMemory` (held/forgotten) are skipped.
+    - `policy.gcPass()` is recommend-then-delete: candidates unused ≥ `candidateArchiveDays` (lastUsedAt ?? createdAt) and verified notes with `uses × exp(-ageDays/tauDays) < 1` get ledger `status:"archived"` plus `{kind:"archive", id, reason, createdAt}` on `pending[]`. `archived` in the return is always 0 — `fabric.forget` is host/Task 6. Missing timestamps skip (fail closed on delete). Already archived/pending skipped.
+    - `policy.health()` is a ledger snapshot: counts by status, `conversionRate` = verified/(candidate+verified), `activationRate` = notes with uses>0 / total, `duplicationRate` = stats.duplicates/stats.writes (reviewer increments on remember fold).
+    - Exports +3 (`runScopedPromotionPass`, `runScopedGcPass`, `scopedMemoryHealth`); budget 920 → 923.
 
-- [ ] Task 6: Facts block budget, injection scan, staged approval gate
+- [x] Task 6: Facts block budget, injection scan, staged approval gate
   - Acceptance Criteria:
-    - Functional: `policy.rememberFact(text)` writes to the working block named by `facts.block` (default `"facts"`); when the block would exceed `facts.maxChars` (default 2200) the call fails with a consolidate-first error listing current entries (Hermes overflow pattern), and the agent/host must merge or remove before retry. Every record surface the policy can inject or write (facts block writes, reviewer proposals, mirror renders) passes the injection/exfiltration scan reused from Task 1's chosen primitive; matches fail closed with the offending pattern class named. `policy.approve(id)`/`policy.reject(id)`/`policy.pending()` operate the staging ledger for every staged write kind (reviewer proposals, GC archives).
+    - Functional: `policy.rememberFact(text)` writes to the working block named by `facts.block` (default `"facts"`); when the block would exceed `facts.maxChars` (default 2200) the call fails with a consolidate-first error listing current entries (Hermes overflow pattern), and the agent/host must merge or remove before retry. Every record surface the policy can inject or write (facts block writes, reviewer proposals, mirror renders) passes `scanScopedMemoryContent` then the memory redactor; matches fail closed with the offending pattern class named. `policy.approve(id)`/`policy.reject(id)`/`policy.pending()` operate the staging ledger for every staged write kind (reviewer proposals, GC archives).
     - Performance: Scan is pure-pattern (no model); budget check is a length comparison.
     - Code Quality: One gate implementation reused by all three surfaces; scan failures are logged with pattern class, never with the payload.
     - Security: This is the trust-boundary task — scanning before any prompt-injectable surface, staged approval default `off` for personal scopes and recommended `staged` for team scopes (documented, not forced).
@@ -211,7 +257,7 @@ the scoped layer activates only when a host creates it.
     - Options Considered:
       - Auto-truncate the facts block on overflow — rejected: silent data loss at a trust boundary.
       - Fail with consolidate-first — chosen (Hermes-validated pattern; forces deliberate curation).
-    - Chosen Approach: Reuse the existing redaction/scan primitive; wrap the fabric working-block insert; staging ledger from Task 4/5.
+    - Chosen Approach: Reuse `redactSecrets`/`createMemory` redactor for secrets. New pure `scanScopedMemoryContent` for prompt-injection / exfil / invisible-Unicode (no shipped scanner). Wrap fabric working-block insert; staging in the Task 3 ledger.
     - API Notes and Examples:
       ```ts
       try { await policy.rememberFact("Staging SSH uses port 2222, not 22"); }
@@ -233,10 +279,15 @@ the scoped layer activates only when a host creates it.
     - Docs pages to create/edit: `docs/scoped-memory.md` security section (Task 9).
     - `docs/index.md` update: yes (Task 9).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion notes:
+    - `policy.rememberFact(text)` appends to working block `facts.block` (default `"facts"`). Over `facts.maxChars` (2200) throws `MemoryLimitError` with `used/max — consolidate first` plus current newline entries. Host consolidates via `fabric.forget({ block })` then retries. Reused `MemoryLimitError`; no `MemoryBudgetError`.
+    - One gate: `scanScopedMemoryContent` then `gateScopedMemoryContent` (throw `scoped memory refused: <class>`, never payload). Classes: `prompt-injection`, `exfil`, `invisible-unicode`. Applied on facts writes, reviewer proposals (stage and write), and approve-of-review. Secret redaction stays `createMemory` redactor on write (Task 7 mirror reapplies for files).
+    - `policy.pending()` / `approve(id)` / `reject(id)` cover staged reviewer proposals (`kind:"review"`, random id) and GC archives (`kind:"archive"`, note id, `prevStatus` for reject restore). Approve-archive runs `fabric.forget`; held notes stay pending.
+    - Exports +6; budget 923 → 929.
 
-- [ ] Task 7: Git audit mirror — deterministic markdown export
+- [x] Task 7: Git audit mirror — deterministic markdown export
   - Acceptance Criteria:
-    - Functional: `policy.renderMirror()` writes one markdown file per note (frontmatter: id, kind, status, scope, validity window, provenance `sourceEntryIds`, uses, lastUsedAt, links) plus `facts.md` into `<scopeRoot>/.memory/`, excluding `state/`. Output is deterministic (stable ordering by id, stable frontmatter key order) so diffs are meaningful; deleted/archived notes disappear from the mirror but git history retains them.
+    - Functional: `policy.renderMirror()` writes one markdown file per note (frontmatter: id, kind, status, scope, validity window, provenance `sourceEntryIds`, uses, lastUsedAt, links) plus `facts.md` into `<scopeRoot>/.memory/`, excluding `state.json`. Output is deterministic (stable ordering by id, stable frontmatter key order) so diffs are meaningful; deleted/archived notes disappear from the mirror but git history retains them.
     - Performance: O(n) writes; a weekly digest is `git log --oneline .memory/` — no code needed.
     - Code Quality: Renderer reads only fabric notes + ledger; it never writes back; mirror is never read by the runtime (audit surface only, per the concept's "one write path, two views").
     - Security: Content passes the Task 6 scan before render; secrets redaction (`memory` redactor) applies so the mirror is committable.
@@ -245,7 +296,7 @@ the scoped layer activates only when a host creates it.
     - Options Considered:
       - Markdown as source of truth with a fabric importer — rejected: two write paths, folding/consent would bypass.
       - Deterministic export — chosen.
-    - Chosen Approach: Pure renderer with stable serialization; `.gitignore` guidance emitted for `state/`.
+    - Chosen Approach: Pure renderer with stable serialization over `exportMemory` pages + ledger; `.gitignore` guidance emitted for `state.json`.
     - API Notes and Examples:
       ```ts
       await policy.renderMirror(); // <scopeRoot>/.memory/{facts.md, notes/*.md}
@@ -263,8 +314,13 @@ the scoped layer activates only when a host creates it.
     - Docs pages to create/edit: `docs/scoped-memory.md` (Task 9).
     - `docs/index.md` update: yes (Task 9).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion notes:
+    - `policy.renderMirror()` writes `<scopeRoot>/.memory/{.gitignore,facts.md,notes/<id>.md}`. Never writes/reads `state.json`. Stale `notes/*.md` unlinked. `.gitignore` is `state.json`.
+    - Notes from `exportMemory` + ledger: skip archived and scan-fail content. Frontmatter key order: id, kind, status, tenantId, resourceId, threadId, validFrom, validTo, sourceEntryIds, uses, lastUsedAt, links. Files sorted by id. Read-only vs fabric.
+    - Secrets: `createMemory` redactor already on export/working. Scan before body write.
+    - Exports +1 (`renderScopedMirror`); budget 929 → 930.
 
-- [ ] Task 8: Evaluation harness — win-rate A/B, precision@3, health, LoCoMo-style probe
+- [x] Task 8: Evaluation harness — win-rate A/B, precision@3, health, LoCoMo-style probe
   - Acceptance Criteria:
     - Functional: `packages/memory/src/scoped/eval/` ships: (a) an A/B runner that replays a task fixture list twice — memory off vs. scoped memory on — through a scripted agent harness (deterministic fake provider, no network) and reports per-task outcome and turn counts; (b) a precision@3 probe over a labeled query→note-id fixture set per scope with a drop alert threshold; (c) `policy.health()` wired into a report command factory (same pattern as observational status/view commands); (d) a LoCoMo-style conversational recall probe fixture (questions answerable only from episodic ledger entries).
     - Performance: Fixtures run network-free; full scoped eval suite completes in the existing CI test budget.
@@ -294,10 +350,15 @@ the scoped layer activates only when a host creates it.
     - Docs pages to create/edit: `docs/scoped-memory.md` evaluation section (Task 9).
     - `docs/index.md` update: yes (Task 9).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion notes:
+    - `runScopedMemoryEval({ fixtures, fakeProvider? })` always constructs tmp `createMemory` + fabric + policy. Rejects `memory`/`policy`/`fabric`/`vectorStore` on the input. Default fake provider answers from recall context or `"unknown"`.
+    - A/B: per-task off vs on, `{ winRate, tasks[] }`. Precision@3 = mean(|relevant ∩ top3| / 3), `precisionAlert` when below floor (default 0.5). LoCoMo: recall must hit `expectedId`; missing seeded id increments `failedClosed` (no false pass).
+    - `createScopedMemoryHealthCommand({ policy })` → `scoped-memory:health` (om:status pattern). Fixtures in `scoped/eval/fixtures/*.json`. No `./scoped/eval` package export — import from `@arnilo/prism-memory/scoped`. No prism-core evals import.
+    - Exports +4 (`runScopedMemoryEval`, `createScopedMemoryHealthCommand`, `probePrecisionAt3`, `probeLocomoRecall`); budget 930 → 934.
 
-- [ ] Task 9: Example, API docs page, index and cross-links
+- [x] Task 9: Example, API docs page, index and cross-links
   - Acceptance Criteria:
-    - Functional: `examples/scoped-memory.ts` (+ built `.js`) runs network-free: scope guard → facts write + overflow → post-run review to candidate → recall with floor/budget → second-use promotion → GC proposal → approve → mirror render. `docs/scoped-memory.md` follows the prism-wiki API page structure exactly (What it does / When to use it / Inputs / Outputs / Request-response example / Implementation example / Extension and configuration notes / Security and performance notes / Related APIs), states the sizing trade-off line (one reviewer call per run; ledger I/O per recall; off by default), and documents every tuning knob with its default. The page states the wiki routing rule: source-cited knowledge belongs in `@arnilo/prism-memory/wiki` (regenerable, line-anchored); session-derived experience belongs in scoped memory (primary records with `sourceEntryIds` provenance) — and the post-run reviewer must not duplicate a wiki-pageable insight as a scoped fact. `docs/index.md` gains the one-sentence entry under "Compaction/session memory"; `docs/scoped-agent-memory.md` links to it as the implemented API page and gains a short wiki-relationship paragraph (currently absent).
+    - Functional: `examples/scoped-memory.ts` (+ built `.js`) runs network-free: scope guard → facts write + overflow → post-run review to candidate → recall with floor/budget → second-use promotion → GC proposal → approve → mirror render. `docs/scoped-memory.md` follows the prism-wiki API page structure exactly (What it does / When to use it / Inputs / Outputs / Request-response example / Implementation example / Extension and configuration notes / Security and performance notes / Related APIs), states the sizing trade-off line (one reviewer call per run; ledger I/O per recall; off by default), and documents every tuning knob with its default. The page states the wiki routing rule: source-cited knowledge belongs in `@arnilo/prism-memory/wiki` (regenerable, line-anchored); session-derived experience belongs in scoped memory (primary records with `sourceEntryIds` provenance) — and the post-run reviewer must not duplicate a wiki-pageable insight as a scoped fact. `docs/index.md` gains the one-sentence entry under "Compaction/session memory"; `docs/scoped-agent-memory.md` links to it as the implemented API page (wiki-relationship paragraph already landed in Task 1).
     - Performance: Example runs in seconds, no credentials.
     - Code Quality: Example mirrors the fabric example conventions (`examples/memory-fabric.ts`).
     - Security: Example uses fake provider + in-memory stores; no real scope roots.
@@ -322,89 +383,22 @@ the scoped layer activates only when a host creates it.
     - Docs pages to create/edit: as listed.
     - `docs/index.md` update: yes — "Scoped memory policy (`@arnilo/prism-memory/scoped`): workspace-scope guard, gated writes, promotion ladder, decay reads, audit mirror."
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+  - Completion notes:
+    - `examples/scoped-memory.ts` walks scope guard → facts overflow → fake reviewer → abstain/hit recall → promotion → GC approve → mirror. `.js` is gitignored (`examples/*.js`); CI emits via `examples_demos_run_to_completion_and_emit_no_secret`.
+    - `docs/scoped-memory.md` is the API page (in `apiPages`). Concept page `docs/scoped-agent-memory.md` now points at it. Index: one Compaction/session memory entry. No `./scoped/eval` subpath; no extra wiki.md edit.
 
-- [ ] Task 10: Release 0.10.0 — version bump + workspace-wide green
-  - Acceptance Criteria:
-    - Functional: All workspace packages bumped to 0.10.0 per release script conventions; typecheck, lint, and full test suite pass, including the new scoped suites and example run.
-    - Performance: CI budget unchanged from 0.9.x.
-    - Code Quality: No `skip`/`todo` flags introduced by the cut.
-    - Security: `npm audit` clean or explained in release notes.
-  - Approach:
-    - Documentation Reviewed: `docs/release-and-install.md`; plan 099 Task 1 pattern.
-    - Options Considered: n/a — standard release plumbing.
-    - Chosen Approach: Script bump + full verification.
-    - API Notes and Examples:
-      ```bash
-      node scripts/release.mjs bump 0.10.0
-      ```
-    - Files to Create/Edit: package.json versions via script.
-    - References: `docs/release-and-install.md`.
-  - Test Cases to Write:
-    - Existing suites (cut adds none beyond regression runs).
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: no.
-    - Docs pages to create/edit: `none`.
-    - `docs/index.md` update: no.
-    - Documentation structure reference: n/a.
+- Moved: Tasks 10–12 (0.10.0 bump, compat baseline, CHANGELOG/publish) → [106](106-Hook-Lifecycle-Completion.md) Tasks 8–10.
 
-- [ ] Task 11: Release 0.10.0 — compatibility baseline regeneration + gate
-  - Acceptance Criteria:
-    - Functional: `node scripts/release.mjs gate --update-baseline` regenerates `scripts/compat-baseline/` files; `release:gate` green; diff reviewed so **additions** (the `@arnilo/prism-memory/scoped` subpath exports: `createScopedMemoryPolicy`, read-policy scorer, lifecycle/health, facts/trust, mirror, eval runner) are intentional; **removals or signature breaks: none planned** — if any appear they are listed in this task before regeneration (plans 083/084 lesson).
-    - Performance: Gate runtime within existing budget.
-    - Code Quality: Baseline diff committed atomically with the version bump.
-    - Security: Baseline contains no secrets (script guarantee, spot-checked).
-  - Approach:
-    - Documentation Reviewed: plans 083/084 baseline incident notes; `scripts/compat-baseline/` current files; plan 099 Task 2 pattern.
-    - Options Considered: Hand-edit baseline — forbidden; script-only regeneration.
-    - Chosen Approach: Regenerate + human-reviewed diff.
-    - API Notes and Examples:
-      ```bash
-      node scripts/release.mjs gate --update-baseline && npm run release:gate
-      ```
-    - Files to Create/Edit: `scripts/compat-baseline/*` (script-written).
-    - References: plans 083/084 baseline incident notes.
-  - Test Cases to Write:
-    - `release:gate` exit 0.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: no (gate mechanics).
-    - Docs pages to create/edit: `none`.
-    - `docs/index.md` update: no.
-    - Documentation structure reference: n/a.
-
-- [ ] Task 12: Release 0.10.0 — CHANGELOG, publish, post-publish verification, plan/roadmap bookkeeping
-  - Acceptance Criteria:
-    - Functional: CHANGELOG entry under 0.10.0 summarizing the scoped memory subpath with the sizing trade-off line; all publishable manifests publish; post-publish verification (install-from-registry smoke) passes; `plans/README.md` row for this plan marked complete; `roadmap.md` updated so 0.10.0 is the recorded current release with this plan as cut owner.
-    - Performance: Publish pipeline unchanged.
-    - Code Quality: Release notes list the new subpath, the opt-in default (off), and the docs page.
-    - Security: No secrets in artifacts; publish uses existing operator-authorized flow.
-  - Approach:
-    - Documentation Reviewed: `docs/release-and-install.md`; plan 099 Task 3/4 pattern; `CHANGELOG.md` current 0.9.0 entry shape.
-    - Options Considered: n/a — standard cut.
-    - Chosen Approach: Follow the established release checklist.
-    - API Notes and Examples:
-      ```bash
-      node scripts/release.mjs publish 0.10.0
-      ```
-    - Files to Create/Edit: `CHANGELOG.md`, `plans/README.md`, `roadmap.md`, `docs/history/` release record if the convention requires one for a minor cut.
-    - References: `docs/release-and-install.md`; plan 099 Tasks 3–4.
-  - Test Cases to Write:
-    - Post-publish smoke: fresh install of `@arnilo/prism-memory@0.10.0` imports both `./fabric` and `./scoped` subpaths.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes (release of the new subpath).
-    - Docs pages to create/edit: `CHANGELOG.md` (release deltas, per plan 068 rule — not in API page bodies).
-    - `docs/index.md` update: no (already updated in Task 9).
-    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass. Known constraints at planning time:
-  - Hybrid lexical+vector fusion inside one recall (research leverage map "open question") is not implemented; the read policy post-ranks fabric hits only. Lexical branch search stays available via `searchConversation`.
-  - Team-scope semantics (shared silo vs per-user) remain single-scope per policy instance; the open question stays open.
+- Hybrid lexical+vector fusion inside one recall is not implemented; the read policy post-ranks fabric hits only. Lexical branch search stays on `searchConversation`.
+- Team-scope semantics (shared silo vs per-user) stay one scope per policy instance.
+- 0.10.0 bump, compat baseline, and publish moved to [106](106-Hook-Lifecycle-Completion.md) Tasks 8–10 after Tasks 1–9 shipped.
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority. Candidates at planning time:
-  - Fuse lexical FTS into `policy.recall` if precision@3 probes show vocabulary-miss failures.
-  - A-MEM-style automatic neighbor evolution beyond the fabric's keyword-union worker, if duplication rate stays high.
-  - Reviewer-to-wiki handoff: when a post-run proposal is really source-cited knowledge (would cite files/lines rather than session entries), hand it to `/wiki-ingest` staging instead of writing a scoped fact — closes the `wiki_record_insight` overlap mechanically; document-only routing covers it until duplication is observed.
-  - Zep-style community summarization if silos grow past a size where health metrics degrade.
+- Fuse lexical FTS into `policy.recall` if precision@3 probes show vocabulary-miss failures. Priority: P3, demand-gated.
+- A-MEM-style automatic neighbor evolution beyond the fabric keyword-union worker if duplication rate stays high. Priority: P3, demand-gated.
+- Reviewer-to-wiki handoff when a post-run proposal is source-cited knowledge (`/wiki-ingest` instead of a scoped fact). Document-only routing covers it until duplication is observed. Priority: P2.
+- Zep-style community summarization if silos grow past a size where health metrics degrade. Priority: P3, demand-gated.

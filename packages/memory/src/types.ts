@@ -141,6 +141,22 @@ export interface MemoryRecallExplanation {
   readonly invalidated?: MemoryInvalidationRecord;
 }
 
+/**
+ * Why a store's own ACL predicate withheld a source (plan 102 Task 6): no grant matched the principal
+ * or its groups, a grant matched but not at the requested `accessVersion`, or the store cannot name the
+ * rule that withheld it (the fail-closed label for a store-side predicate this contract does not cover).
+ */
+export type StoreDenialReason = "no_grant" | "version_mismatch" | "unknown";
+
+/**
+ * One source a store's own ACL predicate withheld for a query. Ids and reasons only: never rows, text,
+ * grant contents, or principal ids.
+ */
+export interface StoreDenial {
+  readonly sourceId: string;
+  readonly reason: StoreDenialReason;
+}
+
 export interface VectorQuery extends MemoryScope {
   readonly embedding: readonly number[];
   readonly topK: number;
@@ -149,6 +165,12 @@ export interface VectorQuery extends MemoryScope {
   readonly authorization?: RagAccessConstraint;
   /** Additional allow-list (share grants). Empty → no hits. */
   readonly ids?: readonly string[];
+  /**
+   * Opt-in report of the sources this query's own ACL predicate withheld, called once per query (empty
+   * list included). Stores that declare `authorization: "acl"` fill it and pay for it only when it is
+   * provided; without it there is no extra statement and the hits are unchanged.
+   */
+  readonly onDeniedSources?: (denials: readonly StoreDenial[]) => void;
 }
 
 export interface VectorDeleteFilter extends MemoryScope {
@@ -181,6 +203,8 @@ export interface VectorLexicalQuery {
   readonly signal?: AbortSignal;
   readonly authorization?: RagAccessConstraint;
   readonly ids?: readonly string[];
+  /** Opt-in store-side denial report; same contract as `VectorQuery.onDeniedSources`. */
+  readonly onDeniedSources?: (denials: readonly StoreDenial[]) => void;
 }
 
 export type LexicalMode = "fts" | "bm25";

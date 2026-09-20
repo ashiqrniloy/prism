@@ -198,6 +198,17 @@ describe("../index.js", () => {
     assert.equal(g.outcome, "deny");
     assert.equal(g.target.kind, "guardrail:input");
 
+    // Plan 104 T3: a pack `ask` rule's suspension records as an approval, not a denial.
+    const gated = await recordGuardrailDecision({
+      store,
+      evaluator,
+      id: "g2",
+      identity: id,
+      record: { guardrail: "pack:coding-standard/ask-outside-roots", stage: "tool_input", action: "interrupt", reason: "needs approval" },
+    });
+    assert.equal(gated.outcome, "approval");
+    assert.equal(gated.target.kind, "guardrail:tool_input");
+
     const p = await recordPermissionDecision({
       store,
       evaluator,

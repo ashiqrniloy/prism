@@ -42,10 +42,12 @@ Field-level detail (defaults, bounds, failure modes) lives on the owning page �
 | --- | --- | --- |
 | `RunOptions.turnPolicy` (`TurnPolicyOptions`) | Synchronous host stop at a turn boundary; a stop lands as `stopReason: "host_policy"` and stays resumable | [Agent loops](agent-loops.md) |
 | `CreateAgUiHandlerOptions.inputPolicy` (`AgUiInputPolicyOptions`) | `clientState: "honor"` \| `"ignore"` — whether the server honors client-supplied AG-UI state and tools | [Frontend interoperability](ag-ui.md) |
+| `SubscribeOptions.acrossRuns` | `true` keeps one live subscriber open across runs of the same session until the host ends it, session teardown, or an overflow (bounded queue, default 1024, no background work); default `false` closes it at run end | [Agent events](agent-events.md) |
 | `snapshotRunBundle(...)` → `RunBundleSnapshot` | Inspectable digest projection of the effective run bundle (prompt/skill/tool/guardrail digests, limits, storage kinds) | [Run bundle](run-bundle.md) |
 | `createClaimGroundingGuardrail` (`ClaimGroundingGuardrailOptions`) | `"output"`-stage guardrail that blocks or flags numeric claims no tool result or host evidence supports | [Guardrails](guardrails.md) |
 | `ErrorInfo.failureClass` (`ProviderFailureClass`) | Typed provider failure on run outcomes, ledger rows, and tool results (`quota`, `rate_limited`, `auth`, `transient`, `permanent`) | [Runs and usage](runs-and-usage.md) |
-| `AgentConfig.usageEstimation` | `"fallback"` (default) records a labeled estimate when a provider reports no usage; `"off"` leaves usage absent; estimates are never priced | [Runs and usage](runs-and-usage.md#automatic-fallback-agentconfigusageestimation) |
+| `AgentConfig.usageEstimation` | `"fallback"` (default) records a labeled estimate when a provider reports no usage; `"off"` leaves usage absent; `"strict"` refuses the turn instead (`code: "usage_missing"`); estimates are never priced | [Runs and usage](runs-and-usage.md#automatic-fallback-agentconfigusageestimation) |
+| `AgentConfig.contextBudget` | Session-turn eviction budget forwarded to every assembly (`maxInputTokens`/`maxInputBytes`, `reportOmissions`, `tokenEstimator`); the usage fallback prefers its measurement | [Input and prompt assembly](input-and-prompt-assembly.md) |
 | `ModelConfig.capabilities.toolCallStrictness` | Advisory tool-call reliability (`"strict"` \| `"lenient"` \| `"legacy"`); catalog conformance, not a promise | [Model registry](model-registry.md) |
 
 ## Agent/session runtime

@@ -1,8 +1,16 @@
-import { readdir, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { loadManifest, validateAnchor } from "../manifest.js";
-import type { BrokenLink, DeadAnchor, LintReport } from "../types.js";
+import { normalizeWikiSourcePath } from "../retire.js";
+import type { BrokenLink, DeadAnchor, LintReport, PrunedSource } from "../types.js";
 import { isIso8601Utc, parseConceptFrontmatter, resolveMarkdownHref } from "./okf.js";
+
+/** Source paths listed under `## Raw Sources` in a compiled page — the compiler's projection of `rawSources`. */
+function listedRawSources(content: string): readonly string[] {
+  const section = /^## Raw Sources[ \t]*\n((?:[-*] `[^`\n]+`[^\n]*\n?)*)/m.exec(content);
+  if (!section) return [];
+  return [...section[1].matchAll(/^[-*] `([^`]+)`/gm)].map((match) => match[1].trim());
+}
 
 export class WikiLinter {
   async lint(wikiRootPath: string, workspaceRootPath: string = process.cwd()): Promise<LintReport> {
@@ -14,6 +22,8 @@ export class WikiLinter {
     const brokenLinks: BrokenLink[] = [];
     const orphans: string[] = [];
     const gaps: string[] = [];
+    const pruned: PrunedSource[] = [];
+    const pageSources = new Map<string, readonly string[]>();
 
     if (!manifest) {
       return {
@@ -26,6 +36,7 @@ export class WikiLinter {
         ],
         orphans: [],
         gaps: [],
+        prunedSources: [],
         ok: false,
       };
     }
@@ -96,6 +107,9 @@ export class WikiLinter {
         const content = await readFile(fullPath, "utf8");
         const sanitizedContent = content.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, "");
 
+        const listed = listedRawSources(content);
+        if (listed.length > 0) pageSources.set(relPath, listed);
+
         if (relPath === "index.md") {
           const fm = parseConceptFrontmatter(content);
           if (fm?.type !== undefined && fm.type !== "" && !content.includes("okf_version:")) {
@@ -156,12 +170,39 @@ export class WikiLinter {
       }
     }
 
+    // 6. Entity pages whose sources are gone: pruned, not broken — one existence check per distinct path
+    const present = new Map<string, boolean>();
+    const sourceExists = async (relativePath: string): Promise<boolean> => {
+      const cached = present.get(relativePath);
+      if (cached !== undefined) return cached;
+      let exists = true;
+      try {
+        await access(join(absWorkspaceRoot, relativePath));
+      } catch {
+        exists = false;
+      }
+      present.set(relativePath, exists);
+      return exists;
+    };
+
+    for (const [entityId, entity] of Object.entries(manifest.entities)) {
+      const page = `entities/${entityId}.md`;
+      const candidates = new Set<string>([...entity.rawSources, ...(pageSources.get(page) ?? [])]);
+      const missing: string[] = [];
+      for (const candidate of candidates) {
+        const normalized = normalizeWikiSourcePath(absWorkspaceRoot, candidate);
+        if (!(await sourceExists(normalized))) missing.push(normalized);
+      }
+      if (missing.length > 0) pruned.push(Object.freeze({ page, missing: Object.freeze(missing.sort()) }));
+    }
+
     const ok = deadAnchors.length === 0 && brokenLinks.length === 0;
     return {
       deadAnchors,
       brokenLinks,
       orphans: orphans.sort(),
       gaps,
+      prunedSources: pruned.sort((left, right) => left.page.localeCompare(right.page)),
       ok,
     };
   }

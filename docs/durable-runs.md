@@ -12,7 +12,7 @@ This is crash recovery for the in-run state, not an orchestrator. The host workf
 - The host wants a bounded, explicit recovery point rather than "restart the whole run".
 - An external orchestrator needs to resume a single run without replaying its tools.
 
-For approval suspension and batch decisions, see [Agent/session runtime § Durable interruption](agent-session-runtime.md#durable-interruption); `every-turn` is additive to that machinery and uses the same store, redaction, bounds, fingerprint, and CAS.
+For approval suspension and batch decisions — including approve-with-edits revalidation against the session's restored pack rules — see [Agent/session runtime § Durable interruption](agent-session-runtime.md#durable-interruption); `every-turn` is additive to that machinery and uses the same store, redaction, bounds, fingerprint, and CAS.
 
 ## Inputs / request
 
@@ -23,7 +23,7 @@ For approval suspension and batch decisions, see [Agent/session runtime § Durab
 | `checkpointPolicy` | `"decision"` (default) persists only on suspension/terminal status. `"every-turn"` adds one running-state checkpoint per provider turn. |
 | `checkpoints` | The host's `CheckpointStore`; the same store serves suspension, crash recovery, and status. |
 | `definitionRevision` | Host-authored revision participating in the fingerprint; a change without a revision bump refuses resume. |
-| `persistSessionState` | Also carries loaded-skill names and the attention sticky frontier into each turn checkpoint. |
+| `persistSessionState` | Also carries loaded-skill names, the attention sticky frontier, and (plan 104 Task 2/3) the session's guardrail pack refs (or an inline pack's pattern rules) plus each pack's own state snapshot into each turn checkpoint. |
 | `includeSkillBodies` | Alongside `persistSessionState`, carries exact skill instructions. |
 | `maxStateBytes` | Save-side byte ceiling (default 256 KB, hard 1 MB). Applies to every turn checkpoint identically. |
 | `checkpointMetadata` | Sidecar map (`Record<string, string>`, ≤ 4 KB, redacted) written with every checkpoint record — never inside the state value, so it costs no `maxStateBytes` budget. A function is resolved at each write, so a host closure can pin state that moves mid-run (git commit, document version). |
@@ -72,11 +72,12 @@ Resume uses `resumeAgentRun` / `resumeAgentRunStream` with `{ expectedVersion, d
 
 ## Outputs / response / events
 
-Each turn checkpoint is a normal durable state (schema v1) carrying status `running`, the current `leafId`, run counters and wall deadline, loop-local state when the loop declares `snapshot`/`restore`, the run's `toolNames` grant, and — with `persistSessionState` — the loaded-skill catalog plus sticky attention frontier. Hard gates are unchanged: CAS `expectedVersion`, ownership/fencing, redaction at the checkpoint boundary, `maxStateBytes`, and the agent fingerprint (`agentFingerprint`) over id, revision, model, instructions, system prompt, skills, tools, guardrails, and loop revision.
+Each turn checkpoint is a normal durable state (schema v1) carrying status `running`, the current `leafId`, run counters and wall deadline, loop-local state when the loop declares `snapshot`/`restore`, the run's `toolNames` grant, and — with `persistSessionState` — the loaded-skill catalog, sticky attention frontier, and the guardrail pack block (`sessionState.guardrailPacks`: `{ packs: [{ id, version, options?, rules? }], state?: { <packId>: <pack state> } }`, ≤ 8 packs and ≤ 64 rules each, ≤ 8 KiB per pack row/rule/options/state, ids ≤ 96 chars, redacted like all state). Measured cost: a 656-byte `persistSessionState` checkpoint grows by 185 bytes for all four built-in packs' rows (≈ 46 bytes/pack); a `validation-respect` row with non-default options and live `validationFailed` state adds ≈ 169 bytes in total. Hard gates are unchanged: CAS `expectedVersion`, ownership/fencing, redaction at the checkpoint boundary, `maxStateBytes`, and the agent fingerprint (`agentFingerprint`) over id, revision, model, instructions, system prompt, skills, tools, guardrails, and loop revision.
 
 A crash leaves the last checkpoint at status `running`. `decision: "continue"` accepts exactly that: a running checkpoint with no interruption and no unresolved pending decisions. Everything else fails closed with `AgentRunStateError` and zero checkpoint writes:
 
 - `expectedVersion` mismatch, ownership/fencing mismatch, revision or fingerprint mismatch (`Stale or non-running agent run resume`, `Agent revision or fingerprint mismatch on resume`).
+- `sessionState.guardrailPacks` that cannot be replayed: an unknown pack id, an inline rule carrying a `deny` predicate or `RegExp` pattern, a row `version` that no longer matches the installed pack definition, a pack whose state has no codec, more than 8 rows (or 64 rules in one), or malformed/oversized pack state. The resume refuses with `AgentRunStateError` and dispatches nothing — a suspended run's enforcement never silently downgrades. A checkpoint written before plan 104 (no key) resumes with no packs and no error.
 - Status `suspended` — approvals, elicitations, and input guardrails still require `approve`/`deny` or a `RunDecision` batch; `continue` never bypasses a gate.
 - Any interruption, pending decision, or ready-to-dispatch pending call recorded in the state.
 

@@ -705,6 +705,38 @@
       "cost": "2 GET /models requests (second cached in TTL)."
     },
     {
+      "id": "calibration/vendor-count-tokens",
+      "package": "@arnilo/prism",
+      "status": "active",
+      "source": "scripts/usage-calibration-live.test.mjs",
+      "command": "node --test scripts/usage-calibration-live.test.mjs",
+      "cwd": ".",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS"
+      ],
+      "requiresAny": [
+        "ANTHROPIC_API_KEY",
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_ANTHROPIC_MODEL",
+          "default": "claude-haiku-4-5",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_GOOGLE_MODEL",
+          "default": "gemini-2.5-flash-lite",
+          "wired": true
+        }
+      ],
+      "scope": "Count-only token requests (no generation) on non-sensitive fixture text, using the chat key each vendor already needs.",
+      "cost": "3 token-count requests per credentialed vendor (prose, CJK, chat transcript); no generation, no streaming.",
+      "plan": "plans/103-Usage-Estimation-And-Context-Meter-Follow-Ups.md",
+      "notes": "Skips per vendor when its key is absent; a rejected credential fails the leg. Rewrites docs/_evidence/phase103-family-token-calibration.md with the measured counts and measured-vs-shipped chars/token."
+    },
+    {
       "id": "cli/live-journey",
       "package": "@arnilo/prism",
       "status": "planned",
@@ -749,6 +781,30 @@
         }
       ],
       "cost": "1 rerank request per configured endpoint (\u22642 total)."
+    },
+    {
+      "id": "memory/local-rerank-live",
+      "package": "@arnilo/prism-memory",
+      "status": "active",
+      "source": "packages/memory/src/rag/__tests__/local-reranker-live.test.ts",
+      "command": "node --test dist/rag/__tests__/local-reranker-live.test.js",
+      "cwd": "packages/memory",
+      "requires": [
+        "PRISM_TEST_LOCAL_RERANK"
+      ],
+      "optional": [
+        "PRISM_TEST_LOCAL_RERANK_CACHE_DIR"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_LOCAL_RERANK_MODEL",
+          "default": "Xenova/bge-reranker-base",
+          "wired": true
+        }
+      ],
+      "scope": "In-process cross-encoder (transformers.js, q8/cpu) on this machine; no service and no credential. Weights come from the documented model id into a host cache dir; a cold run downloads a \u2248280 MB int8 model.",
+      "notes": "Real runtime through createTransformersRerankRuntime (no stub): conformance, top-1 ordering on a fixed query, top-50 latency, offline replay with allowRemoteModels:false, recall@5 over the inlined 24-query / 96-chunk corpus (rerank off vs on, whole-corpus pool, pool-bound rows at 20 and 32 candidates), and a generated docs/_evidence/phase102-local-rerank-latency.md row (no paths, no secrets).",
+      "cost": "One \u2248280 MB model download on a cold cache; zero network after load, no API spend. \u224830 s wall clock after the cache is warm (the recall leg scores 24 \u00d7 96 query/document pairs)."
     },
     {
       "id": "memory/drive-sync-live",
@@ -908,9 +964,9 @@
       "requires": [
         "PRISM_TEST_POSTGRES_URL"
       ],
-      "scope": "Postgres memory store + pgvector index round-trips on the operator database.",
+      "scope": "Postgres memory store + pgvector index round-trips on the operator database, including durable deletion propagation (1,000 derived rows tombstoned in one transaction) and grant-change re-pointing.",
       "cost": "Bounded insert/query cycles against the configured Postgres.",
-      "notes": "Existing integration suites (postgres-memory, postgres-vector) over the real wire.",
+      "notes": "Existing integration suites (postgres-memory, postgres-vector, postgres-propagation) over the real wire.",
       "package": "@arnilo/prism-memory"
     },
     {

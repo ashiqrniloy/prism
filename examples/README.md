@@ -43,6 +43,7 @@ node examples/evals.ts
 node examples/evaluation-gate.ts
 node examples/execution-timeline.ts
 node examples/behavior-evaluation.ts
+node examples/guardrail-packs.ts
 node examples/coding-browser-evaluation.ts
 node examples/web-research.ts
 node examples/run-feedback.ts
@@ -115,6 +116,7 @@ Each demo prints a single JSON line with its result.
 - `evals.ts` — deterministic scorers, dataset snapshot, and bounded `runExperiment` over mock agent results.
 - `evaluation-gate.ts` — network-free experiment threshold that exits non-zero on regression.
 - `execution-timeline.ts` — **demo**: offline workflow execution timeline projection, cockpit summary, and Mermaid diagram export (network-free).
+- `guardrail-packs.ts` — **demo**: guardrail packs end to end — two built-in packs refusing a `shell`/`write` call with the rule named, `createGuardrailPackScorer()` grading the denial, a durable `ask` rule suspending and being approved, and a `secrets-hygiene` refusal that never echoes the token (network-free).
 - `behavior-evaluation.ts` — **demo**: host-journey packs that execute `trials: 3` (`sampleCount`), `runScenario` clarify/refuse, denyTools/unknownEffect/failStore injection, Task 8 stale draft revision, revoked-ACL citations, and `validateReleaseEvalManifest` (network-free).
 - `coding-browser-evaluation.ts` — network-free coding/browser adversarial dataset + scorers + CI threshold, plus a test-oracle `toEnvironment` file-hash gate (no Docker/Playwright binary).
 - `web-research.ts` — network-free host-selected Brave search → Firecrawl Markdown route with fake fetch, stable citation, untrusted marker, and fixed host extraction schema.
@@ -180,6 +182,7 @@ Each demo prints a single JSON line with its result.
 - `work-scopes-coding-loop.ts` — **demo**: nested work scopes with `withWorkScope`, leaf-only auto-bind, projection (task memory hidden until an ancestor bind promotes it), and closed-scope inclusion (network-free).
 - `shared-work-scope.ts` — **demo**: one shared work scope across sessions — owner-branch grants, bound contributions from two sessions, the attached context provider + exact-id recall reading the merged per-branch ledger, a private child scope staying hidden, and revocation taking effect on the next read (network-free).
 - `memory-fabric.ts` — **demo**: typed notes (fact/procedure/working) over the existing stores, in-place folding + supersession, `attach(session)` gating the `memory.*` tools and the linker, and the `memory-fabric` context provider registered for `AgentDefinition.context` (network-free).
+- `scoped-memory.ts` — **demo**: `createScopedMemoryPolicy` scope guard, facts-block overflow, fake-provider review to candidates, recall floor/budget, promotion, GC approve, and git audit mirror (network-free).
 - `host-artifact-loop.ts` — **demo**: third-party host mixing first-party
   and own providers/tools/skills, `AGENTS.md`/`SYSTEM.md` system prompts, and the
   `generate-validate-revise` artifact loop with host-owned schema validation.

@@ -12,6 +12,7 @@ import {
   AgentRunStateOptions,
   DEFAULT_MAX_STICKY_DECISIONS,
   DecisionScope,
+  Guardrails,
   HARD_MAX_PENDING_DECISIONS,
   JsonObject,
   MAX_DECISION_REASON_BYTES,
@@ -24,7 +25,7 @@ import {
   ToolRegistry,
   ToolResult,
 } from "./contracts.js";
-import { runGuardrails } from "./guardrails.js";
+import { guardrailRefusalText, runGuardrails } from "./guardrails.js";
 import type { AgentIdentity } from "./identity.js";
 import { canonicalToolEffectJson } from "./tool-effects.js";
 
@@ -142,6 +143,12 @@ export async function resolveRunDecisions(input: {
   readonly state: StoredAgentRunState;
   readonly decisions: readonly RunDecision[];
   readonly signal?: AbortSignal;
+  /**
+   * Plan 104 T6: extra `tool_input` guardrails for decision-time revalidation of modified arguments —
+   * the resumed session's restored pack rules. Session-scoped on purpose: `agent.config.guardrails` is
+   * never mutated, so no other session of that agent inherits the packs.
+   */
+  readonly guardrails?: Guardrails;
 }): Promise<ResolvedRunDecisions> {
   const { agent, state, decisions } = input;
   if (decisions.length === 0) throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Decision batch must not be empty");
@@ -178,7 +185,7 @@ export async function resolveRunDecisions(input: {
       if (target.kind !== "tool_approval" || !target.toolCallId) {
         throw new AgentDecisionError("ERR_PRISM_DECISION_SCOPE", "Modified arguments apply only to tool approvals");
       }
-      await validateModifiedArguments(agent, registry, state, target, decision.modifiedArguments, input.signal);
+      await validateModifiedArguments(agent, registry, state, target, decision.modifiedArguments, input.signal, input.guardrails);
     }
     if (decision.elicitation !== undefined) {
       if (target.kind !== "elicitation") {
@@ -219,6 +226,7 @@ async function validateModifiedArguments(
   target: PendingDecision,
   modified: JsonObject,
   signal?: AbortSignal,
+  extraGuardrails?: Guardrails,
 ): Promise<void> {
   const invalid = (message: string, cause?: unknown) => new AgentDecisionError("ERR_PRISM_DECISION_INVALID", message, { cause });
   if (JSON.stringify(modified) === undefined || Buffer.byteLength(JSON.stringify(modified), "utf8") > MAX_ELICITATION_BYTES) {
@@ -237,9 +245,15 @@ async function validateModifiedArguments(
   const value: ToolCallContent = call
     ? { ...call, arguments: modified }
     : { type: "tool_call", id: target.toolCallId ?? "", name: toolName, arguments: modified };
+  // Plan 104 T6: the session's pack rules join the agent's own here, so an approval that edits
+  // arguments into a pack-violating state is refused at decision time instead of being accepted and
+  // stopped at dispatch. Only `tool_input` is evaluated by this function, so only it is merged.
+  const guardrails = extraGuardrails?.toolInput?.length
+    ? { ...agent.config.guardrails, toolInput: [...(agent.config.guardrails?.toolInput ?? []), ...extraGuardrails.toolInput] }
+    : agent.config.guardrails;
   const guarded = await runGuardrails({
     stage: "tool_input",
-    guardrails: agent.config.guardrails,
+    guardrails,
     value,
     context: {
       sessionId: state.sessionId,
@@ -251,7 +265,11 @@ async function validateModifiedArguments(
     },
     redactor: agent.config.redactor,
   });
-  if (guarded.terminal) throw invalid("Modified arguments blocked by guardrail");
+  if (guarded.terminal) {
+    // A compiled pack rule is named (bounded, redacted) so the host sees which rule refused the edit;
+    // the arguments themselves are never echoed.
+    throw invalid(guardrailRefusalText(guarded.terminal, "Modified arguments blocked") ?? "Modified arguments blocked by guardrail");
+  }
 }
 
 /**

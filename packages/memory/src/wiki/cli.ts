@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { initWiki } from "./commands/init.js";
-import { lintWiki } from "./commands/lint.js";
+import { lintWiki, renderPrunedSources } from "./commands/lint.js";
 import { refreshWiki } from "./commands/refresh.js";
 import { ingestWikiSource } from "./ingest.js";
 import { Context7Hydrator } from "./search/context7-hydrator.js";
@@ -98,8 +98,16 @@ export async function runCli(argv: readonly string[]): Promise<number> {
       case "lint": {
         console.log(`Linting LLM Wiki at ${wikiRoot}...`);
         const report = await lintWiki({ wikiRoot, workspaceRoot });
+        const prunedText = report.prunedSources.length > 0 ? renderPrunedSources(report) : "";
         if (report.ok) {
           console.log("✅ Wiki health check passed. No broken links or dead anchors found.");
+          if (prunedText !== "") {
+            // Maintainer work, not a broken wiki: the same pruned line as the command, still exit 0.
+            console.log(`📄 ${prunedText}.`);
+            for (const entry of report.prunedSources) {
+              console.log(`  - ${entry.page} lists missing source(s): ${entry.missing.join(", ")}`);
+            }
+          }
           return 0;
         }
         console.log(
@@ -110,6 +118,12 @@ export async function runCli(argv: readonly string[]): Promise<number> {
         }
         for (const bl of report.brokenLinks) {
           console.log(`  - Broken link in ${bl.sourceFile}: [[${bl.target}]]`);
+        }
+        if (prunedText !== "") {
+          console.log(`📄 ${prunedText}.`);
+          for (const entry of report.prunedSources) {
+            console.log(`  - ${entry.page} lists missing source(s): ${entry.missing.join(", ")}`);
+          }
         }
         return 1;
       }

@@ -2,7 +2,12 @@
 
 import { resolveInputCap } from "../../attention-compiler.js";
 import { cacheUsageReport } from "../../cache-helpers.js";
-import { estimateMessageTokens } from "../../context-budget.js";
+import {
+  estimateMessageTokens,
+  estimateRequestExtrasTokens,
+  getContextBudgetReport,
+  resolveHostTokenEstimator,
+} from "../../context-budget.js";
 import type {
   ContentBlock,
   CostCatalog,
@@ -81,7 +86,9 @@ function turnBudgets(session: SessionHost, model: ModelConfig, usage: Usage | un
   const inputCap = resolveTurnInputCap(session, model);
   const runInputBudget = tracker.limits.maxInputTokens;
   return {
-    ...(usage?.inputTokens === undefined ? {} : { inputTokens: usage.inputTokens }),
+    ...(usage?.inputTokens === undefined
+      ? {}
+      : { inputTokens: usage.inputTokens, inputTokensSource: usage.estimated === true ? "estimated" : "reported" }),
     ...(inputCap === undefined ? {} : { inputCap }),
     ...(runInputBudget === null ? {} : { runInputBudget }),
     runInputUsed: snapshot.inputTokens,
@@ -163,21 +170,54 @@ export async function recordProviderUsage(
 }
 
 /**
- * Plan 091 T2 missing-usage fallback: when the provider reported nothing and the
- * agent did not turn estimation off, label an estimate of the turn's own request
- * (messages + tool declarations + context blocks). Returns `undefined` when
- * estimation is off or the request is unavailable — absent stays absent.
+ * Plan 091 T2 missing-usage fallback, plan 103 T6 exact-measurement reuse: when the provider
+ * reported nothing and the agent did not turn estimation off, label one estimate of the turn's
+ * own request, preferring the most exact measurement that already exists —
+ * 1. the budget pass's own `ContextBudgetReport.keptTokens` (whole request, post-eviction,
+ *    the same figure that decided evictions; excludes content added after the budget pass),
+ * 2. the host's `contextBudget.tokenEstimator`, projecting messages plus tool/context portions
+ *    through the assembler's own `measureAll` text shapes,
+ * 3. the plan-091 family heuristic for messages plus those same assembler shapes for extras
+ *    (no `JSON.stringify` of the schemas, so no drift from what the assembler measured).
+ * A host tokenizer's count is still an estimate (`confidence: "high"`, never `"reported"`);
+ * a report measured by the built-in ÷4 basis is honestly `"low"`. Returns `undefined` when
+ * estimation is not the fallback (`"off"` / `"strict"`) or the request is unavailable —
+ * absent stays absent.
  */
 function estimateTurnUsage(session: SessionHost, model: ModelConfig, request: ProviderRequest | undefined): Usage | undefined {
-  if (!request || session.agent.config.usageEstimation === "off") return undefined;
+  // Omitted is the documented default (`"fallback"`), not a reason to skip estimation.
+  const mode = session.agent.config.usageEstimation ?? "fallback";
+  if (!request || mode !== "fallback") return undefined;
+  const hostEstimator = resolveHostTokenEstimator(session.agent.config.contextBudget);
+  const report = getContextBudgetReport(request);
+  if (report) {
+    return { inputTokens: report.keptTokens, estimated: true, confidence: hostEstimator === undefined ? "low" : "high" };
+  }
+  if (hostEstimator) {
+    let tokens = estimateRequestExtrasTokens(request.tools, request.context, hostEstimator);
+    for (const message of request.messages) tokens += estimateMessageTokens(message, hostEstimator);
+    return { inputTokens: tokens, estimated: true, confidence: "high" };
+  }
   const estimate = estimateMessageTokens(request.messages, model.model);
-  const extras =
-    request.tools?.length || request.context?.length ? JSON.stringify({ tools: request.tools, context: request.context }) : undefined;
-  return {
-    inputTokens: estimate.tokens + (extras === undefined ? 0 : estimateTextTokensForFamily(extras, model.model)),
-    estimated: true,
-    confidence: estimate.confidence,
-  };
+  const extras = estimateRequestExtrasTokens(request.tools, request.context, (text) => estimateTextTokensForFamily(text, model.model));
+  return { inputTokens: estimate.tokens + extras, estimated: true, confidence: estimate.confidence };
+}
+
+/**
+ * Plan 103 T5: the refusal `usageEstimation: "strict"` gives a completed turn that reported no
+ * usage. It rides the existing observable-failure path (one attempt, terminal `error` event) and
+ * stamps no `failureClass` — a harness refusal is not a provider failure, so `name`/`code` are
+ * what a host matches on. The info carries the turn number and mode only, never request content.
+ */
+function usageMissingFailure(turn: number): ProviderTurnFailure {
+  return new ProviderTurnFailure(
+    {
+      name: "UsageMissingError",
+      code: "usage_missing",
+      message: `provider reported no usage on turn ${turn} and usageEstimation is "strict"`,
+    },
+    true,
+  );
 }
 
 /** Latest user-role text in the assembled request; steered messages included. */
@@ -390,6 +430,14 @@ export async function generateProviderTurn(
       content.push(call);
       calls.push(call);
       emitOutput({ type: "message_delta", sessionId: session.id, runId, content: call });
+    }
+    // Plan 103 T5: strict refuses a completed turn that reported no usage *before* the usage seam
+    // runs, so no estimate is projected, the cost catalog is not consulted, and the fail-closed
+    // `recordUsage(undefined)` maxCost breach cannot preempt the refusal. Marking the seam
+    // consulted keeps the catch below from re-entering it with the same missing usage.
+    if (usage === undefined && session.agent.config.usageEstimation === "strict") {
+      usageRecorded = true;
+      throw usageMissingFailure(turn);
     }
     await recordTurnUsage();
     if (session.activeGuardrails?.output?.length) {

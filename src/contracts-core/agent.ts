@@ -92,11 +92,24 @@ export interface AgentConfig {
    *  Omitted keeps today's request bytes; per-run options may only relax this setting. */
   readonly attentionCompiler?: import("./attention.js").AttentionCompilerSetting;
   /**
-   * Missing-usage fallback (plan 091 T2): `"fallback"` (default) records a labeled
-   * estimate when a provider turn reports no usage; `"off"` leaves usage absent —
-   * never zero. Estimates are marked `Usage.estimated` and are never priced.
+   * Missing-usage handling (plan 091 T2, plan 103 T5): `"fallback"` (default) records a labeled
+   * estimate when a provider turn reports no usage; `"off"` leaves usage absent — never zero;
+   * `"strict"` refuses a usage-less turn instead, failing the run with `code: "usage_missing"`
+   * (`name: "UsageMissingError"`) so a host whose cost gates cannot tolerate approximations never
+   * runs on an estimate. A refusal is a harness decision, not a provider failure, so it carries no
+   * `failureClass` and is never retried. Estimates are marked `Usage.estimated` and never priced.
    */
-  readonly usageEstimation?: "fallback" | "off";
+  readonly usageEstimation?: "fallback" | "off" | "strict";
+  /**
+   * Session-turn context budget (plan 103 T6): forwarded to every `assembleProviderInput`
+   * call this agent's sessions make, so a session gets the same eviction, `tokenEstimator`,
+   * and `reportOmissions` semantics as a direct assembler caller. Mutually exclusive with
+   * `attentionCompiler` (rejected at assembly). With `usageEstimation: "fallback"`, the
+   * missing-usage estimate prefers this budget's own measurement: the request's
+   * `ContextBudgetReport.keptTokens` when `reportOmissions` is on, else the `tokenEstimator`
+   * projection — see [Runs and usage](../../docs/runs-and-usage.md).
+   */
+  readonly contextBudget?: import("../context-budget.js").ContextBudget;
   readonly inputBuilder?: InputBuilder;
   readonly promptBuilder?: PromptBuilder;
   readonly middleware?: MiddlewareRegistry;
@@ -201,6 +214,12 @@ export interface AgentSessionCloneOptions {
 export type SubscriberOverflowPolicy = "close" | "drop_oldest" | "drop_newest";
 
 export interface SubscribeOptions {
+  /**
+   * Plan 104 T5: `true` keeps this subscriber open across runs of the same session; it is then
+   * closed only by the host (`subscription.close()` / `session.closeSubscribers()`) or by an
+   * overflow under the default `close` policy. Default `false` (closed at run end).
+   */
+  readonly acrossRuns?: boolean;
   /** Maximum queued events for a subscriber that is not actively awaiting `next()`. Defaults to 1024. */
   readonly maxQueuedEvents?: number;
   /** What to do when `maxQueuedEvents` is reached. Defaults to `close`. */

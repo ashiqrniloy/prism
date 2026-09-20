@@ -495,4 +495,166 @@ describeIntegration("createPostgresVectorStore integration", () => {
       await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
     }
   });
+
+  /** Same store, over a pool that records every statement text — for statement-count and SQL-shape pins. */
+  async function createSpyingStore(dimension: number) {
+    const pool = createPool();
+    if (!(await pgvectorAvailable(pool))) {
+      console.log("skip: pgvector extension unavailable");
+      return undefined;
+    }
+    const statements: string[] = [];
+    const spied = new Proxy(pool, {
+      get(target, property, receiver) {
+        if (property === "query") {
+          return async (text: string, params?: unknown[]) => {
+            statements.push(text);
+            return target.query(text, params as never);
+          };
+        }
+        return Reflect.get(target, property, receiver) as unknown;
+      },
+    }) as unknown as Pool;
+    const schema = `prism_vec_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
+    const store = await createPostgresVectorStore({ pool: spied, schema, dimension });
+    return { store, schema, pool, statements };
+  }
+
+  it("reports what its own ACL predicate withheld, one entry per source, only when asked", async () => {
+    const created = await createSpyingStore(2);
+    if (!created) return;
+    const { store, schema, pool, statements } = created;
+    const scope = { tenantId: "t1", resourceId: "r1", threadId: "th1" };
+    const alice = { principalId: "alice", tenantId: "t1", accessVersion: 2 };
+    const id = (sourceId: string, index: number) => `${sourceId}#${String(index).padStart(4, "0")}`;
+    const rag = (sourceId: string, index: number) => ({
+      _rag: { sourceId, citationId: id(sourceId, index), chunkIndex: 0, start: 0, end: 4 },
+    });
+    try {
+      await store.upsert([
+        ...Array.from({ length: 20 }, (_, index) =>
+          baseRecord({
+            id: id("secret", index + 1),
+            embedding: [1, 0],
+            sequence: index,
+            text: "secret merger approval policy",
+            metadata: rag("secret", index + 1),
+          }),
+        ),
+        baseRecord({
+          id: id("stale", 1),
+          embedding: [1, 0],
+          sequence: 20,
+          text: "stale approval policy row",
+          metadata: rag("stale", 1),
+        }),
+        baseRecord({
+          id: id("unmatched", 1),
+          embedding: [1, 0],
+          sequence: 21,
+          text: "unrelated gardening notes",
+          metadata: rag("unmatched", 1),
+        }),
+        baseRecord({
+          id: id("public", 1),
+          embedding: [0.2, 0.98],
+          sequence: 22,
+          text: "public approval policy handbook",
+          metadata: rag("public", 1),
+        }),
+      ]);
+      const setSourceAccess = store.setSourceAccess;
+      assert.ok(setSourceAccess, "the durable store must declare source ACL writes");
+      await setSourceAccess(scope, [
+        { sourceId: "stale", principalIds: ["alice"], accessVersion: 1 },
+        { sourceId: "unmatched", principalIds: ["mallory"], accessVersion: 1 },
+        { sourceId: "public", principalIds: ["alice"], accessVersion: 2 },
+      ]);
+
+      // Without the callback: one statement, and nothing collected.
+      statements.length = 0;
+      const silent = await store.query({ ...scope, embedding: [1, 0], topK: 30, authorization: alice });
+      assert.equal(statements.length, 1);
+      const silentSql = statements[0];
+      assert.ok(silentSql);
+      assert.deepEqual(
+        silent.map((hit) => hit.id),
+        [id("public", 1)],
+      );
+
+      // With the callback: the main statement byte for byte, plus exactly one grouped report.
+      statements.length = 0;
+      const reports: (readonly { sourceId: string; reason: string }[])[] = [];
+      const noisy = await store.query({
+        ...scope,
+        embedding: [1, 0],
+        topK: 30,
+        authorization: alice,
+        onDeniedSources: (denials) => reports.push(denials),
+      });
+      assert.equal(statements.length, 2, "one extra statement, not one per source or per row");
+      const [noisySql, reportSql] = statements;
+      assert.ok(noisySql && reportSql, "one main statement and one grouped report are expected");
+      assert.equal(noisySql, silentSql, "the ACL predicate stays in the main query, unchanged");
+      assert.match(reportSql, /GROUP BY/);
+      assert.deepEqual(
+        noisy.map((hit) => hit.id),
+        silent.map((hit) => hit.id),
+        "the report must not widen or narrow the predicate",
+      );
+      assert.equal(reports.length, 1);
+      const [vectorReport] = reports;
+      assert.ok(vectorReport);
+      assert.deepEqual(
+        [...vectorReport].sort((a, b) => a.sourceId.localeCompare(b.sourceId)),
+        [
+          { sourceId: "secret", reason: "no_grant" },
+          { sourceId: "stale", reason: "version_mismatch" },
+          { sourceId: "unmatched", reason: "no_grant" },
+        ],
+        "20 withheld rows of one source are one entry, and the reason names the rule",
+      );
+
+      const lexicalQuery = store.lexicalQuery;
+      assert.ok(lexicalQuery, "the durable store must expose the lexical leg");
+      // Lexical leg: same contract, and a withheld source whose text does not match is not a denial.
+      if (store.lexicalModes?.includes("fts")) {
+        statements.length = 0;
+        const lexicalReports: (readonly { sourceId: string; reason: string }[])[] = [];
+        const lexical = await lexicalQuery({
+          ...scope,
+          text: "approval policy",
+          topK: 30,
+          authorization: alice,
+          onDeniedSources: (denials) => lexicalReports.push(denials),
+        });
+        assert.equal(statements.length, 2);
+        assert.deepEqual(
+          lexical.map((hit) => hit.id),
+          [id("public", 1)],
+        );
+        const [lexicalReport] = lexicalReports;
+        assert.ok(lexicalReport);
+        assert.deepEqual(
+          [...lexicalReport].map((denial) => denial.sourceId).sort(),
+          ["secret", "stale"],
+          "the report covers the rows this query considers, so an unmatched revoked source is not reported",
+        );
+      }
+
+      // Cost of the opt-in statement, measured for docs/rag.md.
+      const runs = 5;
+      statements.length = 0;
+      const costStarted = Date.now();
+      for (let run = 0; run < runs; run += 1) {
+        await store.query({ ...scope, embedding: [1, 0], topK: 30, authorization: alice, onDeniedSources: () => undefined });
+      }
+      const cost = (Date.now() - costStarted) / runs;
+      assert.equal(statements.length, runs * 2);
+      console.log(`acl denial report: ${runs} queries, ${statements.length} statements, ${cost.toFixed(2)}ms per reported query`);
+    } finally {
+      await store.close();
+      await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+    }
+  });
 });

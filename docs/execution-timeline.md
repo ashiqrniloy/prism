@@ -139,7 +139,8 @@ interface TimelineExhaustion {
 
 `turns` is the per-turn trace, derived in one pass over folded provider steps: turn number, status,
 timing, attempts (retries included), input-token-weighted `cacheHitRate`, the last provider
-attempt's recorded `budgets`, and its stop reason. Cache rate is absent when cache usage is unknown;
+attempt's recorded `budgets` (with its `inputTokensSource` provenance label), and its stop reason.
+Cache rate is absent when cache usage is unknown;
 `budgets` is copied verbatim from `provider_turn_finished.metadata.budgets` and is absent on legacy
 events. `ExecutionTimeline.cacheHitRate` is the same input-token-weighted calculation across all
 provider attempts. The stop reason also rides the `provider` step's metadata (`metadata.stopReason`),
@@ -155,7 +156,7 @@ first group and empty axes. Argument hashes only — `recentToolCalls` never con
 
 `deterministic_turn` folds into a `"deterministic"` step whose `name` is the answering middleware id and whose metadata carries `{ turn, middleware }`. A deterministic turn has no provider step, no `usage`, and no `stopReason`, so a host-answered turn can never be read as model output; its `turns` entry carries `providerAttempts: 0`, and `summarizeTimeline()`/`summarizeSession()` split the turn count into `turns: { model, deterministic }`. The same provenance is copied onto the assistant message as `message.metadata.deterministic = { middleware }`, so the persisted transcript alone proves the turn had no model behind it.
 
-`guardrail_decision` folds into a `"guardrail"` step whose `name` is the stage (`input`/`output`/`tool_input`/`tool_output`) and whose metadata carries `action`, the rule identity `metadata.guardrail` (compiled packs name it `pack:<pack>/<rule>`, other guardrails their configured name), and `toolName`/`toolCallId` when the decision is tool-scoped. A denying action (`deny`, `block`, `tripwire`) sets status `denied`; the free-text guardrail reason stays on the event, not the step.
+`guardrail_decision` folds into a `"guardrail"` step whose `name` is the stage (`input`/`output`/`tool_input`/`tool_output`) and whose metadata carries `action`, the rule identity `metadata.guardrail` (compiled packs name it `pack:<pack>/<rule>`, other guardrails their configured name), and `toolName`/`toolCallId` when the decision is tool-scoped. A denying action (`deny`, `block`, `tripwire`) sets status `denied`; `interrupt` (a pack `ask` rule in a durable run) sets status `succeeded` and leaves the run `suspended` awaiting a decision, while the same rule in a run that cannot suspend reports `block` and sets `denied`; the free-text guardrail reason stays on the event, not the step.
 
 Step statuses: `"running"`, `"succeeded"`, `"failed"`, `"blocked"`, `"skipped"`, `"suspended"`, `"denied"`, `"aborted"`.
 

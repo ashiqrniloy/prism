@@ -524,6 +524,7 @@ test("a retried turn counts both attempts and badges the last stop reason", () =
 test("projects weighted cache hit rates and recorded budgets without zero fills", () => {
   const budgets = {
     inputTokens: 100,
+    inputTokensSource: "estimated" as const,
     inputCap: 128_000,
     runInputBudget: 200_000,
     runInputUsed: 100,

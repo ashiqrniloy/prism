@@ -3,11 +3,11 @@
 Implements the hook-system proposal from the 2026-09-19 analysis: close the run-end/stop
 control gap, make the declared lifecycle events real, add the pre-compaction seam, ship an
 out-of-process hooks adapter package, and unify hook documentation. Everything lands with
-the 0.10.0 cut (plan 105 owns the release task; this plan must complete before plan 105's
-release-cut task runs).
+the 0.10.0 cut. This plan owns the 0.10.0 bump, compat baseline, and publish (Tasks 8–10,
+moved from plan 105 after scoped memory shipped).
 
-Precondition: none. This plan is independent of plan 107 (behavior/graft removals) except
-that both must precede plan 105's release cut.
+Precondition: plan 105 Tasks 1–9 complete (`@arnilo/prism-memory/scoped` shipped). Plan 107
+(removals) must complete before Tasks 8–10. Tasks 1–7 may run in parallel with 107.
 
 ## Objectives
 
@@ -24,6 +24,8 @@ that both must precede plan 105's release cut.
   trust, async delivery) compiled onto the primitives above. Core stays in-process.
 - R5: `docs/hooks.md` — one page mapping every Claude Code / Codex hook event to its
   Prism surface, plus the new stop-hook API.
+- Cut and publish 0.10.0 (Tasks 8–10), covering plan 105 scoped memory, this plan's hooks,
+  and plan 107 removals.
 
 ## Expected Outcome
 
@@ -35,9 +37,9 @@ that both must precede plan 105's release cut.
   (permission stays host policy — a hook that can *allow* is a privilege-escalation
   vector), no `provider_response` middleware (subscribers already observe streams), no
   subprocess sandboxing in core (trust lives in the R4 adapter).
-- All changes additive except `MiddlewareHookName` gaining two names and `stopReason`
-  gaining one value; compat baseline unaffected (plan 107 Task 5 regenerates the baseline
-  for the removals; this plan adds no removals).
+- All hook changes additive except `MiddlewareHookName` gaining two names and `stopReason`
+  gaining one value. Removals are plan 107. Cut-time baseline regen is Task 9.
+- All packages at 0.10.0; `release:gate` green; CHANGELOG and published artifacts verified.
 
 ## Tasks
 
@@ -317,24 +319,96 @@ that both must precede plan 105's release cut.
     - `docs/index.md` update: yes (single entry, kept current-contract).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 7: 0.10.0 coordination
+- [ ] Task 7: 0.10.0 coordination (hooks changelog; precedes this plan's cut)
   - Acceptance Criteria:
-    - Functional: `CHANGELOG.md` gains the 0.10.0 entries for stop hooks, lifecycle bridge, pre-compaction seam, `@arnilo/prism-hooks`, and `docs/hooks.md`. A sequencing note is appended to `plans/105-Scoped-Agent-Memory-And-Release-0-10-0.md` (and plan 107's file) stating this plan's tasks precede plan 105's release-cut task. Full workspace `npm test` green; `release:gate` green against the existing baseline (this plan ships no export removals; plan 107 Task 5 owns regeneration).
+    - Functional: `CHANGELOG.md` gains the 0.10.0 entries for stop hooks, lifecycle bridge, pre-compaction seam, `@arnilo/prism-hooks`, and `docs/hooks.md`. Full workspace `npm test` green. No publish in this task — Tasks 8–10 cut.
     - Performance: no runtime changes beyond Tasks 2–5.
     - Code Quality: no stray TODOs; docs tests green.
     - Security: n/a.
   - Approach:
-    - Documentation Reviewed: `docs/release-and-install.md` workflow section; plan 105 release-cut task.
-    - Options Considered: cut a 0.10.0 from this plan — rejected: plan 105 owns the cut.
-    - Chosen Approach: changelog + sequencing notes; defer publish to plan 105.
+    - Documentation Reviewed: `docs/release-and-install.md` workflow section.
+    - Options Considered: leave the cut on plan 105 — rejected: scoped memory shipped; this plan is the remaining 0.10.0 owner.
+    - Chosen Approach: hooks changelog here; bump/gate/publish in Tasks 8–10.
     - API Notes and Examples: n/a.
-    - Files to Create/Edit: `CHANGELOG.md`, `plans/105-Scoped-Agent-Memory-And-Release-0-10-0.md` (note), `plans/107-…` (note).
-    - References: skill rules on baseline regeneration (not triggered here — no removals).
+    - Files to Create/Edit: `CHANGELOG.md`.
+    - References: skill rules on baseline regeneration (removals: plan 107 Task 4; cut-time regen: Task 9).
   - Test Cases to Write: none (release plumbing).
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: no (coordination).
     - Docs pages to create/edit: `CHANGELOG.md` only.
     - `docs/index.md` update: no.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Task 8: Release 0.10.0 — version bump + workspace-wide green
+  - Acceptance Criteria:
+    - Functional: All workspace packages bumped to 0.10.0 per release script conventions; typecheck, lint, and full test suite pass, including scoped suites (`packages/memory/src/scoped/**`), `examples/scoped-memory.ts`, and this plan's hook suites.
+    - Performance: CI budget unchanged from 0.9.x.
+    - Code Quality: No `skip`/`todo` flags introduced by the cut.
+    - Security: `npm audit` clean or explained in release notes.
+  - Approach:
+    - Documentation Reviewed: `docs/release-and-install.md`; plan 099 Task 1 pattern; plan 105 Tasks 1–9 completion notes.
+    - Options Considered: n/a — standard release plumbing.
+    - Chosen Approach: Script bump + full verification after Tasks 1–7 and plan 107.
+    - API Notes and Examples:
+      ```bash
+      node scripts/release.mjs bump 0.10.0
+      ```
+    - Files to Create/Edit: package.json versions via script.
+    - References: `docs/release-and-install.md`.
+  - Test Cases to Write:
+    - Existing suites (cut adds none beyond regression runs).
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no.
+    - Docs pages to create/edit: `none`.
+    - `docs/index.md` update: no.
+    - Documentation structure reference: n/a.
+
+- [ ] Task 9: Release 0.10.0 — compatibility baseline regeneration + gate
+  - Acceptance Criteria:
+    - Functional: `node scripts/release.mjs gate --update-baseline` regenerates `scripts/compat-baseline/` files; `release:gate` green; diff reviewed so **additions** are intentional: `@arnilo/prism-memory/scoped` (`createScopedMemoryPolicy`, read-policy scorer, lifecycle/health, facts/trust, mirror, eval runner) from plan 105, plus this plan's hook exports / `@arnilo/prism-hooks` if Task 5 shipped; **removals** are plan 107's (already regenerated there — absorb leftover drift in the task note). Unexpected signature breaks: none planned — list any that appear before regeneration (plans 083/084 lesson).
+    - Performance: Gate runtime within existing budget.
+    - Code Quality: Baseline diff committed atomically with the version bump.
+    - Security: Baseline contains no secrets (script guarantee, spot-checked).
+  - Approach:
+    - Documentation Reviewed: plans 083/084 baseline incident notes; `scripts/compat-baseline/` current files; plan 099 Task 2 pattern; plan 107 Task 4.
+    - Options Considered: Hand-edit baseline — forbidden; script-only regeneration.
+    - Chosen Approach: Regenerate + human-reviewed diff covering 105 scoped + 106 hooks + 107 removals.
+    - API Notes and Examples:
+      ```bash
+      node scripts/release.mjs gate --update-baseline && npm run release:gate
+      ```
+    - Files to Create/Edit: `scripts/compat-baseline/*` (script-written).
+    - References: plans 083/084 baseline incident notes.
+  - Test Cases to Write:
+    - `release:gate` exit 0.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no (gate mechanics).
+    - Docs pages to create/edit: `none`.
+    - `docs/index.md` update: no.
+    - Documentation structure reference: n/a.
+
+- [ ] Task 10: Release 0.10.0 — CHANGELOG, publish, post-publish verification, plan/roadmap bookkeeping
+  - Acceptance Criteria:
+    - Functional: CHANGELOG 0.10.0 covers scoped memory (plan 105: subpath, opt-in/off, sizing line — one reviewer call per run; ledger I/O per recall) plus this plan's hooks/`@arnilo/prism-hooks` and plan 107 removals. All publishable manifests publish; post-publish verification (install-from-registry smoke) passes; `plans/README.md` rows for 105/106/107 marked complete; `roadmap.md` records 0.10.0 as current release with this plan as cut owner.
+    - Performance: Publish pipeline unchanged.
+    - Code Quality: Release notes list new subpaths, opt-in defaults, and docs pages.
+    - Security: No secrets in artifacts; publish uses existing operator-authorized flow.
+  - Approach:
+    - Documentation Reviewed: `docs/release-and-install.md`; plan 099 Task 3/4 pattern; `CHANGELOG.md` current 0.9.0 entry shape; plan 105 Task 9 docs page.
+    - Options Considered: n/a — standard cut.
+    - Chosen Approach: Follow the established release checklist.
+    - API Notes and Examples:
+      ```bash
+      node scripts/release.mjs publish 0.10.0
+      ```
+    - Files to Create/Edit: `CHANGELOG.md`, `plans/README.md`, `roadmap.md`, `docs/history/` release record if the convention requires one for a minor cut.
+    - References: `docs/release-and-install.md`; plan 099 Tasks 3–4; plan 105 Tasks 1–9.
+  - Test Cases to Write:
+    - Post-publish smoke: fresh install of `@arnilo/prism-memory@0.10.0` imports both `./fabric` and `./scoped`; `@arnilo/prism-hooks@0.10.0` imports if Task 5 shipped.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes (release of scoped + hooks surfaces).
+    - Docs pages to create/edit: `CHANGELOG.md` (release deltas, per plan 068 rule — not in API page bodies).
+    - `docs/index.md` update: no (scoped page in plan 105 Task 9; hooks page in Task 6).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
 ## Compromises Made

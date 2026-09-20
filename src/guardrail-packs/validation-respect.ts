@@ -6,6 +6,7 @@ const MUTATING_TOOLS = ["write", "edit", "delete", "move"] as const;
 /** Validation-style tool names. `shell` is opt-in (`validationTools`): a non-zero shell exit is a failure signal too. */
 const DEFAULT_VALIDATION_TOOLS = ["test", "run_tests", "validate", "validation", "lint", "typecheck", "check"] as const;
 const MAX_VALIDATION_TOOLS = 16;
+const MAX_VALIDATION_TOOL_CHARS = 128;
 
 /** A tool result failed when it carries an error, or reported a non-zero `exitCode` (the shell tool's shape). */
 function resultFailed(result: ToolResult): boolean {
@@ -42,6 +43,22 @@ export const validationRespectPack: GuardrailPackDefinition = {
       observe(state, result, context) {
         if (!validationTools.includes(context.toolName)) return;
         state.validationFailed = resultFailed(result) ? context.toolName : undefined;
+      },
+      // Plan 104 Task 2: one tool name (or nothing) survives a resume, so a mutation the suspended
+      // run denied stays denied. The codec is the pack's own bound: 128 chars, never arguments.
+      state: {
+        snapshot: (state) => (typeof state.validationFailed === "string" ? { validationFailed: state.validationFailed } : undefined),
+        parse: (json) => {
+          const record = typeof json === "object" && json !== null ? (json as Record<string, unknown>) : {};
+          const failed = record.validationFailed;
+          if (failed === undefined) return {};
+          if (typeof failed !== "string" || !failed.trim() || failed.length > MAX_VALIDATION_TOOL_CHARS) {
+            throw new GuardrailPackError(
+              `validation-respect persisted state.validationFailed must be a non-empty string of at most ${MAX_VALIDATION_TOOL_CHARS} chars`,
+            );
+          }
+          return { validationFailed: failed };
+        },
       },
       rules: [
         {

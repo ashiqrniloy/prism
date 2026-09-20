@@ -297,7 +297,7 @@ Limits (mirroring the skill-disclosure DEFAULT/HARD cap pattern):
 
 ## Guardrails
 
-`DispatchToolCallOptions.guardrails` evaluates `tool_input` after `tool_call` middleware normalization and before lookup, permission, validation, execution policy, or side effect. `tool_output` evaluates raw completed results before redaction, event emission, ledger rows, and transcript append. A block returns a blocked result; tripwire fails the enclosing run. See [Guardrails](guardrails.md).
+`DispatchToolCallOptions.guardrails` evaluates `tool_input` after `tool_call` middleware normalization and before lookup, permission, validation, execution policy, or side effect. `tool_output` evaluates raw completed results before redaction, event emission, ledger rows, and transcript append. A block returns a blocked result; tripwire fails the enclosing run. A blocked call's `error.message` names the refusing rule — `Blocked by guardrail rule pack:<pack>/<rule>`, plus the pack's reason when it set one, bounded to 200 bytes and redacted; a hand-written guardrail keeps `Tool call blocked by guardrail` / `Tool result blocked by guardrail`. The `tool_execution_blocked` event carries the same text in `error.message` while its `reason` stays the machine code. See [Guardrails](guardrails.md).
 
 ## Related APIs
 

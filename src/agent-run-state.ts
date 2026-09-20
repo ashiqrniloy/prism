@@ -15,6 +15,7 @@ import type {
   AgentRunStateOptions,
   CheckpointRecord,
   CheckpointStore,
+  GuardrailRule,
   JsonValue,
   Message,
   ModelConfig,
@@ -81,6 +82,9 @@ export interface StoredAgentRunState extends AgentRunState {
      *  the same stub bytes instead of re-summarizing. Written and restored independently of
      *  `persistSessionState`. Validated on load. */
     readonly attentionFold?: PersistedAttentionFoldLedger;
+    /** Plan 104 T2: compiled pack refs plus pack-owned state, so a resume re-enforces exactly what
+     *  the suspended run enforced. Written only with `persistSessionState`; validated on load. */
+    readonly guardrailPacks?: PersistedGuardrailPacks;
   };
   /** Per-run allow-list (Task 21). Absent = full registered set (legacy checkpoints). */
   readonly toolNames?: readonly string[];
@@ -103,6 +107,30 @@ export const MAX_PERSISTED_SKILL_NAMES = 64;
 export const MAX_PERSISTED_SKILL_NAME_CHARS = 256;
 /** Plan 041: activated-tool names ride the same budget discipline (cap 128; multiple searches accumulate). */
 export const MAX_PERSISTED_ACTIVATED_TOOL_NAMES = 128;
+/** Plan 104 T2: persisted pack refs and state (cap matches `MAX_GUARDRAIL_PACKS`; ids match the pack cap). */
+const MAX_PERSISTED_GUARDRAIL_PACKS = 8;
+const MAX_PERSISTED_GUARDRAIL_PACK_ID_CHARS = 96;
+const MAX_PERSISTED_GUARDRAIL_PACK_RULES = 64;
+/** Per-pack options/state byte ceiling; the whole session state is still bounded by `maxStateBytes`. */
+const MAX_PERSISTED_GUARDRAIL_PACK_BYTES = 8 * 1024;
+
+/** Plan 104 T2: one replayable pack row — the id, the version it was compiled at, and host options. */
+interface PersistedGuardrailPackRef {
+  readonly id: string;
+  readonly version: number;
+  readonly options?: Readonly<Record<string, unknown>>;
+  /** Inline pattern rules; closures and `RegExp` patterns never reach a checkpoint (refused at save). */
+  readonly rules?: readonly GuardrailRule[];
+}
+
+/**
+ * Plan 104 T2: the checkpoint-side pack block written with `persistSessionState`. Rows replay a
+ * registered pack by `id`/`version` or an inline pack by its pattern `rules` (plan 104 T3).
+ */
+export interface PersistedGuardrailPacks {
+  readonly packs: readonly PersistedGuardrailPackRef[];
+  readonly state?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+}
 
 /** Revision stamps of the built-in loops; custom strategies declare their own `revision`. */
 export const BUILT_IN_LOOP_REVISIONS: Readonly<Record<string, string>> = {
@@ -501,5 +529,88 @@ function validateSessionState(sessionState: StoredAgentRunState["sessionState"])
   const fold = sessionState.attentionFold;
   if (fold !== undefined && restoreAttentionFoldLedger(fold) === undefined) {
     throw new AgentRunStateError("Malformed agent run attention fold ledger");
+  }
+  validateGuardrailPackState(sessionState.guardrailPacks);
+}
+
+/**
+ * Plan 104 T2/T3: bounds for the persisted pack block. Rows replay a registered pack by id/version or
+ * an inline pack by its pattern rules, and state may only name those rows — anything else fails the
+ * load, because a dropped pack silently re-allows what it existed to deny. Rule data is re-validated
+ * (pattern compile, id/reason caps) by the compiler that replays it; this checks the JSON envelope.
+ */
+function validateGuardrailPackState(value: PersistedGuardrailPacks | undefined): void {
+  if (value === undefined) return;
+  const raw = value as { readonly packs?: unknown; readonly state?: unknown };
+  if (!raw || typeof raw !== "object" || !Array.isArray(raw.packs)) {
+    throw new AgentRunStateError("Malformed agent run guardrail pack state");
+  }
+  if (raw.packs.length > MAX_PERSISTED_GUARDRAIL_PACKS) {
+    throw new AgentRunStateError(`Persisted guardrail packs exceed ${MAX_PERSISTED_GUARDRAIL_PACKS} entries`);
+  }
+  const ids = new Set<string>();
+  for (const row of raw.packs) {
+    if (!isPlainObject(row)) throw new AgentRunStateError("Malformed agent run guardrail pack row");
+    const { id, version, options } = row as { readonly id?: unknown; readonly version?: unknown; readonly options?: unknown };
+    if (typeof id !== "string" || !id.trim() || id.length > MAX_PERSISTED_GUARDRAIL_PACK_ID_CHARS) {
+      throw new AgentRunStateError(
+        `Persisted guardrail pack ids must be non-empty strings of at most ${MAX_PERSISTED_GUARDRAIL_PACK_ID_CHARS} chars`,
+      );
+    }
+    if (ids.has(id)) throw new AgentRunStateError(`Duplicate persisted guardrail pack id "${id}"`);
+    ids.add(id);
+    if (!Number.isSafeInteger(version) || (version as number) < 1) {
+      throw new AgentRunStateError(`Persisted guardrail pack "${id}" version must be a positive integer`);
+    }
+    if (options !== undefined && !isPlainObject(options)) {
+      throw new AgentRunStateError(`Persisted guardrail pack "${id}" options must be an object`);
+    }
+    if (options !== undefined) boundPackBytes(options, `Pack "${id}" options`);
+    validatePersistedPackRules(id, row as { readonly rules?: unknown });
+  }
+  if (raw.state === undefined) return;
+  if (!isPlainObject(raw.state)) throw new AgentRunStateError("Malformed agent run guardrail pack state");
+  for (const [id, state] of Object.entries(raw.state as Record<string, unknown>)) {
+    if (!ids.has(id)) throw new AgentRunStateError(`Persisted guardrail pack state names unknown pack "${id}"`);
+    if (!isPlainObject(state)) throw new AgentRunStateError(`Persisted guardrail pack "${id}" state must be an object`);
+    boundPackBytes(state, `Pack "${id}" state`);
+  }
+}
+
+function isPlainObject(value: unknown): boolean {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Plan 104 T3: a persisted inline pack must be pattern data — a closure or `RegExp` cannot restore. */
+function validatePersistedPackRules(id: string, row: { readonly rules?: unknown }): void {
+  if (row.rules === undefined) return;
+  if (!Array.isArray(row.rules)) throw new AgentRunStateError(`Persisted guardrail pack "${id}" rules must be an array`);
+  if (row.rules.length === 0 || row.rules.length > MAX_PERSISTED_GUARDRAIL_PACK_RULES) {
+    throw new AgentRunStateError(`Persisted guardrail pack "${id}" rules must number 1..${MAX_PERSISTED_GUARDRAIL_PACK_RULES}`);
+  }
+  for (const rule of row.rules) {
+    if (!isPlainObject(rule)) throw new AgentRunStateError(`Persisted guardrail pack "${id}" rule must be an object`);
+    const { id: ruleId, pattern, deny } = rule as { readonly id?: unknown; readonly pattern?: unknown; readonly deny?: unknown };
+    if (typeof ruleId !== "string" || !ruleId.trim() || ruleId.length > MAX_PERSISTED_GUARDRAIL_PACK_ID_CHARS) {
+      throw new AgentRunStateError(`Persisted guardrail pack "${id}" rule ids must be non-empty strings`);
+    }
+    if (deny !== undefined) throw new AgentRunStateError(`Persisted guardrail pack "${id}" rule "${ruleId}" carries a deny predicate`);
+    if (pattern !== undefined && typeof pattern !== "string") {
+      throw new AgentRunStateError(`Persisted guardrail pack "${id}" rule "${ruleId}" pattern must be a string`);
+    }
+    boundPackBytes(rule, `Pack "${id}" rule "${ruleId}"`);
+  }
+}
+
+/** A pack's state must be JSON and under its per-pack ceiling: refuse, never truncate. */
+function boundPackBytes(value: unknown, label: string): void {
+  let text: string | undefined;
+  try {
+    text = JSON.stringify(value);
+  } catch {
+    throw new AgentRunStateError(`${label} must be JSON serializable`);
+  }
+  if ((text ? Buffer.byteLength(text) : 0) > MAX_PERSISTED_GUARDRAIL_PACK_BYTES) {
+    throw new AgentRunStateError(`${label} exceeds ${MAX_PERSISTED_GUARDRAIL_PACK_BYTES} bytes`);
   }
 }

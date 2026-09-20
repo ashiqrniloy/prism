@@ -575,6 +575,19 @@
         ],
         "mode": ""
       },
+      "./scoped": {
+        "suites": [
+          "packages/memory/src/scoped/__tests__/policy.test.ts",
+          "packages/memory/src/scoped/__tests__/read-policy.test.ts",
+          "packages/memory/src/scoped/__tests__/reviewer.test.ts",
+          "packages/memory/src/scoped/__tests__/lifecycle.test.ts",
+          "packages/memory/src/scoped/__tests__/trust.test.ts",
+          "packages/memory/src/scoped/__tests__/mirror.test.ts",
+          "packages/memory/src/scoped/__tests__/eval.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
       "./graft": {
         "suites": [
           "packages/memory/src/graft/__tests__/cli.test.ts",

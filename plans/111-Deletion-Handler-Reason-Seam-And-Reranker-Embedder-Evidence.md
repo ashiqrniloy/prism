@@ -1,0 +1,178 @@
+# Deletion-Handler Reason Seam and Reranker Evidence on a Real Embedder
+
+Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [102](102-Retrieval-Revocation-And-Reranker-Follow-Ups.md)'s Further Actions. Plan 102 shipped the propagation, re-point, denial-reporting, and reranker work those actions came out of, so this plan takes only the two items that do **not** need a host to ask for them: a deletion handler that silently mislabels a legal hold (its own reason replaces the propagator's), and the reranker numbers that rest on the lexical fixture embedder. Everything else in plan 102's Further Actions stays there, demand-gated, and Task 1 records with runnable evidence that no consumer exists in this tree. Task 1 runs first; Tasks 2 and 3 are independent of each other and of any host work.
+
+## Objectives
+- Make the propagator's reason the handler's reason. One optional field on the existing `DeletionPropagationContext` so a `legal_hold` walk can never stamp `forgotten` on a handler's tombstones — no second tombstone plane, no handler-side reason registry, and no host required to pass the same reason twice.
+- Replace one-embedder reranker evidence with a semantic one. Recall and latency over the same corpus with a real transformers.js embedder, so the documented candidate-pool bound and the local-reranker default rest on the production case instead of the lexical fixture, and the non-CPU leg is stated as host-provisioned rather than assumed.
+- Keep the demand-gated remainder honest: record, with grep-level evidence, that the remaining plan 102 follow-ups have no consumer in this tree, so they stay recorded in plan 102 instead of becoming tasks nobody asked for.
+
+## Expected Outcome
+- `DeletionPropagationContext.reason` exists (optional, additive), the propagator fills it with the reason it resolves once (`packages/memory/src/propagation.ts:89`), and every handler sees it. A handler constructed with no reason mirrors it: `legal_hold` reaches the tombstone as `reason: "legal_hold", hold: true`.
+- The default path is byte-identical: `forgotten` tombstones with no `hold` (`packages/memory/src/__tests__/deletion-propagation.test.ts:96`), the 1k-artifact budget in that suite unchanged, and the built-in rag/wiki/observational handlers behave exactly as today (none of them reads a reason).
+- A handler that *is* configured with an explicit reason loses to the propagator's decision — one source of truth — which is what the type's doc comment and the docs now say, instead of telling hosts to pass the same reason in two places.
+- `docs/_evidence/phase111-primitive-review.md` exists with reuse rows (exact `path:line` spans), gap rows, runnable confirmations, the demand evidence for the gated remainder, and the frozen rejections; `scripts/plan-review-gate.test.mjs` gains a `PLAN_111_TASK_1` block so the review cannot silently drift.
+- The reranker evidence carries a semantic-embedder row set — baseline vs reranked recall@5, pool-bound recall at 20 and 32 candidates, top-50 rerank latency, index build cost, misses — measured on the named machine at `q8`/`cpu` with the embedder named in the table, and `docs/rag.md`'s sizing paragraph cites it. No package default (pool size, model, dtype, device) moves: if the semantic numbers contradict the documented sizing advice, that contradiction is recorded as a compromise with the follow-up it implies.
+
+## Tasks
+
+- [ ] Task 1: Primitive review — the reason seam, the reranker evidence, and the demand evidence for the gated remainder (P1, must run first)
+  - Acceptance Criteria:
+    - Functional: `docs/_evidence/phase111-primitive-review.md` exists with three sections — (a) reuse rows for every primitive Tasks 2–3 build on, each with a `path:line` span, (b) gap rows naming what no current seam does, (c) rejected alternatives with the reason, including every item in the frozen rejected list below.
+    - Functional: the reason trap is **measured**, not asserted. Run a probe over an in-memory store holding one `kind: "file"` note for a path, `createDeletionPropagator({ reason: "legal_hold" })` plus `createFabricRepointHandler({ scope, vectorStore })` built without a reason, and print the store's invalidation rows: today `forgotten` with no `hold` (`packages/memory/src/fabric/repoint.ts:62,131-133`), while the propagator's own tombstones in the same run carry `legal_hold` (`packages/memory/src/propagation.ts:130-132`). One such run was already made while writing this plan — `handler reason=(unset) → docs/a.md:legal_hold+hold ce0821a0a5cc:forgotten` versus `handler reason=legal_hold → docs/a.md:legal_hold+hold <note>:legal_hold+hold` — so the review reproduces that transcript and records it in the evidence file instead of rediscovering it. Print the same run with `reason: "legal_hold"` on the handler to show the workaround hosts are using, and the default run (`:96`) to show what must stay unchanged.
+    - Functional: the gap is located in the seam, not in a handler: `DeletionPropagationContext` declares four fields (`packages/memory/src/propagation.ts:32-38`) and the propagator builds the context by hand for every handler (`:150`) while never passing the reason it already resolved (`:89`) — print the context object a probe handler receives and show `reason` absent from its keys.
+    - Functional: the reranker evidence is re-measured on a real embedder, cheaply, before Task 3 is written: measure recall@5 over the existing 24-topic/96-chunk corpus with a real transformers.js embedder (a small `q8`/`cpu` model, e.g. `Xenova/all-MiniLM-L6-v2`) against the hash-embedder numbers in `docs/_evidence/phase102-local-rerank-latency.md` (baseline 0.208 → reranked 0.792) and print the semantic baseline and reranked numbers side by side, so the task's premise ("a semantic embedder starts higher and gains less", `packages/memory/src/rag/__tests__/local-reranker-live.test.ts:110-112`) is a number rather than a caveat.
+    - Functional: the pool bound is re-measured on that embedder — recall at 20 and at 32 candidates (`packages/memory/src/rag/limits.ts:20-21`, `DEFAULT_QUERY_CANDIDATES`/`HARD_TOP_K_CAP`) — and the review states whether the pool or the reranker is the binding constraint for a semantic host, which is the sizing sentence `docs/rag.md` will carry after Task 3.
+    - Functional: the library owns no host path: print `resolveReranker({})`'s resolved options and `createLocalReranker`'s accepted fields (`packages/memory/src/rag/local-reranker.ts:47-53`, forwarded only when set at `:75-77`) to record that no default `cacheDir` exists, and state the decision explicitly — the per-host cache directory stays a documented host convention (`docs/embeddings.md`), not a library default, because a library-chosen home-directory path is a policy decision with permissions implications.
+    - Functional: demand evidence for the gated remainder is recorded as grep output, per item: in-repo consumers of `applySourceRenames`, of `repointSource(`, of `createFabricRepointHandler`, of `propagateDeletion`, and any store option resembling a ranged read (`afterId`) — with the conclusion per item ("no consumer → stays recorded in plan 102"), so the gate is evidence rather than opinion.
+    - Functional: the review states per later task whether it reuses a seam as-is, extends it, or adds one — Task 2 (extends `DeletionPropagationContext` additively; the fabric handler's existing resolution gains the context as first source; no new type, no new option), Task 3 (parameterizes the existing `measureRecall` at `packages/memory/src/rag/__tests__/local-reranker-live.test.ts:422-477` and reuses the corpus, the pool probes, and the live-matrix row).
+    - Performance: the review records measured numbers — the semantic leg's embedder build cost for 96 chunks, its top-50 rerank latency next to the 102 file's 121 ms, the review harness's wall clock, and the 1k-artifact propagation time Task 2 must not regress.
+    - Code Quality: the review is deterministic evidence, not prose; every reuse row names the exact exported symbol, every gap row names the file that would have to change, and each rejected alternative names the task or plan it would have changed. It adds the `PLAN_111_TASK_1` block to `scripts/plan-review-gate.test.mjs` (plan path, evidence path, required tokens, rejected tokens).
+    - Security: the review states why a reason can only ever make a tombstone stricter (the propagator's `legal_hold` outranks a handler's `forgotten`, never the reverse), why no handler gains write privileges from the field, why the semantic leg is the gated live path (network at first load, weights cached, `allowRemoteModels: false` on replay), and that neither evidence file carries credentials, document text, or an absolute host path.
+  - Approach:
+    - Documentation Reviewed:
+      - Plan 102 `Compromises Made` + `Further Actions` (the source of every later task); `docs/_evidence/phase102-primitive-review.md:19-138` (reuse inventory and per-task verdicts) and `:159-168` (gaps G1–G10, each owned by a plan 102 task that has shipped); `docs/_evidence/phase102-local-rerank-latency.md` (the hash-embedder row set this plan extends with a semantic one); `docs/rag.md:90-113` (deletion propagation, including the handler-context sentence Task 2 edits) and its sizing paragraph; `docs/policy-and-audit.md:121` (invalidation reasons, `legal_hold` among them); `docs/memory-fabric.md:78-84` (the handler's retire bullet, which currently tells hosts to pass the reason twice); `docs/embeddings.md` (shared weight-cache convention); `docs/live-testing.md` + `scripts/live-matrix.json` (the `memory/local-rerank-live` row Task 3 updates).
+    - Options Considered:
+      - Skip the review and write the two tasks directly — rejected: Task 2 changes an exported context type and Task 3 re-states a shipped default's evidence, so the reuse/gap/rejection rows and the demand evidence are exactly what a later reader needs to re-decide.
+      - One evidence file per task — rejected: one review owns the inventory and later tasks cite its rows, matching plans 102/103/104/108/109/110.
+      - Accept the reason mismatch as documented behavior (plan 102's recorded compromise) — rejected: a `legal_hold` that lands as `forgotten` is an audit and retention error in a compliance path, and the fix is one optional field; the compromise stays recorded as the reason the field is additive rather than required.
+      - Assume the semantic case from the lexical numbers — rejected: the fixture's own comment (`packages/memory/src/rag/__tests__/local-reranker-live.test.ts:110-112`) says the two differ, and the documented sizing advice is read by hosts whose embedder is semantic.
+      - Measure with a large embedder or on GPU — rejected: the review leg must stay cheap (small `q8`/`cpu` model, no provisioning), and the GPU/fp16 leg is host-provisioned by definition.
+    - Chosen Approach: one review file that measures the two premises and the demand gate, then two small independent tasks — the seam field and the semantic evidence — with no default change in either.
+    - API Notes and Examples:
+      ```bash
+      # reason trap, before Task 2 (harness under /tmp, output recorded in the review)
+      node --input-type=module -e '…createDeletionPropagator({ reason: "legal_hold" }) + createFabricRepointHandler({ scope, vectorStore })…'
+      # one run while this plan was written: handler reason=(unset) → "docs/a.md:legal_hold+hold ce0821a0a5cc:forgotten"
+      #                                  handler reason=legal_hold → "docs/a.md:legal_hold+hold <note>:legal_hold+hold"
+      # semantic premise (weights cached once, offline afterwards)
+      node --input-type=module -e '…transformers.js feature-extraction, Xenova/all-MiniLM-L6-v2, q8/cpu…'
+      # → recall@5 hash 0.208 → 0.792 | semantic <measured> → <measured>
+      ```
+    - Files to Create/Edit:
+      - `docs/_evidence/phase111-primitive-review.md`: new review artifact (three sections plus the runnable confirmations and their printed output).
+      - `scripts/plan-review-gate.test.mjs`: `PLAN_111_TASK_1` block (required tokens: `packages/memory/src/propagation.ts`, `packages/memory/src/fabric/repoint.ts`, `packages/memory/src/rag/__tests__/local-reranker-live.test.ts`, `packages/memory/src/rag/local-reranker.ts`, `packages/memory/src/rag/limits.ts`, `docs/_evidence/phase102-local-rerank-latency.md`, `createHashEmbedder`, `legal_hold`, `DEFAULT_QUERY_CANDIDATES`; rejected tokens: `second tombstone plane`, `required field`, `raising the pool`, `GPU default`, `propagateDeletion facade`, `directory-move expansion`, `store-level ranged read`).
+    - References:
+      - `packages/memory/src/propagation.ts:32-38,89,130-132,150` (context, resolved reason, tombstone stamping, handler call), `packages/memory/src/fabric/repoint.ts:28-29,55-56,62,127-135` (the handler's own reason resolution and retire leg), `packages/memory/src/__tests__/deletion-propagation.test.ts:96,183,203` (default-reason pin and the 1k budget), `packages/memory/src/rag/__tests__/local-reranker-live.test.ts:110-112,394-477,479-497` (caveat, corpus + `measureRecall`, hermetic controls), `packages/memory/src/rag/local-reranker.ts:22,47-53,75-77`, `packages/memory/src/rag/limits.ts:20-21,79-82`, `scripts/budget-gates.mjs` (evidence files are outside the budget gates).
+  - Test Cases to Write:
+    - Review gate: `scripts/plan-review-gate.test.mjs` fails when `docs/_evidence/phase111-primitive-review.md` is missing, stops naming a required primitive, or drops a frozen rejection.
+    - Reason trap: the probe prints `forgotten`/no-hold for the unconfigured handler under a `legal_hold` propagator, `legal_hold`/hold for the configured one, and the walk's own tombstones as `legal_hold` in both runs.
+    - Semantic premise: the probe prints the semantic baseline and reranked recall@5 for the same 24-topic corpus and the pool-bound numbers at 20/32, with the corpus and query counts beside them.
+    - Demand evidence: the recorded greps return no consumer for the gated surfaces (and the review says which plan item each one belongs to).
+    - Vacuity guard: a probe that skips the handler (or the propagator) shows the mismatch disappears, proving the printout comes from the seam and not from the fixture.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no — the review is an evidence artifact plus a test-registry entry.
+    - Docs pages to create/edit: `none` (the evidence file lives under `docs/_evidence/`, which is excluded from the docs budget gates and from the shipped-doc index).
+    - `docs/index.md` update: no (no behavior delta).
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Task 2: The propagator's reason reaches deletion handlers (P2, not host-gated)
+  - Acceptance Criteria:
+    - Functional: `DeletionPropagationContext` gains `readonly reason?: MemoryInvalidationReason` with a doc comment stating the precedence (propagator's reason wins; a handler's own `reason` option is the fallback for calls that carry none), and the propagator passes the reason it resolved at `packages/memory/src/propagation.ts:89` into the context it hands every registered handler at `:150`.
+    - Functional: `createFabricRepointHandler` resolves its retire reason as `context.reason ?? options.reason ?? "forgotten"` and stamps `hold: true` when that effective reason is `legal_hold` — so `createDeletionPropagator({ reason: "legal_hold" })` plus an unconfigured handler produces `{ reason: "legal_hold", hold: true }` tombstones for the notes, with no handler change by the host.
+    - Functional: default behavior is byte-identical. The built-in handlers (rag, wiki, observational) neither read nor need the field and their results/statements do not change; the default propagator still writes `forgotten` tombstones without `hold` (`packages/memory/src/__tests__/deletion-propagation.test.ts:96` stays as-is); a host-built context literal without `reason` still type-checks and behaves exactly as today (that is the point of it being optional).
+    - Functional: precedence is asserted in both directions — a handler constructed with `reason: "forgotten"` under a `legal_hold` propagator still writes `legal_hold`, and a handler constructed with `reason: "legal_hold"` under a default propagator writes `forgotten` (nothing weakens a hold, nothing invents one).
+    - Performance: no added reads or writes — the field rides the context object the propagator already builds; the 1k-artifact propagation case (`:183`, `:203`) keeps its one-transaction, under-2s bound and is measured before/after in the task note.
+    - Code Quality: one optional field, `MemoryInvalidationReason` reused, no new type name, no new option, no second construction path; the stale comment in `packages/memory/src/fabric/repoint.ts:28-29` ("a host that passes `reason` there should pass it here") is replaced by the precedence rule, and the docs sentence that lists the handler context (`docs/rag.md:106`) names `reason`.
+    - Security: the seam can only make a tombstone stricter — the propagator's `legal_hold` outranks a handler's weaker reason, never the reverse — and the field carries no content, no payload, and no new privilege; the ACL/authorization path (`checkSourceAccess`, tenant check) is untouched, and the task's tests keep the fail-closed cases in `deletion-propagation.test.ts:108-129` green.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/rag.md:90-113` (deletion propagation contract; the handler-context sentence and the `forgotten`-reason sentence to update), `docs/policy-and-audit.md:121` (invalidation reason vocabulary), `docs/memory-fabric.md:78-84` (the retire bullet that currently asks hosts to pass the reason twice), plan 102 `Compromises Made` (the recorded compromise this task closes); code: `packages/memory/src/propagation.ts:32-38,89,130-132,150`, `packages/memory/src/fabric/repoint.ts:28-29,55-56,62,127-135`, `packages/memory/src/__tests__/deletion-propagation.test.ts:46-107,183-205`, `packages/memory/src/fabric/__tests__/repoint.test.ts`, `scripts/release.mjs` gate/compat-baseline behavior for an additive interface property.
+    - Options Considered:
+      - Make `reason` required on the context — rejected: it breaks every host that implements a handler by hand for a field only one built-in needs.
+      - Keep the handler option as the only source and document the trap — rejected: that is plan 102's recorded compromise; a compliance label that depends on the host remembering to pass the same value twice is the bug, and the seam costs one field.
+      - Add a `handlerReason`/`propagatorReason` pair — rejected: two sources of truth and an ambiguity to resolve at every call site.
+      - Add a second tombstone plane (handlers writing their own invalidation rows) — rejected: frozen in plan 102's review; one store invalidation path stays.
+      - Have the propagator stamp the handler's count with its own reason — rejected: the propagator's tombstones already carry it; the gap is what the handler writes, not what the walk records.
+    - Chosen Approach: one optional field on the existing context, filled from the already-resolved propagator reason, consumed as the first source by the fabric retire leg — an additive change to a shipped seam with no new name and no new privilege.
+    - API Notes and Examples:
+      ```ts
+      // before: the note tombstone said "forgotten" unless the host repeated the reason
+      const propagator = createDeletionPropagator({ scope, vectorStore, authorization, reason: "legal_hold" });
+      propagator.register(createFabricRepointHandler({ scope, vectorStore })); // no reason option
+      await propagator.propagate("docs/policy.md");
+      // → walk tombstones: legal_hold + hold true; note tombstones: legal_hold + hold true (before: forgotten, no hold)
+      ```
+    - Files to Create/Edit:
+      - `packages/memory/src/propagation.ts`: `DeletionPropagationContext.reason?: MemoryInvalidationReason` with the precedence doc comment; pass the resolved reason into the handler call.
+      - `packages/memory/src/fabric/repoint.ts`: `context.reason ?? options.reason ?? DELETION_REASON`, `hold` derived from the effective reason, comment replaced.
+      - `packages/memory/src/__tests__/deletion-propagation.test.ts`: the default-reason regression stays; add the mirror cases (context reason wins over the handler's, and the default stays `forgotten`).
+      - `packages/memory/src/fabric/__tests__/repoint.test.ts`: the `legal_hold` case driven through the propagator with an unconfigured handler.
+      - `docs/rag.md`: the handler-context sentence (`:106`) and the reason/precedence sentence; `docs/policy-and-audit.md`: one line on handler tombstones mirroring the walk's reason if the page states the reason vocabulary (no new section); `docs/memory-fabric.md`: the retire bullet loses the "pass it here too" instruction.
+      - `scripts/compat-baseline/**`: only if `npm run release:gate` reports the changed interface statement — then regenerate with `node scripts/release.mjs gate --update-baseline` and record the additions-only diff (one optional property) in the task note; the plan moves no symbol and adds no export, so the export-count budget stays at 903.
+    - References:
+      - `packages/memory/src/propagation.ts:89,150` (single resolution point, single handler call path), `packages/memory/src/fabric/repoint.ts:131-133` (the stamping code the effective reason feeds), `packages/memory/src/types.ts` (`MemoryInvalidationReason`), `packages/memory/src/__tests__/deletion-propagation.test.ts:183-205` (performance bound), plan 102 Task 11 Outcome (`docs/memory-fabric.md` convention), `.agents/skills/create-plan/references/prism-wiki.md` (docs shape).
+  - Test Cases to Write:
+    - Mirror case: `legal_hold` propagator + unconfigured fabric handler → note tombstone `{ reason: "legal_hold", hold: true }`, and the walk's own rows unchanged.
+    - Precedence (weaker handler): handler `reason: "forgotten"` + `legal_hold` propagator → tombstones still `legal_hold` with `hold: true`.
+    - Precedence (stronger handler): handler `reason: "legal_hold"` + default propagator → tombstones `forgotten` without `hold` (nothing invents a hold).
+    - Back-compat: a hand-built `{ sourceId, ids, scope }` context (no `reason`) still satisfies the type and drives the handler to its configured/default reason.
+    - Default regression: existing `deletion-propagation.test.ts` default-reason assertions and the 1k-artifact performance case pass unmodified (one transaction, under 2s).
+    - Built-in handlers: the rag/wiki/observational legs' results and statements are unchanged by the new field (existing suites pass with no edits to their expectations).
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — an exported interface gains an optional property and a handler's tombstone reason can now follow the propagator's.
+    - Docs pages to create/edit: `docs/rag.md` (handler context + precedence in the deletion-propagation section), `docs/memory-fabric.md` (retire bullet), `docs/policy-and-audit.md` (one line if the reason vocabulary is stated there).
+    - `docs/index.md` update: no (existing pages only; no new API surface or subpath).
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+- [ ] Task 3: Reranker recall and latency on a semantic embedder (P3)
+  - Acceptance Criteria:
+    - Functional: the existing gated live suite measures the same corpus twice — once with the deterministic `createHashEmbedder()` baseline it has today and once with a real transformers.js embedder (one named constant, `q8`/`cpu`, the shared host cache dir), and records for each: baseline recall@5, reranked recall@5, pool-bound recall at 20 and 32 candidates, the misses list, and top-50 rerank latency. Both legs keep `lexical: "off"` and vector-only retrieval, and the corpus/query counts stay 24/96.
+    - Functional: `measureRecall` (`packages/memory/src/rag/__tests__/local-reranker-live.test.ts:422-477`) takes the embedder as an input instead of constructing the hash embedder internally, so the two legs share one corpus, one scoring helper, and one pool probe — no second measurement implementation and no duplicate fixture data.
+    - Functional: the semantic numbers land in `docs/_evidence/phase111-reranker-semantic-recall.md` using the 102 file's table shape (model, dtype/device, machine, platform, weights/cache, load, conformance, top-50 latency, corpus, recall@5 hash vs semantic, pool bound, misses, offline replay, secrets/paths) and cite the hash-embedder row set for comparison, including the honest sentence when the semantic baseline is high enough that the reranker's lift is small.
+    - Functional: `docs/rag.md`'s sizing paragraph cites the new evidence and says which number a host should read for its own case (pool bound at the configured `queryCandidates` vs reranker quality), and `docs/embeddings.md` gains the semantic embedder as the second consumer of the shared per-host weight cache if its wording currently implies rerankers only.
+    - Functional: no shipped default changes — `DEFAULT_QUERY_CANDIDATES`, `HARD_TOP_K_CAP`, `DEFAULT_LOCAL_RERANK_MODEL`, `dtype`, `device`, and the absent default `cacheDir` all stay as they are; if a measured number contradicts the documented advice, the task records the contradiction as a compromise plus the follow-up it implies instead of re-tuning.
+    - Functional: the non-CPU leg is stated, not run: the evidence names fp16/GPU as host-provisioned (the named machine has no GPU runtime provisioned for this), and the docs say a host that provisions one should re-measure before expecting the CPU numbers to hold.
+    - Performance: the task records the semantic leg's wall clock, embedder index build for 96 chunks, and rerank latency next to the 121 ms hash-corpus number; the suite's ungated run still skips with its named reason and downloads nothing, and `scripts/live-matrix.json`'s `memory/local-rerank-live` row keeps a truthful cost/notes pair for the longer run.
+    - Code Quality: one small embedder factory next to the existing runtime wiring in the test file, using the same non-literal dynamic-import style as `createTransformersRerankRuntime` so no dependency name enters any manifest; the corpus, helpers, and identity control stay in the test file (the `@arnilo/prism-memory` export ceiling stays at 903); the hermetic controls (`recall_at_k_…`, `an_identity_reranker_reproduces_the_baseline_number`) cover the semantic leg too.
+    - Security: the embedder leg downloads weights once into the host cache dir and runs `allowRemoteModels: false` on replay, so the second run is offline; it embeds generated corpus text only (never host or captured content), records no absolute host path, no credential, and no document text, and stays behind the existing `PRISM_TEST_LOCAL_RERANK` gate so no network is touched in the default suite.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/rag.md` sizing paragraph + `docs/embeddings.md` (weight-cache convention) as shipped by plan 102 Task 4, `docs/_evidence/phase102-local-rerank-latency.md` (the row set to mirror), `docs/live-testing.md` + `scripts/live-matrix.json` (matrix row and cost field), `find-docs` skill for the current `@huggingface/transformers` feature-extraction API (pooling/normalization options) before writing the embedder; code: `packages/memory/src/rag/__tests__/local-reranker-live.test.ts:110-112,394-477,479-497,498-607`, `packages/memory/src/rag/local-reranker.ts:22,40-90`, `packages/memory/src/embedder.ts`, `packages/memory/src/rag/limits.ts:20-21`.
+    - Options Considered:
+      - A second gated suite file for the semantic leg — rejected: a new live-matrix row, a duplicated corpus, and a second place for the numbers to drift.
+      - Replace the hash-embedder baseline entirely — rejected: it is the cheap deterministic control that keeps the measurement honest without a download, and the comparison is the point of the evidence.
+      - Re-tune `queryCandidates`/model/dtype from the measurement — rejected: the pool is a host cost decision and the numbers are one machine; the task's job is evidence, not tuning.
+      - Measure on GPU/fp16 instead of CPU — rejected: not provisioned here (and a GPU number without a host that has one changes nothing), so it is documented as the host-provisioned leg.
+      - Use a large semantic embedder for realism — rejected: the leg must stay cheap (a small `q8` model, ~30 MB class) and the corpus is short technical text where a small model is representative.
+    - Chosen Approach: parameterize the existing measurement, add one small transformers.js embedder factory behind the existing gate, and publish the numbers as a second row set with the pool bound measured on the semantic embedder — evidence for the shipped default, no default moved.
+    - API Notes and Examples:
+      ```ts
+      import { pipeline } from "@huggingface/transformers"; // optional runtime, non-literal specifier as in local-reranker.ts
+
+      const extract = await pipeline("feature-extraction", EMBED_MODEL, { dtype: "q8", device: "cpu", cache_dir: cacheDir });
+      const embedder: Embedder = {
+        id: EMBED_MODEL,
+        dimensions: EMBED_DIMENSIONS,
+        async embed(texts) {
+          const out = await extract([...texts], { pooling: "mean", normalize: true });
+          return out.tolist() as number[][];
+        },
+      };
+      const semantic = await measureRecall({ embedder, reranker }); // same corpus, same pool probe
+      ```
+    - Files to Create/Edit:
+      - `packages/memory/src/rag/__tests__/local-reranker-live.test.ts`: embedder-parameterized `measureRecall`, the embedder factory + constants, the semantic leg, the semantic identity control, the evidence writer, and the cache-layout assertions for the second model.
+      - `docs/_evidence/phase111-reranker-semantic-recall.md`: new evidence table (semantic + hash rows).
+      - `docs/rag.md`: sizing paragraph cites the semantic evidence and states the per-host reading.
+      - `docs/embeddings.md`: one line if the shared-cache wording implies rerankers only.
+      - `scripts/live-matrix.json`: cost/notes for the existing `memory/local-rerank-live` row (longer run when the embedder model downloads); `docs/live-testing.md` regenerated by `scripts/live-matrix.mjs` if the notes change the table.
+    - References:
+      - `packages/memory/src/rag/__tests__/local-reranker-live.test.ts:398-477` (corpus, `relevantIds`, `recallAtK`, `measureRecall`), `:499-607` (the live leg whose evidence writer this task extends), `:78-92` (cache-dir byte counting helper), `packages/memory/src/rag/local-reranker.ts:40-90` (runtime contract and cache handling), plan 102 Task 3/4 Outcomes in `plans/102-Retrieval-Revocation-And-Reranker-Follow-Ups.md`, `docs/_evidence/phase102-local-rerank-latency.md` (measured 0.208 → 0.792, pool 0.625/0.792, 121 ms).
+  - Test Cases to Write:
+    - Semantic leg: baseline and reranked recall@5 recorded with the corpus/query counts, the pool-bound numbers at 20/32, and the misses list.
+    - Identity control on the semantic embedder: an identity reranker reproduces the semantic baseline exactly (the same guard the hermetic case has).
+    - Offline replay: the second run with `allowRemoteModels: false` shares the cache for both the reranker and the embedder (zero network after load).
+    - Cache layout: one host cache dir containing one subdirectory per model id, for both models.
+    - Gate and vacuity: with `PRISM_TEST_LOCAL_RERANK` unset the leg skips with its named reason and downloads nothing; with the gate set but the embedder model unreachable the leg fails loudly instead of recording a partial row set.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no public API change (test + evidence), but the documented sizing advice and the live-matrix row change.
+    - Docs pages to create/edit: `docs/rag.md` (sizing paragraph), `docs/embeddings.md` (shared-cache wording), `docs/live-testing.md` (regenerated table if notes change).
+    - `docs/index.md` update: no (existing pages only).
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
+
+## Compromises Made
+- To be filled after tasks are completed and tests pass.
+
+## Further Actions
+- To be filled after task completion with improvements, rationale, and priority.

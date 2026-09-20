@@ -12,6 +12,8 @@ import type { PendingToolCall } from "../../agent-run-state.js";
 import { toolElicitationRequest } from "../../agent-tool-dispatch.js";
 import type {
   AgentRunRef,
+  GuardrailRecord,
+  Guardrails,
   LoopContext,
   NestedRunRef,
   PendingDecision,
@@ -32,6 +34,7 @@ import {
   MAX_ATTRIBUTION_DEPTH,
 } from "../../contracts.js";
 import { toToolResultMessage } from "../../input.js";
+import { runGuardrails } from "../../guardrails.js";
 import { canonicalToolEffectJson, toolEffectArgumentsHash } from "../../tool-effects.js";
 import { dispatchToolCall, resolveToolEffectDeclaration } from "../../tools.js";
 import { randomId } from "../helpers.js";
@@ -92,6 +95,7 @@ export function buildPendingDecision(
   runId: string,
   metadata: Readonly<Record<string, unknown>>,
   signal: AbortSignal,
+  ask?: GuardrailRecord,
 ): PendingDecision {
   const tool = registry.get(call.name);
   const declaration = tool?.effect
@@ -111,6 +115,12 @@ export function buildPendingDecision(
     signal,
     metadata,
   });
+  // Plan 104 T3: the pack `ask` rule that gated this call is named in the bounded reason and carried
+  // machine-readably, so a host never parses the name to know which rule raised the approval.
+  const pack = ask?.metadata?.pack;
+  const rule = ask?.metadata?.rule;
+  const guardrailRule: { pack: string; rule: string } | undefined =
+    typeof pack === "string" && typeof rule === "string" ? { pack, rule } : undefined;
   return {
     approvalId,
     kind: elicitation ? "elicitation" : "tool_approval",
@@ -121,9 +131,25 @@ export function buildPendingDecision(
       ...(declaration && declaration.kind !== "none" ? { effectKind: declaration.kind } : {}),
       ...(identityRef ? { identity: identityRef } : {}),
     },
-    reason: elicitation?.reason ?? "Tool side effect requires approval",
+    reason: elicitation?.reason ?? (ask ? askDecisionReason(ask) : "Tool side effect requires approval"),
     ...(elicitation ? { elicitationSchema: elicitation.schema } : {}),
+    ...(ask && guardrailRule ? { guardrail: ask.guardrail, guardrailRule } : {}),
   };
+}
+
+const MAX_ASK_DECISION_REASON_BYTES = 200;
+
+/** `pack:<pack>/<rule>` plus the pack's own reason, bounded like every other decision field. */
+function askDecisionReason(ask: GuardrailRecord): string {
+  const pack = ask.metadata?.pack;
+  const rule = ask.metadata?.rule;
+  const defaultReason = typeof pack === "string" && typeof rule === "string" ? `guardrail pack rule ${pack}/${rule}` : undefined;
+  const line = `Approval required by guardrail rule ${ask.guardrail}`;
+  const text = ask.reason && ask.reason !== defaultReason ? `${line}: ${ask.reason}` : line;
+  const bytes = new TextEncoder().encode(text);
+  return bytes.length <= MAX_ASK_DECISION_REASON_BYTES
+    ? text
+    : new TextDecoder().decode(bytes.subarray(0, MAX_ASK_DECISION_REASON_BYTES));
 }
 
 export async function applyNestedRun(
@@ -192,6 +218,7 @@ export async function suspendGatedRound(ctx: RoundContext): Promise<void> {
     reason: single ? single.reason : `${decisions.length} tool side effects require approval`,
     ...(single?.toolCallId ? { toolCallId: single.toolCallId } : {}),
     ...(single?.scope.toolName ? { toolName: single.scope.toolName } : {}),
+    ...(single?.guardrail ? { guardrail: single.guardrail } : {}),
     pendingDecisions: decisions,
   };
   throw new AgentRunSuspended(
@@ -280,23 +307,64 @@ export async function handleNestedSignal(ctx: RoundContext, error: AgentDelegati
 }
 
 export function bindChargeToolRound(ctx: RoundContext): LoopContext["chargeToolRound"] {
-  return (calls) => {
+  return async (calls) => {
     if (calls.length > 0) ctx.limits.charge("maxToolRounds");
     const durable = ctx.session.activeDurable;
-    if (!durable?.options.interruptBeforeTool || calls.length === 0) return;
+    // A run that cannot suspend never gates here: `activeGuardrails` already carries the pack `ask`
+    // rules as plain blocks (assemble.ts), so the ordinary stage path refuses the call.
+    if (!durable || calls.length === 0) return;
+    if (!ctx.session.packAskGate && !durable.options.interruptBeforeTool) return;
     for (const call of calls) {
       if (matchStickyDecision(ctx.session, call, ctx.registry)) continue;
+      const ask = await matchAskGate(ctx, call);
+      if (!ask && !durable.options.interruptBeforeTool) continue;
       const approvalId = randomId("approval");
       ctx.session.activeGatedRound ??= new Map();
       ctx.session.activeGatedRound.set(call.id, {
         entry: { call, status: "ready", approvalId },
-        decision: buildPendingDecision(ctx.session, call, approvalId, ctx.registry, ctx.runId, ctx.metadata, ctx.controller.signal),
+        decision: buildPendingDecision(
+          ctx.session,
+          call,
+          approvalId,
+          ctx.registry,
+          ctx.runId,
+          ctx.metadata,
+          ctx.controller.signal,
+          ask,
+        ),
       });
     }
     if (ctx.session.activeGatedRound && ctx.session.activeGatedRound.size > DEFAULT_MAX_PENDING_DECISIONS) {
       throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Pending decisions exceed ${DEFAULT_MAX_PENDING_DECISIONS} per run`);
     }
   };
+}
+
+/**
+ * Plan 104 T3: evaluate the pack `ask` rules for one call at charge time. The rules run through the
+ * same compiler and stage runner as every other pack rule, so matching, bounds, and redaction are
+ * shared; a match emits its `guardrail_decision` (`interrupt`: awaiting a decision) and gates the
+ * call before it can dispatch.
+ */
+async function matchAskGate(ctx: RoundContext, call: ToolCallContent): Promise<GuardrailRecord | undefined> {
+  const gate: Guardrails | undefined = ctx.session.packAskGate;
+  if (!gate) return undefined;
+  const result = await runGuardrails({
+    stage: "tool_input",
+    guardrails: gate,
+    value: call,
+    context: {
+      sessionId: ctx.session.id,
+      runId: ctx.runId,
+      toolCallId: call.id,
+      toolName: call.name,
+      metadata: ctx.metadata,
+      signal: ctx.controller.signal,
+    },
+    redactor: ctx.session.activeRedactor,
+    emit: (event) => ctx.session.emit(event),
+  });
+  return result.terminal;
 }
 
 /** Last-N dispatched tool calls kept for `budget_exhausted` attribution (plan 087 T2); the hash

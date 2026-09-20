@@ -57,6 +57,34 @@ keyed by block label, and `episode` views write nothing. A rewrite keeps the row
 consent, importance, and every non-fabric metadata key; an explicit `id` or `supersedes` from the
 caller disables auto-folding for that write.
 
+### Following the file (path moves and deletes)
+
+A `file` note names its document by `metadata.path`, and that path — not a lineage edge — is the only
+link between note and file. Notes are store-backed metadata rather than derived chunk rows, so the
+`_lineage` walk that revokes derived records can never find them: this handler is the only path.
+
+```ts
+import { createFabricRepointHandler } from "@arnilo/prism-memory/fabric";
+
+// One handler, both seams: a move rewrites `metadata.path`, a delete tombstones.
+const notes = createFabricRepointHandler({ scope, vectorStore: store });
+await repointSource({ scope, vectorStore: store, from: "docs/a.md", to: "docs/b.md", authorization: principal, handlers: [notes] });
+await createDeletionPropagator({ scope, vectorStore: store, authorization: principal, handlers: [notes] }).propagate("docs/a.md");
+```
+
+- Move: only `kind: "file"` notes whose `path` is the moved id are touched. Id, text, embedding,
+  `sourceEntryIds`, and every other metadata field are reused verbatim — no re-embed, no re-score, and
+  no `_lineage` field invented, so the walk stays for records that really are derived. Non-file notes
+  and notes for other paths are untouched, and the write joins one store transaction when the store
+  has one (a plain `upsert` otherwise).
+- Delete: the notes recorded against the deleted path are tombstoned through the store's own
+  invalidation path (`invalidate`, batched at `HARD_INVALIDATION_BATCH`; reason `forgotten` by default,
+  `legal_hold` when both the handler and the propagator are given it), so recall stops serving them
+  with no second revocation plane and no background cleanup to wait for.
+- One scope read per leg, selecting on `metadata.fabric.path` — never on content. A note in another
+  scope is never visible, and a composition whose scope differs from the handler's is refused
+  (`MemoryScopeError`) instead of writing across threads.
+
 ### Workers (opt-in)
 
 Both workers run inline (awaited) after the write, see redacted text only, call no model and no

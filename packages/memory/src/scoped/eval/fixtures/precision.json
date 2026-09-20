@@ -1,0 +1,9 @@
+{
+  "floor": 0.5,
+  "notes": [
+    { "id": "aaaaaaaaaaaa", "content": "alphazebra uniquequeryxyz" },
+    { "id": "bbbbbbbbbbbb", "content": "betameadow foxtrotnoon" },
+    { "id": "cccccccccccc", "content": "gammacanyon willowdusk" }
+  ],
+  "queries": [{ "query": "alphazebra uniquequeryxyz", "relevantIds": ["aaaaaaaaaaaa"] }]
+}

@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-20",
+  "projection": "text-only: a row's reference count is a tokenizer/oracle count of the sample's text without chat-template overhead, so the deterministic test compares the estimator's text projection and checks per-message overhead separately against the recorded row value. The live legs compare the array-form estimate (text + overhead per message) against the vendor count, which carries the vendor's own template overhead.",
+  "bands": {
+    "prose": 0.12,
+    "cjk": 0.2,
+    "chat": 0.12,
+    "perMessageOverheadTokens": 1
+  },
+  "corpus": {
+    "prose": "You are a careful software engineer. When the user asks for a change, inspect the repository, identify the root cause, and make the smallest correct edit. Prefer existing helpers over new abstractions. Run the focused test file after editing, then report what changed and what remains uncertain.\n\nThe provider returned a 429 response with a quota failure class, so the runtime narrowed the attempt budget and retried after the configured backoff. No usage was reported for that attempt, which means the token counters treat it as unknown rather than zero.",
+    "cjk": "这是一个用于估算令牌数量的中文段落，包含标点符号和混合 text 的英文单词。\n这是一个用于估算令牌数量的中文段落，包含标点符号和混合 text 的英文单词。\n这是一个用于估算令牌数量的中文段落，包含标点符号和混合 text 的英文单词。\n这是一个用于估算令牌数量的中文段落，包含标点符号和混合 text 的英文单词。\n这是一个用于估算令牌数量的中文段落，包含标点符号和混合 text 的英文单词。\n这是一个用于估算令牌数量的中文段落，包含标点符号和混合 text 的英文单词。",
+    "chat": [
+      {
+        "role": "user",
+        "text": "You are a careful software engineer. When the user asks for a change, inspect the repository, identify the root cause, and make the smallest correct edit. Prefer existing helpers over new abstractions. Run the focused test file after editing, then report what changed and what remains uncertain. You are a coding assistant working inside a repository. Read the relevant files before editing, keep diffs small, and run the test suite after every change. If a request is ambiguous, ask one clarifying question instead of guessing."
+      },
+      {
+        "role": "assistant",
+        "text": "The provider returned a 429 response with a quota failure class, so the runtime narrowed the attempt budget and retried after the configured backoff. No usage was reported for that attempt, which means the token counters treat it as unknown rather than zero. I will narrow the attempt budget and retry once, then report what changed."
+      },
+      {
+        "role": "user",
+        "text": "Add one bounded retry for the 429 above, then run the focused test file. You are a coding assistant working inside a repository. Read the relevant files before editing, keep diffs small, and run the test suite after every change. If a request is ambiguous, ask one clarifying question instead of guessing."
+      }
+    ]
+  },
+  "rows": {
+    "openai": {
+      "provenance": "measured",
+      "source": "tiktoken o200k_base dev-time oracle, 2026-09-20 (plan 091's method: no tokenizer dependency ships and none runs in CI)",
+      "charsPerToken": 5,
+      "perMessageOverhead": 3,
+      "proseTokens": 106,
+      "cjkTokens": 162,
+      "chatTokens": 230
+    },
+    "anthropic": {
+      "provenance": "published-range",
+      "source": "Anthropic token-counting guidance (~3.5 chars/token); re-measure with scripts/usage-calibration-live.test.mjs",
+      "charsPerToken": 3.5,
+      "perMessageOverhead": 4,
+      "proseTokens": 159,
+      "cjkTokens": 160,
+      "chatTokens": 335
+    },
+    "google": {
+      "provenance": "published-range",
+      "source": "Gemini token guidance (~4 chars/token); re-measure with scripts/usage-calibration-live.test.mjs",
+      "charsPerToken": 4,
+      "perMessageOverhead": 4,
+      "proseTokens": 139,
+      "cjkTokens": 160,
+      "chatTokens": 293
+    },
+    "mistral": {
+      "provenance": "published-range",
+      "source": "Mistral tokenization guidance (~4 chars/token); re-measure with a Mistral-compatible count endpoint when one exists",
+      "charsPerToken": 4,
+      "perMessageOverhead": 3,
+      "proseTokens": 139,
+      "cjkTokens": 160,
+      "chatTokens": 293
+    },
+    "deepseek": {
+      "provenance": "row-basis",
+      "source": "no published chars/token guidance and no public count endpoint; frozen at the shipped row (3.8)",
+      "charsPerToken": 3.8,
+      "perMessageOverhead": 4,
+      "proseTokens": 147,
+      "cjkTokens": 160,
+      "chatTokens": 308
+    },
+    "openrouter-generic": {
+      "provenance": "row-basis",
+      "source": "routed-model dependent, so no single vendor guidance; frozen at the shipped row (4.4)",
+      "charsPerToken": 4.4,
+      "perMessageOverhead": 4,
+      "proseTokens": 127,
+      "cjkTokens": 160,
+      "chatTokens": 266
+    }
+  }
+}

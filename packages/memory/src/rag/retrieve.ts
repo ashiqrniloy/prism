@@ -2,7 +2,7 @@ import { type JsonObject, resolveRedactor } from "@arnilo/prism";
 import { assertAccessConstraint } from "../acl.js";
 import { MemoryLimitError, MemoryValidationError } from "../errors.js";
 import { indexInvalidations, recordBlocked } from "../lineage.js";
-import type { MemoryInvalidationRecord, MemoryVectorHit, RagAccessConstraint, VectorStore } from "../types.js";
+import type { MemoryInvalidationRecord, MemoryVectorHit, RagAccessConstraint, StoreDenial, VectorStore } from "../types.js";
 import { createAccessRecheck } from "./access-recheck.js";
 import { RagError, RagLimitError, RagScopeError, RagValidationError } from "./errors.js";
 import { fuseReciprocalRankLists } from "./fusion.js";
@@ -125,6 +125,11 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
           topK: limits.queryCandidates,
           signal: options.signal,
           ...(authorization ? { authorization } : {}),
+          // Plan 102 Task 6: the store's own predicate reports what it withheld into the same audit
+          // path — and only when a sink wants it, so a host that never reads denials pays no statement.
+          ...(authorization && options.onAccessDenied && recheck
+            ? { onDeniedSources: (denials: readonly StoreDenial[]) => recheck.noteStoreDenials(scope, denials) }
+            : {}),
         });
         const sliced = found.slice(0, limits.queryCandidates);
         vectorLists.push(sliced);
@@ -147,6 +152,9 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
             topK: limits.queryCandidates,
             signal: options.signal,
             ...(authorization ? { authorization } : {}),
+            ...(authorization && options.onAccessDenied && recheck
+              ? { onDeniedSources: (denials: readonly StoreDenial[]) => recheck.noteStoreDenials(scope, denials) }
+              : {}),
           });
           const sliced = found.slice(0, limits.queryCandidates);
           lexicalLists.push(sliced);

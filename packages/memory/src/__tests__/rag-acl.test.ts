@@ -74,6 +74,94 @@ describe("RAG document authorization", () => {
     assert.equal(revoked.text, "");
   });
 
+  it("reports which sources its own predicate withheld, per source and only when asked", async () => {
+    const embedder = createHashEmbedder({ dimensions: 8 });
+    const store = createMemoryVectorStore();
+    // 20 revoked rows of one source, one version-stale source, one unattributable row, one allowed source.
+    await indexChunks({
+      chunks: [
+        ...chunkText(Array.from({ length: 20 }, (_, index) => `revoked row ${index + 1} about the approval policy`).join(" "), {
+          sourceId: "revoked-doc",
+        }),
+        ...chunkText("stale grant row about the approval policy", { sourceId: "stale-doc" }),
+        ...chunkText("allowed row about the approval policy", { sourceId: "alice-doc" }),
+      ],
+      embedder,
+      store,
+      scope,
+    });
+    await store.setSourceAccess(thread, [
+      { sourceId: "stale-doc", principalIds: ["alice"], accessVersion: 1 },
+      { sourceId: "alice-doc", principalIds: ["alice"], accessVersion: 3 },
+    ]);
+    const [embedding] = await embedder.embed(["approval policy"]);
+    assert.ok(embedding);
+    const lexicalQuery = store.lexicalQuery;
+    assert.ok(lexicalQuery);
+    const reports: (readonly { sourceId: string; reason: string }[])[] = [];
+    const onDeniedSources = (denials: readonly { sourceId: string; reason: string }[]) => reports.push(denials);
+
+    // 20 withheld rows of one source are one report entry, and the version-stale grant is named as such.
+    const vector = await store.query({
+      ...thread,
+      embedding,
+      topK: 50,
+      authorization: { ...alice, accessVersion: 3 },
+      onDeniedSources,
+    });
+    assert.deepEqual(
+      vector.map((hit) => (hit.metadata as { _rag?: { sourceId?: string } })?._rag?.sourceId),
+      ["alice-doc"],
+    );
+    assert.equal(reports.length, 1, "the callback fires once per query");
+    const [vectorReport] = reports;
+    assert.ok(vectorReport);
+    assert.deepEqual(
+      [...vectorReport].sort((a, b) => a.sourceId.localeCompare(b.sourceId)),
+      [
+        { sourceId: "revoked-doc", reason: "no_grant" },
+        { sourceId: "stale-doc", reason: "version_mismatch" },
+      ],
+    );
+
+    // Same contract on the lexical leg, and nothing is reported once the report is not asked for.
+    const lexical = await lexicalQuery({
+      ...thread,
+      text: "approval policy",
+      topK: 50,
+      authorization: { ...alice, accessVersion: 3 },
+      onDeniedSources,
+    });
+    assert.deepEqual(
+      lexical.map((hit) => (hit.metadata as { _rag?: { sourceId?: string } })?._rag?.sourceId),
+      ["alice-doc"],
+    );
+    assert.equal(reports.length, 2);
+    const lexicalReport = reports[1];
+    assert.ok(lexicalReport);
+    assert.deepEqual(lexicalReport.map((denial) => denial.sourceId).sort(), ["revoked-doc", "stale-doc"]);
+    const silent = await store.query({ ...thread, embedding, topK: 50, authorization: { ...alice, accessVersion: 3 } });
+    assert.deepEqual(silent, vector, "the report never widens or narrows the hits");
+    assert.equal(reports.length, 2, "no callback, no report");
+
+    // The lexical leg short-circuits before it reads a row (`topK < 1`), so it reports nothing; the vector
+    // leg still scans its rows, so it reports what its predicate withheld even for a query that returns none.
+    reports.length = 0;
+    await lexicalQuery({
+      ...thread,
+      text: "approval policy",
+      topK: 0,
+      authorization: { ...alice, accessVersion: 3 },
+      onDeniedSources,
+    });
+    assert.equal(reports.length, 0);
+    await store.query({ ...thread, embedding, topK: 0, authorization: { ...alice, accessVersion: 3 }, onDeniedSources });
+    assert.equal(reports.length, 1);
+    const emptyish = reports[0];
+    assert.ok(emptyish);
+    assert.deepEqual(emptyish.map((denial) => denial.sourceId).sort(), ["revoked-doc", "stale-doc"]);
+  });
+
   it("group grant then group revocation", async () => {
     const embedder = createHashEmbedder({ dimensions: 8 });
     const store = createMemoryVectorStore();

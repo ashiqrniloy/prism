@@ -115,11 +115,24 @@ Memory retrieval keeps its own audit events next to policy decisions; hosts forw
 
 | Event | Shape | When |
 | --- | --- | --- |
-| `rag.acl_denied` | `{ sourceId, scope: { tenantId, resourceId, threadId }, reason: "no_grant" \| "check_failed", hits, error? }` via `retrieveContext({ onAccessDenied })` | A source was withheld at the retrieval boundary: revoked/absent/version-mismatched grant, or the grant lookup threw (`error` is redacted, capped at 256 chars) |
+| `rag.acl_denied` | `{ sourceId, scope: { tenantId, resourceId, threadId }, reason: "no_grant" \| "check_failed", hits, error? }` via `retrieveContext({ onAccessDenied })` | A source was withheld: revoked/absent/version-mismatched grant, the grant lookup threw (`error` is redacted, capped at 256 chars), or the store's own predicate filtered it before ranking (`hits: 0`, reported only when the host wires `onDeniedSources` through `retrieveContext`, plan 102 Task 6) |
 | `Repointed` log line + result | `repointSource()` → `{ from, to, movedChunks, rewrittenEdges, layers, batched }` | A source's grant identity moved and derived artifacts followed |
+| `rag.repointed` (rename audit) | `applySourceRenames({ onRenamed })` → `{ from, to, outcome: "moved", movedChunks, rewrittenEdges, layers }` \| `{ from, to, outcome: "failed", error }` | A batch of identity moves ran: one event per rename that settled, successes and failures alike (`error` redacted and capped at 256 chars) — plan 102 Task 7 |
 | Invalidation rows | `store.invalidate()` rows (`{ id, reason: "corrected" \| "revoked" \| "forgotten" \| "legal_hold", at }`) read back by `listInvalidatedIds()` | A source was revoked/forgotten/held; tombstones stay for explainability |
 
 Events are per *source*, not per hit, and are emitted once per query. They never contain document text, grant contents, or credentials; `check_failed` messages pass through the same redactor as retrieved content. Denials are fail-closed: a source is excluded whether the grant is absent, revoked, or the lookup failed, and the query returns the remaining hits. Aborts are not denials and are never recorded as such.
+
+The re-point rows are the same kind of evidence for identity moves: `repointSource()` returns its counts to the caller, and `applySourceRenames()` (plan 102 Task 7) writes a batch into a host sink through `onRenamed` — one event per rename that settled, carrying `from`/`to`, the outcome, and either the moved counts per layer or the redacted error. A failed rename is audited before the batch stops (fail-fast) or continues, and a rename that never started is not audited.
+
+Since plan 102 Task 6 the table also covers what the **store's own predicate** withheld, which plan 089 recorded as unauditable. A store that declares `authorization: "acl"` reports the sources its `query`/`lexicalQuery` predicate filtered out when the caller opts in, and `retrieveContext()` forwards that report into the same `onAccessDenied` path (one event per source per query, `hits: 0` because no hit ever existed — the finer per-source rule stays on the query-level callback):
+
+```ts
+// store-level: what this query's own predicate withheld, and why
+await store.query({ ...scope, embedding, topK, authorization, onDeniedSources: (d) => audit.write(d) });
+// → [{ sourceId: "doc:payroll", reason: "no_grant" }, { sourceId: "doc:hr", reason: "version_mismatch" }]
+```
+
+Without the callback the store issues no extra statement and its SQL is unchanged; with it, PostgreSQL/pgvector adds one grouped anti-join (`GROUP BY source_id` over the rows the predicate refused) that measured **1.2–1.4ms** on the 23-row fixture on an AMD Ryzen 9 PRO 7940HS. Reports carry source ids and reasons only — never rows, text, grant contents, or principal ids — and never widen the predicate: a withheld source stays withheld with or without the callback.
 
 ## Security and performance notes
 

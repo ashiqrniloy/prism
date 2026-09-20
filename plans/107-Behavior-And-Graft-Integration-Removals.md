@@ -3,8 +3,8 @@
 Removes the first-class Ponytail, Caveman, and Graft integrations so hosts provide their
 own implementations through public extension APIs, external MCP servers, or host-authored
 native tools. Everything here is opt-in surface; nothing is default behavior. Removals ship
-with 0.10.0 (plan 105 owns the cut; this plan must complete before plan 105's release-cut
-task, after plan 106's implementation tasks or in parallel with them).
+with 0.10.0 (plan 106 owns the cut; this plan must complete before plan 106 Tasks 8–10,
+after or in parallel with plan 106 Tasks 1–7).
 
 Decision record (2026-09-19): Ponytail and Caveman are already inert, opt-in subpaths of
 `@arnilo/prism-coding-tools` built entirely on public extension APIs (`registerSkill`,
@@ -45,7 +45,7 @@ stay; graft remains this repo's development context tool.
   `docs/hooks.md` (plan 106) and `docs/extensions.md` remain the authoring guides. This
   repo itself keeps using graft (`graft/`, `.mcp.json`, AGENTS.md block) for development.
 - `release:gate` green on a regenerated baseline that records these removals as this plan's
-  (not inherited); all removals ship in 0.10.0 via plan 105.
+  (not inherited); all removals ship in 0.10.0 via plan 106's cut.
 
 ## Tasks
 
@@ -167,26 +167,26 @@ stay; graft remains this repo's development context tool.
 
 - [ ] Task 4: Baseline regeneration and 0.10.0 fold-in
   - Acceptance Criteria:
-    - Functional: `node scripts/release.mjs gate --update-baseline` regenerates `scripts/compat-baseline/` files; the diff contains exactly this plan's removals (the two prism-coding-tools subpaths, the memory `/graft` subpath, optional-peer changes, and the promoted loader export if added) plus any inherited drift — inherited drift is enumerated in the task note and attributed, per the skill rule. `release:gate` green after regeneration. `node scripts/package-truth.mjs` refreshed; `docs/release-and-install.md` counts match. Full workspace `npm test` green. Sequencing note appended to plan 105 and plan 106 files: this plan precedes plan 105's release-cut task.
+    - Functional: `node scripts/release.mjs gate --update-baseline` regenerates `scripts/compat-baseline/` files; the diff contains exactly this plan's removals (the two prism-coding-tools subpaths, the memory `/graft` subpath, optional-peer changes, and the promoted loader export if added) plus any inherited drift — inherited drift is enumerated in the task note and attributed, per the skill rule. `release:gate` green after regeneration. `node scripts/package-truth.mjs` refreshed; `docs/release-and-install.md` counts match. Full workspace `npm test` green. This plan precedes plan 106 Tasks 8–10.
     - Performance: n/a.
     - Code Quality: baseline diff reviewed line-by-line in the task note (no accidental export drops beyond the intended three subpaths).
     - Security: n/a.
   - Approach:
-    - Documentation Reviewed: `scripts/release.mjs` gate usage; `scripts/compat-baseline/` layout; plan 105 release-cut task; plan 084 Task 8 precedent (inherited-drift absorption).
-    - Options Considered: defer regen to plan 105 — rejected: the skill rule requires this plan to own its removal baseline explicitly.
-    - Chosen Approach: Regenerate here; plan 105 verifies gate green at cut time.
+    - Documentation Reviewed: `scripts/release.mjs` gate usage; `scripts/compat-baseline/` layout; plan 106 Tasks 8–10; plan 084 Task 8 precedent (inherited-drift absorption).
+    - Options Considered: defer regen to plan 106 — rejected: the skill rule requires this plan to own its removal baseline explicitly.
+    - Chosen Approach: Regenerate here; plan 106 Task 9 re-verifies gate green at cut time.
     - API Notes and Examples:
       ```bash
       node scripts/release.mjs gate --update-baseline
       npm run release:gate
       ```
-    - Files to Create/Edit: `scripts/compat-baseline/*` (regenerated), `scripts/package-truth.json`, `plans/105-…md` (note), `plans/106-…md` (note), `CHANGELOG.md` (if not already covered by Tasks 2–3).
+    - Files to Create/Edit: `scripts/compat-baseline/*` (regenerated), `scripts/package-truth.json`, `plans/106-…md` (note), `CHANGELOG.md` (if not already covered by Tasks 2–3).
     - References: skill rule (baseline regeneration on public-symbol removal); plan 083/084 history.
   - Test Cases to Write: `release:gate` green is the test.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: no (release plumbing over Tasks 2–3 removals).
     - Docs pages to create/edit: `docs/release-and-install.md` counts (from package-truth).
-    - `docs/index.md` update: no (version table updates belong to plan 105's cut).
+    - `docs/index.md` update: no (version table updates belong to plan 106's cut).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
 ## Compromises Made

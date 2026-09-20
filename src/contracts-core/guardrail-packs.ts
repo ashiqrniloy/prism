@@ -1,11 +1,11 @@
 /**
  * Guardrail packs (plan 092 Task 2): config-declared, restrictive-only rule sets compiled once per
  * session onto the existing tool interception seams (`tool_input` / `tool_output`). Packs can only
- * deny or tripwire — they never grant permissions, widen arguments, or add a stage.
+ * deny, tripwire, or ask for approval — they never grant permissions, widen arguments, or add a stage.
  */
 import type { JsonObject } from "./content.js";
 
-export type GuardrailRuleAction = "deny" | "tripwire";
+export type GuardrailRuleAction = "deny" | "tripwire" | "ask";
 
 /** Read-only identity view handed to a pack rule predicate (never carries a raw argument echo). */
 export interface GuardrailRuleContext {
@@ -28,7 +28,12 @@ export interface GuardrailRule {
   readonly argPath?: string | readonly string[];
   /** Typed predicate escape hatch (host-trusted like all host code); deny when it returns true. Exactly one of `pattern` / `deny`. */
   readonly deny?: (args: JsonObject, context: GuardrailRuleContext) => boolean;
-  /** Defaults to `deny`; `tripwire` also rejects the enclosing run. `ask` has no deterministic seam (plan 092 Task 1). */
+  /**
+   * Defaults to `deny`. `tripwire` also rejects the enclosing run. `ask` suspends a durable run
+   * before the call dispatches (the pending decision names this rule) and blocks the call in a run
+   * that cannot suspend; it requires `pattern` — an opaque predicate cannot raise an approval
+   * (plan 104 Task 3).
+   */
   readonly action?: GuardrailRuleAction;
   /** Bounded, redacted record reason; defaults to the pack/rule id. */
   readonly reason?: string;

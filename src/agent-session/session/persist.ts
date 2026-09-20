@@ -27,10 +27,14 @@ export async function persistDurable(session: SessionHost, state: StoredAgentRun
   // did not keeps exactly today's bytes, where the frontier rides `persistSessionState`.
   const attentionSticky = persistSessionState || session.attentionDurable ? session.serializedAttentionSticky() : undefined;
   const attentionFold = session.attentionDurable ? session.serializedAttentionFold() : undefined;
+  // Plan 104 T2: pack refs and pack-owned state; the key only exists under the same opt-in, so a
+  // default checkpoint keeps exactly today's bytes.
+  const guardrailPacks = persistSessionState ? session.serializedGuardrailPackState() : undefined;
   const sessionState = {
     ...(persistSessionState
       ? {
           loadedSkillNames: session.loadedSkills.list(),
+          ...(guardrailPacks ? { guardrailPacks } : {}),
           ...(session.activatedTools.list().length ? { activatedToolNames: session.activatedTools.list() } : {}),
           ...(durable.options.includeSkillBodies
             ? {
@@ -297,6 +301,6 @@ export async function cleanupRun(input: {
     session.activeRedactor = undefined;
     session.activeProvider = undefined;
     cleanupSignal();
-    session.closeSubscribers();
+    session.closeRunSubscribers();
   }
 }

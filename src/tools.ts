@@ -2,6 +2,7 @@ import { isJsonObject } from "./config.js";
 import type {
   AgentEvent,
   ErrorInfo,
+  GuardrailRecord,
   Guardrails,
   JsonObject,
   OwnershipScope,
@@ -18,7 +19,7 @@ import type {
   ToolRegistry,
   ToolResult,
 } from "./contracts.js";
-import { GuardrailError, runGuardrails } from "./guardrails.js";
+import { GuardrailError, guardrailRefusalText, runGuardrails } from "./guardrails.js";
 import { assertIdentityActive, assertIdentityMatchesOwnership, ownershipFromIdentity } from "./identity.js";
 import { createId } from "./ids.js";
 import type { MiddlewareRegistry } from "./middleware.js";
@@ -224,7 +225,7 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
   });
   if (inputGuards.terminal) {
     if (inputGuards.terminal.action !== "block") throw new GuardrailError(inputGuards.terminal);
-    return blocked(mediatedCall, options.context, "guardrail_blocked", { message: "Tool call blocked by guardrail" }, options, startedAt);
+    return blocked(mediatedCall, options.context, "guardrail_blocked", { message: guardrailBlockMessage(inputGuards.terminal) }, options, startedAt);
   }
   const tool = options.registry.get(mediatedCall.name);
   const postcheck = await checkCall(mediatedCall, options, startedAt);
@@ -328,7 +329,7 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
     if (outputGuards.terminal) {
       if (outputGuards.terminal.action !== "block") throw new GuardrailError(outputGuards.terminal);
       if (effect) return finishUnknownEffect(effect, mediatedCall, context, options, startedAt);
-      return blocked(mediatedCall, context, "guardrail_blocked", { message: "Tool result blocked by guardrail" }, options, startedAt);
+      return blocked(mediatedCall, context, "guardrail_blocked", { message: guardrailBlockMessage(outputGuards.terminal) }, options, startedAt);
     }
     if (effect && mediatedResult.error) return finishUnknownEffect(effect, mediatedCall, context, options, startedAt);
     const result = options.redactor?.redact(mediatedResult) ?? mediatedResult;
@@ -554,6 +555,17 @@ function isSuspended(error: unknown): boolean {
 
 function isLoopStateError(error: unknown): boolean {
   return typeof (error as { code?: unknown })?.code === "string" && (error as { code: string }).code.startsWith("ERR_PRISM_LOOP_");
+}
+
+/**
+ * Plan 104 T3/T4: the model-visible refusal line for a terminal guardrail decision. `guardrailRefusalText`
+ * names a compiled pack rule (bounded, redacted); any other guardrail keeps the neutral stage text.
+ */
+function guardrailBlockMessage(record: GuardrailRecord): string {
+  return (
+    guardrailRefusalText(record) ??
+    (record.stage === "tool_output" ? "Tool result blocked by guardrail" : "Tool call blocked by guardrail")
+  );
 }
 
 function isDelegationSuspended(error: unknown): boolean {

@@ -269,7 +269,7 @@ export interface AccessDenial {
   /** Exact scope whose grant was checked, in `MemoryScope` shape. */
   readonly scope: { readonly tenantId: string; readonly resourceId: string; readonly threadId: string };
   readonly reason: AccessDenialReason;
-  /** Hits this query withheld for the source (pre-filter plus post-rerank drops). */
+  /** Hits this query withheld for the source, pre-filter plus post-rerank drops; `0` when a store's own predicate withheld the whole source, so no hit ever existed (plan 102 Task 6). */
   readonly hits: number;
   /** Redacted store error, present only when reason is `check_failed`. */
   readonly error?: string;

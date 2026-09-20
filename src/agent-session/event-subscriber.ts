@@ -2,6 +2,8 @@
 import type { AgentEvent, SubscribeOptions } from "../contracts.js";
 
 export class EventSubscriber implements AsyncIterable<AgentEvent>, AsyncIterator<AgentEvent> {
+  /** Plan 104 T5: run-scoped unless the host opted into `acrossRuns`. */
+  readonly acrossRuns: boolean;
   private readonly queue: AgentEvent[] = [];
   private readonly waiters: ((result: IteratorResult<AgentEvent>) => void)[] = [];
   private readonly maxQueuedEvents: number;
@@ -16,6 +18,7 @@ export class EventSubscriber implements AsyncIterable<AgentEvent>, AsyncIterator
     const maxQueuedEvents = options.maxQueuedEvents ?? 1024;
     this.maxQueuedEvents = Number.isFinite(maxQueuedEvents) ? Math.max(1, Math.floor(maxQueuedEvents)) : 1024;
     this.overflow = options.overflow ?? "close";
+    this.acrossRuns = options.acrossRuns === true;
   }
 
   [Symbol.asyncIterator](): AsyncIterator<AgentEvent> {

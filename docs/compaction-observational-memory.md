@@ -88,6 +88,7 @@ Key exports:
 | `renderObservationalMemory()` | Render reflections and observations into a prepared memory summary. |
 | `recallObservationalMemory()` | Recover source evidence for a known observation/reflection id from supplied current-branch entries. `invalidatedIds` withholds content (`reason: "revoked"`) without injecting derived text. |
 | `listInvalidatedIds()` (`@arnilo/prism-memory`) | Read the ids one exact scope currently withholds (`corrected` stays) and pass them as `invalidatedIds`, so blocks that rest on a source revoked mid-turn go stale on the next build. Empty for stores without lineage invalidation. |
+| `createObservationalMemoryDropHandler()` | The OM leg of `createDeletionPropagator`: folds the session ledger once and appends one `om.observations.dropped` entry naming every active observation whose id or `sourceEntryIds` intersect the tombstone set (`coversUpToId` omitted — a tombstone set is not a coverage position). Register with `{ session, appendEntry }`; pair it with `listInvalidatedIds()` for the read path. |
 | `recallObservationalMemoryBranchPage()` | Page eligible user/assistant/tool messages around a cursor entry id (`forward`/`backward`, optional `detail: summary|full`). |
 | `createMemoryId()` / `isMemoryId()` | Create/check 12-character ids. |
 | `resolveObservationalMemorySettings()` | Merge `observational-memory` settings with defaults and overrides. |
@@ -100,6 +101,25 @@ Key exports:
 | `createObservationalMemoryCommands()` | Convenience factory returning status and view commands. |
 
 Pure utilities create no events, workers, tools, commands, credentials, or provider requests. `createObservationalMemoryExtension()` and import alone start nothing. `createObservationalMemory().attach()` runs workers only after proxied `run`/`prompt`/`stream`/`compact` complete (or after `wrapResumeRun` / `wrapResumeStream`). `createObservationalMemoryRuntime().flush()` remains for manual/advanced use. Attached `contextProvider` renders two blocks each turn: `observational-memory` (active reflections/observations aligned to the recent-message boundary) and `recent-messages` (last `keepRecentEntries` message entries in branch order, optionally trimmed by `recentMessageMaxTokens` using `estimateEntryTokens`; oldest dropped first). Compaction uses the same `keepRecentEntries` setting. Observer input includes only eligible `message` entries (`user`, `assistant`, `tool`); memory/compaction/bookkeeping entries advance `coversUpToId` scan coverage without entering the observer prompt. Successful observer/reflector runs append coverage markers even when they record zero facts. Reflection uses only active observations recorded after the last `om.reflections.recorded` entry unless `flush({ fullReflectionRebuild: true })`. Attached `flush()` skips with `run_active` while a proxied run is in flight. The compaction strategy is O(n) over supplied entries and makes no provider call.
+
+### Revocation wiring (plan 102 Tasks 2/8)
+
+A revoked source must stop feeding memory on both sides of the write. The two halves share one tombstone set:
+
+```ts
+import { listInvalidatedIds } from "@arnilo/prism-memory";
+import { buildObservationalMemoryContextBlocks, createObservationalMemoryDropHandler } from "@arnilo/prism-memory/compaction/observational-memory";
+
+// Write path: register the OM leg on the host's deletion propagator (see docs/rag.md for the full wiring).
+const handlers = [createObservationalMemoryDropHandler({ session, appendEntry })];
+
+// Read path: withhold at build time for a projection whose ledger has no drop entry yet.
+const blocked = await listInvalidatedIds(store, scope); // one scope read; `corrected` ids stay
+const blocks = buildObservationalMemoryContextBlocks(entries, { invalidatedIds: blocked });
+```
+
+- Both paths render the same memory for the same tombstones, so an id is withheld whether or not the physical drop ran — the drop entry answers "what did the revocation retire" for audit, `invalidatedIds` answers "what must not be injected right now".
+- The drop entry carries observation ids only (no observation text), and the fold treats it as a drop rather than progress (`coversUpToId` omitted).
 
 ### Work-scope index (opt-in)
 
