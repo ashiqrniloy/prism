@@ -23,6 +23,9 @@ export const DEFAULT_RUN_LIMITS = Object.freeze({
   maxTotalTokens: 50_000,
 });
 
+/** Stop-hook continuation cap when no layer configures one (plan 106 R1). Not a counter axis. */
+const DEFAULT_MAX_STOP_CONTINUATIONS = 3;
+
 /**
  * Process-safety ceilings that exist so a bug cannot OOM the host via JSON.parse of giant
  * provider frames. Product axes (turns, wall time, tokens, …) have no hard cap: hosts set
@@ -103,8 +106,13 @@ export function resolveRunLimits(agent?: RunLimits, run?: RunLimits): Readonly<R
     if (attempts !== null && turns !== null && attempts < turns) resolved.maxProviderAttempts = turns;
   }
   const maxCost = override?.maxCost ?? base?.maxCost;
+  // Stop-hook continuation cap (plan 106 R1): no counters-table row — the wrapper turns it into a
+  // clean `hook_limit` stop, not a breach — so it resolves outside the counter-backed axes and
+  // keeps the same narrowing-only law (min, `null` = uncapped).
+  const stopContinuations = minCap(base?.maxStopContinuations, override?.maxStopContinuations);
   return Object.freeze({
     ...resolved,
+    maxStopContinuations: stopContinuations !== undefined ? stopContinuations : DEFAULT_MAX_STOP_CONTINUATIONS,
     ...(maxCost
       ? {
           maxCost:
@@ -140,6 +148,14 @@ function validateLimits(input: RunLimits): RunLimits {
     const { amount, currency } = input.maxCost;
     if (!Number.isFinite(amount) || amount < 0 || !currency.trim())
       throw new TypeError("maxCost requires a finite non-negative amount and currency");
+  }
+  const stopContinuations = input.maxStopContinuations;
+  if (
+    stopContinuations !== undefined &&
+    stopContinuations !== null &&
+    (!Number.isSafeInteger(stopContinuations) || stopContinuations < 0)
+  ) {
+    throw new TypeError("maxStopContinuations must be a non-negative safe integer or null to disable the cap");
   }
   return input;
 }

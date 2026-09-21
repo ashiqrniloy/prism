@@ -54,6 +54,7 @@ import type {
   Usage,
 } from "../contracts.js";
 import {
+  AgentRunStateError,
   DEFAULT_MAX_PENDING_STEER_BYTES,
   DEFAULT_MAX_PENDING_STEERS,
   DEFAULT_SNAPSHOT_CACHE_TTL_MS,
@@ -61,7 +62,6 @@ import {
   resolveShouldCompact,
 } from "../contracts.js";
 import { compileGuardrailPacksWithState, GuardrailError, GuardrailPackError, runGuardrails } from "../guardrails.js";
-import { AgentRunStateError } from "../contracts.js";
 import type { AgentIdentity } from "../identity.js";
 import type { AgentInput } from "../input.js";
 import {
@@ -101,6 +101,10 @@ export class RuntimeAgentSession implements AgentSession {
   private readonly metadata?: Readonly<Record<string, unknown>>;
   private readonly store: SessionStore;
   private readonly subscribers = new Set<EventSubscriber>();
+  /** Plan 106 R2: `session_start` is dispatched at the first run start, once per runtime session. */
+  private sessionOpened = false;
+  /** Plan 106 R2: `close()` dispatches `session_shutdown` and closes subscribers exactly once. */
+  private closed = false;
   private currentLeafId?: string;
   private history: Message[] = [];
   private activeRun?: AbortController;
@@ -465,6 +469,34 @@ export class RuntimeAgentSession implements AgentSession {
     return executeRun(asSessionHost(this), input, options, runId, resumed);
   }
 
+  /**
+   * Plan 106 R2: dispatch `session_start` once per session, at its first run start (including the
+   * first run of a session rebuilt from a durable checkpoint). The run assembler awaits it right
+   * after `agent_started`/`agent_resumed`, so session-scoped provisioning is done before the first
+   * turn while the runtime's synchronous emit burst stays intact. Middleware error policy decides
+   * whether a failure surfaces or becomes an `extension_error` event.
+   */
+  async openSession(runId: string): Promise<void> {
+    if (this.sessionOpened) return;
+    this.sessionOpened = true;
+    await this.agent.config.middleware?.run("session_start", { sessionId: this.id, runId });
+  }
+
+  /**
+   * Plan 106 R2: session teardown. Dispatches `session_shutdown` middleware once (idempotent) and
+   * then closes every subscriber, run-scoped and `acrossRuns` alike. Call it after the active run
+   * settles; `closeSubscribers()` remains the subscriber-only seam.
+   */
+  async close(): Promise<void> {
+    if (this.closed) return;
+    this.closed = true;
+    try {
+      await this.agent.config.middleware?.run("session_shutdown", { sessionId: this.id });
+    } finally {
+      this.closeSubscribers();
+    }
+  }
+
   prompt(input: string, options?: RunOptions): Promise<AgentRunResult> {
     return this.run(input, options);
   }
@@ -780,10 +812,15 @@ export class RuntimeAgentSession implements AgentSession {
       signal,
     };
     this.emit({ type: "compaction_started", sessionId: this.id, runId });
-    let result = await strategy.compact(context);
+    // Plan 106 R3: pre-compaction seam — the strategy compacts exactly the context this returns.
+    const requested = (await this.agent.config.middleware?.run("compaction_request", context)) ?? context;
+    let result = await strategy.compact(requested);
     result = { ...result, summary: redactSecrets(result.summary, secrets) };
-    const payload: CompactionMiddlewarePayload = (await this.agent.config.middleware?.run("compaction", { context, result })) ?? {
-      context,
+    const payload: CompactionMiddlewarePayload = (await this.agent.config.middleware?.run("compaction", {
+      context: requested,
+      result,
+    })) ?? {
+      context: requested,
       result,
     };
     result = { ...payload.result, summary: redactSecrets(payload.result.summary, secrets) };

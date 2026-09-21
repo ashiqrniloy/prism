@@ -4,10 +4,11 @@ ALLOW_FIELD_POLICY	export declare const ALLOW_FIELD_POLICY: FieldPolicy
 ARTIFACT_BODY_ERROR_CODES	export declare const ARTIFACT_BODY_ERROR_CODES: Readonly<Record<ArtifactBodyErrorCode, `ERR_PRISM_ARTIFACT_BODY_$
 ARTIFACT_CHECKPOINT_NAMESPACE	export declare const ARTIFACT_CHECKPOINT_NAMESPACE = "prism.artifact"
 ATTENTION_BUDGET_ERROR_CODE	export declare const ATTENTION_BUDGET_ERROR_CODE: "attention_budget_exceeded"
-ActivatedKernelConfig	export type { ActivatedKernelConfig, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+ActivatedKernelConfig	export type { ActivatedKernelConfig, AgentEventBridgeOptions, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
 ActiveToolSet	export type { ActiveToolSet, ToolSearchIndex, ToolSearchMatch, ToolSearchState, ToolsDisclosure, ToolsSearchOptions, } from "./tool-search.js"
 AgentDecisionError	export declare class AgentDecisionError extends Error
 AgentDelegationSuspendedError	export declare class AgentDelegationSuspendedError extends Error
+AgentEventBridgeOptions	export type { ActivatedKernelConfig, AgentEventBridgeOptions, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
 AgentEventSourceError	export declare class AgentEventSourceError extends Error
 AgentEventSourceErrorCode	export type { AgentEventSourceErrorCode } from "./agent-event-source.js"
 AgentIdentity	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimits, IdentityVerifier, NarrowIdentityOptions, Principal, ResolvedIdentityLimits, } from "./identity.js"
@@ -221,12 +222,12 @@ ExecutionDeniedError	export declare class ExecutionDeniedError extends Error
 ExecutionPolicy	export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js"
 ExecutionRisk	export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js"
 ExportUnderHoldInput	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
-ExtensionErrorPolicy	export type { ActivatedKernelConfig, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
-ExtensionEventBus	export type { ActivatedKernelConfig, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
-ExtensionEventHandler	export type { ActivatedKernelConfig, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
-ExtensionKernel	export type { ActivatedKernelConfig, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
-ExtensionKernelOptions	export type { ActivatedKernelConfig, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
-ExtensionLoadPolicy	export type { ActivatedKernelConfig, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+ExtensionErrorPolicy	export type { ActivatedKernelConfig, AgentEventBridgeOptions, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+ExtensionEventBus	export type { ActivatedKernelConfig, AgentEventBridgeOptions, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+ExtensionEventHandler	export type { ActivatedKernelConfig, AgentEventBridgeOptions, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+ExtensionKernel	export type { ActivatedKernelConfig, AgentEventBridgeOptions, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+ExtensionKernelOptions	export type { ActivatedKernelConfig, AgentEventBridgeOptions, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+ExtensionLoadPolicy	export type { ActivatedKernelConfig, AgentEventBridgeOptions, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
 FIELD_POLICY_LIMITS	export declare const FIELD_POLICY_LIMITS: Readonly<
 FieldPolicy	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
 FieldPolicyAction	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
@@ -303,7 +304,7 @@ LegalHoldExportItem	export type { ApplyRetentionInput, ApplyRetentionResult, Con
 LegalHoldQuery	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 LegalHoldRecord	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 LoadBinaryResourceOptions	export type { LoadBinaryResourceOptions } from "./resources.js"
-LoadedExtension	export type { ActivatedKernelConfig, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
+LoadedExtension	export type { ActivatedKernelConfig, AgentEventBridgeOptions, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
 LoadedSkillBodiesEntry	export type { CreateLoadSkillToolOptions, LoadedSkillBodiesEntry, ResolveSkillLoadOptions, } from "./skill-load.js"
 LoadedSkillSet	export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js"
 MAX_ACTION_CONSTRAINTS	export declare const MAX_ACTION_CONSTRAINTS = 32
@@ -600,7 +601,7 @@ boundResponse	export declare function boundResponse(response: Response, maxBytes
 boundedLoopSnapshot	export declare function boundedLoopSnapshot(name: string, revision: string, snapshot: JsonValue): StoredAgentRunState["loopState"]
 bridgeAbort	export declare function bridgeAbort(signal: AbortSignal | undefined, controller: AbortController): () => void
 buildOpenAIChatBody	export declare function buildOpenAIChatBody(request: ProviderRequest, options?: OpenAIChatBodyOptions): JsonObject
-buildPendingDecision	export declare function buildPendingDecision(session: SessionHost, call: ToolCallContent, approvalId: string, registry: ToolRegistry, runId: string, metadata: Readonly<Record<string, unknown>>, signal: AbortSignal): PendingDecision
+buildPendingDecision	export declare function buildPendingDecision(session: SessionHost, call: ToolCallContent, approvalId: string, registry: ToolRegistry, runId: string, metadata: Readonly<Record<string, unknown>>, signal: AbortSignal, ask?: GuardrailRecord): PendingDecision
 bytesToBase64	export declare function bytesToBase64(bytes: Uint8Array): string
 cacheHitRate	export declare function cacheHitRate(usage: Usage | undefined): number | undefined
 cacheSavings	export declare function cacheSavings(usage: Usage | undefined, model: ModelConfig): number | undefined
@@ -623,6 +624,7 @@ collectMessageContentBlocks	export declare function collectMessageContentBlocks(
 collectProviderEvents	export declare function collectProviderEvents(provider: AIProvider, request: ProviderRequest): Promise<readonly ProviderEvent[]>
 compileAttention	export declare function compileAttention(options: AttentionCompileOptions): Promise<AttentionCompilation>
 compileGuardrailPacks	export declare function compileGuardrailPacks(refs: readonly GuardrailPackRef[] | undefined, registry?: ReadonlyMap<string, import("./guardrail-packs/types.js").GuardrailPackDefinition>): Guardrails | undefined
+compileGuardrailPacksWithState	export declare function compileGuardrailPacksWithState(refs: readonly GuardrailPackRef[] | undefined, registry?: ReadonlyMap<string, import("./guardrail-packs/types.js").GuardrailPackDefinition>, initial?: Readonly<Record<string, unknown>>): CompiledGuardrailPacks
 composeSystemPrompt	export declare function composeSystemPrompt(contributions?: SystemPromptConfig, options?: ComposeSystemPromptOptions): string | undefined
 contentBlockInputModality	export declare function contentBlockInputModality(block: ContentBlock): ModelInputCapability | undefined
 conversationMarkerMetadata	export declare function conversationMarkerMetadata(marker:
@@ -727,6 +729,7 @@ errorToErrorInfo	export declare function errorToErrorInfo(error: unknown, secret
 estimateAssemblyTokens	export declare function estimateAssemblyTokens(messages: readonly Message[]): number
 estimateMessageBytes	export declare function estimateMessageBytes(message: Message): number
 estimateMessageTokens	export declare function estimateMessageTokens(message: Message, estimateTokens?: TokenEstimator): number
+estimateRequestExtrasTokens	export declare function estimateRequestExtrasTokens(tools: readonly ToolDefinition[] | undefined, context: readonly ContextBlock[] | undefined, estimateTokens: TokenEstimator): number
 estimateTextBytes	export declare function estimateTextBytes(text: string): number
 estimateTextTokens	export declare function estimateTextTokens(text: string): number
 estimateTextTokensForFamily	export declare function estimateTextTokensForFamily(text: string, modelFamily?: string): number
@@ -738,6 +741,7 @@ foldToolResultHistory	export declare function foldToolResultHistory(history: rea
 foldToolResults	export declare function foldToolResults(results: readonly ToolResult[], options: ResolvedToolResultFoldOptions, context: FoldToolResultsContext): Promise<readonly ToolResult[]>
 foldedToolResultHeader	export declare function foldedToolResultHeader(toolName: string, toolCallId: string, summary: string): string
 formatFoldedToolResult	export declare function formatFoldedToolResult(summary: string): string
+forwardAgentEvents	export declare function forwardAgentEvents(source: AsyncIterable<AgentEvent>, events: Pick<ExtensionEventBus, "emit">, options?: AgentEventBridgeOptions): () => void
 generateProviderTurn	export declare function generateProviderTurn(session: SessionHost, request: ProviderRequest, runId: string, signal: AbortSignal, secrets?: readonly (string | undefined)[], turn?: number, attempt?: number, recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<Usage | undefined>, toolResults?: readonly ToolResult[]): Promise<ProviderTurnResult>
 generateValidateReviseLoop	export declare function generateValidateReviseLoop(opts:
 generateWithRetry	export declare function generateWithRetry(session: SessionHost, request: ProviderRequest, runId: string, options: RunOptions, signal: AbortSignal, requestSecrets?: readonly (string | undefined)[], turn?: number, recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<Usage | undefined>, toolResults?: readonly ToolResult[]): Promise<ProviderTurnResult>
@@ -746,6 +750,7 @@ getInitUsage	export declare function getInitUsage(templatesRoot?: string, galler
 getPersistencePaginationCursors	export declare function getPersistencePaginationCursors(): readonly PersistencePaginationCursor[]
 getProviderAddUsage	export declare function getProviderAddUsage(): string
 getSessionBranchEntries	export declare function getSessionBranchEntries(reader: BranchReader, query: SessionBranchRead): Promise<readonly SessionEntry[]>
+guardrailRefusalText	export declare function guardrailRefusalText(record: GuardrailRecord, prefix?: string): string | undefined
 handleNestedSignal	export declare function handleNestedSignal(ctx: RoundContext, error: AgentDelegationSuspendedError): Promise<void>
 httpStatusError	export declare function httpStatusError(prefix: string, response: Response, bodyText: string): Error
 identityTelemetryAttributes	export declare function identityTelemetryAttributes(identity: AgentIdentity): Readonly<Record<string, string>>
@@ -913,6 +918,7 @@ resolveContextProviders	export declare function resolveContextProviders(options:
 resolveCredentialValue	export declare function resolveCredentialValue(source: CredentialValueSource | undefined, request: CredentialRequest): Promise<string | undefined>
 resolveDeterministicTurn	export declare function resolveDeterministicTurn(session: SessionHost, request: ProviderRequest, runId: string, turn: number, signal: AbortSignal, toolResults?: readonly ToolResult[]): Promise<ProviderTurnResult | undefined>
 resolveDevicePolicy	export declare function resolveDevicePolicy(adapter: DeviceAdapter, options?: DevicePolicyOptions): ResolvedDevicePolicy
+resolveHostTokenEstimator	export declare function resolveHostTokenEstimator(budget: ContextBudget | undefined): TokenEstimator | undefined
 resolveIdentityLimits	export declare function resolveIdentityLimits(input?: IdentityLimits): ResolvedIdentityLimits
 resolveInputCap	export declare function resolveInputCap(options?: AttentionInputCapOptions, model?: AttentionCompilerContext["model"]): number
 resolveInstructionInjectors	export declare function resolveInstructionInjectors(options: ResolveInstructionInjectorsOptions): readonly InstructionInjector[]
@@ -1025,7 +1031,7 @@ validateProviderName	export declare function validateProviderName(name: string):
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
 validationRespectPack	export declare const validationRespectPack: GuardrailPackDefinition
-version	export declare const version = "0.9.0"
+version	export declare const version = "0.10.0"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]

@@ -17,13 +17,6 @@ export type {
   AgentRunLifecycleStreamRequest,
 } from "./agent-run-lifecycle.js";
 export { createAgentRunLifecycle } from "./agent-run-lifecycle.js";
-export type {
-  CheckpointRestoreAudit,
-  CheckpointRestoreAuditEntry,
-  CheckpointRestoreHook,
-  RunCheckpointRestoreHooksOptions,
-} from "./checkpoint-restore.js";
-export { CheckpointRestoreError, DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS, runCheckpointRestoreHooks } from "./checkpoint-restore.js";
 export type { PendingToolCall, StoredAgentRunState } from "./agent-run-state.js";
 export {
   AGENT_RUN_STATE_NAMESPACE,
@@ -120,6 +113,13 @@ export {
 } from "./cache-telemetry.js";
 export type { ProviderCapture, ProviderCaptureEntry, ProviderCaptureOptions, ProviderCapturePolicy } from "./capture.js";
 export { createProviderCapture } from "./capture.js";
+export type {
+  CheckpointRestoreAudit,
+  CheckpointRestoreAuditEntry,
+  CheckpointRestoreHook,
+  RunCheckpointRestoreHooksOptions,
+} from "./checkpoint-restore.js";
+export { CheckpointRestoreError, DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS, runCheckpointRestoreHooks } from "./checkpoint-restore.js";
 export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
 export { CHECKPOINT_CONFLICT_CODE, CheckpointConflictError, createMemoryCheckpointStore } from "./checkpoints.js";
 export type { DefaultCompactionStrategyOptions } from "./compaction.js";
@@ -399,6 +399,7 @@ export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk
 export { applyExecutionDecision, assertExecutionAllowed, checkExecution, ExecutionDeniedError } from "./execution-policy.js";
 export type {
   ActivatedKernelConfig,
+  AgentEventBridgeOptions,
   ExtensionErrorPolicy,
   ExtensionEventBus,
   ExtensionEventHandler,
@@ -407,7 +408,7 @@ export type {
   ExtensionLoadPolicy,
   LoadedExtension,
 } from "./extensions.js";
-export { activateKernel, createExtensionEventBus, createExtensionKernel } from "./extensions.js";
+export { activateKernel, createExtensionEventBus, createExtensionKernel, forwardAgentEvents } from "./extensions.js";
 export type {
   MemoryRunFeedbackStoreOptions,
   PrepareRunFeedbackOptions,
@@ -441,6 +442,7 @@ export {
   FIELD_POLICY_LIMITS,
   FieldPolicyError,
 } from "./field-policy.js";
+export { BUILT_IN_GUARDRAIL_PACK_IDS } from "./guardrail-packs/index.js";
 export type {
   GuardrailPackRow,
   GuardrailRunResult,
@@ -457,7 +459,6 @@ export {
   MAX_GUARDRAIL_PACKS,
   runGuardrails,
 } from "./guardrails.js";
-export { BUILT_IN_GUARDRAIL_PACK_IDS } from "./guardrail-packs/index.js";
 export type {
   AgentIdentity,
   AssertIdentityActiveOptions,
@@ -808,5 +809,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.9.0";
+export const version = "0.10.0";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

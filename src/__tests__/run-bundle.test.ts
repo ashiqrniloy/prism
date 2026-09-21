@@ -161,7 +161,8 @@ describe("snapshotRunBundle", () => {
       })),
     } as unknown as Parameters<typeof createAgent>[0]);
     // Pinned on purpose: any change to snapshot inputs or digest algorithm must be a deliberate re-pin.
-    assert.equal(snapshotRunBundle({ agent: golden }).digest, "sha256:1ddd9b535600a76706fe3ee01f5fd8afb70053f2ffcc6596732c98de4c066c2b");
+    // Re-pinned in plan 106 Task 2: the resolved `RunLimits` now carry `maxStopContinuations`.
+    assert.equal(snapshotRunBundle({ agent: golden }).digest, "sha256:a533aa01357e71f1a7ef5ec25b90a45a86f3430b98df00cc77cb17845b0f4e85");
     assert.equal(snapshotRunBundle({ agent: golden }).tools.length, 32);
   });
 });

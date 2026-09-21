@@ -47,8 +47,8 @@ const missing = async () => new Response("not found", { status: 404 });
 
 test("0.3.0 release graph is independent, publishable, and documented", () => {
   const release = loadRelease(process.cwd());
-  // 11 = root + 10 workspace packages, including the extracted channels family.
-  assert.equal(release.packages.length, 11);
+  // 12 = root + 11 workspace packages, including the extracted channels family and prism-hooks.
+  assert.equal(release.packages.length, 12);
   assert.doesNotThrow(() =>
     validateReleaseIndependent(release, {
       baseline: "HEAD",

@@ -25,6 +25,7 @@ const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?
   { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools", isSubpaths: true },
   { dir: "packages/prism-core", name: "@arnilo/prism-core", isSubpaths: true },
   { dir: "packages/prism-channels", name: "@arnilo/prism-channels" },
+  { dir: "packages/hooks", name: "@arnilo/prism-hooks" },
   // Pure-manifest family/profile packages (no dist/exports): pack + install, but skip dynamic-import.
   { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isSubpaths: true },
   { dir: "packages/prism-work", name: "@arnilo/prism-work", isSubpaths: true },

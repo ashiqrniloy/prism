@@ -30,6 +30,7 @@ const packages: Array<{
   { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools" },
   { dir: "packages/prism-core", name: "@arnilo/prism-core" },
   { dir: "packages/prism-channels", name: "@arnilo/prism-channels" },
+  { dir: "packages/hooks", name: "@arnilo/prism-hooks" },
   // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
   { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isSubpaths: true },
   { dir: "packages/prism-work", name: "@arnilo/prism-work", isSubpaths: true },
@@ -505,13 +506,13 @@ describe("packaging guard", () => {
       assert.ok(guide.includes(spec), `migration guide missing ${spec}`);
     }
     const truth = JSON.parse(readFileSync(join(repoRoot, "scripts/package-truth.json"), "utf8")) as { counts: { publishable: number } };
-    assert.equal(truth.counts.publishable, 11, "package truth must report 11 active packages");
+    assert.equal(truth.counts.publishable, 12, "package truth must report 12 active packages");
   });
 
-  it("0.4 package set — 11 manifests in lockstep, no shims, family roots stay inert", () => {
+  it("0.4 package set — 12 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 11, "11 active packages including root");
+    assert.equal(names.length, 12, "12 active packages including root");
     assert.ok(names.includes("@arnilo/prism-work"), "work package must be present");
     assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
     for (const pkg of packages) {

@@ -97,7 +97,7 @@ Agent / turn / message events:
 | Variant | Fields |
 | --- | --- |
 | `agent_started` | `sessionId`, `runId` |
-| `agent_finished` | `sessionId`, `runId`, `usage?: Usage` (aggregate of all usage-bearing provider turns), `finishReason?: "turn_limit" \| "token_limit" \| "refusal"` (why a limit/ceiling ended the run cleanly — F4; absent = natural end) |
+| `agent_finished` | `sessionId`, `runId`, `usage?: Usage` (aggregate of all usage-bearing provider turns), `finishReason?: "turn_limit" \| "token_limit" \| "refusal" \| "host_policy" \| "hook_limit"` (why a limit/ceiling/hook cap ended the run cleanly — F4, plan 106 R1; absent = natural end) |
 | `agent_suspended` | `sessionId`, `runId`, redacted `interruption`, checkpoint `version`; no tool side effect has started. |
 | `agent_resumed` | `sessionId`, `runId`, checkpoint `version`. |
 | `agent_denied` | `sessionId`, `runId`, redacted `interruption`, checkpoint `version`; no tool side effect runs. |
@@ -299,6 +299,8 @@ for await (const event of session.stream("draft", { loop: { strategy: "generate-
 ```
 
 ## Extension and configuration notes
+
+Extension packages can subscribe to lifecycle events on the extension bus; `forwardAgentEvents(session.subscribe(), kernel.events)` maps this stream onto that bus as read-only notifications (`agent_started` → `before_agent_start`, turns → `turn`, tool execution → `tool_call`/`tool_result`). See [Extension kernel and event bus](extensions.md) and [Hooks](hooks.md).
 
 - All events flow through `redactAgentEvent(event, activeRedactor)` before subscribers observe them. Configure `AgentConfig.redactor` / `RunOptions.redactor` via `createSecretRedactor([...knownSecretStrings])` so secret values are redacted in `message` content, `errors[].message`, `metadata`, and artifact `result`/`failure` payloads.
 - The artifact variants are emitted only by `generateValidateReviseLoop`. `singleShotLoop` (the default when no `AgentConfig.loop` / `RunOptions.loop` is set) emits zero artifact events. See [Agent loops](agent-loops.md).

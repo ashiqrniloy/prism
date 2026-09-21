@@ -10,6 +10,7 @@ export type MiddlewareHookName =
   | "tool_call"
   | "tool_result"
   | "retry"
+  | "compaction_request"
   | "compaction"
   | "session_start"
   | "session_shutdown";

@@ -1,5 +1,6 @@
 import type {
   AgentDefinition,
+  AgentEvent,
   AIProvider,
   AuthMethod,
   CommandDefinition,
@@ -19,6 +20,7 @@ import type {
   RetryPolicy,
   SettingsProvider,
   Skill,
+  StopHook,
   StoreFactory,
   SystemPromptContribution,
   ToolDefinition,
@@ -211,6 +213,10 @@ export function createExtensionKernel(options: ExtensionKernelOptions = {}): Ext
       registries.instructionInjectors.register(injector.name, injector);
       track?.(() => registries.instructionInjectors.unregister(injector.name));
     },
+    registerStopHook(hook: StopHook) {
+      registries.stopHooks.register(hook.name, hook);
+      track?.(() => registries.stopHooks.unregister(hook.name));
+    },
   });
 
   const unwind = (undo: (() => void)[]) => {
@@ -257,6 +263,74 @@ export function createExtensionKernel(options: ExtensionKernelOptions = {}): Ext
   };
 }
 
+/**
+ * Lifecycle hook each forwarded `AgentEvent` maps onto (plan 106 R2). Notification only: the bus
+ * receives the original event as `payload` and nothing is transformed. Events not listed here are
+ * ignored — notably `agent_finished` stays an AgentEvent and is not re-emitted as a bus event.
+ */
+const AGENT_EVENT_BRIDGE: Readonly<Record<string, ExtensionLifecycleEventName>> = {
+  agent_started: "before_agent_start",
+  turn_started: "turn",
+  turn_finished: "turn",
+  tool_execution_started: "tool_call",
+  tool_execution_finished: "tool_result",
+};
+
+export interface AgentEventBridgeOptions {
+  /** Bridge-side failure (a source error, or a bus listener that throws under `errorPolicy: "throw"`).
+   *  Never rethrown — the bridge must not fail the run it is observing. */
+  readonly onError?: (error: unknown) => void;
+}
+
+/**
+ * Forward an `AgentEvent` iterable onto the extension bus, one mapped lifecycle event at a time
+ * (plan 106 R2). Handlers run in event order and never in the run's path, so a slow or throwing
+ * listener cannot stall or fail the observed run. Returns an unsubscribe that stops forwarding and
+ * releases the source iterator.
+ */
+export function forwardAgentEvents(
+  source: AsyncIterable<AgentEvent>,
+  events: Pick<ExtensionEventBus, "emit">,
+  options: AgentEventBridgeOptions = {},
+): () => void {
+  const iterator: AsyncIterator<AgentEvent> = source[Symbol.asyncIterator]();
+  const report = (error: unknown) => {
+    try {
+      options.onError?.(error);
+    } catch {
+      // A throwing error callback must not become an unhandled rejection.
+    }
+  };
+  let stopped = false;
+  // Serially chained so a listener that awaits keeps event order; the run never awaits this chain.
+  let pending: Promise<void> = Promise.resolve();
+  void (async () => {
+    try {
+      while (!stopped) {
+        const { value, done } = await iterator.next();
+        if (done || stopped) return;
+        const type = AGENT_EVENT_BRIDGE[value.type];
+        if (type === undefined) continue;
+        const event: ExtensionEvent = { type, payload: value };
+        pending = pending.then(() => events.emit(event)).catch(report);
+      }
+    } catch (error) {
+      if (!stopped) report(error);
+    }
+  })();
+  return () => {
+    if (stopped) return;
+    stopped = true;
+    void (async () => {
+      try {
+        await iterator.return?.();
+      } catch (error) {
+        report(error);
+      }
+    })();
+  };
+}
+
 /** Host-owned activation: copy contributed entries into the `createAgent()`
  *  fields that accept plain arrays. Contributions stay inert until the host
  *  passes the returned fields into runtime config. Array slots only —
@@ -268,6 +342,8 @@ export interface ActivatedKernelConfig {
   readonly skills: readonly Skill[];
   readonly instructionInjectors: readonly InstructionInjector[];
   readonly context: readonly ContextProvider[];
+  /** Run-end stop hooks (plan 106 R1); pass to `createAgent({ stopHooks })`. */
+  readonly stopHooks: readonly StopHook[];
   /** For host command surfaces (CLI/RPC/UI); not part of `AgentConfig`. */
   readonly commands: readonly CommandDefinition[];
   /** The kernel middleware registry itself; runs only when passed to runtime config. */
@@ -280,6 +356,7 @@ export function activateKernel(kernel: ExtensionKernel): ActivatedKernelConfig {
     skills: kernel.registries.skills.list(),
     instructionInjectors: kernel.registries.instructionInjectors.list(),
     context: kernel.registries.contextProviders.list(),
+    stopHooks: kernel.registries.stopHooks.list(),
     commands: kernel.registries.commands.list(),
     middleware: kernel.middleware,
   };

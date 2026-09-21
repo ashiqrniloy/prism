@@ -1,14 +1,14 @@
-# Prism Roadmap — Release 0.9.0
+# Prism Roadmap — Release 0.10.0
 
-Updated: **2026-09-20**
+Updated: **2026-09-21**
 
-Released baseline: **0.8.0** — shipped 2026-09-18 as the seven-plan messaging/connected-apps/work-family line ([079](plans/079-Prism-Messaging-Channels-Telegram-Signal.md)–[085](plans/085-Honesty-Gates-Runtime-Split-And-0-8-0-Cut.md)), eleven publishable manifests.
+Released baseline: **0.9.0** — shipped 2026-09-20 as the attention/tooling line ([099](plans/099-Prism-0-9-0-Release-Cut.md), with [100](plans/100-Live-Stream-Terminal-Semantics-And-Limit-Death-Delivery.md) folded in), eleven publishable manifests.
 
-Current release: **0.9.0** — eleven publishable manifests. Attention budget axes, cache-stable progressive disclosure, turn traces and exhaustion attribution, per-turn tool narrowing, guardrail packs, background child agents, checkpoint sidecar metadata, bounded session search, deterministic no-model turns, shared work scopes, retrieval revocation with a local reranker, and one live-stream terminal predicate so a limit death delivers its attribution before the stream ends. Cut owned by [099](plans/099-Prism-0-9-0-Release-Cut.md), with [100](plans/100-Live-Stream-Terminal-Semantics-And-Limit-Death-Delivery.md) folded in; [097](plans/097-Trajectory-Export-For-Co-Training.md) was deferred to 0.10.0 rather than held unstarted against the cut.
+Current release: **0.10.0** — twelve publishable manifests. Hook lifecycle completion (stop hooks with bounded continuation, the agent-event→extension bridge with live `session_start` / `session_shutdown`, the `compaction_request` seam, and the `@arnilo/prism-hooks` hooks-file adapter), scoped persistent agent memory as the opt-in `@arnilo/prism-memory/scoped` subpath, and a unified hook map in [docs/hooks.md](docs/hooks.md). Cut owned by [106](plans/106-Hook-Lifecycle-Completion.md) (Tasks 8–10), with [105](plans/105-Scoped-Agent-Memory-And-Release-0-10-0.md) scoped memory folded in.
 
-Status: **published 2026-09-20** (099 Task 4; registry write operator-authorized).
+Status: **release prepared 2026-09-21** (106 Tasks 8–10: version bump, compat baseline, changelog, and migration notes); registry/tag writes stay operator-authorized, and `npm run post-publish:smoke` verifies the published artifacts after the `v0.10.0` tag push.
 
-Next: [097](plans/097-Trajectory-Export-For-Co-Training.md) trajectory export folds into the 0.10.0 line ([106](plans/106-Hook-Lifecycle-Completion.md) owns the cut; [105](plans/105-Scoped-Agent-Memory-And-Release-0-10-0.md) scoped memory already shipped); R09 delegated coding runtimes, R12 native Vertex, and R13 remote clients remain later-release items if demand returns.
+Next: [107](plans/107-Behavior-And-Graft-Integration-Removals.md) behavior/graft removals and [097](plans/097-Trajectory-Export-For-Co-Training.md) trajectory export were both deferred off the 0.10.0 cut and lead the next line; R09 delegated coding runtimes, R12 native Vertex, and R13 remote clients remain later-release items if demand returns.
 
 This roadmap replaces the previous historical roadmap in full. It preserves the rationale and priorities from the 2026-09-13 review for future reference. Historical implementation evidence remains in [plans](plans/README.md), [CHANGELOG](CHANGELOG.md), and [documentation history](docs/history/README.md); it is not repeated here.
 

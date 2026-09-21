@@ -215,12 +215,15 @@ type PreparedAgentRunResume =
 
 /**
  * A `continue` resume needs a run whose frontier is intact: a crash-recovery checkpoint
- * (`status: "running"`) or a turn-policy stop, which writes a terminal state that still carries
- * the frontier (plan 084 Task 2). Every other terminal state is final — a naturally finished run
- * must never be resurrected.
+ * (`status: "running"`) or a clean run-end stop — a turn-policy stop or a stop-hook continuation
+ * cap — which writes a terminal state that still carries the frontier (plan 084 Task 2, plan 106 R1).
+ * Every other terminal state is final — a naturally finished run must never be resurrected.
  */
 function isContinuableState(state: StoredAgentRunState): boolean {
-  return state.status === "running" || (state.status === "succeeded" && state.stopReason === "host_policy");
+  return (
+    state.status === "running" ||
+    (state.status === "succeeded" && (state.stopReason === "host_policy" || state.stopReason === "hook_limit"))
+  );
 }
 
 async function prepareAgentRunResume(

@@ -17,6 +17,8 @@ import type {
   ResolvedRunLimits,
   RunOptions,
   RunRecord,
+  StopHook,
+  StopHookContext,
   TurnBoundaryContext,
   TurnPolicyOptions,
   Usage,
@@ -89,6 +91,112 @@ class TurnPolicyError extends Error {
   constructor(message: string, options?: { readonly cause?: unknown }) {
     super(message, options);
     this.name = "TurnPolicyError";
+  }
+}
+
+/** Stop-hook misuse: a throwing or malformed hook fails the run closed (plan 106 R1). */
+class StopHookError extends Error {
+  readonly code = "ERR_PRISM_STOP_HOOK";
+  constructor(message: string, options?: { readonly cause?: unknown }) {
+    super(message, options);
+    this.name = "StopHookError";
+  }
+}
+
+/** Validate the merged stop-hook list once per run, before any provider turn (plan 106 R1). */
+function assertStopHooks(hooks: readonly StopHook[]): void {
+  for (const hook of hooks) {
+    if (
+      typeof hook !== "object" ||
+      hook === null ||
+      typeof hook.name !== "string" ||
+      hook.name.length === 0 ||
+      typeof hook.decide !== "function"
+    ) {
+      throw new TypeError("stopHooks entries must be StopHook objects with a non-empty name and a decide function");
+    }
+  }
+}
+
+/**
+ * Run stop hooks in order at a natural loop end (plan 106 R1). The first `continue` wins; every
+ * `stop` (or no hook continuing) leaves the run finished. Hook context is metadata plus the live
+ * transcript — tool arguments, prompts, and results are never reshaped by core.
+ */
+async function evaluateStopHooks(
+  ctx: RoundContext,
+  stopHookActive: boolean,
+): Promise<{ readonly reason: string; readonly steer?: string | Message } | undefined> {
+  const context: StopHookContext = {
+    sessionId: ctx.session.id,
+    runId: ctx.runId,
+    turn: ctx.limits.snapshot().turns,
+    history: ctx.loopCtx.history,
+    metadata: ctx.metadata,
+    signal: ctx.controller.signal,
+    stopHookActive,
+  };
+  for (const hook of ctx.stopHooks) {
+    let decision: unknown;
+    try {
+      decision = await hook.decide(context);
+    } catch (error) {
+      throw new StopHookError(`Stop hook "${hook.name}" threw`, { cause: error });
+    }
+    if (decision === null || typeof decision !== "object") {
+      throw new StopHookError(`Stop hook "${hook.name}" must return a StopHookDecision`);
+    }
+    const action = (decision as { action?: unknown }).action;
+    if (action === "stop") continue;
+    if (action !== "continue") {
+      throw new StopHookError(`Stop hook "${hook.name}" decision action must be "stop" or "continue"`);
+    }
+    const reason = (decision as { reason?: unknown }).reason;
+    if (typeof reason !== "string" || reason.length === 0) {
+      throw new StopHookError(`Stop hook "${hook.name}" continue decision requires a non-empty reason string`);
+    }
+    const steer = (decision as { steer?: unknown }).steer;
+    if (!isStopHookSteer(steer)) {
+      throw new StopHookError(`Stop hook "${hook.name}" steer must be a string or Message`);
+    }
+    return steer === undefined ? { reason } : { reason, steer };
+  }
+  return undefined;
+}
+
+function isStopHookSteer(value: unknown): value is string | Message | undefined {
+  if (value === undefined || typeof value === "string") return true;
+  if (typeof value !== "object" || value === null) return false;
+  const message = value as Message;
+  return typeof message.role === "string" && Array.isArray(message.content);
+}
+
+/**
+ * Queue a continuation through the host steer path (plan 106 R1): same redaction, same 8-message /
+ * 64 KiB caps, and the same input-guardrail re-check when the loop drains it. A queue failure fails
+ * the run closed — the hook asked for something the run cannot deliver.
+ */
+function queueStopHookContinuation(ctx: RoundContext, decision: { readonly reason: string; readonly steer?: string | Message }): void {
+  const messages: Message[] = [{ role: "user", content: [{ type: "text", text: decision.reason }] }];
+  if (decision.steer !== undefined) {
+    messages.push(
+      typeof decision.steer === "string" ? { role: "user", content: [{ type: "text", text: decision.steer }] } : decision.steer,
+    );
+  }
+  try {
+    ctx.session.steer(messages);
+  } catch (error) {
+    throw new StopHookError("Stop hook continuation could not be queued", { cause: error });
+  }
+}
+
+/** The generate-validate-revise loop promises a validated artifact; a bare return is a failure. */
+function assertArtifactOutcome(ctx: RoundContext): void {
+  if (ctx.loop.name === "generate-validate-revise" && !ctx.artifactFinished) {
+    throw Object.assign(new Error(ctx.artifactFailedInfo?.message ?? "artifact loop ended without a validated artifact"), {
+      name: "ArtifactFailed",
+      code: ctx.artifactFailedInfo?.code ?? "artifact_failed",
+    });
   }
 }
 
@@ -187,8 +295,10 @@ async function assembleRoundContext(params: {
   metadata: Readonly<Record<string, unknown>>;
   limits: RunLimitTracker;
   runUsage: RoundContext["runUsage"];
+  stopHooks: readonly StopHook[];
 }): Promise<RoundContext> {
-  const { session, input, options, runId, resumed, controller, model, startedAt, promptVersion, metadata, limits, runUsage } = params;
+  const { session, input, options, runId, resumed, controller, model, startedAt, promptVersion, metadata, limits, runUsage, stopHooks } =
+    params;
   session.resolveRunProvider(options);
   throwIfAborted(controller.signal);
   session.emit({ type: "agent_started", sessionId: session.id, runId });
@@ -200,6 +310,9 @@ async function assembleRoundContext(params: {
       version: resumed.version,
       ...(resumed.restore ? { restore: resumed.restore } : {}),
     });
+  // Plan 106 R2: first run start of this session opens it. Awaited after the two emits above so the
+  // run's synchronous announce burst stays intact; middleware error policy owns failures.
+  await session.openSession(runId);
 
   const startRecord: RunRecord = {
     id: runId,
@@ -359,6 +472,7 @@ async function assembleRoundContext(params: {
     artifactFailedInfo: undefined as RoundContext["artifactFailedInfo"],
     toolCalls: 0,
     toolResults: [],
+    stopHooks,
     runUsage,
     loopCtx: undefined as unknown as LoopContext,
   } as RoundContext;
@@ -538,6 +652,46 @@ async function assembleRoundContext(params: {
   return ctx;
 }
 
+/**
+ * Run the loop to settlement, then apply stop hooks at the natural loop end (plan 106 R1). Each
+ * `continue` queues its reason through the steer path and re-enters the loop with a continuation
+ * context whose `input`/`inputMessages` are empty — the continuation message is already in
+ * `history`, and replaying run-start input would duplicate it. A loop ceiling, a host turn-policy
+ * stop, or an artifact failure is not a natural end: hooks never run there, and a continuation leg
+ * that hits a ceiling ends the run instead of asking again. `limits.maxStopContinuations`
+ * (default 3; `0` observes only; `null` uncapped) bounds continuations as a clean `hook_limit` stop.
+ */
+async function runLoopWithStopHooks(ctx: RoundContext): Promise<Usage | undefined> {
+  let usage = await runLoopUntilSettled(ctx);
+  assertArtifactOutcome(ctx);
+  // Zero overhead when nothing is configured: no wrapper state, no reads.
+  if (ctx.stopHooks.length === 0) return usage;
+  const cap = ctx.limits.limits.maxStopContinuations;
+  let continuations = 0;
+  let stopHookActive = false;
+  for (;;) {
+    if (ctx.runStop !== undefined || ctx.loopCtx.finishReason !== undefined) return usage;
+    const decision = await evaluateStopHooks(ctx, stopHookActive);
+    if (!decision) return usage;
+    if (cap !== null && continuations >= cap) {
+      ctx.loopCtx.finishReason = "hook_limit";
+      return usage;
+    }
+    continuations += 1;
+    stopHookActive = true;
+    queueStopHookContinuation(ctx, decision);
+    const continuationCtx: LoopContext = { ...ctx.loopCtx, input: [], inputMessages: [], continuation: true };
+    try {
+      usage = await runLoopUntilSettled({ ...ctx, loopCtx: continuationCtx });
+    } finally {
+      // The loops set `finishReason` on the context they receive; carry it back so the ceiling
+      // survives onto the result, the finish record, and `persistSucceeded`.
+      if (continuationCtx.finishReason !== undefined) ctx.loopCtx.finishReason = continuationCtx.finishReason;
+    }
+    assertArtifactOutcome(ctx);
+  }
+}
+
 export async function executeRun(
   session: SessionHost,
   input: AgentInput,
@@ -563,6 +717,8 @@ export async function executeRun(
   const requestedLimits = options.limits;
   const resolvedLimits = resolveRunLimits(session.agent.config.limits, requestedLimits);
   assertTurnPolicy(options.turnPolicy, resolvedLimits);
+  const stopHooks = [...(session.agent.config.stopHooks ?? []), ...(options.stopHooks ?? [])];
+  assertStopHooks(stopHooks);
   const durableOptions = options.runState ?? session.agent.config.runState;
   if (session.agent.config.runState && options.runState && session.agent.config.runState !== options.runState) {
     throw new AgentRunStateError("RunOptions cannot replace agent durable run-state configuration");
@@ -602,9 +758,7 @@ export async function executeRun(
   session.activeDurable = resumed ?? (durableOptions ? { options: durableOptions, version: 0 } : undefined);
   // Plan 104 T3: an `ask` rule is gated at charge time when the run can suspend; a run that cannot
   // suspend enforces the same rule as a plain block, so it joins the ordinary stage guardrails.
-  const packGuardrails = session.activeDurable
-    ? session.packGuardrails
-    : mergeGuardrails(session.packGuardrails, session.packAskBlocks);
+  const packGuardrails = session.activeDurable ? session.packGuardrails : mergeGuardrails(session.packGuardrails, session.packAskBlocks);
   session.activeGuardrails = mergeGuardrails(mergeGuardrails(session.agent.config.guardrails, packGuardrails), options.guardrails);
   // Plan 086 T3: reset here, so a suspension before the compiler is resolved (input guardrail)
   // cannot inherit the previous run's durable-folding flag. `assembleRoundContext` sets it true.
@@ -658,6 +812,7 @@ export async function executeRun(
       metadata,
       limits,
       runUsage,
+      stopHooks,
     });
 
     await replayDurableNestedAndPending(ctx);
@@ -672,7 +827,7 @@ export async function executeRun(
       }
       ctx.loop.restore?.(resumedLoopState.snapshot);
     }
-    const loopUsage = await runLoopUntilSettled(ctx).catch((error: unknown) => {
+    const loopUsage = await runLoopWithStopHooks(ctx).catch((error: unknown) => {
       // Host turn-policy stop (plan 084 Task 2): the loop was unwound on purpose at a turn
       // boundary. Not an error — the run settles cleanly and stays resumable.
       if (error instanceof AgentRunStopped) return undefined;
@@ -680,12 +835,6 @@ export async function executeRun(
     });
     stopReason = ctx.runStop?.reason ?? ctx.loopCtx.finishReason;
     stopDetail = ctx.runStop?.detail;
-    if (!ctx.runStop && ctx.loop.name === "generate-validate-revise" && !ctx.artifactFinished) {
-      throw Object.assign(new Error(ctx.artifactFailedInfo?.message ?? "artifact loop ended without a validated artifact"), {
-        name: "ArtifactFailed",
-        code: ctx.artifactFailedInfo?.code ?? "artifact_failed",
-      });
-    }
     usage = runUsage.value() ?? loopUsage;
     return await persistSucceeded(ctx, loopUsage);
   } catch (error) {

@@ -87,6 +87,7 @@ const apiPages = [
   "docs/instruction-injection.md",
   "docs/extensions.md",
   "docs/extension-authoring.md",
+  "docs/hooks.md",
   "docs/middleware-hooks.md",
   "docs/tools.md",
   "docs/tool-effects.md",
@@ -1867,7 +1868,7 @@ describe("docs", () => {
     assert.equal(
       dirs.length,
       existsSync("packages/prism-work/src")
-        ? 11
+        ? 12
         : existsSync("packages/prism-providers/src")
           ? 17
           : existsSync("packages/prism-coding-tools")
@@ -2820,6 +2821,7 @@ describe("docs", () => {
       "tool_call",
       "tool_result",
       "retry",
+      "compaction_request",
       "compaction",
       "session_start",
       "session_shutdown",
@@ -3342,6 +3344,7 @@ describe("docs", () => {
         "examples/skills-progressive-disclosure.ts",
         "examples/caveman-ponytail.ts",
         "examples/graft-extension.ts",
+        "examples/hooks-json.ts",
         "examples/cli.ts",
         "examples/rpc.ts",
         "examples/discover-skills.ts",
@@ -4230,7 +4233,7 @@ describe("docs", () => {
     assert.equal(
       manifests.filter((manifest) => !manifest.private).length,
       existsSync("packages/prism-work/src")
-        ? 11
+        ? 12
         : existsSync("packages/prism-providers/src")
           ? 17
           : existsSync("packages/prism-coding-tools")

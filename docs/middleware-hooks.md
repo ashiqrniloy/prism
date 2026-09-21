@@ -14,7 +14,7 @@ APIs:
 
 Use middleware hooks when a host wants extension/package code to observe or transform a value at a named runtime boundary.
 
-Do not use middleware hooks as a provider adapter, prompt builder, retry policy, compaction strategy, tool dispatcher, permission system, or agent/session runtime. Per-turn tool menus use `AgentConfig.toolNarrowing` / `RunOptions.toolNarrowing`, not a middleware hook — see [Tools](tools.md).
+Do not use middleware hooks as a provider adapter, prompt builder, retry policy, compaction strategy, tool dispatcher, permission system, or agent/session runtime. Per-turn tool menus use `AgentConfig.toolNarrowing` / `RunOptions.toolNarrowing`, not a middleware hook — see [Tools](tools.md). Run-end decisions use stop hooks (`AgentConfig.stopHooks` / `RunOptions.stopHooks`) — see [Hooks](hooks.md) — not a middleware hook.
 
 ## Inputs / request
 
@@ -32,6 +32,7 @@ Built-in hook names:
 - `tool_call`
 - `tool_result`
 - `retry`
+- `compaction_request`
 - `compaction`
 - `session_start`
 - `session_shutdown`
@@ -48,7 +49,16 @@ Built-in hook names:
 
 ## Outputs / response / events
 
-`run()` returns the transformed value. If no middleware is registered for a hook, `run()` returns the original value. `assembleProviderInput()` calls Phase 5 hooks in this order when middleware is supplied: `input_assembly`, then `context`, then `prompt_build`. The `input_assembly` call is unconditional — it runs after whatever `InputBuilder` produced the messages, so host middleware at that hook cannot be skipped by a custom builder. The agent/session runtime runs `beforeProviderTurn` once per turn after the request is assembled and before any provider-round work, then applies configured provider request policies, then invokes `provider_request` once with the `ProviderRequest` before `AIProvider.generate()`, invokes `tool_call` and `tool_result` through `dispatchToolCall()` for complete provider tool calls, invokes `compaction` with `{ context, result }` after a compaction strategy returns and before the runtime appends its standard compaction entry, and invokes `retry` with `{ context, decision }` before scheduling a provider-turn retry. There is no `provider_response` hook; observing provider output belongs to the provider adapter or subscriber events.
+`run()` returns the transformed value. If no middleware is registered for a hook, `run()` returns the original value. `assembleProviderInput()` calls Phase 5 hooks in this order when middleware is supplied: `input_assembly`, then `context`, then `prompt_build`. The `input_assembly` call is unconditional — it runs after whatever `InputBuilder` produced the messages, so host middleware at that hook cannot be skipped by a custom builder. The agent/session runtime runs `beforeProviderTurn` once per turn after the request is assembled and before any provider-round work, then applies configured provider request policies, then invokes `provider_request` once with the `ProviderRequest` before `AIProvider.generate()`, invokes `tool_call` and `tool_result` through `dispatchToolCall()` for complete provider tool calls, invokes `compaction_request` with the strategy's `CompactionContext` before the strategy runs — only when compaction triggers (manual `session.compact()` and auto-compaction both route through it), so a handler rewrites `entries`, `keepRecentEntries`, `metadata`, or `secrets` for the strategy — then invokes `compaction` with `{ context, result }` after the strategy returns and before the runtime appends its standard compaction entry, and invokes `retry` with `{ context, decision }` before scheduling a provider-turn retry. There is no `provider_response` hook; observing provider output belongs to the provider adapter or subscriber events.
+
+Session lifecycle hooks are dispatched by the agent/session runtime, once each:
+
+| Hook | When | Payload |
+| --- | --- | --- |
+| `session_start` | First run start of a session, after `agent_started`/`agent_resumed` and before the first provider turn. A session rebuilt from a durable checkpoint is a new runtime session, so it opens again. | `{ sessionId, runId }` |
+| `session_shutdown` | `session.close()`, before every subscriber is closed. Idempotent — calling `close()` twice dispatches once. | `{ sessionId }` |
+
+Both are one dispatch per session, never per turn, and both honor the registry `errorPolicy` exactly like every other hook: with `"event"` a throw becomes an `extension_error` event and the run continues, with `"throw"` it surfaces (for `session_start`, `session.run()` rejects; for `session_shutdown`, `close()` rejects after closing subscribers).
 
 With default `errorPolicy: "event"`, middleware errors become `extension_error` events when `onError` is provided, and later middleware still runs with the current value. With `errorPolicy: "throw"`, `run()` rejects on the first middleware error.
 
@@ -88,10 +98,47 @@ import type { Extension } from "@arnilo/prism";
 export const extension: Extension = {
   name: "demo-middleware",
   setup(api) {
-    api.use("session_start", (event) => event);
+    api.use("session_start", (event) => {
+      // Once per session: provision session-scoped state here.
+      return event;
+    });
   },
 };
 ```
+
+`session_shutdown` runs on `await session.close()`, which then closes every subscriber:
+
+```ts
+const session = createAgent({ model, provider, middleware }).createSession();
+await session.run("hello");
+await session.close(); // session_shutdown middleware once, then every subscriber closes
+```
+
+## Pre-compaction rewrite (`compaction_request`)
+
+`compaction_request` is the input side of the compaction pair: it runs once per compaction event, right
+after `compaction_started` and before the strategy's `compact()`, and its return value **is** the
+strategy's input. The payload is the same `CompactionContext` the strategy would have received
+(`sessionId`, `entries`, `keepRecentEntries`, `trigger`, `secrets`, `metadata`, `signal`), and the
+post-strategy `compaction` hook then observes that rewritten context — so a subscriber always sees
+what actually compacted.
+
+```ts
+import { createMiddlewareRegistry, type CompactionContext } from "@arnilo/prism";
+
+const middleware = createMiddlewareRegistry();
+middleware.use<CompactionContext>("compaction_request", (context, next) =>
+  next({ ...context, entries: pinCriticalFacts(context.entries) }),
+);
+```
+
+Contract:
+
+- Only compaction events dispatch it: ordinary turns no-op, even with auto-compaction configured but not triggered.
+- Returning `undefined` without `next()` leaves the original context in place; the registry's `next()`-shape rules apply as everywhere else.
+- A throw follows the registry `errorPolicy`: with `"event"` the error is reported and compaction proceeds on the last committed context; with `"throw"` `session.compact()` (or the run, on the auto path) rejects and no compaction entry is appended.
+- The seam rewrites input, it cannot skip compaction: an empty or invalid entry set is the strategy's own error, not `"do nothing"`.
+- Validation stays where it already was. Entries are redacted on append and the strategy owns its input expectations; the hook is host code inside the same trust boundary as `AgentConfig.compaction`, not a remote endpoint.
 
 ## No-model turns (`beforeProviderTurn`)
 
@@ -131,8 +178,10 @@ Contract:
 - Middleware registration is explicit through `createMiddlewareRegistry()` or `ExtensionAPI.use()`.
 - `provider_request` middleware sees generic `ProviderRequest.options` after request policies have run; do not add secrets unless a redactor/policy secret list covers that boundary.
 - Middleware runs only when the host/runtime calls `run()` or passes the registry to a helper that documents a call site.
+- `session_start`/`session_shutdown` dispatch only when the host passes its registry to `AgentConfig.middleware`; a session that never runs never starts, and one the host never closes never shuts down. Closing an idle session is fine — the hook still does not fire twice. There is no `session_start` for a session that only calls `compact()` or `contextMeter()`.
 - `beforeProviderTurn` runs only for turns that reach the provider boundary; a turn already ended by a run limit, host turn policy, or durable suspension never reaches it, and host middleware is trusted code — it must not use the hook to bypass `RunLimits` or guardrails.
 - `compaction` middleware may adjust the compaction result summary/data, but runtime still owns session store append ordering and branch parent ids.
+- `compaction_request` runs once per compaction event with the strategy's context as payload; the runtime still redacts the summary, appends the compaction entry, and rebuilds history. Neither hook can skip compaction (an empty entry set is the strategy's error), and neither runs on ordinary turns.
 - `retry` middleware may stop retrying or adjust delay, but runtime still owns retry event emission, abort-aware waiting, and provider-turn boundaries.
 - The registry does not discover packages, read manifests, load config, call providers, execute tools, read resources, or start sessions.
 - Hosts may pass a middleware registry into `createExtensionKernel({ middleware })` to share it with direct host code.
@@ -152,8 +201,9 @@ Contract:
 - [Contribution registries](contribution-registries.md): direct contribution registration separate from middleware.
 - [Agent/session runtime](agent-session-runtime.md): provider request policy/middleware timing, bounded tool loop call site for `tool_call`/`tool_result` hooks, and runtime call sites for `compaction` and `retry`.
 - [Tools](tools.md): tool dispatch behavior that runs `tool_call` and `tool_result` hooks.
+- [Hooks](hooks.md): the hook model, the Claude Code / Codex event map, the `hooks.json` adapter, and the run-end stop hooks that are separate from payload-transforming middleware.
 - [Input and prompt assembly](input-and-prompt-assembly.md): `input_assembly` and `prompt_build` helper call sites.
-- [Compaction and retry policies](compaction-and-retry.md): compaction/retry middleware payloads and runtime timing.
+- [Compaction and retry policies](compaction-and-retry.md): compaction/retry middleware payloads and runtime timing, including the pre-strategy `compaction_request` seam.
 - [Context and skills](context-and-skills.md): `context` helper call site.
 - [Observability](observability.md): optional OpenTelemetry adapter over `AgentEvent` streams.
 - [Public contracts](public-contracts.md): provider, tool, context, session, and extension contracts that runtimes can pass through hooks.

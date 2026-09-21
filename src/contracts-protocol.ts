@@ -1,3 +1,5 @@
+import type { CacheUsageReport } from "./cache-helpers.js";
+import type { CheckpointRestoreAudit } from "./checkpoint-restore.js";
 import type {
   AgentLoopOptions,
   AgentLoopStrategy,
@@ -23,6 +25,7 @@ import type {
   RunLimitName,
   RunLimits,
   Skill,
+  StopHook,
   SubscriberOverflowPolicy,
   SystemPromptConfig,
   ToolCallAuthority,
@@ -32,8 +35,6 @@ import type {
   TurnPolicyOptions,
   Usage,
 } from "./contracts-core.js";
-import type { CacheUsageReport } from "./cache-helpers.js";
-import type { CheckpointRestoreAudit } from "./checkpoint-restore.js";
 import type { AgentRunInterruption, AgentRunStateOptions } from "./contracts-run-state.js";
 import type { SecretRedactor } from "./redaction.js";
 import type { ToolValidator } from "./tools.js";
@@ -144,6 +145,8 @@ export interface RunOptions {
    * evaluated before every provider request. Omitted → no callback runs.
    */
   readonly turnPolicy?: TurnPolicyOptions;
+  /** Appended to agent-level stop hooks for this run (plan 106 R1). */
+  readonly stopHooks?: readonly StopHook[];
 }
 
 export interface ProviderTurnMetadata {
@@ -206,8 +209,8 @@ export interface DelegatedAgentStep {
   };
 }
 
-/** Why a run stopped cleanly. `host_policy` is a `RunOptions.turnPolicy` stop; the rest are loop ceilings (F4). */
-export type AgentFinishReason = "turn_limit" | "token_limit" | "refusal" | "host_policy";
+/** Why a run stopped cleanly. `host_policy` is a `RunOptions.turnPolicy` stop, `hook_limit` a stop-hook continuation cap; the rest are loop ceilings (F4). */
+export type AgentFinishReason = "turn_limit" | "token_limit" | "refusal" | "host_policy" | "hook_limit";
 
 /**
  * Origin of an agent event forwarded from a delegated child (supervisor child-event passthrough).
@@ -228,7 +231,7 @@ type AgentEventPayload =
       readonly sessionId: string;
       readonly runId: string;
       readonly usage?: Usage;
-      /** Why the loop stopped, when a limit/ceiling or a host turn policy ended the run cleanly (F4). Absent = natural end. */
+      /** Why the loop stopped, when a limit/ceiling, a host turn policy, or a stop-hook continuation cap ended the run cleanly (F4). Absent = natural end. */
       readonly finishReason?: AgentFinishReason;
       /** Host stop detail from `TurnPolicyOptions.stop` (≤256 bytes, redacted). Present only with `finishReason: "host_policy"`. */
       readonly stopDetail?: string;

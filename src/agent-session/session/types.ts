@@ -1,7 +1,7 @@
 /** Shared host/round types for runInternal phase split (plan 059). Internal only. */
 
 import type { ActiveDurableRun } from "../../agent-approval.js";
-import type { PendingToolCall } from "../../agent-run-state.js";
+import type { PendingToolCall, PersistedGuardrailPacks } from "../../agent-run-state.js";
 import type {
   AttentionFoldLedger,
   AttentionStickyFrontier,
@@ -29,6 +29,7 @@ import type {
   SessionEntry,
   SessionStore,
   Skill,
+  StopHook,
   ToolCallSummary,
   ToolDefinition,
   ToolEffectStore,
@@ -38,7 +39,6 @@ import type {
 } from "../../contracts.js";
 import type { AgentIdentity } from "../../identity.js";
 import type { AgentInput } from "../../input.js";
-import type { PersistedGuardrailPacks } from "../../agent-run-state.js";
 import type { SecretRedactor } from "../../redaction.js";
 import type { RunLimitTracker } from "../../run-limits.js";
 import type { SessionContextSnapshot } from "../../session-stores.js";
@@ -118,6 +118,8 @@ export type SessionHost = {
   emit(event: AgentEvent): void;
   rebuildHistory(): Promise<void>;
   resolveRunSkills(options: RunOptions, tools: readonly ToolDefinition[]): readonly Skill[];
+  /** Redacted, cap-checked steer queue push (plan 106 R1 uses it for stop-hook continuations). */
+  steer(input: AgentInput): void;
   appendEntry(entry: SessionEntry): Promise<void>;
   redact<T>(value: T): T;
   appendMessage(message: Message, runId: string): Promise<void>;
@@ -142,6 +144,11 @@ export type SessionHost = {
     readonly runState?: import("../../contracts.js").AgentRunState;
     readonly interruption?: import("../../contracts.js").AgentRunInterruption;
   }): AgentRunResult;
+  /**
+   * Plan 106 R2: dispatch `session_start` middleware once per session (first run start), awaited by
+   * the run assembler after the `agent_started`/`agent_resumed` emits. No-op on every later call.
+   */
+  openSession(runId: string): Promise<void>;
   /** Session teardown: close every subscriber, run-scoped and `acrossRuns` alike. */
   closeSubscribers(): void;
   /** Run end (finish, suspend, or deny): close only the subscribers that do not opt into `acrossRuns`. */
@@ -191,6 +198,8 @@ export type RoundContext = {
   toolResults: ToolResult[];
   /** Set when a `RunOptions.turnPolicy` stop ended the loop (plan 084 Task 2). */
   runStop?: RunStopInfo;
+  /** Merged agent + run stop hooks, in invocation order (plan 106 R1). Empty = wrapper skipped. */
+  stopHooks: readonly StopHook[];
   runUsage: { add(usage: Usage): void; value(): Usage | undefined };
   loopCtx: LoopContext;
 };

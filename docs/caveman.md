@@ -105,7 +105,7 @@ See `examples/caveman-ponytail.ts` for progressive catalog + `load_skill` wiring
 
 - Import alone registers nothing and starts no timers, watchers, or network I/O (`sideEffects: false`).
 - `kernel.load` calls `setup`, which resolves upstream first; failure throws before any `register*`.
-- Level restore scans `getEntries()` for the latest `data.type === "caveman-level"` — same OM attach pattern; core does not auto-emit `session_start`.
+- Level restore scans `getEntries()` for the latest `data.type === "caveman-level"` — same OM attach pattern; it is entry-scan based rather than `session_start` middleware so a reloaded or resumed session restores its level too.
 - Host must register `createLoadSkillTool` and pass `skillsDisclosure: "progressive"` for catalog-only skill bodies.
 - `caveman-stats` dispatches skill metadata only; full stats need host session-log integration.
 - `caveman-init` returns upstream guidance text; it does not write files in the host repo.

@@ -16,6 +16,7 @@ import type {
 } from "./agent.js";
 import type { CompactionStrategy, RetryPolicy } from "./compaction.js";
 import type { ErrorInfo, ModelConfig } from "./content.js";
+import type { StopHook } from "./loop.js";
 import type { StoreFactory } from "./persistence.js";
 import type { AIProvider, ProviderRequest } from "./provider.js";
 import type { Credential, CredentialResolver, ResourceLoader, SettingsProvider } from "./resources.js";
@@ -196,4 +197,6 @@ export interface ExtensionAPI {
   registerProviderRequestPolicy(policy: ProviderRequestPolicy): void;
   registerSystemPromptContribution(contribution: SystemPromptContribution): void;
   registerInstructionInjector(injector: InstructionInjector): void;
+  /** Contributes an inert run-end stop hook; activate it via `activateKernel()` → `AgentConfig.stopHooks` (plan 106 R1). */
+  registerStopHook(hook: StopHook): void;
 }

@@ -274,6 +274,8 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
           });
         },
         subscribe: (subscribeOptions) => session.subscribe(subscribeOptions),
+        // Plan 106 R2: teardown passes through — the wrapper owns no session-scoped state to unwind.
+        close: () => session.close(),
         abort: (reason) => session.abort(reason),
         entries: () => session.entries(),
         checkout: (leafId) => session.checkout(leafId),

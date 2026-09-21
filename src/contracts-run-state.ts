@@ -1,3 +1,4 @@
+import type { CheckpointRestoreHook } from "./checkpoint-restore.js";
 import type {
   AgentSessionCloneOptions,
   AgentSessionForkOptions,
@@ -21,7 +22,6 @@ import type {
   Usage,
 } from "./contracts-core.js";
 import type { AgentEvent, AgentFinishReason, RunOptions, ToolEffectKind } from "./contracts-protocol.js";
-import type { CheckpointRestoreHook } from "./checkpoint-restore.js";
 
 export type AgentRunStatus = "succeeded" | "failed" | "aborted" | "suspended" | "denied";
 
@@ -452,6 +452,13 @@ export interface AgentSession {
    * `subscription.close()`, `closeSubscribers()`, or a queue overflow closes it.
    */
   subscribe(options?: SubscribeOptions): AsyncIterable<AgentEvent>;
+  /**
+   * Plan 106 R2: session teardown. Dispatches `session_shutdown` middleware once (idempotent), then
+   * closes every subscriber (`acrossRuns` included); calling it twice is a no-op. Call after the
+   * active run settles. Subscriber-only teardown stays `break`ing the `for await` (or calling the
+   * iterator's `return()`). See [Agent/session runtime](agent-session-runtime.md).
+   */
+  close(): Promise<void>;
   abort(reason?: unknown): void;
   entries(): Promise<readonly SessionEntry[]>;
   checkout(leafId?: string): Promise<void>;

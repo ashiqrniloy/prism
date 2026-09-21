@@ -44,7 +44,7 @@ All methods may be sync or async (`void | Promise<void>`). The runtime awaits th
 
 ## Run limits
 
-`RunLimits` bounds one `session.run()` across turns, provider attempts, tool rounds/calls, elapsed wall time, request/response bytes, token usage, and optional cost. Configure defaults on `AgentConfig.limits`; `RunOptions.limits` can only narrow an agent-configured value.
+`RunLimits` bounds one `session.run()` across turns, provider attempts, tool rounds/calls, elapsed wall time, request/response bytes, token usage, optional cost, and stop-hook continuations (`maxStopContinuations`, default 3). Configure defaults on `AgentConfig.limits`; `RunOptions.limits` can only narrow an agent-configured value.
 
 ```ts
 await session.run("Summarize", {
@@ -113,9 +113,9 @@ const meter = session.contextMeter();
 
 ## Clean stops and stop reasons
 
-A run can end without an error but also without the model finishing its thought: a host `RunOptions.turnPolicy.stop`, a `turnPolicy.maxTurns` cap, or a loop ceiling. `AgentRunResult.stopReason` names that outcome — `"host_policy"` for a host policy stop, `"turn_limit"`, `"token_limit"`, or `"refusal"` for loop ceilings — with `turnPolicy.stop`'s own string in `stopDetail`. A natural end carries neither field, so hosts that only care about "did it stop early?" check truthiness. The same values ride the emitted `agent_finished` event (as `finishReason`/`stopDetail`), the finish `RunRecord`, and the projected [Execution Timeline](execution-timeline.md).
+A run can end without an error but also without the model finishing its thought: a host `RunOptions.turnPolicy.stop`, a `turnPolicy.maxTurns` cap, a loop ceiling, or the stop-hook continuation cap. `AgentRunResult.stopReason` names that outcome — `"host_policy"` for a host policy stop, `"hook_limit"` when `limits.maxStopContinuations` refused a continuation, `"turn_limit"`, `"token_limit"`, or `"refusal"` for loop ceilings — with `turnPolicy.stop`'s own string in `stopDetail`. A natural end carries neither field, so hosts that only care about "did it stop early?" check truthiness. The same values ride the emitted `agent_finished` event (as `finishReason`/`stopDetail`), the finish `RunRecord`, and the projected [Execution Timeline](execution-timeline.md).
 
-A `host_policy` stop is terminal for the run yet resumable: with `runState: { checkpointPolicy: "every-turn" }` the stopped state keeps its frontier, and `resumeAgentRun(..., { decision: "continue" })` picks the loop up at the boundary. Every other terminal state is final. See [Agent loops § Turn policy](agent-loops.md#turn-policy).
+A `host_policy` stop is terminal for the run yet resumable: with `runState: { checkpointPolicy: "every-turn" }` the stopped state keeps its frontier, and `resumeAgentRun(..., { decision: "continue" })` picks the loop up at the boundary. A `hook_limit` stop is resumable the same way. Every other terminal state is final. See [Agent loops § Turn policy](agent-loops.md#turn-policy) and [Hooks](hooks.md).
 
 ## Provider failure classes
 
@@ -144,7 +144,7 @@ The adapter receives these record shapes:
 | `status` | `queued` \| `running` \| `suspended` \| `denied` \| `succeeded` \| `failed` \| `aborted`. |
 | `startedAt` / `finishedAt` | ISO timestamps. |
 | `abortReason` | Set when status is `aborted`. |
-| `stopReason` | Why the loop stopped cleanly instead of reaching a natural end: `host_policy` (`RunOptions.turnPolicy.stop`), `turn_limit`, `token_limit`, or `refusal`. Absent on a natural end. |
+| `stopReason` | Why the loop stopped cleanly instead of reaching a natural end: `host_policy` (`RunOptions.turnPolicy.stop`), `hook_limit` (stop-hook continuation cap), `turn_limit`, `token_limit`, or `refusal`. Absent on a natural end. |
 | `stopDetail` | Host stop detail from `turnPolicy.stop` (≤256 bytes, redacted). |
 | `error` | `ErrorInfo` when status is `failed`. |
 | `tenantId` / `accountId` / `userId` | From active ownership scope. |

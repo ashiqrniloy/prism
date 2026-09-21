@@ -1,11 +1,11 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-09-20T13:45:28.401Z`
-Repository root version: `0.9.0`
+Generated: `2026-09-21T10:46:55.654Z`
+Repository root version: `0.10.0`
 
 ## 1. Executive Summary & Counts
 
-- **Current repository manifests:** 11 (50 packages during consolidation transition)
+- **Current repository manifests:** 12 (50 packages during consolidation transition)
 - **Retired 0.3.x package names:** 55 (hard-frozen at final 0.3.x releases, deprecated with legacy tag)
 - **Retained package names:** 7 (`@arnilo/prism`, `@arnilo/prism-providers`, `@arnilo/prism-web-tools`, `@arnilo/prism-memory`, `@arnilo/prism-mcp`, `@arnilo/prism-acp-agent`, `@arnilo/prism-ag-ui`)
 - **New family packages:** 4 (`@arnilo/prism-core`, `@arnilo/prism-channels`, `@arnilo/prism-coding-tools`, `@arnilo/prism-office`)
@@ -569,10 +569,10 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 
 | Package Name | Declared Public Exports (dist) | Budget-Gated Exports (src) | Snapshot Baseline File |
 |---|---|---|---|
-| `@arnilo/prism` | 1035 | 1451 | `scripts/compat-baseline/arnilo__prism.txt` |
+| `@arnilo/prism` | 1037 | 1456 | `scripts/compat-baseline/arnilo__prism.txt` |
 | `@arnilo/prism-mcp` | 132 | 139 | `scripts/compat-baseline/arnilo__prism-mcp.txt` |
 | `@arnilo/prism-providers` | 496 | 528 | `scripts/compat-baseline/arnilo__prism-providers.txt` |
-| `@arnilo/prism-memory` | 809 | 903 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
+| `@arnilo/prism-memory` | 841 | 934 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
 | `@arnilo/prism-work` | 328 | 406 | `scripts/compat-baseline/arnilo__prism-work.txt` |
 | `@arnilo/prism-core` | 1291 | 1418 | `scripts/compat-baseline/arnilo__prism-core.txt` |
 | `@arnilo/prism-channels` | 91 | 106 | `scripts/compat-baseline/arnilo__prism-channels.txt` |
@@ -580,3 +580,4 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 | `@arnilo/prism-ag-ui` | 299 | 313 | `scripts/compat-baseline/arnilo__prism-ag-ui.txt` |
 | `@arnilo/prism-web-tools` | 294 | 304 | `scripts/compat-baseline/arnilo__prism-web-tools.txt` |
 | `@arnilo/prism-acp-agent` | 13 | 20 | `scripts/compat-baseline/arnilo__prism-acp-agent.txt` |
+| `@arnilo/prism-hooks` | 33 | 34 | `scripts/compat-baseline/arnilo__prism-hooks.txt` |

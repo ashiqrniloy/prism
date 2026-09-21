@@ -2,7 +2,9 @@ import { MemoryValidationError } from "../errors.js";
 import type { MemoryFabric } from "../fabric/types.js";
 import { loadScopedLedger, saveScopedLedger } from "./ledger.js";
 
-const INVISIBLE = /[\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFE00-\uFE0F\uFEFF]/;
+// Variation selectors (U+FE00-U+FE0F) combine with the preceding character, so they need an
+// alternation instead of a character class (biome noMisleadingCharacterClass).
+const INVISIBLE = /(?:[\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]|[\uFE00-\uFE0F])/;
 const EXFIL = /\b(?:curl|wget)\s+https?:\/\/|\bexfiltrat|\/etc\/passwd|\binvoke-webrequest\b/i;
 const INJECT =
   /\bignore\s+(?:all\s+)?(?:previous|prior|above)\s+instructions\b|\bdisregard\s+(?:all\s+)?(?:previous|prior)\s+instructions\b|\byou\s+are\s+now\b|\bsystem\s+prompt\b|\bjailbreak\b/i;

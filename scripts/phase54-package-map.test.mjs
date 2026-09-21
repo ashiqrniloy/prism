@@ -15,8 +15,8 @@ test("phase54 package map: exact manifest counts and topology invariants", () =>
 
   // Total current manifests in repo after consolidation and delegated CLI adapter removal.
   assert.ok(
-    [11, 17, 34, 40, 42, 50, 65].includes(map.counts.totalCurrentManifests),
-    "Total repository manifests must be 11, 17, 34, 40, 42, 50 or 65",
+    [12, 17, 34, 40, 42, 50, 65].includes(map.counts.totalCurrentManifests),
+    "Total repository manifests must be 12, 17, 34, 40, 42, 50 or 65",
   );
   assert.equal(map.counts.baselineManifests, 62, "Baseline 0.3.3 manifests count must be 62");
   assert.equal(map.counts.officeDraftManifests, 3, "Office drafts count must be 3");
@@ -49,6 +49,8 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
     "@arnilo/prism-core",
     "@arnilo/prism-channels",
     "@arnilo/prism-coding-tools",
+    // Plan 106 R4: the hooks.json adapter package, added after the 0.4 consolidation.
+    "@arnilo/prism-hooks",
     ...(existsSync(join(rootDir, "packages/prism-work/package.json")) ? ["@arnilo/prism-work"] : []),
   ]);
   for (const name of manifestNames) {

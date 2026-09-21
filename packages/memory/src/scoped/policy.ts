@@ -153,7 +153,11 @@ function resolveSettings(policy: ScopedMemoryPolicyKnobs | undefined): ScopedMem
       ),
     }),
     facts: Object.freeze({
-      block: policy.facts?.block === undefined ? DEFAULT_SETTINGS.facts.block : (assertFabricBlockLabel(policy.facts.block), policy.facts.block),
+      block: (() => {
+        if (policy.facts?.block === undefined) return DEFAULT_SETTINGS.facts.block;
+        assertFabricBlockLabel(policy.facts.block);
+        return policy.facts.block;
+      })(),
       maxChars: positiveInt(policy.facts?.maxChars, DEFAULT_SETTINGS.facts.maxChars, "policy.facts.maxChars"),
     }),
     approval: Object.freeze({ default: approval }),

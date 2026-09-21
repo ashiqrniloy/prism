@@ -1,6 +1,6 @@
 /**
  * Plans/064 Task 10: full-surface packed journey test.
- * Packs all eleven first-party packages, installs the tarballs into a fresh
+ * Packs all twelve first-party packages, installs the tarballs into a fresh
  * consumer, then runs scripts/fixtures/e2e-full-surface-journey.mjs inside
  * that consumer — public exports only, resolved against the packed
  * node_modules, never workspace source paths. Hermetic and network-free:
@@ -28,6 +28,7 @@ const packages = [
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
   { dir: "packages/acp-agent", name: "@arnilo/prism-acp-agent" },
+  { dir: "packages/hooks", name: "@arnilo/prism-hooks" },
 ];
 
 let consumer, run, hostRun;
@@ -50,7 +51,7 @@ before(() => {
 after(() => consumer?.cleanup());
 
 describe("packed-install full-surface journey", () => {
-  it("packs and installs all eleven packages at the workspace version", () => {
+  it("packs and installs all twelve packages at the workspace version", () => {
     assert.equal(consumer.installStatus, 0, consumer.installOut);
     for (const pkg of packages) {
       assert.equal(

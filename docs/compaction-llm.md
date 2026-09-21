@@ -122,6 +122,8 @@ const agent = createAgent({ model, provider, compaction: { strategy, thresholdEn
 
 Registration only contributes an inert strategy. The host must resolve and pass it to runtime config.
 
+Both compaction routes (`session.compact()` and auto-compaction) hand this strategy its `CompactionContext` through the pre-strategy `compaction_request` middleware hook, so a host can rewrite the entries the strategy summarizes; the strategy itself needs no change — see [Middleware hooks](middleware-hooks.md).
+
 ## Security and performance notes
 Preparation is O(n) over branch entries and uses only arrays, strings, and JSON serialization. Limit options must be positive safe integers at or below their hard caps and reject during strategy creation. Missing output options use a 16,384-token summary ceiling; reserve ratio/model metadata may narrow the provider request, never remove its finite `maxTokens`. A request policy that replaces `maxTokens` with NaN, Infinity, zero, an unsafe integer, or above-hard-cap input fails before provider generation.
 

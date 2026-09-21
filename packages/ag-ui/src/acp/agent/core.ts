@@ -36,6 +36,8 @@ const STOP_REASON: Readonly<Record<AgentFinishReason, StopReason>> = {
   refusal: "refusal",
   // A host turn-policy stop is a clean terminal turn from the client's perspective.
   host_policy: "end_turn",
+  // Same for a stop-hook continuation cap: the run ended cleanly, the agent just stopped talking.
+  hook_limit: "end_turn",
 };
 
 function stopReasonFor(finishReason: AgentFinishReason | undefined, aborted: boolean): StopReason {

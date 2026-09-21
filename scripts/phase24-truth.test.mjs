@@ -54,12 +54,12 @@ test("counts match manifests at the truth graph", () => {
     Number(hasDiagramsPackage);
   if (hasWorkPackage) {
     // Current package set: delegated CLI adapter removed; provider family has 20 subpaths (plan 062 added ./model-discovery).
-    assert.equal(t.counts.publishable, 11);
-    assert.equal(t.counts.workspace, 10);
+    assert.equal(t.counts.publishable, 12);
+    assert.equal(t.counts.workspace, 11);
     assert.equal(t.counts.provider, 20);
     assert.equal(t.counts.prismFamily, 4);
-    assert.equal(t.counts.capability, 6);
-    assert.equal(t.counts.codeWithPeer, 10);
+    assert.equal(t.counts.capability, 7);
+    assert.equal(t.counts.codeWithPeer, 11);
     assert.equal(t.counts.pureManifest, 0);
   } else if (hasCodingToolsPackage) {
     assert.equal(t.counts.publishable, 17);

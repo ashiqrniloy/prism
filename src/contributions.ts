@@ -15,6 +15,7 @@ import type {
   RetryPolicy,
   SettingsProvider,
   Skill,
+  StopHook,
   StoreFactory,
   SystemPromptContribution,
   ToolDefinition,
@@ -83,6 +84,7 @@ export interface ContributionRegistries {
   readonly providerRequestPolicies: ContributionRegistry<ProviderRequestPolicy>;
   readonly systemPromptContributions: ContributionRegistry<SystemPromptContribution>;
   readonly instructionInjectors: ContributionRegistry<InstructionInjector>;
+  readonly stopHooks: ContributionRegistry<StopHook>;
 }
 
 export interface ContributionRegistriesOptions extends DuplicateRegistrationOptions {}
@@ -110,6 +112,7 @@ export function createContributionRegistries(options: ContributionRegistriesOpti
     providerRequestPolicies: createContributionRegistry(registryOptions("provider request policy")),
     systemPromptContributions: createContributionRegistry(registryOptions("system prompt contribution")),
     instructionInjectors: createContributionRegistry(registryOptions("instruction injector")),
+    stopHooks: createContributionRegistry(registryOptions("stop hook")),
   };
 }
 

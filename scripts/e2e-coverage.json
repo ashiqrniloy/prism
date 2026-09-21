@@ -1174,6 +1174,17 @@
         ],
         "mode": ""
       }
+    },
+    "@arnilo/prism-hooks": {
+      ".": {
+        "suites": [
+          "packages/hooks/src/__tests__/compile.test.ts",
+          "packages/hooks/src/__tests__/schema.test.ts",
+          "examples/hooks-json.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      }
     }
   }
 }

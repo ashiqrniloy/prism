@@ -105,7 +105,7 @@ test("workspace test globs quote `**` so the shell cannot collapse nested suites
     );
     quoted.push(dir);
   }
-  assert.deepEqual(quoted, ["prism-coding-tools", "prism-core"], "positive control: both nested-glob packages are covered");
+  assert.deepEqual(quoted, ["hooks", "prism-coding-tools", "prism-core"], "positive control: every nested-glob package is covered");
 });
 
 test("protection gates stay in the chain and retired phase gates stay out", () => {

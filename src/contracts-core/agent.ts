@@ -12,7 +12,7 @@ import type { CompactionOptions, RetryOptions } from "./compaction.js";
 import type { ContentBlock, ErrorInfo, JsonObject, Message, ModelConfig } from "./content.js";
 import type { ExtensionAPI, ProviderRequestPolicy, SystemPromptConfig } from "./extensions.js";
 import type { GuardrailPackRef } from "./guardrail-packs.js";
-import type { AgentLoopOptions, AgentLoopStrategy, LoopContext } from "./loop.js";
+import type { AgentLoopOptions, AgentLoopStrategy, LoopContext, StopHook } from "./loop.js";
 import type { OwnershipScope } from "./persistence.js";
 import type { AIProvider, ProviderRequestOptions, ProviderResolver } from "./provider.js";
 import type { ResourceLoader } from "./resources.js";
@@ -143,6 +143,8 @@ export interface AgentConfig {
   readonly inputLayout?: InputAssemblyLayout;
   readonly loop?: AgentLoopStrategy | AgentLoopOptions;
   readonly guardrails?: Guardrails;
+  /** Run-end stop hooks (plan 106 R1); `RunOptions.stopHooks` appends to this list. */
+  readonly stopHooks?: readonly StopHook[];
   /** Opt-in durable interruption/checkpointing default for this agent. */
   readonly runState?: AgentRunStateOptions;
   /** Internal marker set by createSecureAgent(); makes security defaults immutable per run. */

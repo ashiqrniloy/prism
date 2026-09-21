@@ -20,6 +20,12 @@ export interface RunLimits {
   readonly maxOutputTokens?: number | null;
   readonly maxTotalTokens?: number | null;
   readonly maxCost?: { readonly amount: number; readonly currency: string };
+  /**
+   * Clean cap on stop-hook continuations in one run (plan 106 R1). Default 3; `0` observes stop
+   * hooks but never continues; `null` disables the cap. Layers narrow by min like every other
+   * policy axis, and the cap ends the run with `stopReason: "hook_limit"` (no limit breach).
+   */
+  readonly maxStopContinuations?: number | null;
 }
 
 /** Fully resolved limits after `resolveRunLimits`: every policy axis is a finite cap or `null` (disabled). */
@@ -35,9 +41,12 @@ export interface ResolvedRunLimits {
   readonly maxOutputTokens: number | null;
   readonly maxTotalTokens: number | null;
   readonly maxCost?: { readonly amount: number; readonly currency: string };
+  /** Stop-hook continuation cap (plan 106 R1); not a run-limit counter axis. */
+  readonly maxStopContinuations: number | null;
 }
 
-export type RunLimitName = keyof Required<RunLimits>;
+/** Counter-backed limit axes; `maxStopContinuations` caps a clean stop instead of a breach. */
+export type RunLimitName = Exclude<keyof Required<RunLimits>, "maxStopContinuations">;
 
 export interface RunLimitCounters {
   readonly turns: number;

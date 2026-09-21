@@ -6,7 +6,7 @@ Guardrails are typed, fail-closed checks at input, completed provider output, to
 
 ## When to use it
 
-Use guardrails to block unsafe prompts, model responses, tool arguments, or tool results before their next boundary. Use a redactor for known secrets. Do not treat guardrails as a sandbox, secret detector, permission policy, or validation replacement.
+Use guardrails to block unsafe prompts, model responses, tool arguments, or tool results before their next boundary. Use a redactor for known secrets. Do not treat guardrails as a sandbox, secret detector, permission policy, or validation replacement. For how guardrails combine with middleware, injectors, and stop hooks — and where each Claude Code / Codex hook event lands — see [Hooks](hooks.md).
 
 ## Inputs / request
 

@@ -1,5 +1,18 @@
 # Migration guide
 
+## 0.9.0 → 0.10.0 (hook lifecycle completion, scoped agent memory)
+
+**Prism 0.10.0 is a lockstep minor for all twelve publishable packages** — `@arnilo/prism-hooks` is new. Node `>=22` stays the floor. Nothing was removed: no import path moved and no export was dropped (compat baseline: +47 names, zero removals, zero renames). Scoped memory is a new opt-in subpath that stays inert until a host constructs a policy.
+
+What a 0.9.0 host must check before upgrading:
+
+- **One type-level addition: `AgentSession.close(): Promise<void>`.** Hosts that implement or proxy the interface (not only consume it) must add a `close()`; `async close() {}` satisfies the type, and a proxy should forward to the wrapped session so `session_shutdown` fires once. The in-repo precedent is the observational-memory proxy in `@arnilo/prism-memory`, which forwards it.
+- **`session_start` and `session_shutdown` are now emitted.** Both names were declared in 0.9.0 but had no call site, so extension handlers registered against them never ran. `session_start` fires once per session at the first turn of the first run (durable resumes included); `session_shutdown` fires from `session.close()` and is idempotent — a host that never calls `close()` never sees it.
+- **`hook_limit` is a new `AgentFinishReason`** (and a `StoredAgentRunState.stopReason`). Exhaustive switches over finish reasons must handle it; a `hook_limit` stop stays resumable only under `checkpointPolicy: "every-turn"`.
+- **Stop hooks are bounded by default.** `RunLimits.maxStopContinuations` defaults to 3 (`0` disables continuation, `null` uncaps), and only a run that registers stop hooks can reach the limit.
+- **`compaction_request` runs before the compaction strategy** when a handler is registered (entries and budget are rewritable); with no handler the compaction path is unchanged.
+- **Additive, inert by default:** `AgentConfig.stopHooks` / `RunOptions.stopHooks` and `ExtensionAPI.registerStopHook()`, `forwardAgentEvents()`, the `@arnilo/prism-hooks` adapter, and the whole `@arnilo/prism-memory/scoped` surface (reviewer, promotion ladder, GC proposals, bounded facts block, approval gate, audit mirror, eval harness).
+
 ## 0.8.0 → 0.9.0 (attention budget axes, turn traces, tool narrowing, guardrail packs, background agents, session search, deterministic turns, shared scopes)
 
 **Prism 0.9.0 is a lockstep minor for all eleven publishable packages.** Node `>=22` stays the floor. Nothing was removed: no import path moved, no export was dropped, and every new surface defaults to 0.8 behavior. The full guide — the four deltas inside existing surfaces, every new option with its sizing line, upgrade steps, and rollback — is [migrate-to-0.9.md](migrate-to-0.9.md).

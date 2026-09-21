@@ -1,0 +1,61 @@
+{
+  "name": "@arnilo/prism-hooks",
+  "version": "0.10.0",
+  "description": "Out-of-process hooks.json adapter for Prism: Claude/Codex-compatible declarative hooks compiled onto public extension, middleware, guardrail, instruction, and stop-hook seams.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node ../../scripts/with-build-lock.mjs node --test \"dist/**/__tests__/*.test.js\"",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "^0.10.0"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../..",
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/hooks"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/hooks#readme",
+  "keywords": [
+    "prism",
+    "hooks",
+    "hooks.json",
+    "claude-code",
+    "codex",
+    "extension"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

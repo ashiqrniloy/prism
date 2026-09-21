@@ -204,19 +204,21 @@ export async function persistSucceeded(ctx: RoundContext, loopUsage: Usage | und
     await session.activeLedger.appendUsage(redactRunLedgerRecord(usageRecord, session.activeRedactor));
   }
   await session.drainLedger();
+  // Plan 084 Task 2 / plan 106 R1: a clean run-end stop keeps the frontier and marks the state
+  // continuable — a host turn-policy stop (`host_policy`) or a stop-hook continuation cap
+  // (`hook_limit`). Every other succeeded state drops its loop state and is final.
+  const continuableStop = stop ? ("host_policy" as const) : ctx.loopCtx.finishReason === "hook_limit" ? ("hook_limit" as const) : undefined;
   const runState = session.activeDurable?.state
     ? await persistDurable(session, {
         ...session.activeDurable.state,
         status: "succeeded",
-        // Plan 084 Task 2: a host-policy stop is terminal for the run but leaves the frontier
-        // intact — the loop state is kept and the state is marked continuable.
-        ...(stop ? { stopReason: "host_policy" as const, leafId: session.currentLeafId } : {}),
+        ...(continuableStop ? { stopReason: continuableStop, leafId: session.currentLeafId } : {}),
         pending: undefined,
         pendingCalls: undefined,
         nestedRuns: undefined,
         stickyDecisions: undefined,
         interruption: undefined,
-        ...(stop ? {} : { loopState: undefined }),
+        ...(continuableStop ? {} : { loopState: undefined }),
       })
     : undefined;
   session.emit({

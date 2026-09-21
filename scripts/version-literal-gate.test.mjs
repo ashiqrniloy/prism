@@ -4,7 +4,7 @@
 //
 // `currentVersion()` (scripts/package-truth.mjs) reads the root manifest, which
 // `release.mjs bump` rewrites first. This gate then asserts that every surface
-// which CLAIMS the release version equals it: all 11 manifests, all internal
+// which CLAIMS the release version equals it: all 12 manifests, all internal
 // `@arnilo/*` caret ranges, the lockfile, the `src/index.ts` version constant,
 // the `docs/index.md` current-line banner, the release-workflow tag list, and the
 // generated package-truth artifact.
@@ -89,8 +89,8 @@ export function claimViolations(files, current) {
   const problems = [];
   const caret = `^${current}`;
   const manifests = [...files.keys()].filter((path) => MANIFEST.test(path)).sort();
-  if (manifests.length !== 11) {
-    problems.push(`expected 11 manifests (root + 10 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
+  if (manifests.length !== 12) {
+    problems.push(`expected 12 manifests (root + 11 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
   }
   for (const path of manifests) {
     const pkg = parseJson(files, path, problems);

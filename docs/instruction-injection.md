@@ -181,3 +181,4 @@ RPC: `prompt`/`followUp` params accept an optional `instructionInjectors: readon
 - [Extensions](extensions.md): `registerInstructionInjector` in the contribution-kinds list.
 - [CLI and RPC](cli-rpc.md): `--instruction`/`--injector-file` flags and the RPC `instructionInjectors` field.
 - [Credentials and redaction](credentials-and-redaction.md): `createSecretRedactor`, `redactProviderRequest`, `redactAgentEvent`.
+- [Hooks](hooks.md): the Claude Code / Codex event map, where hook `additionalContext` is queued for the next assembly.

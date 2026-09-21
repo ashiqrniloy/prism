@@ -137,7 +137,9 @@ describe("configuration and manifests", () => {
 
   it("manifest_kind_list_matches_current_data_only_registry_categories", () => {
     const registries = createContributionRegistries();
-    const registryToKind: Record<keyof typeof registries, ManifestContributionKind> = {
+    // Executable-only registries with no data-only descriptor form are not manifest kinds.
+    const executableOnly = new Set<keyof typeof registries>(["stopHooks"]);
+    const registryToKind: Record<Exclude<keyof typeof registries, "stopHooks">, ManifestContributionKind> = {
       providers: "provider",
       models: "model",
       tools: "tool",
@@ -163,7 +165,7 @@ describe("configuration and manifests", () => {
     const expectedKinds = new Set(Object.values(registryToKind));
     const actualKinds = new Set<ManifestContributionKind>(Object.values(registryToKind));
 
-    assert.deepEqual(new Set(Object.keys(registries)), new Set(Object.keys(registryToKind)));
+    assert.deepEqual(new Set(Object.keys(registries)), new Set([...Object.keys(registryToKind), ...executableOnly]));
     assert.deepEqual(actualKinds, expectedKinds);
   });
 

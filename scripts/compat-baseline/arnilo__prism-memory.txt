@@ -1,6 +1,8 @@
 AccessDenial	export type { AccessDenial, AccessDenialReason, Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagAccessConstraint, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSou
 AccessDenialReason	export type { AccessDenial, AccessDenialReason, Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagAccessConstraint, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSou
 AccessRecheck	export type { AccessRecheck, CreateAccessRecheckOptions } from "./access-recheck.js"
+ApplySourceRenamesOptions	export type { ApplySourceRenamesOptions, ApplySourceRenamesResult, RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore, SourceRename, SourceRenameEvent, } from "./repoint.js"
+ApplySourceRenamesResult	export type { ApplySourceRenamesOptions, ApplySourceRenamesResult, RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore, SourceRename, SourceRenameEvent, } from "./repoint.js"
 AttachedObservationalMemorySession	export type { AttachedObservationalMemorySession, CreateObservationalMemoryOptions, ObservationalMemory, ObservationalMemoryAppendOptions, ObservationalMemoryAttachOptions, ObservationalMemoryContextConfig, ObservationalMemoryDropperConfig, ObservationalMemoryObservationConfig, ObservationalMemoryReflectionConfig, ObservationalMemoryRetrievalConfig, ObservationalMemoryWorkerConfig, } from "./compose.js"
 BoundedMemoryPayload	export type { BoundedMemoryPayload } from "./memory-bounds.js"
 ChunkOptions	export type { AccessDenial, AccessDenialReason, Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagAccessConstraint, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSou
@@ -17,6 +19,7 @@ CreateObservationalMemoryOptions	export type { AttachedObservationalMemorySessio
 CreateOpenAiCompatibleRerankerOptions	export type { CreateOpenAiCompatibleRerankerOptions, CreateVoyageRerankerOptions } from "./hosted-rerankers.js"
 CreateTeiRerankerOptions	export type { CreateTeiRerankerOptions } from "./tei-reranker.js"
 CreateVoyageRerankerOptions	export type { CreateOpenAiCompatibleRerankerOptions, CreateVoyageRerankerOptions } from "./hosted-rerankers.js"
+CustomEntryAppendOptions	export type { CustomEntryAppendOptions } from "./append-custom.js"
 DEFAULT_BUILD_BUDGET_MS	export declare const DEFAULT_BUILD_BUDGET_MS = 120000
 DEFAULT_BUILD_MAX_RESULT_BYTES	export declare const DEFAULT_BUILD_MAX_RESULT_BYTES: number
 DEFAULT_CHUNK_OVERLAP	export declare const DEFAULT_CHUNK_OVERLAP = 100
@@ -354,11 +357,11 @@ RememberResult	export type { CreateMemoryOptions, Embedder, ExportMemoryOptions,
 RenderObservationalMemoryOptions	export type { RenderObservationalMemoryOptions } from "./render.js"
 ReplaceDocumentOptions	export type { AccessDenial, AccessDenialReason, Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagAccessConstraint, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSou
 ReplaceSourceOptions	export type { AccessDenial, AccessDenialReason, Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagAccessConstraint, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSou
-RepointContext	export type { RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore } from "./repoint.js"
-RepointHandler	export type { RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore } from "./repoint.js"
-RepointSourceOptions	export type { RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore } from "./repoint.js"
-RepointSourceResult	export type { RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore } from "./repoint.js"
-RepointStore	export type { RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore } from "./repoint.js"
+RepointContext	export type { ApplySourceRenamesOptions, ApplySourceRenamesResult, RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore, SourceRename, SourceRenameEvent, } from "./repoint.js"
+RepointHandler	export type { ApplySourceRenamesOptions, ApplySourceRenamesResult, RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore, SourceRename, SourceRenameEvent, } from "./repoint.js"
+RepointSourceOptions	export type { ApplySourceRenamesOptions, ApplySourceRenamesResult, RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore, SourceRename, SourceRenameEvent, } from "./repoint.js"
+RepointSourceResult	export type { ApplySourceRenamesOptions, ApplySourceRenamesResult, RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore, SourceRename, SourceRenameEvent, } from "./repoint.js"
+RepointStore	export type { ApplySourceRenamesOptions, ApplySourceRenamesResult, RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore, SourceRename, SourceRenameEvent, } from "./repoint.js"
 Reranker	export type { AccessDenial, AccessDenialReason, Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagAccessConstraint, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSou
 RerankerConfig	export type { RerankerConfig } from "./reranker-config.js"
 ResolveGraftCliOptions	export type { ResolvedGraftCli, ResolveGraftCliOptions } from "./upstream.js"
@@ -375,6 +378,8 @@ RunReflectorOptions	export type { RunReflectorOptions } from "./workers/reflecto
 SEEN_CAP	export declare const SEEN_CAP = 256
 SESSION_WORK_SCOPE_ID	export declare const SESSION_WORK_SCOPE_ID = "session"
 SUMMARIZATION_SYSTEM_PROMPT	export declare const SUMMARIZATION_SYSTEM_PROMPT = "You summarize Prism agent history for future context.\nWrite concise structured markdown with these sections:\n## Goal\n## Constraints & Preferences\n## Progress\n### Done\n### In Progress\n### Blocked\n## Key Decisions\n## Next Steps\n## Critical Context\nPreserve exact file paths, commands, errors, IDs, decisions, and user constraints. Do not continue the conversation."
+ScopedMemoryReviewResult	export type { ScopedMemoryReviewResult, ScopedMemoryReviewer } from "./reviewer.js"
+ScopedMemoryReviewer	export type { ScopedMemoryReviewResult, ScopedMemoryReviewer } from "./reviewer.js"
 SerializeCompactionConversationOptions	export type { SerializeCompactionConversationOptions } from "./serialize.js"
 SharedScopeAccessEvent	export type { MergedSharedScopes, ResolveSharedScopesOptions, SharedScopeAccessEvent, SharedScopeAccessReason, SharedScopeMemory, SharedWorkScopeConfig, SharedWorkScopeConfigEntry, } from "./shared-scopes.js"
 SharedScopeAccessReason	export type { MergedSharedScopes, ResolveSharedScopesOptions, SharedScopeAccessEvent, SharedScopeAccessReason, SharedScopeMemory, SharedWorkScopeConfig, SharedWorkScopeConfigEntry, } from "./shared-scopes.js"
@@ -384,6 +389,8 @@ SharedWorkScopeConfigEntry	export type { MergedSharedScopes, ResolveSharedScopes
 SourceAccessGrant	export type { CreateMemoryOptions, Embedder, ExportMemoryOptions, LexicalMode, Memory, MemoryConsent, MemoryConsentInput, MemoryConsentScope, MemoryConsentSource, MemoryContextProviderOptions, MemoryEntryInput, MemoryExportIdentity, MemoryExportResult, MemoryInvalidationEvent, MemoryInvalidationReason, MemoryInvalidationRecord, MemoryLineage, MemoryRecallExplanation, MemoryRetentionPolicy, MemoryRetentionResult, MemoryScope, MemoryShareGrant, MemoryVectorHit, MemoryVectorListQuery, MemoryVectorO
 SourceFreshness	export type { AccessDenial, AccessDenialReason, Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagAccessConstraint, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSou
 SourceMutationResult	export type { SourceMutationResult } from "./sources.js"
+SourceRename	export type { ApplySourceRenamesOptions, ApplySourceRenamesResult, RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore, SourceRename, SourceRenameEvent, } from "./repoint.js"
+SourceRenameEvent	export type { ApplySourceRenamesOptions, ApplySourceRenamesResult, RepointContext, RepointHandler, RepointSourceOptions, RepointSourceResult, RepointStore, SourceRename, SourceRenameEvent, } from "./repoint.js"
 SourceVectorStore	export type { AccessDenial, AccessDenialReason, Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagAccessConstraint, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSou
 SyncKnowledgeOptions	export type { KnowledgeChange, KnowledgeChangePage, KnowledgeConnector, SyncKnowledgeOptions, SyncKnowledgeResult } from "./sync.js"
 SyncKnowledgeResult	export type { KnowledgeChange, KnowledgeChangePage, KnowledgeConnector, SyncKnowledgeOptions, SyncKnowledgeResult } from "./sync.js"
@@ -440,6 +447,8 @@ WorkingMemoryUpdateOptions	export type { CreateMemoryOptions, Embedder, ExportMe
 activeObservations	export declare function activeObservations(ledger: ObservationalMemoryLedger): readonly MemoryObservation[]
 appendCustomEntry	export declare function appendCustomEntry(options: CustomEntryAppendOptions, data: unknown): Promise<void>
 appendFabricBlock	export declare function appendFabricBlock(memory: Memory, block: string, text: string, options?:
+applySourceRenames	export declare function applySourceRenames(options: ApplySourceRenamesOptions): Promise<ApplySourceRenamesResult>
+approveScopedPending	export declare function approveScopedPending(input:
 assertAccessConstraint	export declare function assertAccessConstraint(authorization: RagAccessConstraint): RagAccessConstraint
 assertAccessGrants	export declare function assertAccessGrants(grants: readonly SourceAccessGrant[]): readonly SourceAccessGrant[]
 assertAuthorizationTenant	export declare function assertAuthorizationTenant(authorization: RagAccessConstraint, tenantId: string): void
@@ -490,6 +499,7 @@ createFabricAttach	export declare function createFabricAttach(deps: MemoryFabric
 createFabricConversationSearch	export declare function createFabricConversationSearch(deps:
 createFabricFileJail	export declare function createFabricFileJail(root: string, options?: CreateFabricFileJailOptions): FabricFileJail
 createFabricRecall	export declare function createFabricRecall(deps:
+createFabricRepointHandler	export declare function createFabricRepointHandler(options:
 createFakeReranker	export declare function createFakeReranker(): Reranker
 createFoldedMemoryDetails	export declare function createFoldedMemoryDetails(projection: Pick<ObservationalMemoryProjection, "observations" | "reflections" | "droppedObservationIds">, fullFold?: boolean): FoldedMemoryDetails
 createGoogleDriveConnector	export declare function createGoogleDriveConnector(options: GoogleDriveConnectorOptions): KnowledgeConnector
@@ -515,6 +525,7 @@ createMemoryWorkingStore	export declare function createMemoryWorkingStore(option
 createObservationalMemory	export declare function createObservationalMemory(options: CreateObservationalMemoryOptions): ObservationalMemory
 createObservationalMemoryCommands	export declare function createObservationalMemoryCommands(options: MemoryCommandOptions): readonly CommandDefinition[]
 createObservationalMemoryCompactionStrategy	export declare function createObservationalMemoryCompactionStrategy(options?: ObservationalMemoryCompactionStrategyOptions): CompactionStrategy
+createObservationalMemoryDropHandler	export declare function createObservationalMemoryDropHandler(options: CustomEntryAppendOptions): DeletionPropagationHandler
 createObservationalMemoryExtension	export declare function createObservationalMemoryExtension(options?: ObservationalMemoryExtensionOptions): Extension
 createObservationalMemoryRuntime	export declare function createObservationalMemoryRuntime(options: ObservationalMemoryRuntimeOptions): ObservationalMemoryRuntime
 createOpenAiCompatibleReranker	export declare function createOpenAiCompatibleReranker(options: CreateOpenAiCompatibleRerankerOptions): Reranker
@@ -524,6 +535,8 @@ createRagContextProvider	export declare function createRagContextProvider(option
 createRagDeletionHandler	export declare function createRagDeletionHandler(options:
 createRecallMemoryTool	export declare function createRecallMemoryTool(options: RecallMemoryToolOptions): ToolDefinition
 createResourceDocumentLoader	export declare function createResourceDocumentLoader(options: ResourceDocumentLoaderOptions): DocumentLoader
+createScopedMemoryHealthCommand	export declare function createScopedMemoryHealthCommand(options:
+createScopedMemoryPolicy	export declare function createScopedMemoryPolicy(options: CreateScopedMemoryPolicyOptions): ScopedMemoryPolicy
 createTeiReranker	export declare function createTeiReranker(options: CreateTeiRerankerOptions): Reranker
 createTransformersRerankRuntime	export declare function createTransformersRerankRuntime(options?: TransformersRerankRuntimeOptions): LocalRerankRuntime
 createVoyageReranker	export declare function createVoyageReranker(options: CreateVoyageRerankerOptions): Reranker
@@ -573,6 +586,7 @@ formatFileOperations	export declare function formatFileOperations(details: FileO
 formatPointerPack	export declare function formatPointerPack(askResult: unknown, seen: ReadonlySet<string>): PointerPack
 fuseReciprocalRank	export declare function fuseReciprocalRank(vectorHits: readonly MemoryVectorHit[], lexicalHits: readonly MemoryVectorHit[], rrfK: number): readonly FusedCandidate[]
 fuseReciprocalRankLists	export declare function fuseReciprocalRankLists(lists: readonly
+gateScopedMemoryContent	export declare function gateScopedMemoryContent(text: string): void
 grantAllows	export declare function grantAllows(grant:
 hashContent	export declare function hashContent(content: string | Buffer): string
 hashFile	export declare function hashFile(filePath: string): Promise<string>
@@ -619,9 +633,11 @@ latestUserText	export declare function latestUserText(messages: readonly
 lintWiki	export declare function lintWiki(options?: WikiExtensionOptions): Promise<LintReport>
 listIngestionStatus	export declare function listIngestionStatus(options: IngestionStatusQuery): Promise<
 listInvalidatedIds	export declare function listInvalidatedIds(vectorStore: VectorStore, scope: MemoryScope, options?:
+listScopedPending	export declare function listScopedPending(ledgerFile: string): Promise<readonly
 loadBundledSkills	export declare function loadBundledSkills(packageRoot?: string): Promise<Map<string, Skill>>
 loadManifest	export declare function loadManifest(wikiRootPath: string): Promise<WikiManifest | undefined>
 loadOrientation	export declare function loadOrientation(indexPath: string, freshness: GraftFreshness | undefined, maxBytes?: number): string | undefined
+loadScopedLedger	export declare function loadScopedLedger(path: string): Promise<ScopedMemoryLedger>
 markdownParser	export declare const markdownParser: Parser
 matchesFilter	export declare function matchesFilter(metadata: JsonObject | undefined, filter: JsonObject | undefined): boolean
 measureWorkerJson	export declare function measureWorkerJson(value: unknown, maxBytes: number, label: string): number
@@ -641,7 +657,7 @@ observationsUncoveredByReflection	export declare function observationsUncoveredB
 oneLine	export declare function oneLine(value: string): string
 orderHitsByScores	export declare function orderHitsByScores(hits: readonly RagHit[], scores: readonly number[], label: string): readonly RagHit[]
 orderScores	export declare function orderScores(hits: readonly RagHit[], parsed: unknown, resultsKey: string, scoreKey: string, label: string): readonly RagHit[]
-packageName	export declare const packageName = "@arnilo/prism-memory/rag"
+packageName	export declare const packageName = "@arnilo/prism-memory/scoped"
 parseConceptFrontmatter	export declare function parseConceptFrontmatter(content: string):
 parseLineage	export declare function parseLineage(metadata: MemoryVectorRecord["metadata"]): ParsedLineage
 parseMarkdownHeading	export declare function parseMarkdownHeading(line: string):
@@ -653,6 +669,8 @@ planMemoryConsolidation	export declare function planMemoryConsolidation(input:
 postRerankJson	export declare function postRerankJson(transport: typeof globalThis.fetch, endpoint: string, payload: unknown, options: RerankHttpOptions, signal: AbortSignal | undefined, label: string, host: string, extraHeaders?: Record<string, string>): Promise<unknown>
 prepareLlmCompaction	export declare function prepareLlmCompaction(context: Pick<CompactionContext, "entries" | "trigger">, options?: PrepareLlmCompactionOptions): LlmCompactionPreparation
 prependLog	export declare function prependLog(existing: string | undefined, date: string, items: readonly
+probeLocomoRecall	export declare function probeLocomoRecall(policy: Recall, seededIds: ReadonlySet<string>, questions: readonly
+probePrecisionAt3	export declare function probePrecisionAt3(policy: Recall, queries: readonly
 projectWorkMemory	export declare function projectWorkMemory(ledger: ObservationalMemoryLedger, map: WorkScopeMap, options: ProjectWorkMemoryOptions): WorkMemoryProjection
 qualifyTable	export declare function qualifyTable(schema: string, table: string): string
 queryPostgres	export declare function queryPostgres(pool: Queryable, sql: string, params?: unknown[]): Promise<import("pg").QueryResult<any>>
@@ -662,23 +680,28 @@ readBoundedFile	export declare function readBoundedFile(root: string, relativePa
 readFabricBlock	export declare function readFabricBlock(record: WorkingMemoryRecord | undefined, block: string): FabricWorkingBlock | undefined
 recallObservationalMemory	export declare function recallObservationalMemory(entries: readonly SessionEntry[], id: string, secrets?: readonly (string | undefined)[], options?: RecallMemoryOptions): MemoryRecallResult
 recallObservationalMemoryBranchPage	export declare function recallObservationalMemoryBranchPage(entries: readonly SessionEntry[], request: RecallBranchPageRequest, secrets?: readonly (string | undefined)[]): RecallBranchPageResult
+recallScopedMemory	export declare function recallScopedMemory(input:
 recencyOf	export declare function recencyOf(createdAt: string, halfLifeMs: number, now: number): number
 recordBlocked	export declare function recordBlocked(record: Pick<MemoryVectorRecord, "id" | "metadata">, invalidations: ReadonlyMap<string, MemoryInvalidationRecord>): boolean
 redactJson	export declare function redactJson<T>(value: T, redactor?: SecretRedactor): T
 redactPaths	export declare function redactPaths(text: string, paths?: readonly string[]): string
 reflectionBlockedByInvalidation	export declare function reflectionBlockedByInvalidation(reflection: Pick<MemoryReflection, "id" | "supportingObservationIds">, droppedOrInvalidated: ReadonlySet<string>): boolean
 refreshWiki	export declare function refreshWiki(options?: WikiExtensionOptions): Promise<RefreshWikiResult>
+rejectScopedPending	export declare function rejectScopedPending(input:
 relevanceValues	export declare const relevanceValues: readonly ["low", "medium", "high", "critical"]
 reliefHit	export declare function reliefHit(id: string, score: number, retrievalRank: number): RagHit
+rememberScopedFact	export declare function rememberScopedFact(input:
 renderConceptFrontmatter	export declare function renderConceptFrontmatter(input:
 renderDirIndex	export declare function renderDirIndex(dir: "entities" | "decisions" | "concepts", entities: readonly WikiEntityMetadata[]): string
 renderEntityMarkdown	export declare function renderEntityMarkdown(workspaceRoot: string, entity: WikiEntityMetadata, symbols: readonly ExtractedSymbol[], summary?: string): string
 renderIndexCatalog	export declare function renderIndexCatalog(entities: readonly WikiEntityMetadata[]): string
 renderIngestBrief	export declare function renderIngestBrief(staged: WikiIngestResult): string
 renderObservationalMemory	export declare function renderObservationalMemory(reflections: readonly MemoryReflection[], observations: readonly MemoryObservation[], secretsOrOptions?: readonly (string | undefined)[] | RenderObservationalMemoryOptions): string
+renderPrunedSources	export declare function renderPrunedSources(report: LintReport): string
 renderRecentMessageWindow	export declare function renderRecentMessageWindow(entries: readonly SessionEntry[], secrets?: readonly (string | undefined)[]): string
 renderRootIndex	export declare function renderRootIndex(entities: readonly WikiEntityMetadata[]): string
 renderSchema	export declare function renderSchema(profileName: string, profileRules: string): string
+renderScopedMirror	export declare function renderScopedMirror(input:
 renderTemplate	export declare function renderTemplate(template: string, value: JsonObject): string
 replaceDocument	export declare function replaceDocument(options: ReplaceDocumentOptions): Promise<SourceMutationResult>
 replaceSource	export declare function replaceSource(options: ReplaceSourceOptions): Promise<SourceMutationResult>
@@ -715,6 +738,7 @@ resumeAgentRun	export { createObservationalMemory, resumeAgentRun, resumeAgentRu
 resumeAgentRunStream	export { createObservationalMemory, resumeAgentRun, resumeAgentRunStream } from "./compose.js"
 retireWikiSources	export declare function retireWikiSources(options: RetireWikiSourcesOptions): Promise<RetireWikiSourcesResult>
 retrieveContext	export declare function retrieveContext(query: string, options: RetrieveContextOptions): Promise<RagContextResult>
+reviewScopedSession	export declare function reviewScopedSession(input:
 revokedIdsAbsent	export declare function revokedIdsAbsent(environment:
 runCli	export declare function runCli(argv: readonly string[]): Promise<number>
 runDropper	export declare function runDropper(options: RunDropperOptions): Promise<readonly string[]>
@@ -726,10 +750,18 @@ runMemoryWorkerLoop	export declare function runMemoryWorkerLoop(options: MemoryW
 runObserver	export declare function runObserver(options: RunObserverOptions): Promise<readonly MemoryObservation[]>
 runReflector	export declare function runReflector(options: RunReflectorOptions): Promise<readonly MemoryReflection[]>
 runRerankerConformance	export declare function runRerankerConformance(createReranker: () => Reranker): Promise<void>
+runScopedGcPass	export declare function runScopedGcPass(input:
+runScopedMemoryEval	export declare function runScopedMemoryEval(input:
+runScopedPromotionPass	export declare function runScopedPromotionPass(input:
 saveManifest	export declare function saveManifest(wikiRootPath: string, manifest: WikiManifest): Promise<void>
+saveScopedLedger	export declare function saveScopedLedger(path: string, ledger: ScopedMemoryLedger): Promise<void>
 scaffoldWiki	export declare function scaffoldWiki(options: ScaffoldOptions): Promise<ScaffoldResult>
 scanRawFiles	export declare function scanRawFiles(workspaceRoot: string, rawRoots?: readonly string[], options?: ScanOptions): Promise<Map<string, string>>
+scanScopedMemoryContent	export declare function scanScopedMemoryContent(text: string):
 scopeKey	export declare function scopeKey(scope: MemoryScope): string
+scopedLedgerPath	export declare function scopedLedgerPath(scopeRoot: string): string
+scopedMemoryHealth	export declare function scopedMemoryHealth(ledgerFile: string): Promise<
+scoreScopedHit	export declare function scoreScopedHit(score: number, uses: number, ageDays: number, tauDays: number): number
 selectAdjacentRecords	export declare function selectAdjacentRecords(threadRecords: readonly MemoryVectorRecord[], hits: readonly MemoryVectorHit[], messageRange: number): MemoryVectorRecord[]
 selectRecentMessageEntries	export declare function selectRecentMessageEntries(entries: readonly SessionEntry[], options?: RecentMessageWindowOptions): readonly SessionEntry[]
 selectRecentMessageEntryIds	export declare function selectRecentMessageEntryIds(entries: readonly SessionEntry[], keepRecentEntries: number): readonly string[]
@@ -750,10 +782,12 @@ textParser	export declare const textParser: Parser
 toInvalidationEvent	export declare function toInvalidationEvent(reason: MemoryInvalidationReason, ids: readonly string[], hold: boolean): MemoryInvalidationEvent
 tokenizeLexical	export declare function tokenizeLexical(text: string): Set<string>
 tombstoneFabricBlock	export declare function tombstoneFabricBlock(memory: Memory, block: string, options?:
+touchScopedLedger	export declare function touchScopedLedger(ledger: ScopedMemoryLedger, ids: readonly string[], nowIso: string): ScopedMemoryLedger
 truncateUtf8	export declare function truncateUtf8(text: string, maxBytes: number): string
 truncateWorkerText	export declare function truncateWorkerText(text: string, maxBytes: number): string
 type AttachedMemoryFabricSession	export { type AttachedMemoryFabricSession, createFabricAttach, type MemoryFabricAttachableSession, type MemoryFabricAttachOptions, } from "./attach.js"
 type CreateMemoryFabricOptions	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, type MemoryFabric, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type MemoryFabricEvolutionOptions, type MemoryFabricExplainEntry, type MemoryFabricForgetInput, type MemoryFabricForgetRe
+type CreateScopedMemoryPolicyOptions	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
 type MemoryFabric	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, type MemoryFabric, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type MemoryFabricEvolutionOptions, type MemoryFabricExplainEntry, type MemoryFabricForgetInput, type MemoryFabricForgetRe
 type MemoryFabricAttachOptions	export { type AttachedMemoryFabricSession, createFabricAttach, type MemoryFabricAttachableSession, type MemoryFabricAttachOptions, } from "./attach.js"
 type MemoryFabricAttachableSession	export { type AttachedMemoryFabricSession, createFabricAttach, type MemoryFabricAttachableSession, type MemoryFabricAttachOptions, } from "./attach.js"
@@ -779,6 +813,13 @@ type MemoryNoteKind	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KIND
 type MemoryNoteLink	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, type MemoryFabric, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type MemoryFabricEvolutionOptions, type MemoryFabricExplainEntry, type MemoryFabricForgetInput, type MemoryFabricForgetRe
 type MemoryNoteMetadata	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, type MemoryFabric, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type MemoryFabricEvolutionOptions, type MemoryFabricExplainEntry, type MemoryFabricForgetInput, type MemoryFabricForgetRe
 type MemoryNotePromotion	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, type MemoryFabric, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type MemoryFabricEvolutionOptions, type MemoryFabricExplainEntry, type MemoryFabricForgetInput, type MemoryFabricForgetRe
+type ScopedMemoryApprovalMode	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
+type ScopedMemoryPolicy	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
+type ScopedMemoryPolicyKnobs	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
+type ScopedMemoryPolicySettings	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
+type ScopedMemoryRecallResult	export { scoreScopedHit, type ScopedMemoryRecallResult } from "./read-policy.js"
+type ScopedMemoryReviewResult	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
+type ScopedMemoryReviewer	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
 underGraft	export declare function underGraft(projectDir: string, path: string): boolean
 unionStrings	export declare function unionStrings(left: readonly string[] | undefined, right: readonly string[] | undefined): readonly string[] | undefined
 unscannedEntries	export declare function unscannedEntries(entries: readonly SessionEntry[], latestObservationCoverageId?: string): readonly SessionEntry[]

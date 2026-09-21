@@ -1,0 +1,33 @@
+DEFAULT_ADDITIONAL_CONTEXT_LIMIT	export declare const DEFAULT_ADDITIONAL_CONTEXT_LIMIT = 2500
+DEFAULT_HANDLER_TIMEOUT_SECONDS	export declare const DEFAULT_HANDLER_TIMEOUT_SECONDS = 600
+HOOK_EVENT_NAMES	export declare const HOOK_EVENT_NAMES: readonly ["SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop"]
+HooksConfigError	export declare class HooksConfigError extends Error
+compileMatcher	export declare function compileMatcher(matcher: string | undefined): (candidate: string) => boolean
+createContextQueue	export declare function createContextQueue(limitTokens: number, outputDir?: string): ContextQueue
+createHooksExtension	export declare function createHooksExtension(config: HooksConfig, options?: HooksExtensionOptions): HooksExtension
+defaultHookOutputDir	export declare function defaultHookOutputDir(): string
+estimateContextTokens	export declare function estimateContextTokens(text: string): number
+hookCommandHash	export declare function hookCommandHash(handler: CommandHookHandler, options?:
+hookStdinPayload	export declare function hookStdinPayload(input: HookHandlerInput, cwd: string): Record<string, unknown>
+parseHookDecision	export declare function parseHookDecision(stdout: string, exitCode: number | null, stderr: string): HookOutcome
+parseHooksConfig	export declare function parseHooksConfig(input: string | object): HooksConfig
+runCommandHandler	export declare function runCommandHandler(handler: CommandHookHandler, input: HookHandlerInput, options?: CommandHandlerOptions): Promise<HookOutcome>
+runMcpToolHandler	export declare function runMcpToolHandler(handler: McpToolHookHandler, input: HookHandlerInput, options?: McpHandlerOptions): Promise<HookOutcome>
+substituteTemplates	export declare function substituteTemplates(value: unknown, scope: Readonly<Record<string, unknown>>, path?: string): unknown
+templateScope	export declare function templateScope(input: HookHandlerInput): Record<string, unknown>
+tokenizeCommand	export declare function tokenizeCommand(command: string): string[]
+type CommandHandlerOptions	export { type CommandHandlerOptions, DEFAULT_HANDLER_TIMEOUT_SECONDS, type HookHandlerInput, type HookOutcome, hookStdinPayload, parseHookDecision, runCommandHandler, tokenizeCommand, } from "./handlers/command.js"
+type CommandHookHandler	export { type CommandHookHandler, DEFAULT_ADDITIONAL_CONTEXT_LIMIT, HOOK_EVENT_NAMES, type HookDefinition, type HookEventName, type HookHandler, type HooksConfig, HooksConfigError, type McpToolHookHandler, parseHooksConfig, } from "./schema.js"
+type ContextQueue	export { type ContextQueue, createContextQueue, defaultHookOutputDir, estimateContextTokens, } from "./async-queue.js"
+type HookDefinition	export { type CommandHookHandler, DEFAULT_ADDITIONAL_CONTEXT_LIMIT, HOOK_EVENT_NAMES, type HookDefinition, type HookEventName, type HookHandler, type HooksConfig, HooksConfigError, type McpToolHookHandler, parseHooksConfig, } from "./schema.js"
+type HookEventName	export { type CommandHookHandler, DEFAULT_ADDITIONAL_CONTEXT_LIMIT, HOOK_EVENT_NAMES, type HookDefinition, type HookEventName, type HookHandler, type HooksConfig, HooksConfigError, type McpToolHookHandler, parseHooksConfig, } from "./schema.js"
+type HookHandler	export { type CommandHookHandler, DEFAULT_ADDITIONAL_CONTEXT_LIMIT, HOOK_EVENT_NAMES, type HookDefinition, type HookEventName, type HookHandler, type HooksConfig, HooksConfigError, type McpToolHookHandler, parseHooksConfig, } from "./schema.js"
+type HookHandlerInput	export { type CommandHandlerOptions, DEFAULT_HANDLER_TIMEOUT_SECONDS, type HookHandlerInput, type HookOutcome, hookStdinPayload, parseHookDecision, runCommandHandler, tokenizeCommand, } from "./handlers/command.js"
+type HookOutcome	export { type CommandHandlerOptions, DEFAULT_HANDLER_TIMEOUT_SECONDS, type HookHandlerInput, type HookOutcome, hookStdinPayload, parseHookDecision, runCommandHandler, tokenizeCommand, } from "./handlers/command.js"
+type HooksConfig	export { type CommandHookHandler, DEFAULT_ADDITIONAL_CONTEXT_LIMIT, HOOK_EVENT_NAMES, type HookDefinition, type HookEventName, type HookHandler, type HooksConfig, HooksConfigError, type McpToolHookHandler, parseHooksConfig, } from "./schema.js"
+type HooksExtension	export { createHooksExtension, type HooksExtension, type HooksExtensionOptions, type HooksWarning, hookCommandHash } from "./compile.js"
+type HooksExtensionOptions	export { createHooksExtension, type HooksExtension, type HooksExtensionOptions, type HooksWarning, hookCommandHash } from "./compile.js"
+type HooksWarning	export { createHooksExtension, type HooksExtension, type HooksExtensionOptions, type HooksWarning, hookCommandHash } from "./compile.js"
+type McpHandlerOptions	export { type McpHandlerOptions, type McpToolClient, runMcpToolHandler, substituteTemplates, templateScope, } from "./handlers/mcp.js"
+type McpToolClient	export { type McpHandlerOptions, type McpToolClient, runMcpToolHandler, substituteTemplates, templateScope, } from "./handlers/mcp.js"
+type McpToolHookHandler	export { type CommandHookHandler, DEFAULT_ADDITIONAL_CONTEXT_LIMIT, HOOK_EVENT_NAMES, type HookDefinition, type HookEventName, type HookHandler, type HooksConfig, HooksConfigError, type McpToolHookHandler, parseHooksConfig, } from "./schema.js"

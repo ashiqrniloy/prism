@@ -53,6 +53,7 @@ describe("run limits", () => {
         maxOutputTokens: 10_000,
         maxTotalTokens: 50_000,
         maxCost: undefined,
+        maxStopContinuations: 3,
       },
     );
     assert.deepEqual({ ...HARD_RUN_LIMITS }, { maxRequestBytes: 64 * 1024 * 1024, maxResponseBytes: 64 * 1024 * 1024 });

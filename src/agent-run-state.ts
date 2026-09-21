@@ -95,11 +95,12 @@ export interface StoredAgentRunState extends AgentRunState {
    */
   readonly checkpointPolicy?: "every-turn";
   /**
-   * Set when a terminal state was written by a `RunOptions.turnPolicy` stop (plan 084 Task 2):
-   * the run succeeded cleanly but its frontier is intact, so `decision: "continue"` may resume
-   * it. Absent on every other state — a naturally finished run is never continuable.
+   * Set when a terminal state was written by a clean run-end stop that leaves the frontier intact:
+   * a `RunOptions.turnPolicy` stop (`host_policy`, plan 084 Task 2) or a stop-hook continuation cap
+   * (`hook_limit`, plan 106 R1). The run succeeded but `decision: "continue"` may resume it. Absent
+   * on every other state — a naturally finished run is never continuable.
    */
-  readonly stopReason?: "host_policy";
+  readonly stopReason?: "host_policy" | "hook_limit";
 }
 
 /** Session-state caps (plan 015 Task 4): bounded names charged against the run-state byte budget. */
@@ -451,7 +452,7 @@ export function parseAgentRunState(value: unknown, version?: number): StoredAgen
   if (state.checkpointPolicy !== undefined && state.checkpointPolicy !== "every-turn") {
     throw new AgentRunStateError("Malformed agent run checkpoint policy");
   }
-  if (state.stopReason !== undefined && state.stopReason !== "host_policy") {
+  if (state.stopReason !== undefined && state.stopReason !== "host_policy" && state.stopReason !== "hook_limit") {
     throw new AgentRunStateError("Malformed agent run stop reason");
   }
   // Load bounds against the hard cap, not the default: the configured maxStateBytes is a

@@ -8,6 +8,7 @@ APIs:
 
 - `createExtensionKernel()` / `ExtensionKernel`
 - `createExtensionEventBus()` / `ExtensionEventBus`
+- `forwardAgentEvents()` / `AgentEventBridgeOptions`
 - `ExtensionAPI`, `ExtensionEvent`, and `extension_error` events
 - Shared `MiddlewareRegistry` access and `api.use()` registration
 
@@ -42,7 +43,8 @@ createExtensionEventBus(options?: { errorPolicy?: "event" | "throw"; secrets?: r
 - `kernel.events.on(type, handler)` registers ordered event handlers and returns an unsubscribe function.
 - `kernel.events.emit(event)` calls matching handlers in registration order.
 - `kernel.middleware.run(hook, value)` runs matching middleware in registration order.
-- `activateKernel(kernel)` copies the `createAgent()` array slots into one config: `{ tools, skills, instructionInjectors, context, commands, middleware }`. Contributions stay inert until the host passes them into runtime config; single-slot builders, `compaction`/`retry`, provider/model selection, and skill activation remain host-owned decisions.
+- `forwardAgentEvents(source, events, options?)` is host-invoked wiring for a live `AgentEvent` stream: it maps `agent_started` → `before_agent_start`, `turn_started`/`turn_finished` → `turn`, `tool_execution_started` → `tool_call`, and `tool_execution_finished` → `tool_result`, carrying the original event as read-only `payload`. Other events are ignored. Handlers run in event order and never in the run's path, so a slow or throwing listener cannot stall or fail the observed run; the returned function stops forwarding and releases the source iterator. Bridge failures go to `options.onError` (or become `extension_error` under the bus's own policy) — never to the run.
+- `activateKernel(kernel)` copies the `createAgent()` array slots into one config: `{ tools, skills, instructionInjectors, context, stopHooks, commands, middleware }`. Contributions stay inert until the host passes them into runtime config; single-slot builders, `compaction`/`retry`, provider/model selection, and skill activation remain host-owned decisions.
 - With default `errorPolicy: "event"`, setup/listener/middleware errors become `extension_error` events with redacted `ErrorInfo`.
 - With `errorPolicy: "throw"`, setup/listener/middleware errors reject/throw.
 
@@ -58,7 +60,7 @@ createExtensionEventBus(options?: { errorPolicy?: "event" | "throw"; secrets?: r
 ## Implementation example
 
 ```ts
-import { activateKernel, createAgent, createExtensionKernel, type Extension } from "@arnilo/prism";
+import { activateKernel, createAgent, createExtensionKernel, forwardAgentEvents, type Extension } from "@arnilo/prism";
 
 const extension: Extension = {
   name: "demo-extension",
@@ -76,9 +78,11 @@ const extension: Extension = {
     api.registerAgent({ name: "demo", create: () => createAgent({ model, provider }) });
     api.registerCompactionStrategy({ name: "compact", compact: () => ({ summary: "summary" }) });
     api.registerRetryPolicy({ name: "retry", decide: () => ({ retry: false }) });
-    api.on("session_start", (event) => {
+    api.registerStopHook({ name: "checklist", decide: (ctx) => (ctx.stopHookActive ? { action: "stop" } : { action: "continue", reason: "Verify the checklist." }) });
+    api.on("demo:ready", (event) => {
       console.log(event.type);
     });
+    api.use("session_start", (payload) => payload);
     api.use("provider_request", (request) => request);
     api.use("compaction", (payload) => payload);
     api.use("retry", (payload) => payload);
@@ -105,9 +109,16 @@ const agent = createAgent({
   tools: activated.tools,
   skills: activated.skills,
   instructionInjectors: activated.instructionInjectors,
+  stopHooks: activated.stopHooks,
   context: activated.context,
   middleware: activated.middleware,
 });
+
+// Forward live AgentEvents onto the bus; stop() ends forwarding and releases the subscription.
+const session = agent.createSession();
+const stop = forwardAgentEvents(session.subscribe(), kernel.events, { onError: (error) => console.warn(error) });
+// const run = await session.run("Hi");
+// stop();
 ```
 
 ## Extension and configuration notes
@@ -120,6 +131,9 @@ const agent = createAgent({
 - `api.registerInputBuilder()`, `api.registerPromptBuilder()`, and `api.registerContextProvider()` contribute inert builders/providers; they do not replace defaults or run until the host passes selected entries to Phase 5 helpers.
 - `api.registerSkill()` contributes an inert `Skill` to `registries.skills`; it does not disclose instructions, activate referenced tools, or grant permissions until the host selects it.
 - `api.registerInstructionInjector()` (Phase 30) contributes an inert `InstructionInjector` to `registries.instructionInjectors`; it grants no tools, skills, or permissions and is only applied when the host selects it via `AgentConfig.instructionInjectors`/`RunOptions.instructionInjectors`. See [Instruction injection](instruction-injection.md).
+- `api.registerStopHook()` contributes an inert run-end `StopHook` to `registries.stopHooks`; `activateKernel()` copies it into `stopHooks` for `createAgent({ stopHooks })`, and `LoadedExtension.dispose()` unwinds it. Hooks decide at a natural loop end only — see [Hooks](hooks.md).
+- `forwardAgentEvents()` is host-invoked wiring, not a runtime default, and it observes only: the bus never transforms what the run sees. Prefer `session.subscribe()` directly when the host wants the raw stream; use the bridge when extension packages already listen on the bus.
+- Session lifecycle middleware (`session_start`/`session_shutdown`) is dispatched by the agent/session runtime when the host passes its registry to `AgentConfig.middleware` — see [Middleware hooks](middleware-hooks.md).
 - `api.registerProviderPackage()`, `api.registerAuthMethod()`, `api.registerProviderRequestPolicy()`, and `api.registerSystemPromptContribution()` contribute inert provider-package data; they do not load packages, resolve credentials, mutate provider payloads, or change prompts until selected by a host/runtime helper that documents that behavior.
 - `api.registerAgent()` contributes an inert `AgentDefinition`; its `create()` can call `createAgent()`, but the runtime is not started until host code resolves the definition and creates/runs a session.
 - The kernel registers middleware only into the explicit registry returned by `createMiddlewareRegistry()` or provided by the host.
@@ -144,7 +158,10 @@ const agent = createAgent({
 - [Contribution registries](contribution-registries.md): registry bundle populated by `ExtensionAPI`.
 - [Contribution discovery (workspace)](contribution-discovery.md): filesystem-driven complement to extension registration — opt-in scan without `import()` or activation.
 - [Tools](tools.md): host activation, filtering, and dispatch for contributed tool definitions.
+- [Middleware hooks](middleware-hooks.md): hook names, payloads, and the dispatched `session_start`/`session_shutdown` call sites.
+- [Agent events](agent-events.md): the `AgentEvent` union the bridge forwards.
 - [Instruction injection](instruction-injection.md): package injectors that layer instructions and context blocks for `first_turn`/`every_turn`/`on_input` without granting tools.
+- [Hooks](hooks.md): the hook model and event map, plus run-end stop hooks contributed through `ExtensionAPI.registerStopHook()`.
 - [Input and prompt assembly](input-and-prompt-assembly.md): host selection for contributed input/prompt builders.
 - [System prompts](system-prompts.md): host selection for contributed system prompt layers.
 - [Context and skills](context-and-skills.md): host selection and tool checks for contributed context providers and skills.

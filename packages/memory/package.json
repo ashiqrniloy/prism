@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-memory",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Memory and context family for Prism: working/semantic memory, RAG, compaction strategies, Graft bridge, and Wiki with bundled skills.",
   "type": "module",
   "main": "./dist/index.js",
@@ -67,7 +67,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.9.0",
+    "@arnilo/prism": "^0.10.0",
     "@nanonets/graft": "^0.16.0 || ^0.18.0"
   },
   "peerDependenciesMeta": {

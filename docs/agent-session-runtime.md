@@ -14,6 +14,7 @@ The agent/session runtime adds the minimal shared SDK surface for running provid
 - `session.compact(options?)`
 - `session.contextMeter()` → `ContextMeter` (latest provider-turn input tokens, reported or labeled estimate, with cap/budget/ratio)
 - `session.subscribe(options?)`
+- `session.close()` → dispatches `session_shutdown` middleware once, then closes every subscriber
 - `session.abort()`
 - `session.entries()`
 - `session.checkout(leafId?)`
@@ -57,6 +58,8 @@ string | Message | readonly Message[]
 ## Outputs / response / events
 
 `session.fork(options?)` / `session.clone(options?)` take `AgentSessionForkOptions` / `AgentSessionCloneOptions` (leaf id, new session id, metadata, and store overrides), and `session.steer(input, options?)` takes `SteerOptions`. See [Public contracts](public-contracts.md) for the field tables, and the [options index](options-index.md) for every session option surface.
+
+`session.close()` is the session teardown seam: it dispatches `session_shutdown` middleware exactly once (idempotent — a second `close()` dispatches nothing) and then closes every subscriber, run-scoped and `acrossRuns` alike. It does not abort an active run, so call it after the run settles. `session_start` middleware, the mirror dispatch, runs once at the session's first run start (the two hooks are the only per-session middleware calls — every other hook is per turn or per boundary). See [Middleware hooks](middleware-hooks.md).
 
 `session.run()` / `session.prompt()` resolve to an `AgentRunResult` with `sessionId`, `runId`, `status`, `text`, `content`, optional `message`/`usage`/`leafId`, and terminal `error`/`abortReason` when applicable. Callers may ignore the return value. Failed and aborted runs still emit their terminal events, then reject with `AgentRunError` whose `.result` carries the same shape.
 

@@ -45,6 +45,35 @@ export interface TurnPolicyOptions {
   readonly stop?: (context: TurnBoundaryContext) => TurnStopDecision;
 }
 
+/**
+ * Run-end stop-hook contract (plan 106 R1). Stop hooks run at a natural loop end — never after a
+ * loop ceiling, a host turn-policy stop, or an artifact failure — and decide whether the run is
+ * done. The first `continue` queues `reason` (plus optional `steer`) through the same steer path a
+ * host would use and re-enters the loop; `stop` (or no hook continuing) ends the run normally.
+ */
+export interface StopHookContext {
+  readonly sessionId: string;
+  readonly runId: string;
+  /** Provider turns already assembled in this run (resumption continues the run's counter). */
+  readonly turn: number;
+  /** Live transcript at loop end; hooks read it, never mutate it. */
+  readonly history: readonly Message[];
+  readonly metadata: Readonly<Record<string, unknown>>;
+  readonly signal: AbortSignal;
+  /** True on every invocation after the first continuation in this run (Claude Code `stop_hook_active`). */
+  readonly stopHookActive: boolean;
+}
+
+/** `continue` re-enters the loop with `reason` queued as a steer (optional extra `steer` message follows it). */
+export type StopHookDecision =
+  | { readonly action: "stop" }
+  | { readonly action: "continue"; readonly reason: string; readonly steer?: string | Message };
+
+export interface StopHook {
+  readonly name: string;
+  decide(context: StopHookContext): StopHookDecision | Promise<StopHookDecision>;
+}
+
 export interface LoopContext {
   readonly sessionId: string;
   readonly runId: string;
@@ -53,6 +82,12 @@ export interface LoopContext {
   readonly history: Message[];
   readonly input: AgentInput;
   readonly inputMessages: readonly Message[];
+  /**
+   * True when this `run()` call is a stop-hook continuation re-entry (plan 106 R1): `input` and
+   * `inputMessages` are empty because the continuation message is already in `history`. Custom
+   * strategies must not replay run-start input when this is set.
+   */
+  readonly continuation?: boolean;
   readonly maxToolRounds: number;
   /**
    * Why the loop stopped, when a limit/ceiling ends the run cleanly (F4). Strategies set
