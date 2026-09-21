@@ -101,7 +101,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@ai-sdk/provider": "4.0.13",
+    "@ai-sdk/provider": "4.0.17",
     "@arnilo/prism": "^0.10.0"
   },
   "peerDependenciesMeta": {
@@ -110,8 +110,8 @@
     }
   },
   "devDependencies": {
-    "@ai-sdk/openai": "4.0.65",
-    "@ai-sdk/provider": "4.0.13",
+    "@ai-sdk/openai": "4.0.70",
+    "@ai-sdk/provider": "4.0.17",
     "@arnilo/prism": "file:../.."
   },
   "engines": {
