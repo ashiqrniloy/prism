@@ -65,11 +65,7 @@ describe("policy.recall", () => {
   });
 
   it("clamps to topK and ranks by combined score, not raw similarity", async () => {
-    const hits = [
-      hit("weak", 0.9),
-      hit("hot", 0.4),
-      ...Array.from({ length: 8 }, (_, i) => hit(`n${i}`, 0.5)),
-    ];
+    const hits = [hit("weak", 0.9), hit("hot", 0.4), ...Array.from({ length: 8 }, (_, i) => hit(`n${i}`, 0.5))];
     const { root, policy } = await boundPolicy(hits);
     await mkdir(join(root, ".memory"), { recursive: true });
     await writeFile(

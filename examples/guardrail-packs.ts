@@ -39,8 +39,7 @@ import { createGuardrailPackScorer, runScenario } from "@arnilo/prism-core/gover
 const MODEL = { provider: "mock", model: "guardrail-packs-demo" } as const;
 const FINISH: readonly ProviderEvent[] = [providerTextDelta("done"), providerDone()];
 
-const call = (id: string, name: string, args: JsonObject): ProviderEvent =>
-  providerToolCall(toolCallContent(id, name, args));
+const call = (id: string, name: string, args: JsonObject): ProviderEvent => providerToolCall(toolCallContent(id, name, args));
 
 /** One provider turn per `generate()`; the last script entry repeats, so every run terminates. */
 function scriptedProvider(script: readonly (readonly ProviderEvent[])[]): AIProvider {
@@ -77,8 +76,7 @@ async function refusalsOf(store: MemorySessionStore, sessionId: string): Promise
   const refusals: { tool: string; message: string }[] = [];
   for (const entry of await store.list(sessionId)) {
     for (const part of entry.message?.content ?? []) {
-      const block: Extract<ContentBlock, { type: "tool_result" }> | undefined =
-        part.type === "tool_result" ? part : undefined;
+      const block: Extract<ContentBlock, { type: "tool_result" }> | undefined = part.type === "tool_result" ? part : undefined;
       if (block?.error?.message) refusals.push({ tool: block.name, message: block.error.message });
     }
   }
@@ -122,10 +120,7 @@ async function scoredScenario(executed: string[]): Promise<string> {
     id: "pack-demo-eval",
     model: { ...MODEL },
     store: createMemorySessionStore(),
-    provider: scriptedProvider([
-      [call("c1", "shell", { command: "rm -rf ./build" }), providerDone()],
-      FINISH,
-    ]),
+    provider: scriptedProvider([[call("c1", "shell", { command: "rm -rf ./build" }), providerDone()], FINISH]),
     tools: [recordingTool("shell", executed)],
   });
   const scenario = await runScenario({
@@ -165,7 +160,10 @@ async function durableAsk(executed: string[]): Promise<{ rule?: string; dispatch
     id: "pack-demo-ask",
     model: { ...MODEL },
     store: createMemorySessionStore(),
-    provider: scriptedProvider([[call("d1", "deploy", { version: "prod-7" }), providerDone()], [providerTextDelta("shipped"), providerDone()]]),
+    provider: scriptedProvider([
+      [call("d1", "deploy", { version: "prod-7" }), providerDone()],
+      [providerTextDelta("shipped"), providerDone()],
+    ]),
     tools: [recordingTool("deploy", executed)],
   });
   const session = agent.createSession({ id: "pack-ask", guardrailPacks: [askPack] });

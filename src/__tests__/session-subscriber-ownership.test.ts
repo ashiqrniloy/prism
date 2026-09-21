@@ -48,10 +48,7 @@ async function drainRunEvents(iterator: AsyncIterator<AgentEvent>, runs: number)
 async function drainAvailable(iterator: AsyncIterator<AgentEvent>): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
   for (;;) {
-    const outcome = await Promise.race([
-      iterator.next(),
-      new Promise<"parked">((resolve) => setTimeout(() => resolve("parked"), 20)),
-    ]);
+    const outcome = await Promise.race([iterator.next(), new Promise<"parked">((resolve) => setTimeout(() => resolve("parked"), 20))]);
     if (outcome === "parked" || outcome.done) return events;
     events.push(outcome.value);
   }
@@ -183,7 +180,10 @@ describe("session subscriber ownership (plan 104 Task 5)", () => {
     assert.equal(ended, "aborted", "an aborted run still ends the stream");
     assert.equal(terminal.at(-1), "error", "the terminal event lands before the rejection");
     const hostEvents = await drainAvailable(hostOwned);
-    assert.ok(hostEvents.some((event) => event.type === "error"), "the acrossRuns subscriber saw the aborted run's terminal event");
+    assert.ok(
+      hostEvents.some((event) => event.type === "error"),
+      "the acrossRuns subscriber saw the aborted run's terminal event",
+    );
     assert.equal(await parked(hostOwned), true, "an abort closes nothing the host owns explicitly");
     await hostOwned.return?.();
 

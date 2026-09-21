@@ -183,7 +183,10 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
       agent,
       { runId: result.runId, sessionId: result.sessionId },
       {
-        decisions: (result.interruption?.pendingDecisions ?? []).map((entry) => ({ approvalId: entry.approvalId, outcome: "allow_once" as const })),
+        decisions: (result.interruption?.pendingDecisions ?? []).map((entry) => ({
+          approvalId: entry.approvalId,
+          outcome: "allow_once" as const,
+        })),
         expectedVersion: secondVersion,
       },
       { checkpoints, definitionRevision: "1" },
@@ -284,7 +287,10 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
     assert.equal(resumed.status, "succeeded", "the run continues after the refusal");
     assert.deepEqual(executions, [], "the approved call still never executed");
     const refusal = await toolResultOf(store, "ask-no-widen");
-    assert.ok(String(refusal?.error?.message).includes("pack:deploy-guard/deny-prod"), "the denial names the deny rule, not the approved one");
+    assert.ok(
+      String(refusal?.error?.message).includes("pack:deploy-guard/deny-prod"),
+      "the denial names the deny rule, not the approved one",
+    );
   });
 
   it("does not gate calls the rule does not match", async () => {

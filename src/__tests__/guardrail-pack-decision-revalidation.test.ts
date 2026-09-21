@@ -140,7 +140,12 @@ describe("pack decision-time revalidation (plan 104 Task 6)", () => {
     assert.equal(untouched.state.stickyDecisions ?? undefined, undefined, "no sticky decision is written");
 
     // The same suspension is still decidable as-is: the refusal changed nothing but the decision.
-    const resumed = await resumeAgentRun(agent, ref, { decisions: [{ approvalId, outcome: "allow_once" }], expectedVersion }, DURABLE(checkpoints));
+    const resumed = await resumeAgentRun(
+      agent,
+      ref,
+      { decisions: [{ approvalId, outcome: "allow_once" }], expectedVersion },
+      DURABLE(checkpoints),
+    );
     assert.equal(resumed.status, "succeeded");
     assert.deepEqual(calls, [{ version: "prod-1" }]);
   });
@@ -231,7 +236,12 @@ describe("pack decision-time revalidation (plan 104 Task 6)", () => {
         ),
       (error: unknown) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID",
     );
-    const resumed = await resumeAgentRun(agent, ref, { decisions: [{ approvalId, outcome: "allow_for_run" }], expectedVersion }, DURABLE(checkpoints));
+    const resumed = await resumeAgentRun(
+      agent,
+      ref,
+      { decisions: [{ approvalId, outcome: "allow_for_run" }], expectedVersion },
+      DURABLE(checkpoints),
+    );
     assert.equal(resumed.status, "succeeded");
     assert.deepEqual(calls, [{ version: "prod-1" }], "the unedited allowance dispatched the call it was given");
   });

@@ -52,10 +52,7 @@ describe("policy.rememberFact / approve", () => {
     for (const [text, cls, leak] of fixtures) {
       await assert.rejects(
         () => policy.rememberFact(text),
-        (error: unknown) =>
-          error instanceof MemoryValidationError &&
-          error.message.includes(cls) &&
-          !error.message.includes(leak),
+        (error: unknown) => error instanceof MemoryValidationError && error.message.includes(cls) && !error.message.includes(leak),
       );
     }
     assert.equal(readFabricBlock(await memory.getWorking(), "facts"), undefined);
@@ -76,9 +73,7 @@ describe("policy.rememberFact / approve", () => {
     });
     assert.deepEqual(await policy.gcPass(), { proposed: 1, archived: 0 });
     await policy.reviewSession("remember this", {
-      reviewer: async () => [
-        { kind: "fact", content: "User prefers metric units", sourceEntryIds: ["aaaaaaaaaaaa"] },
-      ],
+      reviewer: async () => [{ kind: "fact", content: "User prefers metric units", sourceEntryIds: ["aaaaaaaaaaaa"] }],
     });
 
     const pending = await policy.pending();
@@ -91,7 +86,10 @@ describe("policy.rememberFact / approve", () => {
 
     await policy.reject(archive!.id);
     const identity = { tenantId: "t1", resourceId: root, threadId: "scoped" };
-    assert.equal((await memory.exportMemory({ identity })).entries.some((entry) => entry.id === stale.id), true);
+    assert.equal(
+      (await memory.exportMemory({ identity })).entries.some((entry) => entry.id === stale.id),
+      true,
+    );
 
     await policy.approve(review!.id);
     assert.equal((await fabric.recall("User prefers metric units")).hits.length > 0, true);

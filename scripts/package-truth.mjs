@@ -196,7 +196,8 @@ export const PACKAGE_NOTES = {
   "@arnilo/prism-providers": "family — all provider adapters as `/<adapter>` subpaths",
   "@arnilo/prism-acp-agent": "capability — ACP adapter",
   "@arnilo/prism-ag-ui": "capability — AG-UI/A2A/A2UI adapter",
-  "@arnilo/prism-hooks": "capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams",
+  "@arnilo/prism-hooks":
+    "capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams",
   "@arnilo/prism-mcp": "capability — MCP client/server/OAuth interop",
   "@arnilo/prism-memory": "capability — memory plus /rag, /compaction/*, /fabric, /graft, /wiki subpaths",
   "@arnilo/prism-work": "capability — /connectors, /documents, /sheets, /diagrams, /document-reader, /sandbox, /skills, /tools subpaths",

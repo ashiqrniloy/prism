@@ -53,7 +53,10 @@ describe("policy.renderMirror", () => {
     assert.deepEqual(await snapshot(join(root, ".memory")), first);
     assert.equal(first[".gitignore"], "state.json\n");
     assert.equal(first["facts.md"], "workspace uses pnpm\n");
-    assert.equal(Object.keys(first).some((k) => k.startsWith("notes/") && k.endsWith(".md")), true);
+    assert.equal(
+      Object.keys(first).some((k) => k.startsWith("notes/") && k.endsWith(".md")),
+      true,
+    );
   });
 
   it("closed validTo and uses render; archived notes are absent", async () => {

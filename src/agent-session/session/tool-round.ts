@@ -147,9 +147,7 @@ function askDecisionReason(ask: GuardrailRecord): string {
   const line = `Approval required by guardrail rule ${ask.guardrail}`;
   const text = ask.reason && ask.reason !== defaultReason ? `${line}: ${ask.reason}` : line;
   const bytes = new TextEncoder().encode(text);
-  return bytes.length <= MAX_ASK_DECISION_REASON_BYTES
-    ? text
-    : new TextDecoder().decode(bytes.subarray(0, MAX_ASK_DECISION_REASON_BYTES));
+  return bytes.length <= MAX_ASK_DECISION_REASON_BYTES ? text : new TextDecoder().decode(bytes.subarray(0, MAX_ASK_DECISION_REASON_BYTES));
 }
 
 export async function applyNestedRun(
@@ -322,16 +320,7 @@ export function bindChargeToolRound(ctx: RoundContext): LoopContext["chargeToolR
       ctx.session.activeGatedRound ??= new Map();
       ctx.session.activeGatedRound.set(call.id, {
         entry: { call, status: "ready", approvalId },
-        decision: buildPendingDecision(
-          ctx.session,
-          call,
-          approvalId,
-          ctx.registry,
-          ctx.runId,
-          ctx.metadata,
-          ctx.controller.signal,
-          ask,
-        ),
+        decision: buildPendingDecision(ctx.session, call, approvalId, ctx.registry, ctx.runId, ctx.metadata, ctx.controller.signal, ask),
       });
     }
     if (ctx.session.activeGatedRound && ctx.session.activeGatedRound.size > DEFAULT_MAX_PENDING_DECISIONS) {

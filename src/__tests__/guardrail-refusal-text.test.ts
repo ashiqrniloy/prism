@@ -43,7 +43,11 @@ function writeAgent(
   path: string,
   content: string,
   tools: readonly ToolDefinition[],
-  options: { readonly reason?: string; readonly action?: "deny" | "tripwire"; readonly redactor?: ReturnType<typeof createSecretRedactor> } = {},
+  options: {
+    readonly reason?: string;
+    readonly action?: "deny" | "tripwire";
+    readonly redactor?: ReturnType<typeof createSecretRedactor>;
+  } = {},
 ) {
   const requests: unknown[] = [];
   const events: AgentEvent[] = [];
@@ -123,7 +127,9 @@ describe("guardrail refusal text (plan 104 Task 4)", () => {
     const { agent } = writeAgent("/repo/src/app.test.ts", "x", [writeTool([])]);
     const session = agent.createSession({
       id: "refusal-no-reason",
-      guardrailPacks: [{ id: "coding-standard", rules: [{ id: "no-test-rewrites", tool: "write", argPath: "path", pattern: "\\.test\\.ts$" }] }],
+      guardrailPacks: [
+        { id: "coding-standard", rules: [{ id: "no-test-rewrites", tool: "write", argPath: "path", pattern: "\\.test\\.ts$" }] },
+      ],
       store,
     });
     const result = await session.run("rewrite the test file");
@@ -187,7 +193,9 @@ describe("guardrail refusal text (plan 104 Task 4)", () => {
       call,
       registry: createToolRegistry([tool]),
       context: { sessionId: "s1", runId: "r1", metadata: {}, toolCallId: "c1" },
-      guardrails: { toolOutput: [{ name: "host-output-policy", stage: "tool_output", evaluate: () => ({ action: "block", reason: "nope" }) }] },
+      guardrails: {
+        toolOutput: [{ name: "host-output-policy", stage: "tool_output", evaluate: () => ({ action: "block", reason: "nope" }) }],
+      },
       emit: (event) => {
         events.push(event);
       },

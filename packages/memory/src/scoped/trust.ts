@@ -34,9 +34,9 @@ function gist(value: string): string {
   return value.length <= GIST_CHARS ? value : value.slice(0, GIST_CHARS);
 }
 
-export async function listScopedPending(ledgerFile: string): Promise<
-  readonly { readonly id: string; readonly kind: "review" | "archive"; readonly gist: string; readonly createdAt: string }[]
-> {
+export async function listScopedPending(
+  ledgerFile: string,
+): Promise<readonly { readonly id: string; readonly kind: "review" | "archive"; readonly gist: string; readonly createdAt: string }[]> {
   const ledger = await loadScopedLedger(ledgerFile);
   const out: { id: string; kind: "review" | "archive"; gist: string; createdAt: string }[] = [];
   for (const item of ledger.pending) {

@@ -134,7 +134,11 @@ function resolveSettings(policy: ScopedMemoryPolicyKnobs | undefined): ScopedMem
   }
   return Object.freeze({
     promotion: Object.freeze({
-      reuseThreshold: positiveInt(policy.promotion?.reuseThreshold, DEFAULT_SETTINGS.promotion.reuseThreshold, "policy.promotion.reuseThreshold"),
+      reuseThreshold: positiveInt(
+        policy.promotion?.reuseThreshold,
+        DEFAULT_SETTINGS.promotion.reuseThreshold,
+        "policy.promotion.reuseThreshold",
+      ),
     }),
     decay: Object.freeze({
       tauDays: positiveNumber(policy.decay?.tauDays, DEFAULT_SETTINGS.decay.tauDays, "policy.decay.tauDays"),
@@ -182,7 +186,10 @@ export function createScopedMemoryPolicy(options: CreateScopedMemoryPolicyOption
     settings,
     recall: (query: string, recallOptions?: MemoryFabricRecallOptions) =>
       recallScopedMemory({ fabric, ledgerFile, settings }, query, recallOptions),
-    reviewSession: (digest: string | readonly unknown[], reviewOptions: { readonly reviewer: ScopedMemoryReviewer; readonly prompt?: string }) => {
+    reviewSession: (
+      digest: string | readonly unknown[],
+      reviewOptions: { readonly reviewer: ScopedMemoryReviewer; readonly prompt?: string },
+    ) => {
       if (typeof reviewOptions?.reviewer !== "function") {
         throw new MemoryValidationError("reviewSession requires reviewer");
       }
@@ -198,12 +205,10 @@ export function createScopedMemoryPolicy(options: CreateScopedMemoryPolicyOption
     promotionPass: () => runScopedPromotionPass({ memory, ledgerFile, settings }),
     gcPass: () => runScopedGcPass({ memory, ledgerFile, settings }),
     health: () => scopedMemoryHealth(ledgerFile),
-    rememberFact: (text: string) =>
-      rememberScopedFact({ memory, block: settings.facts.block, maxChars: settings.facts.maxChars, text }),
+    rememberFact: (text: string) => rememberScopedFact({ memory, block: settings.facts.block, maxChars: settings.facts.maxChars, text }),
     pending: () => listScopedPending(ledgerFile),
     approve: (id: string) => approveScopedPending({ fabric, ledgerFile, id }),
     reject: (id: string) => rejectScopedPending({ ledgerFile, id }),
-    renderMirror: () =>
-      renderScopedMirror({ memory, scopeRoot, ledgerFile, factsBlock: settings.facts.block }),
+    renderMirror: () => renderScopedMirror({ memory, scopeRoot, ledgerFile, factsBlock: settings.facts.block }),
   });
 }

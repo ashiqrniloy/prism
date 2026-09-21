@@ -41,7 +41,12 @@ async function exportAll(memory: Memory): Promise<readonly MemoryVectorRecord[]>
   return entries;
 }
 
-function renderNote(record: MemoryVectorRecord, status: "candidate" | "verified", uses: number, lastUsedAt: string | undefined): string | undefined {
+function renderNote(
+  record: MemoryVectorRecord,
+  status: "candidate" | "verified",
+  uses: number,
+  lastUsedAt: string | undefined,
+): string | undefined {
   const meta = parseMemoryNoteMetadata(record.metadata);
   if (!meta) return undefined;
   if (!scanScopedMemoryContent(record.text).ok) return undefined;

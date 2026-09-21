@@ -90,6 +90,13 @@ export async function recallScopedMemory(
   const ledger = await loadScopedLedger(input.ledgerFile);
   const result = applyReadPolicy(recalled.hits, recalled.explain, ledger, input.settings, now);
   if (result.hits.length === 0) return result;
-  await saveScopedLedger(input.ledgerFile, touchScopedLedger(ledger, result.hits.map((hit) => hit.id), new Date(now).toISOString()));
+  await saveScopedLedger(
+    input.ledgerFile,
+    touchScopedLedger(
+      ledger,
+      result.hits.map((hit) => hit.id),
+      new Date(now).toISOString(),
+    ),
+  );
   return result;
 }

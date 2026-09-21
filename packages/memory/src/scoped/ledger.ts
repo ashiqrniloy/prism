@@ -54,9 +54,7 @@ function parseScopedLedger(raw: string): ScopedMemoryLedger {
   const pending = (parsed as { pending?: unknown }).pending;
   const statsIn = (parsed as { stats?: unknown }).stats;
   const stats =
-    statsIn !== null && typeof statsIn === "object" && !Array.isArray(statsIn)
-      ? asStats(statsIn as Record<string, unknown>)
-      : undefined;
+    statsIn !== null && typeof statsIn === "object" && !Array.isArray(statsIn) ? asStats(statsIn as Record<string, unknown>) : undefined;
   return {
     notes,
     pending: Array.isArray(pending) ? pending : [],
@@ -67,7 +65,14 @@ function parseScopedLedger(raw: string): ScopedMemoryLedger {
 function asStats(row: Record<string, unknown>): { writes: number; duplicates: number } | undefined {
   const writes = row.writes;
   const duplicates = row.duplicates;
-  if (typeof writes !== "number" || typeof duplicates !== "number" || !Number.isFinite(writes) || !Number.isFinite(duplicates) || writes < 0 || duplicates < 0) {
+  if (
+    typeof writes !== "number" ||
+    typeof duplicates !== "number" ||
+    !Number.isFinite(writes) ||
+    !Number.isFinite(duplicates) ||
+    writes < 0 ||
+    duplicates < 0
+  ) {
     return undefined;
   }
   return { writes, duplicates };
