@@ -255,7 +255,7 @@ describe("packaging guard", () => {
     }
   });
 
-  it("memory family keeps rag/compaction/graft/wiki subpaths and the wiki bin in one tarball", () => {
+  it("memory family keeps rag/compaction/wiki subpaths and the wiki bin in one tarball", () => {
     const memory = readPkg("packages/memory");
     const exportsMap = memory.exports as Record<string, { types: string; default: string }>;
     assert.deepEqual(Object.keys(exportsMap).sort(), [
@@ -263,7 +263,6 @@ describe("packaging guard", () => {
       "./compaction/llm",
       "./compaction/observational-memory",
       "./fabric",
-      "./graft",
       "./rag",
       "./rag/loaders",
       "./rag/parsers",
@@ -271,9 +270,8 @@ describe("packaging guard", () => {
       "./wiki",
     ]);
     const peers = memory.peerDependencies as Record<string, string>;
-    const meta = memory.peerDependenciesMeta as Record<string, { optional?: boolean }>;
-    assert.equal(peers["@nanonets/graft"], "^0.16.0 || ^0.18.0", "graft subpath must peer @nanonets/graft");
-    assert.equal(meta["@nanonets/graft"]?.optional, true, "@nanonets/graft must stay an optional peer");
+    assert.deepEqual(Object.keys(peers).sort(), ["@arnilo/prism"], "memory keeps only the required @arnilo/prism peer");
+    assert.equal(memory.peerDependenciesMeta, undefined, "memory declares no optional peers");
     assert.equal(
       (memory.bin as Record<string, string>)["prism-wiki"],
       "./dist/wiki/cli.js",
@@ -285,7 +283,6 @@ describe("packaging guard", () => {
       "dist/rag/index.js",
       "dist/compaction/llm/index.js",
       "dist/compaction/observational-memory/index.js",
-      "dist/graft/index.js",
       "dist/wiki/cli.js",
       "skills/wiki-maintainer/SKILL.md",
       "skills/wiki-searcher/SKILL.md",

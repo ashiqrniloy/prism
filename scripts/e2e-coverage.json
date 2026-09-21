@@ -588,18 +588,6 @@
         ],
         "mode": ""
       },
-      "./graft": {
-        "suites": [
-          "packages/memory/src/graft/__tests__/cli.test.ts",
-          "packages/memory/src/graft/__tests__/commands.test.ts",
-          "packages/memory/src/graft/__tests__/edit-watch.test.ts",
-          "packages/memory/src/graft/__tests__/injector.test.ts",
-          "packages/memory/src/graft/__tests__/tools.test.ts",
-          "packages/memory/src/graft/__tests__/upstream.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": ""
-      },
       "./wiki": {
         "suites": [
           "packages/memory/src/wiki/__tests__/cli.test.ts",
@@ -918,27 +906,6 @@
       "./dev/cli": {
         "suites": [
           "packages/prism-coding-tools/src/dev/__tests__/cli.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": ""
-      },
-      "./caveman": {
-        "suites": [
-          "packages/prism-coding-tools/src/caveman/__tests__/caveman.test.ts",
-          "packages/prism-coding-tools/src/caveman/__tests__/index.test.ts",
-          "packages/prism-coding-tools/src/caveman/__tests__/packed-consumer.test.ts",
-          "packages/prism-coding-tools/src/caveman/__tests__/upstream.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": ""
-      },
-      "./ponytail": {
-        "suites": [
-          "packages/prism-coding-tools/src/ponytail/__tests__/index.test.ts",
-          "packages/prism-coding-tools/src/ponytail/__tests__/packed-consumer.test.ts",
-          "packages/prism-coding-tools/src/ponytail/__tests__/ponytail.test.ts",
-          "packages/prism-coding-tools/src/ponytail/__tests__/subagent-hook.test.ts",
-          "packages/prism-coding-tools/src/ponytail/__tests__/upstream.test.ts",
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": ""

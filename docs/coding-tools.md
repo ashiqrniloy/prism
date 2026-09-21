@@ -8,14 +8,11 @@ The `@arnilo/prism-coding-tools` family package unifies Prism's coding agent too
 npm install @arnilo/prism @arnilo/prism-coding-tools
 ```
 
-For document reading or specialized persona integrations, install the optional peer dependencies as needed:
+For document reading or specialized integrations, install the optional peer dependencies as needed:
 
 ```bash
 # PDF and DOCX document extraction
 npm install pdf-parse mammoth
-
-# Ponytail upstream integration
-npm install @dietrichgebert/ponytail
 ```
 
 ## Subpaths Map
@@ -28,8 +25,6 @@ npm install @dietrichgebert/ponytail
 | `@arnilo/prism-coding-tools/computer-use-linux` | Linux desktop observation and targeting tool bridge | — |
 | `@arnilo/prism-coding-tools/dev` | Loopback-only developer inspector, event timeline visualizer, and local replay server | — |
 | `@arnilo/prism-coding-tools/dev/cli` | Command-line entrypoint for `prism dev` | — |
-| `@arnilo/prism-coding-tools/caveman` | Caveman ultra-terse engineering persona extension | — |
-| `@arnilo/prism-coding-tools/ponytail` | Ponytail multi-agent planning and delegation persona extension | `@dietrichgebert/ponytail` |
 | `@arnilo/prism-coding-tools/impeccable` | Impeccable high-precision frontend engineering persona extension | — |
 
 ## CLI
@@ -65,17 +60,18 @@ const composition = createSandboxCodingComposition({
 
 ### Persona Extensions
 ```ts
-import { createCavemanExtension } from "@arnilo/prism-coding-tools/caveman";
-import { createPonytailExtension } from "@arnilo/prism-coding-tools/ponytail";
 import { createImpeccableExtension } from "@arnilo/prism-coding-tools/impeccable";
 
-const caveman = createCavemanExtension();
-const ponytail = createPonytailExtension();
 const impeccable = createImpeccableExtension();
 ```
+
+Host-owned personas (any upstream `SKILL.md` tree) need no package subpath: load it with
+`loadSkillDirectory` from `@arnilo/prism/node/contribution-discovery`, register the skills and an
+instruction injector from a host extension, and persist the active mode in session entries — see
+[`examples/caveman-ponytail.ts`](../examples/caveman-ponytail.ts).
 
 ## Security & Import Isolation
 
 - Importing `@arnilo/prism-coding-tools/agent` never loads Docker sandbox adapters, desktop MCP bridges, document parser peers, or Dev inspector modules.
-- Document parser peers (`pdf-parse`, `mammoth`) and Ponytail optional peer fail closed when absent.
+- Document parser peers (`pdf-parse`, `mammoth`) fail closed when absent.
 - Persona extensions are pure prompt and behavior modifiers and never gain implicit host privileges.

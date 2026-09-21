@@ -5,12 +5,10 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { createCodingTools, createEditTool, createReadTool, createWriteTool } from "../agent/index.js";
-import { createCavemanExtension } from "../caveman/index.js";
 import { createComputerUseLinuxTools } from "../computer-use-linux/index.js";
 import { compareInspectorRuns, createPrismDevInspector } from "../dev/index.js";
 import { createImpeccableExtension } from "../impeccable/index.js";
 import { createOpenApiTools } from "../openapi/index.js";
-import { createPonytailExtension } from "../ponytail/index.js";
 import { createCodingApprovalPolicy, createDockerSandbox, createE2BSandbox } from "../security/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -18,18 +16,8 @@ const pkgRoot = join(__dirname, "../..");
 const manifest = JSON.parse(readFileSync(join(pkgRoot, "package.json"), "utf8"));
 
 describe("@arnilo/prism-coding-tools conformance", () => {
-  it("exports all 9 subpaths with valid types and default entrypoints", () => {
-    const expectedSubpaths = [
-      "./agent",
-      "./security",
-      "./openapi",
-      "./computer-use-linux",
-      "./dev",
-      "./dev/cli",
-      "./caveman",
-      "./ponytail",
-      "./impeccable",
-    ];
+  it("exports all 7 subpaths with valid types and default entrypoints", () => {
+    const expectedSubpaths = ["./agent", "./security", "./openapi", "./computer-use-linux", "./dev", "./dev/cli", "./impeccable"];
     for (const subpath of expectedSubpaths) {
       assert.ok(manifest.exports[subpath], `Missing subpath export: ${subpath}`);
       assert.ok(manifest.exports[subpath].types, `Missing types for: ${subpath}`);
@@ -49,8 +37,6 @@ describe("@arnilo/prism-coding-tools conformance", () => {
     assert.equal(typeof createComputerUseLinuxTools, "function");
     assert.equal(typeof createPrismDevInspector, "function");
     assert.equal(typeof compareInspectorRuns, "function");
-    assert.equal(typeof createCavemanExtension, "function");
-    assert.equal(typeof createPonytailExtension, "function");
     assert.equal(typeof createImpeccableExtension, "function");
   });
 

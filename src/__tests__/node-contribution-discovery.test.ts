@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import { discoverContributions } from "../node/contribution-discovery.js";
+import { discoverContributions, loadSkillDirectory } from "../node/contribution-discovery.js";
 
 async function makeRoot(prefix: string): Promise<string> {
   return mkdtemp(join(tmpdir(), `prism-disc-${prefix}-`));
@@ -171,5 +171,45 @@ describe("discoverContributions", () => {
       types: "./dist/node/contribution-discovery.d.ts",
       default: "./dist/node/contribution-discovery.js",
     });
+  });
+});
+
+describe("loadSkillDirectory", () => {
+  it("loads `<dir>/<name>/SKILL.md` files sorted by name and skips non-skill entries", async () => {
+    const dir = await makeRoot("skilldir");
+    await writeFileDeep(`${dir}/zeta/SKILL.md`, "---\nname: zeta\n---\nz body\n");
+    await writeFileDeep(`${dir}/alpha/SKILL.md`, "---\nname: alpha\ndescription: a\n---\nalpha body\n");
+    await mkdir(`${dir}/not-a-skill`, { recursive: true });
+    await writeFile(`${dir}/stray.md`, "ignored");
+
+    const skills = await loadSkillDirectory(dir);
+
+    assert.deepEqual(
+      skills.map((s) => s.name),
+      ["alpha", "zeta"],
+    );
+    assert.equal(skills[0].description, "a");
+    assert.match(skills[0].instructions ?? "", /^alpha body/);
+  });
+
+  it("throws when the directory is not a readable skill directory", async () => {
+    await assert.rejects(loadSkillDirectory(join(tmpdir(), "prism-missing-skill-dir")), /No readable skill directory at/);
+  });
+
+  it("rejects a SKILL.md over the byte cap, including an overridden cap", async () => {
+    const dir = await makeRoot("skillcap");
+    await writeFileDeep(`${dir}/big/SKILL.md`, `---\nname: big\n---\n${"x".repeat(200)}\n`);
+
+    await assert.rejects(loadSkillDirectory(dir, { maxSkillBytes: 100 }), /exceeds 100 byte cap/);
+    assert.equal((await loadSkillDirectory(dir)).length, 1);
+  });
+
+  it("skips a skill directory symlink escaping the supplied root", async () => {
+    const dir = await makeRoot("skill-link");
+    const outside = await mkdtemp(join(tmpdir(), "prism-outside-skilldir-"));
+    await writeFileDeep(`${outside}/SKILL.md`, "---\nname: escaped\n---\nb\n");
+    await symlink(outside, `${dir}/escaped`, "dir");
+
+    assert.deepEqual(await loadSkillDirectory(dir), []);
   });
 });

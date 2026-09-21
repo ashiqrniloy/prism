@@ -226,8 +226,14 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
       ...(hasPromptPackage ? { "@arnilo/prism-prompts": ["@arnilo/prism-evals"] } : {}),
     });
   }
-  const ponytail = pkgs.find((p) => p.name === (hasCodingToolsPackage ? "@arnilo/prism-coding-tools" : "@arnilo/prism-ponytail"));
-  assert.equal(ponytail.peerDependencies["@dietrichgebert/ponytail"], "^4.9.0");
+  if (hasCodingToolsPackage) {
+    // Plan 107 Task 2: the caveman/ponytail persona subpaths and their optional peer are gone.
+    const codingTools = pkgs.find((p) => p.name === "@arnilo/prism-coding-tools");
+    assert.equal(codingTools.peerDependencies["@dietrichgebert/ponytail"], undefined);
+  } else {
+    const ponytail = pkgs.find((p) => p.name === "@arnilo/prism-ponytail");
+    assert.equal(ponytail.peerDependencies["@dietrichgebert/ponytail"], "^4.9.0");
+  }
   // Plan 054 Task 8: profile manifests are deleted; every workspace package is a
   // code package with a core peer, so nothing may lack one.
   if (hasWorkPackage) {

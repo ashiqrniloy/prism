@@ -3343,7 +3343,6 @@ describe("docs", () => {
         "examples/shared-work-scope.ts",
         "examples/skills-progressive-disclosure.ts",
         "examples/caveman-ponytail.ts",
-        "examples/graft-extension.ts",
         "examples/hooks-json.ts",
         "examples/cli.ts",
         "examples/rpc.ts",
@@ -4384,34 +4383,27 @@ describe("docs", () => {
 
   it("phase5_third_party_behavior_docs_cover_caveman_ponytail_migration_and_example", () => {
     const index = readFileSync("docs/index.md", "utf8");
-    const caveman = readFileSync("docs/caveman.md", "utf8");
-    const ponytail = readFileSync("docs/ponytail.md", "utf8");
     const extensions = readFileSync("docs/extensions.md", "utf8");
     const contextSkills = readFileSync("docs/context-and-skills.md", "utf8");
+    const discovery = readFileSync("docs/contribution-discovery.md", "utf8");
     const migration = migrationDoc();
 
     assert.ok(index.includes("Third-party integrations"), "docs/index.md missing Third-party integrations group");
-    assert.ok(index.includes("caveman.md"), "docs/index.md missing caveman link");
-    assert.ok(index.includes("ponytail.md"), "docs/index.md missing ponytail link");
     assert.ok(index.includes("impeccable.md"), "docs/index.md missing impeccable link");
 
-    for (const [name, text, tokens] of [
-      ["caveman.md", caveman, ["createCavemanExtension", "caveman-level", "caveman-mode", "upstreamPath", "appendEntry"]],
-      ["ponytail.md", ponytail, ["createPonytailExtension", "ponytail-mode", "ponytail-mode", "getPonytailInstructions", "appendEntry"]],
-      [
-        "impeccable.md",
-        readFileSync("docs/impeccable.md", "utf8"),
-        ["createImpeccableExtension", "upstreamPath", "load_skill", "SKILL.md"],
-      ],
-    ] as const) {
-      for (const token of tokens) {
-        assert.ok(text.includes(token), `${name} missing ${token}`);
-      }
+    // Plan 107 Task 2 removed the caveman/ponytail subpaths and their pages; the
+    // host-owned pattern is now documented through the loader + the ported example.
+    assert.equal(existsSync("docs/caveman.md"), false, "docs/caveman.md must be removed with the subpath");
+    assert.equal(existsSync("docs/ponytail.md"), false, "docs/ponytail.md must be removed with the subpath");
+
+    for (const token of ["createImpeccableExtension", "upstreamPath", "load_skill", "SKILL.md"]) {
+      assert.ok(readFileSync("docs/impeccable.md", "utf8").includes(token), `impeccable.md missing ${token}`);
     }
 
-    assert.ok(extensions.includes("caveman.md"), "extensions.md missing caveman link");
+    assert.ok(extensions.includes("contribution-discovery.md"), "extensions.md missing contribution-discovery link");
     assert.ok(contextSkills.includes("Third-party behavior packages"), "context-and-skills.md missing third-party section");
     assert.ok(contextSkills.includes("createLoadSkillTool"), "context-and-skills.md missing load_skill in third-party section");
+    assert.ok(discovery.includes("loadSkillDirectory"), "contribution-discovery.md missing loadSkillDirectory");
     assert.ok(migration.includes("0.0.21 → 0.0.22 third-party behavior integrations"), "migration missing 0.0.22 third-party section");
     assert.ok(existsSync("examples/caveman-ponytail.ts"), "missing caveman-ponytail example");
   });

@@ -30,9 +30,6 @@
       "@arnilo/prism-memory/compaction/observational-memory": [
         "./packages/memory/src/compaction/observational-memory/index.ts"
       ],
-      "@arnilo/prism-memory/graft": [
-        "./packages/memory/src/graft/index.ts"
-      ],
       "@arnilo/prism-workflows": [
         "./packages/workflows/src/index.ts"
       ],

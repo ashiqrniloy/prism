@@ -970,18 +970,6 @@
       "package": "@arnilo/prism-memory"
     },
     {
-      "id": "memory/graft",
-      "status": "active",
-      "source": "packages/memory/src/graft/__tests__/commands.test.ts",
-      "command": "node --test dist/graft/__tests__/*.test.js",
-      "cwd": "packages/memory",
-      "requires": [],
-      "scope": "Graft upstream CLI child-process protocol (real binary spawns against the in-repo fixture graft bin).",
-      "cost": "Hermetic; no network.",
-      "notes": "Always-runnable leg: empty requires = hermetic fixture-binary execution. An operator real-upstream-binary probe (PRISM_TEST_GRAFT_BIN) can be added later without matrix changes.",
-      "package": "@arnilo/prism-memory"
-    },
-    {
       "id": "memory/wiki",
       "status": "active",
       "source": "packages/memory/src/wiki/__tests__/commands.test.ts",

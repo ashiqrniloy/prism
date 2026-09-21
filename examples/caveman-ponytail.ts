@@ -2,28 +2,30 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assembleProviderInput,
+  type CommandDefinition,
   createExtensionKernel,
   createLoadedSkillSet,
   createLoadSkillTool,
   createMemorySessionStore,
+  createSessionEntry,
   createSkillRegistry,
   createToolRegistry,
   dispatchToolCall,
+  type Extension,
   resolveActiveSkills,
-  type SessionEntry,
   type Skill,
   toolCallContent,
 } from "@arnilo/prism";
-import { createCavemanExtension } from "@arnilo/prism-coding-tools/caveman";
-import { createPonytailExtension } from "@arnilo/prism-coding-tools/ponytail";
+import { loadSkillDirectory } from "@arnilo/prism/node/contribution-discovery";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const cavemanUpstream = join(here, "../packages/prism-coding-tools/fixtures/caveman/upstream-full");
-const ponytailUpstream = join(here, "../packages/prism-coding-tools/fixtures/ponytail/upstream-full");
+const skillsDir = join(here, "fixtures/behavior-skills/skills");
 const sessionId = "behavior-demo";
 
 const PONYTAIL_BODY_MARKER = "seen every over-engineered codebase";
 const AUDIT_BODY_MARKER = "ponytail-review, repo-wide";
+
+type HostStore = ReturnType<typeof createMemorySessionStore>;
 
 function messageText(request: Awaited<ReturnType<typeof assembleProviderInput>>): string {
   return request.messages
@@ -32,40 +34,102 @@ function messageText(request: Awaited<ReturnType<typeof assembleProviderInput>>)
     .join("\n");
 }
 
-function attachCallbacks(store: ReturnType<typeof createMemorySessionStore>) {
+interface PersonaOptions {
+  /** Command name, mode header prefix, and the SKILL.md whose body becomes the slice. */
+  readonly name: "caveman" | "ponytail";
+  readonly skills: readonly Skill[];
+  readonly store: HostStore;
+  /** Session-entry `data.type` used to persist/restore the mode: `caveman-level` / `ponytail-mode`. */
+  readonly stateType: string;
+}
+
+/**
+ * Host-owned persona: no package subpath needed. One extension loads upstream
+ * skills from disk, registers a `/mode` command, persists the active mode into
+ * session entries, and injects the upstream SKILL.md body every turn while the
+ * mode is not `off`.
+ */
+function createPersonaExtension(options: PersonaOptions): Extension {
+  const bodies = new Map(options.skills.map((skill) => [skill.name, skill.instructions ?? ""] as const));
+  let mode = "off";
+
+  const restore = async () => {
+    const entries = await options.store.list(sessionId);
+    for (const entry of entries) {
+      const data = entry.kind === "custom" ? (entry.data as { type?: unknown; mode?: unknown }) : undefined;
+      if (data?.type === options.stateType && typeof data.mode === "string") mode = data.mode;
+    }
+  };
+
   return {
-    appendEntry: async (entry: SessionEntry, options?: { readonly expectedParentId?: string }) => {
-      await store.append(entry, options);
+    name: `host-${options.name}`,
+    async setup(api) {
+      await restore();
+
+      for (const skill of options.skills) api.registerSkill(skill);
+
+      const command: CommandDefinition = {
+        name: options.name,
+        description: `Set the ${options.name} persona mode`,
+        async execute(args, context) {
+          const next = typeof args.mode === "string" ? args.mode : "full";
+          mode = next;
+          if (context.sessionId) {
+            const entries = await options.store.list(context.sessionId);
+            const parentId = entries.at(-1)?.id;
+            await options.store.append(
+              createSessionEntry({
+                sessionId: context.sessionId,
+                parentId,
+                kind: "custom",
+                data: { type: options.stateType, mode: next },
+              }),
+              { expectedParentId: parentId },
+            );
+          }
+          return { name: options.name, value: { mode: next } };
+        },
+      };
+      api.registerCommand(command);
+
+      api.registerInstructionInjector({
+        name: `${options.name}-mode`,
+        description: `Inject the active ${options.name} mode slice from the upstream SKILL.md body.`,
+        apply() {
+          if (mode === "off") return { when: "every_turn" };
+          const body = bodies.get(options.name) ?? "";
+          return { when: "every_turn", instructions: `${options.name.toUpperCase()} MODE ACTIVE (${mode})\n\n${body}` };
+        },
+      });
     },
-    getEntries: async () => await store.list(sessionId),
   };
 }
 
-// Caveman + Ponytail: attach session store, progressive catalog, load_skill, injector slices (network-free).
+function assertInert(condition: boolean) {
+  if (!condition) throw new Error("expected inert registries before kernel.load");
+}
+
+// Host-owned persona extensions: public APIs only, upstream skills loaded from disk,
+// progressive catalog, load_skill, mode injector + session-entry persistence (network-free).
 export async function demo() {
   const store = createMemorySessionStore();
-  const callbacks = attachCallbacks(store);
+  const skills = await loadSkillDirectory(skillsDir);
+  const [cavemanSkill, ponytailSkill, auditSkill] = ["caveman", "ponytail", "ponytail-audit"].map((name) => {
+    const skill = skills.find((candidate) => candidate.name === name);
+    if (!skill) throw new Error(`missing fixture skill: ${name}`);
+    return skill;
+  });
 
   const kernelBefore = createExtensionKernel({ errorPolicy: "throw" });
   assertInert(kernelBefore.registries.skills.list().length === 0);
 
   const kernel = createExtensionKernel({ errorPolicy: "throw" });
   await kernel.load([
-    createCavemanExtension({
-      upstreamPath: cavemanUpstream,
-      defaultLevel: "off",
-      ...callbacks,
-    }),
-    createPonytailExtension({
-      upstreamPath: ponytailUpstream,
-      defaultMode: "off",
-      quietStartup: true,
-      ...callbacks,
-    }),
+    createPersonaExtension({ name: "caveman", skills: [cavemanSkill], store, stateType: "caveman-level" }),
+    createPersonaExtension({ name: "ponytail", skills: [ponytailSkill, auditSkill], store, stateType: "ponytail-mode" }),
   ]);
 
-  const skills = kernel.registries.skills.list() as Skill[];
-  const registry = createSkillRegistry(skills);
+  const registry = createSkillRegistry(kernel.registries.skills.list());
   const loaded = createLoadedSkillSet();
   const loadSkill = createLoadSkillTool({ registry, loaded });
   const toolRegistry = createToolRegistry([loadSkill]);
@@ -74,7 +138,7 @@ export async function demo() {
   const activeSkills = resolveActiveSkills({ registry, names: activeNames });
 
   await kernel.registries.commands.get("ponytail")!.execute({ mode: "lite" }, { sessionId });
-  await kernel.registries.commands.get("caveman")!.execute({ level: "lite" }, { sessionId });
+  await kernel.registries.commands.get("caveman")!.execute({ mode: "full" }, { sessionId });
 
   const catalogRequest = await assembleProviderInput({
     model: { provider: "mock", model: "demo" },
@@ -154,10 +218,6 @@ export async function demo() {
     loadedCount: loaded.list().length,
     persistedModeEntries: modeEntries.length,
   };
-}
-
-function assertInert(condition: boolean) {
-  if (!condition) throw new Error("expected inert registries before kernel.load");
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

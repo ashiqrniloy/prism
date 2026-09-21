@@ -98,7 +98,6 @@ Keep `skillsDisclosure: "progressive"` so the full `SKILL.md` stays catalog-only
 
 ## Related APIs
 
-- [Caveman behavior integration](caveman.md)
-- [Ponytail behavior integration](ponytail.md)
 - [Extension kernel and event bus](extensions.md)
 - [Context and skills](context-and-skills.md)
+- [Contribution discovery](contribution-discovery.md): `loadSkillDirectory` for host-owned upstream skill trees (the removed Caveman/Ponytail pattern).

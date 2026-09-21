@@ -64,6 +64,18 @@ The markdown body below the front fence becomes `Skill.instructions`. Unknown fr
 | `--discover-kinds <csv>` | Kinds to scan. Defaults to `skill`. Accepts `skill,tool,context,instructions`. |
 | `--no-discovery` | Hard-disable discovery even if `--discover` is set. |
 
+### `loadSkillDirectory` (third-party skill trees)
+
+`discoverContributions` scans only `<workspaceRoot>/.agents/<kind>s/<name>/`. To load a tree you already own — an upstream persona checkout, a provider's compiled skills, a vendored `SKILL.md` set — use `loadSkillDirectory(directory, options?)` from `@arnilo/prism/node/contribution-discovery`:
+
+```ts
+import { loadSkillDirectory } from "@arnilo/prism/node/contribution-discovery";
+
+const skills = await loadSkillDirectory("/opt/upstream/skills", { maxSkillBytes: 64 * 1024 });
+```
+
+It reads `<directory>/<name>/SKILL.md` and returns inert `Skill[]` sorted by directory name. Subdirectories without `SKILL.md`, plain files, and symlinks that escape `directory` are skipped; an unreadable `directory` or a file over `options.maxSkillBytes` (default `HARD_MAX_SKILL_INSTRUCTION_BYTES`, 262 144) throws. No trust policy, no permission callback, and no `import()`: the host naming the directory is the authority, exactly as with the deleted persona subpaths (see `examples/caveman-ponytail.ts`).
+
 ## Outputs / response / events
 
 `discoverContributions()` returns `readonly DiscoveredContribution[]`. Each envelope has `kind`, `name`, `origin` (`"global"` | `"workspace"`), `path`, and either `skill` (for the `skill` kind) or `declaration` (a `ManifestContributionDeclaration` for other kinds), plus optional `metadata`. The envelope is inert: it contains no executable code, no credential, and no resolved provider/model/tool reference.
@@ -131,6 +143,7 @@ A complete runnable example lives at `examples/discover-skills.ts`.
 - **Workspace gating**: workspace roots are checked through `createPathTrustPolicy` + `isPathInsideReal`, which resolve symlinks and fail closed (return false) if either root or target cannot be resolved. Untrusted workspace roots are skipped silently, never thrown over. Permission is asserted per directory read via `assertPermission`.
 - **Symlink handling**: symlinked entries that escape the kind root after realpath resolution are excluded. `SKILL.md` and `manifest.json` are also realpath-checked against their contribution directory before read, so an entry-file symlink cannot escape to another path.
 - **Opt-in**: discovery is opt-in — it runs only when the host passes `--discover` or calls `discoverContributions()` explicitly. Default runs perform no filesystem I/O.
+- **Bounded third-party trees**: `loadSkillDirectory` reads one level (`<dir>/<name>/SKILL.md`), realpath-checks each directory and entry file against the supplied root, and fails closed on a missing directory or an over-cap file; the host names the root, so no workspace trust decision is implied.
 - **No auto-execute**: discovery reads text. It does not `import()`, `require()`, or run contribution code. `registerDiscoveredContributions` registers descriptor stubs whose execution methods throw — the host lifts them into live tools/providers itself.
 - **No auto-activate**: discovery registers skills; it does not select them. Activation requires explicit `RunOptions.activeSkills`, and `toolNames` is still validated against the resolved tool set. Discovery grants no tools, permissions, or provider slots.
 - **No provider scanning**: provider/model discovery stays config/package-driven (Phase 24). See [Provider packages](provider-packages.md).

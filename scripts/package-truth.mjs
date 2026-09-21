@@ -189,7 +189,7 @@ const flag = (name) => {
 export const PACKAGE_NOTES = {
   "@arnilo/prism": "core — runtime, CLI/RPC, templates, docs",
   "@arnilo/prism-coding-tools":
-    "family — /agent, /security, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths",
+    "family — /agent, /security, /openapi, /computer-use-linux, /dev, /impeccable subpaths",
   "@arnilo/prism-channels":
     "family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal",
   "@arnilo/prism-core": "family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths",
@@ -199,7 +199,7 @@ export const PACKAGE_NOTES = {
   "@arnilo/prism-hooks":
     "capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams",
   "@arnilo/prism-mcp": "capability — MCP client/server/OAuth interop",
-  "@arnilo/prism-memory": "capability — memory plus /rag, /compaction/*, /fabric, /graft, /wiki subpaths",
+  "@arnilo/prism-memory": "capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths",
   "@arnilo/prism-work": "capability — /connectors, /documents, /sheets, /diagrams, /document-reader, /sandbox, /skills, /tools subpaths",
   "@arnilo/prism-web-tools": "capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths",
 };

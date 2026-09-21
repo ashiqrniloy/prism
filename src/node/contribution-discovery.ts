@@ -1,11 +1,12 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { isJsonObject } from "../config.js";
-import type { ContributionFileKind, DiscoveredContribution, JsonObject } from "../contracts.js";
+import type { ContributionFileKind, DiscoveredContribution, JsonObject, Skill } from "../contracts.js";
 import { parseSkillFile } from "../contribution-parsing.js";
 import type { ManifestContributionDeclaration, ManifestContributionKind } from "../manifests.js";
 import type { PermissionPolicy, TrustPolicy } from "../security.js";
 import { assertPermission } from "../security.js";
+import { HARD_MAX_SKILL_INSTRUCTION_BYTES } from "../skill-disclosure.js";
 import { isNodeErrorCode } from "./config.js";
 import { isPathInsideReal } from "./trust.js";
 
@@ -128,6 +129,54 @@ export async function readOptionalFile(path: string): Promise<string | undefined
     if (isNodeErrorCode(error, "ENOENT")) return undefined;
     throw error;
   }
+}
+
+export interface LoadSkillDirectoryOptions {
+  /** Per-file byte cap; defaults to `HARD_MAX_SKILL_INSTRUCTION_BYTES` (262 144). */
+  readonly maxSkillBytes?: number;
+}
+
+/**
+ * Load a host-supplied `<directory>/<name>/SKILL.md` tree (an upstream persona
+ * or provider checkout) into inert {@link Skill} values. Bounded per file,
+ * symlink-contained, and deterministic (sorted by directory name); nothing is
+ * auto-activated — the host registers the result through `api.registerSkill` or
+ * its own loader.
+ *
+ * Throws when `directory` is unreadable or a SKILL.md exceeds the cap. A
+ * subdirectory without SKILL.md (or a symlink escaping `directory`) is skipped.
+ */
+export async function loadSkillDirectory(directory: string, options: LoadSkillDirectoryOptions = {}): Promise<readonly Skill[]> {
+  const maxBytes = options.maxSkillBytes ?? HARD_MAX_SKILL_INSTRUCTION_BYTES;
+  let names: readonly string[];
+  try {
+    names = await readdir(directory);
+  } catch (error) {
+    throw new Error(`No readable skill directory at ${directory}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  const skills: Skill[] = [];
+  for (const name of [...names].sort()) {
+    const dir = join(directory, name);
+    let isDir: boolean;
+    try {
+      isDir = (await stat(dir)).isDirectory();
+    } catch (error) {
+      if (isNodeErrorCode(error, "ENOENT")) continue;
+      throw error;
+    }
+    if (!isDir || !(await isPathInsideReal(directory, dir))) continue;
+
+    const path = join(dir, "SKILL.md");
+    if (!(await isPathInsideReal(directory, path))) continue;
+    const text = await readOptionalFile(path);
+    if (text === undefined) continue;
+    if (Buffer.byteLength(text, "utf8") > maxBytes) {
+      throw new Error(`Skill file ${path} exceeds ${maxBytes} byte cap`);
+    }
+    skills.push(parseSkillFile(text, path));
+  }
+  return skills;
 }
 
 // --- Internal helpers. ---

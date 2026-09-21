@@ -233,9 +233,7 @@ await section("@arnilo/prism-memory: compaction strategies", async () => {
   assert.ok(om.DEFAULT_KEEP_RECENT_ENTRIES >= 1, "observational memory must export bounded defaults");
 });
 
-await section("@arnilo/prism-memory: graft + wiki", async () => {
-  const graft = await import("@arnilo/prism-memory/graft");
-  assert.match(graft.redactPaths("see /home/x/y and /home/x/y2", ["/home/x"]), /<path>/, "graft must redact supplied paths");
+await section("@arnilo/prism-memory: wiki", async () => {
   const wiki = await import("@arnilo/prism-memory/wiki");
   assert.equal(typeof wiki.WikiCompiler, "function");
 });
@@ -560,7 +558,7 @@ await section("@arnilo/prism-providers: model-discovery", async () => {
 });
 
 // ---------------------------------------------------------------------------
-// @arnilo/prism-coding-tools (10 subpaths)
+// @arnilo/prism-coding-tools (7 subpaths)
 // ---------------------------------------------------------------------------
 await section("@arnilo/prism-coding-tools: agent", async () => {
   const agent = await import("@arnilo/prism-coding-tools/agent");
@@ -623,12 +621,8 @@ await section("@arnilo/prism-coding-tools: computer-use-linux + dev", async () =
   assert.equal(typeof devCli.runDevCli, "function");
 });
 
-await section("@arnilo/prism-coding-tools: persona extensions", async () => {
-  const caveman = await import("@arnilo/prism-coding-tools/caveman");
-  const ponytail = await import("@arnilo/prism-coding-tools/ponytail");
+await section("@arnilo/prism-coding-tools: persona extension", async () => {
   const impeccable = await import("@arnilo/prism-coding-tools/impeccable");
-  assert.ok(caveman.createCavemanExtension, "caveman extension factory must resolve");
-  assert.ok(ponytail.createPonytailExtension, "ponytail extension factory must resolve");
   assert.ok(impeccable.createImpeccableExtension, "impeccable extension factory must resolve");
 });
 

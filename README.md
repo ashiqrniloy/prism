@@ -164,14 +164,14 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | --- | --- | --- |
 | `@arnilo/prism` | 0.10.0 | core — runtime, CLI/RPC, templates, docs |
 | `@arnilo/prism-channels` | 0.10.0 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
-| `@arnilo/prism-coding-tools` | 0.10.0 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths |
+| `@arnilo/prism-coding-tools` | 0.10.0 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /impeccable subpaths |
 | `@arnilo/prism-core` | 0.10.0 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths |
 | `@arnilo/prism-providers` | 0.10.0 | family — all provider adapters as `/<adapter>` subpaths |
 | `@arnilo/prism-acp-agent` | 0.10.0 | capability — ACP adapter |
 | `@arnilo/prism-ag-ui` | 0.10.0 | capability — AG-UI/A2A/A2UI adapter |
 | `@arnilo/prism-hooks` | 0.10.0 | capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams |
 | `@arnilo/prism-mcp` | 0.10.0 | capability — MCP client/server/OAuth interop |
-| `@arnilo/prism-memory` | 0.10.0 | capability — memory plus /rag, /compaction/*, /fabric, /graft, /wiki subpaths |
+| `@arnilo/prism-memory` | 0.10.0 | capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths |
 | `@arnilo/prism-web-tools` | 0.10.0 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
 | `@arnilo/prism-work` | 0.10.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-reader, /sandbox, /skills, /tools subpaths |
 <!-- generated:package-truth:inventory end -->

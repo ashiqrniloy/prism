@@ -20,8 +20,6 @@ One row per declaration. `Unlocks` names the subpath whose import reaches the pe
 | Peer | Declared range | Optional | Declared by | Unlocks | Install | Network |
 | --- | --- | --- | --- | --- | --- | --- |
 | `zod` | `^3.25.0 \|\| ^4.0.0` | no | `@arnilo/prism-ag-ui` | `./acp` | `npm i zod` | no |
-| `@nanonets/graft` | `^0.16.0 \|\| ^0.18.0` | yes | `@arnilo/prism-memory` | `./graft` | `npm i @nanonets/graft` | no |
-| `@dietrichgebert/ponytail` | `^4.9.0` | yes | `@arnilo/prism-coding-tools` | `./ponytail` | `npm i @dietrichgebert/ponytail` | no |
 | `mammoth` | `^1.8.0` | yes | `@arnilo/prism-work` | `./document-reader` | `npm i mammoth` | no |
 | `pdf-parse` | `^2.4.5` | yes | `@arnilo/prism-work` | `./document-reader` | `npm i pdf-parse` | no |
 | `e2b` | `2.49.1` | yes | `@arnilo/prism-coding-tools` | `./security` | `npm i e2b@2.49.1` | yes |
@@ -47,7 +45,7 @@ Two peers are pinned to an exact version instead of a range, because the pin is 
 `pg`, `@nats-io/jetstream`, `@nats-io/transport-node`, `playwright-core`, and `e2b` open sockets. For a supply-chain review of those five:
 
 - **Connection targets are host-owned.** Every one of them is passed a host-supplied connection string, endpoint list, browser instance, API key, or service URL. Prism holds no default endpoint, and no peer is reachable from the root import.
-- **Bytes stay local otherwise.** `better-sqlite3`, `mammoth`, `pdf-parse`, `@nanonets/graft`, and `@dietrichgebert/ponytail` are filesystem/process peers; the remaining two (`zod`, `@ai-sdk/provider`) are pure types/schemas.
+- **Bytes stay local otherwise.** `better-sqlite3`, `mammoth`, and `pdf-parse` are filesystem/process peers; the remaining two (`zod`, `@ai-sdk/provider`) are pure types/schemas.
 - **No secrets are read by the peers.** Prism resolves credentials through host providers and redacts them at the boundary; peers only ever receive a resolved connection string or model object. See [Credentials and redaction](credentials-and-redaction.md) and [Host security guide](host-security.md).
 - **Nothing is installed implicitly.** Optional peers are never auto-installed by npm; a missing one fails closed at the call site with a typed error naming the peer and the subpath. Required peers (today only `zod`) are installed by npm with the package.
 
@@ -79,7 +77,7 @@ const tools = await createBrowserTools({ browser });
 
 ## Extension and configuration notes
 
-- A peer is an *implementation the host owns*. When a peer's default wiring is not what you want, pass your own implementation instead of installing theirs: the document reader accepts host parsers (`createReadTool({ documentReader })`), the memory `/graft` resolver accepts an explicit package root, and the browser surfaces accept a host `Browser`.
+- A peer is an *implementation the host owns*. When a peer's default wiring is not what you want, pass your own implementation instead of installing theirs: the document reader accepts host parsers (`createReadTool({ documentReader })`), and the browser surfaces accept a host `Browser`.
 - Subpaths that need a peer isolate that import, so importing another subpath of the same package never evaluates it. The office family is the extreme case: zero peers, because it takes structural inputs. `@arnilo/prism-channels` also has no third-party peers: Telegram uses native `fetch`, and signal-cli is a host-operated binary rather than an npm peer.
 - Adding a peer to a Prism package is a release-gated change: the declaration must be optional unless a hard dependency's own peer forces it (the `zod` case), and exact pins must come with a version-gate or compatibility rationale.
 
@@ -93,4 +91,4 @@ const tools = await createBrowserTools({ browser });
 
 - [Release and install](release-and-install.md): install profiles that pair with each peer.
 - [Configuration options index](options-index.md): the option surfaces each peer unlocks.
-- Package-level detail: [Coding tools](coding-tools.md), [Core runtime](core.md), [Session stores](session-stores.md), [Browser automation](browser-automation.md), [Document reader](document-reader.md), [Graft](graft.md), [Ponytail](ponytail.md), [Provider packages](provider-packages.md), [Messaging channels](messaging-channels.md).
+- Package-level detail: [Coding tools](coding-tools.md), [Core runtime](core.md), [Session stores](session-stores.md), [Browser automation](browser-automation.md), [Document reader](document-reader.md), [Provider packages](provider-packages.md), [Messaging channels](messaging-channels.md).

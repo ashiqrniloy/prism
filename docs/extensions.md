@@ -169,9 +169,8 @@ const stop = forwardAgentEvents(session.subscribe(), kernel.events, { onError: (
 - [Compaction and retry policies](compaction-and-retry.md): compaction strategy/retry policy contributions and `compaction`/`retry` middleware runtime behavior.
 - [LLM compaction package](compaction-llm.md): optional extension helper that registers a provider-backed compaction strategy.
 - [Observational memory compaction package](compaction-observational-memory.md): optional extension helper that registers an inert fast memory compaction strategy.
-- [Caveman behavior integration](caveman.md): optional `@arnilo/prism-coding-tools/caveman` upstream Caveman skills, commands, level injector, and session `caveman-level` persistence.
-- [Ponytail behavior integration](ponytail.md): optional `@arnilo/prism-coding-tools/ponytail` upstream Ponytail skills, commands, mode injector, and session `ponytail-mode` persistence.
 - [Impeccable behavior integration](impeccable.md): optional `@arnilo/prism-coding-tools/impeccable` upstream Impeccable skill and `load_skill` command.
+- [Contribution discovery](contribution-discovery.md): `loadSkillDirectory` loads a host-supplied `<dir>/<name>/SKILL.md` tree for host-owned personas (`examples/caveman-ponytail.ts`).
 - [Public contracts](public-contracts.md): `Extension`, `ExtensionAPI`, and contribution contract types.
 - [Credentials and redaction](credentials-and-redaction.md): secret-redaction behavior used for extension errors.
 

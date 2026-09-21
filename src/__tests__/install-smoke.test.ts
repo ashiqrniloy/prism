@@ -130,7 +130,6 @@ before(() => {
     "@arnilo/prism-memory/compaction/llm",
     "@arnilo/prism-memory/compaction/observational-memory",
     "@arnilo/prism-memory/fabric",
-    "@arnilo/prism-memory/graft",
     "@arnilo/prism-memory/scoped",
     "@arnilo/prism-memory/wiki",
     "@arnilo/prism-web-tools/browser",

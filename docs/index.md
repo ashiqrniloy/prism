@@ -50,7 +50,6 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 - **Peer and options truth**: the optional peer-dependency matrix and the configuration options index (both linked below) cover every third-party peer and public option surface (plan 070).
 - **Trusted extension activation**: `activateKernel(kernel)` returns ready-to-spread `AgentConfig` contributions; CLI loads allow-listed `--extension` packages (plan 069).
 - **Wiki ingest**: `/wiki-ingest` + `ingestWikiSource` stage text/file/image/PDF (and URLs via a host `fetchUrl` hook) into `raw/ingest/` with an OKF filing brief (plan 069).
-- **Graft graph commands**: `/graft-init`, `/graft-build`, `/graft-build-deep` (host-configured `deepModel`, key env-only) (plan 069).
 - **Run limits**: HARD caps are request/response bytes only; policy axes accept `null` (plan 067).
 - **Tool-result fold**: content-only `ToolResult`s fold into `tool_result.result` (0.5.3).
 - **Stream token coalesce**: adjacent text/thinking deltas merge on persist (0.5.2).
@@ -239,9 +238,6 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 
 ## Third-party integrations
 
-- [Caveman behavior integration](caveman.md): upstream Caveman skills with injector, persistence, and progressive catalog.
-- [Ponytail behavior integration](ponytail.md): upstream Ponytail skills with injector and peer resolution; opt-in.
-- [Graft context-graph integration](graft.md): graft CLI pull tools, retrieval-pack context provider, blast-radius middleware, and `/graft-init` / `/graft-build` / `/graft-build-deep` commands (host-configured `deepModel`).
 - [Impeccable behavior integration](impeccable.md): upstream Impeccable skill behind `load_skill`; host supplies the compiled `SKILL.md`.
 - [Messaging channels](messaging-channels.md): `@arnilo/prism-channels` transport-neutral runtime — deny-by-default sender authorization, owned session binding, serialized turns, current-run replies, one-use durable approvals, bounded attachment refs (images reach the model only when it declares image input), and opt-in host notices to one already-bound pair.
 - [Telegram channel](telegram-channel.md): official `@arnilo/prism-channels/telegram` long polling and mountable webhook ingress with durable offset/lease handling, approval callbacks, opt-in granted group/topic text, bounded media with optional voice transcription/synthesis, and opt-in streaming drafts.
@@ -270,14 +266,14 @@ The generated inventory below derives from [`scripts/package-truth.json`](../scr
 | --- | --- | --- |
 | `@arnilo/prism` | 0.10.0 | core — runtime, CLI/RPC, templates, docs |
 | `@arnilo/prism-channels` | 0.10.0 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
-| `@arnilo/prism-coding-tools` | 0.10.0 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /caveman, /ponytail, /impeccable subpaths |
+| `@arnilo/prism-coding-tools` | 0.10.0 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /impeccable subpaths |
 | `@arnilo/prism-core` | 0.10.0 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths |
 | `@arnilo/prism-providers` | 0.10.0 | family — all provider adapters as `/<adapter>` subpaths |
 | `@arnilo/prism-acp-agent` | 0.10.0 | capability — ACP adapter |
 | `@arnilo/prism-ag-ui` | 0.10.0 | capability — AG-UI/A2A/A2UI adapter |
 | `@arnilo/prism-hooks` | 0.10.0 | capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams |
 | `@arnilo/prism-mcp` | 0.10.0 | capability — MCP client/server/OAuth interop |
-| `@arnilo/prism-memory` | 0.10.0 | capability — memory plus /rag, /compaction/*, /fabric, /graft, /wiki subpaths |
+| `@arnilo/prism-memory` | 0.10.0 | capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths |
 | `@arnilo/prism-web-tools` | 0.10.0 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
 | `@arnilo/prism-work` | 0.10.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-reader, /sandbox, /skills, /tools subpaths |
 <!-- generated:package-truth:inventory end -->

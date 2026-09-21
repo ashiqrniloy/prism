@@ -30,7 +30,6 @@ node examples/observational-memory-recall-status-view.ts
 node examples/observational-memory-lifecycle.ts
 node examples/skills-progressive-disclosure.ts
 node examples/caveman-ponytail.ts
-node examples/graft-extension.ts
 node examples/hooks-json.ts
 node examples/distributed-events-and-tool-effects.ts
 node examples/external-app-db-backed.ts
@@ -162,8 +161,7 @@ Each demo prints a single JSON line with its result.
 - `context.ts` — ordered context-provider pipeline.
 - `skills.ts` — skill registry + progressive disclosure activation.
 - `skills-progressive-disclosure.ts` — **demo**: many-skill catalog under budget + `load_skill` body load (network-free).
-- `caveman-ponytail.ts` — **demo**: Caveman + Ponytail extensions, session attach callbacks, progressive catalog, injector mode slices, `load_skill` (network-free).
-- `graft-extension.ts` — **demo**: Graft extension against a stub CLI — pull tool call, push-mode retrieval pack + orientation, edit blast radius, `DO_NOT_TRACK` child-env guard (network-free).
+- `caveman-ponytail.ts` — **demo**: host-owned persona extensions built from a `SKILL.md` directory (`loadSkillDirectory`), progressive catalog, injector mode slices, session-entry mode persistence, `load_skill` (network-free).
 - `hooks-json.ts` — **demo**: Claude/Codex-shaped `hooks.json` compiled onto public seams — `SessionStart` context injection, `PreToolUse` `additionalContext`/deny (a `.env` write is blocked), hash-pinned trust, and the local `hooks-audit-command.mjs` fixture spawned with no shell (network-free).
 - `extensions.ts` — extension kernel + event bus.
 - `manifests.ts` — data-only Prism manifest: define + parse.
