@@ -944,6 +944,17 @@ describe("cascade and recovery telemetry", () => {
     assert.ok(failed, "child_failed attribution missing");
     assert.equal(failed.status, "failed");
     assert.equal(failed.limit?.limit, "maxToolCalls");
+    // Plan 108 T5: the child's own exhaustion counters ride the failure record. The result is no
+    // longer unreachable (`SupervisorLimitError.result` carries it; the test below pins that).
+    assert.equal(failed.consumed?.turns, 2);
+    assert.ok(failed.consumed && failed.consumed.requestBytes > 0);
+    assert.deepEqual(
+      failed.recentToolCalls?.map((call) => call.name),
+      ["noop", "noop"],
+      "the hashed tool-call trail is the child's own",
+    );
+    assert.ok(failed.recentToolCalls?.every((call) => /^sha256:[a-f0-9]{64}$/.test(call.argHash)));
+    assert.ok(failed.closestOtherAxes && failed.closestOtherAxes.length > 0);
     assert.ok(
       events.findIndex((event) => event.type === "child_failed") < events.findIndex((event) => event.type === "delegation_error"),
       "attribution must arrive before the terminal delegation_error",
@@ -953,6 +964,110 @@ describe("cascade and recovery telemetry", () => {
     assert.deepEqual(supervisor.summary().children, [
       { childId: "worker", attempts: 2, retries: 1, failures: 1, failureRadius: 0, outcome: "succeeded" },
     ]);
+  });
+
+  it("carries the child result on a limit error, and none on a supervisor-level ceiling", async () => {
+    const supervisor = createSupervisor({ ownership, children: { worker: { createAgent: () => toolTurnAgent() } } });
+    const limitError = await supervisor
+      .delegate({ childId: "worker", input: "first", limits: { maxToolCalls: 1 } })
+      .catch((thrown: unknown) => thrown);
+    assert.ok(limitError instanceof SupervisorLimitError);
+    // Plan 108 follow-up: the limit-to-error conversion keeps the child's terminal result, so a
+    // host that catches it reads the same breach and attribution the `child_failed` event carries.
+    assert.equal(limitError.result?.status, "failed");
+    assert.equal(limitError.result?.limit?.limit, "maxToolCalls");
+    assert.equal(limitError.result?.attribution?.consumed?.turns, 2);
+    assert.deepEqual(
+      limitError.result?.attribution?.recentToolCalls?.map((call) => call.name),
+      ["noop", "noop"],
+      "the carried result is the child's own",
+    );
+
+    const oversized = await supervisor.delegate({ childId: "worker", input: "x".repeat(70_000) }).catch((thrown: unknown) => thrown);
+    assert.ok(oversized instanceof SupervisorLimitError);
+    assert.equal(oversized.result, undefined, "a supervisor-level ceiling has no child run behind it");
+  });
+
+  it("summary({ reset: true }) opens a new counting window, and retries count only inside it", async () => {
+    const script = [() => toolTurnAgent(), () => doneAgent("recovered"), () => toolTurnAgent(), () => doneAgent("recovered")];
+    let runs = 0;
+    const supervisor = createSupervisor({
+      ownership,
+      children: { worker: { createAgent: () => script[runs++]?.() ?? doneAgent("recovered") } },
+    });
+    // A reset before any delegation is a fresh window: every row zeroed and idle.
+    assert.deepEqual(supervisor.summary({ reset: true }).children, [
+      { childId: "worker", attempts: 0, retries: 0, failures: 0, failureRadius: 0, outcome: "idle" },
+    ]);
+    await assert.rejects(supervisor.delegate({ childId: "worker", input: "first", limits: { maxToolCalls: 1 } }), /limit/i);
+    assert.deepEqual(
+      supervisor.summary({ reset: false }).children,
+      [{ childId: "worker", attempts: 1, retries: 0, failures: 1, failureRadius: 0, outcome: "failed" }],
+      "an explicit reset: false keeps the cumulative contract",
+    );
+    assert.deepEqual(supervisor.summary({ reset: true }).children, [
+      { childId: "worker", attempts: 0, retries: 0, failures: 0, failureRadius: 0, outcome: "idle" },
+    ]);
+    // The failure happened before the window, so this dispatch is a first attempt, not a retry.
+    await supervisor.delegate({ childId: "worker", input: "second" });
+    assert.deepEqual(supervisor.summary().children, [
+      { childId: "worker", attempts: 1, retries: 0, failures: 0, failureRadius: 0, outcome: "succeeded" },
+    ]);
+    // A failure inside the window makes the next dispatch a retry.
+    await assert.rejects(supervisor.delegate({ childId: "worker", input: "third", limits: { maxToolCalls: 1 } }), /limit/i);
+    await supervisor.delegate({ childId: "worker", input: "fourth" });
+    assert.deepEqual(supervisor.summary().children, [
+      { childId: "worker", attempts: 3, retries: 1, failures: 1, failureRadius: 0, outcome: "succeeded" },
+    ]);
+  });
+
+  it("reset while a delegation is live keeps that delegation's settle in the new window", async () => {
+    const controller = new AbortController();
+    const release: { fire?: () => void } = {};
+    const held = new Promise<void>((resolve) => {
+      release.fire = resolve;
+    });
+    let writers = 0;
+    const supervisor = createSupervisor({
+      ownership,
+      signal: controller.signal,
+      children: {
+        lead: {
+          createAgent: (context) => {
+            const provider: AIProvider = {
+              id: "mock",
+              async *generate() {
+                context.delegate({ childId: "writer", input: "slow" }).catch(() => undefined);
+                await held;
+                throw new Error("lead exploded after the reset");
+              },
+            };
+            return createAgent({ model: { provider: "mock", model: "test" }, provider });
+          },
+        },
+        writer: {
+          createAgent: () => {
+            writers += 1;
+            return hangingAgent();
+          },
+        },
+      },
+    });
+    await supervisor.delegateAsync({ childId: "lead", input: "fail" });
+    for (let tries = 0; writers < 1 && tries < 1000; tries += 1) await new Promise((resolve) => setTimeout(resolve, 1));
+    assert.deepEqual(supervisor.summary({ reset: true }).children, [
+      { childId: "lead", attempts: 0, retries: 0, failures: 0, failureRadius: 0, outcome: "running" },
+      { childId: "writer", attempts: 0, retries: 0, failures: 0, failureRadius: 0, outcome: "running" },
+    ]);
+    release.fire?.();
+    for (let tries = 0; tries < 1000 && supervisor.summary().children[0]?.failures === 0; tries += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    }
+    const [lead, writer] = supervisor.summary().children;
+    assert.deepEqual(lead, { childId: "lead", attempts: 0, retries: 0, failures: 1, failureRadius: 1, outcome: "failed" });
+    assert.equal(writer?.outcome, "running", "the descendant delegated before the reset is still live");
+    controller.abort();
+    await new Promise((resolve) => setTimeout(resolve, 10));
   });
 
   it("attributes a plain failure, and a host cancel is not a failure", async () => {
@@ -982,6 +1097,9 @@ describe("cascade and recovery telemetry", () => {
     const failed = events.find((event): event is Extract<SupervisorEvent, { type: "child_failed" }> => event.type === "child_failed");
     assert.ok(failed, "child_failed attribution missing");
     assert.equal(failed.limit, undefined, "a plain failure carries no breach");
+    assert.equal(failed.consumed, undefined, "a plain failure carries no exhaustion counters");
+    assert.equal(failed.closestOtherAxes, undefined);
+    assert.equal(failed.recentToolCalls, undefined);
     assert.match(failed.reason, /provider exploded/);
     assert.equal(failed.reason.includes("canary"), false, "error details follow redaction rules");
     assert.equal(supervisor.summary().children[0]?.failures, 1);
@@ -1024,6 +1142,139 @@ describe("cascade and recovery telemetry", () => {
     assert.deepEqual(lead, { childId: "lead", attempts: 1, retries: 0, failures: 1, failureRadius: 1, outcome: "failed" });
     assert.equal(writer?.outcome, "running", "the nested descendant is still live");
     assert.equal(other?.failureRadius, 0, "an unrelated live child is not in the radius");
+    controller.abort();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  });
+
+  it("counts exact ancestry for concurrent delegations of the same child", async () => {
+    const controller = new AbortController();
+    let leads = 0;
+    let writers = 0;
+    const supervisor = createSupervisor({
+      ownership,
+      signal: controller.signal,
+      limits: { maxActiveChildren: 8 },
+      children: {
+        lead: {
+          createAgent: (context) => {
+            const attempt = (leads += 1);
+            const provider: AIProvider = {
+              id: "mock",
+              async *generate() {
+                context.delegate({ childId: "writer", input: "slow" }).catch(() => undefined);
+                // The first delegation stays live; the second one fails once both writers exist,
+                // so the two `[lead, writer]` child-id paths are identical at failure time.
+                if (attempt === 1) await new Promise(() => undefined);
+                for (let tries = 0; writers < 2 && tries < 1000; tries += 1) await new Promise((resolve) => setTimeout(resolve, 1));
+                throw new Error("second lead exploded");
+              },
+            };
+            return createAgent({ model: { provider: "mock", model: "test" }, provider });
+          },
+        },
+        writer: {
+          createAgent: () => {
+            writers += 1;
+            return hangingAgent();
+          },
+        },
+        other: { createAgent: () => hangingAgent() },
+      },
+    });
+    await supervisor.delegateAsync({ childId: "lead", input: "stay" });
+    await supervisor.delegateAsync({ childId: "other", input: "unrelated" });
+    await assert.rejects(supervisor.delegate({ childId: "lead", input: "fail" }));
+    const [lead, writer, other] = supervisor.summary().children;
+    assert.equal(lead?.attempts, 2);
+    assert.equal(lead?.failures, 1);
+    assert.equal(lead?.failureRadius, 1, "only this delegation's own live writer counts, not the concurrent subtree's");
+    assert.equal(lead?.outcome, "running", "the concurrent delegation of the same child is still live");
+    assert.equal(writer?.outcome, "running");
+    assert.equal(other?.failureRadius, 0);
+    controller.abort();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  });
+
+  it("counts every live descendant across branches, depth, and lifetimes", async () => {
+    const controller = new AbortController();
+    let writerStarts = 0;
+    const supervisor = createSupervisor({
+      ownership,
+      signal: controller.signal,
+      children: {
+        lead: {
+          createAgent: (context) => {
+            const provider: AIProvider = {
+              id: "mock",
+              async *generate() {
+                await context.delegate({ childId: "researcher", input: "quick" });
+                context.delegate({ childId: "mid", input: "slow" }).catch(() => undefined);
+                for (let tries = 0; writerStarts < 1 && tries < 1000; tries += 1) await new Promise((resolve) => setTimeout(resolve, 1));
+                throw new Error("lead exploded");
+              },
+            };
+            return createAgent({ model: { provider: "mock", model: "test" }, provider });
+          },
+        },
+        mid: {
+          createAgent: (context) => {
+            const provider: AIProvider = {
+              id: "mock",
+              async *generate() {
+                context.delegate({ childId: "writer", input: "slow" }).catch(() => undefined);
+                await new Promise(() => undefined);
+              },
+            };
+            return createAgent({ model: { provider: "mock", model: "test" }, provider });
+          },
+        },
+        writer: {
+          createAgent: () => {
+            writerStarts += 1;
+            return hangingAgent();
+          },
+        },
+        researcher: { createAgent: () => doneAgent() },
+      },
+    });
+    await assert.rejects(supervisor.delegate({ childId: "lead", input: "x" }));
+    const [lead, mid, writer, researcher] = supervisor.summary().children;
+    assert.equal(lead?.failureRadius, 2, "a live child and its own live child both count");
+    assert.equal(mid?.outcome, "running");
+    assert.equal(writer?.outcome, "running");
+    assert.equal(researcher?.outcome, "succeeded", "an already-settled sibling is never in the radius");
+    controller.abort();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  });
+
+  it("counts the live descendant of a failed session-lifetime child", async () => {
+    const controller = new AbortController();
+    const supervisor = createSupervisor({
+      ownership,
+      signal: controller.signal,
+      children: {
+        watch: {
+          policy: { lifetime: "session" },
+          createAgent: (context) => {
+            const provider: AIProvider = {
+              id: "mock",
+              async *generate() {
+                context.delegate({ childId: "writer", input: "slow" }).catch(() => undefined);
+                throw new Error("watch exploded");
+              },
+            };
+            return createAgent({ model: { provider: "mock", model: "test" }, provider });
+          },
+        },
+        writer: { createAgent: () => hangingAgent() },
+      },
+    });
+    const handle = await supervisor.delegateAsync({ childId: "watch", input: "go", lifetime: "session" });
+    await assert.rejects(supervisor.wait(handle.delegationId), /watch exploded/);
+    const [watch, writer] = supervisor.summary().children;
+    assert.equal(watch?.failures, 1);
+    assert.equal(watch?.failureRadius, 1, "a task-lifetime descendant of a session-lifetime child is still an affected delegation");
+    assert.equal(writer?.outcome, "running");
     controller.abort();
     await new Promise((resolve) => setTimeout(resolve, 10));
   });

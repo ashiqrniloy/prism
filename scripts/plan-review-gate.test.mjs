@@ -98,6 +98,75 @@ const PLAN_104_TASK_1 = {
   completeTask: /^- \[x\] Task 1:/m,
 };
 
+/** Plan 108 Task 1 — the supervisor failure-bridge / radius / counters / attribution review (plan 093 follow-ups). */
+const PLAN_108_TASK_1 = {
+  plan: "plans/108-Supervisor-Recovery-Telemetry-Follow-Ups.md",
+  evidence: "docs/_evidence/phase108-primitive-review.md",
+  required: [
+    // Task 2 — coding lifecycle failure/recovery bridge
+    "packages/prism-coding-tools/src/agent/supervisor-lifecycle.ts",
+    "ObserveSupervisorLifecycleOptions",
+    "lifecycleEvent",
+    "packages/prism-coding-tools/src/agent/lifecycle.ts",
+    "SubagentStoppedEvent",
+    "DEFAULT_LIFECYCLE_MAX_REASON_BYTES",
+    "scripts/phase10-freeze-manifest.json",
+    "lifecycleEventMapping",
+    // Task 3 — exact failureRadius ancestry
+    "packages/prism-core/src/runtime/supervisor/supervisor.ts",
+    "ChainContext",
+    "noteDelegationStart",
+    "countLiveDescendants",
+    "settleDelegation",
+    "DelegationMapping",
+    // Task 4 — per-root-run counter read
+    "packages/prism-core/src/runtime/supervisor/types.ts",
+    "summary()",
+    "childSummary",
+    // Task 5 — limit attribution on the result and child_failed
+    "src/run-limits.ts",
+    "describeBudgetExhaustion",
+    "src/contracts-run-state.ts",
+    "AgentRunResult",
+    "src/agent-session/session.ts",
+    "buildRunResult",
+    "src/agent-session/session/assemble.ts",
+    "packages/prism-core/src/runtime/supervisor/spawn-tool.ts",
+    "ChildFailureAttribution",
+    "failureAttribution",
+    "budget_exhausted",
+    "child_failed",
+    "consumed",
+    "closestOtherAxes",
+    "recentToolCalls",
+    // the runnable confirmations
+    "CONFIRMED",
+  ],
+  rejected: [
+    "subagent_failed", // R1 — no new lifecycle kind
+    "always attach", // R2 — default-off, not always-on, failure details
+    "second supervisor subscription", // R3 — the stream is single-consumer
+    "read counters on `child_failed`", // R4 — counters are final only at stop
+    "require `summary`", // R5 — keep the optional source width
+    "forward `usage`/`recentToolCalls`", // R6 — no lifecycle consumer needs them
+    "dedupe by depth", // R7 — same-child same-depth paths stay identical
+    "parentDelegationId", // R8 — walk-free recorded chain instead
+    "reverse index", // R9 — a bounded scan needs no index
+    "path + delegationId", // R10 — delegationId is already the unique key
+    "resetSummary()", // R11 — one read+reset call, not a second method
+    "supervisor_run_summary", // R12 — no root-run boundary exists
+    "since: marker", // R13 — hosts already hold the snapshot
+    "resetting on `delegate()`", // R14 — implicit resets are untrustworthy
+    "supervisor-side subscription", // R15 — no always-on per-delegation subscription
+    "re-derive", // R16 — usage has no axis counters or hashes
+    "full `TimelineExhaustion`", // R17 — result.limit already carries the breach
+    "second core event", // R18 — child_failed stays the single failure record
+    "prose findings", // R19 — the gate reads a file and tokens
+    "skipping the review", // R20 — two public shapes change
+  ],
+  completeTask: /^- \[x\] Task 1:/m,
+};
+
 function assertPrimitiveReview(spec) {
   assert.ok(existsSync(join(ROOT, spec.evidence)), `missing ${spec.evidence}`);
   const text = readFileSync(join(ROOT, spec.evidence), "utf8");
@@ -123,4 +192,8 @@ test("plan 074 Task 1 primitive review exists, names every reuse row, and skips 
 
 test("plan 104 Task 1 primitive review exists, names every reuse row, and skips no rejection", () => {
   assertPrimitiveReview(PLAN_104_TASK_1);
+});
+
+test("plan 108 Task 1 primitive review exists, names every reuse row, and skips no rejection", () => {
+  assertPrimitiveReview(PLAN_108_TASK_1);
 });

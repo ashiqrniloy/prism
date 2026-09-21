@@ -536,6 +536,7 @@ export class RuntimeAgentSession implements AgentSession {
     readonly status: AgentRunResult["status"];
     readonly usage?: Usage;
     readonly limit?: import("../contracts.js").RunLimitBreach;
+    readonly attribution?: import("../run-limits.js").BudgetExhaustionAttribution;
     readonly error?: ErrorInfo;
     readonly abortReason?: string;
     readonly stopReason?: import("../contracts.js").AgentFinishReason;
@@ -554,6 +555,7 @@ export class RuntimeAgentSession implements AgentSession {
       message: final.message,
       usage: input.usage,
       limit: input.limit,
+      attribution: input.attribution,
       error: input.error,
       abortReason: input.abortReason,
       stopReason: input.stopReason,

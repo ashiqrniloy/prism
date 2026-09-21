@@ -314,6 +314,16 @@ function axisCap(limits: Readonly<ResolvedRunLimits>, axis: RunLimitName): numbe
 }
 
 /**
+ * Attribution carried by a limit death (plan 087 T2, plan 108 T5): the `budget_exhausted` payload
+ * without `limit`, which `AgentRunResult.limit` / `child_failed.limit` already carry.
+ */
+export interface BudgetExhaustionAttribution {
+  readonly consumed: BudgetConsumedCounters;
+  readonly closestOtherAxes: readonly BudgetAxisUsage[];
+  readonly recentToolCalls: readonly ToolCallSummary[];
+}
+
+/**
  * Build the `budget_exhausted` payload (plan 087 T2): which axis fired, the counters a host reads
  * first, the closest other axes, and the last dispatched tool calls (hashes only).
  */
@@ -321,12 +331,7 @@ export function describeBudgetExhaustion(
   tracker: RunLimitTracker,
   breach: RunLimitBreach,
   recentToolCalls: readonly ToolCallSummary[],
-): {
-  limit: RunLimitName;
-  consumed: BudgetConsumedCounters;
-  closestOtherAxes: BudgetAxisUsage[];
-  recentToolCalls: ToolCallSummary[];
-} {
+): BudgetExhaustionAttribution & { readonly limit: RunLimitName } {
   const counters = tracker.snapshot();
   const closestOtherAxes = ATTRIBUTION_AXES.filter(({ axis }) => axis !== breach.limit)
     .flatMap(({ axis, counter }) => {

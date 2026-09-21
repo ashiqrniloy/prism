@@ -846,15 +846,12 @@ export async function executeRun(
     }
     runError = errorToErrorInfo(error);
     const breach = error instanceof RunLimitError ? error.breach : limits.breach;
+    // Built once: the event and the terminal result carry the same attribution payload (plan 108 T5).
+    const exhaustion = breach ? describeBudgetExhaustion(limits, breach, session.activeRecentToolCalls ?? []) : undefined;
     // Terminal attribution before the terminal `error`/finish records, so a subscriber that stops
     // at the first terminal event still sees why the run died (plan 087 T2).
-    if (breach) {
-      session.emit({
-        type: "budget_exhausted",
-        sessionId: session.id,
-        runId,
-        ...describeBudgetExhaustion(limits, breach, session.activeRecentToolCalls ?? []),
-      });
+    if (exhaustion) {
+      session.emit({ type: "budget_exhausted", sessionId: session.id, runId, ...exhaustion });
     }
     session.emit({ type: "error", sessionId: session.id, runId, error: runError });
     runStatus = breach ? "failed" : controller.signal.aborted ? "aborted" : "failed";
@@ -874,6 +871,11 @@ export async function executeRun(
       status: runStatus,
       usage: runUsage.value() ?? usage,
       limit: breach,
+      attribution: exhaustion && {
+        consumed: exhaustion.consumed,
+        closestOtherAxes: exhaustion.closestOtherAxes,
+        recentToolCalls: exhaustion.recentToolCalls,
+      },
       error: runError,
       abortReason: !breach && controller.signal.aborted ? String(controller.signal.reason) : undefined,
       runState,

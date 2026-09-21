@@ -583,6 +583,7 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "AgentEventSourceErrorCode",
   "AgentInput",
   "ApprovalOutcome",
+  "BudgetExhaustionAttribution",
   "DecisionScope",
   "NestedRunApproval",
   "NestedRunOutcome",

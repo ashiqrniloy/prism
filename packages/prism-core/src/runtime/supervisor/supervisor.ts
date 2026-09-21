@@ -7,6 +7,8 @@ import {
   assertIdentityActive,
   assertIdentityMatchesOwnership,
   assertIdentityPropagation,
+  type BudgetAxisUsage,
+  type BudgetConsumedCounters,
   createAgent,
   createEventMultiplexer,
   type NestedRunOutcome,
@@ -17,6 +19,7 @@ import {
   resumeAgentRun,
   type RunLimitBreach,
   type SecretRedactor,
+  type ToolCallSummary,
   type Usage,
 } from "@arnilo/prism";
 import { SupervisorDeniedError, SupervisorError, SupervisorLimitError, SupervisorValidationError } from "./errors.js";
@@ -46,6 +49,8 @@ import type {
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 interface ChainContext {
   readonly path: readonly string[];
+  /** Ancestor delegation ids (oldest first); absent for a top-level delegation. */
+  readonly parents?: readonly string[];
   readonly signal?: AbortSignal;
 }
 
@@ -70,7 +75,8 @@ type CompletedDelegation =
 /** Live delegation bookkeeping for `summary().failureRadius`; deleted on settle. */
 interface LiveDelegation {
   readonly childId: string;
-  readonly path: readonly string[];
+  /** Ancestor delegation ids plus this delegation's own id (oldest first). */
+  readonly chain: readonly string[];
 }
 
 /** Mutable per-child counters behind `summary()`; frozen on read. */
@@ -89,6 +95,10 @@ type ChildFailureAttribution = {
   readonly limit?: RunLimitBreach;
   readonly stopReason?: AgentRunResult["stopReason"];
   readonly usage?: Usage;
+  /** Copied from `result.attribution` on a ceiling death (plan 108 T5); the breach stays in `limit`. */
+  readonly consumed?: BudgetConsumedCounters;
+  readonly closestOtherAxes?: readonly BudgetAxisUsage[];
+  readonly recentToolCalls?: readonly ToolCallSummary[];
 };
 
 const DELEGATION_NAMESPACE = "prism.supervisor-delegation";
@@ -310,6 +320,8 @@ interface DelegationMapping {
   readonly delegationId: string;
   readonly threadId: string;
   readonly path: readonly string[];
+  /** Ancestor delegation ids (oldest first), so a resumed rebuild can rebuild the chain. */
+  readonly parents?: readonly string[];
   readonly version: number;
   /** Redacted delegation input, needed to re-run the before-hook at resume. */
   readonly input: string;
@@ -349,7 +361,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
     children.map(([childId]) => [childId, { attempts: 0, retries: 0, failures: 0, failureRadius: 0, outcome: "idle" }]),
   );
 
-  function noteDelegationStart(childId: string, delegationId: string, path: readonly string[]): void {
+  function noteDelegationStart(childId: string, delegationId: string, parents?: readonly string[]): void {
     const counters = childCounters.get(childId);
     if (counters) {
       // A re-dispatch after failure/abort is a recovery attempt; resuming a suspended run is not.
@@ -357,7 +369,19 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
       counters.attempts += 1;
       counters.outcome = "running";
     }
-    liveDelegations.set(delegationId, { childId, path });
+    liveDelegations.set(delegationId, { childId, chain: Object.freeze([...(parents ?? []), delegationId]) });
+  }
+
+  /**
+   * Live-delegation entry behind `failureRadius`/`hasLiveDelegation`: added when a delegation
+   * starts — including a resume, so a fresh instance counts a delegation that was live across the
+   * restart — and removed when it settles. A resumed id is re-based in `resumeNestedRun` before it
+   * can collide, but if one still is taken the running delegation keeps its entry: displacing it
+   * would lose a live delegation's ancestry, while the resumed one degrades to pre-resume behavior.
+   */
+  function noteLiveDelegation(childId: string, delegationId: string, parents?: readonly string[]): void {
+    if (liveDelegations.has(delegationId)) return;
+    liveDelegations.set(delegationId, { childId, chain: Object.freeze([...(parents ?? []), delegationId]) });
   }
 
   function hasLiveDelegation(childId: string): boolean {
@@ -368,16 +392,13 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
   /**
    * Blast radius: task-lifetime descendants still live when this delegation failed. Nested
    * session lifetime is unreachable (`context.delegate` is synchronous), so every live
-   * descendant is an affected one.
-   * ponytail: ancestry is the child-id path prefix; concurrent duplicate subtrees can
-   * overcount a radius. Switch to a delegation-id parent chain if that ever needs to be exact.
+   * descendant is an affected one. Ancestry is the delegation-id chain, unique per delegation,
+   * so concurrent delegations of the same child id stay distinct.
    */
-  function countLiveDescendants(path: readonly string[]): number {
+  function countLiveDescendants(delegationId: string): number {
     let count = 0;
-    for (const live of liveDelegations.values()) {
-      if (live.path.length <= path.length) continue;
-      if (path.every((step, index) => live.path[index] === step)) count += 1;
-    }
+    // The settled delegation is already deleted, so a chain never matches itself.
+    for (const live of liveDelegations.values()) if (live.chain.includes(delegationId)) count += 1;
     return count;
   }
 
@@ -390,7 +411,6 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
     childId: string,
     delegationId: string,
     depth: number,
-    path: readonly string[],
     outcome: SupervisorChildOutcome,
     failure?: ChildFailureAttribution,
   ): void {
@@ -399,7 +419,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
     if (counters) {
       if (failure) {
         counters.failures += 1;
-        counters.failureRadius += countLiveDescendants(path);
+        counters.failureRadius += countLiveDescendants(delegationId);
       }
       counters.outcome = hasLiveDelegation(childId) ? "running" : outcome;
     }
@@ -414,6 +434,9 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         ...(failure.limit !== undefined ? { limit: failure.limit } : {}),
         ...(failure.stopReason !== undefined ? { stopReason: failure.stopReason } : {}),
         ...(failure.usage !== undefined ? { usage: failure.usage } : {}),
+        ...(failure.consumed !== undefined ? { consumed: failure.consumed } : {}),
+        ...(failure.closestOtherAxes !== undefined ? { closestOtherAxes: failure.closestOtherAxes } : {}),
+        ...(failure.recentToolCalls !== undefined ? { recentToolCalls: failure.recentToolCalls } : {}),
       });
     }
   }
@@ -473,7 +496,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
     // Kept across the limit-to-SupervisorLimitError translation so the catch below can still
     // publish structured plan-087 attribution (the conversion drops `error.result`).
     let limitedResult: AgentRunResult | undefined;
-    noteDelegationStart(request.childId, delegationId, path);
+    noteDelegationStart(request.childId, delegationId, chain.parents);
 
     try {
       let hookPermission: PermissionPolicy | undefined;
@@ -500,7 +523,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
           events.publish({ type: "delegation_rejected", childId: request.childId, delegationId, depth, reason });
           await complete({ childId: request.childId, delegationId, depth, status: "rejected", text: "", error: reason });
           completionSent = true;
-          settleDelegation(request.childId, delegationId, depth, path, "rejected");
+          settleDelegation(request.childId, delegationId, depth, "rejected");
           throw new SupervisorDeniedError(reason);
         }
         limits = narrowSupervisorLimits(limits, decision.limits);
@@ -538,7 +561,12 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
               threadId,
               permission: preliminaryPermission,
               signal: controller.signal,
-              delegate: (nested: DelegationRequest) => delegate(nested, { path, signal: controller.signal }),
+              delegate: (nested: DelegationRequest) =>
+                delegate(nested, {
+                  path,
+                  parents: [...(chain.parents ?? []), delegationId],
+                  signal: controller.signal,
+                }),
             }),
           ),
         ),
@@ -607,7 +635,10 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
                 : error.result.limit.limit === "maxWallTimeMs"
                   ? "timeout"
                   : "run";
-          throw new SupervisorLimitError(`Delegation ${label} limit exceeded`);
+          // The child's terminal result travels with the error: a host that catches it reads the
+          // same `limit`/`attribution` the `child_failed` event carries, matching the plain-failure
+          // path, which rethrows the child's `AgentRunError` (and its `result`) as-is.
+          throw new SupervisorLimitError(`Delegation ${label} limit exceeded`, error.result);
         }
         throw error;
       } finally {
@@ -626,6 +657,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
           delegationId,
           threadId,
           path,
+          ...(chain.parents?.length ? { parents: chain.parents } : {}),
           version,
           input,
           ...(policy.report !== "on-complete" ? { report: policy.report } : {}),
@@ -639,7 +671,6 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         request.childId,
         delegationId,
         depth,
-        path,
         result.status,
         result.status === "failed"
           ? failureAttribution(result, safeError(result.error?.message ?? "Delegated run failed", options))
@@ -663,7 +694,6 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
           request.childId,
           delegationId,
           depth,
-          path,
           failed ? "failed" : (result?.status ?? (controller.signal.aborted ? "aborted" : "rejected")),
           failed ? failureAttribution(result, message) : undefined,
         );
@@ -772,6 +802,12 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
     }
     const child = options.children[mapping.childId];
     if (!child) throw new SupervisorDeniedError("Unknown delegated run");
+    // A fresh instance numbers delegations from `-1` again, so seed the counter from the resumed
+    // id: a delegation started after this resume cannot take a suspended delegation's id.
+    const resumedIndex = Number(mapping.delegationId.slice(id.length + 1));
+    if (mapping.delegationId.startsWith(`${id}-`) && Number.isSafeInteger(resumedIndex)) {
+      sequence = Math.max(sequence, resumedIndex);
+    }
     const childIdentity =
       options.identity && child.scopes !== undefined ? narrowIdentity(options.identity, { scopes: child.scopes }) : options.identity;
     if (options.identity && childIdentity) assertIdentityPropagation(options.identity, childIdentity);
@@ -826,7 +862,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
           error: reason,
         });
         disposeResumeSignals();
-        settleDelegation(mapping.childId, mapping.delegationId, depth, mapping.path, "rejected");
+        settleDelegation(mapping.childId, mapping.delegationId, depth, "rejected");
         return { status: "failed", code: "delegation_denied", message: reason };
       }
       limits = narrowSupervisorLimits(limits, decision.limits);
@@ -847,7 +883,12 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         threadId: mapping.threadId,
         permission,
         signal: controller.signal,
-        delegate: (nestedRequest: DelegationRequest) => delegate(nestedRequest, { path: mapping.path, signal: controller.signal }),
+        delegate: (nestedRequest: DelegationRequest) =>
+          delegate(nestedRequest, {
+            path: mapping.path,
+            parents: [...(mapping.parents ?? []), mapping.delegationId],
+            signal: controller.signal,
+          }),
       }),
     );
     assertChildAgent(childAgent, mapping.childId);
@@ -873,6 +914,9 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
           // Plan 078 Task 7: the same pump as live `delegate()`, attached to the rebuilt session,
           // so a consumer that lost the stream across HITL still sees child milestones.
           onSession: (session) => {
+            // The rebuilt delegation is live again from the moment its run starts: registered after
+            // resumeAgentRun's guardrails, so a stale or foreign resume never registers a live entry.
+            noteLiveDelegation(mapping.childId, mapping.delegationId, mapping.parents);
             if (resumePolicy.report === "on-complete") return;
             stopChildEvents = startChildEventPump(
               session,
@@ -886,6 +930,26 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
           },
         },
       );
+    } catch (error) {
+      // Terminal symmetry with live `delegate()`: a resumed run that died settles its counters,
+      // publishes the terminal error, and runs the terminal hook. A rebuild error thrown by
+      // `resumeAgentRun` before the run starts (stale version, fingerprint drift) stays silent,
+      // so a duplicate resume attempt can never clean up a live suspended child.
+      if (!(error instanceof AgentRunError)) throw error;
+      const failed = error.result;
+      const message = safeError(error, options);
+      const abortedByHost = controller.signal.aborted && !(controller.signal.reason instanceof SupervisorLimitError);
+      const isFailure = !abortedByHost && failed.status !== "denied" && failed.status !== "succeeded";
+      settleDelegation(
+        mapping.childId,
+        mapping.delegationId,
+        depth,
+        isFailure ? "failed" : failed.status,
+        isFailure ? failureAttribution(failed, message) : undefined,
+      );
+      events.publish({ type: "delegation_error", childId: mapping.childId, delegationId: mapping.delegationId, depth, error: message });
+      await complete(toCompletion(failed, mapping.childId, mapping.delegationId, depth, options));
+      throw error;
     } finally {
       // Stops on every outcome, including a failed rebuild (stale version, fingerprint drift).
       await stopChildEvents?.();
@@ -902,7 +966,6 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
       mapping.childId,
       mapping.delegationId,
       depth,
-      mapping.path,
       result.status,
       result.status === "failed"
         ? failureAttribution(result, safeError(result.error?.message ?? "Delegated run failed", options))
@@ -951,7 +1014,21 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
     cancel,
     resumeNestedRun,
     subscribe: () => events.subscribe(),
-    summary: () => Object.freeze({ children: Object.freeze(children.map(([childId]) => childSummary(childId))) }),
+    summary: (options?: { readonly reset?: boolean }) => {
+      if (options?.reset) {
+        // New counting window: zero every counter and restate the present state, so a dispatch
+        // after a pre-window failure counts `attempts: 1` without a `retries` bump. Live
+        // delegations keep their own entries, so a settle after the reset still records.
+        for (const [childId, counters] of childCounters) {
+          counters.attempts = 0;
+          counters.retries = 0;
+          counters.failures = 0;
+          counters.failureRadius = 0;
+          counters.outcome = hasLiveDelegation(childId) ? "running" : "idle";
+        }
+      }
+      return Object.freeze({ children: Object.freeze(children.map(([childId]) => childSummary(childId))) });
+    },
     get activeChildren() {
       return activeChildren;
     },
@@ -987,7 +1064,8 @@ function waitFor<T>(promise: Promise<T>, signal: AbortSignal | undefined, timeou
 
 /**
  * `child_failed` attribution from a terminal result: the plan-087 finish vocabulary
- * (`status`/`stopReason`) plus the plan-086/087 breach when a configured ceiling fired.
+ * (`status`/`stopReason`), the plan-086/087 breach when a configured ceiling fired, and the
+ * plan-087 exhaustion attribution the result carries on that death (plan 108 T5).
  */
 function failureAttribution(result: AgentRunResult | undefined, reason: string): ChildFailureAttribution {
   return {
@@ -996,6 +1074,9 @@ function failureAttribution(result: AgentRunResult | undefined, reason: string):
     ...(result?.limit !== undefined ? { limit: result.limit } : {}),
     ...(result?.stopReason !== undefined ? { stopReason: result.stopReason } : {}),
     ...(result?.usage !== undefined ? { usage: result.usage } : {}),
+    ...(result?.attribution?.consumed !== undefined ? { consumed: result.attribution.consumed } : {}),
+    ...(result?.attribution?.closestOtherAxes !== undefined ? { closestOtherAxes: result.attribution.closestOtherAxes } : {}),
+    ...(result?.attribution?.recentToolCalls !== undefined ? { recentToolCalls: result.attribution.recentToolCalls } : {}),
   };
 }
 

@@ -22,6 +22,7 @@ import type {
   Usage,
 } from "./contracts-core.js";
 import type { AgentEvent, AgentFinishReason, RunOptions, ToolEffectKind } from "./contracts-protocol.js";
+import type { BudgetExhaustionAttribution } from "./run-limits.js";
 
 export type AgentRunStatus = "succeeded" | "failed" | "aborted" | "suspended" | "denied";
 
@@ -378,6 +379,11 @@ export interface AgentRunResult {
   readonly usage?: Usage;
   /** Present when the run hit a configured resource ceiling. */
   readonly limit?: RunLimitBreach;
+  /**
+   * Present with `limit` when the run died on a ceiling: the same plan-087 attribution payload the
+   * `budget_exhausted` event carries (`limit` stays on {@link AgentRunResult.limit}).
+   */
+  readonly attribution?: BudgetExhaustionAttribution;
   /** Present when `status` is `"failed"` or when a failed attempt still produced partial output. */
   readonly error?: ErrorInfo;
   /** String form of the abort reason when `status` is `"aborted"`. */

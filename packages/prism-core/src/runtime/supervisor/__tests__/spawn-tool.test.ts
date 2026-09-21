@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   type Agent,
+  type AIProvider,
   createAgent,
   createMockProvider,
   createSecretRedactor,
@@ -394,5 +395,49 @@ describe("createSpawnAgentTool lifetime and report policy", () => {
       if (next.value.type === "delegation_finished") break;
     }
     assert.deepEqual(types, ["delegation_started", "delegation_finished"]);
+  });
+
+  it("keeps tool-result value keys stable for a limit-failed child", async () => {
+    // Plan 108 T5: the child result now carries `attribution`; none of it may leak into the
+    // model-visible value projections, which stay explicit key lists.
+    const failing = (): Agent => {
+      let generated = 0;
+      const provider: AIProvider = {
+        id: "mock",
+        async *generate() {
+          generated += 1;
+          yield providerToolCall({ type: "tool_call", id: `c${generated}`, name: "noop", arguments: {} });
+        },
+      };
+      return createAgent({
+        model: { provider: "mock", model: "test" },
+        provider,
+        tools: [{ name: "noop", execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "noop", value: "ok" }) }],
+      });
+    };
+    const supervisor = createSupervisor({
+      ownership,
+      children: { research: { limits: { maxToolCalls: 1 }, createAgent: failing }, ok: { createAgent: () => doneAgent() } },
+    });
+    const spawn = createSpawnAgentTool({ supervisor });
+    const wait = createWaitAgentTool({ supervisor });
+
+    // Sync spawn: the ceiling death surfaces as an error result with no value at all.
+    const failed = await execute(spawn, { childId: "research", input: "x" });
+    assert.equal(failed.value, undefined);
+    assert.ok(failed.error?.message);
+
+    // Async launch: the handle keeps its `{ childId, delegationId, status }` keys, and the wait
+    // that reports the death carries the error instead of a value.
+    const launched = await execute(spawn, { childId: "research", input: "x", mode: "async" });
+    const handle = launched.value as { readonly delegationId: string };
+    assert.deepEqual(Object.keys(handle).sort(), ["childId", "delegationId", "status"]);
+    const joined = await execute(wait, { delegationId: handle.delegationId });
+    assert.equal(joined.value, undefined);
+    assert.ok(joined.error?.message);
+
+    // A successful delegation keeps the pinned success keys.
+    const ok = await execute(spawn, { childId: "ok", input: "x" });
+    assert.deepEqual(Object.keys(ok.value as object).sort(), ["childId", "status", "text", "usage"]);
   });
 });

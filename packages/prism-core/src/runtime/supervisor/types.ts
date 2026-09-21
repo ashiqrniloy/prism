@@ -3,12 +3,15 @@ import type {
   AgentEvent,
   AgentIdentity,
   AgentRunResult,
+  BudgetAxisUsage,
+  BudgetConsumedCounters,
   CheckpointStore,
   OwnershipScope,
   PermissionPolicy,
   ResumeNestedRun,
   RunLimitBreach,
   SecretRedactor,
+  ToolCallSummary,
   ToolEffectStore,
   Usage,
 } from "@arnilo/prism";
@@ -209,6 +212,10 @@ export type SupervisorEvent =
       readonly limit?: RunLimitBreach;
       readonly stopReason?: AgentRunResult["stopReason"];
       readonly usage?: Usage;
+      /** Plan-087 attribution carried by the child's own `AgentRunResult.attribution` on a ceiling death. */
+      readonly consumed?: BudgetConsumedCounters;
+      readonly closestOtherAxes?: readonly BudgetAxisUsage[];
+      readonly recentToolCalls?: readonly ToolCallSummary[];
     };
 
 /**
@@ -297,7 +304,12 @@ export interface Supervisor {
    */
   readonly resumeNestedRun: ResumeNestedRun;
   subscribe(): AsyncIterable<SupervisorEvent>;
-  /** Per-child attempts/retries/failures/failure-radius counters; one row per allow-listed child. */
-  summary(): SupervisorRunSummary;
+  /**
+   * Per-child attempts/retries/failures/failure-radius counters; one row per allow-listed child.
+   * Cumulative for the supervisor's lifetime; `reset: true` starts a new counting window instead
+   * (every counter zeroed, `outcome` restated as `running` when the child has a live delegation,
+   * else `idle`).
+   */
+  summary(options?: { readonly reset?: boolean }): SupervisorRunSummary;
   readonly activeChildren: number;
 }

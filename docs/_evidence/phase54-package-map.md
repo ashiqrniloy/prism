@@ -1,6 +1,6 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-09-21T15:40:20.914Z`
+Generated: `2026-09-21T17:19:47.903Z`
 Repository root version: `0.10.0`
 
 ## 1. Executive Summary & Counts
@@ -569,14 +569,14 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 
 | Package Name | Declared Public Exports (dist) | Budget-Gated Exports (src) | Snapshot Baseline File |
 |---|---|---|---|
-| `@arnilo/prism` | 1038 | 1458 | `scripts/compat-baseline/arnilo__prism.txt` |
+| `@arnilo/prism` | 1039 | 1459 | `scripts/compat-baseline/arnilo__prism.txt` |
 | `@arnilo/prism-mcp` | 132 | 139 | `scripts/compat-baseline/arnilo__prism-mcp.txt` |
 | `@arnilo/prism-providers` | 496 | 528 | `scripts/compat-baseline/arnilo__prism-providers.txt` |
 | `@arnilo/prism-memory` | 783 | 861 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
 | `@arnilo/prism-work` | 328 | 406 | `scripts/compat-baseline/arnilo__prism-work.txt` |
 | `@arnilo/prism-core` | 1291 | 1418 | `scripts/compat-baseline/arnilo__prism-core.txt` |
 | `@arnilo/prism-channels` | 91 | 106 | `scripts/compat-baseline/arnilo__prism-channels.txt` |
-| `@arnilo/prism-coding-tools` | 887 | 936 | `scripts/compat-baseline/arnilo__prism-coding-tools.txt` |
+| `@arnilo/prism-coding-tools` | 890 | 939 | `scripts/compat-baseline/arnilo__prism-coding-tools.txt` |
 | `@arnilo/prism-ag-ui` | 299 | 313 | `scripts/compat-baseline/arnilo__prism-ag-ui.txt` |
 | `@arnilo/prism-web-tools` | 294 | 304 | `scripts/compat-baseline/arnilo__prism-web-tools.txt` |
 | `@arnilo/prism-acp-agent` | 13 | 20 | `scripts/compat-baseline/arnilo__prism-acp-agent.txt` |

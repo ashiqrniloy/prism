@@ -120,7 +120,24 @@ describe("createAcpLifecycleMapper (freeze lifecycleEventMapping)", () => {
       messageId: "prism:subagent:delegation-1",
       content: { type: "text", text: "Subagent [REDACTED]-child succeeded" },
     });
-    assert.doesNotMatch(JSON.stringify([...started, ...stopped]), /secret|input|output/);
+    // Opt-in failure/recovery fields stay host-side: the mapper consumes ids, depth, and status only.
+    const attributed = await mapper.map({
+      type: "subagent_stopped",
+      childId: "secret-child",
+      delegationId: "delegation-1",
+      depth: 1,
+      status: "failed",
+      failure: { reason: "run limit: maxToolCalls", limit: "maxToolCalls", stopReason: "turn_limit" },
+      recovery: { attempts: 2, retries: 1, failures: 1, failureRadius: 0, outcome: "failed" },
+    });
+    assert.deepEqual(attributed, [
+      {
+        sessionUpdate: "agent_message_chunk",
+        messageId: "prism:subagent:delegation-1",
+        content: { type: "text", text: "Subagent [REDACTED]-child failed" },
+      },
+    ]);
+    assert.doesNotMatch(JSON.stringify([...started, ...stopped, ...attributed]), /secret|input|output|maxToolCalls|turn_limit|attempts/);
   });
 
   it("maps plan_changed to a complete plan_update and plan_removed to plan_removed (F5)", async () => {

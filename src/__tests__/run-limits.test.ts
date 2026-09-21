@@ -6,12 +6,15 @@ import {
   AgentRunError,
   type AIProvider,
   createAgent,
+  createMemoryCheckpointStore,
+  createMemorySessionStore,
   createMockProvider,
   HARD_RUN_LIMITS,
   providerDone,
   providerTextDelta,
   providerToolCall,
   providerUsage,
+  resumeAgentRunStream,
   type RunLimitBreach,
   RunLimitError,
   RunLimitTracker,
@@ -244,6 +247,8 @@ describe("run limits", () => {
     const events = collect(session.subscribe());
     const result = await session.run("hi", { loop, limits: { maxTurns: null, maxOutputTokens: null } });
     assert.equal(result.status, "succeeded");
+    assert.equal(result.limit, undefined);
+    assert.equal(result.attribution, undefined, "a clean run carries no attribution");
     const observed = await events;
     assert.equal(
       observed.some((event) => event.type === "message_delta"),
@@ -277,9 +282,10 @@ describe("run limits", () => {
     const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] });
     const session = agent.createSession();
     const events = collect(session.subscribe());
+    let failure: AgentRunError | undefined;
     await assert.rejects(session.run("hi", { limits: { maxTurns: 12, maxToolRounds: 20, maxToolCalls: 20 } }), (error: unknown) => {
       assert.ok(error instanceof AgentRunError);
-      assert.equal(error.result.limit?.limit, "maxTurns");
+      failure = error;
       return true;
     });
     const observed = await events;
@@ -311,6 +317,14 @@ describe("run limits", () => {
       order.indexOf("run_limit_exceeded") < order.indexOf("budget_exhausted") && order.indexOf("budget_exhausted") < order.indexOf("error"),
       "a limit death must deliver its breach, then its attribution, then the run's error",
     );
+    // Plan 108 T5: the same payload rides the terminal result, so a host that keeps only the
+    // result reads exactly what the event reported, and the breach itself stays on `limit`.
+    const result = failure?.result;
+    assert.equal(result?.limit?.limit, "maxTurns");
+    assert.deepEqual(result?.attribution?.consumed, event.consumed);
+    assert.deepEqual(result?.attribution?.closestOtherAxes, event.closestOtherAxes);
+    assert.deepEqual(result?.attribution?.recentToolCalls, event.recentToolCalls);
+    assert.deepEqual(Object.keys(result?.attribution ?? {}).sort(), ["closestOtherAxes", "consumed", "recentToolCalls"]);
   });
 
   it("names the run input budget axis when cumulative tokens die, and hashes tool-call arguments", async () => {
@@ -351,5 +365,79 @@ describe("run limits", () => {
     assert.ok(call);
     assert.match(call.argHash, /^sha256:[a-f0-9]{64}$/);
     assert.equal(JSON.stringify(event).includes(secret), false, "raw arguments never enter the attribution event");
+  });
+
+  it("carries no attribution for a host abort", async () => {
+    let ready: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const provider: AIProvider = {
+      id: "mock",
+      async *generate(request) {
+        ready?.();
+        await new Promise<void>((_resolve, reject) =>
+          request.signal?.addEventListener("abort", () => reject(request.signal?.reason), { once: true }),
+        );
+      },
+    };
+    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, limits: { maxTurns: 4 } });
+    const controller = new AbortController();
+    const run = agent.createSession().run("hi", { signal: controller.signal });
+    await started;
+    controller.abort(new Error("host cancels"));
+    await assert.rejects(run, (error: unknown) => {
+      assert.ok(error instanceof AgentRunError);
+      assert.equal(error.result.status, "aborted");
+      assert.equal(error.result.limit, undefined);
+      assert.equal(error.result.attribution, undefined, "an abort is not a ceiling death");
+      return true;
+    });
+  });
+
+  it("carries attribution on a durable resumed run that dies on a limit", async () => {
+    const checkpoints = createMemoryCheckpointStore();
+    const agent = createAgent({
+      id: "durable-limit",
+      model: { provider: "mock", model: "demo" },
+      limits: { maxToolCalls: 1 },
+      store: createMemorySessionStore(),
+      provider: createMockProvider([
+        providerToolCall(toolCallContent("call-1", "write", { v: 1 })),
+        providerToolCall(toolCallContent("call-2", "write", { v: 2 })),
+        providerDone(),
+      ]),
+      tools: [
+        { name: "write", parameters: {}, execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "write", value: "ok" }) },
+      ],
+    });
+    const first = await agent.createSession({ id: "durable-limit-session" }).run("go", {
+      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    });
+    assert.equal(first.status, "suspended");
+    const version = first.runState?.version;
+    assert.ok(version !== undefined, "the suspended run carries its version");
+
+    const events: AgentEvent[] = [];
+    let failure: AgentRunError | undefined;
+    try {
+      for await (const event of resumeAgentRunStream(
+        agent,
+        { runId: first.runId, sessionId: first.sessionId },
+        { decision: "approve", expectedVersion: version },
+        { checkpoints, definitionRevision: "1" },
+      )) {
+        events.push(event);
+      }
+    } catch (error) {
+      assert.ok(error instanceof AgentRunError);
+      failure = error;
+    }
+    const exhausted = events.find((event) => event.type === "budget_exhausted");
+    assert.ok(exhausted, "a resumed limit death still emits its attribution");
+    assert.equal(failure?.result.limit?.limit, "maxToolCalls");
+    assert.deepEqual(failure?.result.attribution?.consumed, exhausted.consumed);
+    assert.deepEqual(failure?.result.attribution?.closestOtherAxes, exhausted.closestOtherAxes);
+    assert.deepEqual(failure?.result.attribution?.recentToolCalls, exhausted.recentToolCalls);
   });
 });

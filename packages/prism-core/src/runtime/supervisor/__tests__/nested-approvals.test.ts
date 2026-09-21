@@ -15,6 +15,7 @@ import {
 import {
   type CreateSupervisorOptions,
   createSupervisor,
+  type DelegationChildContext,
   type DelegationCompletion,
   type Supervisor,
   SupervisorDeniedError,
@@ -42,12 +43,23 @@ function harness(options?: {
   childEvents?: boolean;
   limits?: CreateSupervisorOptions["limits"];
   hooks?: CreateSupervisorOptions["hooks"];
+  /** After a resume, this child spawns `spawnChildId` fire-and-forget, then fails its run. */
+  resumeSpawn?: { childId: string; spawnChildId: string };
+  /** Shared durable state, so a second instance can resume what the first suspended. */
+  durable?: {
+    checkpoints: ReturnType<typeof createMemoryCheckpointStore>;
+    sessions: Map<string, ReturnType<typeof createMemorySessionStore>>;
+    /** Per-scope provider turn counters: a rebuilt provider must not replay turn 1. */
+    turns: Map<string, number>;
+  };
+  /** Hold the resumed turn open until this resolves (observes a delegation that is live on resume). */
+  resumeGate?: Promise<void>;
 }): Harness {
-  const checkpoints = createMemoryCheckpointStore();
+  const checkpoints = options?.durable?.checkpoints ?? createMemoryCheckpointStore();
   const executed: string[] = [];
-  const turns = new Map<string, number>();
+  const turns = options?.durable?.turns ?? new Map<string, number>();
   // Session stores persist across child-agent rebuilds (hosts use durable stores).
-  const sessionStores = new Map<string, ReturnType<typeof createMemorySessionStore>>();
+  const sessionStores = options?.durable?.sessions ?? new Map<string, ReturnType<typeof createMemorySessionStore>>();
   const storeFor = (key: string) => {
     let store = sessionStores.get(key);
     if (!store) {
@@ -58,7 +70,7 @@ function harness(options?: {
   };
   const childDefs = options?.children ?? { writer: {} };
 
-  const childAgent = (childId: string, scopeKey: string): Agent =>
+  const childAgent = (childId: string, scopeKey: string, context: DelegationChildContext): Agent =>
     createAgent({
       id: `child-${childId}`,
       model: { provider: "mock", model: "test" },
@@ -73,6 +85,11 @@ function harness(options?: {
             yield providerDone();
             return;
           }
+          if (options?.resumeSpawn?.childId === childId) {
+            context.delegate({ childId: options.resumeSpawn.spawnChildId, input: "slow" }).catch(() => undefined);
+            throw new Error(`${childId} exploded after resume`);
+          }
+          if (options?.resumeGate) await options.resumeGate;
           yield providerTextDelta(`${childId} done`);
           yield providerDone();
         },
@@ -102,22 +119,23 @@ function harness(options?: {
         childId,
         {
           permission: def.permission,
-          createAgent: (context: { resourceId: string }) => childAgent(childId, context.resourceId),
+          createAgent: (context) => childAgent(childId, context.resourceId, context),
         },
       ]),
     ),
   });
 
-  let rootTurn = 0;
   const rootPlan = options?.rootTurns ?? [Object.keys(childDefs)[0]!, "text"];
   const root = createAgent({
     id: "root",
     model: { provider: "mock", model: "test" },
-    store: createMemorySessionStore(),
+    store: storeFor("root-session"),
     provider: {
       id: "mock",
       async *generate() {
-        rootTurn += 1;
+        // Shared across instances like the child counters: a rebuilt root must not replay turn 1.
+        const rootTurn = (turns.get("root") ?? 0) + 1;
+        turns.set("root", rootTurn);
         const step = rootPlan[rootTurn - 1] ?? "text";
         if (step !== "text") {
           yield { type: "tool_call" as const, call: toolCallContent(`root-d${rootTurn}`, "delegate", { childId: step }) };
@@ -432,6 +450,15 @@ describe("nested-agent approval propagation", () => {
     assert.equal(stage2[0]!.scope.toolName, "write");
     assert.deepEqual(executed, []);
 
+    // Plan 108 T3: the persisted mapping keeps the ancestor delegation ids, so a resumed
+    // rebuild reconstructs the same delegation chain instead of the child-id path alone.
+    const mappings = (await checkpoints.listCheckpoints()).items.map(
+      (record) => record.value as { childId?: string; delegationId?: string; parents?: readonly string[] },
+    );
+    const leafMapping = mappings.find((mapping) => mapping.childId === "leaf");
+    assert.equal(leafMapping?.delegationId, "lead-2");
+    assert.deepEqual(leafMapping?.parents, ["lead-1"], "the suspended leaf's mapping carries its ancestor delegation ids");
+
     const done = await resumeAgentRun(
       root,
       { runId: first.runId, sessionId: first.sessionId },
@@ -689,5 +716,79 @@ describe("nested-agent approval propagation", () => {
     assert.equal(completion.delegationId, "lead-1");
     assert.equal(completion.status, "rejected");
     assert.equal(completion.error, "revoked");
+  });
+
+  it("keeps the delegation ancestry across a resume so the failure radius stays exact", async () => {
+    const h = harness({
+      children: { lead: {}, writer: {} },
+      rootTurns: ["lead", "text"],
+      resumeSpawn: { childId: "lead", spawnChildId: "writer" },
+    });
+    const outcome = await suspendThenResume(h, "s11");
+    assert.ok(
+      outcome instanceof Error || (outcome as { status?: string }).status === "failed",
+      "the resumed child failure surfaces on the root run",
+    );
+    const [lead, writer] = h.supervisor.summary().children;
+    assert.equal(lead?.attempts, 1, "a resume is not a new attempt");
+    assert.equal(lead?.failures, 1);
+    assert.equal(lead?.failureRadius, 1, "a descendant spawned after the resume is attributed to its delegation");
+    assert.equal(writer?.outcome, "running", "the spawned descendant is still live (its approval is outstanding)");
+  });
+
+  // Plan 108 follow-up: a delegation resumed by a fresh supervisor instance is live again, so its
+  // child row does not flip back to a terminal outcome while it runs, and a delegation started
+  // after that resume cannot reuse the resumed delegation's id (the registry is keyed by it).
+  it("registers a delegation resumed by a fresh supervisor instance as live", async () => {
+    const durable = {
+      checkpoints: createMemoryCheckpointStore(),
+      sessions: new Map<string, ReturnType<typeof createMemorySessionStore>>(),
+      turns: new Map<string, number>(),
+    };
+    const before = harness({ durable });
+    const suspended = await before.root.createSession({ id: "s12" }).run("go", { runState: ROOT_RUN_STATE(before) });
+    assert.equal(suspended.status, "suspended");
+    const decision = suspended.interruption?.pendingDecisions?.[0];
+    const version = suspended.runState?.version;
+    assert.ok(decision && version !== undefined, "the child approval and the root version are durable");
+
+    // Restart: a new instance over the same checkpoints and session stores. Its first fresh
+    // delegation would otherwise take `lead-1`, the id the resumed delegation already holds.
+    let release = (): void => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let beforeCalls = 0;
+    const after = harness({
+      durable,
+      resumeGate: gate,
+      childEvents: true,
+      hooks: { before: () => (++beforeCalls === 1 ? { allowed: true } : { allowed: false, reason: "revoked" }) },
+    });
+    const iterator = after.supervisor.subscribe()[Symbol.asyncIterator]();
+    const resumed = resumeAgentRun(
+      after.root,
+      { runId: suspended.runId, sessionId: suspended.sessionId },
+      { expectedVersion: version, decisions: [{ approvalId: decision.approvalId, outcome: "allow_once" }] },
+      ROOT_RUN_STATE(after),
+    ).catch((error: unknown) => error);
+    // The rebuilt delegation replays its one gated call, then holds its run open on the gate.
+    await pullUntil(iterator, (event) => event.type === "delegation_child_event" && event.childEvent.type === "tool_execution_finished");
+    assert.equal(after.executed.length, 1, "only the resumed delegation ran its gated tool");
+
+    // A second delegation of the same child is rejected while the resumed one is live: the row
+    // must stay `running` (and not delete the resumed delegation's live entry).
+    await assert.rejects(after.supervisor.delegate({ childId: "writer", input: "again" }), SupervisorDeniedError);
+    assert.deepEqual(after.supervisor.summary().children, [
+      { childId: "writer", attempts: 1, retries: 0, failures: 0, failureRadius: 0, outcome: "running" },
+    ]);
+
+    release();
+    const settled = await resumed;
+    assert.ok(!(settled instanceof Error), `resumed root run failed: ${String(settled)}`);
+    assert.equal((settled as { status?: string }).status, "succeeded");
+    assert.deepEqual(after.supervisor.summary().children, [
+      { childId: "writer", attempts: 1, retries: 0, failures: 0, failureRadius: 0, outcome: "succeeded" },
+    ]);
   });
 });

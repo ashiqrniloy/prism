@@ -139,6 +139,7 @@ export type SessionHost = {
     readonly status: AgentRunResult["status"];
     readonly usage?: Usage;
     readonly limit?: import("../../contracts.js").RunLimitBreach;
+    readonly attribution?: import("../../run-limits.js").BudgetExhaustionAttribution;
     readonly error?: ErrorInfo;
     readonly abortReason?: string;
     readonly runState?: import("../../contracts.js").AgentRunState;

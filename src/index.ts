@@ -621,7 +621,7 @@ export {
   HARD_LEDGER_BATCH_ENTRIES,
   isFlushableRunLedger,
 } from "./run-ledger.js";
-export type { RunLimitTrackerOptions } from "./run-limits.js";
+export type { BudgetExhaustionAttribution, RunLimitTrackerOptions } from "./run-limits.js";
 export {
   createRunLimitTracker,
   DEFAULT_RUN_LIMITS,

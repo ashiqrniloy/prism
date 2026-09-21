@@ -1,3 +1,5 @@
+import type { AgentRunResult } from "@arnilo/prism";
+
 export class SupervisorError extends Error {
   constructor(
     message: string,
@@ -16,7 +18,14 @@ export class SupervisorValidationError extends SupervisorError {
 }
 
 export class SupervisorLimitError extends SupervisorError {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    /**
+     * The child's terminal result when a delegated run died on its own ceiling; absent for a
+     * supervisor-level ceiling (depth, active children, delegation or wait timeout, cycle, bytes).
+     */
+    readonly result?: AgentRunResult,
+  ) {
     super(message, "ERR_PRISM_SUPERVISOR_LIMIT");
     this.name = "SupervisorLimitError";
   }
