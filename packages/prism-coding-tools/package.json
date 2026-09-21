@@ -72,8 +72,8 @@
     "@arnilo/prism-core": "file:../prism-core",
     "@arnilo/prism-mcp": "file:../mcp",
     "@arnilo/prism-work": "file:../prism-work",
-    "@types/diff": "^7.0.2",
-    "@types/node": "^22.20.0",
+    "@types/diff": "^8.0.0",
+    "@types/node": "^26.6.1",
     "typescript": "^7.0.2"
   },
   "engines": {
