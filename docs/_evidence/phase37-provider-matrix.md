@@ -21,7 +21,7 @@ Cell legend: **supported** (code + offline proof) · **gap** (code exists, confo
 
 Rejected this freeze: provider-local SSE, extra retry loops, `VersionManager`, collapsed desktop-style APIs, Gemini `cachedContents` lifecycle, Bedrock Converse `cachePoint`, Vertex cache-resource CRUD, Changesets.
 
-## Frozen packages (19)
+## Frozen packages (22)
 
 Adapter identifiers are the family subpaths `@arnilo/prism-providers/<adapter>` (enforced by `scripts/phase37-provider-matrix.test.mjs`).
 
@@ -47,6 +47,8 @@ Adapter identifiers are the family subpaths `@arnilo/prism-providers/<adapter>` 
 | `@arnilo/prism-providers/vertex` | `packages/prism-providers/src/vertex` | Vertex OpenAPI-compatible Chat Completions | supported — registers host models only | host ADC/WIF bearer; credential **once** | host-owned catalog |
 | `@arnilo/prism-providers/xai` | `packages/prism-providers/src/xai` | OpenAI-compatible Completions SSE | supported — zero-fetch test | `api_key`; SuperGrok device-code OAuth host-invoked | caller-gated `listXaiModels` |
 | `@arnilo/prism-providers/zai` | `packages/prism-providers/src/zai` | OpenAI-compatible Chat Completions SSE | supported — zero-fetch test | `api_key` | caller-gated `listZaiModels` |
+| `@arnilo/prism-providers/typesafe` | `packages/prism-providers/src/typesafe` | System One `POST /v1/systemone` (no SSE) | supported — zero-fetch test | `api_key` (`TYPESAFE_API_KEY`) | none (static `jev-latest` / `jev-preview`) |
+| `@arnilo/prism-providers/laya` | `packages/prism-providers/src/laya` | System One `POST /v1/systemone` against `laya-serve` | supported — zero-fetch test | optional `api_key` (`LAYA_API_KEY`) | none (static checkpoints; server Router picks) |
 
 ## Stream, abort, media, tools, reasoning, structured output
 

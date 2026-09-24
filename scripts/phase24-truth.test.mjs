@@ -54,10 +54,10 @@ test("counts match manifests at the truth graph", () => {
     Number(hasSheetsPackage) +
     Number(hasDiagramsPackage);
   if (hasWorkPackage) {
-    // Current package set: delegated CLI adapter removed; provider family has 20 subpaths (plan 062 added ./model-discovery).
+    // Current package set: delegated CLI adapter removed; provider family has 22 subpaths (plan 062 added ./model-discovery; plan 121 added ./typesafe and ./laya).
     assert.equal(t.counts.publishable, 12);
     assert.equal(t.counts.workspace, 11);
-    assert.equal(t.counts.provider, 20);
+    assert.equal(t.counts.provider, 22);
     assert.equal(t.counts.prismFamily, 4);
     assert.equal(t.counts.capability, 7);
     assert.equal(t.counts.codeWithPeer, 11);
@@ -99,9 +99,9 @@ test("umbrella closures match manifests", () => {
   const t = computePackageTruth();
   const providers = t.umbrella["prism-providers"];
   if (hasCodingToolsPackage) {
-    // Plan 054 Task 6 + plan 055 Task 6: the family ships its adapters as subpaths, not deps (20 since plan 062).
+    // Plan 054 Task 6 + plan 055 Task 6: the family ships its adapters as subpaths, not deps (22 since plan 121).
     assert.deepEqual(providers.deps, []);
-    assert.equal(providers.subpaths.length, 20);
+    assert.equal(providers.subpaths.length, 22);
     assert.deepEqual(providers.omitsProviders, []);
   } else {
     assert.equal(providers.deps.length, 14);

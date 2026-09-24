@@ -21,30 +21,32 @@ Do not use provider packages as a package manager, credential store, env loader,
 ### Provider inventory
 
 <!-- generated:package-truth:providers begin -->
-**20 provider adapters** — first-party adapters ship as `@arnilo/prism-providers/<adapter>` subpaths in one tarball (importing one never evaluates another):
+**22 provider adapters** — first-party adapters ship as `@arnilo/prism-providers/<adapter>` subpaths in one tarball (importing one never evaluates another):
 
 | adapter package | version |
 | --- | --- |
-| `@arnilo/prism-providers/ai-sdk` | 0.11.0 |
-| `@arnilo/prism-providers/alibaba` | 0.11.0 |
-| `@arnilo/prism-providers/anthropic` | 0.11.0 |
-| `@arnilo/prism-providers/azure` | 0.11.0 |
-| `@arnilo/prism-providers/bedrock` | 0.11.0 |
-| `@arnilo/prism-providers/clinepass` | 0.11.0 |
-| `@arnilo/prism-providers/commandcode` | 0.11.0 |
-| `@arnilo/prism-providers/deepseek` | 0.11.0 |
-| `@arnilo/prism-providers/google` | 0.11.0 |
-| `@arnilo/prism-providers/hyper` | 0.11.0 |
-| `@arnilo/prism-providers/kimi` | 0.11.0 |
-| `@arnilo/prism-providers/model-discovery` | 0.11.0 |
-| `@arnilo/prism-providers/neuralwatt` | 0.11.0 |
-| `@arnilo/prism-providers/ollama` | 0.11.0 |
-| `@arnilo/prism-providers/openai` | 0.11.0 |
-| `@arnilo/prism-providers/opencode-go` | 0.11.0 |
-| `@arnilo/prism-providers/openrouter` | 0.11.0 |
-| `@arnilo/prism-providers/vertex` | 0.11.0 |
-| `@arnilo/prism-providers/xai` | 0.11.0 |
-| `@arnilo/prism-providers/zai` | 0.11.0 |
+| `@arnilo/prism-providers/ai-sdk` | 0.11.1 |
+| `@arnilo/prism-providers/alibaba` | 0.11.1 |
+| `@arnilo/prism-providers/anthropic` | 0.11.1 |
+| `@arnilo/prism-providers/azure` | 0.11.1 |
+| `@arnilo/prism-providers/bedrock` | 0.11.1 |
+| `@arnilo/prism-providers/clinepass` | 0.11.1 |
+| `@arnilo/prism-providers/commandcode` | 0.11.1 |
+| `@arnilo/prism-providers/deepseek` | 0.11.1 |
+| `@arnilo/prism-providers/google` | 0.11.1 |
+| `@arnilo/prism-providers/hyper` | 0.11.1 |
+| `@arnilo/prism-providers/kimi` | 0.11.1 |
+| `@arnilo/prism-providers/laya` | 0.11.1 |
+| `@arnilo/prism-providers/model-discovery` | 0.11.1 |
+| `@arnilo/prism-providers/neuralwatt` | 0.11.1 |
+| `@arnilo/prism-providers/ollama` | 0.11.1 |
+| `@arnilo/prism-providers/openai` | 0.11.1 |
+| `@arnilo/prism-providers/opencode-go` | 0.11.1 |
+| `@arnilo/prism-providers/openrouter` | 0.11.1 |
+| `@arnilo/prism-providers/typesafe` | 0.11.1 |
+| `@arnilo/prism-providers/vertex` | 0.11.1 |
+| `@arnilo/prism-providers/xai` | 0.11.1 |
+| `@arnilo/prism-providers/zai` | 0.11.1 |
 <!-- generated:package-truth:providers end -->
 
 

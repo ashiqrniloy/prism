@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-channels",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "description": "Messaging channels family for Prism: transport-neutral channel contracts, Prism execution adapter, durable bindings/journal/pairing, and (as subpaths) Telegram/Signal adapters.",
   "type": "module",
   "main": "./dist/index.js",
@@ -36,7 +36,7 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.11.0"
+    "@arnilo/prism": "^0.11.1"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

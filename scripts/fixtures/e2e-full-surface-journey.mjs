@@ -470,7 +470,7 @@ await section("@arnilo/prism-core: validation/json-schema", async () => {
 });
 
 // ---------------------------------------------------------------------------
-// @arnilo/prism-providers (20 subpaths) — pure helpers / model catalogs;
+// @arnilo/prism-providers (22 subpaths) — pure helpers / model catalogs;
 // factories construct-only, never a wire call.
 // ---------------------------------------------------------------------------
 await section("@arnilo/prism-providers: adapter surfaces", async () => {

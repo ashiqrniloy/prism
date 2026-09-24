@@ -176,7 +176,9 @@
     "lateAdditions": {
       "@arnilo/prism-providers/hyper": "plan 055",
       "@arnilo/prism-providers/commandcode": "plan 055",
-      "@arnilo/prism-providers/model-discovery": "plan 062"
+      "@arnilo/prism-providers/model-discovery": "plan 062",
+      "@arnilo/prism-providers/typesafe": "plan 121",
+      "@arnilo/prism-providers/laya": "plan 121"
     }
   },
   "compat": {

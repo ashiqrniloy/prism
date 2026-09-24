@@ -1,7 +1,7 @@
 {
   "name": "@arnilo/prism-providers",
-  "version": "0.11.0",
-  "description": "Unified provider family: all 19 first-party Prism provider adapters as explicit subpaths (openai, anthropic, google, azure, bedrock, vertex, deepseek, xai, zai, alibaba, kimi, clinepass, neuralwatt, ollama, opencode-go, openrouter, ai-sdk, hyper, commandcode). Importing one adapter never evaluates another.",
+  "version": "0.11.1",
+  "description": "Unified provider family: all 21 first-party Prism provider adapters as explicit subpaths (openai, anthropic, google, azure, bedrock, vertex, deepseek, xai, zai, alibaba, kimi, clinepass, neuralwatt, ollama, opencode-go, openrouter, ai-sdk, hyper, commandcode, typesafe, laya). Importing one adapter never evaluates another.",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -49,6 +49,10 @@
       "types": "./dist/kimi/index.d.ts",
       "default": "./dist/kimi/index.js"
     },
+    "./laya": {
+      "types": "./dist/laya/index.d.ts",
+      "default": "./dist/laya/index.js"
+    },
     "./model-discovery": {
       "types": "./dist/model-discovery/index.d.ts",
       "default": "./dist/model-discovery/index.js"
@@ -72,6 +76,10 @@
     "./openrouter": {
       "types": "./dist/openrouter/index.d.ts",
       "default": "./dist/openrouter/index.js"
+    },
+    "./typesafe": {
+      "types": "./dist/typesafe/index.d.ts",
+      "default": "./dist/typesafe/index.js"
     },
     "./vertex": {
       "types": "./dist/vertex/index.d.ts",
@@ -102,7 +110,7 @@
   },
   "peerDependencies": {
     "@ai-sdk/provider": "4.0.13",
-    "@arnilo/prism": "^0.11.0"
+    "@arnilo/prism": "^0.11.1"
   },
   "peerDependenciesMeta": {
     "@ai-sdk/provider": {

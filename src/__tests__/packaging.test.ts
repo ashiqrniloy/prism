@@ -317,7 +317,7 @@ describe("packaging guard", () => {
     );
   });
 
-  it("provider family exports exactly the 20 adapter subpaths with no activating root barrel", () => {
+  it("provider family exports exactly the 22 adapter subpaths with no activating root barrel", () => {
     const manifest = readPkg("packages/prism-providers");
     assert.equal(manifest.dependencies, undefined, "provider family must not add runtime dependencies");
     const exports = manifest.exports as Record<string, Record<string, string>>;
@@ -333,12 +333,14 @@ describe("packaging guard", () => {
       "google",
       "hyper",
       "kimi",
+      "laya",
       "model-discovery",
       "neuralwatt",
       "ollama",
       "openai",
       "opencode-go",
       "openrouter",
+      "typesafe",
       "vertex",
       "xai",
       "zai",
@@ -346,7 +348,7 @@ describe("packaging guard", () => {
     assert.deepEqual(
       Object.keys(exports).sort(),
       adapters.map((a) => `./${a}`).sort(),
-      "provider family exports must be exactly the 20 adapter subpaths",
+      "provider family exports must be exactly the 22 adapter subpaths",
     );
     assert.equal(exports["."], undefined, "provider family must have no root barrel: no adapter may activate at family-root import");
     // Adapter isolation: compiled adapter code only imports its own directory and

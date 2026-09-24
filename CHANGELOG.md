@@ -1,3 +1,8 @@
+## [0.11.1] - 2026-09-24 (System One decision models)
+
+### Added
+- **`@arnilo/prism-providers/typesafe` and `@arnilo/prism-providers/laya`.** Structured-output decision models on `POST /v1/systemone`. Jev is hosted (`https://api.typesafe.ai`, env `TYPESAFE_API_KEY`). Laya is self-hosted `laya-serve` (default `http://localhost:8000`, optional `LAYA_API_KEY`). A request without `options.structuredOutput`, or with tools, fails before any network call. See [docs/providers/typesafe.md](docs/providers/typesafe.md) and [docs/providers/laya.md](docs/providers/laya.md).
+
 ## [0.11.0] - 2026-09-24 (store bounds, lease fence reset, subpath removals)
 
 > **Twelve publishable packages.** Lockstep minor. No new public exports from the review remediation. Two host-visible store contracts change, and three subpaths that the published 0.10.0 tarball still shipped are removed. Predecessor published line is **0.10.0**. Registry/tag writes stay operator-authorized.

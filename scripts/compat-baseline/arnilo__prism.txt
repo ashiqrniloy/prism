@@ -1036,7 +1036,7 @@ validateProviderName	export declare function validateProviderName(name: string):
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
 validationRespectPack	export declare const validationRespectPack: GuardrailPackDefinition
-version	export declare const version = "0.11.0"
+version	export declare const version = "0.11.1"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]

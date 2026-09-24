@@ -136,6 +136,8 @@ const providerPackagePages: ReadonlyArray<[string, string]> = [
   ["docs/providers/alibaba.md", "packages/prism-providers/src/alibaba/index.ts"],
   ["docs/providers/ollama.md", "packages/prism-providers/src/ollama/index.ts"],
   ["docs/providers/neuralwatt.md", "packages/prism-providers/src/neuralwatt/index.ts"],
+  ["docs/providers/typesafe.md", "packages/prism-providers/src/typesafe/index.ts"],
+  ["docs/providers/laya.md", "packages/prism-providers/src/laya/index.ts"],
   ["docs/providers/ai-sdk.md", "packages/prism-providers/src/ai-sdk/index.ts"],
   ["docs/providers/azure.md", "packages/prism-providers/src/azure/index.ts"],
   ["docs/providers/bedrock.md", "packages/prism-providers/src/bedrock/index.ts"],

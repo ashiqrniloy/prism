@@ -42,7 +42,7 @@ function parseCacheClaims(evidence) {
 test("phase37 matrix lists every provider family adapter subpath", () => {
   const evidence = readFileSync(evidencePath, "utf8");
   const pkgs = providerAdapters();
-  assert.equal(pkgs.length, 20, `expected 20 provider adapters, got ${pkgs.length}`);
+  assert.equal(pkgs.length, 22, `expected 22 provider adapters, got ${pkgs.length}`);
   for (const pkg of pkgs) {
     assert.ok(evidence.includes(pkg.name), `docs/_evidence/phase37-provider-matrix.md missing row for ${pkg.name}`);
   }
