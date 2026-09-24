@@ -69,10 +69,10 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@office-open/docx": "0.14.5",
-    "@office-open/pptx": "0.14.5",
-    "@office-open/xlsx": "0.14.5",
-    "@office-open/xml": "0.14.5",
+    "@office-open/docx": "0.14.6",
+    "@office-open/pptx": "0.14.6",
+    "@office-open/xlsx": "0.14.6",
+    "@office-open/xml": "0.14.6",
     "ajv": "^8.17.1",
     "fast-xml-parser": "5.11.1"
   },
