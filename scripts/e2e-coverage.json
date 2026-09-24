@@ -391,6 +391,13 @@
         ],
         "mode": ""
       },
+      "./laya": {
+        "suites": [
+          "packages/prism-providers/src/laya/__tests__/laya.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
       "./kimi": {
         "suites": [
           "packages/prism-providers/src/kimi/__tests__/kimi.test.ts",
@@ -455,6 +462,14 @@
         "suites": [
           "packages/prism-providers/src/openrouter/__tests__/live.test.ts",
           "packages/prism-providers/src/openrouter/__tests__/openrouter.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./typesafe": {
+        "suites": [
+          "packages/prism-providers/src/typesafe/__tests__/live.test.ts",
+          "packages/prism-providers/src/typesafe/__tests__/typesafe.test.ts",
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": ""
