@@ -142,7 +142,7 @@
   "scripts": {
     "build:core": "node scripts/with-build-lock.mjs tsc",
     "clean": "rm -rf dist packages/*/dist",
-    "build": "npm run build:core && bun run --workspaces --if-present build",
+    "build": "npm run build:core && for p in @arnilo/prism-mcp @arnilo/prism-providers @arnilo/prism-memory @arnilo/prism-work @arnilo/prism-core @arnilo/prism-channels @arnilo/prism-coding-tools @arnilo/prism-ag-ui @arnilo/prism-web-tools @arnilo/prism-acp-agent @arnilo/prism-hooks; do bun run --filter \"$p\" build || exit 1; done",
     "typecheck": "bun run build && bun run --workspaces --if-present typecheck && tsc -p examples --noEmit",
     "sweep:unused": "node scripts/sweep-unused.mjs --json",
     "test:live": "node scripts/live-matrix.mjs",
