@@ -964,7 +964,7 @@ describe("docs", () => {
     const readiness = readinessDoc();
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     for (const workflow of [security, release]) {
-      assert.ok(workflow.includes("npm audit --audit-level=moderate"), "workflows must enforce moderate audit policy");
+      assert.ok(workflow.includes("bun audit --audit-level=moderate"), "workflows must enforce moderate audit policy");
     }
     for (const job of ["dependency-review", "codeql", "supply-chain"]) assert.ok(security.includes(job), `security.yml missing ${job}`);
     assert.ok(
@@ -2371,7 +2371,7 @@ describe("docs", () => {
     );
     assert.equal(packageJson.scripts["release:dry-run"], "npm run sdk:ready", "release:dry-run should mirror CI verify");
     assert.ok(
-      packageJson.scripts.typecheck.startsWith("npm run build &&"),
+      packageJson.scripts.typecheck.startsWith("bun run build &&"),
       "clean typecheck must build cross-workspace declarations first",
     );
     assert.ok(workflow.includes("npm run sdk:ready"), "release workflow verify must run sdk:ready");
@@ -2415,7 +2415,7 @@ describe("docs", () => {
       "allowed to exceed the `npm test` budget",
       "Local release dry-run mirrors the GitHub Actions `verify` job and delegates to the SDK readiness gate",
       "`npm run release:dry-run` is an alias for the same gate",
-      "The GitHub Actions `verify` job runs `npm ci` and `npm run sdk:ready`",
+      "The GitHub Actions `verify` job runs `bun ci` and `npm run sdk:ready`",
       compatJob,
       "postgres-integration",
       "PRISM_TEST_POSTGRES_URL",
@@ -2436,7 +2436,7 @@ describe("docs", () => {
     const release = readFileSync("scripts/release.mjs", "utf8");
     assert.equal(pkg.scripts["release:check"], "node scripts/release.mjs check");
     assert.equal(pkg.scripts["release:publish"], "node scripts/release.mjs publish");
-    for (const phrase of ["topologicalOrder", "package-lock.json", "--provenance", "--access", "public", "--tag", "latest"]) {
+    for (const phrase of ["topologicalOrder", "bun.lock", "--provenance", "--access", "public", "--tag", "latest"]) {
       assert.ok(release.includes(phrase), `release script missing ${phrase}`);
     }
     for (const phrase of [
@@ -2486,6 +2486,40 @@ describe("docs", () => {
       "peerDependencies",
     ]) {
       assert.ok(docs.includes(phrase), `docs/release-and-install.md missing ${phrase}`);
+    }
+  });
+
+  it("the offline test budget is pinned once and matches the measured evidence baseline", () => {
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const evidence = readFileSync("docs/_evidence/phase115-suite-budget.md", "utf8");
+    const marker = /<!-- budget: pin="([^"]+)" baseline_s="([\d.]+)" -->/.exec(evidence);
+    assert.ok(marker, "docs/_evidence/phase115-suite-budget.md must carry the machine-readable budget marker");
+    const [, pin, baseline] = marker;
+    const escaped = pin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s*");
+    const sentence = new RegExp(`pinned at \\*\\*${escaped}\\*\\* with a measured local baseline of \\*\\*~${baseline}s\\*\\*`).exec(
+      release,
+    );
+    assert.ok(sentence, `docs/release-and-install.md must pin ${pin} with a ~${baseline}s baseline`);
+    assert.ok(release.includes(`budget pinned \`${pin}\``), "the requirements row must carry the same pin");
+    // The drift this replaces: a prose-only `< 60s` claim outlived a 101 s suite. Every page-level
+    // budget statement must now restate the same pin; the evidence page is the only place allowed
+    // to narrate older numbers, so it is not scanned here.
+    const pages = [
+      "README.md",
+      ...readdirSync(docsDir)
+        .filter((name) => name.endsWith(".md"))
+        .map((name) => `docs/${name}`),
+    ];
+    const found: Array<[string, string]> = [];
+    for (const page of pages) {
+      for (const line of readFileSync(page, "utf8").split("\n")) {
+        if (!/offline test budget|budget pinned/i.test(line)) continue;
+        for (const match of line.matchAll(/<\s*\d+\s*s/g)) found.push([match[0].replace(/\s+/g, ""), page]);
+      }
+    }
+    assert.ok(found.length >= 2, "expected the pin in the budget sentence and the requirements row");
+    for (const [value, page] of found) {
+      assert.equal(value, pin.replace(/\s+/g, ""), `${page} restates a different budget pin than ${pin}`);
     }
   });
 
@@ -2738,6 +2772,7 @@ describe("docs", () => {
         "@arnilo/prism/testing/prefix-stability-conformance",
         [
           "runPrefixStabilityConformance",
+          "scorePrefixStability",
           "skills",
           "minContinuity",
           "cache prefix",
@@ -2745,6 +2780,8 @@ describe("docs", () => {
           "assertOn",
           "allowedResets",
           "resets",
+          "resetDetails",
+          "foldableToolResultBytes",
           "Documented invalidation boundaries",
           "invalidation-inventory.test.ts",
         ],

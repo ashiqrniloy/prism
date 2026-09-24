@@ -9,6 +9,7 @@ import {
   loadAgentRunState,
   providerDone,
   providerTextDelta,
+  runCheckpointRestoreHooks,
   toolCallContent,
 } from "../index.js";
 
@@ -125,6 +126,9 @@ describe("checkpoint restore hooks", () => {
         assert.equal(error.hook, "restoreDocs");
         assert.equal(error.cause, boom);
         assert.match(error.message, /restoreDocs failed: git reset exploded/);
+        // Plan 109 Task 2: with no compensate anywhere the failure shape is exactly plan 094's.
+        assert.equal(error.compensation, undefined);
+        assert.deepEqual(Object.keys(error).sort(), ["code", "hook", "name"]);
         return true;
       },
     );
@@ -242,5 +246,271 @@ describe("checkpoint restore hooks", () => {
       (error: unknown) => error instanceof CheckpointRestoreError && error.hook === "requestHook",
     );
     assert.deepEqual(order, ["lifecycle", "request"]);
+  });
+
+  it("compensates the applied layers in reverse when a later hook fails, failing hook first", async () => {
+    const { checkpoints, lifecycle, ref, status } = await suspend("restore-compensate");
+    const layer = { docs: "v1", git: "c1" };
+    const compensateOrder: string[] = [];
+    await assert.rejects(
+      lifecycle.resume(
+        ref,
+        { decision: "approve", expectedVersion: status.version },
+        {
+          agentId: "restore-compensate",
+          restoreHooks: [
+            {
+              id: "docs",
+              restore: () => {
+                layer.docs = "v2";
+              },
+              compensate: () => {
+                compensateOrder.push("docs");
+                layer.docs = "v1";
+              },
+            },
+            {
+              id: "git",
+              // Half-applied: the layer moved, then the restore failed.
+              restore: () => {
+                layer.git = "c2";
+                throw new Error("git unreachable");
+              },
+              compensate: () => {
+                compensateOrder.push("git");
+                layer.git = "c1";
+              },
+            },
+            {
+              id: "workspace",
+              restore: () => {
+                throw new Error("later hook never runs");
+              },
+              compensate: () => {
+                compensateOrder.push("workspace");
+              },
+            },
+          ],
+        },
+      ),
+      (error: unknown) => {
+        assert.ok(error instanceof CheckpointRestoreError);
+        assert.equal(error.hook, "git");
+        assert.equal(error.cause instanceof Error && error.cause.message, "git unreachable");
+        assert.deepEqual(error.compensation?.ran, ["git", "docs"]);
+        assert.equal(error.compensation?.failed, undefined);
+        return true;
+      },
+    );
+    assert.deepEqual(layer, { docs: "v1", git: "c1" });
+    assert.deepEqual(compensateOrder, ["git", "docs"]);
+    // Best-effort: the checkpoint was never claimed, and a fixed resume still works.
+    const after = await lifecycle.status(ref, { agentId: "restore-compensate" });
+    assert.equal(after.state.status, "suspended");
+    assert.equal(after.version, status.version);
+    assert.deepEqual((await loadAgentRunState(checkpoints, ref)).record.metadata, { gitCommit: "commit-1" });
+    await lifecycle.resume(ref, { decision: "approve", expectedVersion: after.version }, { agentId: "restore-compensate" });
+    assert.equal((await lifecycle.status(ref, { agentId: "restore-compensate" })).state.status, "succeeded");
+  });
+
+  it("records a failing compensation without masking the original error and keeps the pass going", async () => {
+    const calls: string[] = [];
+    await assert.rejects(
+      runCheckpointRestoreHooks(
+        [
+          {
+            id: "docs",
+            restore: () => {
+              calls.push("docs:restore");
+            },
+            compensate: () => {
+              calls.push("docs:compensate");
+              throw new Error("docs undo failed");
+            },
+          },
+          {
+            id: "git",
+            restore: () => {
+              calls.push("git:restore");
+              throw new Error("git restore failed");
+            },
+            compensate: () => {
+              calls.push("git:compensate");
+            },
+          },
+        ],
+        { runId: "run-compensate-failure" },
+      ),
+      (error: unknown) => {
+        assert.ok(error instanceof CheckpointRestoreError);
+        assert.equal(error.hook, "git");
+        assert.equal(error.cause instanceof Error && error.cause.message, "git restore failed");
+        assert.deepEqual(error.compensation?.ran, ["git", "docs"]);
+        assert.deepEqual(error.compensation?.failed, { hook: "docs", reason: "docs undo failed" });
+        return true;
+      },
+    );
+    assert.deepEqual(calls, ["docs:restore", "git:restore", "git:compensate", "docs:compensate"]);
+  });
+
+  it("compensates a hook that timed out under the same per-hook ceiling", async () => {
+    const calls: string[] = [];
+    await assert.rejects(
+      runCheckpointRestoreHooks(
+        [
+          {
+            id: "docs",
+            restore: () => {
+              calls.push("docs:restore");
+            },
+            compensate: () => {
+              calls.push("docs:compensate");
+            },
+          },
+          {
+            id: "slow",
+            restore: (_checkpoint, signal) =>
+              new Promise<void>((_resolve, reject) => {
+                signal.addEventListener("abort", () => reject(new Error("hook saw the timeout")));
+              }),
+            compensate: () => {
+              calls.push("slow:compensate");
+            },
+          },
+        ],
+        { runId: "run-compensate-timeout" },
+        { timeoutMs: 20 },
+      ),
+      (error: unknown) => {
+        assert.ok(error instanceof CheckpointRestoreError);
+        assert.equal(error.hook, "slow");
+        assert.match(error.message, /timed out after 20ms/);
+        assert.deepEqual(error.compensation?.ran, ["slow", "docs"]);
+        return true;
+      },
+    );
+    assert.deepEqual(calls, ["docs:restore", "slow:compensate", "docs:compensate"]);
+  });
+
+  it("stops compensation on a caller abort and rethrows the abort unchanged", async () => {
+    const controller = new AbortController();
+    const reason = new Error("host cancelled");
+    const calls: string[] = [];
+    await assert.rejects(
+      runCheckpointRestoreHooks(
+        [
+          {
+            id: "docs",
+            restore: () => {
+              calls.push("docs:restore");
+            },
+            compensate: () => {
+              calls.push("docs:compensate");
+            },
+          },
+          {
+            id: "git",
+            restore: () => {
+              calls.push("git:restore");
+              throw new Error("git restore failed");
+            },
+            compensate: () => {
+              calls.push("git:compensate");
+              controller.abort(reason);
+            },
+          },
+        ],
+        { runId: "run-compensate-abort" },
+        { signal: controller.signal },
+      ),
+      (error: unknown) => error === reason,
+    );
+    // The abort stopped the pass before the earlier layer's undo could run.
+    assert.deepEqual(calls, ["docs:restore", "git:restore", "git:compensate"]);
+  });
+
+  it("never runs compensation after a caller abort during the failing restore", async () => {
+    const controller = new AbortController();
+    const reason = new Error("host cancelled");
+    const calls: string[] = [];
+    await assert.rejects(
+      runCheckpointRestoreHooks(
+        [
+          {
+            id: "docs",
+            restore: () => {
+              calls.push("docs:restore");
+            },
+            compensate: () => {
+              calls.push("docs:compensate");
+            },
+          },
+          {
+            id: "git",
+            restore: () => {
+              calls.push("git:restore");
+              controller.abort(reason);
+              throw new Error("git saw the abort");
+            },
+            compensate: () => {
+              calls.push("git:compensate");
+            },
+          },
+        ],
+        { runId: "run-compensate-abort-restore" },
+        { signal: controller.signal },
+      ),
+      (error: unknown) => {
+        // The restore-path failure shape is unchanged; only compensation is skipped.
+        assert.ok(error instanceof CheckpointRestoreError);
+        assert.equal(error.hook, "git");
+        assert.equal(Object.hasOwn(error, "compensation"), false);
+        return true;
+      },
+    );
+    assert.deepEqual(calls, ["docs:restore", "git:restore"]);
+  });
+
+  it("leaves compensation untouched on a successful resume", async () => {
+    const { lifecycle, ref, status } = await suspend("restore-compensate-ok");
+    const calls: string[] = [];
+    const resumed = await lifecycle.resume(
+      ref,
+      { decision: "approve", expectedVersion: status.version },
+      {
+        agentId: "restore-compensate-ok",
+        restoreHooks: [
+          {
+            id: "docs",
+            restore: () => {
+              calls.push("docs");
+            },
+            compensate: () => {
+              calls.push("docs:compensate");
+            },
+          },
+          {
+            id: "git",
+            restore: () => {
+              calls.push("git");
+            },
+            compensate: () => {
+              calls.push("git:compensate");
+            },
+          },
+          {
+            id: "workspace",
+            restore: () => {
+              calls.push("workspace");
+            },
+            compensate: () => {
+              calls.push("workspace:compensate");
+            },
+          },
+        ],
+      },
+    );
+    assert.equal(resumed.status, "succeeded");
+    assert.deepEqual(calls, ["docs", "git", "workspace"]);
   });
 });

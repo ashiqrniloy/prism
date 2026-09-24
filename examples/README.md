@@ -9,6 +9,17 @@ Examples are part of `npm run typecheck` (separate `examples/tsconfig.json`,
 `noEmit`, strict). They typecheck against package source, so no workspace
 build is required to typecheck.
 
+## Execution gate
+
+`npm test` runs `scripts/examples-execution.test.mjs`. It does not respawn an
+example already executed by the `docs.test.ts` demo list or by a dedicated
+`spawnSync(process.execPath, ["examples/<file>.ts"])` test. Every other
+`examples/*.ts` must exit 0 within 60s, or be named in
+`scripts/examples-manifest.json` with reason `env-gated`, `network`,
+`interactive`, `long-running`, or `known-broken:<ref>`. A new file in none of
+those buckets fails until triaged. The gate adds no credentials (`NODE_ENV=test`
+at most). Exit 0 is the assertion; output is not parsed.
+
 ## Run a demo by hand
 
 Node 24 strips TypeScript types natively, so after building the core package

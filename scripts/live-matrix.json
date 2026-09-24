@@ -802,9 +802,9 @@
           "wired": true
         }
       ],
-      "scope": "In-process cross-encoder (transformers.js, q8/cpu) on this machine; no service and no credential. Weights come from the documented model id into a host cache dir; a cold run downloads a \u2248280 MB int8 model.",
-      "notes": "Real runtime through createTransformersRerankRuntime (no stub): conformance, top-1 ordering on a fixed query, top-50 latency, offline replay with allowRemoteModels:false, recall@5 over the inlined 24-query / 96-chunk corpus (rerank off vs on, whole-corpus pool, pool-bound rows at 20 and 32 candidates), and a generated docs/_evidence/phase102-local-rerank-latency.md row (no paths, no secrets).",
-      "cost": "One \u2248280 MB model download on a cold cache; zero network after load, no API spend. \u224830 s wall clock after the cache is warm (the recall leg scores 24 \u00d7 96 query/document pairs)."
+      "scope": "In-process cross-encoder (transformers.js, q8/cpu) plus a semantic embedder on this machine; no service and no credential. Weights come from the documented model ids into a host cache dir; a cold run downloads a \u2248280 MB reranker and a \u224823 MB embedder.",
+      "notes": "Real runtime through createTransformersRerankRuntime (no stub): conformance, top-1 ordering on a fixed query, top-50 latency, offline replay with allowRemoteModels:false, and recall@5 over the inlined 24-query / 96-chunk corpus (rerank off vs on, whole-corpus pool, pool-bound rows at 20 and 32 candidates) for the deterministic hash embedder and a real semantic embedder (\"Xenova/all-MiniLM-L6-v2\", q8/cpu, identity control, local_files_only replay). Writes generated docs/_evidence/phase102-local-rerank-latency.md and docs/_evidence/phase111-reranker-semantic-recall.md rows (no paths, no secrets).",
+      "cost": "Two model downloads on a cold cache (\u2248280 MB reranker + \u224823 MB embedder); zero network after load, no API spend. \u224850 s wall clock after the cache is warm (the recall legs score 24 \u00d7 96 query/document pairs three times)."
     },
     {
       "id": "memory/drive-sync-live",

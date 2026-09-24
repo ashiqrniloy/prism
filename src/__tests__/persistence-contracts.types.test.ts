@@ -300,7 +300,7 @@ describe("atomic append contracts (compile only)", () => {
   });
 
   it("readBranchPath is optional on SessionStore and ProductionPersistenceStore", () => {
-    // store WITHOUT readBranchPath stays assignable (built-in memory/JSONL stores)
+    // store WITHOUT readBranchPath stays assignable (JSONL still omits it)
     const withoutReader: SessionStore = {
       async append(entry: SessionEntry) {
         void entry.id;

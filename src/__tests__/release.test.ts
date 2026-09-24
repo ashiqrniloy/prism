@@ -31,14 +31,17 @@ function fixture() {
     ["packages/addon", { name: "@arnilo/prism-addon", version: VERSION, peerDependencies: { "@arnilo/prism": VERSION } }],
     ["packages/meta", { name: "@arnilo/prism-meta", version: VERSION, dependencies: { "@arnilo/prism-addon": VERSION } }],
   ] as const;
-  const packages: Record<string, unknown> = {};
+  const workspaces: Record<string, { name: string; version?: string }> = {};
   for (const [path, manifest] of manifests) {
     mkdirSync(join(root, path), { recursive: true });
     const complete = { ...manifest, publishConfig: { access: "public" } };
     writeFileSync(join(root, path, "package.json"), `${JSON.stringify(complete, null, 2)}\n`);
-    packages[path] = complete;
+    const key = path === "" ? "" : path;
+    workspaces[key] = { name: complete.name, ...(path === "" ? {} : { version: complete.version }) };
   }
-  writeFileSync(join(root, "package-lock.json"), `${JSON.stringify({ lockfileVersion: 3, packages }, null, 2)}\n`);
+  // Real bun.lock is JSONC-shaped (trailing commas) and its root entry has no version.
+  const lockEntries = Object.entries(workspaces).map(([key, entry]) => `    ${JSON.stringify(key)}: ${JSON.stringify(entry)},`);
+  writeFileSync(join(root, "bun.lock"), `{\n  "lockfileVersion": 2,\n  "workspaces": {\n${lockEntries.join("\n")}\n  },\n}\n`);
   writeFileSync(join(root, ".gitignore"), "release-artifacts/\n");
   return root;
 }

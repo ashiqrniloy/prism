@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-channels",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Messaging channels family for Prism: transport-neutral channel contracts, Prism execution adapter, durable bindings/journal/pairing, and (as subpaths) Telegram/Signal adapters.",
   "type": "module",
   "main": "./dist/index.js",
@@ -30,13 +30,13 @@
   "scripts": {
     "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/runtime.test.js dist/__tests__/state.test.js dist/__tests__/recovery.test.js dist/__tests__/postgres.integration.test.js dist/__tests__/telegram.test.js dist/__tests__/signal.test.js dist/__tests__/end-to-end.test.js",
-    "test:live": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/telegram-live.test.js dist/__tests__/signal-live.test.js",
-    "test:postgres": "node ../../scripts/require-postgres-url.mjs && node ../../scripts/with-build-lock.mjs node --test dist/__tests__/postgres.integration.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs --shared node --test dist/__tests__/runtime.test.js dist/__tests__/state.test.js dist/__tests__/recovery.test.js dist/__tests__/postgres.integration.test.js dist/__tests__/telegram.test.js dist/__tests__/signal.test.js dist/__tests__/end-to-end.test.js",
+    "test:live": "node ../../scripts/with-build-lock.mjs --shared node --test dist/__tests__/telegram-live.test.js dist/__tests__/signal-live.test.js",
+    "test:postgres": "node ../../scripts/require-postgres-url.mjs && node ../../scripts/with-build-lock.mjs --shared node --test dist/__tests__/postgres.integration.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.10.0"
+    "@arnilo/prism": "^0.11.0"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

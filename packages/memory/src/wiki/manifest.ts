@@ -12,6 +12,8 @@ export const DEFAULT_IGNORE_PATTERNS = [
   "build",
   ".cache",
   ".DS_Store",
+  "bun.lock",
+  "bun.lockb",
   "package-lock.json",
   "yarn.lock",
   "pnpm-lock.yaml",

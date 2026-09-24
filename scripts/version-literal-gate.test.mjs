@@ -24,6 +24,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { currentVersion, expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
+import { parseBunLock } from "./bun-lock.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const INTERNAL_PACKAGE = "@arnilo/";
@@ -39,13 +40,7 @@ function claimFiles(rootDir) {
   for (const dir of expandWorkspaceDirs(rootDir, readManifest(join(rootDir, "package.json")).workspaces ?? [])) {
     put(`${dir.slice(rootDir.length + 1).replaceAll("\\", "/")}/package.json`);
   }
-  for (const path of [
-    "package-lock.json",
-    "src/index.ts",
-    "docs/index.md",
-    ".github/workflows/release.yml",
-    "scripts/package-truth.json",
-  ]) {
+  for (const path of ["bun.lock", "src/index.ts", "docs/index.md", ".github/workflows/release.yml", "scripts/package-truth.json"]) {
     put(path);
   }
   return files;
@@ -80,6 +75,21 @@ function capture(files, path, pattern, label, problems) {
   return match[1];
 }
 
+/** bun.lock is JSONC-shaped (trailing commas), so it parses through the shared reader. */
+function parseLock(files, path, problems) {
+  const raw = files.get(path);
+  if (raw === undefined) {
+    problems.push(`${path}: missing (the gate cannot verify this surface)`);
+    return undefined;
+  }
+  try {
+    return parseBunLock(raw);
+  } catch {
+    problems.push(`${path}: malformed lockfile`);
+    return undefined;
+  }
+}
+
 /**
  * Claim surfaces that do not equal `current`, as human-readable lines.
  * Pure: `files` is a path→text map, so the positive control can mutate a fixture
@@ -104,13 +114,18 @@ export function claimViolations(files, current) {
     }
   }
 
-  const lock = parseJson(files, "package-lock.json", problems);
+  const lock = parseLock(files, "bun.lock", problems);
   if (lock !== undefined) {
-    if (lock.version !== current) problems.push(`package-lock.json: version ${lock.version} != ${current}`);
-    for (const [path, entry] of Object.entries(lock.packages ?? {})) {
-      const manifest = path === "" ? "package.json" : `${path}/package.json`;
-      if (!MANIFEST.test(manifest)) continue;
-      if (entry.version !== current) problems.push(`package-lock.json: ${path || "."} version ${entry.version} != ${current}`);
+    // Root `workspaces[""]` carries no version today; if a future Bun writes one,
+    // it is a release claim and must match. Workspace entries always carry one.
+    const rootEntry = lock.workspaces?.[""];
+    if (rootEntry?.version !== undefined && rootEntry.version !== current) {
+      problems.push(`bun.lock: root version ${rootEntry.version} != ${current}`);
+    }
+    for (const [path, entry] of Object.entries(lock.workspaces ?? {})) {
+      if (path === "") continue;
+      if (!MANIFEST.test(`${path}/package.json`)) continue;
+      if (entry.version !== current) problems.push(`bun.lock: ${path} version ${entry.version} != ${current}`);
     }
   }
 
@@ -164,7 +179,7 @@ test("positive control: a half-finished cut is reported surface by surface", () 
   for (const [label, fragment] of [
     ["workspace manifest", "packages/prism-core/package.json: version"],
     ["internal range", "package.json: peerDependencies"],
-    ["lockfile", "package-lock.json: version"],
+    ["lockfile", "bun.lock:"],
     ["index constant", "src/index.ts: version constant"],
     ["docs banner", "docs/index.md: current line"],
     ["workflow tag", ".github/workflows/release.yml: tag list has no"],

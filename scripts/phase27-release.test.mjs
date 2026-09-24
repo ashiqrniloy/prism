@@ -8,6 +8,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
+import { workspacePackageCounts } from "./package-truth.mjs";
 import { scanSecrets } from "./scan-secrets.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -72,9 +73,10 @@ describe("Plan 027 Task 10 release closeout", () => {
       Number(hasDocumentsPackage) +
       Number(hasSheetsPackage) +
       Number(hasDiagramsPackage);
-    const hasWork = truth.capability.includes("@arnilo/prism-work");
-    const hasCodingTools = truth.family?.includes("@arnilo/prism-coding-tools");
-    const hasCore = truth.family?.includes("@arnilo/prism-core");
+    const packages = workspacePackageCounts();
+    const hasWork = packages.has("prism-work");
+    const hasCodingTools = packages.has("prism-coding-tools");
+    const hasCore = packages.has("prism-core");
     const delta = hasWork ? -45 : hasCodingTools ? -42 : hasCore ? -14 : 0;
     assert.equal(truth.counts.publishable, hasCodingTools && !hasWork ? 17 : 55 + added + delta, "current publishable package count");
     assert.equal(truth.counts.workspace, hasCodingTools && !hasWork ? 16 : 54 + added + delta, "current workspace package count");

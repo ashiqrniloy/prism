@@ -69,6 +69,9 @@ describe("shared pending decisions", () => {
     assert.equal(executed.length, 0);
     const pending = first.interruption?.pendingDecisions;
     assert.equal(pending?.length, 2);
+    assert.equal(first.interruption?.kind, "tool_approval");
+    assert.equal(first.interruption?.reason, "2 tool side effects require approval");
+    assert.equal(first.interruption?.guardrail, undefined);
     assert.equal(pending?.[0]?.scope.toolName, "write");
     assert.match(pending?.[0]?.scope.argumentsHash ?? "", /^[a-f0-9]{64}$/);
 

@@ -1,4 +1,4 @@
-import type { CheckpointRestoreHook } from "./checkpoint-restore.js";
+import type { CheckpointRestoreHandler } from "./checkpoint-restore.js";
 import type {
   AgentSessionCloneOptions,
   AgentSessionForkOptions,
@@ -288,8 +288,8 @@ export interface AgentCheckpointRestoreContext {
   readonly checkpoint: CheckpointRecord;
 }
 
-/** Host code restoring one external layer before a durable resume applies. */
-export type AgentCheckpointRestoreHook = CheckpointRestoreHook<AgentCheckpointRestoreContext>;
+/** Host code restoring or compensating one external layer before a durable resume applies. */
+export type AgentCheckpointRestoreHook = CheckpointRestoreHandler<AgentCheckpointRestoreContext>;
 
 export interface AgentRunResumeOptions {
   readonly checkpoints: CheckpointStore;
@@ -320,7 +320,9 @@ export interface AgentRunResumeOptions {
    * Plan 094 Task 3: external-state restore hooks. Every hook must succeed (sequentially, each
    * within `restoreHookTimeoutMs`) before the claim write and the conversation restore apply;
    * the first failure throws `CheckpointRestoreError` naming the hook and leaves the checkpoint
-   * suspended. Hosts that register hooks on the lifecycle instead pass them once there.
+   * suspended. Plan 109 Task 2: an entry may be `{ id?, restore, compensate? }`, and on failure the
+   * applied layers are compensated in reverse order (best-effort) before the throw. Hosts that
+   * register hooks on the lifecycle instead pass them once there.
    */
   readonly restoreHooks?: readonly AgentCheckpointRestoreHook[];
   /** Per-hook restore ceiling in ms; defaults to `DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS`. */

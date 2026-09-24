@@ -29,6 +29,7 @@ import {
   WORKFLOW_CONCURRENCY,
 } from "./benchmark-scenarios/multi-agent-runtime.mjs";
 import { loadBudgets } from "./budget-gates.mjs";
+import { workspacePackageCounts } from "./package-truth.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const runner = join(here, "benchmark.mjs");
@@ -59,11 +60,12 @@ function workspaceManifests() {
 describe("multi-agent runtime coverage and baselines", () => {
   it("inventories all current manifests in the evidence matrix", () => {
     const names = workspaceManifests();
-    const hasCodingTools = names.includes("@arnilo/prism-coding-tools");
-    const hasCore = names.includes("@arnilo/prism-core");
+    const packages = workspacePackageCounts();
+    const hasCodingTools = packages.has("prism-coding-tools");
+    const hasCore = packages.has("prism-core");
     const hasChannels = names.includes("@arnilo/prism-channels");
-    const hasWorkFamily = existsSync(join(here, "../packages/prism-work/src"));
-    const hasProvidersFamily = existsSync(join(here, "../packages/prism-providers/src"));
+    const hasWorkFamily = packages.has("prism-work");
+    const hasProvidersFamily = packages.has("prism-providers");
     const expectedCount = hasWorkFamily ? 12 : hasProvidersFamily ? 17 : hasCodingTools ? 34 : hasCore ? 50 : 65;
     assert.equal(names.length, expectedCount, `expected ${expectedCount} manifests, found ${names.length}`);
     const evidence = readFileSync(evidencePath, "utf8");

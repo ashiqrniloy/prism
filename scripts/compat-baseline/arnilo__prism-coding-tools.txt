@@ -20,10 +20,6 @@ BashOperations	export type { BashExecOptions, BashOperations, BashSpawnContext, 
 BashSpawnContext	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
 BashSpawnHook	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
 BoundGitRunner	export type { BoundGitRunner, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitRunner } from "./git-exec.js"
-CAVEMAN_LEVELS	export declare const CAVEMAN_LEVELS: readonly ["off", "lite", "full", "ultra", "wenyan-lite", "wenyan", "wenyan-ultra", "micro"]
-CAVEMAN_LEVEL_TYPE	export declare const CAVEMAN_LEVEL_TYPE: "caveman-level"
-CAVEMAN_SKILL_NAMES	export declare const CAVEMAN_SKILL_NAMES: readonly ["caveman", "caveman-commit", "caveman-review", "caveman-stats", "caveman-compress", "caveman-help", "cavecrew"]
-CAVEMAN_UPSTREAM_PACKAGE	export declare const CAVEMAN_UPSTREAM_PACKAGE = "juliusbrussee/caveman"
 CODING_CHECKPOINT_SCHEMA_VERSION	export declare const CODING_CHECKPOINT_SCHEMA_VERSION: 1
 CODING_GOAL_VERIFY_REVISION	export declare const CODING_GOAL_VERIFY_REVISION: "1"
 CODING_GOAL_VERIFY_SUSPEND_REASON	export declare const CODING_GOAL_VERIFY_SUSPEND_REASON: "approve-coding-goal-verify"
@@ -37,10 +33,6 @@ COMPUTER_USE_LINUX_READ_TOOLS	export declare const COMPUTER_USE_LINUX_READ_TOOLS
 COMPUTER_USE_LINUX_SETUP_TOOLS	export declare const COMPUTER_USE_LINUX_SETUP_TOOLS: readonly ["setup_accessibility", "setup_window_targeting"]
 COMPUTER_USE_LINUX_SKILL_NAME	export declare const COMPUTER_USE_LINUX_SKILL_NAME = "computer-use-linux"
 COMPUTER_USE_LINUX_TOOL_NAMES	export declare const COMPUTER_USE_LINUX_TOOL_NAMES: readonly ["doctor", "list_apps", "list_windows", "focused_window", "get_app_state", "screenshot", ...("activate_window" | "click" | "drag" | "move_window" | "perform_action" | "press_key" | "resize_window" | "scroll" | "set_value" | "setup_accessibility" | "setup_window_targeting" | "type_text")[]]
-CavemanAppendOptions	export type { CavemanAppendOptions, CavemanExtensionOptions, CavemanExtensionState, CavemanLevel, } from "./types.js"
-CavemanExtensionOptions	export type { CavemanAppendOptions, CavemanExtensionOptions, CavemanExtensionState, CavemanLevel, } from "./types.js"
-CavemanExtensionState	export type { CavemanAppendOptions, CavemanExtensionOptions, CavemanExtensionState, CavemanLevel, } from "./types.js"
-CavemanLevel	export type { CavemanAppendOptions, CavemanExtensionOptions, CavemanExtensionState, CavemanLevel, } from "./types.js"
 CodingApprovalFn	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
 CodingApprovalPolicyOptions	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
 CodingApprovalRequest	export type { ApprovalCacheScope, CodingApprovalFn, CodingApprovalPolicyOptions, CodingApprovalRequest, } from "./approval.js"
@@ -57,10 +49,10 @@ CodingFingerprints	export type { CodingArtifactKind, CodingArtifactRef, CodingCh
 CodingGoalVerifyApproval	export type { CodingGoalVerifyApproval, RunCodingGoalVerifyOptions, } from "./goal-verify.js"
 CodingGoalVerifyError	export declare class CodingGoalVerifyError extends Error
 CodingHandoffSummary	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
-CodingLifecycleEmitter	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+CodingLifecycleEmitter	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 CodingLifecycleError	export declare class CodingLifecycleError extends Error
-CodingLifecycleEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
-CodingLifecycleLimits	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+CodingLifecycleEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+CodingLifecycleLimits	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 CodingPatchReview	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
 CodingPatchReviewCheckSummary	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
 CodingPatchReviewDiagnosticSummary	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
@@ -79,10 +71,10 @@ CodingWorkspaceRecord	export type { CodingWorkspaceLifecycle, CodingWorkspaceRec
 CommandRule	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
 CommandRuleAction	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
 CommandRuleEvaluation	export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js"
-ConfigurationChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+ConfigurationChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 ConnectE2BSandboxOptions	export type { ConnectE2BSandboxOptions, CreateE2BSandboxOptions, E2BClient, E2BConnectOpts, E2BCreateOpts, E2BProcessRecoveryBackendOptions, E2BProcessRefData, E2BSandboxInfo, E2BSandboxInstance, E2BSandboxStatic, } from "./e2b-sandbox.js"
 CreateAllowListEgressProxyOptions	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
-CreateCodingLifecycleEmitterOptions	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+CreateCodingLifecycleEmitterOptions	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 CreateCodingPatchReviewInput	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
 CreateCodingWorkspaceLifecycleOptions	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
 CreateDockerSandboxOptions	export type { CreateDockerSandboxOptions, DockerNetworkConfig, DockerProcessRecoveryBackendOptions, DockerProcessRefData, } from "./docker-sandbox.js"
@@ -95,7 +87,6 @@ CreateLanguageIntelligenceOptions	export type { CreateLanguageIntelligenceOption
 CreateNativeSandboxOptions	export type { CreateNativeSandboxOptions, NativeSandboxLimitOptions, NativeSpawnCommand, NativeUnshareMode, ResolvedNativeSandboxLimits, } from "./native-sandbox.js"
 CreateProcessSessionsOptions	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
 DEFAULT_BINARY_SNIFF_BYTES	export declare const DEFAULT_BINARY_SNIFF_BYTES = 8192
-DEFAULT_CAVEMAN_CONFIG	export declare const DEFAULT_CAVEMAN_CONFIG: CavemanConfig
 DEFAULT_CHECK_TIMEOUT_MS	export declare const DEFAULT_CHECK_TIMEOUT_MS: number
 DEFAULT_CHILD_ENV_INHERIT	export declare const DEFAULT_CHILD_ENV_INHERIT: readonly string[]
 DEFAULT_CLEANUP_DEADLINE_MS	export declare const DEFAULT_CLEANUP_DEADLINE_MS = 30000
@@ -217,7 +208,6 @@ DEFAULT_MAX_WORKSPACE_WORKTREES	export declare const DEFAULT_MAX_WORKSPACE_WORKT
 DEFAULT_MAX_WRITE_BYTES	export declare const DEFAULT_MAX_WRITE_BYTES: number
 DEFAULT_MEMORY_BYTES	export declare const DEFAULT_MEMORY_BYTES: number
 DEFAULT_OPENAPI_LIMITS	export declare const DEFAULT_OPENAPI_LIMITS: ResolvedOpenApiLimits
-DEFAULT_PONYTAIL_CONFIG	export declare const DEFAULT_PONYTAIL_CONFIG: PonytailConfig
 DEFAULT_REPO_EXCLUDE	export declare const DEFAULT_REPO_EXCLUDE: readonly string[]
 DEFAULT_SHELL_TIMEOUT_SECONDS	export declare const DEFAULT_SHELL_TIMEOUT_SECONDS = 600
 DEFAULT_STARTUP_TIMEOUT_MS	export declare const DEFAULT_STARTUP_TIMEOUT_MS = 30000
@@ -273,8 +263,8 @@ EgressProxy	export type { CreateAllowListEgressProxyOptions, EgressAttestation, 
 EgressProxyEndpoint	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
 EgressProxyStats	export type { CreateAllowListEgressProxyOptions, EgressAttestation, EgressProxy, EgressProxyEndpoint, EgressProxyStats, } from "./proxy.js"
 EgressRule	export type { CreateEgressPolicyOptions, EgressPolicy, EgressPreset, EgressProtocol, EgressRule } from "./policy.js"
-FileChangeOp	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
-FileChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+FileChangeOp	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+FileChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 ForgeCheck	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
 ForgeCredential	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
 ForgeCredentialResolver	export type { CreateGitHubForgeOptions, ForgeCheck, ForgeCredential, ForgeCredentialResolver, ForgeCredentialResolverSource, ForgeErrorCode, ForgeHandoffReport, ForgeIssueContext, ForgeLimits, ForgeOperations, ForgePullRequest, ResolvedForgeLimits, } from "./types.js"
@@ -458,8 +448,6 @@ ListToolOptions	export type { ListToolOptions } from "./list.js"
 LspClient	export declare class LspClient
 LspFrameError	export declare class LspFrameError extends Error
 LspFrameReader	export declare class LspFrameReader
-MAX_CONFIG_FILE_BYTES	export declare const MAX_CONFIG_FILE_BYTES = 16384
-MAX_INJECTED_INSTRUCTION_BYTES	export declare const MAX_INJECTED_INSTRUCTION_BYTES = 32768
 MAX_RENDERED_WINDOW	export declare const MAX_RENDERED_WINDOW = 400
 MAX_SKILL_FILE_BYTES	export declare const MAX_SKILL_FILE_BYTES = 262144
 MoveOperations	export type { MoveOperations, MoveToolOptions } from "./move.js"
@@ -481,19 +469,11 @@ OpenApiPolicyCheck	export type { OpenApiCredentialInput, OpenApiCredentialResolv
 OpenApiToolError	export declare class OpenApiToolError extends Error
 OpenApiToolsOptions	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
 OutputAccumulator	export declare class OutputAccumulator
-PONYTAIL_MODES	export declare const PONYTAIL_MODES: readonly ["off", "lite", "full", "ultra"]
-PONYTAIL_MODE_TYPE	export declare const PONYTAIL_MODE_TYPE: "ponytail-mode"
-PONYTAIL_PEER_PACKAGE	export declare const PONYTAIL_PEER_PACKAGE = "@dietrichgebert/ponytail"
-PONYTAIL_SKILL_NAMES	export declare const PONYTAIL_SKILL_NAMES: readonly ["ponytail", "ponytail-audit", "ponytail-debt", "ponytail-gain", "ponytail-help", "ponytail-review"]
 PROCESS_RECOVERY_CATEGORY	export declare const PROCESS_RECOVERY_CATEGORY = "coding-process"
 PROCESS_RECOVERY_LEASE_NAMESPACE	export declare const PROCESS_RECOVERY_LEASE_NAMESPACE = "prism.coding-agent.process.lease.v1"
 PROCESS_RECOVERY_NAMESPACE	export declare const PROCESS_RECOVERY_NAMESPACE = "prism.coding-agent.process.v1"
 PROCESS_RECOVERY_SCHEMA_VERSION	export declare const PROCESS_RECOVERY_SCHEMA_VERSION = 1
-PermissionDeniedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
-PonytailAppendOptions	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
-PonytailExtensionOptions	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
-PonytailExtensionState	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
-PonytailMode	export type { PonytailAppendOptions, PonytailExtensionOptions, PonytailExtensionState, PonytailMode, } from "./types.js"
+PermissionDeniedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 PrHandoff	export type { ArtifactReference, ArtifactWriter, BoundGitRunner, CreateGitOperationsOptions, CreateGitRunnerOptions, GitExecRequest, GitExecResult, GitLimitOptions, GitOperations, GitRunner, GitStatusBranch, GitStatusEntry, GitStatusEntryKind, GitStatusResult, PrHandoff, ResolvedGitLimits, } from "./git.js"
 ProcessExitResult	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
 ProcessOutputChunk	export type { CodingProcessEvent, CreateProcessSessionsOptions, ProcessExitResult, ProcessOutputChunk, ProcessPtyBackend, ProcessPtyHandle, ProcessPtyStartRequest, ProcessRecoveryBackend, ProcessRecoveryErrorCode, ProcessRecoveryLimits, ProcessRecoveryOutcome, ProcessRecoveryRecord, ProcessRecoveryRecordReport, ProcessRecoveryReport, ProcessSandboxBackend, ProcessSandboxHandle, ProcessSandboxStartRequest, ProcessSession, ProcessSessionLimits, ProcessSessionMetadata, ProcessSessionState, ProcessS
@@ -554,7 +534,7 @@ RepositoryWalkLimits	export type { IndexedRepositoryOptions, IndexFacade, IndexF
 ResolvedAskUserDecisionAnswer	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
 ResolvedAskUserDecisionLimits	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
 ResolvedCodingCheckpointLimits	export type { CodingArtifactKind, CodingArtifactRef, CodingCheckpointLimitOptions, CodingCheckpointMetadata, CodingCheckSummary, CodingFingerprints, CodingHandoffSummary, CodingTaskStatus, CodingTodoItem, ResolvedCodingCheckpointLimits, } from "./coding-checkpoint.js"
-ResolvedCodingLifecycleLimits	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+ResolvedCodingLifecycleLimits	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 ResolvedCodingReviewLimits	export type { AssertCodingPatchAcceptedInput, AssertCodingPatchAcceptedResult, CodingPatchReview, CodingPatchReviewCheckSummary, CodingPatchReviewDiagnosticSummary, CodingPatchReviewDiffstatEntry, CodingPatchReviewErrorCode, CodingPatchReviewIdentity, CodingPatchReviewState, CodingReviewArtifactInput, CodingReviewLimits, CreateCodingPatchReviewInput, ResolvedCodingReviewLimits, ReviewDiagnosticSeverity, } from "./review.js"
 ResolvedDiagnosticsLimits	export type { DiagnosticDelta, DiagnosticDeltaRequest, DiagnosticSeverity, NormalizeDiagnosticsOptions, NormalizedDiagnostic, RawDiagnostic, ResolvedDiagnosticsLimits, } from "./diagnostics.js"
 ResolvedDockerSandboxLimits	export type { DockerSandboxLimitOptions, ResolvedDockerSandboxLimits, } from "./sandbox-limits.js"
@@ -573,7 +553,6 @@ RunCodingGoalVerifyOptions	export type { CodingGoalVerifyApproval, RunCodingGoal
 SAFE_GIT_CONFIG_ARGS	export declare const SAFE_GIT_CONFIG_ARGS: readonly ["-c", "core.hooksPath=/dev/null", "-c", "core.pager=cat", "-c", "sequence.editor=true", "-c", "credential.helper=", "-c", "advice.detachedHead=false"]
 SAFE_GIT_ENV	export declare const SAFE_GIT_ENV: Readonly<Record<string, string>>
 SANDBOX_FS_SCRIPTS	export declare const SANDBOX_FS_SCRIPTS: Readonly<
-SKILLS_DIR_NAME	export declare const SKILLS_DIR_NAME = "skills"
 SKILL_FILE_CANDIDATES	export declare const SKILL_FILE_CANDIDATES: readonly ["skills/impeccable/SKILL.md", "SKILL.md"]
 SandboxAdapter	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
 SandboxCapabilities	export type { DisposableSandbox, SandboxAdapter, SandboxCapabilities, SandboxCloseOptions, SandboxExecFileRequest, SandboxExecRequest, SandboxExportMetadata, SandboxPauseResult, SandboxProcessHandle, SandboxSnapshotKind, SandboxStatus, SandboxStatusState, } from "./sandbox.js"
@@ -599,8 +578,11 @@ SearchToolOptions	export type { SearchToolOptions } from "./search.js"
 Semaphore	export declare class Semaphore
 ShellConfig	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
 ShellToolOptions	export type { BashExecOptions, BashOperations, BashSpawnContext, BashSpawnHook, ShellConfig, ShellToolOptions, } from "./shell.js"
-SubagentStartedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
-SubagentStoppedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+SubagentFailure	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+SubagentRecovery	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+SubagentRecoveryOutcome	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+SubagentStartedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+SubagentStoppedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 SuspendAskUserDecisionOptions	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
 TextFileClient	export type { TextFileClient } from "./acp-operations.js"
 TransformImage	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
@@ -621,7 +603,7 @@ WorkspaceRepositoryRecord	export type { CodingWorkspaceLifecycle, CodingWorkspac
 WorkspaceRepositoryRegistration	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
 WorkspaceRepositoryState	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
 WorkspaceState	export type { CodingWorkspaceLifecycle, CodingWorkspaceRecord, CreateCodingWorkspaceLifecycleOptions, ResolvedWorkspaceLimits, WorkspaceCleanupPolicy, WorkspaceCreateRequest, WorkspaceErrorCode, WorkspaceLimitOptions, WorkspaceRepositoryRecord, WorkspaceRepositoryRegistration, WorkspaceRepositoryState, WorkspaceState, } from "./workspace-lifecycle.js"
-WorktreeChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
+WorktreeChangedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 WorktreeChildContext	export type { WorktreeChildContext, WorktreeChildFactory, WorktreeChildFactoryOptions } from "./spawn-worktree.js"
 WorktreeChildFactory	export type { WorktreeChildContext, WorktreeChildFactory, WorktreeChildFactoryOptions } from "./spawn-worktree.js"
 WorktreeChildFactoryOptions	export type { WorktreeChildContext, WorktreeChildFactory, WorktreeChildFactoryOptions } from "./spawn-worktree.js"
@@ -648,16 +630,13 @@ assertPathInsideRoots	export declare function assertPathInsideRoots(roots: reado
 assertPinned	export declare function assertPinned(host: string, remoteAddress: string | undefined, pinned: readonly string[]): void
 assertPolicy	export declare function assertPolicy(host: SessionsHost, operation: string, command: string, args: readonly string[], cwd: string, owner: string): Promise<string>
 assertSandboxPath	export declare function assertSandboxPath(workspaceRoot: string, absolutePath: string): string
-assertSkillsMarker	export declare function assertSkillsMarker(root: string): void
 atomicWriteUtf8File	export declare function atomicWriteUtf8File(targetPath: string, content: string, options?:
 attachRecoveredHandle	export declare function attachRecoveredHandle(host: SessionsHost, current: ProcessRecoveryRecord, handle: ProcessPtyHandle | ProcessSandboxHandle, version: number): void
 attachWithTimeout	export declare function attachWithTimeout(backend: ProcessRecoveryBackend, ref: string, timeoutMs: number): Promise<ProcessPtyHandle | ProcessSandboxHandle | null>
-buildCavemanInstructions	export declare function buildCavemanInstructions(upstreamRoot: string, level: CavemanLevel): string | undefined
 buildChildEnv	export declare function buildChildEnv(
 buildCodingCheckpointMetadata	export declare function buildCodingCheckpointMetadata(input:
 buildDockerCreateArgsForTest	export declare function buildDockerCreateArgsForTest(options: Omit<CreateDockerSandboxOptions, "docker" | "runner" | "skipImport">): string[]
 buildNativeSpawnCommand	export declare function buildNativeSpawnCommand(request: SandboxExecRequest | SandboxExecFileRequest, options:
-buildPonytailInstructions	export declare function buildPonytailInstructions(api: UpstreamPonytailInstructions, mode: PonytailMode): string | undefined
 buildProcessRecoveryRecord	export declare function buildProcessRecoveryRecord(input:
 cancelOwned	export declare function cancelOwned(host: SessionsHost, owner: string, cancelOptions?:
 checkSandboxAlive	export declare function checkSandboxAlive(host: SessionsHost): Promise<void>
@@ -680,8 +659,6 @@ createAllowListEgressProxy	export declare function createAllowListEgressProxy(op
 createAskUserDecisionResumeValidator	export declare function createAskUserDecisionResumeValidator(limits?: Pick<ResolvedAskUserDecisionLimits, "maxCustomTextBytes">): WorkflowResumeValidator
 createAskUserDecisionTool	export declare function createAskUserDecisionTool(options: AskUserDecisionToolOptions): ToolDefinition
 createBoundGitRunner	export declare function createBoundGitRunner(options?: CreateGitRunnerOptions): Promise<BoundGitRunner>
-createCavemanCommands	export declare function createCavemanCommands(ctx: CavemanCommandContext): readonly CommandDefinition[]
-createCavemanExtension	export declare function createCavemanExtension(options: CavemanExtensionOptions): Extension
 createCodingApprovalPolicy	export declare function createCodingApprovalPolicy(options: CodingApprovalPolicyOptions): ExecutionPolicy
 createCodingArtifactRef	export declare function createCodingArtifactRef(input:
 createCodingCheckTool	export declare function createCodingCheckTool(cwd: string, options: CodingCheckToolOptions): ToolDefinition
@@ -723,8 +700,6 @@ createLocalRepositoryOperations	export declare function createLocalRepositoryOpe
 createMoveTool	export declare function createMoveTool(cwd: string, options?: MoveToolOptions): ToolDefinition
 createNativeSandbox	export declare function createNativeSandbox(options: CreateNativeSandboxOptions): Promise<DisposableSandbox>
 createOpenApiTools	export declare function createOpenApiTools(options: OpenApiToolsOptions): readonly ToolDefinition[]
-createPonytailCommands	export declare function createPonytailCommands(ctx: PonytailCommandContext): readonly CommandDefinition[]
-createPonytailExtension	export declare function createPonytailExtension(options: PonytailExtensionOptions): Extension
 createPrismDevInspector	export declare function createPrismDevInspector(options: CreatePrismDevInspectorOptions): PrismDevInspector
 createProcessSessions	export declare function createProcessSessions(options: CreateProcessSessionsOptions): ProcessSessions
 createReadOnlyTools	export declare function createReadOnlyTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
@@ -768,8 +743,6 @@ evictRecoveryOverflow	export declare function evictRecoveryOverflow(host: Sessio
 executeOpenApiOperation	export declare function executeOpenApiOperation(options: ExecuteOpenApiOperationOptions): Promise<ToolResult>
 expandGlobBraces	export declare function expandGlobBraces(pattern: string, options?: BraceExpansionOptions): string[]
 expandPath	export declare function expandPath(filePath: string): string
-extractUserText	export declare function extractUserText(messages: readonly
-filterSkillBodyForLevel	export declare function filterSkillBodyForLevel(body: string, level: CavemanLevel): string
 fingerprintJson	export declare function fingerprintJson(value: unknown): string
 formatSize	export declare function formatSize(bytes: number): string
 fuzzyFindText	export declare function fuzzyFindText(content: string, oldText: string): FuzzyMatchResult
@@ -787,16 +760,13 @@ inspectorConfigResponse	export declare function inspectorConfigResponse(basePath
 inspectorPageResponse	export declare function inspectorPageResponse(): Response
 inspectorScriptResponse	export declare function inspectorScriptResponse(): Response
 isBinaryBuffer	export declare function isBinaryBuffer(buffer: Buffer): boolean
-isCavemanLevel	export declare function isCavemanLevel(value: string): value is CavemanLevel
 isComputerUseLinuxTool	export declare function isComputerUseLinuxTool(name: string, includeSetupTools?: boolean): boolean
-isDeactivationCommand	export declare function isDeactivationCommand(text: string): boolean
 isInsideRoot	export declare function isInsideRoot(root: string, target: string): boolean
 isMetadataAddress	export declare function isMetadataAddress(address: string): boolean
 isOwnershipConflict	export declare function isOwnershipConflict(error: unknown): boolean
 isPathInside	export declare function isPathInside(root: string, target: string): boolean
 isPathInsideReal	export declare function isPathInsideReal(root: string, target: string): Promise<boolean>
 isPathInsideRoot	export declare function isPathInsideRoot(root: string, target: string): boolean
-isPonytailMode	export declare function isPonytailMode(value: string): value is PonytailMode
 isPrivateAddress	export declare function isPrivateAddress(address: string): boolean
 isTerminalState	export declare function isTerminalState(state: ProcessSessionState): boolean
 killProcessTree	export declare function killProcessTree(pid: number): void
@@ -806,18 +776,15 @@ loadComputerUseLinuxSkill	export declare function loadComputerUseLinuxSkill(): S
 loadImpeccableSkill	export declare function loadImpeccableSkill(root: string, skillRelativePath: string, expectedDigest?: string): Skill
 loadProcessRecoveryRecord	export declare function loadProcessRecoveryRecord(input:
 loadProcessRecoveryRecords	export declare function loadProcessRecoveryRecords(input:
-loadUpstreamHooks	export declare function loadUpstreamHooks(upstreamRoot: string): UpstreamPonytailHooks
-loadUpstreamSkills	export declare function loadUpstreamSkills(upstreamRoot: string): Skill[]
 makeHandle	export declare function makeHandle(host: SessionsHost, record: SessionRecord): ProcessSession
 matchGlobPattern	export declare function matchGlobPattern(pattern: string, path: string): boolean
 mountInspector	export declare function mountInspector(root: HTMLElement): Promise<MountHandles>
 normalizeAddress	export declare function normalizeAddress(address: string): string
 normalizeDiagnostics	export declare function normalizeDiagnostics(raw: readonly RawDiagnostic[], options: NormalizeDiagnosticsOptions): readonly NormalizedDiagnostic[]
 normalizeForFuzzyMatch	export declare function normalizeForFuzzyMatch(text: string): string
-normalizeLevelArg	export declare function normalizeLevelArg(arg: string): CavemanLevel | null
 normalizeToLF	export declare function normalizeToLF(text: string): string
 nowIso	export declare function nowIso(): string
-observeSupervisorLifecycle	export declare function observeSupervisorLifecycle(supervisor: Pick<Supervisor, "redact" | "subscribe">, options: ObserveSupervisorLifecycleOptions): () => void
+observeSupervisorLifecycle	export declare function observeSupervisorLifecycle(supervisor: SupervisorLifecycleSource, options: ObserveSupervisorLifecycleOptions): () => void
 ownershipKey	export declare function ownershipKey(ownership: CreateProcessSessionsOptions["ownership"], identity: CreateProcessSessionsOptions["identity"]): string
 packageName	export declare const packageName = "@arnilo/prism-coding-tools/openapi"
 parseAskUserDecisionArgs	export declare function parseAskUserDecisionArgs(args: Record<string, unknown>, limits: ResolvedAskUserDecisionLimits):
@@ -826,18 +793,13 @@ parseGitLsFilesZ	export declare function parseGitLsFilesZ(buffer: Buffer): strin
 parseInspectorCompareBody	export declare function parseInspectorCompareBody(text: string): InspectorComparison
 parsePorcelainV2	export declare function parsePorcelainV2(stdout: Buffer, options?:
 pathExists	export declare function pathExists(filePath: string): Promise<boolean>
-persistLevel	export declare function persistLevel(options: PersistLevelOptions): Promise<void>
-persistMode	export declare function persistMode(options: PersistModeOptions): Promise<void>
 persistRecoveryUnknown	export declare function persistRecoveryUnknown(host: SessionsHost, current: ProcessRecoveryRecord, version: number, signal?: AbortSignal): Promise<boolean>
 persistTransition	export declare function persistTransition(host: SessionsHost, record: SessionRecord): void
 posixQuote	export declare function posixQuote(value: string): string
 readBoundedFile	export declare function readBoundedFile(root: string, relativePath: string, maxBytes: number): string
-readCavemanConfig	export declare function readCavemanConfig(configPath?: string): CavemanConfig
 readCodingCheckpointFromState	export declare function readCodingCheckpointFromState(state: Readonly<Record<string, unknown>>, limits?: CodingCheckpointLimitOptions): CodingCheckpointMetadata | undefined
 readCodingPlanFile	export declare function readCodingPlanFile(input:
 readFileBounded	export declare function readFileBounded(path: string, maxBytes: number, signal?: AbortSignal): Promise<Buffer>
-readInitialConfig	export declare function readInitialConfig(configPath: string | undefined, defaultMode?: PonytailMode, quietStartup?: boolean): PonytailConfig
-readPonytailConfig	export declare function readPonytailConfig(configPath?: string): PonytailConfig
 reconcileAllUnknown	export declare function reconcileAllUnknown(host: SessionsHost): number
 reconcileCodingToolEffect	export declare function reconcileCodingToolEffect(input: CodingEffectReconciliationInput): Promise<CodingEffectReconciliation>
 recoverSessions	export declare function recoverSessions(host: SessionsHost, recoverOptions?:
@@ -846,8 +808,6 @@ redactRemoteUrl	export declare function redactRemoteUrl(url: string): string
 refuseReadBeforeWrite	export declare function refuseReadBeforeWrite(operation: "write" | "edit", displayPath: string, absolutePath: string, options: ReadBeforeWriteOptions | undefined, force: boolean): string | null
 releaseRecordLease	export declare function releaseRecordLease(input:
 replayRunPage	export declare function replayRunPage(seams: DevReplaySeams, request: Request, runId: string, cursor: string | undefined): Promise<Response>
-requireCavemanSkills	export declare function requireCavemanSkills(skills: readonly Skill[]): Map<string, Skill>
-requirePonytailSkills	export declare function requirePonytailSkills(skills: readonly Skill[]): Map<PonytailSkillName, Skill>
 requireRecord	export declare function requireRecord(host: SessionsHost, sessionId: string, owner?: string): SessionRecord
 resolveAskUserDecisionAnswer	export declare function resolveAskUserDecisionAnswer(answer: AskUserDecisionAnswer | null | undefined, selectionMode: AskUserDecisionSelectionMode, options: readonly AskUserDecisionOption[], gates:
 resolveAskUserDecisionLimits	export declare function resolveAskUserDecisionLimits(options?: Pick<AskUserDecisionToolOptions, "maxOptions" | "maxQuestionBytes" | "maxLabelBytes" | "maxBulletBytes" | "maxCustomTextBytes">): ResolvedAskUserDecisionLimits
@@ -864,11 +824,8 @@ resolveForgeLimits	export declare function resolveForgeLimits(options?: ForgeLim
 resolveGitLimits	export declare function resolveGitLimits(options?: GitLimitOptions): ResolvedGitLimits
 resolveIndexLimits	export declare function resolveIndexLimits(options?: IndexLimitOptions): ResolvedIndexLimits
 resolveLanguageIntelligenceLimits	export declare function resolveLanguageIntelligenceLimits(options?: LanguageIntelligenceLimits): ResolvedLanguageIntelligenceLimits
-resolveLevelFromEntries	export declare function resolveLevelFromEntries(entries: readonly SessionEntry[]): CavemanLevel | undefined
-resolveModeFromEntries	export declare function resolveModeFromEntries(entries: readonly SessionEntry[]): PonytailMode | undefined
 resolveNativeSandboxLimits	export declare function resolveNativeSandboxLimits(input?: NativeSandboxLimitOptions): ResolvedNativeSandboxLimits
 resolveOpenApiLimits	export declare function resolveOpenApiLimits(input?: OpenApiLimits): ResolvedOpenApiLimits
-resolvePeerPackageRoot	export declare function resolvePeerPackageRoot(packageName: string): string
 resolvePinned	export declare function resolvePinned(host: string, resolve?: AddressResolver): Promise<readonly string[]>
 resolveProcessRecoveryLimits	export declare function resolveProcessRecoveryLimits(limits?: ProcessRecoveryLimits): ResolvedProcessRecoveryLimits
 resolveProcessSessionLimits	export declare function resolveProcessSessionLimits(limits?: ProcessSessionLimits): ResolvedProcessSessionLimits
@@ -880,7 +837,7 @@ resolveSandboxCapabilities	export declare function resolveSandboxCapabilities(sa
 resolveTerminal	export declare function resolveTerminal(host: SessionsHost, terminal: ProcessTerminalRequest | undefined):
 resolveToCwd	export declare function resolveToCwd(filePath: string, cwd: string): string
 resolveUnderRoot	export declare function resolveUnderRoot(root: string, candidate: string): string
-resolveUpstreamRoot	export declare function resolveUpstreamRoot(options?: ResolveUpstreamRootOptions): string
+resolveUpstreamRoot	export declare function resolveUpstreamRoot(options: ResolveUpstreamRootOptions): ResolvedImpeccableUpstream
 resolveWorkspaceLimits	export declare function resolveWorkspaceLimits(options?: WorkspaceLimitOptions): ResolvedWorkspaceLimits
 restoreLineEndings	export declare function restoreLineEndings(text: string, ending: "\r\n" | "\n"): string
 runCodingGoalVerify	export declare function runCodingGoalVerify(options: RunCodingGoalVerifyOptions): Promise<WorkflowRunResult>
@@ -930,6 +887,4 @@ visibleItems	export declare function visibleItems(items: readonly TimelineItem[]
 waitForChildProcess	export declare function waitForChildProcess(child: ChildProcess): Promise<number | null>
 walkRepository	export declare function walkRepository(rootReal: string, startAbsolute: string, limits: RepositoryWalkLimits): AsyncGenerator<RepositoryWalkEvent>
 withFileMutationQueue	export declare function withFileMutationQueue<T>(filePath: string, fn: () => Promise<T>): Promise<T>
-writeCavemanConfig	export declare function writeCavemanConfig(configPath: string, config: CavemanConfig): void
 writeCodingPlanFile	export declare function writeCodingPlanFile(input:
-writePonytailDefaultMode	export declare function writePonytailDefaultMode(configPath: string, mode: PonytailMode): void

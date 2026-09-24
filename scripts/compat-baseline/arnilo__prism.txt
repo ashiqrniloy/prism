@@ -64,6 +64,7 @@ BUILT_IN_LOOP_REVISIONS	export declare const BUILT_IN_LOOP_REVISIONS: Readonly<R
 BatchJobsError	export declare class BatchJobsError extends Error
 BatchedRunLedgerOptions	export type { BatchedRunLedgerOptions } from "./run-ledger.js"
 BeforeProviderTurnPayload	export type { BeforeProviderTurnPayload, DeterministicTurnAnswer, DeterministicTurnProvenance, Middleware, MiddlewareHookName, MiddlewareNext, MiddlewareRegistry, MiddlewareRegistryOptions, } from "./middleware.js"
+BudgetExhaustionAttribution	export type { BudgetExhaustionAttribution, RunLimitTrackerOptions } from "./run-limits.js"
 CACHE_TELEMETRY_OVERFLOW_KEY	export declare const CACHE_TELEMETRY_OVERFLOW_KEY = "__overflow__"
 CHECKPOINT_CONFLICT_CODE	export declare const CHECKPOINT_CONFLICT_CODE = "ERR_PRISM_CHECKPOINT_CONFLICT"
 CONTEXT_BUDGET_ERROR_CODE	export declare const CONTEXT_BUDGET_ERROR_CODE: "context_budget_exceeded"
@@ -79,10 +80,12 @@ CacheTelemetryReport	export type { CacheTelemetry, CacheTelemetryOptions, CacheT
 CacheTelemetrySample	export type { CacheTelemetry, CacheTelemetryOptions, CacheTelemetryReport, CacheTelemetrySample, } from "./cache-telemetry.js"
 CacheUsageReport	export type { ApplyCacheControlOptions, CacheControlledContentBlock, CacheControlledMessage, CacheControlValue, CacheUsageReport, } from "./cache-helpers.js"
 CheckpointConflictError	export declare class CheckpointConflictError extends Error
-CheckpointRestoreAudit	export type { CheckpointRestoreAudit, CheckpointRestoreAuditEntry, CheckpointRestoreHook, RunCheckpointRestoreHooksOptions, } from "./checkpoint-restore.js"
-CheckpointRestoreAuditEntry	export type { CheckpointRestoreAudit, CheckpointRestoreAuditEntry, CheckpointRestoreHook, RunCheckpointRestoreHooksOptions, } from "./checkpoint-restore.js"
+CheckpointRestoreAudit	export type { CheckpointRestoreAudit, CheckpointRestoreAuditEntry, CheckpointRestoreCompensation, CheckpointRestoreHandler, CheckpointRestoreHook, RunCheckpointRestoreHooksOptions, } from "./checkpoint-restore.js"
+CheckpointRestoreAuditEntry	export type { CheckpointRestoreAudit, CheckpointRestoreAuditEntry, CheckpointRestoreCompensation, CheckpointRestoreHandler, CheckpointRestoreHook, RunCheckpointRestoreHooksOptions, } from "./checkpoint-restore.js"
+CheckpointRestoreCompensation	export type { CheckpointRestoreAudit, CheckpointRestoreAuditEntry, CheckpointRestoreCompensation, CheckpointRestoreHandler, CheckpointRestoreHook, RunCheckpointRestoreHooksOptions, } from "./checkpoint-restore.js"
 CheckpointRestoreError	export declare class CheckpointRestoreError extends Error
-CheckpointRestoreHook	export type { CheckpointRestoreAudit, CheckpointRestoreAuditEntry, CheckpointRestoreHook, RunCheckpointRestoreHooksOptions, } from "./checkpoint-restore.js"
+CheckpointRestoreHandler	export type { CheckpointRestoreAudit, CheckpointRestoreAuditEntry, CheckpointRestoreCompensation, CheckpointRestoreHandler, CheckpointRestoreHook, RunCheckpointRestoreHooksOptions, } from "./checkpoint-restore.js"
+CheckpointRestoreHook	export type { CheckpointRestoreAudit, CheckpointRestoreAuditEntry, CheckpointRestoreCompensation, CheckpointRestoreHandler, CheckpointRestoreHook, RunCheckpointRestoreHooksOptions, } from "./checkpoint-restore.js"
 CitationIntegrityReason	export type { ArtifactApproval, ArtifactApprovalState, ArtifactBodyErrorCode, ArtifactBodyPresignOptions, ArtifactBodyRef, ArtifactBodyStore, ArtifactBodyTransferOptions, ArtifactCitation, ArtifactDecisionState, ArtifactDeliveryToken, ArtifactRecord, ArtifactRevision, CitationIntegrityReason, CitationIntegrityResult, CitationLiveSource, CitationSupport, } from "./artifacts.js"
 CitationIntegrityResult	export type { ArtifactApproval, ArtifactApprovalState, ArtifactBodyErrorCode, ArtifactBodyPresignOptions, ArtifactBodyRef, ArtifactBodyStore, ArtifactBodyTransferOptions, ArtifactCitation, ArtifactDecisionState, ArtifactDeliveryToken, ArtifactRecord, ArtifactRevision, CitationIntegrityReason, CitationIntegrityResult, CitationLiveSource, CitationSupport, } from "./artifacts.js"
 CitationLiveSource	export type { ArtifactApproval, ArtifactApprovalState, ArtifactBodyErrorCode, ArtifactBodyPresignOptions, ArtifactBodyRef, ArtifactBodyStore, ArtifactBodyTransferOptions, ArtifactCitation, ArtifactDecisionState, ArtifactDeliveryToken, ArtifactRecord, ArtifactRevision, CitationIntegrityReason, CitationIntegrityResult, CitationLiveSource, CitationSupport, } from "./artifacts.js"
@@ -421,7 +424,7 @@ ResumeNestedRun	export type { ApprovalOutcome, AttentionCompiler, AttentionCompi
 RevocableOAuthCredentialStore	export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js"
 RunBundleSnapshot	export type { RunBundleSnapshot, RunBundleSnapshotInput } from "./run-bundle.js"
 RunBundleSnapshotInput	export type { RunBundleSnapshot, RunBundleSnapshotInput } from "./run-bundle.js"
-RunCheckpointRestoreHooksOptions	export type { CheckpointRestoreAudit, CheckpointRestoreAuditEntry, CheckpointRestoreHook, RunCheckpointRestoreHooksOptions, } from "./checkpoint-restore.js"
+RunCheckpointRestoreHooksOptions	export type { CheckpointRestoreAudit, CheckpointRestoreAuditEntry, CheckpointRestoreCompensation, CheckpointRestoreHandler, CheckpointRestoreHook, RunCheckpointRestoreHooksOptions, } from "./checkpoint-restore.js"
 RunDecision	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, ContextMeter, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldC
 RunFeedbackError	export declare class RunFeedbackError extends Error
 RunFeedbackLimits	export type { MemoryRunFeedbackStoreOptions, PrepareRunFeedbackOptions, RunFeedbackLimits, RunFeedbackRun, RunFeedbackRunResolver, } from "./feedback.js"
@@ -432,7 +435,7 @@ RunLimitCounters	export type { ApprovalOutcome, AttentionCompiler, AttentionComp
 RunLimitError	export declare class RunLimitError extends Error
 RunLimitName	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, ContextMeter, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldC
 RunLimitTracker	export declare class RunLimitTracker
-RunLimitTrackerOptions	export type { RunLimitTrackerOptions } from "./run-limits.js"
+RunLimitTrackerOptions	export type { BudgetExhaustionAttribution, RunLimitTrackerOptions } from "./run-limits.js"
 RuntimeAgentSession	export declare class RuntimeAgentSession implements AgentSession
 SEARCH_TOOLS_TOOL_NAME	export declare const SEARCH_TOOLS_TOOL_NAME = "search_tools"
 SESSION_APPEND_CONFLICT_CODE	export declare const SESSION_APPEND_CONFLICT_CODE: "session_append_conflict"
@@ -712,7 +715,7 @@ definePrismManifest	export declare function definePrismManifest(manifest: PrismM
 defineProviderPackage	export declare function defineProviderPackage(providerPackage: ProviderPackage): ProviderPackage
 denialToErrorInfo	export declare function denialToErrorInfo(error: unknown): ErrorInfo
 deriveToolEffectKey	export declare function deriveToolEffectKey(input: Omit<ToolEffectKey, "key" | "signal">): string
-describeBudgetExhaustion	export declare function describeBudgetExhaustion(tracker: RunLimitTracker, breach: RunLimitBreach, recentToolCalls: readonly ToolCallSummary[]):
+describeBudgetExhaustion	export declare function describeBudgetExhaustion(tracker: RunLimitTracker, breach: RunLimitBreach, recentToolCalls: readonly ToolCallSummary[]): BudgetExhaustionAttribution &
 describeGuardrailPacks	export declare function describeGuardrailPacks(refs: readonly GuardrailPackRef[] | undefined, registry?: ReadonlyMap<string, import("./guardrail-packs/types.js").GuardrailPackDefinition>): readonly GuardrailPackRow[]
 describeStorage	export declare function describeStorage(store: unknown, checkpoints: unknown):
 description	export declare const description = "Agent harness for AI providers, agents, sessions, and tools."
@@ -805,6 +808,7 @@ loadJsonResource	export declare function loadJsonResource(loader: ResourceLoader
 loadManifestResource	export declare function loadManifestResource(loader: ResourceLoader, uri: string, context?: ResourceLoadContext): Promise<PrismManifest>
 loadProvidersCatalog	export declare function loadProvidersCatalog(templatesRoot?: string): ReadonlyMap<string, ProviderSpec>
 loadSettingsFiles	export declare function loadSettingsFiles(files: readonly NodeSettingsFile[]): Promise<SettingsProvider>
+loadSkillDirectory	export declare function loadSkillDirectory(directory: string, options?: LoadSkillDirectoryOptions): Promise<readonly Skill[]>
 loadSystemPromptFiles	export declare function loadSystemPromptFiles(options: SystemPromptFilesOptions): Promise<readonly SystemPromptContribution[]>
 loadTextResource	export declare function loadTextResource(loader: ResourceLoader, uri: string, context?: ResourceLoadContext): Promise<string>
 mapCacheRetention	export declare function mapCacheRetention(retention: CacheRetention | undefined, model: ModelConfig): "short" | "long" | undefined
@@ -951,7 +955,7 @@ resumeAgentRun	export declare function resumeAgentRun(agent: Agent, ref: AgentRu
 resumeAgentRunStream	export declare function resumeAgentRunStream(agent: Agent, ref: AgentRunRef, resume: AgentRunResume, options: AgentRunResumeStreamOptions): AsyncGenerator<AgentEvent>
 revokeOAuthCredential	export declare function revokeOAuthCredential(options:
 runBatchJobsConformance	export declare function runBatchJobsConformance(options: BatchJobsConformanceOptions): Promise<void>
-runCheckpointRestoreHooks	export declare function runCheckpointRestoreHooks<Context>(hooks: readonly CheckpointRestoreHook<Context>[], context: Context, options?: RunCheckpointRestoreHooksOptions): Promise<CheckpointRestoreAudit>
+runCheckpointRestoreHooks	export declare function runCheckpointRestoreHooks<Context>(hooks: readonly CheckpointRestoreHandler<Context>[], context: Context, options?: RunCheckpointRestoreHooksOptions): Promise<CheckpointRestoreAudit>
 runCli	export declare function runCli(argv: readonly string[], runtime: CliRuntime): Promise<number>
 runDevicePolicyConformance	export declare function runDevicePolicyConformance(adapter: DeviceAdapter, options?: DevicePolicyOptions): DeviceConformanceResult
 runEmbeddingsConformance	export declare function runEmbeddingsConformance(options: EmbeddingsConformanceOptions): Promise<EmbeddingsResult | undefined>
@@ -975,6 +979,7 @@ runTranscriptionConformance	export declare function runTranscriptionConformance(
 runVideoGenerationConformance	export declare function runVideoGenerationConformance(options: VideoGenerationConformanceOptions): Promise<VideoGenerationJob | undefined>
 sanitizeCacheKey	export declare function sanitizeCacheKey(value: string | undefined, maxLength: number): string | undefined
 saveAgentRunState	export declare function saveAgentRunState(input:
+scorePrefixStability	export declare function scorePrefixStability(requests: readonly ProviderRequest[], options?: ScorePrefixStabilityOptions): PrefixStabilitySample
 scoreTools	export declare function scoreTools(index: ToolSearchIndex, query: string, k: number, queryByteCap?: number): readonly ToolSearchMatch[]
 searchLinearSessions	export declare function searchLinearSessions(bySession: Map<string, SessionEntry[]>, leafBySession: Map<string, string>, query: SessionSearchQuery, caps?: LinearSearchCaps): PersistencePage<SessionSearchHit>
 secretsHygienePack	export declare const secretsHygienePack: GuardrailPackDefinition
@@ -1031,7 +1036,7 @@ validateProviderName	export declare function validateProviderName(name: string):
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
 validationRespectPack	export declare const validationRespectPack: GuardrailPackDefinition
-version	export declare const version = "0.10.0"
+version	export declare const version = "0.11.0"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]

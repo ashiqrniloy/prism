@@ -1,0 +1,5 @@
+# Local dev tool versions (plan 113 Task 2). CI pins its own versions in
+# .github/workflows, so a Bun or Node bump touches both files.
+[tools]
+node = "24"
+bun = "1.4.2"

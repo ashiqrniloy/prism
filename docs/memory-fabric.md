@@ -78,8 +78,9 @@ await createDeletionPropagator({ scope, vectorStore: store, authorization: princ
   and notes for other paths are untouched, and the write joins one store transaction when the store
   has one (a plain `upsert` otherwise).
 - Delete: the notes recorded against the deleted path are tombstoned through the store's own
-  invalidation path (`invalidate`, batched at `HARD_INVALIDATION_BATCH`; reason `forgotten` by default,
-  `legal_hold` when both the handler and the propagator are given it), so recall stops serving them
+  invalidation path (`invalidate`, batched at `HARD_INVALIDATION_BATCH`; the propagation's resolved
+  reason wins, `forgotten` by default, `legal_hold` stamps `hold: true` — the handler's own `reason`
+  option is only the fallback for a hand-built context), so recall stops serving them
   with no second revocation plane and no background cleanup to wait for.
 - One scope read per leg, selecting on `metadata.fabric.path` — never on content. A note in another
   scope is never visible, and a composition whose scope differs from the handler's is refused

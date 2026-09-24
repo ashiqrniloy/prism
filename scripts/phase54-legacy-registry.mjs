@@ -20,7 +20,7 @@
 // Apply is only valid AFTER the 0.4 packages and the migration guide are public (Task 9).
 //
 // Offline fixture tests override the npm executable via PRISM_LEGACY_NPM and the plan
-// path via PRISM_LEGACY_PLAN (see scripts/phase54-legacy-registry.test.mjs).
+// path via PRISM_LEGACY_PLAN (see scripts/phase54-legacy-registry-*.test.mjs).
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";

@@ -10,6 +10,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { RepointStore } from "../../repoint.js";
+import type { DeletionPropagationContext } from "../../propagation.js";
 import type { MemoryScope, MemoryVectorRecord, VectorStore } from "../../types.js";
 import {
   createDeletionPropagator,
@@ -211,7 +212,7 @@ describe("fabric note re-point handler", () => {
     assert.equal((await fabric.recall("Runbook for the on-call rotation")).hits[0]?.id, survivor.id, "other paths survive");
   });
 
-  it("carries a host-chosen reason and a legal hold into the tombstone", async () => {
+  it("mirrors the propagator's reason into the note tombstones with no handler option", async () => {
     const { fabric, vectors } = makeHarness();
     const note = await fabric.remember({ kind: "file", content: "Subpoenaed ledger design", path: "docs/a.md" });
     await vectors.setSourceAccess?.(thread, [{ sourceId: "docs/a.md", principalIds: ["alice"], accessVersion: 1 }]);
@@ -221,7 +222,7 @@ describe("fabric note re-point handler", () => {
       vectorStore: vectors,
       authorization: alice,
       reason: "legal_hold",
-      handlers: [createFabricRepointHandler({ scope: thread, vectorStore: vectors, reason: "legal_hold" })],
+      handlers: [createFabricRepointHandler({ scope: thread, vectorStore: vectors })],
     }).propagate("docs/a.md");
 
     const tombstones = await vectors.listInvalidated?.(thread);
@@ -232,6 +233,64 @@ describe("fabric note re-point handler", () => {
         [note.id, "legal_hold", true],
       ],
     );
+  });
+
+  it("lets the propagator's reason win over the handler's own, in both directions", async () => {
+    // A weaker handler reason under a legal_hold walk is still a hold.
+    const held = makeHarness();
+    const heldNote = await held.fabric.remember({ kind: "file", content: "Held ledger", path: "docs/a.md" });
+    await held.vectors.setSourceAccess?.(thread, [{ sourceId: "docs/a.md", principalIds: ["alice"], accessVersion: 1 }]);
+    await createDeletionPropagator({
+      scope: thread,
+      vectorStore: held.vectors,
+      authorization: alice,
+      reason: "legal_hold",
+      handlers: [createFabricRepointHandler({ scope: thread, vectorStore: held.vectors, reason: "forgotten" })],
+    }).propagate("docs/a.md");
+    assert.deepEqual(
+      (await held.vectors.listInvalidated?.(thread))?.map((entry) => [entry.id, entry.reason, entry.hold]),
+      [
+        ["docs/a.md", "legal_hold", true],
+        [heldNote.id, "legal_hold", true],
+      ],
+    );
+
+    // A stronger handler reason under a default walk invents nothing.
+    const plain = makeHarness();
+    const plainNote = await plain.fabric.remember({ kind: "file", content: "Ordinary ledger", path: "docs/a.md" });
+    await plain.vectors.setSourceAccess?.(thread, [{ sourceId: "docs/a.md", principalIds: ["alice"], accessVersion: 1 }]);
+    await createDeletionPropagator({
+      scope: thread,
+      vectorStore: plain.vectors,
+      authorization: alice,
+      handlers: [createFabricRepointHandler({ scope: thread, vectorStore: plain.vectors, reason: "legal_hold" })],
+    }).propagate("docs/a.md");
+    assert.deepEqual(
+      (await plain.vectors.listInvalidated?.(thread))?.map((entry) => [entry.id, entry.reason, entry.hold]),
+      [
+        ["docs/a.md", "forgotten", undefined],
+        [plainNote.id, "forgotten", undefined],
+      ],
+    );
+  });
+
+  it("keeps a hand-built context without a reason valid and falls back to the handler's option", async () => {
+    const { fabric, vectors } = makeHarness();
+    const note = await fabric.remember({ kind: "file", content: "Hand-built retire", path: "docs/a.md" });
+    const context: DeletionPropagationContext = { sourceId: "docs/a.md", ids: ["docs/a.md"], scope: thread };
+    const handler = createFabricRepointHandler({ scope: thread, vectorStore: vectors });
+    assert.equal(await handler.delete(context), 1);
+    assert.deepEqual(
+      (await vectors.listInvalidated?.(thread))?.map((entry) => [entry.id, entry.reason, entry.hold]),
+      [[note.id, "forgotten", undefined]],
+    );
+
+    const heldNote = await fabric.remember({ kind: "file", content: "Hand-built hold", path: "docs/b.md" });
+    const held = createFabricRepointHandler({ scope: thread, vectorStore: vectors, reason: "legal_hold" });
+    assert.equal(await held.delete({ sourceId: "docs/b.md", ids: ["docs/b.md"], scope: thread }), 1);
+    const rows = (await vectors.listInvalidated?.(thread)) ?? [];
+    assert.equal(rows.find((entry) => entry.id === heldNote.id)?.reason, "legal_hold");
+    assert.equal(rows.find((entry) => entry.id === heldNote.id)?.hold, true);
   });
 
   it("never touches another scope, and refuses a composition whose scope does not match", async () => {

@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 //
 //   node scripts/post-publish-smoke.mjs                    # from the registry (after publish)
 //   node scripts/post-publish-smoke.mjs --local            # from local tarballs (pre-publish parity)
-//   node scripts/post-publish-smoke.mjs --version 0.10.0   # pin the version
+//   node scripts/post-publish-smoke.mjs --version 0.11.0   # pin the version
 //
 // Registry mode is the post-publish gate: it proves the published artifacts (not the working
 // tree) resolve `./fabric`, `./scoped`, and the hooks adapter. `--local` runs the same checks

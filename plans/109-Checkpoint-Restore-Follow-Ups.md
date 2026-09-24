@@ -14,7 +14,7 @@ Release: 0.9.x follow-up to plan 094, recorded from that plan's Further Actions.
 
 ## Tasks
 
-- [ ] Task 1: Primitive review — restore, compensation, and audit surfaces (P2)
+- [x] Task 1: Primitive review — restore, compensation, and audit surfaces (P2)
   - Acceptance Criteria:
     - Functional: `docs/_evidence/phase109-primitive-review.md` exists with three sections — (a) reuse rows for every primitive the later tasks build on, each with a `path:line` span, (b) gap rows naming what no current seam does, (c) rejected alternatives with the reason (including every rejected option in Tasks 2 and 3).
     - Functional: the review confirms or refutes, with a runnable observation, (a) that today's executor leaves an earlier layer restored when a later hook fails — drive `runCheckpointRestoreHooks` with two fake layers whose second throws and print the first layer's state — and (b) that `agent_resumed.restore` / `workflow_resumed.restore` never reaches a projection: `packages/prism-core/src/governance/observability/timeline.ts:261-265` and `:788-791` are status-only, so a host cannot read the audit off `ExecutionTimeline` today.
@@ -56,7 +56,7 @@ Release: 0.9.x follow-up to plan 094, recorded from that plan's Further Actions.
     - `docs/index.md` update: no (`docs/_evidence/` is not indexed).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 2: Reverse-order compensation for partially restored layers (P3, host-demand gated)
+- [x] Task 2: Reverse-order compensation for partially restored layers (P3, host-demand gated)
   - Acceptance Criteria:
     - Functional: `CheckpointRestoreHandler<Context>` is a union of today's `CheckpointRestoreHook<Context>` function and `{ id?: string; restore: CheckpointRestoreHook<Context>; compensate?: CheckpointRestoreHook<Context> }`; `restoreHooks` on `AgentRunResumeOptions`/`AgentRunLifecycleOptions` and `RunWorkflowOptions` widens to it, so every existing bare function keeps compiling and behaving identically (no runtime branch for hosts that pass none).
     - Functional: when hook *i* throws or times out, compensation runs for *j* = *i*…0 in reverse order, each under the same per-hook timeout from `restoreHookTimeoutMs`; the audit name is `id ?? restore.name ?? hook[i]`. Compensation failures are collected, never mask the original error, and a caller abort during compensation stops the pass and rethrows the abort so a cancel still reads as cancelled.
@@ -98,11 +98,13 @@ Release: 0.9.x follow-up to plan 094, recorded from that plan's Further Actions.
       export interface CheckpointRestoreCompensation { readonly ran: readonly string[]; readonly failed?: { readonly hook: string; readonly reason: string }; }
       ```
     - Files to Create/Edit:
-      - `src/checkpoint-restore.ts`: object form + normalization, reverse compensation pass, `CheckpointRestoreCompensation`, `CheckpointRestoreError.compensation`.
+      - `src/checkpoint-restore.ts`: object form + normalization, reverse compensation pass, `CheckpointRestoreCompensation`, `CheckpointRestoreError.compensation`. The object interface stays module-private so the public surface grows by exactly the two named types (Task 1 evidence G6).
       - `src/contracts-run-state.ts` (`restoreHooks` widens), `packages/prism-core/src/runtime/workflows/types.ts:567` (`restoreHooks` widens).
+      - `src/agent-run-lifecycle.ts` + `packages/prism-core/src/runtime/workflows/run/main.ts`: thread the configured redactor into `runCheckpointRestoreHooks` so `compensation.failed.reason` is redacted (Task 1 evidence G7); no compensation loop at either call site.
       - `src/index.ts` + `src/__tests__/public-export-contract.test.ts`: export `CheckpointRestoreHandler`, `CheckpointRestoreCompensation`; `scripts/budgets.json`: rebaseline the `@arnilo/prism` export count with a reason entry (plan 099 owns the release-wide regeneration; this task only keeps the number honest for its own +2).
       - `src/__tests__/agent-run-restore-hooks.test.ts`: compensation cases; `packages/prism-core/src/runtime/workflows/__tests__/run.test.ts`: one workflow-side compensation case.
       - `docs/durable-runs.md` (§Restore hooks: object form, reverse order, best-effort limits), `docs/workflows.md:92` row text.
+    - Delivered 2026-09-22 (HEAD `3129d5cf`): `CheckpointRestoreHandler<Context>` union + module-private `normalizeRestoreHandler` once at the executor boundary; reverse pass compensates `failedIndex…0` (failing hook first) under the same `restoreHookTimeoutMs`, records the first compensation failure as redacted/capped `reason`, continues the pass, and stops on caller abort (rethrows the abort unchanged); `CheckpointRestoreError.compensation` omitted entirely when no `compensate` exists (bare-function shape and enumerable keys unchanged: `code,hook,name`). `AgentCheckpointRestoreHook`/`WorkflowCheckpointRestoreHook` now alias the handler union, contexts untouched; root export count measured 1461 (baseline 1459 → 1461 with a reason entry). Checks: `dist/__tests__/agent-run-restore-hooks.test.js` 11/11, workflow `run.test.js` 35/35, full `prism-core` 688 pass + 9 skipped, `public-export-contract` + `plan-review-gate` + `release-gate` + `dead-export-verify` + `tooling-gate` green. `release:gate` itself is blocked on pre-existing environment evidence (no coverage summaries, `PRISM_TEST_POSTGRES_URL` unset), not on this task.
     - References:
       - `src/checkpoint-restore.ts:63-81` (the loop to extend), `src/agent-run-lifecycle.ts:419-440` and `packages/prism-core/src/runtime/workflows/run/main.ts:256-275` (the two call sites that inherit the change), `src/__tests__/agent-run-restore-hooks.test.ts` (existing pins that must stay green: later hook never runs, status/version unchanged, next resume succeeds).
   - Test Cases to Write:
@@ -121,7 +123,7 @@ Release: 0.9.x follow-up to plan 094, recorded from that plan's Further Actions.
     - `docs/index.md` update: no (existing pages only).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 3: Restore audit on the review surface (P3, reviewer-demand gated)
+- [x] Task 3: Restore audit on the review surface (P3, reviewer-demand gated)
   - Acceptance Criteria:
     - Functional: Task 1's review decides and records the surface with evidence: (a) `ExecutionTimeline.restore?: CheckpointRestoreAudit` — uniform for agent and workflow resumes, mirroring the `workflowMetadata` precedent (`timeline-types.ts:113-125`); (b) `ExecutionStep.metadata.restore` on the run step — rejected unless the review finds an agent-only consumer, because a workflow resume has no matching step and the two families would report differently; (c) documented event-only — the accepted fallback when no host or tool consumes it.
     - Functional: with (a) chosen, `ExecutionTimeline.restore` carries the same entries the `agent_resumed` / `workflow_resumed` event published (order preserved, `durationMs` included), is absent (not `{}`) on a run that never resumed, and renders identically for both families.
@@ -148,6 +150,7 @@ Release: 0.9.x follow-up to plan 094, recorded from that plan's Further Actions.
       - `packages/prism-core/src/governance/observability/timeline-types.ts` (`ExecutionTimeline.restore`), `timeline.ts` (agent + workflow resume cases).
       - `packages/prism-core/src/governance/observability/__tests__/timeline.test.ts`: agent and workflow restore rows.
       - `docs/execution-timeline.md` (field row), `docs/workflows.md` (graph/review note).
+    - Delivered 2026-09-22 (HEAD `3129d5cf`): option (a) shipped — `ExecutionTimeline.restore?: CheckpointRestoreAudit` (core type imported from `@arnilo/prism`, no duplicate). `FoldState.restore` is set only when the resume event carries an audit, in the existing `agent_resumed` case (`timeline.ts:262`) and `workflow_resumed` case (`timeline.ts:806`), and spread into both return objects (`buildTimeline` for agent/trace/folder, the workflow projector's own return); no new event kind, step kind, or projection option, and the workflow incremental folder inherits it because it delegates to `projectWorkflowTimeline`. Two tests in `timeline.test.ts` cover agent + workflow order/duration equality under `content: "metadata"`, the absent-not-`{}` default on resume-without-hooks, and never-resumed runs. Checks: `timeline.test.js` 21/21, full `prism-core` 688 pass + 9 skipped, root `public-export-contract` green, `release:gate` export additions only (env-blocked elsewhere), evidence §8 updated with G5 retired.
     - References:
       - `packages/prism-core/src/governance/observability/timeline.ts:261-265`, `:788-791`; `src/agent-session/session/assemble.ts:197-202`; `packages/prism-core/src/runtime/workflows/run/scheduler.ts:124`; Task 1's evidence rows for Task 3.
   - Test Cases to Write:
@@ -165,7 +168,19 @@ Release: 0.9.x follow-up to plan 094, recorded from that plan's Further Actions.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
 ## Compromises Made
-- To be filled after tasks are completed and tests pass.
+- **First compensation failure only.** `CheckpointRestoreCompensation.failed` is singular by design (the report rides an error body); later compensation failures still run and appear in `ran`, but their reasons are dropped. Pinned by the "records a failing compensation" test. Widen to a list only if a host needs every undo failure.
+- **One module-private 1 KiB reason cap.** `MAX_COMPENSATION_REASON_BYTES` (1,024) was added to `src/checkpoint-restore.ts` rather than reusing `DEFAULT_LIFECYCLE_MAX_REASON_BYTES` from the coding-tools package; the two bounds are independent and can drift.
+- **Abort asymmetry.** A caller abort during a *restore* hook keeps plan 094's `CheckpointRestoreError` shape and only skips compensation (pinned by "never runs compensation after a caller abort"); an abort during the *compensation* pass rethrows the raw abort reason. The plan only specified the latter — the former preserves "no `compensate` anywhere ⇒ byte-identical" because the existing failure path is unchanged. A caller abort mid-hook is also not compensated, per the security rule that no host code runs after an abort.
+- **Redactor source is the agent config.** `AgentRunResumeOptions` has no redactor, so the agent path redacts the compensation reason with `agent.config.redactor`; the workflow path uses `RunWorkflowOptions.redactor`. A host that sets a redactor only on a run overlay (never the agent config) gets a truncated-but-unredacted reason on the agent path — the same exposure the original error body already has, which the server boundary redacts.
+- **The object handler interface is not directly nameable.** `CheckpointRestoreHandlerObject` stays module-private (the `CheckpointRestoreHandler` union exposes its shape structurally) so the public surface grows by exactly the two names evidence G6 recorded and `scripts/budgets.json` stays honest at 1461.
+- **Nested agent resumes share the workflow fold field.** `projectWorkflowTimeline` delegates nested `agent_event`s to `foldAgentEvent`, so an `agent_resumed` with an audit inside a workflow timeline would set the same `state.restore` a `workflow_resumed` sets (last write wins). No nested-agent checkpoint resume exists today, so no guard was added.
+- **Compensation stays off every review surface.** A failed restore never claims and never emits a resume event (plan Task 3 R8), so `ExecutionTimeline.restore` carries only the successful audit; a host wanting failure posture captures the thrown `CheckpointRestoreError`.
+- **`release:gate` is environment-blocked, not code-blocked.** It reports blocked on missing `coverage-summary.json` evidence and `PRISM_TEST_POSTGRES_URL`; the artifact-diet/packaging gates also fail because npm ≥11 returns a name-keyed object from `npm pack --dry-run --json` while `scripts/budget-gates.mjs` and `packaging.test.js` read an array index. The export-count gate itself is green at 1461.
 
 ## Further Actions
-- To be filled after task completion with improvements, rationale, and priority.
+- **(done, 2026-09-22) Fix the npm-pack JSON assumption in the gates (medium):** all five readers — `measureRootPack` (`scripts/budget-gates.mjs`), `packedFilePaths` (`scripts/release-gates.mjs`), `getPackList` (`src/__tests__/packaging.test.ts`), `packList` and the install canary in `scripts/packaging-current.test.mjs` — now accept the name-keyed object npm ≥11 emits, so the artifact-diet and packaging guards measure instead of throwing. See plan 110's Further Actions for the verification runs.
+- **Produce the release evidence `release:gate` demands (medium, plan 099 owns the release plumbing):** run `npm run test:coverage` and set `PRISM_TEST_POSTGRES_URL` before the final cut; the export budget rebaseline belongs to plan 099's release-wide regeneration.
+- **Compensation failure list (low, host-demand gated):** if a host needs every failed undo, change `failed?` to `failed: readonly { hook, reason }[]` — a type-only change to Task 2's report, re-gated on demand.
+- **Restore-failure audit surface (low, reviewer-demand gated):** if reviewers need failed-restore posture on a timeline, that reopens Task 3 R5/R8 (a new error field or event); today the accepted answer is "capture the thrown error".
+- **Converge the reason cap (low):** if a cross-package bounded-reason constant ever lands, point `MAX_COMPENSATION_REASON_BYTES` at it so compensation and lifecycle reasons cannot drift.
+- **Task 1's docs spans are review-baseline records (informational):** tasks 2–3 edited `docs/durable-runs.md`/`docs/workflows.md` after the review, so its `docs/…:L…` citations no longer match live lines; the code spans it verified are unchanged apart from additive lines.

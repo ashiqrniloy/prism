@@ -29,7 +29,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { workspaceShape } from "./package-truth.mjs";
+import { workspacePackageCounts, workspaceShape } from "./package-truth.mjs";
 import { effectiveTestChain } from "./run-all-tests.mjs";
 
 const url = (path) => new URL(path, import.meta.url);
@@ -277,11 +277,12 @@ test("baseline evidence file exists, is valid JSON captured at 0.1.4, with green
 test("baseline manifest count is coherent with the real filesystem", () => {
   const mc = baseline.manifestCount;
   const { names: workspaceNames, providerDirs, prismDirs } = workspaceShape();
-  const hasCodingTools = workspaceNames.includes("prism-coding-tools");
-  const hasCore = workspaceNames.includes("prism-core");
+  const packages = workspacePackageCounts();
+  const hasCodingTools = packages.has("prism-coding-tools");
+  const hasCore = packages.has("prism-core");
   const delta = hasCodingTools ? -46 : hasCore ? -14 : 0; // plan 054 Tasks 2-8: providers family + office family + profile deletions
   assert.equal(mc.workspacePackages + delta, workspaceNames.length, "workspacePackages matches packages/*/package.json count");
-  const hasProviderFamily = existsSync(url("../packages/prism-providers/src")); // plan 054 Task 6: adapters moved inside the family
+  const hasProviderFamily = packages.has("prism-providers"); // plan 054 Task 6: adapters moved inside the family
   assert.equal(
     mc.categories.provider + (hasProviderFamily ? -17 : 0),
     providerDirs.length,

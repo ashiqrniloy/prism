@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  CheckpointRestoreError,
   createAgent,
   createMockProvider,
   createSecretRedactor,
@@ -782,6 +783,80 @@ describe("runWorkflow", () => {
     assert.deepEqual(order, ["git"]);
     assert.equal(executions, 0);
     const after = await getWorkflowRun(checkpoints, { workflowId: "restore-hooks-fail", runId: suspended.runId });
+    assert.equal(after?.value.status, "suspended");
+    assert.equal(after?.version, suspended.version);
+  });
+
+  it("compensates applied workflow layers in reverse when a restore hook fails", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    let executions = 0;
+    const publish: ToolDefinition = {
+      name: "publish",
+      parameters: {},
+      async execute() {
+        executions += 1;
+        return { toolCallId: "publish-restore-compensate", name: "publish", value: "published" };
+      },
+    };
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "restore-hooks-compensate",
+      nodes: {
+        publish: toolNode({
+          tool: publish,
+          args: async () => ({ artifactId: "a1" }),
+          approval: { reason: "publish release" },
+        }),
+      },
+    });
+    const suspended = await runWorkflow(workflow, null, { checkpoints, runId: "restore-hooks-compensate-run" });
+    assert.equal(suspended.status, "suspended");
+
+    const layers = { docs: "v1", git: "c1" };
+    const compensation: string[] = [];
+    await assert.rejects(
+      resumeWorkflow(
+        workflow,
+        { runId: suspended.runId },
+        {
+          checkpoints,
+          resume: { decision: "approve", expectedVersion: suspended.version },
+          restoreHooks: [
+            {
+              id: "docs",
+              restore: () => {
+                layers.docs = "v2";
+              },
+              compensate: () => {
+                compensation.push("docs");
+                layers.docs = "v1";
+              },
+            },
+            {
+              id: "git",
+              restore: () => {
+                layers.git = "c2";
+                throw new Error("git store unavailable");
+              },
+              compensate: () => {
+                compensation.push("git");
+                layers.git = "c1";
+              },
+            },
+          ],
+        },
+      ),
+      (error: unknown) => {
+        assert.ok(error instanceof CheckpointRestoreError);
+        assert.equal(error.hook, "git");
+        assert.deepEqual(error.compensation?.ran, ["git", "docs"]);
+        return true;
+      },
+    );
+    assert.deepEqual(compensation, ["git", "docs"]);
+    assert.deepEqual(layers, { docs: "v1", git: "c1" });
+    assert.equal(executions, 0);
+    const after = await getWorkflowRun(checkpoints, { workflowId: "restore-hooks-compensate", runId: suspended.runId });
     assert.equal(after?.value.status, "suspended");
     assert.equal(after?.version, suspended.version);
   });

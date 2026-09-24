@@ -160,6 +160,11 @@ export function createAllowListEgressProxy(options: CreateAllowListEgressProxyOp
 
   const failHttp = (res: ServerResponse, status: number, code: EgressErrorCode, message: string): void => {
     if (res.headersSent || res.destroyed) {
+      // Mid-stream failure: destroy the socket, not just the response. A partial
+      // body behind a forwarded content-length must reach the client as a
+      // connection error (ECONNRESET), never as a clean short read — Node's
+      // res.destroy() does that, Bun's resolves the client with a 200 instead.
+      res.socket?.destroy();
       res.destroy();
       return;
     }

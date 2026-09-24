@@ -2,7 +2,16 @@
 
 Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credentials, storage, and behavior; Prism supplies contracts, registries, events, and replaceable runtime primitives.
 
-## Current line (0.10.0)
+## Current line (0.11.0)
+
+- **Memory-store branch reads**: the built-in memory session store implements `readBranchPath`. A snapshot walks the branch once and clones each kept entry once.
+- **JSONL parse cache**: a read after an in-process append reuses the parsed file when size and mtime match. A same-size write inside one filesystem timestamp tick can still look unchanged.
+- **Idempotency window**: memory and JSONL stores remember the latest 4,096 dedup keys. Replaying an older key appends a new entry instead of rejecting the write.
+- **In-memory lease sweep**: expired lease rows are deleted once the map reaches 1,024. A swept key starts its next fence at 1. A released key still in the map keeps `fencingToken + 1`. SQLite and Postgres adapters still keep the counter on the row.
+- **Shared text token estimate**: plain-text estimates use one `ceil(length/4)` helper. Message and entry estimates are unchanged.
+- **12 publishable packages** at current **0.11.0** lockstep, with the migration guide reachable from the release section below — inventory below.
+
+### Carried from the 0.10.0 line
 
 - **Attention budget axes**: `attentionCompiler.trigger` accepts one axis, a predicate, or an any-of array (`input_ratio`, `run_input_ratio`, `token_floor`), and `durable: true` keeps the fold ledger and sticky frontier in the checkpoint across a resume.
 - **Turn traces and exhaustion attribution**: `provider_turn_finished` carries a closed `stopReason`, a `budgets` snapshot, the effective tool menu (`count` / `idsHash`), and provider cache counts; `agent_finished` carries the run outcome, and the execution timeline adds per-turn stop reasons plus `exhaustion`.
@@ -17,8 +26,6 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 - **Shared work scopes**: explicitly granted observational-memory scopes shared across sessions, deny-by-default, audited, and revocable at the next read; session-private scopes stay the default.
 - **Retrieval revocation and local reranking**: deletion and revocation propagate through derived vector/wiki artifacts under bounded walks, and an in-process cross-encoder reranker ships with no declared inference dependency.
 - **Live-stream terminal semantics**: one `isTerminalAgentEventType` predicate (`agent_finished` / `agent_denied` / `error`) shared by every source, so a limit death delivers `run_limit_exceeded` → `budget_exhausted` → `error` before a stream or replay ends.
-- **12 publishable packages** at current **0.10.0** lockstep, with the migration guide reachable from the release section below — inventory below.
-
 ### Carried from the 0.8.0 line
 
 - **Messaging channels**: `@arnilo/prism-channels` transport-neutral runtime with deny-by-default authorization, owned bindings, one-use durable approvals, official Telegram (private DMs, opt-in granted groups/topics, drafts, bounded media/voice, opt-in notices) and experimental pinned signal-cli Signal.
@@ -223,7 +230,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 
 ## Testing and examples
 
-- [Test layout and isolation](testing.md): the five `npm test` stages, scratch-root rule, and the tracked-fixture isolation gate.
+- [Test layout and isolation](testing.md): the `npm test` stage table (build, performance budget, root, SQLite, gate, build-race, workspace, examples, and branch-coverage stages), scratch-root rule, and the tracked-fixture isolation gate.
 - [Contribution quality budgets](contributing.md): the non-null assertion allowance, export-surface ceilings, and the rule that keeps them shrinking.
 - [Live and end-to-end testing](live-testing.md): opt-in live matrix with skip-not-fail contract and credential scoping table.
 - Provider test doubles: `createMockProvider()` and provider event helpers are documented on the canonical Provider layer page above.
@@ -247,6 +254,7 @@ Prism is a TypeScript/Node.js agent harness. Hosts own providers, tools, credent
 ## Release and install
 
 - [Release and install](release-and-install.md): install rules, package graph, and deterministic resumable publication.
+- [Migrate 0.10 → 0.11](migrate-to-0.11.md): idempotency window, in-memory lease fence reset, and the persona/graft subpath removals.
 - [Migrate 0.8 → 0.9](migrate-to-0.9.md): the four behavior deltas inside existing surfaces (limit-death stream order, turn-trace metadata, cache-stable disclosure, labeled usage estimates), every new option with its sizing line, and 0.9.0 host migration steps.
 - [Migrate 0.7 → 0.8](migrate-to-0.8.md): work-family import map, messaging channels, connected apps, durable runs, and 0.8.0 host migration steps.
 - [Migrate 0.6 → 0.7](migrate-to-0.7.md): ACP MCP allow-list URL normalization, model router facade fail-closed governance, and 0.7.0 host migration steps.
@@ -264,16 +272,16 @@ The generated inventory below derives from [`scripts/package-truth.json`](../scr
 
 | package | version | notes |
 | --- | --- | --- |
-| `@arnilo/prism` | 0.10.0 | core — runtime, CLI/RPC, templates, docs |
-| `@arnilo/prism-channels` | 0.10.0 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
-| `@arnilo/prism-coding-tools` | 0.10.0 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /impeccable subpaths |
-| `@arnilo/prism-core` | 0.10.0 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths |
-| `@arnilo/prism-providers` | 0.10.0 | family — all provider adapters as `/<adapter>` subpaths |
-| `@arnilo/prism-acp-agent` | 0.10.0 | capability — ACP adapter |
-| `@arnilo/prism-ag-ui` | 0.10.0 | capability — AG-UI/A2A/A2UI adapter |
-| `@arnilo/prism-hooks` | 0.10.0 | capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams |
-| `@arnilo/prism-mcp` | 0.10.0 | capability — MCP client/server/OAuth interop |
-| `@arnilo/prism-memory` | 0.10.0 | capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths |
-| `@arnilo/prism-web-tools` | 0.10.0 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
-| `@arnilo/prism-work` | 0.10.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-reader, /sandbox, /skills, /tools subpaths |
+| `@arnilo/prism` | 0.11.0 | core — runtime, CLI/RPC, templates, docs |
+| `@arnilo/prism-channels` | 0.11.0 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
+| `@arnilo/prism-coding-tools` | 0.11.0 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /impeccable subpaths |
+| `@arnilo/prism-core` | 0.11.0 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths |
+| `@arnilo/prism-providers` | 0.11.0 | family — all provider adapters as `/<adapter>` subpaths |
+| `@arnilo/prism-acp-agent` | 0.11.0 | capability — ACP adapter |
+| `@arnilo/prism-ag-ui` | 0.11.0 | capability — AG-UI/A2A/A2UI adapter |
+| `@arnilo/prism-hooks` | 0.11.0 | capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams |
+| `@arnilo/prism-mcp` | 0.11.0 | capability — MCP client/server/OAuth interop |
+| `@arnilo/prism-memory` | 0.11.0 | capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths |
+| `@arnilo/prism-web-tools` | 0.11.0 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
+| `@arnilo/prism-work` | 0.11.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-reader, /sandbox, /skills, /tools subpaths |
 <!-- generated:package-truth:inventory end -->

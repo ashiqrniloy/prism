@@ -6,7 +6,7 @@
 
 import assert from "node:assert/strict";
 import { createAgent } from "../agent-session/create-agent.js";
-import type { AgentConfig, AgentSession, AIProvider, Message, ProviderRequest, Skill, ToolDefinition } from "../contracts.js";
+import type { AgentConfig, AgentSession, AIProvider, JsonObject, Message, ProviderRequest, Skill, ToolDefinition } from "../contracts.js";
 import { providerDone, providerThinkingDelta, toolCallContent } from "../provider-events.js";
 import { createLoadSkillTool } from "../skill-load.js";
 import { createSkillRegistry } from "../skills.js";
@@ -37,6 +37,13 @@ export interface PrefixStabilityConformanceOptions {
    * fixture was supposed to invalidate the prefix, so a run that never did cannot pass vacuously.
    */
   readonly allowedResets?: number;
+  /**
+   * Install a runner-owned fixture tool (name constant) that returns exactly this many bytes of
+   * generated text, and add a second tool call for it alongside `load_skill` in the same round, so
+   * the attention compiler's tool-result stage has one row worth stubbing. The payload is
+   * `"x".repeat(bytes)`, never host content. Unset: the capture is byte-identical to today.
+   */
+  readonly foldableToolResultBytes?: number;
 }
 
 export interface PrefixStabilityConformanceResult {
@@ -56,6 +63,76 @@ export interface PrefixStabilityConformanceResult {
    * prefix instead of appending. Empty when every gap stayed above the minimum.
    */
   readonly resets: readonly number[];
+  /**
+   * One row per `resets` entry, same order. `fraction` is the metric `assertOn` selected;
+   * `cacheableFraction` is the tail-excluded fraction for that pair. Empty when `resets` is.
+   */
+  readonly resetDetails: readonly PrefixStabilityResetDetail[];
+}
+
+export interface ScorePrefixStabilityOptions {
+  /** Session tail map. Omitted or unmatched: both fractions stay equal — never a fabricated `1`. */
+  readonly tailSegments?: ReadonlyMap<string, Message>;
+  /** Minimum shared byte-prefix fraction. Default `0.95`. Selects which pairs land in `resets`. */
+  readonly minContinuity?: number;
+  /**
+   * Which fraction `resets` follows. Default `"providerPrefix"` (the wire prefix). The runner
+   * passes its own `assertOn` so fixture resets stay on the selected metric without a second pass.
+   */
+  readonly assertOn?: "providerPrefix" | "cacheablePrefix";
+}
+
+/** One reset: index plus both fractions. Numbers only — no message text. */
+export interface PrefixStabilityResetDetail {
+  /** 1-based index of the later request in the pair. */
+  readonly request: number;
+  /** Fraction of the metric `assertOn` selected for the pair. Default: provider-visible. */
+  readonly fraction: number;
+  /** The same pair with tail segments removed. */
+  readonly cacheableFraction: number;
+}
+
+export interface PrefixStabilitySample {
+  readonly minContinuity: number;
+  readonly cacheableContinuity: number;
+  readonly resets: readonly number[];
+  readonly resetDetails: readonly PrefixStabilityResetDetail[];
+}
+
+/**
+ * Score an already-captured request list. One pass, no session, no provider call.
+ * A wrong `tailSegments` map yields a wrong number, not a throw.
+ */
+export function scorePrefixStability(requests: readonly ProviderRequest[], options?: ScorePrefixStabilityOptions): PrefixStabilitySample {
+  const first = requests[0];
+  if (requests.length < 2 || first === undefined) {
+    throw new Error(`scorePrefixStability needs at least 2 captured requests, got ${requests.length}`);
+  }
+  const minContinuity = options?.minContinuity ?? 0.95;
+  const assertOn = options?.assertOn ?? "providerPrefix";
+  const isTail = tailClassifier(options?.tailSegments ?? new Map());
+  let observed = 1;
+  let cacheableObserved = 1;
+  const resetDetails: PrefixStabilityResetDetail[] = [];
+  let previous = measureRequest(first, isTail);
+  for (let index = 1; index < requests.length; index += 1) {
+    const current = requests[index];
+    if (current === undefined) continue;
+    const next = measureRequest(current, isTail);
+    const fraction = sharedPrefixFraction(previous.providerPrefix, next.providerPrefix);
+    const cacheableFraction = sharedPrefixFraction(previous.cacheablePrefix, next.cacheablePrefix);
+    observed = Math.min(observed, fraction);
+    cacheableObserved = Math.min(cacheableObserved, cacheableFraction);
+    const measured = assertOn === "cacheablePrefix" ? cacheableFraction : fraction;
+    if (measured < minContinuity) resetDetails.push(projectResetDetail(index + 1, fraction, cacheableFraction, assertOn));
+    previous = next;
+  }
+  return {
+    minContinuity: observed,
+    cacheableContinuity: cacheableObserved,
+    resets: resetDetails.map((gap) => gap.request),
+    resetDetails,
+  };
 }
 
 /**
@@ -86,16 +163,26 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
   }
 
   const requests: ProviderRequest[] = [];
+  const foldableBytes = options.foldableToolResultBytes;
+  assert.ok(
+    foldableBytes === undefined || (Number.isSafeInteger(foldableBytes) && foldableBytes > 0),
+    "prefix stability conformance foldableToolResultBytes must be a positive safe integer",
+  );
   const registry = createSkillRegistry([...skills]);
   const hostTools: readonly ToolDefinition[] = host.tools && "list" in host.tools ? host.tools.list() : (host.tools ?? []);
   const agent = createAgent({
     ...host,
     skills: registry,
-    tools: [...hostTools, createLoadSkillTool({ registry })],
+    tools: [
+      ...hostTools,
+      createLoadSkillTool({ registry }),
+      ...(foldableBytes === undefined ? [] : [createFoldableToolResultTool(foldableBytes)]),
+    ],
     provider: fixtureProvider(
       requests,
       [first.name, second.name],
       host.attentionCompiler === true || typeof host.attentionCompiler === "object",
+      foldableBytes !== undefined,
     ),
   });
   const session = agent.createSession() as AgentSession & { readonly tailSegments: ReadonlyMap<string, Message> };
@@ -112,10 +199,11 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
   // The session's own map holds the exact `Message` objects `appendTailSegment` allocated, so the
   // classification is exact rather than a heuristic over host-authored content. (`tailSegments` is
   // runtime-session state, not part of the public `AgentSession` contract, hence the narrow above.)
-  const isTail = tailClassifier(session.tailSegments);
-  const captured = requests.map((request) => measureRequest(request, isTail));
+  const assertOn = options.assertOn ?? "providerPrefix";
+  // One measurement. The assertion below reads the sample; it does not serialize again.
+  const sample = scorePrefixStability(requests, { tailSegments: session.tailSegments, minContinuity, assertOn });
   // Guard against a vacuous pass: both bodies must have been disclosed by the end.
-  const last = captured.at(-1)?.providerPrefix ?? "";
+  const last = (requests.at(-1)?.messages ?? []).map((message) => JSON.stringify(message)).join("\n");
   for (const [index, skill] of skills.entries()) {
     assert.ok(
       last.includes(bodies[index] ?? ""),
@@ -123,36 +211,21 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
     );
   }
 
-  const assertOn = options.assertOn ?? "providerPrefix";
   const allowedResets = options.allowedResets ?? 0;
   assert.ok(
     Number.isSafeInteger(allowedResets) && allowedResets >= 0,
     "prefix stability conformance allowedResets must be a non-negative safe integer",
   );
-  let observed = 1;
-  let cacheableObserved = 1;
-  let previous = captured.at(0) ?? { providerPrefix: "", cacheablePrefix: "" };
-  // Collect every gap first: an allowed reset must not be hidden by a later assert, and the
-  // vacuity check needs the whole list to prove the fixture folded exactly as declared.
-  const gaps: Array<{ readonly request: number; readonly fraction: number; readonly cacheableFraction: number }> = [];
-  for (let index = 1; index < captured.length; index += 1) {
-    const next = captured[index] ?? previous;
-    const fraction = sharedPrefixFraction(previous.providerPrefix, next.providerPrefix);
-    const cacheableFraction = sharedPrefixFraction(previous.cacheablePrefix, next.cacheablePrefix);
-    observed = Math.min(observed, fraction);
-    cacheableObserved = Math.min(cacheableObserved, cacheableFraction);
-    const measured = assertOn === "cacheablePrefix" ? cacheableFraction : fraction;
-    if (measured < minContinuity) gaps.push({ request: index + 1, fraction, cacheableFraction });
-    previous = next;
-  }
-
-  const resets = gaps.map((gap) => gap.request);
+  const observed = sample.minContinuity;
+  const cacheableObserved = sample.cacheableContinuity;
+  const gaps = sample.resetDetails;
+  const resets = sample.resets;
   const measuredLabel = assertOn === "cacheablePrefix" ? "previous cacheable prefix (tail segments excluded)" : "previous provider prefix";
   const minimum = (minContinuity * 100).toFixed(1);
-  const observedResets = `resets ${formatResets(resets)} of ${captured.length - 1} request pairs`;
+  const observedResets = `resets ${formatResets(resets)} of ${requests.length - 1} request pairs`;
   const firstGap = gaps[0];
   if (firstGap !== undefined && gaps.length > allowedResets) {
-    const measured = assertOn === "cacheablePrefix" ? firstGap.cacheableFraction : firstGap.fraction;
+    const measured = firstGap.fraction;
     assert.fail(
       `prefix stability conformance: request ${firstGap.request - 1} → ${firstGap.request} kept ${(measured * 100).toFixed(1)}% of the ${measuredLabel} ` +
         `(minimum ${minimum}%), and ${gaps.length} pair(s) broke below it (${observedResets}, allowedResets ${allowedResets}). ` +
@@ -166,7 +239,27 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
         "The fixture was supposed to invalidate the prefix at those boundaries — drop allowedResets for an append-only assembly, or check the fold trigger or eviction condition actually fired.",
     );
   }
-  return { requests: captured.length, minContinuity: observed, cacheableContinuity: cacheableObserved, resets };
+  return {
+    requests: requests.length,
+    minContinuity: observed,
+    cacheableContinuity: cacheableObserved,
+    resets,
+    resetDetails: sample.resetDetails,
+  };
+}
+
+/** One gap row. `fraction` is the metric the caller selected; `cacheableFraction` stays the tail-excluded pair. */
+function projectResetDetail(
+  request: number,
+  providerFraction: number,
+  cacheableFraction: number,
+  assertOn: "providerPrefix" | "cacheablePrefix",
+): PrefixStabilityResetDetail {
+  return {
+    request,
+    fraction: assertOn === "cacheablePrefix" ? cacheableFraction : providerFraction,
+    cacheableFraction,
+  };
 }
 
 /**
@@ -180,12 +273,28 @@ const FIXTURE_THINKING =
     17,
   );
 
+/** Runner-owned fixture tool (plan 110 Task 4): the tool-result stage needs a row worth stubbing. */
+const PREFIX_STABILITY_BULK_TOOL_NAME = "prefix_stability_bulk" as const;
+
+function createFoldableToolResultTool(bytes: number): ToolDefinition {
+  return {
+    name: PREFIX_STABILITY_BULK_TOOL_NAME,
+    description: "Deterministic bulk payload for the tool-result fold fixture.",
+    parameters: { type: "object", properties: {} } as JsonObject,
+    execute(_args, context) {
+      const text = "x".repeat(bytes);
+      return { toolCallId: context.toolCallId, name: PREFIX_STABILITY_BULK_TOOL_NAME, value: text, content: [{ type: "text", text }] };
+    },
+  };
+}
+
 /**
  * Fixture provider: turn 1 loads `skillNames[0]`, turn 2 loads `skillNames[1]`, everything else
  * completes. With `reasoning` (the host runs an attention compiler) each skill-load round also
- * carries a thinking block, so the compiler's thinking stage has real content to fold.
+ * carries a thinking block, so the compiler's thinking stage has real content to fold. With `bulk`
+ * the same round also calls the runner-owned bulk tool, so the tool-result stage has a foldable row.
  */
-function fixtureProvider(requests: ProviderRequest[], skillNames: readonly string[], reasoning: boolean): AIProvider {
+function fixtureProvider(requests: ProviderRequest[], skillNames: readonly string[], reasoning: boolean, bulk: boolean): AIProvider {
   let call = 0;
   return {
     id: "prefix-stability-fixture",
@@ -197,6 +306,12 @@ function fixtureProvider(requests: ProviderRequest[], skillNames: readonly strin
       if (index % 2 === 0 && skillName !== undefined) {
         if (reasoning) yield providerThinkingDelta(FIXTURE_THINKING);
         yield { type: "tool_call" as const, call: toolCallContent(`prefix-stability-${index}`, "load_skill", { name: skillName }) };
+        if (bulk) {
+          yield {
+            type: "tool_call" as const,
+            call: toolCallContent(`prefix-stability-bulk-${index}`, PREFIX_STABILITY_BULK_TOOL_NAME, {}),
+          };
+        }
         return;
       }
       yield providerDone();

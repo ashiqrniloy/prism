@@ -1,8 +1,9 @@
 {
   "name": "@arnilo/prism",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Agent harness for AI providers, agents, sessions, and tools.",
   "type": "module",
+  "packageManager": "bun@1.4.2",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -141,12 +142,12 @@
   "scripts": {
     "build:core": "node scripts/with-build-lock.mjs tsc",
     "clean": "rm -rf dist packages/*/dist",
-    "build": "npm run build:core && npm run build --workspaces --if-present",
-    "typecheck": "npm run build && npm run typecheck --workspaces --if-present && tsc -p examples --noEmit",
+    "build": "npm run build:core && bun run --workspaces --if-present build",
+    "typecheck": "bun run build && bun run --workspaces --if-present typecheck && tsc -p examples --noEmit",
     "sweep:unused": "node scripts/sweep-unused.mjs --json",
     "test:live": "node scripts/live-matrix.mjs",
     "test": "node scripts/run-all-tests.mjs",
-    "test:coverage": "node scripts/with-build-lock.mjs node --test --experimental-test-coverage --test-coverage-lines=60 --test-coverage-functions=70 --test-coverage-branches=75 --test-coverage-exclude='**/__tests__/**' --test-coverage-exclude='**/node_modules/**' --test-coverage-exclude='**/scripts/**' --test-coverage-exclude='**/packages/**' --test-coverage-exclude='**/examples/**' dist/__tests__/*.test.js && node scripts/with-build-lock.mjs node scripts/coverage-summary.mjs && node --test scripts/phase23-coverage.test.mjs && node --test scripts/phase23-skip-manifest.test.mjs",
+    "test:coverage": "node scripts/with-build-lock.mjs bun test --coverage --timeout=0 dist/__tests__/*.test.js > node_modules/.prism-core-coverage.out 2>&1; core_exit=$?; cat node_modules/.prism-core-coverage.out; PRISM_COVERAGE_CORE_OUTPUT=node_modules/.prism-core-coverage.out PRISM_COVERAGE_CORE_EXIT=$core_exit node scripts/with-build-lock.mjs node scripts/coverage-summary.mjs && node --test scripts/phase23-coverage.test.mjs && node --test scripts/phase23-skip-manifest.test.mjs; stage_exit=$?; rm -f node_modules/.prism-core-coverage.out; exit $stage_exit",
     "coverage:summary": "node scripts/with-build-lock.mjs node scripts/coverage-summary.mjs",
     "lint": "biome lint . --reporter=sarif --reporter-file=scripts/lint-report.sarif",
     "format": "biome format --write .",

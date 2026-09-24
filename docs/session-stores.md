@@ -108,7 +108,7 @@ Recognize it with `isSessionAppendConflict(error)`, not message text. Built-in s
 - Store adapters own id generation policy, ordering, duplicate detection, idempotency storage, and error handling.
 - `AgentSession` uses `AgentSessionConfig.store` before `AgentConfig.store`; otherwise it falls back to a private memory store.
 - Branch semantics are parent links plus a leaf id. External UIs should keep branch handles as `(sessionId, leafId)`; RPC exposes an additional `handleId` for active handles.
-- Development stores can omit `readBranchPath`; the runtime falls back to `list(sessionId)` and the pure in-memory branch walk. Database-backed stores should implement `readBranchPath` so `entries()`, `clone()`, and context rebuild read only the selected ancestor chain.
+- The memory store implements `readBranchPath` (ancestor chain root→leaf, numeric offset cursor, one clone on the way out). The JSONL store still omits it; the runtime falls back to `list(sessionId)`. Database-backed stores should implement `readBranchPath` so `entries()`, `clone()`, and context rebuild read only the selected ancestor chain.
 
 ## Session search
 
@@ -152,7 +152,7 @@ Sizing (plan 095): SQLite FTS5 and the Postgres `tsvector` column are maintained
 
 - Do not store provider credentials, credential resolvers, provider instances, or unredacted secrets in session entries, append options, idempotency keys, or branch records.
 - Use `AgentConfig.redactor` or `RunOptions.redactor` to redact secrets before entries reach durable stores. Stores receive already-redacted `SessionEntry` values.
-- `createMemorySessionStore()` keeps O(1) duplicate/idempotency/parent checks in process-local maps; it is not durable.
+- `createMemorySessionStore()` keeps O(1) duplicate/idempotency/parent checks in process-local maps; it is not durable. Idempotency dedup remembers the latest 4,096 keys; an older replay appends as a new entry.
 - The JSONL adapter serializes appends per store instance, has no cross-process lock, and is not suitable for production multi-writer storage.
 - Database-backed stores should follow the indexes and retention guidance in [Database persistence](database-persistence.md). Implement `readBranchPath` as a single branch-path query (for example a recursive CTE) and avoid loading entire large sessions into memory when only one branch is needed.
 

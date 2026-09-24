@@ -520,8 +520,8 @@ export interface WorkflowCheckpointRestoreContext {
   readonly checkpoint: WorkflowCheckpointRecord;
 }
 
-/** Host code restoring one external layer before a workflow resume applies. */
-export type WorkflowCheckpointRestoreHook = import("@arnilo/prism").CheckpointRestoreHook<WorkflowCheckpointRestoreContext>;
+/** Host code restoring or compensating one external layer before a workflow resume applies. */
+export type WorkflowCheckpointRestoreHook = import("@arnilo/prism").CheckpointRestoreHandler<WorkflowCheckpointRestoreContext>;
 
 export interface RunWorkflowOptions {
   readonly concurrency?: number;
@@ -563,6 +563,8 @@ export interface RunWorkflowOptions {
    * Plan 094 Task 3: external-state restore hooks, run once per resume (including crash
    * recovery) before the scheduler touches the checkpoint. The first failing or timing-out hook
    * throws `CheckpointRestoreError`; nothing is written and the checkpoint stays resumable.
+   * Plan 109 Task 2: an entry may be `{ id?, restore, compensate? }`, and on failure the applied
+   * layers are compensated in reverse order (best-effort) before the throw.
    */
   readonly restoreHooks?: readonly WorkflowCheckpointRestoreHook[];
   /** Per-hook restore ceiling in ms; defaults to `DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS`. */

@@ -105,6 +105,58 @@ describe("deletion propagation", () => {
     assert.ok((await memory.recall("note", { topK: 5 })).hits.some((hit) => hit.id === "note:other"));
   });
 
+  it("resolves the reason once and hands it to every handler, defaulting to forgotten", async () => {
+    const held = createMemoryVectorStore();
+    await held.upsert([record("doc:hold", []), record("summary:hold", ["doc:hold"])]);
+    await held.setSourceAccess(scope, [{ sourceId: "doc:hold", principalIds: ["p1"], groupIds: [], accessVersion: 1 }]);
+    const seen: (string | undefined)[] = [];
+    const holdPropagator = createDeletionPropagator({
+      scope,
+      vectorStore: held,
+      authorization: authority,
+      reason: "legal_hold",
+      handlers: [
+        {
+          kind: "probe",
+          delete: ({ reason }) => {
+            seen.push(reason);
+            return 0;
+          },
+        },
+      ],
+    });
+    await holdPropagator.propagate("doc:hold");
+    assert.deepEqual(seen, ["legal_hold"], "the propagator's resolved reason rides the handler context");
+    assert.deepEqual((await held.listInvalidated(scope)).map((entry) => [entry.id, entry.reason, entry.hold]).sort(), [
+      ["doc:hold", "legal_hold", true],
+      ["summary:hold", "legal_hold", true],
+    ]);
+
+    const plain = createMemoryVectorStore();
+    await plain.upsert([record("doc:plain", [])]);
+    await plain.setSourceAccess(scope, [{ sourceId: "doc:plain", principalIds: ["p1"], groupIds: [], accessVersion: 1 }]);
+    const defaults: (string | undefined)[] = [];
+    await createDeletionPropagator({
+      scope,
+      vectorStore: plain,
+      authorization: authority,
+      handlers: [
+        {
+          kind: "probe",
+          delete: ({ reason }) => {
+            defaults.push(reason);
+            return 0;
+          },
+        },
+      ],
+    }).propagate("doc:plain");
+    assert.deepEqual(defaults, ["forgotten"], "the default is resolved, not omitted from the context");
+    assert.deepEqual(
+      (await plain.listInvalidated(scope)).map((entry) => [entry.id, entry.reason, entry.hold]),
+      [["doc:plain", "forgotten", undefined]],
+    );
+  });
+
   it("fails closed for a principal the source ACL does not grant (and retrieval never propagates)", async () => {
     const store = createMemoryVectorStore();
     await store.upsert([record("doc:payroll", []), record("summary:payroll", ["doc:payroll"])]);

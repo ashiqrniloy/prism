@@ -198,10 +198,11 @@ value when the adapter saw a native reason.
 
 `provider_turn_finished.metadata.budgets` is an O(1) snapshot from the run limit tracker:
 `{ inputTokens?, inputTokensSource?, inputCap?, runInputBudget?, runInputUsed, turns, maxTurns }` —
-current-turn charged input tokens (provider-reported, or the labeled fallback estimate when the
-provider reported none) against the resolved per-request input cap, cumulative run input against
-`limits.maxInputTokens`, and provider turns against `limits.maxTurns` (`null` when disabled).
-`inputTokensSource` is `"reported"` or `"estimated"` and is absent together with `inputTokens`.
+current-turn charged input tokens against the resolved per-request input cap, cumulative run input
+against `limits.maxInputTokens`, and provider turns against `limits.maxTurns` (`null` when disabled).
+`inputTokensSource` is `"reported"` or `"estimated"` and is absent together with `inputTokens`; what
+produces each is documented in
+[Runs and usage § Automatic fallback](runs-and-usage.md#automatic-fallback-agentconfigusageestimation).
 Optional fields are absent when the provider reported no usage or no input cap can be derived; hosts
 that ignore the fields are unaffected.
 

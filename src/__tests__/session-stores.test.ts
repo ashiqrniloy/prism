@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { BranchReader, SessionEntry } from "../index.js";
 import {
+  createAgent,
   createMemorySessionStore,
+  createMockProvider,
   createSessionEntry,
   getSessionBranchEntries,
   isSessionAppendConflict,
@@ -280,6 +282,23 @@ describe("atomic append guards (memory store)", () => {
     assert.equal((await store.list("sA")).length, 1);
   });
 
+  it("forgets idempotency keys older than 4096", async () => {
+    const store = createMemorySessionStore();
+    for (let i = 0; i < 5_000; i++) {
+      await store.append(createSessionEntry({ id: `e${i}`, sessionId: "s1", kind: "label", label: String(i) }), {
+        idempotencyKey: `k${i}`,
+      });
+    }
+    await store.append(createSessionEntry({ id: "replay-old", sessionId: "s1", kind: "label", label: "old" }), {
+      idempotencyKey: "k0",
+    });
+    await assert.rejects(
+      () =>
+        store.append(createSessionEntry({ id: "replay-new", sessionId: "s1", kind: "label", label: "new" }), { idempotencyKey: "k4999" }),
+      (error: unknown) => isSessionAppendConflict(error) && error.conflict.idempotencyDuplicate === true,
+    );
+  });
+
   it("deduplicates an exact retry at the same position by idempotencyKey", async () => {
     const store = createMemorySessionStore();
     const root = createSessionEntry({ sessionId: "s1", kind: "label", label: "root" });
@@ -330,6 +349,141 @@ describe("atomic append guards (memory store)", () => {
       false,
       "orphan was not persisted",
     );
+  });
+});
+
+describe("memory readBranchPath", () => {
+  it("returns an empty page for an unknown session and rejects an unknown leaf", async () => {
+    const store = createMemorySessionStore();
+    const read = store.readBranchPath;
+    if (read === undefined) throw new Error("memory store missing readBranchPath");
+    assert.deepEqual(await read({ sessionId: "missing" }), { items: [] });
+    await store.append(entry("a"));
+    await assert.rejects(() => read({ sessionId: "s1", leafId: "nope" }), /Unknown session leaf: nope/);
+    await assert.rejects(() => read({ sessionId: "s1", cursor: "nope" }), /Invalid branch pagination cursor/);
+  });
+
+  it("pages the ancestor chain root→leaf and resumes from the offset cursor", async () => {
+    const store = createMemorySessionStore();
+    await store.append(entry("root"));
+    await store.append(entry("mid", "root"));
+    await store.append(entry("leaf", "mid"));
+    await store.append(entry("fork", "root"));
+
+    const page = await store.readBranchPath?.({ sessionId: "s1", leafId: "leaf", limit: 2 });
+    assert.deepEqual(
+      page?.items.map((item) => item.id),
+      ["root", "mid"],
+    );
+    assert.equal(page?.nextCursor, "2");
+    const rest = await store.readBranchPath?.({ sessionId: "s1", leafId: "leaf", cursor: page?.nextCursor });
+    assert.deepEqual(
+      rest?.items.map((item) => item.id),
+      ["leaf"],
+    );
+    assert.equal(rest?.nextCursor, undefined);
+
+    const fork = await store.readBranchPath?.({ sessionId: "s1", leafId: "fork" });
+    assert.deepEqual(
+      fork?.items.map((item) => item.id),
+      ["root", "fork"],
+    );
+  });
+
+  it("defaults to the latest tip, not the last append", async () => {
+    const store = createMemorySessionStore();
+    await store.append(
+      createSessionEntry({ id: "root", sessionId: "s1", timestamp: "2026-01-01T00:00:00.000Z", kind: "label", label: "root" }),
+    );
+    await store.append(
+      createSessionEntry({
+        id: "late",
+        parentId: "root",
+        sessionId: "s1",
+        timestamp: "2026-01-03T00:00:00.000Z",
+        kind: "label",
+        label: "late",
+      }),
+    );
+    await store.append(
+      createSessionEntry({
+        id: "early",
+        parentId: "root",
+        sessionId: "s1",
+        timestamp: "2026-01-02T00:00:00.000Z",
+        kind: "label",
+        label: "early",
+      }),
+    );
+    const page = await store.readBranchPath?.({ sessionId: "s1" });
+    assert.equal(page?.items.at(-1)?.id, "late");
+  });
+
+  it("detaches snapshot messages from the store", async () => {
+    const store = createMemorySessionStore([entry("a")]);
+    const readBranchPath = store.readBranchPath;
+    if (readBranchPath === undefined) throw new Error("memory store missing readBranchPath");
+    const read = readBranchPath.bind(store);
+    const snap = await rebuildSessionContext(read, { sessionId: "s1", leafId: "a" });
+    const block = snap.messages[0]?.content[0] as { type: string; text: string } | undefined;
+    assert.equal(block?.type, "text");
+    if (block) block.text = "mutated";
+    const again = await rebuildSessionContext(read, { sessionId: "s1", leafId: "a" });
+    const next = again.messages[0]?.content[0];
+    assert.equal(next?.type === "text" ? next.text : undefined, "Hi");
+  });
+
+  it("snapshot() clones each branch entry once and does not list()", async () => {
+    const store = createMemorySessionStore();
+    let parent: string | undefined;
+    for (let i = 0; i < 5000; i++) {
+      const id = `e${i}`;
+      await store.append(
+        createSessionEntry({
+          id,
+          parentId: parent,
+          sessionId: "s1",
+          timestamp: "2026-01-01T00:00:00.000Z",
+          kind: "message",
+          message: { role: "user", content: [{ type: "text", text: `m${i}` }] },
+        }),
+      );
+      parent = id;
+    }
+    let listed = 0;
+    const readBranchPath = store.readBranchPath;
+    if (readBranchPath === undefined) throw new Error("memory store missing readBranchPath");
+    const wrapped = {
+      append: store.append.bind(store),
+      list: async (id: string) => {
+        listed++;
+        return store.list(id);
+      },
+      get: store.get?.bind(store),
+      searchSessions: store.searchSessions?.bind(store),
+      readBranchPath: readBranchPath.bind(store),
+    };
+    const session = createAgent({
+      model: { provider: "mock", model: "m" },
+      provider: createMockProvider(),
+      store: wrapped,
+    }).createSession({ id: "s1", leafId: parent });
+    const slot = globalThis as { structuredClone: typeof structuredClone };
+    const orig = slot.structuredClone;
+    let clones = 0;
+    slot.structuredClone = ((value: unknown) => {
+      clones++;
+      return orig(value);
+    }) as typeof structuredClone;
+    try {
+      const listedBefore = listed;
+      const snap = await (session as unknown as { snapshot(): Promise<{ messages: readonly unknown[] }> }).snapshot();
+      assert.equal(snap.messages.length, 5000);
+      assert.equal(clones, 5000);
+      assert.equal(listed, listedBefore);
+    } finally {
+      slot.structuredClone = orig;
+    }
   });
 });
 

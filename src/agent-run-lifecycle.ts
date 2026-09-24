@@ -42,7 +42,8 @@ export interface AgentRunLifecycleOptions {
   /**
    * Plan 094 Task 3: external-state restore hooks, run on every claiming resume before the
    * checkpoint is claimed. Registered once here because a resume builds its session from the
-   * stored state (there is no live session to register against beforehand).
+   * stored state (there is no live session to register against beforehand). Plan 109 Task 2: an
+   * entry may be `{ id?, restore, compensate? }` so a failed resume rolls the applied layers back.
    */
   readonly restoreHooks?: readonly AgentCheckpointRestoreHook[];
   /** Per-hook restore ceiling in ms; defaults to `DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS`. */
@@ -445,7 +446,7 @@ async function prepareAgentRunResume(
           ...(recordMetadata ? { metadata: recordMetadata } : {}),
           checkpoint: record,
         },
-        { timeoutMs: options.restoreHookTimeoutMs, signal },
+        { timeoutMs: options.restoreHookTimeoutMs, signal, redactor: agent.config.redactor },
       )
     : undefined;
   throwIfAbortedSignal(signal);

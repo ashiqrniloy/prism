@@ -1,0 +1,131 @@
+{
+  "$comment": "Golden vectors pinning token-estimate sites. A site's math change must update that site's column. Text columns are ceil(length/4) at root, memory llm, and memory om. Message and entry columns differ on purpose. family* is estimateTextTokensForFamily, not ceil(length/4). No secrets, no absolute paths.",
+  "text": [
+    { "id": "empty", "text": "", "root": 0, "memoryLlmText": 0, "memoryOmText": 0, "familyUnknown": 0, "familyOpenai": 0, "familyAnthropic": 0 },
+    { "id": "one-char", "text": "a", "root": 1, "memoryLlmText": 1, "memoryOmText": 1, "familyUnknown": 1, "familyOpenai": 1, "familyAnthropic": 1 },
+    { "id": "ascii-short", "text": "hello world", "root": 3, "memoryLlmText": 3, "memoryOmText": 3, "familyUnknown": 4, "familyOpenai": 3, "familyAnthropic": 3 },
+    { "id": "cjk", "text": "中文测试", "root": 1, "memoryLlmText": 1, "memoryOmText": 1, "familyUnknown": 3, "familyOpenai": 3, "familyAnthropic": 3 },
+    { "id": "emoji", "text": "😀", "root": 1, "memoryLlmText": 1, "memoryOmText": 1, "familyUnknown": 1, "familyOpenai": 1, "familyAnthropic": 1 },
+    { "id": "mixed", "text": "hi 中", "root": 1, "memoryLlmText": 1, "memoryOmText": 1, "familyUnknown": 2, "familyOpenai": 2, "familyAnthropic": 2 },
+    { "id": "fenced", "text": "```\nconst x = 1;\n```", "root": 5, "memoryLlmText": 5, "memoryOmText": 5, "familyUnknown": 7, "familyOpenai": 5, "familyAnthropic": 7 },
+    { "id": "spaces", "text": "    ", "root": 1, "memoryLlmText": 1, "memoryOmText": 1, "familyUnknown": 2, "familyOpenai": 1, "familyAnthropic": 2 },
+    { "id": "newline", "text": "a\nb", "root": 1, "memoryLlmText": 1, "memoryOmText": 1, "familyUnknown": 1, "familyOpenai": 1, "familyAnthropic": 1 },
+    { "id": "long", "text": "xxxxxxxxxxxxxxxxx", "root": 5, "memoryLlmText": 5, "memoryOmText": 5, "familyUnknown": 5, "familyOpenai": 4, "familyAnthropic": 5 }
+  ],
+  "messages": [
+    {
+      "id": "user-text",
+      "message": { "role": "user", "content": [{ "type": "text", "text": "hello world" }] },
+      "root": 3,
+      "memoryLlm": 4,
+      "memoryOm": 9
+    },
+    {
+      "id": "asst-text",
+      "message": { "role": "assistant", "content": [{ "type": "text", "text": "ok" }] },
+      "root": 1,
+      "memoryLlm": 4,
+      "memoryOm": 7
+    },
+    {
+      "id": "system-empty-text",
+      "message": { "role": "system", "content": [{ "type": "text", "text": "" }] },
+      "root": 0,
+      "memoryLlm": 2,
+      "memoryOm": 7
+    },
+    {
+      "id": "empty-content",
+      "message": { "role": "user", "content": [] },
+      "root": 0,
+      "memoryLlm": 1,
+      "memoryOm": 0
+    },
+    {
+      "id": "thinking",
+      "message": { "role": "assistant", "content": [{ "type": "thinking", "text": "x" }] },
+      "root": 1,
+      "memoryLlm": 4,
+      "memoryOm": 8
+    },
+    {
+      "id": "tool-call",
+      "message": { "role": "assistant", "content": [{ "type": "tool_call", "id": "c1", "name": "write", "arguments": { "v": 1 } }] },
+      "root": 4,
+      "memoryLlm": 7,
+      "memoryOm": 17
+    },
+    {
+      "id": "tool-result",
+      "message": { "role": "tool", "content": [{ "type": "tool_result", "toolCallId": "c1", "name": "write", "result": { "ok": true } }] },
+      "root": 3,
+      "memoryLlm": 6,
+      "memoryOm": 19
+    },
+    {
+      "id": "image",
+      "message": { "role": "user", "content": [{ "type": "image", "mimeType": "image/png" }] },
+      "root": 3,
+      "memoryLlm": 4,
+      "memoryOm": 10
+    },
+    {
+      "id": "tool-delta",
+      "message": { "role": "assistant", "content": [{ "type": "tool_call_delta", "index": 0, "argumentsText": "{}" }] },
+      "root": 2,
+      "memoryLlm": 5,
+      "memoryOm": 15
+    },
+    {
+      "id": "multi",
+      "message": { "role": "user", "content": [{ "type": "text", "text": "a" }, { "type": "thinking", "text": "b" }] },
+      "root": 1,
+      "memoryLlm": 3,
+      "memoryOm": 15
+    }
+  ],
+  "entries": [
+    {
+      "id": "summary",
+      "entry": { "id": "e1", "sessionId": "s", "timestamp": "2026-01-01T00:00:00.000Z", "kind": "summary", "summary": "done" },
+      "memoryLlm": 1,
+      "memoryOm": 25
+    },
+    {
+      "id": "label",
+      "entry": { "id": "e2", "sessionId": "s", "timestamp": "2026-01-01T00:00:00.000Z", "kind": "label", "label": "a" },
+      "memoryLlm": 1,
+      "memoryOm": 24
+    },
+    {
+      "id": "event",
+      "entry": {
+        "id": "e3",
+        "sessionId": "s",
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "kind": "event",
+        "event": { "type": "agent_started", "sessionId": "s", "runId": "r" }
+      },
+      "memoryLlm": 13,
+      "memoryOm": 36
+    },
+    {
+      "id": "message-entry",
+      "entry": {
+        "id": "e4",
+        "sessionId": "s",
+        "timestamp": "2026-01-01T00:00:00.000Z",
+        "kind": "message",
+        "message": { "role": "user", "content": [{ "type": "text", "text": "hi" }] }
+      },
+      "memoryLlm": 2,
+      "memoryOm": 7
+    },
+    {
+      "id": "bare",
+      "entry": { "id": "e5", "sessionId": "s", "timestamp": "2026-01-01T00:00:00.000Z", "kind": "custom" },
+      "memoryLlm": 0,
+      "memoryOm": 21
+    }
+  ]
+}

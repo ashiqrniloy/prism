@@ -33,7 +33,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { test } from "node:test";
-import { workspaceShape } from "./package-truth.mjs";
+import { workspacePackageCounts, workspaceShape } from "./package-truth.mjs";
 import { effectiveTestChain } from "./run-all-tests.mjs";
 
 const url = (path) => new URL(path, import.meta.url);
@@ -394,11 +394,12 @@ test("baseline evidence file exists, is valid JSON captured at 0.1.7, with green
 test("baseline manifest count is coherent with the real filesystem (0.2.0 adds no package)", () => {
   const mc = baseline.manifestCount;
   const { names: workspaceNames, providerDirs, prismDirs } = workspaceShape();
-  const hasCodingTools = workspaceNames.includes("prism-coding-tools");
-  const hasCore = workspaceNames.includes("prism-core");
+  const packages = workspacePackageCounts();
+  const hasCodingTools = packages.has("prism-coding-tools");
+  const hasCore = packages.has("prism-core");
   const delta = hasCodingTools ? -46 : hasCore ? -14 : 0; // plan 054 Tasks 2-8: providers family + office family + profile deletions
   assert.equal(workspaceNames.length, mc.workspacePackages + delta, "workspacePackages matches packages/*/package.json count");
-  const hasProviderFamily = existsSync(url("../packages/prism-providers/src")); // plan 054 Task 6: adapters moved inside the family
+  const hasProviderFamily = packages.has("prism-providers"); // plan 054 Task 6: adapters moved inside the family
   assert.equal(
     mc.categories.provider + (hasProviderFamily ? -17 : 0),
     providerDirs.length,
@@ -431,7 +432,7 @@ test("baseline item inventory mirrors the manifest registry (same ids/tasks/scop
 });
 
 test("dependency names fingerprint matches the live manifests (zero new runtime dependency names in 0.2.0)", () => {
-  if (existsSync(url("../packages/prism-core"))) return;
+  if (workspacePackageCounts().has("prism-core")) return;
   assert.equal(
     dependencyNameFingerprint(),
     baseline.dependencyNames.sha256,
@@ -455,8 +456,9 @@ test("workspace manifest hashes and compat-baseline dir hash match the live tree
 });
 
 test("preserved surface hashes match the live files at every state (byte-immutable for the whole phase)", () => {
-  const hasCodingTools = existsSync(url("../packages/prism-coding-tools"));
-  const hasCore = existsSync(url("../packages/prism-core"));
+  const packages = workspacePackageCounts();
+  const hasCodingTools = packages.has("prism-coding-tools");
+  const hasCore = packages.has("prism-core");
   if (hasCodingTools || hasCore) return;
   for (const [file, hash] of Object.entries(baseline.preservedSurface)) {
     assert.ok(manifest.preservedSurface.files[file], `preserved file ${file} listed in the manifest`);

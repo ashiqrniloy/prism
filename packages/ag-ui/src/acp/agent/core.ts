@@ -440,7 +440,14 @@ export function createPrismAcpAgent<Authorization extends AcpAuthorization = Acp
               ownership: authorization.ownership,
               agentId: current.agentId,
               ...(current.activeRun.version !== undefined ? { expectedVersion: current.activeRun.version } : {}),
-              signal: context.signal,
+              // The durable write must outlive a client disconnect, so it is not
+              // tied to `context.signal` (aborted when the connection closes).
+              // AbortSignal.timeout bounds a hung store with the cancel-lease
+              // TTL (default 30_000 ms); the store still observes the signal.
+              // ponytail: the host's leaseTtlMs is reused without recovery's
+              // 300s clamp; a longer await bound than the lease is harmless
+              // (fencing rejects a write after lease expiry).
+              signal: AbortSignal.timeout(options.recovery?.leaseTtlMs ?? 30_000),
             },
           );
         }

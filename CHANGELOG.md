@@ -1,3 +1,25 @@
+## [0.11.0] - 2026-09-24 (store bounds, lease fence reset, subpath removals)
+
+> **Twelve publishable packages.** Lockstep minor. No new public exports from the review remediation. Two host-visible store contracts change, and three subpaths that the published 0.10.0 tarball still shipped are removed. Predecessor published line is **0.10.0**. Registry/tag writes stay operator-authorized.
+
+### Changed
+- **Lockstep `0.10.0` → `0.11.0`.** All twelve publishable manifests move together with `^0.11.0` internal ranges. The lockfile, the `src/index.ts` version constant, the docs index banner, the release-workflow tag list, and the generated package-truth artifact agree (`scripts/version-literal-gate.test.mjs`).
+- **Compat baseline regenerated.** The only declaration this cut changed is `version` (`"0.10.0"` → `"0.11.0"`). The same regen records the already-landed persona/graft removals (58 `@arnilo/prism-memory`, 48 `@arnilo/prism-coding-tools`) and the signature widenings already named in [docs/migration.md](docs/migration.md). No plan-120 public name was added.
+- **Memory session store implements `readBranchPath`.** A snapshot walks the branch once and clones each kept entry once. JSONL and the durable adapters already had the method.
+- **JSONL parse cache.** Reads after an in-process append reuse the parsed file when `(size, mtimeMs)` match. A same-size write inside one filesystem timestamp tick can still look unchanged; the upgrade path is hashing the file.
+- **Idempotency window is 4,096 keys** on the memory store and the JSONL store. A replay of a key still inside the window is rejected. A replay of an evicted key appends a new entry. See [docs/migrate-to-0.11.md](docs/migrate-to-0.11.md).
+- **In-memory lease sweep.** Expired rows are deleted once the map reaches 1,024. A released key that is still in the map inherits `fencingToken + 1`. A key that was swept starts its next fence at 1 (`docs/operations.md`). SQLite and Postgres adapters still keep the counter on the expired row.
+- **Plain-text token estimates share one helper** (`ceil(length/4)`). Message and entry estimates are unchanged and are not billing numbers. Golden vectors live in `scripts/token-estimate-fixtures.json` (not shipped).
+- **`npm test` gains two stages:** examples execution (spawns examples not already executed; `docker-process-session.ts` is `known-broken:placeholder-image`) and a Node branch-coverage audit (floor 83.49, `dist/**` only). Bun's coverage gate still records `branches: null`. Offline test budget pin is `< 110s`.
+- **Freeze-test package presence** comes from `workspacePackageCounts()` in `scripts/package-truth.mjs`. Frozen count deltas stay in each suite.
+
+### Removed
+- **Behavior persona subpaths (`@arnilo/prism-coding-tools/caveman`, `/ponytail`).** Both subpaths, their vendored upstream fixtures, and the `@dietrichgebert/ponytail` optional peer are gone. Load the upstream tree with `loadSkillDirectory` and register skills from a host extension. `@arnilo/prism-coding-tools/impeccable` is unchanged. See [docs/migrate-to-0.11.md](docs/migrate-to-0.11.md).
+- **Graft bridge subpath (`@arnilo/prism-memory/graft`).** The subpath, its `@nanonets/graft` optional peer, the fixture CLI, and the graft commands are gone. Integrate graft as a host MCP server, or author tools against `registerTool` / `registerCommand`. `/rag`, `/compaction/*`, `/fabric`, `/wiki`, and `/scoped` stay.
+
+### Security
+- No new credential surface. The lease sweep does not delete a live lease. Idempotency eviction cannot be used to skip the in-window duplicate check.
+
 ## [0.10.0] - 2026-09-21 (hook lifecycle completion, scoped agent memory)
 
 > **Twelve publishable packages.** All 105–106 features ship behind their documented options and defaults: `@arnilo/prism-hooks` is the new twelfth package, and scoped memory is an opt-in subpath that does nothing until a host constructs it. Predecessor published line is **0.9.0**. Plan 097 (trajectory export) was not implemented for this line and is deferred rather than held unstarted against the cut. Registry/tag writes stay operator-authorized.
@@ -21,8 +43,7 @@
 - **Migration notes for 0.9.0 hosts**: [docs/migration.md](docs/migration.md) — the `AgentSession.close()` addition, `session_start` / `session_shutdown` now being emitted, the new `hook_limit` finish reason, the `maxStopContinuations` default, and the opt-in scoped-memory subpath.
 
 ### Removed
-- **Behavior persona subpaths (`@arnilo/prism-coding-tools/caveman`, `/ponytail`).** Both subpaths, their vendored upstream fixtures, and the `@dietrichgebert/ponytail` optional peer are gone from `@arnilo/prism-coding-tools`. The capability is host-owned and still fully supported on public APIs: load the upstream tree with `loadSkillDirectory`, register the skills, a `/caveman`-style command, an every-turn injector, and session-entry mode persistence from a host extension — see the ported [`examples/caveman-ponytail.ts`](examples/caveman-ponytail.ts). `@arnilo/prism-coding-tools/impeccable` is unchanged.
-- **Graft bridge subpath (`@arnilo/prism-memory/graft`).** The subpath, its `@nanonets/graft` optional peer, the `prism-graft` fixture CLI, and the `/graft-init` / `/graft-build` / `/graft-build-deep` commands are gone; `@arnilo/prism-memory` declares only its required `@arnilo/prism` peer. Integrate graft as a host-exposed graft **MCP server**, or author the tools/commands against public seams (`registerTool` / `registerCommand`): the former extension used a subprocess CLI, a retrieval-pack context provider, and blast-radius middleware — all host-composable. `@arnilo/prism-memory` keeps `/rag`, `/compaction/*`, `/fabric`, `/wiki`, and `/scoped` unchanged.
+- None in the published 0.10.0 tarball. A post-publish amendment recorded the persona and graft subpath removals here; they ship in 0.11.0 (see the section above).
 
 ### Security
 - **Stop hooks and the hooks-file adapter fail closed.** `StopHook` entries are validated at run start (`name` plus `decide`), a malformed decision or a throwing handler is a non-blocking error that never silently allows a stop, `maxStopContinuations` (default 3) bounds continuation loops, and the adapter's `command` handlers spawn shell-free with tokenized argv and a `hookCommandHash()` trust pin. Codex's `continue: false` reads as the stop signal, not a continuation.

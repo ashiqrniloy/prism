@@ -100,6 +100,43 @@ const pendingResult: ToolResult = { toolCallId: "c1", name: "echo", content: [{ 
 const briefSkill: Skill = { name: "brief", description: "Be brief", instructions: "Full body" };
 const hostContext: ContextProvider = { name: "project", resolve: () => [{ title: "Project", content: "stable" }] };
 
+type InputLayoutName = "cache_aware" | "legacy";
+
+/**
+ * The injector-context fixture, shared by the shipped `cache_aware` row and the Task 6 layout
+ * parity rows: the same builder produces both layouts, so the two expectations cannot drift.
+ */
+const contextBlockInjector = (blocks: readonly ContextBlock[] | undefined): InstructionInjector => ({
+  name: "now",
+  apply: () => ({ contextBlocks: blocks, when: "every_turn" }),
+});
+
+const contextSlotAssembly = (blocks?: readonly ContextBlock[], layout: InputLayoutName = "cache_aware"): AssembleProviderInputOptions => ({
+  model,
+  systemInstructions: "Base rules.",
+  contextProviders: [hostContext],
+  instructionInjectors: [contextBlockInjector(blocks)],
+  skills: [briefSkill],
+  skillsDisclosure: "progressive",
+  input: "Ask",
+  inputLayout: layout,
+});
+
+const nowBlock: ContextBlock = { title: "Now", content: "turn two" };
+
+/** Summary fixture with context and a skill, where the hoist difference between layouts is visible. */
+const summaryWithContextAssembly = (summary: string, layout: InputLayoutName): AssembleProviderInputOptions => ({
+  model,
+  systemInstructions: "Base rules.",
+  summaries: [summary],
+  history: [hUser, hAssistant],
+  contextProviders: [hostContext],
+  skills: [briefSkill],
+  skillsDisclosure: "progressive",
+  input: "Ask B",
+  inputLayout: layout,
+});
+
 describe("invalidation inventory (plan 088 Task 1)", () => {
   it("stable rows: base instructions plus ordinary transcript growth keep the prefix at 1", async () => {
     const askB: Message = { role: "user", content: [{ type: "text", text: "Ask B" }] };
@@ -160,22 +197,7 @@ describe("invalidation inventory (plan 088 Task 1)", () => {
   });
 
   it("injector context blocks: appearing or vanishing resets at the injector context position", async () => {
-    const contextBlockInjector = (blocks?: readonly ContextBlock[]): InstructionInjector => ({
-      name: "now",
-      apply: () => ({ contextBlocks: blocks, when: "every_turn" }),
-    });
-    const contextSlotAssembly = (blocks?: readonly ContextBlock[]): AssembleProviderInputOptions => ({
-      model,
-      systemInstructions: "Base rules.",
-      contextProviders: [hostContext],
-      instructionInjectors: [contextBlockInjector(blocks)],
-      skills: [briefSkill],
-      skillsDisclosure: "progressive",
-      input: "Ask",
-    });
-    const now: ContextBlock = { title: "Now", content: "turn two" };
-
-    const appeared = await assembleTwice(contextSlotAssembly(), contextSlotAssembly([now]));
+    const appeared = await assembleTwice(contextSlotAssembly(), contextSlotAssembly([nowBlock]));
     assert.equal(appeared.boundary.messageIndex, 2, "after the hoisted system prompt (0) and host context (1), before skills (3)");
     assert.deepEqual(textsOf(appeared.before), ["System instruction:\nBase rules.", "Project:\nstable", "Skill brief: Be brief", "Ask"]);
     assert.deepEqual(textsOf(appeared.after), [
@@ -186,9 +208,70 @@ describe("invalidation inventory (plan 088 Task 1)", () => {
       "Ask",
     ]);
 
-    const vanished = await assembleTwice(contextSlotAssembly([now]), contextSlotAssembly());
+    const vanished = await assembleTwice(contextSlotAssembly([nowBlock]), contextSlotAssembly());
     assert.equal(vanished.boundary.messageIndex, 2, "vanishing blocks reset the same position: nothing before it moved");
     assert.deepEqual(textsOf(vanished.after), textsOf(appeared.before));
+  });
+
+  it("layout parity: the injector-context boundary moves from 2 (cache_aware) to 1 (legacy)", async () => {
+    const cacheAware = await assembleTwice(contextSlotAssembly(undefined, "cache_aware"), contextSlotAssembly([nowBlock], "cache_aware"));
+    const legacy = await assembleTwice(contextSlotAssembly(undefined, "legacy"), contextSlotAssembly([nowBlock], "legacy"));
+
+    assert.equal(
+      cacheAware.boundary.messageIndex,
+      2,
+      "cache_aware keeps the leading system prompt and host context ahead of the injector block",
+    );
+    assert.equal(legacy.boundary.messageIndex, 1, "legacy leads with the context/skill slots; the host context at 0 survives");
+    assert.notEqual(cacheAware.boundary.messageIndex, legacy.boundary.messageIndex, "the layout switch alone moves the boundary");
+    assert.deepEqual(textsOf(cacheAware.before), ["System instruction:\nBase rules.", "Project:\nstable", "Skill brief: Be brief", "Ask"]);
+    assert.deepEqual(textsOf(legacy.before), ["Project:\nstable", "Skill brief: Be brief", "System instruction:\nBase rules.", "Ask"]);
+    assert.deepEqual(textsOf(cacheAware.after).slice(0, 4), [
+      "System instruction:\nBase rules.",
+      "Project:\nstable",
+      "Now:\nturn two",
+      "Skill brief: Be brief",
+    ]);
+    assert.deepEqual(textsOf(legacy.after).slice(0, 4), [
+      "Project:\nstable",
+      "Now:\nturn two",
+      "Skill brief: Be brief",
+      "System instruction:\nBase rules.",
+    ]);
+    assert.ok(cacheAware.continuity < 1 && legacy.continuity < 1, "the appearing injector block invalidates both layouts");
+  });
+
+  it("layout parity: the hoisted summary moves from 1 (cache_aware) to 3 (legacy) once context and a skill lead", async () => {
+    const cacheAware = await assembleTwice(
+      summaryWithContextAssembly("Summary one", "cache_aware"),
+      summaryWithContextAssembly("Summary two", "cache_aware"),
+    );
+    const legacy = await assembleTwice(
+      summaryWithContextAssembly("Summary one", "legacy"),
+      summaryWithContextAssembly("Summary two", "legacy"),
+    );
+
+    assert.equal(cacheAware.boundary.messageIndex, 1, "cache_aware hoists the summary right after the leading system prompt");
+    assert.equal(legacy.boundary.messageIndex, 3, "legacy puts context, skill, and the system prompt ahead of the summary");
+    assert.notEqual(cacheAware.boundary.messageIndex, legacy.boundary.messageIndex, "the layout switch alone moves the boundary");
+    assert.deepEqual(textsOf(cacheAware.before).slice(0, 4), [
+      "System instruction:\nBase rules.",
+      "Summary:\nSummary one",
+      "Project:\nstable",
+      "Skill brief: Be brief",
+    ]);
+    assert.deepEqual(textsOf(legacy.before).slice(0, 4), [
+      "Project:\nstable",
+      "Skill brief: Be brief",
+      "System instruction:\nBase rules.",
+      "Summary:\nSummary one",
+    ]);
+    assert.deepEqual(
+      textsOf(legacy.after).slice(0, 3),
+      textsOf(legacy.before).slice(0, 3),
+      "everything before the summary is byte-identical",
+    );
+    assert.ok(cacheAware.continuity < 1 && legacy.continuity < 1);
   });
 
   it("observational-memory blocks: recompose-changed resets at the early context position, recompose-equal is byte-identical", async () => {
@@ -325,6 +408,114 @@ describe("invalidation inventory (plan 088 Task 1)", () => {
     );
     assert.equal(two.boundary.messageIndex, 2, "with two groups evicted the boundary is the earlier one: the first history message");
     assert.deepEqual(textsOf(two.after), ["System instruction:\nBase rules.", "Summary:\nSummary", "h2", "Ask"]);
+  });
+
+  it("context eviction: the lowest-priority block is the boundary, higher-priority bytes survive", async () => {
+    const low = "l".repeat(120);
+    const high = "h".repeat(120);
+    const host: AssembleProviderInputOptions = {
+      model,
+      systemInstructions: "Base rules.",
+      contextProviders: [
+        {
+          name: "priority",
+          resolve: () => [
+            { id: "low", title: "Low", content: low, priority: 0 },
+            { id: "high", title: "High", content: high, priority: 100 },
+          ],
+        },
+      ],
+      input: "Ask",
+    };
+    const calibrated = await assembleProviderInput({ ...host, contextBudget: { maxInputBytes: 1_000_000, reportOmissions: true } });
+    const report = getContextBudgetReport(calibrated);
+    assert.ok(report, "reportOmissions attaches the eviction report");
+    assert.equal(report.omitted.length, 0, "the calibration cap keeps everything");
+    assert.deepEqual(textsOf(calibrated), ["System instruction:\nBase rules.", `Low:\n${low}`, `High:\n${high}`, "Ask"]);
+
+    // One byte below the measured cost drops exactly the lowest-priority block.
+    const evicted = await assembleTwice(
+      { ...host, contextBudget: { maxInputBytes: report.keptBytes } },
+      { ...host, contextBudget: { maxInputBytes: report.keptBytes - 1, reportOmissions: true } },
+    );
+    const evictedReport = getContextBudgetReport(evicted.after);
+    assert.deepEqual(
+      evictedReport?.omitted.map((row) => [row.kind, row.id]),
+      [["context", "low"]],
+      "the lower-priority block drops first",
+    );
+    assert.equal(evicted.boundary.messageIndex, 1, "the low block was message 1; the high block's bytes survive at message 2");
+    assert.deepEqual(textsOf(evicted.after), ["System instruction:\nBase rules.", `High:\n${high}`, "Ask"]);
+    assert.ok(evicted.continuity < 1);
+  });
+
+  it("skills eviction: the skill body demotes to its catalog form at the catalog message index", async () => {
+    const body = "i".repeat(400);
+    const catalogText = "Skill big: short desc";
+    const host: AssembleProviderInputOptions = {
+      model,
+      systemInstructions: "Base rules.",
+      skills: [{ name: "big", description: "short desc", instructions: body }],
+      skillsDisclosure: "eager",
+      input: "Ask",
+    };
+    const calibrated = await assembleProviderInput({ ...host, contextBudget: { maxInputBytes: 1_000_000, reportOmissions: true } });
+    const report = getContextBudgetReport(calibrated);
+    assert.ok(report, "reportOmissions attaches the eviction report");
+    assert.equal(report.omitted.length, 0, "the calibration cap keeps everything");
+    assert.equal(textsOf(calibrated)[1], `Skill big:\n${body}`, "the eager body renders inline before any budget pressure");
+
+    // One byte below the measured cost demotes the body instead of dropping the catalog row.
+    const evicted = await assembleTwice(
+      { ...host, contextBudget: { maxInputBytes: report.keptBytes } },
+      { ...host, contextBudget: { maxInputBytes: report.keptBytes - 1, reportOmissions: true } },
+    );
+    const evictedReport = getContextBudgetReport(evicted.after);
+    assert.deepEqual(
+      evictedReport?.omitted.map((row) => [row.kind, row.id]),
+      [["skill_body", "big"]],
+      "the body demotes before a full skill drop",
+    );
+    assert.equal(evicted.boundary.messageIndex, 1, "the catalog message is 1; name and description bytes survive");
+    assert.equal(textsOf(evicted.after)[1], catalogText);
+    assert.ok(evicted.continuity < 1);
+  });
+
+  it("attachments eviction: the newest attachment drops first, older bytes survive", async () => {
+    const host: AssembleProviderInputOptions = {
+      model,
+      systemInstructions: "Base rules.",
+      attachments: [
+        { name: "older.md", text: "older attachment" },
+        { name: "newer.md", text: "newer attachment" },
+      ],
+      input: "Ask",
+    };
+    const calibrated = await assembleProviderInput({ ...host, contextBudget: { maxInputBytes: 1_000_000, reportOmissions: true } });
+    const report = getContextBudgetReport(calibrated);
+    assert.ok(report, "reportOmissions attaches the eviction report");
+    assert.equal(report.omitted.length, 0, "the calibration cap keeps everything");
+    assert.deepEqual(textsOf(calibrated), [
+      "System instruction:\nBase rules.",
+      "Attachment older.md:\nolder attachment",
+      "Attachment newer.md:\nnewer attachment",
+      "Ask",
+    ]);
+
+    // One byte below the measured cost pops the newest attachment (LIFO).
+    const evicted = await assembleTwice(
+      { ...host, contextBudget: { maxInputBytes: report.keptBytes } },
+      { ...host, contextBudget: { maxInputBytes: report.keptBytes - 1, reportOmissions: true } },
+    );
+    const evictedReport = getContextBudgetReport(evicted.after);
+    assert.deepEqual(
+      evictedReport?.omitted.map((row) => [row.kind, row.id]),
+      [["attachments", undefined]],
+      "attachments drop LIFO",
+    );
+    assert.equal(evicted.boundary.messageIndex, 2, "the newer attachment was message 2; the older bytes survive at message 1");
+    assert.deepEqual(textsOf(evicted.after), ["System instruction:\nBase rules.", "Attachment older.md:\nolder attachment", "Ask"]);
+    assert.ok(evicted.continuity < 1);
   });
 
   it("tool-schema selection: gaining or losing a schema never touches the message prefix", async () => {

@@ -1,0 +1,7 @@
+{
+  "$comment": "Skip vocabulary: env-gated | network | interactive | long-running | known-broken:<ref>. Absence of createMockProvider is not a skip — only an example that does not exit 0 offline is listed. env-gated re-runs when env[file] is set. known-broken is re-run every gate and fails the gate if it exits 0.",
+  "skips": {
+    "docker-process-session.ts": "known-broken:placeholder-image"
+  },
+  "env": {}
+}

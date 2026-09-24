@@ -64,8 +64,11 @@ function getPackList(dir: string, name: string): string[] {
     stdio: ["ignore", "pipe", "ignore"],
   });
   assert.equal(result.status, 0, `npm pack --dry-run failed for ${name} (status ${result.status})`);
-  const parsed = JSON.parse(result.stdout) as Array<{ files: Array<{ path: string }> }>;
-  const files = parsed[0].files.map((f) => f.path);
+  // npm 12 emits an object keyed by package name; npm 11 and earlier emitted an array of entries.
+  type PackEntry = { readonly files: readonly { readonly path: string }[] };
+  const parsed = JSON.parse(result.stdout) as PackEntry[] | Record<string, PackEntry>;
+  const entries = Array.isArray(parsed) ? parsed : Object.values(parsed);
+  const files = (entries[0]?.files ?? []).map((file) => file.path);
   packCache.set(dir, files);
   return files;
 }

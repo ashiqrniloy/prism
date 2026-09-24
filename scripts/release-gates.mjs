@@ -185,8 +185,10 @@ export function packedFilePaths(root, pkgPath) {
     encoding: "utf8",
   });
   if (result.status !== 0) throw new Error(`npm pack --dry-run failed for ${pkgPath}: ${result.stderr}`);
+  // npm 12 emits an object keyed by package name; npm 11 and earlier emitted an array of entries.
   const parsed = JSON.parse(result.stdout);
-  return (parsed[0]?.files ?? []).map((f) => f.path.replace(/\\/g, "/"));
+  const entries = Array.isArray(parsed) ? parsed : Object.values(parsed);
+  return (entries[0]?.files ?? []).map((f) => f.path.replace(/\\/g, "/"));
 }
 
 export function runGates({ release, version, independent = false, allowBreak = false, updateBaseline = false, skipTarball = false }) {

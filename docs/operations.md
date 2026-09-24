@@ -20,7 +20,7 @@ This page is the operator runbook for the high-availability story proven by plan
 
 ## Outputs / response / events
 
-- A lease record: `{ namespace, key, ownerId, token, fencingToken, acquiredAt, expiresAt, updatedAt }`. Expired rows retain their fencing counter; the next owner inherits `fencingToken + 1`.
+- A lease record: `{ namespace, key, ownerId, token, fencingToken, acquiredAt, expiresAt, updatedAt }`. Expired rows retain their fencing counter; the next owner inherits `fencingToken + 1`. The in-memory store deletes expired rows once it holds 1,024 of them; an evicted key's next owner starts at fencing 1. Durable adapters keep the counter.
 - A checkpoint record: `{ namespace, key, version, fencingToken?, value, createdAt, updatedAt }`. Cursor/value changes are CAS-committed; a peer can replay an unfinished step but can never skip ahead or move the cursor backward.
 - Failover timing: the drill reports `failoverMs` (wall time between the owner's death and the peer's acquisition) and asserts it against the frozen ceiling.
 

@@ -61,7 +61,7 @@ describe("phase23 security conformance (plan 023 Task 5, built public entrypoint
       // npm run build:core resolves node_modules/.bin for the tsc leaf (phase23-build-race precedent)
       const [build, importer] = await Promise.all([
         Promise.resolve().then(() => spawn("npm", ["run", "build:core"])),
-        Promise.resolve().then(() => spawn(process.execPath, [LOCK, "node", "--test", IMPORTER])),
+        Promise.resolve().then(() => spawn("node", [LOCK, "node", "--test", IMPORTER])),
       ]);
       assert.equal(build.status, 0, `emit round ${round} failed:\n${build.stdout}\n${build.stderr}`);
       assert.equal(
@@ -92,10 +92,13 @@ describe("phase23 security conformance (plan 023 Task 5, built public entrypoint
           JSON.stringify({
             captured: real.captured,
             marginPp: real.marginPp,
+            // Permissive floors so the fallback run always produces an artifact;
+            // the core entry is required by the summary (plan 114).
+            core: { lines: 0, functions: 0 },
             packages: Object.fromEntries(Object.entries(real.packages).map(([name, value]) => [name, { ...value, lines: 0 }])),
           }),
         );
-        const result = spawn(process.execPath, [SUMMARY], {
+        const result = spawn("node", [SUMMARY], {
           env: { PRISM_COVERAGE_THRESHOLDS: thresholds, PRISM_COVERAGE_ARTIFACT: join(tmp, "artifact.json") },
         });
         assert.equal(result.status, 0, `coverage-summary failed:\n${result.stdout}\n${result.stderr}`);

@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { pathToFileURL } from "node:url";
-import { computePackageTruth, expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
+import { computePackageTruth, expandWorkspaceDirs, readManifest, workspacePackageCounts } from "./package-truth.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const run = (args, cwd = ROOT) => spawnSync(process.execPath, args, { cwd, encoding: "utf8" });
@@ -19,13 +19,14 @@ const hasGraftPackage = existsSync(join(ROOT, "packages", "prism-graft")); // pl
 const hasObscuraPackage = existsSync(join(ROOT, "packages", "obscura", "package.json")); // plan 039 optional Obscura browser package
 const hasDevInspectorPackage = existsSync(join(ROOT, "packages", "prism-dev", "package.json")); // plan 040 dev inspector (omitted from umbrellas)
 const hasPromptPackage = existsSync(join(ROOT, "packages", "prompts", "package.json")); // plan 042 versioned prompt registry (omitted from umbrellas)
-const hasWorkPackage = existsSync(join(ROOT, "packages", "prism-work", "package.json")); // plan 083 Task 2 work family
+const packages = workspacePackageCounts();
+const hasWorkPackage = packages.has("prism-work"); // plan 083 Task 2 work family
 const hasDocumentsPackage = existsSync(join(ROOT, "packages", "documents", "package.json")); // plan 051 documents engine (omitted from umbrellas)
 const hasSheetsPackage = existsSync(join(ROOT, "packages", "sheets", "package.json")); // plan 052 sheets engine (omitted from umbrellas)
 const hasDiagramsPackage = existsSync(join(ROOT, "packages", "diagrams", "package.json")); // plan 053 diagrams engine (omitted from umbrellas)
 
-const hasCodingToolsPackage = existsSync(join(ROOT, "packages", "prism-coding-tools", "package.json"));
-const hasCorePackage = existsSync(join(ROOT, "packages", "prism-core", "package.json"));
+const hasCodingToolsPackage = packages.has("prism-coding-tools");
+const hasCorePackage = packages.has("prism-core");
 
 test("generator reproducible: two runs byte-identical modulo generatedAt", () => {
   assert.deepEqual(stripStamp(computePackageTruth()), stripStamp(computePackageTruth()));

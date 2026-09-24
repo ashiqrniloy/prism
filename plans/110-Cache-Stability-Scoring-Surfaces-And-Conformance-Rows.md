@@ -17,7 +17,7 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
 
 ## Tasks
 
-- [ ] Task 1: Primitive review — scoring surface, reset detail, and the uncovered conformance rows (P1, must run first)
+- [x] Task 1: Primitive review — scoring surface, reset detail, and the uncovered conformance rows (P1, must run first)
   - Acceptance Criteria:
     - Functional: `docs/_evidence/phase110-primitive-review.md` exists with three sections — (a) reuse rows for every primitive the later tasks build on, each with a `path:line` span, (b) gap rows naming what no current seam does, (c) rejected alternatives with the reason (including every item in the rejected list below).
     - Functional: the review confirms each ceiling with a runnable observation, not prose:
@@ -44,8 +44,8 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
     - API Notes and Examples:
       ```text
       reuse: src/testing/prefix-stability-conformance.ts:232-244  measureRequest (private)          → Task 2 (extend: internals of the exported scorer)
-      reuse: src/testing/prefix-stability-conformance.ts:220-230  tailClassifier (private)         → Task 2 (reuse, stays private)
-      reuse: src/testing/prefix-stability-conformance.ts:252-259  sharedPrefixFraction (private)   → Task 2 (reuse, stays private)
+      reuse: src/testing/prefix-stability-conformance.ts:220-224  tailClassifier (private)         → Task 2 (reuse, stays private)
+      reuse: src/testing/prefix-stability-conformance.ts:252-260  sharedPrefixFraction (private)   → Task 2 (reuse, stays private)
       reuse: src/testing/prefix-stability-conformance.ts:134-169  gap loop + resets/return        → Task 3 (extend: one projection)
       reuse: src/testing/prefix-stability-conformance.ts:188-207  fixtureProvider + call wiring    → Task 4 (extend: optional bulk tool call)
       reuse: src/__tests__/invalidation-inventory.test.ts:79-95   assembleTwice + calibration     → Tasks 5, 6 (reuse)
@@ -70,7 +70,7 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
     - `docs/index.md` update: no (`docs/_evidence/` is not indexed).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 2: Host-facing tail-aware scoring entry point (P2, host-demand gated)
+- [x] Task 2: Host-facing tail-aware scoring entry point (P2, host-demand gated)
   - Acceptance Criteria:
     - Functional: `src/testing/prefix-stability-conformance.ts` exports `scorePrefixStability(requests: readonly ProviderRequest[], options?: ScorePrefixStabilityOptions): PrefixStabilitySample`, reachable at the existing `./testing/prefix-stability-conformance` subpath. `ScorePrefixStabilityOptions` is `{ tailSegments?: ReadonlyMap<string, Message>; minContinuity?: number }` (default `0.95`). `PrefixStabilitySample` is `{ minContinuity, cacheableContinuity, resets, resetDetails }`; `resetDetails` is the projection Task 3 also puts on the runner result, so both surfaces read one producer.
     - Functional: fewer than two captured requests throws a plain `Error` naming the count (the runner's own convention: no test runner, no network, no credentials), and a tail map that matches nothing returns `cacheableContinuity === minContinuity` — never a fabricated `1` (`docs/prefix-stability-conformance.md:58`).
@@ -87,7 +87,7 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
       - Exporting `measureProviderPrefix` plus a classifier factory — rejected: two exports for internals, and a host can mis-order them; one entry point that returns the whole sample is harder to misuse.
       - A second host-facing runner that re-implements the capture — rejected: duplicated assertions and two definitions of "reset".
       - Keeping the runner private and documenting "run the fixture runner" — the honest fallback when Task 1 finds no consumer; it is what ships today, and the docs already say so.
-    - Chosen Approach: one exported scorer that owns the sample shape and delegates to the private measurement, with the runner refactored to call it — smallest surface (+2 exports) and a single algorithm.
+    - Chosen Approach: one exported scorer that owns the sample shape and delegates to the private measurement, with the runner refactored to call it — smallest surface and a single algorithm. Execution (2026-09-22): the user request opened the demand gate (Task 1 still found no in-repo consumer). `assertOn` is an optional third field, default `providerPrefix`, so the runner can pass its metric and read `resets` off the sample without a second serialization. The export counter saw +4 (function + three types), not the sketch's +2. `src/index.ts` untouched. Compat baseline not regenerated.
     - API Notes and Examples:
       ```ts
       import { scorePrefixStability } from "@arnilo/prism/testing/prefix-stability-conformance";
@@ -111,7 +111,7 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
       - `docs/prefix-stability-conformance.md`: "When to use it" gains the host-capture sentence, "Outputs" documents the scorer, "Implementation example" gains the snippet above.
       - `scripts/budgets.json`: rebaseline the `@arnilo/prism` export count with a reason entry naming the two additions (testing subpath only, no root-barrel change). Additive only — no compat-baseline regeneration in this task; the 0.11.0 cut owns that.
     - References:
-      - `src/testing/prefix-stability-conformance.ts:220-259` (the measurement to export), `src/agent-session/session/assemble.ts:241` and `src/input.ts:577-632` (where tail segments actually come from, so the docs stay truthful about what a host must pass), `docs/prefix-stability-conformance.md:56-58` (the rule the scorer must preserve).
+      - `src/testing/prefix-stability-conformance.ts:220-260` (the measurement to export), `src/agent-session/session/assemble.ts:354` (`tailSegments.clear()` — plan cite `:241` was `evaluateTurnStop`) and `src/input.ts:360-366` plus `:574-633` (where tail segments actually come from), `docs/prefix-stability-conformance.md:56-58` (the rule the scorer must preserve). Demand gate: Task 1 found no consumer (`docs/_evidence/phase110-primitive-review.md` §8). Do not start unless a host consumer appears.
   - Test Cases to Write:
     - Scorer over a hand-built three-request capture with one tail message: `cacheableContinuity` above `minContinuity`, `resets` naming the pair that broke, `resetDetails` aligned with it.
     - Runner parity: run `runPrefixStabilityConformance` for a fixture host, then score the captured requests with the runner's own tail map — both fractions and `resets` are identical, so the two surfaces cannot diverge.
@@ -126,7 +126,7 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
     - `docs/index.md` update: no (existing page only).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 3: Per-pair reset detail on the result (P2, host-demand gated; depends on Task 2's scorer)
+- [x] Task 3: Per-pair reset detail on the result (P2, host-demand gated; depends on Task 2's scorer). Demand gate (Task 1 §8): no in-repo consumer. Do not start unless one appears. Task 2 landed: copy `resetDetails` off `scorePrefixStability`'s sample — do not add a second gap loop.
   - Acceptance Criteria:
     - Functional: `PrefixStabilityConformanceResult` gains `resetDetails: readonly PrefixStabilityResetDetail[]` — one row per reset, ascending, with `request` equal to `resets[i]`, `fraction` the fraction of the metric `assertOn` selected for that pair, and `cacheableFraction` the tail-excluded fraction for the same pair. A run with no gap returns `[]`; a run with a declared `allowedResets` carries exactly that many rows.
     - Functional: the rows come from the same gap list that produces `resets` (one projection, shared with Task 2's `PrefixStabilitySample`), so the two cannot disagree; a test asserts the alignment rather than assuming it.
@@ -142,7 +142,7 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
       - Detail rows only in the scorer, not on the runner result — rejected: the runner is where fixtures read the reset, and a host cockpit that uses the runner would still have to re-derive the fraction.
       - A parallel `fractions` array with no `request` field — rejected: index-pairing two arrays is exactly the fragile shape the alignment test would have to police.
       - Include the captured requests or their bytes in the result — rejected: it would turn a numbers-only diagnostics result into a payload carrier and change the docs' security sentence.
-    - Chosen Approach: add `resetDetails` to the runner result, projected from the same gap list that already yields `resets`, and share that projection with the scorer.
+    - Chosen Approach: add `resetDetails` to the runner result, projected from the same gap list that already yields `resets`, and share that projection with the scorer. Execution (2026-09-22): the user request opened the gate. `projectResetDetail` is the one projection; the runner copies `sample.resetDetails`. `fraction` is the metric `assertOn` selected. No new export — `PrefixStabilityResetDetail` was already counted in Task 2. `scripts/budgets.json` untouched.
     - API Notes and Examples:
       ```ts
       const { resets, resetDetails } = await runPrefixStabilityConformance({ host, skills, allowedResets: 1 });
@@ -168,7 +168,7 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
     - `docs/index.md` update: no (existing page only).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 4: Tool-result-stage fold fixture (P3)
+- [x] Task 4: Tool-result-stage fold fixture (P3)
   - Acceptance Criteria:
     - Functional: `PrefixStabilityConformanceOptions` gains `foldableToolResultBytes?: number`. When set, the runner installs a runner-owned fixture tool (constant name, e.g. `prefix_stability_bulk`) that returns deterministic generated text of exactly that many bytes, and the fixture provider adds a second `tool_call` part for it to the even-index request alongside `load_skill`, so both results land in the same round (the runner's `limits.maxToolRounds: 1` keeps it to one round and two requests per turn). Default unset: the capture is byte-identical to today — same four requests, one tool call each, same message shapes.
     - Functional: with `foldableToolResultBytes: 8_192` and a host attention compiler whose trigger settles (`state.turn === 1 && estimatedInputTokens >= floor`, plan 101's shape) plus `keepLast: 0`, the run declares exactly one reset and that request carries the stub header for the bulk `toolCallId` while the sibling `load_skill` confirmation in the same request is byte-unchanged — the reset is attributable to the compiler's tool-result stage (and to the shrink guard, which left the small row alone: `src/attention-compiler.ts:545-552`).
@@ -187,6 +187,7 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
       - Tuning `fold.minBytes` down to the confirmation's size — rejected: the shrink guard still skips the row (the stub is larger), so it would prove the gate rather than the stage.
       - Duplicating the runner inside the test file to drive a big tool result — rejected: a second capture path with its own reset definition.
     - Chosen Approach: one opt-in option, one runner-owned fixture tool, and a second parallel tool call in the same round — the smallest change that puts a foldable row in history without moving the request count.
+    - Execution (2026-09-22): `foldableToolResultBytes` + private `createFoldableToolResultTool` / `PREFIX_STABILITY_BULK_TOOL_NAME`; `fixtureProvider` gained a `bulk` parameter. No new export, so `scripts/budgets.json` untouched (measured 1465 = baseline). Tests capture the runner's own wire requests through the existing `provider_request` middleware hook. Measured window: run-2 opening > 3,500 tokens pre-fold, 1,841 post-fold, so the test floor is 2,500. With 8 KiB the stub header is `Tool result prefix_stability_bulk [prefix-stability-bulk-0]: omitted 8194 bytes (sha256 …)`; the sibling 36-byte confirmation is byte-identical across the reset; one thinking block survives; the tail re-renders byte-identically; case cost 1.3–3.5 ms. Default capture: four requests, no bulk tool, no bulk id.
     - API Notes and Examples:
       ```ts
       await runPrefixStabilityConformance({
@@ -202,7 +203,7 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
       - `src/__tests__/prefix-stability-conformance.test.ts`: the tool-result fold case plus the default-capture regression.
       - `docs/prefix-stability-conformance.md`: options row, one sentence in the fold section naming both proven stages, and a note that the fixture tool is installed only for this option.
     - References:
-      - `src/attention-compiler.ts:537-561` (stage 2 and the shrink guard), `:632-667` (`toolResultTargets` eligibility), `src/tool-result-fold.ts:187,203` (`foldedToolResultHeader`, `capToolResultSummary` — the stub bytes the case asserts), `src/testing/prefix-stability-conformance.ts:188-207` (the provider to extend), plan 101 Task 2's trigger design (`docs/prefix-stability-conformance.md:96-113`).
+      - `src/attention-compiler.ts:537-551` (stage 2 and the shrink guard), `:632-668` (`toolResultTargets`), `src/tool-result-fold.ts:187,203` (`foldedToolResultHeader`, `capToolResultSummary`), `src/testing/prefix-stability-conformance.ts:188-205` (the provider to extend), plan 101 Task 2's trigger design (`docs/prefix-stability-conformance.md:96-113`). Task 1 §5(c): 36-byte confirmation is 18 vs 27 tokens (guard skips); 8 KiB is 2049 vs 31 (shrink 8071 message bytes). A 512-byte confirmation would not be skipped — the cap is not the shrink floor. §5(f): two calls still yield four requests.
   - Test Cases to Write:
     - Tool-result fold: one declared reset; the reset request contains the stub header for the bulk call id; the `load_skill` confirmation in that request equals its predecessor's bytes.
     - Stage isolation: every thinking block present before the reset is still present in the reset request; the only differing message is the stubbed one.
@@ -215,7 +216,7 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
     - `docs/index.md` update: no (existing page only).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 5: Remaining eviction-boundary rows (P3)
+- [x] Task 5: Remaining eviction-boundary rows (P3)
   - Acceptance Criteria:
     - Functional: `src/__tests__/invalidation-inventory.test.ts` pins the boundary for the three eviction groups plan 101 left behavioral, each with its cap derived from a calibration run (the file's existing pattern: assemble once with `maxInputBytes: 1_000_000`, `reportOmissions: true`, then derive the cap that drops exactly the target group — no magic constants):
       - `context`: two host context blocks with different `priority` values (`src/context-budget.ts:262`) — the cap that evicts the lower-priority block only; boundary is the message index where the context fragment first differs and the surviving block's bytes stay intact.
@@ -234,6 +235,7 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
       - Hardcoding caps that happen to evict the right group — rejected: a cap tied to the ÷4 estimator breaks silently when the estimator or the fixture text changes; the calibration derives it.
       - Asserting the whole final message list for each case — rejected: an exact list pins unrelated bytes and turns a fixture-text edit into a boundary failure.
     - Chosen Approach: extend the existing suite with one calibration-derived case per group, asserting the boundary index plus the surviving bytes, and update the one docs row.
+    - Execution (2026-09-22): three cases added, no production change, no new export. Each calibrates at `maxInputBytes: 1_000_000` then evicts with `keptBytes - 1`: context boundary **1** (low-priority block message, high-priority bytes survive), skills boundary **1** (`skill_body` demotion; `Skill big: short desc` survives, body gone), attachments boundary **2** (newest pops LIFO, older bytes survive). Omission kinds read back per case. The suite is 10 tests and ran in **6.6 ms** (plan 101's seven-case mark was ~13 ms). Docs row names the five pinned groups and points at `src/__tests__/context-budget.test.ts` for the full order.
     - API Notes and Examples:
       ```ts
       // Same shape as the shipped tool_result/history rows: calibrate, then derive the cap.
@@ -257,9 +259,9 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
     - `docs/index.md` update: no (no navigation delta).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
-- [ ] Task 6: `legacy`-layout parity rows (P3)
+- [x] Task 6: `legacy`-layout parity rows (P3)
   - Acceptance Criteria:
-    - Functional: `src/__tests__/invalidation-inventory.test.ts` gains a parity row set that assembles the same fixtures under `inputLayout: "legacy"` and asserts the documented legacy positions from `createDefaultPromptBuilder`'s legacy branch (`src/input.ts:201-204`) and `flattenInputGroups` (`:459-467`): context and skill slots lead the request and the instructions/summaries follow, so the injector-context fixture's boundary is the leading message (index 0) instead of message 2, and the summary fixture carries its summary after the context/skill/declaration slots instead of hoisted at index 1.
+    - Functional: `src/__tests__/invalidation-inventory.test.ts` gains a parity row set that assembles the same fixtures under `inputLayout: "legacy"` and asserts the documented legacy positions from `createDefaultPromptBuilder`'s legacy branch (`src/input.ts:201-203`) and `flattenInputGroups` (`:445-466`). Task 1 §5(e) measured the move: injector-context boundary is message 2 under `cache_aware` and message 1 under `legacy` (host context stays at 0; the injector block is the first difference) — not message 0. The bare summary fixture stays at message 1 in both layouts, so a parity row on it passes vacuously. The summary row must include the host context provider and a skill: measured `cache_aware` boundary 1 (hoisted) and `legacy` boundary 3 (after context, skill, and the system instruction).
     - Functional: at least two rows are pinned in both layouts from the same fixture host, so a layout change that silently relocates a boundary fails one of them; the `cache_aware` expectations stay exactly as plan 101 pinned them.
     - Functional: the docs page records that switching `inputLayout` is an explicit, documented invalidation (the whole order moves) rather than a stability claim, and the row set is named as the pin for the legacy order.
     - Performance: two extra assembly pairs on fixtures that already exist; no new session, provider, or calibration run.
@@ -273,12 +275,14 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
       - Pin only `cache_aware` and document legacy as unverified — rejected: that is today's state, and it is the gap this task exists to close.
       - Assert legacy positions in a new file — rejected: the rows are one inventory and one table.
     - Chosen Approach: parameterize the existing fixtures by layout, assert both orders in the same suite, and state the documented invalidation in the docs row.
+    - Execution (2026-09-22): the injector fixture's `contextBlockInjector` + `contextSlotAssembly` moved to module scope with a layout parameter (the shipped `cache_aware` row now calls the same builder), and `summaryWithContextAssembly(summary, layout)` is the new shared builder. Measured and pinned: injector-context boundary **2 → 1**, summary boundary **1 → 3**; both parity pairs assert the host context stays at message 0 under `legacy` and that the boundary moves on layout alone. Suite: 12 tests, 8.2 ms. No production change, no new export.
     - API Notes and Examples:
       ```ts
       const cacheAware = await assembleTwice(fixture("cache_aware", 1), fixture("cache_aware", 2));
       const legacy = await assembleTwice(fixture("legacy", 1), fixture("legacy", 2));
-      assert.equal(cacheAware.boundary.messageIndex, 2); // context slot after the stable prefix
-      assert.equal(legacy.boundary.messageIndex, 0);     // legacy leads with context, so the whole list moves
+      assert.equal(cacheAware.boundary.messageIndex, 2); // injector block after system + host context
+      assert.equal(legacy.boundary.messageIndex, 1);     // host context leads; injector block is the first difference
+      // bare summary fixture is 1 in both layouts. summary + context + skill: cache_aware 1, legacy 3
       ```
     - Files to Create/Edit:
       - `src/__tests__/invalidation-inventory.test.ts`: layout-parameterized fixtures plus the parity assertions.
@@ -286,7 +290,7 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
     - References:
       - `src/input.ts:201-212` (legacy branch and the hoist), `:445-467` (`flattenInputGroups` order), `src/__tests__/input-pipeline.test.ts` (existing layout expectations to stay consistent with).
   - Test Cases to Write:
-    - Injector-context fixture in both layouts: boundaries 2 and 0, each with the surviving bytes asserted.
+    - Injector-context fixture in both layouts: boundaries 2 and 1 (Task 1 §5(e); not 0), each with the surviving bytes asserted.
     - Summary fixture in both layouts: hoisted index under `cache_aware`, post-context/skill index under `legacy`.
     - Guard: switching only the layout (same fixture content) changes the boundary — the pair is not silently equal, so the parity rows cannot pass vacuously.
   - Documentation/Wiki Assessment:
@@ -297,7 +301,16 @@ Release: **post-0.10.0** (the 0.11.0 line), recorded from plan [101](101-Cache-S
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`.
 
 ## Compromises Made
-- To be filled after tasks are completed and tests pass.
+- **Demand gate opened by request, not by a found consumer.** Task 1 §8 found no in-repo consumer of the runner, so Tasks 2–3 were gated; the explicit task requests landed them anyway. The seam decisions from the review (one scorer, one projected gap list, no second measurement) keep them adoptable without moving code if a host appears.
+- **`ScorePrefixStabilityOptions` gained an optional `assertOn`** beyond the plan's `{ tailSegments?, minContinuity? }` sketch, so the runner can read its reset metric off the same single pass. Default is `providerPrefix`; runner results stayed byte-identical.
+- **Task 2's export count was +4, not the plan's +2** (`scorePrefixStability` plus `ScorePrefixStabilityOptions`, `PrefixStabilityResetDetail`, `PrefixStabilitySample` — the types the sketch itself exported). Recorded in `scripts/budgets.json`.
+- **Task 4's fold floor (`2_500`) is a measured scenario constant**, not a runtime-derived cap. It sits in the measured window (run-2 opening > 3,500 pre-fold, 1,841 post-fold); if the fixture host text changes, the case fails loudly with `AttentionBudgetError` instead of silently adapting.
+- **Task 6 uses measured boundaries (1 and 3), not the plan's original 0.** Task 1 §5(e) showed the host context stays at message 0 under `legacy` and the bare summary fixture is vacuous across layouts, so the summary parity row adds context and a skill.
+- **The root tarball diet check now runs** on npm 12 after the pack-JSON fix (Further Actions): `budget-gate.test.mjs` is 19/19, including the artifact-diet bound. The working-tree pack size measured +4.4% over the 0.9.0-cut baseline (inside the 5% tolerance), so no rebaseline was needed for this plan's docs edits.
 
 ## Further Actions
-- To be filled after task completion with improvements, rationale, and priority.
+- (done, 2026-09-22) **`npm pack` JSON shape.** All five readers now normalize the npm ≥11 name-keyed object: `measureRootPack` (`scripts/budget-gates.mjs`), `packedFilePaths` (`scripts/release-gates.mjs`), `getPackList` (`src/__tests__/packaging.test.ts`), `packList` and the install canary's `filename` read (`scripts/packaging-current.test.mjs`), each via `const entries = Array.isArray(parsed) ? parsed : Object.values(parsed)`. Verified: `budget-gate.test.mjs` 19/19 (was 17/19), `packaging-current.test.mjs` 40/40 (was 39/40), `dist/__tests__/packaging.test.js` 73/73. npm 11 arrays still take the array branch. Plan 109's copy of this item is retired.
+- (P3) `scripts/phase15-freeze.test.mjs` "baseline manifest count is coherent with the real filesystem" fails on the current workspace (expected 11 vs measured 9): its `manifestCount` plus the plan-054 `delta` constants no longer match `workspaceShape()` after later package changes (plans 083/105/106/107). Pre-existing and unrelated to the pack fix; rebaseline the counts or retire the 0.1.2-era leg.
+- (P3) The `summaries` and `tools` omission kinds remain behavioral-only (`src/__tests__/context-budget.test.ts`); the inventory now pins tool results, history, context, skill-body demotion, and attachments. Add boundary rows for the remaining two when the drop order or their caps change.
+- (P3) Tasks 2–3 ship a host-facing testing-subpath surface with no in-repo consumer. If none appears by the 0.11.0 cut, decide then whether to keep it as documented host API or revert it before the release.
+- (P3) `npm run build` (all workspaces) was not run for Tasks 4–6; `build:core` plus the affected root suites were. Run the full build before the 0.11.0 cut.

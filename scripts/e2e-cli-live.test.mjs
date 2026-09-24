@@ -92,9 +92,11 @@ describe(`packed-install CLI live journey (${providerId} over the real wire)`, {
     assert.match(agentSrc, new RegExp(spec.factoryExport));
     assert.match(agentSrc, new RegExp(`process\\.env\\.${spec.envKey}`), "scaffold must read the key from env, never inline it");
     // Generated offline test runs against the packed install (mock provider, no network).
+    // `node` by name: a Bun parent would make `process.execPath` a Bun child and
+    // `bun --test` is not a test runner (plan 115 Task 3).
     const test = record(
       "generated test",
-      spawnSync(process.execPath, ["--test", join("app", "src", "__tests__", "agent.test.ts")], {
+      spawnSync("node", ["--test", join("app", "src", "__tests__", "agent.test.ts")], {
         cwd: consumer,
         encoding: "utf8",
         timeout: 60_000,

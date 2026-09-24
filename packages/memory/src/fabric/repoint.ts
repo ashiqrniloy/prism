@@ -25,7 +25,7 @@ import {
   parseMemoryNoteMetadata,
 } from "./types.js";
 
-/** Mirrors the propagator's default reason; a host that passes `reason` there should pass it here. */
+/** Fallback reason for a hand-built context that carries none; the propagator's resolved reason always wins. */
 const DELETION_REASON: MemoryInvalidationReason = "forgotten";
 
 /** The `file` note a record holds, when that note is recorded against `matches`. */
@@ -52,7 +52,7 @@ function requireScopeReader(store: RepointStore): NonNullable<RepointStore["getB
 export function createFabricRepointHandler(options: {
   readonly scope: MemoryScope;
   readonly vectorStore: RepointStore & DeletionPropagationStore;
-  /** Tombstone reason for the retire leg; default `forgotten`. */
+  /** Fallback tombstone reason for a hand-built context that carries none; a propagation's own reason wins. */
   readonly reason?: MemoryInvalidationReason;
 }): RepointHandler & DeletionPropagationHandler {
   if (options === null || typeof options !== "object") throw new MemoryValidationError("createFabricRepointHandler requires options");
@@ -115,7 +115,7 @@ export function createFabricRepointHandler(options: {
     },
 
     /** Path deleted: tombstone the notes recorded against it, through the store's invalidation path. */
-    async delete({ ids, scope: callerScope, signal }: DeletionPropagationContext) {
+    async delete({ ids, scope: callerScope, reason: contextReason, signal }: DeletionPropagationContext) {
       assertCallerScope(callerScope, "deletion");
       assertNotAborted(signal);
       const invalidate = store.invalidate;
@@ -125,12 +125,14 @@ export function createFabricRepointHandler(options: {
       const paths = new Set(ids);
       const selected = await selectedNotes((path) => paths.has(path), signal);
       if (selected.length === 0) return 0;
+      /** The propagator's reason is the first source; a hand-built context falls back to the handler's option. */
+      const effectiveReason = contextReason ?? reason;
       const at = new Date().toISOString();
       const entries = selected.map(({ record }) => ({
         id: record.id,
-        reason,
+        reason: effectiveReason,
         at,
-        ...(reason === "legal_hold" ? { hold: true as const } : {}),
+        ...(effectiveReason === "legal_hold" ? { hold: true as const } : {}),
       }));
       const write = async (target: VectorStore): Promise<void> => {
         const writeTarget = target.invalidate;

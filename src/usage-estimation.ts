@@ -26,16 +26,22 @@ export interface ModelFamilyTokens {
   readonly confidence: TokenEstimateConfidence;
 }
 
-/** Per-family chars/token tables (plan 091 Task 1). Estimates only, never billing. */
-export const MODEL_FAMILY_TOKENS: Readonly<Record<ModelFamily, ModelFamilyTokens>> = {
-  anthropic: { charsPerToken: 3.7, perMessageOverhead: 4, confidence: "medium" },
-  openai: { charsPerToken: 5.0, perMessageOverhead: 3, confidence: "medium" },
-  google: { charsPerToken: 3.9, perMessageOverhead: 4, confidence: "medium" },
-  deepseek: { charsPerToken: 3.8, perMessageOverhead: 4, confidence: "medium" },
-  "openrouter-generic": { charsPerToken: 4.4, perMessageOverhead: 4, confidence: "medium" },
-  mistral: { charsPerToken: 3.9, perMessageOverhead: 3, confidence: "medium" },
-  unknown: { charsPerToken: 3.5, perMessageOverhead: 6, confidence: "low" },
-};
+/** Per-family chars/token tables (plan 091 Task 1). Estimates only, never billing.
+ *
+ * Deep-frozen — each row, then the table. `Readonly<Record<…>>` is compile-time only, and a
+ * runtime write to a nested row silently changes token accounting: an under-counted input
+ * estimate is what `maxInputTokens`/`maxCost` are checked against, and a replaced row makes the
+ * estimate `NaN`, which compares false. Recalibration is a source change plus the live calibration
+ * leg (`scripts/usage-calibration-live.test.mjs`), never a runtime override. */
+export const MODEL_FAMILY_TOKENS: Readonly<Record<ModelFamily, ModelFamilyTokens>> = Object.freeze({
+  anthropic: Object.freeze({ charsPerToken: 3.7, perMessageOverhead: 4, confidence: "medium" }),
+  openai: Object.freeze({ charsPerToken: 5.0, perMessageOverhead: 3, confidence: "medium" }),
+  google: Object.freeze({ charsPerToken: 3.9, perMessageOverhead: 4, confidence: "medium" }),
+  deepseek: Object.freeze({ charsPerToken: 3.8, perMessageOverhead: 4, confidence: "medium" }),
+  "openrouter-generic": Object.freeze({ charsPerToken: 4.4, perMessageOverhead: 4, confidence: "medium" }),
+  mistral: Object.freeze({ charsPerToken: 3.9, perMessageOverhead: 3, confidence: "medium" }),
+  unknown: Object.freeze({ charsPerToken: 3.5, perMessageOverhead: 6, confidence: "low" }),
+});
 
 /** Model-id patterns per family. Family names themselves also resolve (see `resolveModelFamily`). */
 const FAMILY_PATTERNS: readonly (readonly [ModelFamily, RegExp])[] = [

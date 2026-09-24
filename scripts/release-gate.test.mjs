@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import { loadRelease, publishArgs, satisfiesInternalRange } from "./release.mjs";
+import { loadRelease, publishArgs, satisfiesInternalRange, validateRelease } from "./release.mjs";
+import { parseBunLock } from "./bun-lock.mjs";
 import {
+  BASELINE_DIR,
   assertTarballAllowDeny,
   baselineName,
   diffSurface,
@@ -42,15 +44,25 @@ function lockstepFixture({ range = "^0.5.7" } = {}) {
     };
     writeFileSync(join(dir, path, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   }
-  const lock = {
-    lockfileVersion: 3,
-    packages: Object.fromEntries(manifests.map(({ path }) => [path === "." ? "" : path, { version: "0.5.7" }])),
-  };
-  writeFileSync(join(dir, "package-lock.json"), `${JSON.stringify(lock, null, 2)}\n`);
+  const workspaces = manifests.map(({ path, name }) => {
+    const key = path === "." ? "" : path;
+    const entry = { name, ...(path === "." ? {} : { version: "0.5.7" }) };
+    return `    ${JSON.stringify(key)}: ${JSON.stringify(entry)},`;
+  });
+  // Real bun.lock is JSONC-shaped: trailing commas, root entry without a version.
+  writeFileSync(join(dir, "bun.lock"), `{\n  "lockfileVersion": 2,\n  "workspaces": {\n${workspaces.join("\n")}\n  },\n}\n`);
   return { dir, release: loadRelease(dir) };
 }
 
 describe("release gates", () => {
+  it("bun.lock reader strips trailing commas without eating commas inside strings", () => {
+    const text =
+      '{\n  "lockfileVersion": 2,\n  "packages": {\n    "better-sqlite3@13.0.3": ["better-sqlite3@13.0.3", "", {}, "sha512-a,b,c"],\n  },\n  "workspaces": {\n    "": { "name": "@arnilo/prism" },\n    "packages/core": { "name": "@arnilo/prism-core", "version": "0.5.7" },\n  },\n}\n';
+    const lock = parseBunLock(text);
+    assert.equal(lock.packages["better-sqlite3@13.0.3"][3], "sha512-a,b,c", "comma inside a string must survive");
+    assert.equal(lock.workspaces[""].version, undefined, "root entry has no version");
+    assert.equal(lock.workspaces["packages/core"].version, "0.5.7");
+  });
   it("parses local declarations, re-exports, star exports, and default", () => {
     const dir = fixture();
     writeFileSync(
@@ -145,6 +157,17 @@ export * as ns from "./mod.js";
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it("lockfile drift is reported: workspace version mismatch and a missing path", () => {
+    const { dir, release } = lockstepFixture();
+    const lockPath = join(dir, "bun.lock");
+    const original = readFileSync(lockPath, "utf8");
+    writeFileSync(lockPath, original.replace('"version":"0.5.7"', '"version":"0.5.6"'));
+    assert.throws(() => validateRelease(release, "0.5.7"), /bun\.lock packages\/core version is 0\.5\.6, expected 0\.5\.7/);
+    writeFileSync(lockPath, original.replace('    "packages/core": {"name":"@arnilo/prism-core","version":"0.5.7"},\n', ""));
+    assert.throws(() => validateRelease(release, "0.5.7"), /bun\.lock missing packages\/core/);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   it("lockstep range gate accepts exact and caret pins at the cut version", () => {
     const exact = lockstepFixture({ range: "0.5.7" });
     assert.deepEqual(runGates({ release: exact.release, version: "0.5.7", skipTarball: true }), {
@@ -169,5 +192,33 @@ export * as ns from "./mod.js";
       /ranges: @arnilo\/prism peerDependencies\.@arnilo\/prism-core is \^0\.5\.5, expected 0\.5\.7[\s\S]*@arnilo\/prism-memory peerDependencies\.@arnilo\/prism is \^0\.5\.5, expected 0\.5\.7/,
     );
     rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("compat baselines are current for every package with a built dist/", () => {
+    // The release gate's compat leg, runnable without the coverage-evidence preflight
+    // (`node scripts/release.mjs gate` stops at checkReleaseEvidence before reaching it).
+    // A stale baseline is a red gate, so this suite fails here rather than at release time.
+    const release = loadRelease(join(import.meta.dirname, ".."));
+    const stale = [];
+    for (const pkg of release.packages) {
+      const distDir = join(release.root, pkg.path, "dist");
+      if (!existsSync(distDir)) continue; // manifest-only profiles ship no code
+      const baselinePath = join(release.root, BASELINE_DIR, baselineName(pkg.manifest.name));
+      const diff = diffSurface(extractDeclaredSurface(distDir), parseSurface(readFileSync(baselinePath, "utf8")));
+      if (!diff.removed.length && !diff.changed.length) continue;
+      stale.push(
+        `${pkg.manifest.name} ${[
+          diff.removed.length ? `removed: ${diff.removed.join(", ")}` : "",
+          diff.changed.length ? `changed: ${diff.changed.join(", ")}` : "",
+        ]
+          .filter(Boolean)
+          .join("; ")}`,
+      );
+    }
+    assert.equal(
+      stale.length,
+      0,
+      `compat baseline stale — review the removals against their owning plans, then run\n  node scripts/release.mjs gate --version <line> --update-baseline\n${stale.join("\n")}`,
+    );
   });
 });

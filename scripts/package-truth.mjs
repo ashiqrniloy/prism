@@ -100,6 +100,17 @@ export function workspaceShape(rootDir = DEFAULT_ROOT) {
   return { dirs, names, providerDirs, prismDirs, capabilityDirs };
 }
 
+// Plan 120 Task 8. Presence of a workspace package (directory + package.json).
+// Counts a future package; never excludes one. Cached per root for the process.
+const packageCountCache = new Map();
+export function workspacePackageCounts(rootDir = DEFAULT_ROOT) {
+  const cached = packageCountCache.get(rootDir);
+  if (cached) return cached;
+  const counts = new Set(workspaceShape(rootDir).names);
+  packageCountCache.set(rootDir, counts);
+  return counts;
+}
+
 // Plan 071 Task 1 (plan 070 FA 10): the one source for the release version. The
 // root manifest is what `release.mjs bump` rewrites first, so tests and scripts
 // read it instead of hardcoding the cut version (`scripts/version-literal-gate.test.mjs`
@@ -188,8 +199,7 @@ const flag = (name) => {
 // package without a note renders with its kind label.
 export const PACKAGE_NOTES = {
   "@arnilo/prism": "core — runtime, CLI/RPC, templates, docs",
-  "@arnilo/prism-coding-tools":
-    "family — /agent, /security, /openapi, /computer-use-linux, /dev, /impeccable subpaths",
+  "@arnilo/prism-coding-tools": "family — /agent, /security, /openapi, /computer-use-linux, /dev, /impeccable subpaths",
   "@arnilo/prism-channels":
     "family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal",
   "@arnilo/prism-core": "family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths",

@@ -95,16 +95,71 @@ describe("tooling gates fail on violations", () => {
     assert.match(readFileSync(`${basePath}/ddl.ts`, "utf8"), /CREATE SCHEMA/);
   });
 
+  // Plan 115 Task 3: a spawn that carries a Node-only flag (`--test`, `--test-isolation`,
+  // `--experimental-test-coverage`) must run `node` by name — under a Bun parent
+  // `process.execPath` is a Bun child, and `bun --test` is a script run, not a test runner.
+  // Runner-agnostic spawns (`-e` snippets, CLI paths) keep `process.execPath` on purpose:
+  // Bun's `-e` exists, which is why the root `bun test` run works.
+  it("node-only spawns use `node` by name, not process.execPath", () => {
+    const NODE_ONLY = /--test\b|--test-isolation|--experimental-test-coverage/;
+    // The flags sit in the spawn's argument list, so scan from the command to the end of its
+    // statement. ponytail: lexical, not an AST — a flag hidden behind a spread constant is
+    // caught by review, not here.
+    const violations = (source) =>
+      [...source.matchAll(/(?:spawn|spawnSync|execFile|execFileSync|run)\s*\(\s*process\.execPath/g)]
+        // Skip matches inside a template literal (this file's own fixture strings).
+        .filter((match) => {
+          const before = source.slice(source.lastIndexOf("\n", match.index) + 1, match.index);
+          return (before.match(/`/g) ?? []).length % 2 === 0;
+        })
+        .map((match) => source.slice(match.index).split(";")[0].slice(0, 500))
+        .filter((statement) => NODE_ONLY.test(statement));
+    for (const ok of [
+      `spawnSync(process.execPath, ["-e", "1"]);`,
+      `spawnSync(process.execPath, [cli, "--provider", id, "--mode", "rpc"]);`,
+      `const child = spawn(process.execPath, [FIXTURE], { stdio: ["pipe", "pipe", "pipe"] });`,
+      `run(\n  process.execPath,\n  [join("scripts", "with-build-lock.mjs"), ...args],\n);`,
+      `spawnSync("node", ["--test", file]);`,
+    ]) {
+      assert.deepEqual(violations(ok), [], `runner-agnostic spawn must pass the scan: ${ok}`);
+    }
+    for (const bad of [
+      `spawnSync(process.execPath, ["--test", file]);`,
+      `spawn(process.execPath, [LOCK, "node", "--test", IMPORTER]);`,
+      `run(process.execPath, ["--test-isolation=none", glob]);`,
+      `spawnSync(process.execPath, ["--experimental-test-coverage", ...args]);`,
+      `spawn(\n  process.execPath,\n  ["--test", file],\n);`,
+    ]) {
+      assert.ok(violations(bad).length > 0, `Node-only spawn through process.execPath must fail the scan: ${bad}`);
+    }
+    const files = [];
+    const walk = (dir) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (["node_modules", "dist", ".git", "coverage"].includes(entry.name)) continue;
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(?:mjs|js|ts|tsx)$/.test(entry.name)) files.push(full);
+      }
+    };
+    for (const root of ["src", "scripts", "packages"]) walk(root);
+    const offenders = files.flatMap((file) =>
+      violations(readFileSync(file, "utf8")).map((statement) => `${file}: ${statement.split("\n")[0]}`),
+    );
+    assert.deepEqual(offenders, [], `Node-only spawns must use "node" by name: ${offenders.join(" | ")}`);
+  });
+
   it("coverage thresholds and gates are wired into package scripts", () => {
     const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts;
-    for (const flag of [
-      "--experimental-test-coverage",
-      "--test-coverage-lines=",
-      "--test-coverage-functions=",
-      "--test-coverage-branches=",
-    ]) {
+    for (const flag of ["bun test --coverage", "--timeout=0"]) {
       assert.ok(scripts["test:coverage"].includes(flag), `test:coverage missing ${flag}`);
     }
+    assert.ok(!scripts["test:coverage"].includes("--experimental-test-coverage"), "test:coverage must not keep the Node instrument");
+    // Floors are data now (core + per-package rows), not flags in the script.
+    const thresholds = JSON.parse(readFileSync("scripts/coverage-thresholds.json", "utf8"));
+    assert.ok(
+      Number.isFinite(thresholds.core?.lines) && Number.isFinite(thresholds.core?.functions),
+      "coverage-thresholds.json must carry the Bun-measured core floors",
+    );
     for (const gate of ["npm run lint", "npm run format:check", "npm run test:coverage"]) {
       assert.ok(scripts["sdk:ready"].includes(gate), `sdk:ready missing ${gate}`);
     }

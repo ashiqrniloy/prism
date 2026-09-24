@@ -301,6 +301,7 @@ describe("nested-agent approval propagation", () => {
     assert.equal(first.status, "suspended");
     const pending = first.interruption!.pendingDecisions!;
     assert.equal(pending.length, 2);
+    assert.equal(first.interruption?.reason, "2 approval request(s) need a decision");
 
     const partial = await resumeAgentRun(
       root,
@@ -309,6 +310,7 @@ describe("nested-agent approval propagation", () => {
       runState,
     );
     assert.equal(partial.status, "suspended");
+    assert.equal(partial.interruption?.reason, "1 approval request(s) remain");
     assert.equal(partial.interruption?.pendingDecisions?.length, 1);
     assert.equal(partial.interruption?.pendingDecisions?.[0]?.approvalId, pending[1]!.approvalId);
     assert.equal(executed.length, 0);

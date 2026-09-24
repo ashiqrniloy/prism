@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { estimateMessageTokens, type Message, MODEL_FAMILY_TOKENS, type ModelFamily, resolveModelFamily } from "../index.js";
+// Module-private by design (not re-exported from the root barrel): the text-only projection the
+// freeze pins, and the seam the plan 103 calibration bands compare against.
+import { estimateTextTokensForFamily } from "../usage-estimation.js";
 
 // Plan 091 Task 1. Reference token counts are measured with tiktoken's
 // `o200k_base` (dev-time oracle; no tokenizer dependency ships and no tokenizer
@@ -129,5 +132,44 @@ describe("usage estimation (plan 091 Task 1)", () => {
     assert.ok(estimate.tokens > 0);
     // ponytail: generous wall-clock envelope to avoid CI flake; catches only gross regressions (task target: <0.1ms/100k).
     assert.ok(elapsedMs < 100, `100k-char estimate took ${elapsedMs}ms`);
+  });
+
+  // Plan 112 T2: the table is deep-frozen. The per-row freeze is load-bearing: the plan 112
+  // review measured (docs/_evidence/phase112-primitive-review.md §4.2) that a table-level
+  // `Object.freeze` alone still lets `MODEL_FAMILY_TOKENS.anthropic.charsPerToken = 99` land and
+  // turns a 370-char estimate from 100 into 4, so dropping one row's `Object.freeze` must fail
+  // this suite. A freeze that is only declared `Readonly` is not a runtime guarantee.
+  it("freezes the table and every row — a runtime write cannot change token accounting", () => {
+    const before = estimateTextTokensForFamily("x".repeat(370), "claude-sonnet-4-5");
+    assert.equal(before, 100, "pinned estimate for the mutation fixture");
+    assert.equal(Object.isFrozen(MODEL_FAMILY_TOKENS), true, "the table must be frozen");
+    for (const [family, row] of Object.entries(MODEL_FAMILY_TOKENS)) {
+      assert.equal(Object.isFrozen(row), true, `${family} row must be frozen — the table freeze alone leaves rows writable`);
+    }
+
+    assert.throws(() => {
+      (MODEL_FAMILY_TOKENS.anthropic as { charsPerToken: number }).charsPerToken = 99;
+    }, TypeError);
+    assert.equal(Reflect.set(MODEL_FAMILY_TOKENS.anthropic, "charsPerToken", 99), false);
+    assert.equal(Reflect.set(MODEL_FAMILY_TOKENS, "anthropic", {}), false, "a whole-row replacement must not land");
+    assert.equal(estimateTextTokensForFamily("x".repeat(370), "claude-sonnet-4-5"), before, "a failed write leaves the estimate intact");
+  });
+
+  it("pins the estimator's per-family output so the freeze cannot hide a ratio edit", () => {
+    // Captured before the plan 112 T2 freeze (docs/_evidence/phase112-primitive-review.md §4.7).
+    const pinned: Readonly<Record<ModelFamily, readonly [prose: number, code: number, cjk: number]>> = {
+      anthropic: [63, 28, 24],
+      openai: [47, 21, 24],
+      google: [60, 27, 24],
+      deepseek: [62, 27, 24],
+      "openrouter-generic": [53, 24, 24],
+      mistral: [60, 27, 24],
+      unknown: [67, 30, 24],
+    };
+    for (const [family, [prose, code, cjk]] of Object.entries(pinned)) {
+      assert.equal(estimateTextTokensForFamily(PROSE, family), prose, `${family} prose`);
+      assert.equal(estimateTextTokensForFamily(FENCED_CODE, family), code, `${family} fenced code`);
+      assert.equal(estimateTextTokensForFamily(CJK, family), cjk, `${family} CJK`);
+    }
   });
 });

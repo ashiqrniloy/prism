@@ -32,7 +32,7 @@ import { createJsonlSessionStore } from "@arnilo/prism/node/session-store-jsonl"
 
 `createJsonlSessionStore()` returns a `SessionStore`:
 
-- `append(entry, options?)` appends one JSON line, rejects duplicate entry ids, honors `expectedParentId` existence checks, and deduplicates exact idempotency retries within this store instance. Append **fails closed** when the file already contains any corrupt or shape-invalid line (`Invalid JSONL at line N: …`) so writers cannot extend a damaged log.
+- `append(entry, options?)` appends one JSON line, rejects duplicate entry ids, honors `expectedParentId` existence checks, and deduplicates exact idempotency retries within this store instance (latest 4,096 keys; an older replay appends as a new entry). Append **fails closed** when the file already contains any corrupt or shape-invalid line (`Invalid JSONL at line N: …`) so writers cannot extend a damaged log.
 - `list(sessionId)` reads the file and returns valid entries for that session id. Corrupt or shape-invalid lines are skipped; they do not poison the whole file.
 - `get(id)` reads the file and returns the matching valid entry, if any.
 - `searchSessions(query)` reads the file and runs the shared linear session matcher. Corrupt or shape-invalid lines are quarantined exactly as in `list()`/`get()`, the contract linear caps bound sessions/entries/bytes scanned, and hits carry the same shape as the indexed adapters (`sessionId`, `leafId`, `entryId`, `runId`, `turn`, `snippet`) — without `score`, since a linear scan has no index relevance.
@@ -77,8 +77,9 @@ Use `createMemorySessionStore()` for tests or throwaway sessions; use the JSONL 
 - Reads and writes use only the caller-provided path.
 - Errors include path/reason or line number, not file contents.
 - Do not put secrets in messages, metadata, summaries, labels, or custom entries.
-- Reads are linear in file size. Appends also re-read and re-parse the whole file for duplicate/parent/corruption checks before writing one line, and are serialized per store instance. A rejected append does not poison later appends; the rejected line is not written.
-- `searchSessions` is linear in file size too (there is no index): every query reads and parses the whole file before the capped scan, so latency and peak memory grow with the corpus. Use a SQLite/Postgres `SessionStore` when search latency matters, and treat search here as resume/filter tooling on small stores.
+- Each store instance caches the parsed array keyed by `(size, mtimeMs)`. A stat match reuses it; a stat miss re-reads. Reads are linear in file size on a miss. `append()` refreshes the cache after a successful write so the next `list()` / `snapshot()` does not re-parse. A same-size rewrite inside one filesystem timestamp tick is not detected. `readJsonlSessionEntries()` does not use this cache.
+- Appends still re-read and re-parse the whole file for duplicate/parent/corruption checks before writing one line, and are serialized per store instance. A rejected append does not poison later appends; the rejected line is not written.
+- `searchSessions` has no index. A cache hit reuses the parsed array; a miss reads and parses the whole file before the capped scan, so latency and peak memory still grow with the corpus. Use a SQLite/Postgres `SessionStore` when search latency matters, and treat search here as resume/filter tooling on small stores.
 - There is no cross-process lock or durable idempotency table; two processes writing the same file can race. Add a database or external lock if multiple processes write the same file.
 - Treat this adapter as development/single-process storage. Production multi-writer hosts should use an indexed database `SessionStore` adapter.
 

@@ -8,20 +8,33 @@
 // PRISM_BUILD_LOCK_HELD=1 is exported to the child as a non-nesting guard: if a wrapped leaf
 // ever spawns another wrapped leaf, the grandchild skips acquisition (already inside the
 // critical section).
+//
+// Reader mode (plan 115 Task 2): `--shared` takes a shared reader slot instead of the
+// exclusive lockfile — test leaves read dist/, so they may overlap each other, while tsc
+// keeps the default exclusive mode and excludes every reader. A reader registers
+// node_modules/.prism-build.lock.readers/<pid> BEFORE checking the lockfile, and an
+// exclusive acquirer drains that directory AFTER taking the lockfile, so a reader that
+// runs while a writer holds the lock is impossible: the reader either sees the lockfile
+// (backs off) or its marker predates the writer's drain (the writer waits). Dead reader
+// pids are reclaimed exactly like dead lockfile holders.
 import { spawnSync } from "node:child_process";
-import { openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const LOCK = join(ROOT, "node_modules", ".prism-build.lock");
+const READERS = `${LOCK}.readers`; // shared-reader markers: <pid> <timestamp>, one file per reader
+const READER_MARKER = join(READERS, String(process.pid));
 const TIMEOUT_MS = Number(process.env.PRISM_BUILD_LOCK_TIMEOUT_MS ?? 120_000);
 const RETRY_MS = 100;
 const UNPARSEABLE_GRACE_MS = 1_000; // empty/unparseable lock: give the writer 1s, then reclaim
 
-const [cmd, ...args] = process.argv.slice(2);
+const argv = process.argv.slice(2);
+const shared = argv[0] === "--shared"; // reader mode: test leaves overlap each other
+const [cmd, ...args] = shared ? argv.slice(1) : argv;
 if (!cmd) {
-  console.error("with-build-lock: usage: with-build-lock.mjs <command> [args...]");
+  console.error("with-build-lock: usage: with-build-lock.mjs [--shared] <command> [args...]");
   process.exit(2);
 }
 
@@ -123,6 +136,109 @@ function release() {
   }
 }
 
+/** Take a shared reader slot. Returns once no writer holds the exclusive lockfile. */
+async function acquireShared() {
+  const deadline = Date.now() + TIMEOUT_MS;
+  try {
+    mkdirSync(READERS, { recursive: true });
+  } catch (err) {
+    throw new Error(`cannot create reader directory ${READERS}: ${err.message}`);
+  }
+  for (;;) {
+    try {
+      // Register BEFORE checking the lockfile: a writer that acquires in between
+      // sees this marker in its drain and waits for us.
+      writeFileSync(READER_MARKER, `${process.pid} ${Date.now()}\n`);
+    } catch (err) {
+      throw new Error(`cannot write reader marker ${READER_MARKER}: ${err.message}`);
+    }
+    let writer;
+    try {
+      if (existsSync(LOCK)) writer = readHolderPid() ?? "unknown";
+    } catch {
+      // lockfile vanished between check and read: no writer
+    }
+    if (writer === undefined) return;
+    try {
+      unlinkSync(READER_MARKER); // wait without blocking the writer's drain
+    } catch {
+      // already gone
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(`build lock timeout after ${TIMEOUT_MS}ms waiting for writer pid ${writer}`);
+    }
+    await sleep(RETRY_MS);
+  }
+}
+
+function releaseShared() {
+  try {
+    unlinkSync(READER_MARKER);
+  } catch {
+    // already gone — fine
+  }
+}
+
+/** Live reader pids, reclaiming markers whose holder is dead (or stale-unparseable). */
+function liveReaders() {
+  let entries;
+  try {
+    entries = readdirSync(READERS);
+  } catch {
+    return []; // no readers dir yet
+  }
+  const live = [];
+  for (const entry of entries) {
+    const path = join(READERS, entry);
+    let content;
+    try {
+      content = readFileSync(path, "utf8");
+    } catch {
+      continue; // released between readdir and read
+    }
+    const pid = Number(String(content).trim().split(/\s+/)[0]);
+    if (Number.isInteger(pid) && pid > 0) {
+      if (isAlive(pid)) {
+        live.push(pid);
+        continue;
+      }
+    } else {
+      // Mid-write or abandoned: same grace as the writer lockfile.
+      const stat = statSync(path, { throwIfNoEntry: false });
+      if (stat && Date.now() - stat.mtimeMs < UNPARSEABLE_GRACE_MS) {
+        live.push("unknown");
+        continue;
+      }
+    }
+    // Dead pid (or stale unparseable marker): steal via a unique tombstone — no
+    // read-then-unlink pair on the shared path (CodeQL js/file-system-race).
+    const tombstone = `${path}.reclaim-${process.pid}-${Date.now()}`;
+    try {
+      renameSync(path, tombstone);
+      unlinkSync(tombstone);
+    } catch {
+      // vanished or concurrently reclaimed — rescan
+    }
+  }
+  return live;
+}
+
+/** A writer holds the exclusive lockfile and waits here until every reader has drained. */
+async function drainReaders() {
+  const deadline = Date.now() + TIMEOUT_MS;
+  for (;;) {
+    const live = liveReaders();
+    if (live.length === 0) return;
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `build lock timeout after ${TIMEOUT_MS}ms waiting for ${live.length} shared reader(s) ` +
+          `(pids ${live.join(", ")}); a stale reader marker is reclaimed only when its pid is dead`,
+      );
+    }
+    await sleep(RETRY_MS);
+  }
+}
+
 function runChild() {
   // NODE_TEST_* env leaks from a test-worker parent would make nested `node --test`
   // runs skip everything ("recursively within a test file"); strip it.
@@ -144,7 +260,12 @@ if (process.env.PRISM_BUILD_LOCK_HELD) {
   runChild();
 } else {
   try {
-    await acquire();
+    if (shared) {
+      await acquireShared();
+    } else {
+      await acquire();
+      await drainReaders(); // readers registered before our lockfile are waited for here
+    }
   } catch (err) {
     console.error(`with-build-lock: ${err.message}`);
     process.exit(1); // fail-closed: never proceed to emit/consume without the lock
@@ -152,6 +273,7 @@ if (process.env.PRISM_BUILD_LOCK_HELD) {
   try {
     runChild();
   } finally {
-    release();
+    if (shared) releaseShared();
+    else release();
   }
 }

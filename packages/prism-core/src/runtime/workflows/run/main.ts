@@ -267,7 +267,7 @@ export async function resumeWorkflow(
           ...(record.value.metadata ? { metadata: record.value.metadata } : {}),
           checkpoint: record,
         },
-        { timeoutMs: options.restoreHookTimeoutMs, signal: options.signal },
+        { timeoutMs: options.restoreHookTimeoutMs, signal: options.signal, redactor: options.redactor },
       )
     : undefined;
 

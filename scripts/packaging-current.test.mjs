@@ -41,7 +41,10 @@ function packList(dir, name) {
   if (cached) return cached;
   const result = spawnSync("npm", ["pack", "--dry-run", "--json"], { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   assert.equal(result.status, 0, `npm pack --dry-run failed for ${name}: ${result.stderr}`);
-  const files = JSON.parse(result.stdout)[0].files.map((f) => f.path);
+  // npm 12 emits an object keyed by package name; npm 11 and earlier emitted an array of entries.
+  const parsed = JSON.parse(result.stdout);
+  const entries = Array.isArray(parsed) ? parsed : Object.values(parsed);
+  const files = (entries[0]?.files ?? []).map((f) => f.path);
   packCache.set(dir, files);
   return files;
 }
@@ -108,7 +111,10 @@ test("install canary: root tarball installs offline and its exports resolve", as
       stdio: ["ignore", "pipe", "ignore"],
     });
     assert.equal(pack.status, 0, `npm pack failed for ${rootManifest.name}`);
-    const tarball = join(dir, JSON.parse(pack.stdout)[0].filename);
+    // npm 12 emits an object keyed by package name; npm 11 and earlier emitted an array of entries.
+    const packed = JSON.parse(pack.stdout);
+    const [packedEntry] = Array.isArray(packed) ? packed : Object.values(packed);
+    const tarball = join(dir, packedEntry.filename);
 
     writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "consumer", private: true }));
     const install = spawnSync("npm", ["install", "--offline", "--no-audit", "--no-fund", tarball], {

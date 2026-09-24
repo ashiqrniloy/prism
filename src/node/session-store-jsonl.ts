@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, stat } from "node:fs/promises";
 import { dirname } from "node:path";
 import {
   isSessionEntryKind,
@@ -12,6 +12,16 @@ import {
 } from "../contracts.js";
 import { searchLinearSessions } from "../session-stores.js";
 import { isNodeErrorCode } from "./config.js";
+
+const IDEMPOTENCY_SEEN_MAX = 4_096;
+
+function rememberIdempotencyKey(seen: Set<string>, key: string): void {
+  if (seen.size >= IDEMPOTENCY_SEEN_MAX) {
+    const oldest = seen.values().next().value;
+    if (oldest !== undefined) seen.delete(oldest);
+  }
+  seen.add(key);
+}
 
 export interface JsonlSessionStoreOptions {
   readonly path: string;
@@ -29,6 +39,9 @@ export interface SessionEntryReadResult {
   readonly errors: SessionEntryParseError[];
 }
 
+/** Test-only read counter on the store instance. Not a SessionStore field. */
+const JSONL_FILE_READS = Symbol.for("prism.jsonl.fileReads");
+
 export function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStoreOptions): SessionStore {
   const options = typeof pathOrOptions === "string" ? { path: pathOrOptions, createDirectory: true } : pathOrOptions;
   const path = options.path;
@@ -39,14 +52,48 @@ export function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStor
   // lock). The expectedParentId/idempotency guards below mirror the memory store;
   // a DB adapter enforces them via a conditional transaction + unique index.
   const idempotencySeen = new Set<string>();
+  // ponytail: cache key is (size, mtimeMs). A same-size rewrite inside one filesystem
+  // timestamp tick is invisible. Upgrade: hash the file. Post-write size !== prior
+  // size + bytes written already drops the cache so the next read re-parses.
+  let cache: { size: number; mtimeMs: number; entries: SessionEntry[] } | undefined;
+  let fileReads = 0;
 
-  return {
+  async function readParsed(): Promise<SessionEntryReadResult> {
+    fileReads++;
+    return readJsonlSessionEntries(path);
+  }
+
+  async function readEntries(): Promise<SessionEntry[]> {
+    let st: { size: number; mtimeMs: number };
+    try {
+      const info = await stat(path);
+      st = { size: info.size, mtimeMs: info.mtimeMs };
+    } catch (error) {
+      if (isNodeErrorCode(error, "ENOENT")) {
+        cache = undefined;
+        return [];
+      }
+      throw new Error(`Failed to read session store ${path}: ${errorMessage(error)}`);
+    }
+    if (cache && cache.size === st.size && cache.mtimeMs === st.mtimeMs) return cache.entries;
+    const result = await readParsed();
+    cache = { size: st.size, mtimeMs: st.mtimeMs, entries: result.entries };
+    return result.entries;
+  }
+
+  const store: SessionStore = {
     append(entry, appendOptions) {
       const operation = appendChain
         .catch(() => undefined)
         .then(async () => {
           if (options.createDirectory !== false) await mkdir(dirname(path), { recursive: true });
-          const readResult = await readJsonlSessionEntries(path);
+          let beforeSize = 0;
+          try {
+            beforeSize = (await stat(path)).size;
+          } catch (error) {
+            if (!isNodeErrorCode(error, "ENOENT")) throw error;
+          }
+          const readResult = await readParsed();
           if (readResult.errors.length > 0) {
             const first = readResult.errors[0]!;
             throw new Error(`Invalid JSONL at line ${first.line}: ${first.message}`);
@@ -65,23 +112,29 @@ export function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStor
             throw new SessionAppendConflictError({ code: SESSION_APPEND_CONFLICT_CODE, expectedParentId: appendOptions.expectedParentId });
           }
           if (entries.some((existing) => existing.id === entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
-          if (dedupKey !== undefined) idempotencySeen.add(dedupKey);
-          await appendFile(path, `${JSON.stringify(entry)}\n`, "utf8");
+          if (dedupKey !== undefined) rememberIdempotencyKey(idempotencySeen, dedupKey);
+          const line = `${JSON.stringify(entry)}\n`;
+          await appendFile(path, line, "utf8");
+          const info = await stat(path);
+          if (info.size === beforeSize + Buffer.byteLength(line)) {
+            cache = { size: info.size, mtimeMs: info.mtimeMs, entries: entries.concat(entry) };
+          } else {
+            cache = undefined;
+          }
         });
       appendChain = operation.catch(() => undefined);
       return operation;
     },
     async list(sessionId) {
-      return (await readEntries(path)).filter((entry) => entry.sessionId === sessionId);
+      return (await readEntries()).filter((entry) => entry.sessionId === sessionId);
     },
     async get(id) {
-      return findEntry(path, id);
+      return (await readEntries()).find((entry) => entry.id === id);
     },
     async searchSessions(query) {
-      // ponytail: no index - every search reads and parses the file (O(corpus) time and memory), the
-      // recommended indexed paths are the SQLite/Postgres adapters. Corrupt lines are quarantined
-      // exactly as in list()/get(), and the contract linear caps bound entries/text scanned.
-      const { entries } = await readJsonlSessionEntries(path);
+      // ponytail: no index. Cache miss still reads and parses the file (O(corpus)); hit reuses the
+      // parsed array. Indexed path is SQLite/Postgres. Corrupt lines stay quarantined like list()/get().
+      const entries = await readEntries();
       const bySession = new Map<string, SessionEntry[]>();
       const leafBySession = new Map<string, string>();
       for (const entry of entries) {
@@ -93,6 +146,8 @@ export function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStor
       return searchLinearSessions(bySession, leafBySession, query);
     },
   };
+  Object.defineProperty(store, JSONL_FILE_READS, { get: () => fileReads });
+  return store;
 }
 
 /** Read a JSONL session file and return both valid entries and per-line parse errors. */
@@ -116,14 +171,6 @@ export async function readJsonlSessionEntries(path: string): Promise<SessionEntr
     }
   }
   return { entries, errors };
-}
-
-async function findEntry(path: string, id: string): Promise<SessionEntry | undefined> {
-  return (await readEntries(path)).find((entry) => entry.id === id);
-}
-
-async function readEntries(path: string): Promise<SessionEntry[]> {
-  return (await readJsonlSessionEntries(path)).entries;
 }
 
 function parseEntry(line: string, lineNumber: number): { ok: true; entry: SessionEntry } | { ok: false; error: SessionEntryParseError } {

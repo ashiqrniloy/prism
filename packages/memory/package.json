@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-memory",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Memory and context family for Prism: working/semantic memory, RAG, compaction strategies, and Wiki with bundled skills.",
   "type": "module",
   "main": "./dist/index.js",
@@ -58,12 +58,12 @@
   "scripts": {
     "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/memory.test.js dist/__tests__/public-surface.test.js dist/__tests__/rag-acl.test.js dist/__tests__/lineage.test.js dist/__tests__/deletion-propagation.test.js dist/__tests__/repoint.test.js dist/__tests__/host-wiring.test.js dist/__tests__/eval-revocation.test.js dist/__tests__/postgres-vector.integration.test.js dist/__tests__/postgres-propagation.integration.test.js dist/rag/__tests__/*.test.js dist/compaction/llm/__tests__/*.test.js dist/compaction/observational-memory/__tests__/*.test.js dist/fabric/__tests__/*.test.js dist/wiki/__tests__/*.test.js dist/scoped/__tests__/*.test.js",
-    "test:postgres": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/memory.test.js dist/__tests__/postgres-memory.integration.test.js dist/__tests__/postgres-vector.integration.test.js dist/__tests__/postgres-propagation.integration.test.js dist/__tests__/rag-acl.test.js dist/__tests__/lineage.test.js dist/__tests__/deletion-propagation.test.js dist/__tests__/repoint.test.js dist/__tests__/host-wiring.test.js dist/__tests__/eval-revocation.test.js dist/rag/__tests__/*.test.js dist/compaction/llm/__tests__/*.test.js dist/compaction/observational-memory/__tests__/*.test.js dist/fabric/__tests__/*.test.js dist/wiki/__tests__/*.test.js dist/scoped/__tests__/*.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs --shared node --test dist/__tests__/memory.test.js dist/__tests__/public-surface.test.js dist/__tests__/rag-acl.test.js dist/__tests__/lineage.test.js dist/__tests__/deletion-propagation.test.js dist/__tests__/repoint.test.js dist/__tests__/host-wiring.test.js dist/__tests__/eval-revocation.test.js dist/__tests__/postgres-vector.integration.test.js dist/__tests__/postgres-propagation.integration.test.js dist/rag/__tests__/*.test.js dist/compaction/llm/__tests__/*.test.js dist/compaction/observational-memory/__tests__/*.test.js dist/fabric/__tests__/*.test.js dist/wiki/__tests__/*.test.js dist/scoped/__tests__/*.test.js",
+    "test:postgres": "node ../../scripts/with-build-lock.mjs --shared node --test dist/__tests__/memory.test.js dist/__tests__/postgres-memory.integration.test.js dist/__tests__/postgres-vector.integration.test.js dist/__tests__/postgres-propagation.integration.test.js dist/__tests__/rag-acl.test.js dist/__tests__/lineage.test.js dist/__tests__/deletion-propagation.test.js dist/__tests__/repoint.test.js dist/__tests__/host-wiring.test.js dist/__tests__/eval-revocation.test.js dist/rag/__tests__/*.test.js dist/compaction/llm/__tests__/*.test.js dist/compaction/observational-memory/__tests__/*.test.js dist/fabric/__tests__/*.test.js dist/wiki/__tests__/*.test.js dist/scoped/__tests__/*.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.10.0"
+    "@arnilo/prism": "^0.11.0"
   },
   "dependencies": {
     "pg": "^8.23.0"

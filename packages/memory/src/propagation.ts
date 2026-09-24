@@ -34,6 +34,14 @@ export interface DeletionPropagationContext {
   /** Lineage-closed ids: the deleted source plus every derived record that lists it. */
   readonly ids: readonly string[];
   readonly scope: Required<MemoryScope>;
+  /**
+   * The reason the propagator resolved for this pass (`options.reason`, default `forgotten`). It
+   * rides the one context object every registered handler receives, so a handler tombstones its
+   * own artifacts with the walk's reason instead of a second configured copy — the propagator's
+   * reason always wins over a handler's own `reason` option, which is only the fallback for a
+   * hand-built context that carries none. `legal_hold` handlers stamp `hold: true`.
+   */
+  readonly reason?: MemoryInvalidationReason;
   readonly signal?: AbortSignal;
 }
 
@@ -147,7 +155,7 @@ export function createDeletionPropagator(options: DeletionPropagatorOptions): De
     const layers: Record<string, number> = {};
     for (const handler of handlers.values()) {
       assertNotAborted(signal);
-      const removed = await handler.delete({ sourceId, ids, scope, signal });
+      const removed = await handler.delete({ sourceId, ids, scope, reason, signal });
       if (!Number.isInteger(removed) || removed < 0) {
         throw new MemoryValidationError(`deletion handler ${handler.kind} returned an invalid count`);
       }

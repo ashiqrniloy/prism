@@ -49,20 +49,26 @@ head = "commit-2"; // the next checkpoint records the new commit
 ```ts
 await lifecycle.resume(ref, { decision: "approve", expectedVersion }, {
   restoreHooks: [
+    {
+      id: "docs",
+      restore: (cp) => docs.restoreVersion(cp.metadata?.docVersion),
+      compensate: () => docs.restoreVersion(previousVersion),
+    },
     async function restoreGit(cp) {
       await git.reset(cp.metadata?.gitCommit);
-    },
-    async function restoreDocs(cp) {
-      await docs.restoreVersion(cp.metadata?.docVersion);
     },
   ],
   restoreHookTimeoutMs: 10_000, // default, per hook
 });
 ```
 
+A bare function is the plan 094 form: the audit names it by `fn.name`, and it has no undo. The object
+form `{ id?, restore, compensate? }` adds a stable audit name and the layer's own undo handler.
+
 All-or-nothing:
 
 - The first hook that throws or overruns `restoreHookTimeoutMs` (default 10 s, `DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS`) aborts the resume with `CheckpointRestoreError` — `code: "ERR_PRISM_CHECKPOINT_RESTORE"`, `hook` naming the layer, `cause` the original error. Later hooks do not run.
+- A failing restore compensates the applied layers in reverse order, starting with the failing hook itself — a half-applied layer is put back by its own `compensate` — each under the same `restoreHookTimeoutMs`. The error carries `compensation: { ran: [<hook names, most recent first>], failed?: { hook, reason } }`; the first compensation failure is recorded (reason redacted and capped at 1 KiB) and never replaces the original `cause`, and the pass continues with the remaining layers. A caller abort stops the pass and rethrows the abort. Compensation is best-effort: the checkpoint stays unclaimed and resumable either way, so a host fixes the failing layer and retries the whole resume.
 - The claim write and the conversation replay happen only after every hook succeeds, so a failed restore leaves the checkpoint byte-for-byte as it was — still resumable — instead of claiming a half-restored world. The server maps the failure to `409`/`ERR_PRISM_CHECKPOINT_RESTORE`.
 - Hooks run on claiming resumes only; `deny` and resuspend paths never call them.
 - The claim's `agent_resumed` event carries the audit: `restore: { hooks: [{ hook, durationMs }], durationMs }`.
@@ -125,6 +131,7 @@ The complete network-free demo — one tool execution across the crash, resumed 
 
 - `"continue"` is a host-API action only. Prism's AG-UI interrupt resolution accepts `approve`/`deny` only, channel adapters resume with `deny`, and there is no server route that forwards an untrusted `continue`; adding one would create an approval-bypass path.
 - Restore hooks are trusted host code running outside the sandbox: they see the checkpoint's (already redacted) sidecar map and are bounded only by their timeout. Because they run before the claim write, a timeout cannot leave a claimed checkpoint pointing at un-restored external state.
+- Compensation reports only hook names and `compensation.failed.reason`: the failing handler's message, redacted by the configured agent/lifecycle redactor and capped at 1 KiB. Hook arguments and the sidecar map are never copied into the report; the original error stays in `cause` and crosses the server boundary as before.
 - Every gate that protects a suspension protects a continue resume: exact ownership, fencing token, fingerprint, revision, CAS version, and the absence of unresolved work. A running checkpoint is a recovery point, never an authorization.
 - Cost is one bounded checkpoint write per provider turn (same redaction and `maxStateBytes` ceiling as suspension writes). A 40-turn investigation under `"every-turn"` therefore writes 40 checkpoint rows plus the terminal save, while the default `"decision"` policy writes at most one row per approval or suspension. Each row carries the run frontier, counters, run limits, and loop snapshot — not the message history, which stays in the session store and is pointed at by `leafId` — so the store grows with turns, not with turns × transcript; a state that would exceed `maxStateBytes` (default 256 KiB, `DEFAULT_MAX_AGENT_RUN_STATE_BYTES`) fails closed rather than truncating. Pick `"every-turn"` when a worker restart must cost at most one turn of thinking, and leave the default for runs with many cheap turns.
 - Checkpoints never contain provider objects, callbacks, signals, credentials, or raw secrets; the payload is bounded and redacted like any other durable state.

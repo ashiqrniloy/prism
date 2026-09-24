@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-hooks",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Out-of-process hooks.json adapter for Prism: Claude/Codex-compatible declarative hooks compiled onto public extension, middleware, guardrail, instruction, and stop-hook seams.",
   "type": "module",
   "main": "./dist/index.js",
@@ -22,11 +22,11 @@
   "scripts": {
     "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node ../../scripts/with-build-lock.mjs node --test \"dist/**/__tests__/*.test.js\"",
+    "test": "node ../../scripts/with-build-lock.mjs --shared node --test \"dist/**/__tests__/*.test.js\"",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.10.0"
+    "@arnilo/prism": "^0.11.0"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

@@ -188,6 +188,9 @@ export function revokeToken(token: string): void {
     await writeFile(join(scanDir, "src/util.ts"), "export const b = 2;");
     await writeFile(join(scanDir, "node_modules/pkg/index.js"), "module.exports = {};");
     await writeFile(join(scanDir, ".git/config"), "[core]");
+    await writeFile(join(scanDir, "bun.lock"), "{}");
+    await writeFile(join(scanDir, "bun.lockb"), "binary");
+    await writeFile(join(scanDir, "package-lock.json"), "{}");
 
     const fileMap = await scanRawFiles(scanDir, ["."]);
 
@@ -195,5 +198,8 @@ export function revokeToken(token: string): void {
     assert.ok(fileMap.has("src/util.ts"));
     assert.equal(fileMap.has("node_modules/pkg/index.js"), false);
     assert.equal(fileMap.has(".git/config"), false);
+    assert.equal(fileMap.has("bun.lock"), false);
+    assert.equal(fileMap.has("bun.lockb"), false);
+    assert.equal(fileMap.has("package-lock.json"), false);
   });
 });

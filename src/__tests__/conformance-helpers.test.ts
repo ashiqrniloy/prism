@@ -30,7 +30,7 @@ import { assertToolEffectStoreConforms } from "../testing/tool-effect-store-conf
 
 void describe("session-store conformance helper", () => {
   it("conforms against the core memory store", async () => {
-    await assertSessionStoreConforms(createMemorySessionStore());
+    await assertSessionStoreConforms(createMemorySessionStore(), { exerciseReadBranchPath: true });
   });
 
   it("conforms against a custom store that implements readBranchPath", async () => {

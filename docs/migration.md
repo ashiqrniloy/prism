@@ -1,8 +1,19 @@
 # Migration guide
 
+## 0.10.0 → 0.11.0 (behavior persona and graft subpath removals)
+
+**Prism 0.11.0 removes three public subpaths** that shipped through 0.10.0. Both capabilities stay supported on public seams — only the vendored convenience subpaths are gone. Compat baselines are regenerated for this line: 106 names removed (58 in `@arnilo/prism-memory`, 48 in `@arnilo/prism-coding-tools`) with no consumer-visible signature break; the only non-barrel signature changes are the widened `runCheckpointRestoreHooks` parameter and `describeBudgetExhaustion` return, plus two internal modules that no `exports` entry reaches. The 0.11.0 cut's own declaration change is `version` `"0.10.0"` → `"0.11.0"`. Plan 120 added no public name.
+
+What a 0.10.0 host must check before upgrading:
+
+- **`@arnilo/prism-coding-tools/caveman` and `/ponytail` are gone**, with their vendored upstream fixtures and the `@dietrichgebert/ponytail` optional peer. Load the upstream skill tree with the new `loadSkillDirectory(directory, { maxSkillBytes? })` on `@arnilo/prism/node/contribution-discovery`, then register the skills, a `/caveman`-style command, an every-turn injector, and session-entry mode persistence from a host extension — [examples/caveman-ponytail.ts](../examples/caveman-ponytail.ts) is the ported reference. `@arnilo/prism-coding-tools/impeccable` is unchanged.
+- **`@arnilo/prism-memory/graft` is gone**, with its `@nanonets/graft` optional peer, the `prism-graft` fixture CLI, and the `/graft-init` / `/graft-build` / `/graft-build-deep` commands; `@arnilo/prism-memory` now declares only its required `@arnilo/prism` peer. Integrate graft as a host-exposed graft **MCP server**, or author the tools and commands against `registerTool` / `registerCommand` — the deleted extension was a subprocess CLI plus a retrieval-pack context provider plus blast-radius middleware, all host-composable. `/rag`, `/compaction/*`, `/fabric`, `/wiki`, and `/scoped` are unchanged.
+- **Additive in the same line:** `CheckpointRestoreHandler` / `CheckpointRestoreCompensation` (a restore hook may now compensate) and the `BudgetExhaustionAttribution` on `describeBudgetExhaustion`'s return, `SubagentFailure` / `SubagentRecovery` / `SubagentRecoveryOutcome` lifecycle events, and `scorePrefixStability`. A host passing a plain restore hook to `runCheckpointRestoreHooks` needs no change — the new parameter type is that hook, widened.
+- **Idempotency window and lease fence.** Memory and JSONL stores remember the latest 4,096 dedup keys; replaying an older key appends a new entry. The in-memory lease store deletes expired rows once the map reaches 1,024, and a swept key's next acquire starts at fencing 1. Durable SQLite and Postgres adapters still keep the counter. Full steps: [migrate-to-0.11.md](migrate-to-0.11.md).
+
 ## 0.9.0 → 0.10.0 (hook lifecycle completion, scoped agent memory)
 
-**Prism 0.10.0 is a lockstep minor for all twelve publishable packages** — `@arnilo/prism-hooks` is new. Node `>=22` stays the floor. Nothing was removed: no import path moved and no export was dropped (compat baseline: +47 names, zero removals, zero renames). Scoped memory is a new opt-in subpath that stays inert until a host constructs a policy.
+**Prism 0.10.0 is a lockstep minor for all twelve publishable packages** — `@arnilo/prism-hooks` is new. Node `>=22` stays the floor. Nothing was removed in 0.10.0 itself: no import path moved and no export was dropped (compat baseline: +47 names, zero removals, zero renames); the persona and graft subpath removals recorded for this line land in **0.11.0** — see the section above. Scoped memory is a new opt-in subpath that stays inert until a host constructs a policy.
 
 What a 0.9.0 host must check before upgrading:
 

@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runGates } from "./release-gates.mjs";
+import { lockWorkspace, readBunLock } from "./bun-lock.mjs";
 
 const INTERNAL_SCOPE = "@arnilo/";
 const DEPENDENCY_FIELDS = ["dependencies", "optionalDependencies", "peerDependencies"];
@@ -27,6 +28,25 @@ export function loadRelease(root = process.cwd()) {
   return release;
 }
 
+/**
+ * bun.lock version drift for every release package. The root entry has no
+ * `version` (measured in phase 113 Task 1); a future Bun that writes one must
+ * still match. Workspace entries must carry their manifest version. One helper
+ * for both validators, so a lockfile shape change is fixed once.
+ */
+function lockVersionErrors(release, lock, versionFor) {
+  const errors = [];
+  for (const pkg of release.packages) {
+    const entry = lockWorkspace(lock, pkg.path);
+    const expected = versionFor(pkg);
+    if (!entry) errors.push(`bun.lock missing ${pkg.path}`);
+    else if (entry.version !== undefined && entry.version !== expected)
+      errors.push(`bun.lock ${pkg.path} version is ${entry.version}, expected ${expected}`);
+    else if (pkg.path !== "." && entry.version === undefined) errors.push(`bun.lock ${pkg.path} has no version`);
+  }
+  return errors;
+}
+
 export function validateRelease(release, version) {
   const errors = [];
   for (const pkg of release.packages) {
@@ -45,12 +65,8 @@ export function validateRelease(release, version) {
     }
   }
 
-  const lock = JSON.parse(readFileSync(join(release.root, "package-lock.json"), "utf8"));
-  for (const pkg of release.packages) {
-    const locked = lock.packages?.[pkg.path === "." ? "" : pkg.path];
-    if (!locked) errors.push(`package-lock.json missing ${pkg.path}`);
-    else if (locked.version !== version) errors.push(`package-lock.json ${pkg.path} version is ${locked.version}, expected ${version}`);
-  }
+  const lock = readBunLock(release.root);
+  errors.push(...lockVersionErrors(release, lock, () => version));
   if (errors.length) throw new Error(errors.join("\n"));
   return topologicalOrder(release);
 }
@@ -119,13 +135,13 @@ export function rewriteInternalRanges(release, version, style = "caret") {
 }
 
 export function regenerateLockfile(root) {
-  const result = spawnSync("npm", ["install", "--package-lock-only", "--ignore-scripts"], {
+  const result = spawnSync("bun", ["install", "--lockfile-only"], {
     cwd: root,
     encoding: "utf8",
     stdio: "inherit",
     env: process.env,
   });
-  if (result.status !== 0) throw new Error("npm install --package-lock-only failed after version bump");
+  if (result.status !== 0) throw new Error("bun install --lockfile-only failed after version bump");
 }
 
 // --- independent versioning (dual-mode; default after the 0.3.0 cut) ---
@@ -249,13 +265,8 @@ export function validateReleaseIndependent(release, { baseline, gitDiff = defaul
       }
     }
   }
-  const lock = JSON.parse(readFileSync(join(release.root, "package-lock.json"), "utf8"));
-  for (const pkg of release.packages) {
-    const locked = lock.packages?.[pkg.path === "." ? "" : pkg.path];
-    if (!locked) errors.push(`package-lock.json missing ${pkg.path}`);
-    else if (locked.version !== pkg.manifest.version)
-      errors.push(`package-lock.json ${pkg.path} version is ${locked.version}, manifest is ${pkg.manifest.version}`);
-  }
+  const lock = readBunLock(release.root);
+  errors.push(...lockVersionErrors(release, lock, (pkg) => pkg.manifest.version));
   for (const pkg of release.packages) {
     const changed = gitDiff(release.root, resolved, pkg.path);
     const base = baselineVersion(release.root, resolved, pkg.path);

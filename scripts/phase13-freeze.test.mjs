@@ -13,7 +13,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
-import { workspaceShape } from "./package-truth.mjs";
+import { workspacePackageCounts, workspaceShape } from "./package-truth.mjs";
 
 const url = (path) => new URL(path, import.meta.url);
 const manifest = JSON.parse(readFileSync(url("./phase13-freeze-manifest.json"), "utf8"));
@@ -142,11 +142,12 @@ test("baseline release gate is green at 0.1.0 with 49 packages and zero breaking
 test("baseline manifest count is coherent with the real filesystem", () => {
   const mc = baseline.manifestCount;
   const { names: workspaceNames, providerDirs, prismDirs } = workspaceShape();
-  const hasCodingTools = workspaceNames.includes("prism-coding-tools");
-  const hasCore = workspaceNames.includes("prism-core");
+  const packages = workspacePackageCounts();
+  const hasCodingTools = packages.has("prism-coding-tools");
+  const hasCore = packages.has("prism-core");
   const delta = hasCodingTools ? -46 : hasCore ? -14 : 0; // plan 054 Tasks 2-8: providers family + office family + profile deletions
   assert.equal(mc.workspacePackages + delta, workspaceNames.length, "workspacePackages matches packages/*/package.json count");
-  const hasProviderFamily = existsSync(url("../packages/prism-providers/src")); // plan 054 Task 6: adapters moved inside the family
+  const hasProviderFamily = packages.has("prism-providers"); // plan 054 Task 6: adapters moved inside the family
   assert.equal(
     mc.categories.provider + (hasProviderFamily ? -17 : 0),
     providerDirs.length,

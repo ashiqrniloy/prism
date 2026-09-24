@@ -11,6 +11,7 @@ import {
 import type { PendingToolCall } from "../../agent-run-state.js";
 import { toolElicitationRequest } from "../../agent-tool-dispatch.js";
 import type {
+  AgentRunInterruption,
   AgentRunRef,
   GuardrailRecord,
   Guardrails,
@@ -33,8 +34,8 @@ import {
   HARD_MAX_PENDING_DECISIONS,
   MAX_ATTRIBUTION_DEPTH,
 } from "../../contracts.js";
-import { toToolResultMessage } from "../../input.js";
 import { runGuardrails } from "../../guardrails.js";
+import { toToolResultMessage } from "../../input.js";
 import { canonicalToolEffectJson, toolEffectArgumentsHash } from "../../tool-effects.js";
 import { dispatchToolCall, resolveToolEffectDeclaration } from "../../tools.js";
 import { randomId } from "../helpers.js";
@@ -205,20 +206,38 @@ export async function applyNestedRun(
   }
 }
 
+function buildRunInterruption(input: {
+  readonly decisions: readonly PendingDecision[];
+  readonly reason: string;
+  readonly kind: AgentRunInterruption["kind"];
+  readonly toolCallId?: string;
+  readonly toolName?: string;
+  readonly guardrail?: string;
+}): AgentRunInterruption {
+  return {
+    kind: input.kind,
+    reason: input.reason,
+    ...(input.toolCallId ? { toolCallId: input.toolCallId } : {}),
+    ...(input.toolName ? { toolName: input.toolName } : {}),
+    ...(input.guardrail ? { guardrail: input.guardrail } : {}),
+    pendingDecisions: input.decisions,
+  };
+}
+
 export async function suspendGatedRound(ctx: RoundContext): Promise<void> {
   const gated = ctx.session.activeGatedRound;
   if (!gated?.size) return;
   const entries = [...gated.values()];
   const decisions = entries.map((gatedCall) => gatedCall.decision);
   const single = decisions.length === 1 ? decisions[0]! : undefined;
-  const interruption: import("../../contracts.js").AgentRunInterruption = {
+  const interruption = buildRunInterruption({
+    decisions,
     kind: single?.kind === "elicitation" ? "elicitation" : "tool_approval",
     reason: single ? single.reason : `${decisions.length} tool side effects require approval`,
-    ...(single?.toolCallId ? { toolCallId: single.toolCallId } : {}),
-    ...(single?.scope.toolName ? { toolName: single.scope.toolName } : {}),
-    ...(single?.guardrail ? { guardrail: single.guardrail } : {}),
-    pendingDecisions: decisions,
-  };
+    toolCallId: single?.toolCallId,
+    toolName: single?.scope.toolName,
+    guardrail: single?.guardrail,
+  });
   throw new AgentRunSuspended(
     await suspendDurable(ctx.session, {
       runId: ctx.runId,
@@ -258,13 +277,13 @@ export async function suspendNested(
     throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Pending decisions exceed ${HARD_MAX_PENDING_DECISIONS} per run`);
   }
   const single = decisions.length === 1 ? decisions[0]! : undefined;
-  const interruption: import("../../contracts.js").AgentRunInterruption = {
+  const interruption = buildRunInterruption({
+    decisions,
     kind: single?.kind ?? "tool_approval",
     reason: single ? single.reason : `${decisions.length} approval request(s) need a decision`,
-    ...(single?.toolCallId ? { toolCallId: single.toolCallId } : {}),
-    ...(single?.scope.toolName ? { toolName: single.scope.toolName } : {}),
-    pendingDecisions: decisions,
-  };
+    toolCallId: single?.toolCallId,
+    toolName: single?.scope.toolName,
+  });
   throw new AgentRunSuspended(
     await suspendDurable(ctx.session, {
       runId: ctx.runId,
@@ -455,13 +474,13 @@ export function bindDispatchToolCall(ctx: RoundContext): LoopContext["dispatchTo
             ctx.metadata,
             ctx.controller.signal,
           );
-          const interruption: import("../../contracts.js").AgentRunInterruption = {
+          const interruption = buildRunInterruption({
+            decisions: [decision],
             kind: "tool_approval",
             reason: decision.reason,
             toolCallId: mediatedCall.id,
             toolName: mediatedCall.name,
-            pendingDecisions: [decision],
-          };
+          });
           throw new AgentRunSuspended(
             await suspendDurable(ctx.session, {
               runId: ctx.runId,
@@ -550,13 +569,13 @@ export async function replayDurableNestedAndPending(ctx: RoundContext): Promise<
     if (remainingOwn.length > 0 || surfacedPending.length > 0) {
       const pendingDecisions = [...remainingOwn, ...surfacedPending];
       const single = pendingDecisions.length === 1 ? pendingDecisions[0]! : undefined;
-      const interruption: import("../../contracts.js").AgentRunInterruption = {
+      const interruption = buildRunInterruption({
+        decisions: pendingDecisions,
         kind: single?.kind ?? "tool_approval",
         reason: `${pendingDecisions.length} approval request(s) remain`,
-        ...(single?.toolCallId ? { toolCallId: single.toolCallId } : {}),
-        ...(single?.scope.toolName ? { toolName: single.scope.toolName } : {}),
-        pendingDecisions,
-      };
+        toolCallId: single?.toolCallId,
+        toolName: single?.scope.toolName,
+      });
       throw new AgentRunSuspended(
         await suspendDurable(session, {
           runId: ctx.runId,

@@ -84,8 +84,10 @@ function runWikiSuites(cwd) {
   const label = cwd.slice(ROOT.length + 1) || ".";
   // A nested `node --test` refuses to run ("skipping running files") while
   // NODE_TEST_CONTEXT is inherited — it exits 0 with no output, so a gate that
-  // spawns the runner must strip it and assert a pass count afterwards.
-  const result = spawnSync(process.execPath, ["--test", "--test-isolation=none", suiteGlob(cwd)], {
+  // spawns the runner must strip it and assert a pass count afterwards. The child is
+  // `node` by name, never `process.execPath`: under a Bun parent that is a Bun child,
+  // and `bun --test` is a script run, not a test runner (plan 115 Task 3).
+  const result = spawnSync("node", ["--test", "--test-isolation=none", suiteGlob(cwd)], {
     cwd,
     encoding: "utf8",
     env: { ...process.env, NODE_TEST_CONTEXT: undefined, NODE_TEST_WORKER_ID: undefined },

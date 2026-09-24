@@ -70,6 +70,8 @@ interface ExecutionTimeline {
   readonly workflowRevision?: string;
   /** Workflow checkpoint sidecar metadata (`WorkflowCheckpointValue.metadata`); present only when projected with a checkpoint. */
   readonly workflowMetadata?: Readonly<Record<string, unknown>>;
+  /** Restore-hook audit from the claiming `agent_resumed` / `workflow_resumed` event (plan 094 Task 3); hook names and durations only, absent when the run never resumed or resumed without hooks. */
+  readonly restore?: CheckpointRestoreAudit;
   readonly traceId?: string;
   readonly status: string;
   readonly stopReason?: AgentFinishReason;
@@ -87,6 +89,10 @@ interface ExecutionTimeline {
   readonly content: TimelineContentPolicy;
 }
 ```
+
+`restore` is the same `{ hooks: [{ hook, durationMs }], durationMs }` the claiming resume event published, in
+run order — a metadata-only audit (hook names are host-chosen identifiers), so it projects under every
+content policy and never carries prompts, tool arguments, or node payloads.
 
 ### `ExecutionStep`
 

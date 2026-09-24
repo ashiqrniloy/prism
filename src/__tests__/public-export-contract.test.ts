@@ -628,6 +628,8 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "CacheTelemetrySample",
   "CheckpointRestoreAudit",
   "CheckpointRestoreAuditEntry",
+  "CheckpointRestoreCompensation",
+  "CheckpointRestoreHandler",
   "CheckpointRestoreHook",
   "RunCheckpointRestoreHooksOptions",
   "ComposeSystemPromptOptions",

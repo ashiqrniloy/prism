@@ -92,7 +92,42 @@ describe("LeaseStore", () => {
     assert.equal(await store.releaseLease({ namespace: "workflow", key: "run", ownerId: "a", token: first.token, tenantId: "t1" }), false);
     assert.equal(await store.releaseLease({ namespace: "workflow", key: "run", ownerId: "b", token: second.token, tenantId: "t1" }), true);
   });
+
+  it("keeps fencing on a released key that was not swept", async () => {
+    const store = createMemoryLeaseStore();
+    const first = await store.tryAcquireLease({ namespace: "n", key: "keep", ownerId: "a", ttlMs: 60_000 });
+    assert.ok(first);
+    assert.equal(await store.releaseLease({ namespace: "n", key: "keep", ownerId: "a", token: first.token }), true);
+    assert.equal(await store.getLease({ namespace: "n", key: "keep" }), null);
+    const second = await store.tryAcquireLease({ namespace: "n", key: "keep", ownerId: "a", ttlMs: 60_000 });
+    assert.equal(second?.fencingToken, first.fencingToken + 1);
+  });
+
+  it("sweeps expired leases at 1024 and restarts an evicted fence at 1", async () => {
+    const store = createMemoryLeaseStore();
+    const live = await store.tryAcquireLease({ namespace: "n", key: "live", ownerId: "a", ttlMs: 60_000 });
+    assert.ok(live);
+    let peak = leaseCount(store);
+    for (let i = 0; i < 10_000; i++) {
+      const lease = await store.tryAcquireLease({ namespace: "n", key: `e${i}`, ownerId: "a", ttlMs: 60_000 });
+      assert.ok(lease);
+      assert.equal(await store.releaseLease({ namespace: "n", key: `e${i}`, ownerId: "a", token: lease.token }), true);
+      peak = Math.max(peak, leaseCount(store));
+    }
+    assert.ok(peak <= 1_024);
+    assert.equal(leaseCount(store) <= 1_024, true);
+    assert.equal(await store.getLease({ namespace: "n", key: "e0" }), null);
+    assert.equal((await store.getLease({ namespace: "n", key: "live" }))?.token, live.token);
+    const again = await store.tryAcquireLease({ namespace: "n", key: "e0", ownerId: "a", ttlMs: 60_000 });
+    assert.equal(again?.fencingToken, 1);
+  });
 });
+
+function leaseCount(store: object): number {
+  const count = (store as Record<symbol, number>)[Symbol.for("prism.lease.recordCount")];
+  if (typeof count !== "number") throw new Error("missing lease recordCount probe");
+  return count;
+}
 
 describe("EventMultiplexer", () => {
   it("fans in sources and bounds overflow", async () => {

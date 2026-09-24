@@ -81,18 +81,18 @@ async function readBranchFromReader(reader: BranchReader, query: SessionBranchRe
     cursor = result.nextCursor;
     if (!cursor) break;
   }
-  // Reuse the validated in-memory walk: the reader returns the ancestor SET (any order);
-  // indexEntries + the parentId walk order it and still reject missing parents / dupes.
-  return getSessionBranchEntriesCore(items, { leafId: query.leafId });
+  // Reader returns an ancestor set in any order. Order once and keep those objects.
+  // Detachment is the store's clone (readBranchPath / list), not a second walk here.
+  return orderBranch(items, { leafId: query.leafId });
 }
 
 type SessionIndex = { byId: Map<string, SessionEntry>; parentIds: Set<string> };
 
-function getSessionBranchEntriesCore(
+function orderBranch(
   entries: readonly SessionEntry[],
   options: SessionBranchOptions = {},
   index: SessionIndex = indexEntries(entries),
-): readonly SessionEntry[] {
+): SessionEntry[] {
   const leafId = options.leafId ?? entries.at(-1)?.id;
   if (!leafId) return [];
   if (!index.byId.has(leafId)) throw new Error(`Unknown session leaf: ${leafId}`);
@@ -104,7 +104,16 @@ function getSessionBranchEntriesCore(
     branch.push(entry);
     id = entry.parentId;
   }
-  return branch.reverse().map(cloneEntry);
+  branch.reverse();
+  return branch;
+}
+
+function getSessionBranchEntriesCore(
+  entries: readonly SessionEntry[],
+  options: SessionBranchOptions = {},
+  index: SessionIndex = indexEntries(entries),
+): readonly SessionEntry[] {
+  return orderBranch(entries, options, index).map(cloneEntry);
 }
 
 export function listSessionBranches(entries: readonly SessionEntry[]): readonly SessionBranch[] {
@@ -127,14 +136,17 @@ export function rebuildSessionContext(
 }
 
 async function rebuildSessionContextFromReader(reader: BranchReader, query: SessionBranchRead): Promise<SessionContextSnapshot> {
-  // ponytail: pass the drained branch back through the sync core so compaction logic has ONE
-  // code path; the redundant re-walk is O(branch length) and branch chains are short.
-  const branch = await readBranchFromReader(reader, query);
-  return rebuildSessionContextCore(branch, { leafId: query.leafId });
+  // ponytail: one order pass on the reader's pages. No second walk and no second clone —
+  // stores that implement readBranchPath already detach. Upgrade path: clone here again if a
+  // host reader returns live store objects and a snapshot mutation is observed in the store.
+  return snapshotFromBranch(await readBranchFromReader(reader, query));
 }
 
 function rebuildSessionContextCore(entries: readonly SessionEntry[], options: SessionBranchOptions = {}): SessionContextSnapshot {
-  const branch = getSessionBranchEntriesCore(entries, options);
+  return snapshotFromBranch(getSessionBranchEntriesCore(entries, options));
+}
+
+function snapshotFromBranch(branch: readonly SessionEntry[]): SessionContextSnapshot {
   const compaction = [...branch]
     .reverse()
     .find((entry) => entry.kind === "compaction" && entry.summary && isCompactionEntryData(entry.data));
@@ -157,7 +169,7 @@ function rebuildSessionContextCore(entries: readonly SessionEntry[], options: Se
       continue;
     }
     if (entry.id === compaction.id) continue;
-    if (entry.kind === "message" && entry.message && (afterThrough || keepIds.has(entry.id))) messages.push(cloneEntry(entry.message));
+    if (entry.kind === "message" && entry.message && (afterThrough || keepIds.has(entry.id))) messages.push(entry.message);
     if (entry.kind === "summary" && entry.summary && afterThrough) summaries.push(entry.summary);
   }
 
@@ -248,6 +260,17 @@ export function createMemorySessionStore(
       if (mode === "unsupported") throw new SessionSearchUnsupportedError();
       return searchLinearSessions(bySession, leafBySession, query, searchCaps);
     },
+    async readBranchPath(query) {
+      const entries = bySession.get(query.sessionId) ?? [];
+      const leafId = query.leafId ?? tipLeafId(entries);
+      if (!leafId) return { items: [] };
+      const chain = orderBranch(entries, { leafId });
+      const start = query.cursor !== undefined ? decodeBranchOffset(query.cursor) : 0;
+      const limit = query.limit ?? chain.length;
+      const items = chain.slice(start, start + limit).map(cloneEntry);
+      const next = start + items.length;
+      return { items, nextCursor: next < chain.length ? String(next) : undefined };
+    },
   };
 
   function add(entry: SessionEntry, options?: SessionAppendOptions): void {
@@ -279,7 +302,7 @@ export function createMemorySessionStore(
       }
     }
     if (byId.has(entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
-    if (dedupKey !== undefined) idempotencySeen.add(dedupKey);
+    if (dedupKey !== undefined) rememberIdempotencyKey(idempotencySeen, dedupKey);
     byId.set(entry.id, entry);
     const entries = bySession.get(entry.sessionId) ?? [];
     entries.push(entry);
@@ -454,8 +477,37 @@ function isAfterSearchCursor(hit: SessionSearchHit, cursor: { updatedAt: string;
   return at < cursor.updatedAt || (at === cursor.updatedAt && hit.sessionId < cursor.sessionId);
 }
 
+/** Dedup only covers retries near the append. Older keys append as new entries. */
+const IDEMPOTENCY_SEEN_MAX = 4_096;
+
+function rememberIdempotencyKey(seen: Set<string>, key: string): void {
+  if (seen.size >= IDEMPOTENCY_SEEN_MAX) {
+    const oldest = seen.values().next().value;
+    if (oldest !== undefined) seen.delete(oldest);
+  }
+  seen.add(key);
+}
+
 function cloneEntry<T>(entry: T): T {
   return structuredClone(entry);
+}
+
+function decodeBranchOffset(cursor: string): number {
+  const value = Number(cursor);
+  if (!Number.isInteger(value) || value < 0) throw new Error("Invalid branch pagination cursor");
+  return value;
+}
+
+/** Tip with the latest timestamp, then highest id. Matches SQLite `findLatestLeafId`. */
+function tipLeafId(entries: readonly SessionEntry[]): string | undefined {
+  const parents = new Set<string>();
+  for (const entry of entries) if (entry.parentId) parents.add(entry.parentId);
+  let best: SessionEntry | undefined;
+  for (const entry of entries) {
+    if (parents.has(entry.id)) continue;
+    if (!best || entry.timestamp > best.timestamp || (entry.timestamp === best.timestamp && entry.id > best.id)) best = entry;
+  }
+  return best?.id;
 }
 
 function isCompactionEntryData(value: unknown): value is CompactionEntryData {

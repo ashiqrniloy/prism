@@ -26,7 +26,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
-import { workspaceShape } from "./package-truth.mjs";
+import { workspacePackageCounts, workspaceShape } from "./package-truth.mjs";
 import { effectiveTestChain } from "./run-all-tests.mjs";
 
 const url = (path) => new URL(path, import.meta.url);
@@ -253,11 +253,12 @@ test("baseline evidence file exists, is valid JSON captured at 0.1.6, with green
 test("baseline manifest count is coherent with the real filesystem (0.1.7 adds no package)", () => {
   const mc = baseline.manifestCount;
   const { names: workspaceNames, providerDirs, prismDirs } = workspaceShape();
-  const hasCodingTools = workspaceNames.includes("prism-coding-tools");
-  const hasCore = workspaceNames.includes("prism-core");
+  const packages = workspacePackageCounts();
+  const hasCodingTools = packages.has("prism-coding-tools");
+  const hasCore = packages.has("prism-core");
   const delta = hasCodingTools ? -46 : hasCore ? -14 : 0; // plan 054 Tasks 2-8: providers family + office family + profile deletions
   assert.equal(mc.workspacePackages + delta, workspaceNames.length, "workspacePackages matches packages/*/package.json count");
-  const hasProviderFamily = existsSync(url("../packages/prism-providers/src")); // plan 054 Task 6: adapters moved inside the family
+  const hasProviderFamily = packages.has("prism-providers"); // plan 054 Task 6: adapters moved inside the family
   assert.equal(
     mc.categories.provider + (hasProviderFamily ? -17 : 0),
     providerDirs.length,
@@ -290,7 +291,7 @@ test("baseline item inventory mirrors the manifest registry (same ids/tasks/scop
 });
 
 test("preserved surface hashes match the live files at every state (byte-immutable for the whole phase)", () => {
-  if (existsSync(url("../packages/prism-core"))) return;
+  if (workspacePackageCounts().has("prism-core")) return;
   for (const [file, hash] of Object.entries(baseline.preservedSurface)) {
     assert.ok(manifest.preservedSurface.files[file], `preserved file ${file} listed in the manifest`);
     assert.equal(

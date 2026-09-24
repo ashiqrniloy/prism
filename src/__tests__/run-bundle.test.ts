@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { agentFingerprint, createAgent, createMemoryCheckpointStore, type SessionStore, snapshotRunBundle } from "../index.js";
 
@@ -117,7 +117,11 @@ describe("snapshotRunBundle", () => {
     );
 
     // A synchronous function whose module imports no network primitive cannot open a socket.
-    const source = readFileSync(new URL("../run-bundle.js", import.meta.url), "utf8");
+    // The source run (`bun test src/…`) resolves this file's sibling as `.ts`, the dist run as
+    // `.js`; read whichever exists so the scan never opens a missing path or an empty string.
+    const js = new URL("../run-bundle.js", import.meta.url);
+    const source = readFileSync(existsSync(js) ? js : new URL("../run-bundle.ts", import.meta.url), "utf8");
+    assert.match(source, /export function snapshotRunBundle/, "the scan must read the module it names");
     assert.doesNotMatch(source, /"node:(?:dns|http|https|net|tls)"|\bfetch\(/);
     assert.ok(!(snapshotRunBundle({ agent: agentWith() }) instanceof Promise), "snapshotRunBundle is synchronous");
   });

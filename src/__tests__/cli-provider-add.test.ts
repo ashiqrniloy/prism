@@ -285,9 +285,12 @@ describe("prism providers add", () => {
       );
       assert.equal(typecheck.status, 0, `typecheck failed:\n${typecheck.stdout}\n${typecheck.stderr}`);
 
-      const test = runInProject(process.execPath, ["--test", join(target, "dist", "__tests__", "provider.test.js")], target);
+      const test = runInProject("node", ["--test", join(target, "dist", "__tests__", "provider.test.js")], target);
       assert.equal(test.status, 0, `fixture test failed:\n${test.stdout}\n${test.stderr}`);
-      assert.match(`${test.stdout}\n${test.stderr}`, /ℹ (pass|tests)/);
+      // `ℹ pass N` is Node's spec reporter: it proves the child was a Node test run that
+      // executed tests, not just an exit code (a Bun child fails with "Cannot use describe
+      // outside of the test runner").
+      assert.match(`${test.stdout}\n${test.stderr}`, /ℹ pass [1-9]/);
 
       // scaffold output never lands in the repo graph: fixture dir removed below; nothing tracked
       assert.ok(readdirSync(fixtureRoot).includes("acme"));

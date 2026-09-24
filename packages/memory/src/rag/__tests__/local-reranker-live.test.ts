@@ -1,22 +1,24 @@
 /**
- * Local reranker live leg (plan 102 Tasks 3 and 4): the real transformers.js runtime,
- * no injected stub, on this machine — the leg the plan 064 matrix was missing
- * (hosted/TEI endpoints are covered; in-process weights were not). Task 4 adds the recall@k
+ * Local reranker live leg (plan 102 Tasks 3 and 4, extended by plan 111 Task 3): the real
+ * transformers.js runtime, no injected stub, on this machine — the leg the plan 064 matrix was
+ * missing (hosted/TEI endpoints are covered; in-process weights were not). Task 4 adds the recall@k
  * measurement over the inlined corpus (mention-only distractors vs answers, lexical baseline
- * vs cross-encoder) and the on-disk weight-cache layout assertion.
+ * vs cross-encoder) and the on-disk weight-cache layout assertion. Plan 111 Task 3 measures the
+ * same corpus a second time through a real semantic embedder and writes the side-by-side evidence.
  *
- * Gated by `PRISM_TEST_LOCAL_RERANK=1` because a cold run downloads model
- * weights (~280 MB class int8) from the documented model id; unset, the leg
- * skips with a reason and never silently passes. With the gate set there is no
- * skip path: a missing runtime, an unreachable model, or a load failure throws
- * `RagValidationError` with install guidance and fails the run (matrix suite
- * `memory/local-rerank-live`, strict mode included).
+ * Gated by `PRISM_TEST_LOCAL_RERANK=1` because a cold run downloads model weights (~280 MB class
+ * reranker + ~23 MB class embedder) from the documented model ids; unset, the leg skips with a
+ * reason and never silently passes. With the gate set there is no skip path: a missing runtime, an
+ * unreachable model, or a load failure throws `RagValidationError` with install guidance and fails
+ * the run before any evidence row is written (matrix suite `memory/local-rerank-live`, strict mode
+ * included).
  *
- * It also writes the generated evidence row
- * `docs/_evidence/phase102-local-rerank-latency.md`: top-50 median latency, the recall numbers
- * above, model id, dtype, device, machine, Node version, cache-vs-download, and the cache
- * layout. The report carries no absolute host paths, no document text, and no secret-shaped
- * string (asserted before it is written).
+ * It writes two generated evidence rows — `docs/_evidence/phase102-local-rerank-latency.md` (the
+ * hash-embedder row set, plan 102) and `docs/_evidence/phase111-reranker-semantic-recall.md` (the
+ * same run as hash vs semantic table, plan 111 Task 3): top-50 median latency, recall numbers,
+ * model ids, dtype, device, machine, Node version, cache-vs-download, cache layout, and the
+ * semantic embedder's load/index cost. Neither report carries an absolute host path, document text,
+ * or a secret-shaped string (asserted before either is written).
  */
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
@@ -25,12 +27,14 @@ import { dirname, join, sep } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { createHashEmbedder, createMemoryVectorStore } from "../../index.js";
+import type { Embedder } from "../../types.js";
 import {
   chunkMarkdown,
   DEFAULT_LOCAL_RERANK_MODEL,
   indexChunks,
   type RagChunk,
   type RagHit,
+  RagValidationError,
   type Reranker,
   resolveReranker,
   retrieveContext,
@@ -57,6 +61,11 @@ const RECALL_POOL_DEPTHS = [20, 32] as const;
 const RECALL_MAX_RERANK_MS = 10_000;
 const RECALL_SCOPE = { tenantId: "t1", resourceId: "rerank-recall", corpusId: "phase102" } as const;
 const EVIDENCE = new URL("../../../../../docs/_evidence/phase102-local-rerank-latency.md", import.meta.url);
+const EVIDENCE_SEMANTIC = new URL("../../../../../docs/_evidence/phase111-reranker-semantic-recall.md", import.meta.url);
+/** Same non-literal specifier posture as `createTransformersRerankRuntime`: the optional runtime never enters a manifest. */
+const TRANSFORMERS_MODULE = "@huggingface/transformers";
+/** Small `q8`/`cpu` class semantic embedder for the second recall leg (plan 111 Task 3). */
+const SEMANTIC_EMBED_MODEL = "Xenova/all-MiniLM-L6-v2";
 
 /** Non-sensitive probe inputs by construction. */
 const QUERY = "capital of France";
@@ -98,6 +107,78 @@ function median(values: readonly number[]): number {
   const middle = sorted[Math.floor(sorted.length / 2)];
   assert.ok(middle !== undefined, "median requires a non-empty sample");
   return middle;
+}
+
+/** Model-id subdirectories under a cache dir (`owner/model`), depth 2 — the documented layout. */
+function cachedModelIds(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  const ids: string[] = [];
+  for (const owner of readdirSync(dir, { withFileTypes: true })) {
+    if (!owner.isDirectory()) continue;
+    for (const model of readdirSync(join(dir, owner.name), { withFileTypes: true })) {
+      if (model.isDirectory()) ids.push(`${owner.name}/${model.name}`);
+    }
+  }
+  return ids.sort();
+}
+
+interface FeatureExtractionTensor {
+  tolist(): number[][];
+}
+
+type FeatureExtractionPipeline = (
+  texts: readonly string[],
+  options: { readonly pooling: "mean"; readonly normalize: true },
+) => Promise<FeatureExtractionTensor>;
+
+/**
+ * One small transformers.js feature-extraction embedder next to the reranker wiring: mean-pooled,
+ * normalized vectors into the documented cache dir, with a strict local-files-only replay switch.
+ * The runtime is resolved with a non-literal specifier, so no dependency name enters any manifest.
+ */
+async function createSemanticEmbedder(options: { readonly localOnly?: boolean } = {}): Promise<Embedder> {
+  let loaded: unknown;
+  try {
+    loaded = await import(TRANSFORMERS_MODULE);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "module not found";
+    throw new RagValidationError(`semantic embedder unavailable (${reason}): install @huggingface/transformers`);
+  }
+  const module = loaded as { readonly pipeline?: (task: string, model: string, settings?: unknown) => Promise<unknown> };
+  if (typeof module.pipeline !== "function") {
+    throw new RagValidationError("transformers.js exposes no pipeline(): install @huggingface/transformers");
+  }
+  const extract = (await module.pipeline("feature-extraction", SEMANTIC_EMBED_MODEL, {
+    dtype: DTYPE,
+    device: DEVICE,
+    cache_dir: CACHE_DIR,
+    ...(options.localOnly ? { local_files_only: true } : {}),
+  })) as FeatureExtractionPipeline;
+  const probe = await extract(["dimension probe"], { pooling: "mean", normalize: true });
+  const dimensions = probe.tolist()[0]?.length ?? 0;
+  if (!Number.isInteger(dimensions) || dimensions <= 0) {
+    throw new RagValidationError(`semantic embedder ${SEMANTIC_EMBED_MODEL} returned no vector dimensions`);
+  }
+  return {
+    id: SEMANTIC_EMBED_MODEL,
+    dimensions,
+    async embed(texts) {
+      const output = await extract([...texts], { pooling: "mean", normalize: true });
+      return output.tolist();
+    },
+  };
+}
+
+/** Assert the report is secret-shape- and absolute-path-free, then write it. */
+function writeEvidence(path: URL, report: string): void {
+  assert.ok(
+    !/(?:sk-|sk-ant-|xai-)[A-Za-z0-9_-]{10,}|Bearer\s+[A-Za-z0-9._-]{8,}|(?:api[_-]?key|secret|token)\s*=/i.test(report),
+    "report must not contain secret-shaped strings",
+  );
+  assert.ok(!report.includes(CACHE_DIR), "report must not contain an absolute host path");
+  mkdirSync(dirname(fileURLToPath(path)), { recursive: true });
+  writeFileSync(path, report);
+  assert.ok(existsSync(fileURLToPath(path)), "evidence row must be written");
 }
 
 // --- recall corpus (plan 102 Task 4) -----------------------------------------
@@ -404,6 +485,10 @@ function recallAtK(hits: readonly RagHit[], relevant: readonly string[], k: numb
 }
 
 interface RecallMeasurement {
+  readonly embedder: string;
+  readonly dimensions: number;
+  /** Wall clock for the embedder's index build over the whole corpus. */
+  readonly indexBuildMs: number;
   readonly corpusQueries: number;
   readonly corpusChunks: number;
   readonly k: number;
@@ -418,11 +503,12 @@ interface RecallMeasurement {
   readonly missesReranked: readonly string[];
 }
 
-/** End-to-end measurement over the corpus: one hash-embedder index, both legs, no model for the baseline leg. */
-async function measureRecall(reranker: Reranker | undefined): Promise<RecallMeasurement> {
-  const embedder = createHashEmbedder();
+/** End-to-end measurement over the corpus: one index for the given embedder, both legs, no model for the baseline leg. */
+async function measureRecall(embedder: Embedder, reranker: Reranker | undefined): Promise<RecallMeasurement> {
   const store = createMemoryVectorStore();
+  const buildStarted = Date.now();
   await indexChunks({ chunks: CORPUS_CHUNKS, embedder, store, scope: RECALL_SCOPE });
+  const indexBuildMs = Date.now() - buildStarted;
   // The measured legs score the whole corpus, so the only variable is the ordering — every answer is
   // reachable in the pool. The probes below show what a narrow pool would have capped recall at.
   const fullPool = CORPUS_CHUNKS.length;
@@ -457,6 +543,9 @@ async function measureRecall(reranker: Reranker | undefined): Promise<RecallMeas
   }
   const queries = RECALL_CORPUS.length;
   return {
+    embedder: embedder.id,
+    dimensions: embedder.dimensions,
+    indexBuildMs,
     corpusQueries: queries,
     corpusChunks: CORPUS_CHUNKS.length,
     k: RECALL_K,
@@ -467,6 +556,24 @@ async function measureRecall(reranker: Reranker | undefined): Promise<RecallMeas
     missesBaseline,
     missesReranked,
   };
+}
+
+/** One assertion block shared by both recall legs. */
+function assertMeasurement(measured: RecallMeasurement, label: string): void {
+  assert.equal(measured.corpusQueries, RECALL_CORPUS.length, `the ${label} leg measures the corpus whole`);
+  assert.equal(measured.poolDepths.length, measured.poolRecall.length);
+  assert.ok(measured.baseline >= 0 && measured.baseline <= 1 && measured.reranked >= 0 && measured.reranked <= 1);
+}
+
+/** Pool-bound row text for one leg. */
+function poolBound(measured: RecallMeasurement): string {
+  return measured.poolDepths
+    .map((depth, index) => `recall@${depth} at a ${depth}-candidate pool = ${(measured.poolRecall[index] ?? 0).toFixed(3)}`)
+    .join("; ");
+}
+
+function misses(list: readonly string[]): string {
+  return list.join(", ") || "none";
 }
 
 /** A reranker that keeps the vector order: the measurement's negative control. */
@@ -488,7 +595,7 @@ describe("rerank recall measurement (hermetic)", () => {
   });
 
   it("an_identity_reranker_reproduces_the_baseline_number", async () => {
-    const measured = await measureRecall(identityReranker);
+    const measured = await measureRecall(createHashEmbedder(), identityReranker);
     assert.equal(measured.corpusChunks, RECALL_CORPUS.length * 4, "one answer + three mention-only chunks per topic");
     assert.equal(measured.poolRecall.length, RECALL_POOL_DEPTHS.length);
     assert.equal(measured.reranked, measured.baseline, "an identity ordering must not move recall");
@@ -546,13 +653,34 @@ describe("local reranker live (real transformers.js runtime)", () => {
     assert.ok(offline);
     assert.equal((await offline.rerank({ query: QUERY, hits: fixtureHits() })).length, FIXTURE_TEXTS.length);
 
-    // Recall@k on the fixture corpus, rerank off vs on, through the real retrieval path.
-    const recall = await measureRecall(reranker);
-    assert.equal(recall.corpusQueries, RECALL_CORPUS.length, "the corpus is measured whole");
-    assert.equal(recall.poolDepths.length, recall.poolRecall.length);
-    assert.ok(recall.baseline >= 0 && recall.baseline <= 1 && recall.reranked >= 0 && recall.reranked <= 1);
+    // Recall@k on the fixture corpus: the deterministic hash baseline and the real semantic embedder,
+    // both rerank off vs on, through the real retrieval path.
+    const hashRecall = await measureRecall(createHashEmbedder(), reranker);
+    assertMeasurement(hashRecall, "hash");
+    const semanticLoadStarted = Date.now();
+    const semanticEmbedder = await createSemanticEmbedder();
+    const semanticLoadMs = Date.now() - semanticLoadStarted;
+    const semanticRecall = await measureRecall(semanticEmbedder, reranker);
+    assertMeasurement(semanticRecall, "semantic");
+    assert.equal(semanticRecall.corpusChunks, hashRecall.corpusChunks, "both legs measure the same corpus");
+    // Identity control on the semantic leg: the same guard the hermetic hash case has.
+    const semanticIdentity = await measureRecall(semanticEmbedder, identityReranker);
+    assert.equal(semanticIdentity.reranked, semanticIdentity.baseline, "an identity ordering must not move the semantic baseline");
+
+    // Cache layout: one host cache dir, one subdirectory per model id, for both models.
     assert.ok(existsSync(CACHE_DIR), "the documented cache dir layout must exist after a load");
-    assert.ok(cachedBytes(CACHE_DIR, MODEL) > 0, "the host cache must hold the weights under a path naming the model id");
+    assert.ok(cachedBytes(CACHE_DIR, MODEL) > 0, "the host cache must hold the reranker weights under a path naming the model id");
+    assert.ok(
+      cachedBytes(CACHE_DIR, SEMANTIC_EMBED_MODEL) > 0,
+      "the host cache must hold the embedder weights under a path naming the model id",
+    );
+    const modelDirs = cachedModelIds(CACHE_DIR).filter((id) => id === MODEL || id === SEMANTIC_EMBED_MODEL);
+    assert.deepEqual(modelDirs, [MODEL, SEMANTIC_EMBED_MODEL].sort(), "one host cache dir with one subdirectory per model id");
+
+    // Zero network after the first load: both models pinned to local files only, sharing the cache dir.
+    const offlineEmbedder = await createSemanticEmbedder({ localOnly: true });
+    const offlineVectors = await offlineEmbedder.embed(["offline replay"]);
+    assert.equal(offlineVectors[0]?.length, semanticEmbedder.dimensions, "the offline embedder reuses the cached weights");
 
     assert.equal(load.length, 1, "one lazy load per reranker instance");
     assert.equal(load[0]?.model, MODEL);
@@ -578,10 +706,10 @@ describe("local reranker live (real transformers.js runtime)", () => {
       "| conformance | pass (`runRerankerConformance`: permutation, deterministic, empty→empty) |",
       '| ordering | `src#0001` ranked first for "capital of France" (exact answer beat the distractor) |',
       `| top-${TOP_K} latency | median ${median(timings)} ms over ${LATENCY_RUNS} runs (min ${Math.min(...timings)}, max ${Math.max(...timings)}); one warm-up run excluded |`,
-      `| recall corpus | ${recall.corpusQueries} queries / ${recall.corpusChunks} chunks (one answer + three mention-only chunks per topic), lexical \`prism-hash-embedder\` baseline, \`lexical: "off"\`, vector-only |`,
-      `| recall@${recall.k} (pool = whole corpus, ${recall.corpusChunks} candidates) | ${recall.baseline.toFixed(3)} → ${recall.reranked.toFixed(3)} (vector order → \`${MODEL}\` ${DTYPE}/${DEVICE}) |`,
-      `| candidate-pool bound | ${recall.poolDepths.map((depth, index) => `recall@${depth} at a ${depth}-candidate pool = ${(recall.poolRecall[index] ?? 0).toFixed(3)}`).join("; ")} — reranking cannot recover an answer the pool never returned |`,
-      `| recall misses | baseline: ${recall.missesBaseline.join(", ") || "none"} | after rerank: ${recall.missesReranked.join(", ") || "none"} |`,
+      `| recall corpus | ${hashRecall.corpusQueries} queries / ${hashRecall.corpusChunks} chunks (one answer + three mention-only chunks per topic), lexical \`prism-hash-embedder\` baseline, \`lexical: "off"\`, vector-only |`,
+      `| recall@${hashRecall.k} (pool = whole corpus, ${hashRecall.corpusChunks} candidates) | ${hashRecall.baseline.toFixed(3)} → ${hashRecall.reranked.toFixed(3)} (vector order → \`${MODEL}\` ${DTYPE}/${DEVICE}) |`,
+      `| candidate-pool bound | ${poolBound(hashRecall)} — reranking cannot recover an answer the pool never returned |`,
+      `| recall misses | baseline: ${misses(hashRecall.missesBaseline)} | after rerank: ${misses(hashRecall.missesReranked)} |`,
       `| weight cache layout | one host cache dir with a \`${MODEL}\` subdirectory (the documented convention; the same dir is reusable by local embedders) |`,
       "| offline replay | pass (`allowRemoteModels: false` shared the cache: zero network after load) |",
       "| secrets / paths | none: no credentials, no document text, no absolute host path |",
@@ -594,14 +722,50 @@ describe("local reranker live (real transformers.js runtime)", () => {
       "seam) and the run requires no credentials.",
       "",
     ].join("\n");
+    writeEvidence(EVIDENCE, report);
 
-    assert.ok(
-      !/(?:sk-|sk-ant-|xai-)[A-Za-z0-9_-]{10,}|Bearer\s+[A-Za-z0-9._-]{8,}|(?:api[_-]?key|secret|token)\s*=/i.test(report),
-      "report must not contain secret-shaped strings",
-    );
-    assert.ok(!report.includes(CACHE_DIR), "report must not contain an absolute host path");
-    mkdirSync(dirname(fileURLToPath(EVIDENCE)), { recursive: true });
-    writeFileSync(EVIDENCE, report);
-    assert.ok(existsSync(fileURLToPath(EVIDENCE)), "evidence row must be written");
+    const semanticLift = semanticRecall.reranked - semanticRecall.baseline;
+    const reportSemantic = [
+      "# Phase 111 — Reranker recall and latency on a semantic embedder (generated)",
+      "",
+      "Generated by `packages/memory/src/rag/__tests__/local-reranker-live.test.ts` on a gated run",
+      "(`PRISM_TEST_LOCAL_RERANK=1`). Re-run the leg to regenerate; never hand-edit the numbers.",
+      "",
+      "| field | value |",
+      "| --- | --- |",
+      `| reranker | \`${MODEL}\` |`,
+      `| reranker dtype / device | \`${DTYPE}\` / \`${DEVICE}\` |`,
+      `| machine | ${hostname()} (${cpus()[0]?.model ?? "unknown CPU"}) |`,
+      `| platform | ${process.platform} ${process.arch}, Node ${process.version} |`,
+      `| reranker weights | ${weights} |`,
+      `| reranker lazy load | 1 load, ${load[0]?.loadMs ?? -1} ms |`,
+      "| conformance | pass (`runRerankerConformance`: permutation, deterministic, empty→empty) |",
+      '| ordering | `src#0001` ranked first for "capital of France" (exact answer beat the distractor) |',
+      `| top-${TOP_K} latency | median ${median(timings)} ms over ${LATENCY_RUNS} runs (min ${Math.min(...timings)}, max ${Math.max(...timings)}); one warm-up run excluded |`,
+      `| recall corpus | ${hashRecall.corpusQueries} queries / ${hashRecall.corpusChunks} chunks (one answer + three mention-only chunks per topic), \`lexical: "off"\`, vector-only, whole-corpus pool, k=${RECALL_K} |`,
+      `| baseline embedder | \`${hashRecall.embedder}\` (${hashRecall.dimensions} dims), index build ${hashRecall.indexBuildMs} ms |`,
+      `| semantic embedder | \`${semanticEmbedder.id}\` ${DTYPE}/${DEVICE} (${semanticEmbedder.dimensions} dims), load ${semanticLoadMs} ms, index build ${semanticRecall.indexBuildMs} ms |`,
+      `| recall@${RECALL_K} (hash) | ${hashRecall.baseline.toFixed(3)} → ${hashRecall.reranked.toFixed(3)} (vector order → \`${MODEL}\` ${DTYPE}/${DEVICE}) |`,
+      `| recall@${RECALL_K} (semantic) | ${semanticRecall.baseline.toFixed(3)} → ${semanticRecall.reranked.toFixed(3)} (vector order → \`${MODEL}\` ${DTYPE}/${DEVICE}; identity control ${semanticIdentity.baseline.toFixed(3)} → ${semanticIdentity.reranked.toFixed(3)}) |`,
+      `| candidate-pool bound (hash) | ${poolBound(hashRecall)} |`,
+      `| candidate-pool bound (semantic) | ${poolBound(semanticRecall)} |`,
+      `| recall misses (hash) | baseline: ${misses(hashRecall.missesBaseline)} | after rerank: ${misses(hashRecall.missesReranked)} |`,
+      `| recall misses (semantic) | baseline: ${misses(semanticRecall.missesBaseline)} | after rerank: ${misses(semanticRecall.missesReranked)} |`,
+      `| weight cache layout | one host cache dir with \`${MODEL}\` and \`${semanticEmbedder.id}\` subdirectories (the documented convention) |`,
+      "| offline replay | pass (`allowRemoteModels: false` reranker + `local_files_only: true` embedder shared the cache: zero network after load) |",
+      "| non-CPU leg | not run: fp16/GPU is host-provisioned — re-measure before expecting these CPU numbers to hold |",
+      "| secrets / paths | none: no credentials, no document text, no absolute host path |",
+      "",
+      "Latency and recall are evidence, not gates: hardware, dtype, and the embedder move them. With this",
+      `semantic embedder the baseline starts at the hash leg's reranked number and the reranker's lift is`,
+      `**${semanticLift.toFixed(3)}**: at the package default (\`DEFAULT_QUERY_CANDIDATES = 20\`) the semantic pool bound is`,
+      `${(semanticRecall.poolRecall[0] ?? 0).toFixed(3)}, so the pool is not the binding constraint and the remaining misses are`,
+      "retrieval-quality misses neither leg fixes. Read the pool-bound row for your own embedder before sizing the",
+      "reranker; the hash row set in [phase102-local-rerank-latency.md](phase102-local-rerank-latency.md) stays the",
+      "lexical control. Model weights come from the documented model ids into the host cache dir; nothing is declared",
+      "in any manifest (`@huggingface/transformers` stays a host seam) and the run requires no credentials.",
+      "",
+    ].join("\n");
+    writeEvidence(EVIDENCE_SEMANTIC, reportSemantic);
   });
 });

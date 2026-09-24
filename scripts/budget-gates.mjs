@@ -36,7 +36,9 @@ export function checkCeiling(label, measured, ceiling) {
 
 export function measureRootPack(cwd = process.cwd()) {
   const out = execFileSync("npm", ["pack", "--dry-run", "--json"], { cwd, stdio: ["pipe", "pipe", "pipe"] }).toString();
-  const entry = JSON.parse(out)[0];
+  // npm 12 emits an object keyed by package name; npm 11 and earlier emitted an array of entries.
+  const parsed = JSON.parse(out);
+  const entry = (Array.isArray(parsed) ? parsed : Object.values(parsed))[0];
   return { packedBytes: entry.size, unpackedBytes: entry.unpackedSize, fileCount: entry.files.length };
 }
 

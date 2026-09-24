@@ -116,6 +116,8 @@ export { createProviderCapture } from "./capture.js";
 export type {
   CheckpointRestoreAudit,
   CheckpointRestoreAuditEntry,
+  CheckpointRestoreCompensation,
+  CheckpointRestoreHandler,
   CheckpointRestoreHook,
   RunCheckpointRestoreHooksOptions,
 } from "./checkpoint-restore.js";
@@ -809,5 +811,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.10.0";
+export const version = "0.11.0";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

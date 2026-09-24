@@ -626,8 +626,8 @@ export class RuntimeAgentSession implements AgentSession {
   }
 
   private branchReader() {
-    // ponytail: prefer the store's readBranchPath (one ancestor-chain query) when present so a
-    // DB-backed store never loads the full session; else fall back to list() + in-memory walk.
+    // ponytail: prefer readBranchPath when present (memory, SQLite, Postgres) so snapshot does
+    // not list() the whole session. JSONL and other omitters fall back to list() + in-memory walk.
     const read = this.store.readBranchPath;
     return read ? (query: SessionBranchRead) => read.call(this.store, query) : undefined;
   }

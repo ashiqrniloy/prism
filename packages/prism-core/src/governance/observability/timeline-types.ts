@@ -2,12 +2,13 @@ import type {
   AgentFinishReason,
   BudgetAxisUsage,
   BudgetConsumedCounters,
+  CheckpointRestoreAudit,
   ErrorInfo,
   ProviderStopReason,
   RunLimitName,
-  TurnBudgets,
   SecretRedactor,
   ToolCallSummary,
+  TurnBudgets,
   Usage,
 } from "@arnilo/prism";
 import type { WorkflowCheckpointValue, WorkflowEvent } from "../../runtime/workflows/types.js";
@@ -119,6 +120,12 @@ export interface ExecutionTimeline {
   readonly workflowRevision?: string;
   /** Workflow checkpoint sidecar metadata (`WorkflowCheckpointValue.metadata`), present only when projected with a checkpoint. */
   readonly workflowMetadata?: Readonly<Record<string, unknown>>;
+  /**
+   * Restore-hook audit published on the claiming `agent_resumed` / `workflow_resumed` event
+   * (plan 094 Task 3, projected per plan 109 Task 3): hook names and durations only, never
+   * content or host payload. Absent when the run never resumed or resumed without hooks.
+   */
+  readonly restore?: CheckpointRestoreAudit;
   readonly traceId?: string;
   readonly status: string;
   /** Clean-stop taxonomy when the run stopped on a ceiling or host turn policy (`agent_finished.finishReason`). */

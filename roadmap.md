@@ -1,14 +1,14 @@
-# Prism Roadmap — Release 0.10.0
+# Prism Roadmap — Release 0.11.0
 
-Updated: **2026-09-21**
+Updated: **2026-09-24**
 
-Released baseline: **0.9.0** — shipped 2026-09-20 as the attention/tooling line ([099](plans/099-Prism-0-9-0-Release-Cut.md), with [100](plans/100-Live-Stream-Terminal-Semantics-And-Limit-Death-Delivery.md) folded in), eleven publishable manifests.
+Released baseline: **0.10.0** — shipped 2026-09-21 as the hook-lifecycle and scoped-memory line ([106](plans/106-Hook-Lifecycle-Completion.md), with [105](plans/105-Scoped-Agent-Memory-And-Release-0-10-0.md) folded in), twelve publishable manifests.
 
-Current release: **0.10.0** — twelve publishable manifests. Hook lifecycle completion (stop hooks with bounded continuation, the agent-event→extension bridge with live `session_start` / `session_shutdown`, the `compaction_request` seam, and the `@arnilo/prism-hooks` hooks-file adapter), scoped persistent agent memory as the opt-in `@arnilo/prism-memory/scoped` subpath, and a unified hook map in [docs/hooks.md](docs/hooks.md). Cut owned by [106](plans/106-Hook-Lifecycle-Completion.md) (Tasks 8–10), with [105](plans/105-Scoped-Agent-Memory-And-Release-0-10-0.md) scoped memory folded in.
+Current release: **0.11.0** — twelve publishable manifests. Memory-store `readBranchPath`, a JSONL stat-keyed parse cache, a 4,096-key idempotency window, and an in-memory lease sweep that restarts a swept key's fence at 1. The persona and graft subpaths that the published 0.10.0 tarball still shipped are removed in this cut. Cut owned by [120](plans/120-Implementation-Review-Remediation-And-Release-0-11-0.md).
 
-Status: **release prepared 2026-09-21** (106 Tasks 8–10: version bump, compat baseline, changelog, and migration notes); registry/tag writes stay operator-authorized, and `npm run post-publish:smoke` verifies the published artifacts after the `v0.10.0` tag push.
+Status: **release prepared 2026-09-24** (version bump, changelog, migration page); registry/tag writes stay operator-authorized, and `npm run post-publish:smoke` verifies the published artifacts after the `v0.11.0` tag push.
 
-Next: [107](plans/107-Behavior-And-Graft-Integration-Removals.md) behavior/graft removals and [097](plans/097-Trajectory-Export-For-Co-Training.md) trajectory export were both deferred off the 0.10.0 cut and lead the next line; R09 delegated coding runtimes, R12 native Vertex, and R13 remote clients remain later-release items if demand returns.
+Next: [097](plans/097-Trajectory-Export-For-Co-Training.md) trajectory export remains deferred; R09 delegated coding runtimes, R12 native Vertex, and R13 remote clients remain later-release items if demand returns.
 
 This roadmap replaces the previous historical roadmap in full. It preserves the rationale and priorities from the 2026-09-13 review for future reference. Historical implementation evidence remains in [plans](plans/README.md), [CHANGELOG](CHANGELOG.md), and [documentation history](docs/history/README.md); it is not repeated here.
 

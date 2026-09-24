@@ -8,6 +8,7 @@ bug-reports/
 code-reviews/
 scripts/unused-sweep-report.txt
 scripts/coverage-summary.json
+coverage/
 scripts/postgres-evidence.json
 scripts/release-evidence.json
 scripts/lint-report.sarif
@@ -19,3 +20,6 @@ scripts/live.env
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# binary lockfile — never commit if saveTextLockfile is flipped (plan 113)
+bun.lockb

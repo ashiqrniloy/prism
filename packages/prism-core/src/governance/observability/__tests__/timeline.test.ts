@@ -4,6 +4,7 @@ import type { AgentEvent } from "@arnilo/prism";
 import { createSecretRedactor } from "@arnilo/prism";
 import type { WorkflowCheckpointValue, WorkflowEvent } from "../../../runtime/workflows/types.js";
 import type { EvaluationTrace } from "../../evals/types.js";
+import { summarizeTimeline } from "../summary.js";
 import {
   createTimelineFolder,
   createWorkflowTimelineFolder,
@@ -12,7 +13,6 @@ import {
   projectWorkflowTimeline,
   TimelineError,
 } from "../timeline.js";
-import { summarizeTimeline } from "../summary.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -673,4 +673,78 @@ test("deterministic_turn folds to a deterministic step with provenance and no us
   assert.equal(summary.turnCount, 1);
   assert.deepStrictEqual(summary.turns, { model: 0, deterministic: 1 });
   assert.equal(summary.providerAttempts, 0);
+});
+
+// ─── Restore audit projection (plan 109 Task 3) ──────────────────────────────
+
+const restoreAudit = {
+  hooks: [
+    { hook: "restoreGit", durationMs: 12 },
+    { hook: "restoreDocs", durationMs: 3 },
+  ],
+  durationMs: 15,
+};
+
+test("agent resume projects the restore audit under every content policy", () => {
+  const events: AgentEvent[] = [agentEvent("agent_started"), agentEvent("agent_resumed", { version: 2, restore: restoreAudit })];
+  const timeline = projectAgentTimeline(events, { content: "metadata" });
+
+  assert.equal(timeline.status, "running");
+  assert.deepStrictEqual(timeline.restore, restoreAudit);
+  assert.deepStrictEqual(
+    timeline.restore?.hooks.map(({ hook, durationMs }) => [hook, durationMs]),
+    [
+      ["restoreGit", 12],
+      ["restoreDocs", 3],
+    ],
+  );
+  assert.equal(timeline.restore?.durationMs, 15);
+
+  // A resume with no hooks and a run that never resumed both omit the field.
+  const noHooks = projectAgentTimeline([agentEvent("agent_started"), agentEvent("agent_resumed", { version: 2 })]);
+  assert.equal(noHooks.restore, undefined);
+  assert.equal(Object.hasOwn(noHooks, "restore"), false, "absent audit must not project as {}");
+  const neverResumed = projectAgentTimeline([agentEvent("agent_started"), agentEvent("agent_finished")]);
+  assert.equal(neverResumed.restore, undefined);
+});
+
+test("workflow resume projects the same restore audit shape", () => {
+  const wfId = "wf-restore";
+  const wfRunId = "wfr-restore";
+  const events: WorkflowEvent[] = [
+    { type: "workflow_started", workflowId: wfId, runId: wfRunId, timestamp: ts, sequence: 1 },
+    {
+      type: "workflow_resumed",
+      workflowId: wfId,
+      runId: wfRunId,
+      resume: { nodeId: "nodeA", resumedAt: ts, decision: "approve", expectedVersion: 1 },
+      restore: restoreAudit,
+      timestamp: ts,
+      sequence: 2,
+    },
+  ];
+  const timeline = projectWorkflowTimeline(events);
+
+  assert.equal(timeline.status, "running");
+  assert.deepStrictEqual(timeline.restore, restoreAudit);
+
+  // A workflow resume without hooks and a workflow that never resumed omit the field.
+  const noHooks = projectWorkflowTimeline([
+    { type: "workflow_started", workflowId: wfId, runId: wfRunId, timestamp: ts, sequence: 1 },
+    {
+      type: "workflow_resumed",
+      workflowId: wfId,
+      runId: wfRunId,
+      resume: { nodeId: "nodeA", resumedAt: ts, decision: "approve", expectedVersion: 1 },
+      timestamp: ts,
+      sequence: 2,
+    },
+  ]);
+  assert.equal(noHooks.restore, undefined);
+  assert.equal(Object.hasOwn(noHooks, "restore"), false);
+  const neverResumed = projectWorkflowTimeline([
+    { type: "workflow_started", workflowId: wfId, runId: wfRunId, timestamp: ts, sequence: 1 },
+    { type: "workflow_finished", workflowId: wfId, runId: wfRunId, status: "succeeded", timestamp: ts, sequence: 2 },
+  ]);
+  assert.equal(neverResumed.restore, undefined);
 });

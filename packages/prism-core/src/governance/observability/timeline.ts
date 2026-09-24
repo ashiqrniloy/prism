@@ -4,6 +4,7 @@ import type {
   AgentFinishReason,
   BudgetAxisUsage,
   BudgetConsumedCounters,
+  CheckpointRestoreAudit,
   ErrorInfo,
   ProviderStopReason,
   RunLimitBreach,
@@ -157,6 +158,8 @@ interface FoldState {
   stopReason?: AgentFinishReason;
   /** Host turn-policy stop detail, bounded and redacted at the runtime boundary. */
   stopDetail?: string;
+  /** Restore-hook audit published by the claiming resume event (plan 094 Task 3); absent when no hooks ran. */
+  restore?: CheckpointRestoreAudit;
   startedAt: string;
   finishedAt?: string;
   runInput?: unknown;
@@ -260,6 +263,7 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
     }
     case "agent_resumed": {
       state.status = "running";
+      if (event.restore) state.restore = event.restore;
       if (state.runStep) state.runStep.status = "running";
       return;
     }
@@ -675,6 +679,7 @@ function buildTimeline(state: FoldState): ExecutionTimeline {
     ...(state.runResult !== undefined ? { result: state.runResult } : {}),
     ...(state.totalUsage ? { usage: state.totalUsage } : {}),
     ...(cacheHitRate === undefined ? {} : { cacheHitRate }),
+    ...(state.restore ? { restore: state.restore } : {}),
     steps: Object.freeze(state.steps.map(freezeStep)),
     ...(turns ? { turns } : {}),
     ...(exhaustion ? { exhaustion } : {}),
@@ -804,6 +809,7 @@ export function projectWorkflowTimeline(
       }
       case "workflow_resumed": {
         state.status = "running";
+        if (event.restore) state.restore = event.restore;
         break;
       }
       case "node_started": {
@@ -937,6 +943,7 @@ export function projectWorkflowTimeline(
     ...(state.runInput !== undefined ? { input: state.runInput } : {}),
     ...(state.runResult !== undefined ? { result: state.runResult } : {}),
     ...(state.totalUsage ? { usage: state.totalUsage } : {}),
+    ...(state.restore ? { restore: state.restore } : {}),
     steps: Object.freeze(state.steps.map(freezeStep)),
     redacted: state.anyRedacted,
     content: state.content,

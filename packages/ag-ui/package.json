@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-ag-ui",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Optional bounded AG-UI event mapper for Prism agent events.",
   "type": "module",
   "main": "./dist/index.js",
@@ -29,18 +29,18 @@
   "scripts": {
     "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node ../../scripts/with-build-lock.mjs node --test dist/__tests__/*.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs --shared node --test dist/__tests__/*.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
     "@ag-ui/core": "0.0.59",
     "@agentclientprotocol/sdk": "1.4.0",
-    "@arnilo/prism-coding-tools": "^0.10.0"
+    "@arnilo/prism-coding-tools": "^0.11.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.10.0",
-    "@arnilo/prism-core": "^0.10.0",
-    "@arnilo/prism-mcp": "^0.10.0",
+    "@arnilo/prism": "^0.11.0",
+    "@arnilo/prism-core": "^0.11.0",
+    "@arnilo/prism-mcp": "^0.11.0",
     "zod": "^3.25.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {

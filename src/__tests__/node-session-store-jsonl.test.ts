@@ -3,7 +3,15 @@ import { appendFile, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import { isSessionAppendConflict, isSessionEntryKind, SESSION_ENTRY_KINDS, SESSION_ENTRY_SCHEMA_VERSION } from "../index.js";
+import {
+  createAgent,
+  createMockProvider,
+  isSessionAppendConflict,
+  isSessionEntryKind,
+  rebuildSessionContext,
+  SESSION_ENTRY_KINDS,
+  SESSION_ENTRY_SCHEMA_VERSION,
+} from "../index.js";
 import { createJsonlSessionStore, readJsonlSessionEntries } from "../node/session-store-jsonl.js";
 import { createSessionEntry } from "../session-stores.js";
 
@@ -416,4 +424,83 @@ describe("node jsonl session store", () => {
     assert.ok(result.errors.some((error) => error.message.includes("event entry")));
     assert.ok(result.errors.some((error) => error.message.includes("metadata entry")));
   });
+
+  it("snapshot rebuild stays detached from the file", async () => {
+    const path = await tempPath();
+    const store = createJsonlSessionStore(path);
+    const entry = createSessionEntry({
+      id: "e1",
+      sessionId: "s1",
+      kind: "message",
+      message: { role: "user", content: [{ type: "text", text: "hi" }] },
+    });
+    await store.append(entry);
+    const snap = rebuildSessionContext(await store.list("s1"), { leafId: "e1" });
+    const block = snap.messages[0]?.content[0] as { type: string; text: string } | undefined;
+    if (block?.type === "text") block.text = "mutated";
+    const again = rebuildSessionContext(await store.list("s1"), { leafId: "e1" });
+    const next = again.messages[0]?.content[0];
+    assert.equal(next?.type === "text" ? next.text : undefined, "hi");
+  });
+
+  it("snapshot after append does not re-read the file", async () => {
+    const path = await tempPath();
+    const store = createJsonlSessionStore(path);
+    await store.append(
+      createSessionEntry({
+        id: "e1",
+        sessionId: "s1",
+        kind: "message",
+        message: { role: "user", content: [{ type: "text", text: "hi" }] },
+      }),
+    );
+    const before = fileReads(store);
+    const session = createAgent({
+      model: { provider: "mock", model: "m" },
+      provider: createMockProvider(),
+      store,
+    }).createSession({ id: "s1", leafId: "e1", snapshotCacheTtlMs: 0 });
+    const snap = await (session as unknown as { snapshot(): Promise<{ messages: readonly unknown[] }> }).snapshot();
+    assert.equal(snap.messages.length, 1);
+    assert.equal(fileReads(store), before);
+  });
+
+  it("sees an out-of-band append", async () => {
+    const path = await tempPath();
+    const store = createJsonlSessionStore(path);
+    await store.append(createSessionEntry({ id: "e1", sessionId: "s1", kind: "label", label: "one" }));
+    await store.list("s1");
+    const extra = createSessionEntry({ id: "e2", sessionId: "s1", kind: "label", label: "two" });
+    await appendFile(path, `${JSON.stringify(extra)}\n`, "utf8");
+    assert.deepEqual(
+      (await store.list("s1")).map((entry) => entry.id),
+      ["e1", "e2"],
+    );
+  });
+
+  it("does not share a parse cache across instances on the same path", async () => {
+    const path = await tempPath();
+    const a = createJsonlSessionStore(path);
+    const b = createJsonlSessionStore(path);
+    await a.append(createSessionEntry({ id: "e1", sessionId: "s1", kind: "label", label: "one" }));
+    const bBefore = fileReads(b);
+    assert.deepEqual(
+      (await b.list("s1")).map((entry) => entry.id),
+      ["e1"],
+    );
+    assert.equal(fileReads(b), bBefore + 1);
+    await b.append(createSessionEntry({ id: "e2", sessionId: "s1", kind: "label", label: "two" }));
+    const aBefore = fileReads(a);
+    assert.deepEqual(
+      (await a.list("s1")).map((entry) => entry.id),
+      ["e1", "e2"],
+    );
+    assert.equal(fileReads(a), aBefore + 1);
+  });
 });
+
+function fileReads(store: object): number {
+  const reads = (store as Record<symbol, number>)[Symbol.for("prism.jsonl.fileReads")];
+  if (typeof reads !== "number") throw new Error("missing jsonl fileReads probe");
+  return reads;
+}

@@ -24,7 +24,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
-import { workspaceShape } from "./package-truth.mjs";
+import { workspacePackageCounts, workspaceShape } from "./package-truth.mjs";
 import { effectiveTestChain } from "./run-all-tests.mjs";
 
 const url = (path) => new URL(path, import.meta.url);
@@ -211,8 +211,9 @@ test("baseline evidence file exists, is valid JSON captured at 0.1.5, with green
 test("baseline manifest count is coherent with the real filesystem (doc-reader adds exactly one when demanded)", () => {
   const mc = baseline.manifestCount;
   const { names: workspaceNames, providerDirs, prismDirs } = workspaceShape();
-  const hasCodingTools = workspaceNames.includes("prism-coding-tools");
-  const hasCore = workspaceNames.includes("prism-core");
+  const packages = workspacePackageCounts();
+  const hasCodingTools = packages.has("prism-coding-tools");
+  const hasCore = packages.has("prism-core");
   const delta = hasCodingTools ? -46 : hasCore ? -14 : 0; // plan 054 Tasks 2-8: providers family + office family + profile deletions
   const docReaderDemanded = closeoutById("doc-reader").status === "demanded";
   const expectedWorkspace = mc.workspacePackages + (docReaderDemanded ? 1 : 0) + delta;
@@ -224,7 +225,7 @@ test("baseline manifest count is coherent with the real filesystem (doc-reader a
   if (docReaderDemanded && !hasCodingTools) {
     assert.ok(workspaceNames.includes("document-reader"), "the extra workspace package is document-reader");
   }
-  const hasProviderFamily = existsSync(url("../packages/prism-providers/src")); // plan 054 Task 6: adapters moved inside the family
+  const hasProviderFamily = packages.has("prism-providers"); // plan 054 Task 6: adapters moved inside the family
   assert.equal(
     mc.categories.provider + (hasProviderFamily ? -17 : 0),
     providerDirs.length,

@@ -96,6 +96,21 @@ function makeRecovery(overrides?: {
 const ref = { runId: "run-1", sessionId: "s-1" };
 const ownership = { tenantId: "tenant-a" };
 
+/** Bounded await for a probe step: a stuck step must fail, not hang the suite. */
+async function within(signal: Promise<void>, ms: number, label: string): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      signal,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 describe("active-run reference validation", () => {
   it("valid refs round-trip through the persisted session shape", () => {
     const runRef: PersistedAcpRunRef = { runId: "run-1", sessionId: "s-1", status: "suspended", version: 7, updatedAt: iso };
@@ -312,6 +327,40 @@ describe("durable cancellation", () => {
     );
   });
 
+  it("bounds a hung cancel write on the signal and reports no marker", async () => {
+    const base = createMemoryCheckpointStore();
+    let aborted: (() => void) | undefined;
+    const writeAborted = new Promise<void>((resolve) => {
+      aborted = resolve;
+    });
+    const checkpoints = {
+      saveCheckpoint: (input) => {
+        if (input.namespace !== ACP_RUN_CANCEL_NAMESPACE) return base.saveCheckpoint(input);
+        // Hung store: only the caller's bounded signal settles the write.
+        return new Promise<never>((_, reject) => {
+          input.signal?.addEventListener(
+            "abort",
+            () => {
+              aborted?.();
+              reject(input.signal?.reason);
+            },
+            { once: true },
+          );
+        });
+      },
+      loadCheckpoint: (input) => base.loadCheckpoint(input),
+      listCheckpoints: (query) => base.listCheckpoints(query),
+      deleteCheckpoint: (input) => base.deleteCheckpoint(input),
+    } satisfies CheckpointStore;
+    const recovery = makeRecovery({ checkpoints, lifecycle: fakeLifecycle({ state: { status: "suspended" } }) });
+    await assert.rejects(
+      () => recovery.cancel(ref, { ownership, signal: AbortSignal.timeout(50) }),
+      (error: unknown) => error instanceof Error && error.name === "TimeoutError",
+    );
+    await writeAborted;
+    assert.equal(await base.loadCheckpoint({ namespace: ACP_RUN_CANCEL_NAMESPACE, key: "run-1", ...ownership }), null);
+  });
+
   it("corrupt cancel markers fail closed and are rewritten by a later cancel", async () => {
     const checkpoints = createMemoryCheckpointStore();
     await checkpoints.saveCheckpoint({
@@ -333,7 +382,26 @@ describe("durable cancellation", () => {
 describe("ACP agent wiring", () => {
   it("persists the active-run ref on live runs and restores it across a restart", async () => {
     const store = new MemorySessionStore();
-    const checkpoints = createMemoryCheckpointStore();
+    const baseCheckpoints = createMemoryCheckpointStore();
+    // Completion signal for the durable cancel write. The client disconnects
+    // before the write lands (Bun schedules the handler later than Node), so
+    // the test awaits the write itself instead of polling the marker.
+    let cancelWriteSettled: () => void = () => {};
+    const cancelWrite = new Promise<void>((resolve) => {
+      cancelWriteSettled = resolve;
+    });
+    const checkpoints: CheckpointStore = {
+      saveCheckpoint: async (input) => {
+        try {
+          return await baseCheckpoints.saveCheckpoint(input);
+        } finally {
+          if (input.namespace === ACP_RUN_CANCEL_NAMESPACE) cancelWriteSettled();
+        }
+      },
+      loadCheckpoint: (input) => baseCheckpoints.loadCheckpoint(input),
+      listCheckpoints: (query) => baseCheckpoints.listCheckpoints(query),
+      deleteCheckpoint: (input) => baseCheckpoints.deleteCheckpoint(input),
+    };
     const leases = createMemoryLeaseStore();
     const prismAgent = createAgent({
       id: "recovery-agent",
@@ -388,14 +456,149 @@ describe("ACP agent wiring", () => {
       await connection.request(methods.agent.session.load, { sessionId, cwd: "/w", mcpServers: [] });
       await connection.notify(methods.agent.session.cancel, { sessionId });
     });
+    // The client is gone. Await the durable write itself (not the socket): a
+    // dropped write must fail here, not hang the suite.
+    let hangBound: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      cancelWrite,
+      new Promise<void>((resolve) => {
+        hangBound = setTimeout(resolve, 2000);
+      }),
+    ]);
+    clearTimeout(hangBound);
     const restored = store.entries.get(sessionId);
     assert.ok(restored?.activeRun);
     assert.equal(restored.activeRun.runId, persisted.runId);
+    // The client disconnected immediately after the cancel notification; the
+    // durable marker must exist without a connection to keep it alive.
     const marker = await checkpoints.loadCheckpoint({
       namespace: ACP_RUN_CANCEL_NAMESPACE,
       key: persisted.runId,
       userId: "user-1",
     });
-    assert.ok(marker);
+    assert.ok(marker, "durable cancel marker missing after an immediate client disconnect");
+  });
+
+  it("session/close does not abort an in-flight durable cancel write", async () => {
+    const baseStore = new MemorySessionStore();
+    let activeRunSaved: () => void = () => {};
+    const activeRunStored = new Promise<void>((resolve) => {
+      activeRunSaved = resolve;
+    });
+    const store: AcpSessionStore = {
+      async save(entry) {
+        await baseStore.save(entry);
+        if (entry.activeRun) activeRunSaved();
+      },
+      loadAll: () => baseStore.loadAll(),
+      evict: (sessionId) => baseStore.evict(sessionId),
+    };
+    const baseCheckpoints = createMemoryCheckpointStore();
+    // Hold the cancel-namespace write until session/close has run, so the marker
+    // only lands if close leaves the in-flight durable write alone.
+    let writeStarted: () => void = () => {};
+    const started = new Promise<void>((resolve) => {
+      writeStarted = resolve;
+    });
+    let releaseWrite: () => void = () => {};
+    const writeGate = new Promise<void>((resolve) => {
+      releaseWrite = resolve;
+    });
+    let writeSettled: () => void = () => {};
+    const settled = new Promise<void>((resolve) => {
+      writeSettled = resolve;
+    });
+    const checkpoints: CheckpointStore = {
+      async saveCheckpoint(input) {
+        if (input.namespace === ACP_RUN_CANCEL_NAMESPACE) {
+          writeStarted();
+          await writeGate;
+          try {
+            return await baseCheckpoints.saveCheckpoint(input);
+          } finally {
+            writeSettled();
+          }
+        }
+        return baseCheckpoints.saveCheckpoint(input);
+      },
+      loadCheckpoint: (input) => baseCheckpoints.loadCheckpoint(input),
+      listCheckpoints: (query) => baseCheckpoints.listCheckpoints(query),
+      deleteCheckpoint: (input) => baseCheckpoints.deleteCheckpoint(input),
+    };
+    const leases = createMemoryLeaseStore();
+    let providerEntered: () => void = () => {};
+    const providerStarted = new Promise<void>((resolve) => {
+      providerEntered = resolve;
+    });
+    let runAborted: () => void = () => {};
+    const controllerAbort = new Promise<void>((resolve) => {
+      runAborted = resolve;
+    });
+    const prismAgent = createAgent({
+      id: "close-agent",
+      model: { provider: "mock", model: "mock" },
+      store: createMemorySessionStore(),
+      runState: { checkpoints, definitionRevision: "1" },
+      provider: {
+        id: "mock",
+        async *generate(request) {
+          providerEntered();
+          // Hang the turn until the run controller aborts, so the session stays live.
+          if (request.signal?.aborted) {
+            runAborted();
+            return;
+          }
+          await new Promise<void>((resolve) => {
+            request.signal?.addEventListener(
+              "abort",
+              () => {
+                runAborted();
+                resolve();
+              },
+              { once: true },
+            );
+          });
+        },
+      },
+    });
+    const app = createPrismAcpAgent<AcpAuthorization>({
+      authorize: () => ({ ownership: { userId: "user-1" } }),
+      sessionFactory: () => ({ session: prismAgent.createSession({ id: "acp-session" }), agentId: "close-agent" }),
+      lifecycle: createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent: prismAgent, definitionRevision: "1" }) }),
+      sessionStore: store,
+      sessions: {
+        load: async () => ({ session: prismAgent.createSession({ id: "acp-session" }), agentId: "close-agent" }),
+      },
+      recovery: { checkpoints, leases, ownerId: "replica-1" },
+    });
+    const acpClient = client({ name: "test-client" }).onNotification(methods.client.session.update, () => void 0);
+    let sessionId = "";
+    let runId = "";
+    await acpClient.connectWith(app, async (connection) => {
+      await connection.request(methods.agent.initialize, { protocolVersion: PROTOCOL_VERSION });
+      const created = await connection.request(methods.agent.session.new, { cwd: "/w", mcpServers: [] });
+      sessionId = created.sessionId;
+      // The prompt stays in flight (the provider hangs until the controller aborts).
+      void connection.request(methods.agent.session.prompt, { sessionId, prompt: [{ type: "text", text: "go" }] }).catch(() => undefined);
+      await within(activeRunStored, 2000, "active-run persistence"); // cancel is durable only with a ref
+      runId = baseStore.entries.get(sessionId)?.activeRun?.runId ?? "";
+      await within(providerStarted, 2000, "provider turn start"); // the turn is live when cancel lands
+      await connection.notify(methods.agent.session.cancel, { sessionId });
+      await within(started, 2000, "cancel write start"); // the durable write is in flight
+      await connection.request(methods.agent.session.close, { sessionId }); // the close handler completes before it responds
+      releaseWrite(); // let the in-flight write finish after close
+    });
+    await within(settled, 2000, "cancel write after session/close");
+    await within(controllerAbort, 2000, "run controller abort");
+    const marker = await checkpoints.loadCheckpoint({ namespace: ACP_RUN_CANCEL_NAMESPACE, key: runId, userId: "user-1" });
+    assert.ok(marker, "durable cancel marker missing after session/close");
+    const recovery = createAcpRunRecovery({
+      lifecycle: createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent: prismAgent, definitionRevision: "1" }) }),
+      checkpoints,
+      leases,
+      ownerId: "replica-1",
+    });
+    const status = await recovery.status({ runId, sessionId }, { ownership: { userId: "user-1" } });
+    assert.equal(status.status, "cancelled");
   });
 });

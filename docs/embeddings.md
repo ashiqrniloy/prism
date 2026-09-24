@@ -95,7 +95,9 @@ await runEmbeddingsConformance({
   and the reranker through the same runtime should point them at one weight cache:
   one `cacheDir` per host (e.g. `~/.cache/prism/models`), one subdirectory per
   model id, so each model is downloaded once and shared by every process on that
-  host; a cache miss downloads into that directory and later runs stay on disk.
+  host; a cache miss downloads into that directory and later runs stay on disk. The live reranker
+  leg runs exactly that pair — a semantic embedder and the cross-encoder into one cache dir — and
+  records both subdirectories ([semantic reranker evidence](_evidence/phase111-reranker-semantic-recall.md)).
 - Adapters never auto-chunk: a batch over the provider cap rejects with
   `batch_too_large`, so `embedBatched`-style callers own batching and preserve
   per-item error attribution.

@@ -20,6 +20,7 @@ import {
   renderProvidersBlock,
 } from "./package-truth.mjs";
 import { effectiveTestChain } from "./run-all-tests.mjs";
+import { readBunLock } from "./bun-lock.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const stripStamp = ({ generatedAt, ...rest }) => rest;
@@ -53,27 +54,36 @@ test("workspace manifests, truth counts, and taxonomy partition agree", () => {
   for (const n of names) assert.ok(all.has(n), `workspace package ${n} missing from truth taxonomy`);
 });
 
-test("lockfile agrees with manifests: workspace name-set, root identity, counts", () => {
+test("lockfile agrees with manifests: workspace name-set, versions, root identity, counts", () => {
   const truth = computePackageTruth(ROOT);
   const root = readManifest(join(ROOT, "package.json"));
-  const lock = readJson("package-lock.json");
-  const lockRoot = lock.packages[""];
-  assert.ok(lockRoot, "lockfile has a root package entry");
-  assert.equal(lockRoot.name, root.name, "lockfile root name drifted from package.json");
-  assert.equal(lockRoot.version, root.version, "lockfile root version drifted from package.json");
+  const lock = readBunLock(ROOT);
+  const lockRoot = lock.workspaces[""];
+  assert.ok(lockRoot, "bun.lock has a root workspace entry");
+  assert.equal(lockRoot.name, root.name, "bun.lock root name drifted from package.json");
+  // The root entry has no `version` today (phase 113 Task 1); if Bun adds one it is a claim.
+  if (lockRoot.version !== undefined) assert.equal(lockRoot.version, root.version, "bun.lock root version drifted from package.json");
 
-  const lockWorkspaceNames = Object.keys(lock.packages)
-    .filter((k) => k.startsWith("packages/"))
-    .map((k) => lock.packages[k].name)
-    .sort();
-  const manifestNames = expandWorkspaceDirs(ROOT, root.workspaces)
-    .map((d) => readManifest(join(d, "package.json")).name)
-    .sort();
-  assert.deepEqual(lockWorkspaceNames, manifestNames, "lockfile workspace name-set drifted; run npm install");
-  assert.equal(lockWorkspaceNames.length, truth.counts.workspace, "lockfile workspace count drifted from truth");
-  // ponytail: lockfile root `workspaces` glob text may lag package.json (npm
-  // rewrites it on the next lockfile-touching install) — the resolved name-set
-  // above is the invariant that breaks on real churn.
+  const lockWorkspaces = Object.fromEntries(
+    Object.entries(lock.workspaces)
+      .filter(([key]) => key.startsWith("packages/"))
+      .map(([key, entry]) => [key, { name: entry.name, version: entry.version }]),
+  );
+  const manifests = Object.fromEntries(
+    expandWorkspaceDirs(ROOT, root.workspaces).map((dir) => [
+      dir.slice(ROOT.length + 1).replaceAll("\\", "/"),
+      readManifest(join(dir, "package.json")),
+    ]),
+  );
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(lockWorkspaces).map(([key, entry]) => [key, entry.name])),
+    Object.fromEntries(Object.entries(manifests).map(([key, manifest]) => [key, manifest.name])),
+    "bun.lock workspace name-set drifted; run bun install",
+  );
+  for (const [key, manifest] of Object.entries(manifests)) {
+    assert.equal(lockWorkspaces[key].version, manifest.version, `bun.lock ${key} version drifted; run bun install`);
+  }
+  assert.equal(Object.keys(lockWorkspaces).length, truth.counts.workspace, "bun.lock workspace count drifted from truth");
 });
 
 test("drift detection: a tampered truth/manifest pair fails the equality gate", () => {

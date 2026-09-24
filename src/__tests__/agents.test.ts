@@ -2642,12 +2642,18 @@ describe("agent session runtime", () => {
         { id: "e1", sessionId: "ttl", timestamp: "2026-01-01T00:00:00.000Z", kind: "label", label: "one" },
       ]);
       let count = 0;
+      const readBranchPath = inner.readBranchPath;
+      if (readBranchPath === undefined) throw new Error("memory store missing readBranchPath");
       return {
         store: {
           ...inner,
           async list(sessionId) {
             count += 1;
             return inner.list(sessionId);
+          },
+          async readBranchPath(query) {
+            count += 1;
+            return readBranchPath(query);
           },
         },
         count: () => count,

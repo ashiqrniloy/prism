@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-acp-agent",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Spawnable ACP agent: serves createPrismAcpAgent over stdio from a config file.",
   "type": "module",
   "main": "./dist/src/index.js",
@@ -24,18 +24,18 @@
   "scripts": {
     "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node ../../scripts/with-build-lock.mjs node --test dist/src/__tests__/*.test.js",
+    "test": "node ../../scripts/with-build-lock.mjs --shared node --test dist/src/__tests__/*.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "1.4.0",
-    "@arnilo/prism-coding-tools": "^0.10.0",
-    "@arnilo/prism-core": "^0.10.0"
+    "@arnilo/prism-coding-tools": "^0.11.0",
+    "@arnilo/prism-core": "^0.11.0"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.10.0",
-    "@arnilo/prism-ag-ui": "^0.10.0",
-    "@arnilo/prism-providers": "^0.10.0"
+    "@arnilo/prism": "^0.11.0",
+    "@arnilo/prism-ag-ui": "^0.11.0",
+    "@arnilo/prism-providers": "^0.11.0"
   },
   "peerDependenciesMeta": {
     "@arnilo/prism-providers": {

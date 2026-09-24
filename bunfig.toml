@@ -1,0 +1,12 @@
+# Plan 113 Task 2: Bun is the contributor package manager.
+# Hoisted matches how npm consumers resolve optional native peers (better-sqlite3,
+# pg, @napi-rs/keyring); the isolated linker would change that resolution.
+[install]
+linker = "hoisted"
+saveTextLockfile = true
+
+# Plan 114 Task 2: coverage scoping for the core row (`bun test --coverage` from
+# the repo root). Bun 1.4.2 does not discover bunfig.toml from parent dirs, so every
+# gated workspace carries its own copy, read from its package cwd.
+[test]
+coveragePathIgnorePatterns = ["**/packages/**", "**/scripts/**", "**/examples/**", "../**"]

@@ -49,7 +49,8 @@ export interface SessionStore {
   get?(id: string): Promise<SessionEntry | undefined>;
   /** DB-friendly branch read: return one branch's ancestor chain as a page so adapters
    *  avoid `list(sessionId)` (full-session scan) + in-memory rebuild. Optional — the
-   *  built-in memory/JSONL stores omit it and the runtime falls back to `list()`. */
+   *  built-in JSONL store omits it and the runtime falls back to `list()`. The memory
+   *  store implements it. */
   readBranchPath?(query: SessionBranchRead): Promise<PersistencePage<SessionEntry>>;
   /**
    * Optional bounded session search. Prefer implementing this **or** returning a companion
