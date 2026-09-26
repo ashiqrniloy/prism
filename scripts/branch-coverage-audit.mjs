@@ -4,10 +4,12 @@
  * Bun's gate stays `branches: null` (plan 114). This script does not replace it.
  *
  * # ponytail: Node's instrument measures branches Bun cannot (plan 114 row 11).
- * Two instruments means two floor semantics. Upgrade path: one instrument when Bun ships BRDA.
+ * Two instruments means two floor semantics. Upgrade path: probeBunBranchRecords()
+ * fails this stage when Bun ships BRDA; then delete this Node spawn.
  */
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -77,19 +79,105 @@ function writeArtifact(artifact) {
   return next;
 }
 
+/** True when lcov contains branch records. Bun 1.4.2 emits line/function records only. */
+export function lcovHasBranchRecords(lcov) {
+  return /^BRDA:/m.test(lcov);
+}
+
+/**
+ * One covered if/else under `bun test --coverage`. True only when this Bun emits `BRDA`.
+ * # ponytail: temp dir, one file. The Node instrument below is the thing this replaces.
+ */
+export function probeBunBranchRecords() {
+  const dir = mkdtempSync(join(tmpdir(), "prism-brda-"));
+  try {
+    writeFileSync(join(dir, "sample.ts"), "export function sign(n) {\n  if (n > 0) return 1;\n  if (n < 0) return -1;\n  return 0;\n}\n");
+    writeFileSync(
+      join(dir, "sample.test.ts"),
+      'import assert from "node:assert/strict";\nimport { test } from "bun:test";\nimport { sign } from "./sample.ts";\ntest("branches", () => {\n  assert.equal(sign(1), 1);\n  assert.equal(sign(-1), -1);\n  assert.equal(sign(0), 0);\n});\n',
+    );
+    const result = spawnSync("bun", ["test", "--coverage", "--coverage-reporter=lcov"], {
+      cwd: dir,
+      encoding: "utf8",
+      timeout: 60_000,
+    });
+    let lcov = "";
+    try {
+      lcov = readFileSync(join(dir, "coverage", "lcov.info"), "utf8");
+    } catch {
+      lcov = "";
+    }
+    if ((result.status ?? 1) !== 0 || !lcov) {
+      const detail = (result.stderr || result.error?.message || `exit ${result.status}`).split("\n")[0];
+      throw new Error(`branch-coverage: Bun BRDA probe failed: ${detail}`);
+    }
+    return lcovHasBranchRecords(lcov);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 export function auditBranchCoverage() {
+  if (probeBunBranchRecords()) {
+    console.error(
+      "branch-coverage: Bun now emits BRDA. Delete this Node spawn and the NODE_SPAWN_EXCEPTIONS entry for scripts/branch-coverage-audit.mjs (plan 127 §14).",
+    );
+    return 1;
+  }
   const files = coreTests();
   if (files.length === 0) {
-    console.error("branch-coverage: no dist/__tests__ — run npm run build first");
+    console.error("branch-coverage: no dist/__tests__ — run bun run build first");
     return 1;
   }
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("NODE_TEST_")));
   const started = Date.now();
-  const result = spawnSync(
-    "node",
-    ["--test", "--experimental-test-coverage", "--test-coverage-include=dist/**", "--test-coverage-exclude=dist/__tests__/**", ...files],
-    { cwd: root, encoding: "utf8", env, maxBuffer: 64 * 1024 * 1024, timeout: 180_000 },
-  );
+  const shimDir = mkdtempSync(join(tmpdir(), "prism-node-bun-shim-"));
+  let result;
+  try {
+    const shimPath = join(shimDir, "shim.mjs");
+    const loaderPath = join(shimDir, "loader.mjs");
+    writeFileSync(
+      shimPath,
+      [
+        `import * as nodeTest from ${JSON.stringify("node:test")};`,
+        'export const describe = nodeTest.describe;',
+        'export const it = nodeTest.it;',
+        'export const test = nodeTest.test;',
+        'export const before = nodeTest.before;',
+        'export const after = nodeTest.after;',
+        'export const beforeAll = nodeTest.before;',
+        'export const afterAll = nodeTest.after;',
+        'export const beforeEach = nodeTest.beforeEach;',
+        'export const afterEach = nodeTest.afterEach;',
+        'function skipIf(condition) { return condition ? this.skip : this; }',
+        'if (!describe.skipIf) describe.skipIf = skipIf.bind(describe);',
+        'if (!it.skipIf) it.skipIf = skipIf.bind(it);',
+        'if (!test.skipIf) test.skipIf = skipIf.bind(test);',
+        'export default nodeTest;',
+      ].join("\n"),
+    );
+    writeFileSync(
+      loaderPath,
+      [
+        'import { registerHooks } from "node:module";',
+        'registerHooks({',
+        '  resolve(specifier, context, nextResolve) {',
+        '    if (specifier === "bun:test") {',
+        '      return { format: "module", shortCircuit: true, url: new URL("./shim.mjs", import.meta.url).href };',
+        '    }',
+        '    return nextResolve(specifier, context);',
+        '  }',
+        '});',
+      ].join("\n"),
+    );
+    result = spawnSync(
+      "node",
+      ["--import", loaderPath, "--test", "--experimental-test-coverage", "--test-coverage-include=dist/**", "--test-coverage-exclude=dist/__tests__/**", ...files],
+      { cwd: root, encoding: "utf8", env, maxBuffer: 64 * 1024 * 1024, timeout: 180_000 },
+    );
+  } finally {
+    rmSync(shimDir, { recursive: true, force: true });
+  }
   const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
   if (result.error) {
     console.error(`branch-coverage: ${result.error.message}`);
