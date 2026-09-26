@@ -38,6 +38,7 @@ export {
   WorkflowDefinitionError,
   WorkflowLoopLimitError,
   WorkflowRuntimeError,
+  WorkflowSuperstepLimitError,
 } from "./errors.js";
 export { createWorkflowEventBus } from "./events.js";
 export {
@@ -97,6 +98,7 @@ export {
   HARD_MAX_SCHEDULE_INPUT_BYTES,
   HARD_MAX_STATE_BYTES,
   HARD_MAX_STATE_HISTORY,
+  HARD_MAX_SUPERSTEPS,
   HARD_SCHEDULE_PAGE_CAP,
   WORKFLOW_CHECKPOINT_SCHEMA_VERSION,
   WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION,
@@ -108,6 +110,7 @@ export {
   functionNode,
   joinNode,
   loopNode,
+  routeNode,
   toolNode,
   workflowNode,
 } from "./nodes.js";
@@ -142,6 +145,26 @@ export {
   type WorkflowSchedules,
 } from "./schedules.js";
 export {
+  createScopedContext,
+  createScopedState,
+  type ScopedSubgraphConfig,
+  type ScopedWorkflowNodeContext,
+  scopedSubgraphNode,
+  validateScopeKey,
+  withNodeScope,
+} from "./scoped.js";
+export {
+  clearSwarmEvents,
+  type DefineSwarmWorkflowInput,
+  defineSwarmWorkflow,
+  getSwarmEvents,
+  matchSwarmTopic,
+  publishSwarmEvent,
+  type SwarmEvent,
+  type SwarmRouterConfig,
+  swarmRouterNode,
+} from "./swarm.js";
+export {
   type CancelWorkflowRunInput,
   type CancelWorkflowRunResult,
   cancelWorkflowRun,
@@ -157,6 +180,8 @@ export type {
   LoopNodeConfig,
   LoopNodeDefinition,
   NestedWorkflowNodeDefinition,
+  RouteNodeConfig,
+  RouteNodeDefinition,
   RunWorkflowOptions,
   ToolNodeDefinition,
   WorkflowCheckpointAdapter,
@@ -172,6 +197,8 @@ export type {
   WorkflowEventBus,
   WorkflowEventInput,
   WorkflowEventMergeOptions,
+  WorkflowExecutionCheckpoint,
+  WorkflowExecutionPendingActivation,
   WorkflowLimits,
   WorkflowLoopBodyDefinition,
   WorkflowLoopIterationRecord,

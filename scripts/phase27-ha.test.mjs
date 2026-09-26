@@ -24,7 +24,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { createPostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
 import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
 import { Pool } from "pg";
@@ -66,7 +66,7 @@ async function waitFor(file, timeoutMs) {
   return false;
 }
 
-test("Task 6 HA drill: two-process failover, fencing, cursors, split-brain, tenant isolation", { skip }, async () => {
+(skip ? test.skip : test)("Task 6 HA drill: two-process failover, fencing, cursors, split-brain, tenant isolation", async () => {
   const pool = new Pool({ connectionString: url, max: 10 });
   const schema = `prism_ha_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   const barrierDir = `${mkdtempSync(join(tmpdir(), "phase27-ha-"))}/`;

@@ -157,7 +157,7 @@ The `@arnilo/prism-providers/model-discovery` adapters have an opt-in live leg t
 
 ```bash
 PRISM_LIVE_PROVIDER_TESTS=1 OPENAI_API_KEY=...   # or GEMINI_API_KEY for the Google route
-node --test packages/prism-providers/dist/model-discovery/__tests__/live.test.js
+bun test packages/prism-providers/dist/model-discovery/__tests__/live.test.js
 ```
 
 Chooses the OpenAI-compatible or Google route based on which key is present; neither → skip.

@@ -1,5 +1,5 @@
 import { type CheckpointQuery, type CheckpointRecord, type CheckpointStore } from "@arnilo/prism";
-import type Database from "better-sqlite3";
+import type { Database } from "bun:sqlite";
 import {
   assertCheckpointInput,
   decodeCheckpointCursor,
@@ -26,7 +26,7 @@ interface Row {
   updated_at: string;
 }
 
-export function createSqliteCheckpointStore(database: Database.Database): CheckpointStore {
+export function createSqliteCheckpointStore(database: Database): CheckpointStore {
   database.exec(`
 CREATE TABLE IF NOT EXISTS prism_checkpoints (
   namespace TEXT NOT NULL,

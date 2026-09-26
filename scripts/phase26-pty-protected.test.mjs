@@ -17,13 +17,13 @@
  * Blocked-gate semantics (frozen in scripts/phase26-freeze-manifest.json):
  * without PRISM_TEST_PTY_BACKEND this file records a named, visible BLOCKED
  * GATE failure instead of a passing skip. It is only wired into the protected
- * release profile; it is not part of `npm test`.
+ * release profile; it is not part of `bun run test`.
  */
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { after, before, test } from "node:test";
+import { afterAll as after, beforeAll as before, test } from "bun:test";
 import { pathToFileURL } from "node:url";
 import { createProcessSessions } from "../packages/prism-coding-tools/dist/agent/index.js";
 import { blockedGate } from "./blocked-gate.mjs";

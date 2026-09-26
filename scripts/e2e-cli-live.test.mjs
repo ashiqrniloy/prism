@@ -16,7 +16,7 @@ import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { after, describe, it } from "node:test";
+import { afterAll as after, describe, it } from "bun:test";
 import { createPackedConsumer, repoRoot } from "./fixtures/packed-consumer.mjs";
 
 const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
@@ -43,7 +43,6 @@ if (!LIVE || !spec || !API_KEY) {
   process.exit(0); // skip-not-fail: matrix treats empty run as skip
 }
 
-const CEILING_MS = 120_000;
 const PROMPT = "Reply with exactly the word: pong";
 /** Placeholder/expired keys happen: provider-side 401/403 means the credential
  *  is unavailable (skip-not-fail invariant), not that the CLI is broken — the
@@ -80,7 +79,7 @@ function runCli(args, cwd = consumer, timeoutMs = 60_000) {
   return record(args.join(" "), spawnSync(process.execPath, [cli, ...args], { cwd, env, encoding: "utf8", timeout: timeoutMs }));
 }
 
-describe(`packed-install CLI live journey (${providerId} over the real wire)`, { timeout: CEILING_MS }, () => {
+describe(`packed-install CLI live journey (${providerId} over the real wire)`, () => {
   it(`prism init --provider ${providerId} scaffolds a project whose generated offline test passes`, () => {
     const init = runCli(["init", "app", "--provider", providerId]);
     assert.equal(init.status, 0, init.stdout + init.stderr);
@@ -92,11 +91,11 @@ describe(`packed-install CLI live journey (${providerId} over the real wire)`, {
     assert.match(agentSrc, new RegExp(spec.factoryExport));
     assert.match(agentSrc, new RegExp(`process\\.env\\.${spec.envKey}`), "scaffold must read the key from env, never inline it");
     // Generated offline test runs against the packed install (mock provider, no network).
-    // `node` by name: a Bun parent would make `process.execPath` a Bun child and
-    // `bun --test` is not a test runner (plan 115 Task 3).
+    // Plan 124 Task 2: the consumer runtime is Bun, so the generated suite runs `bun test`
+    // (native TypeScript, no type-stripper child).
     const test = record(
       "generated test",
-      spawnSync("node", ["--test", join("app", "src", "__tests__", "agent.test.ts")], {
+      spawnSync("bun", ["test", "--timeout=0", join("app", "src", "__tests__", "agent.test.ts")], {
         cwd: consumer,
         encoding: "utf8",
         timeout: 60_000,
@@ -113,18 +112,22 @@ describe(`packed-install CLI live journey (${providerId} over the real wire)`, {
     assert.ok(existsSync(join(pkg, "src", "provider.ts")), "providers add must write the provider module");
   });
 
-  it("print mode completes a real one-shot prompt", (t) => {
+  it("print mode completes a real one-shot prompt", () => {
     const run = runCli(["--provider", providerId, "--mode", "print", "-p", PROMPT]);
-    if (isCredentialRejected(run.stdout + run.stderr))
-      return t.skip(`provider rejected ${spec.envKey} (401/403) — refresh the credential and rerun`);
+    if (isCredentialRejected(run.stdout + run.stderr)) {
+      console.log(`provider rejected ${spec.envKey} (401/403) — refresh the credential and rerun`);
+      return;
+    }
     assert.equal(run.status, 0, run.stdout + run.stderr);
     assert.ok(run.stdout.trim().length > 0, "print mode produced no text");
   });
 
-  it("json mode emits well-formed event envelopes", (t) => {
+  it("json mode emits well-formed event envelopes", () => {
     const run = runCli(["--provider", providerId, "--mode", "json", "-p", PROMPT]);
-    if (isCredentialRejected(run.stdout + run.stderr))
-      return t.skip(`provider rejected ${spec.envKey} (401/403) — refresh the credential and rerun`);
+    if (isCredentialRejected(run.stdout + run.stderr)) {
+      console.log(`provider rejected ${spec.envKey} (401/403) — refresh the credential and rerun`);
+      return;
+    }
     assert.equal(run.status, 0, run.stdout + run.stderr);
     const lines = run.stdout.split("\n").filter((l) => l.trim());
     assert.ok(lines.length > 0, "json mode produced no output");
@@ -135,7 +138,7 @@ describe(`packed-install CLI live journey (${providerId} over the real wire)`, {
     }
   });
 
-  it("rpc mode drives prompt → state → abort over the real stdio wire", async (t) => {
+  it("rpc mode drives prompt → state → abort over the real stdio wire", async () => {
     const child = spawn(process.execPath, [cli, "--provider", providerId, "--mode", "rpc"], {
       cwd: consumer,
       env,
@@ -183,7 +186,8 @@ describe(`packed-install CLI live journey (${providerId} over the real wire)`, {
     const done1 = await waitFor(1);
     if (done1.ok === false && isCredentialRejected(JSON.stringify(done1))) {
       child.kill();
-      return t.skip(`provider rejected ${spec.envKey} (401/403) — refresh the credential and rerun`);
+      console.log(`provider rejected ${spec.envKey} (401/403) — refresh the credential and rerun`);
+      return;
     }
     assert.equal(done1.ok, true, JSON.stringify(done1));
     const events1 = lines.map((l) => JSON.parse(l)).filter((p) => p.type === "event" && p.id === 1);

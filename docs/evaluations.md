@@ -323,7 +323,7 @@ if (records.some((record) => record.status !== "scored" || record.score !== 1)) 
 
 ```sh
 # Protected run (requires a disposable PostgreSQL instance):
-PRISM_TEST_POSTGRES_URL=postgresql://... node --test scripts/phase27-erp-journey.test.mjs
+PRISM_TEST_POSTGRES_URL=postgresql://... bun test scripts/phase27-erp-journey.test.mjs
 ```
 
 The journey reuses the two-replica failover worker (`scripts/phase27-ha-worker.mjs`) and asserts the comprehensive DR drill evidence (`docs/_evidence/phase27-dr-evidence.json`) is present and not stale. Local substitutes are labelled in the journey evidence and never converted into production claims: an in-memory WORM/SIEM sink (host owns the immutable store in production), in-memory saga checkpoint/lease stores (saga durability is proven in its own suite), and a logical pg-client backup/restore of the ERP tables (comprehensive PITR is in the DR drill evidence). Passing this protected journey **does not** satisfy the 0.3.0 live-service matrix.

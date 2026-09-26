@@ -9,7 +9,7 @@
  * and config_option_update notifications with the full current-value set.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { type ClientContext, client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import type { AgentRunLifecycle, AgentSession } from "@arnilo/prism";
 import {

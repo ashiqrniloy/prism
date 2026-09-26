@@ -14,7 +14,7 @@
  * grader reports 0 with the violation named.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import {
   type Agent,
   type AgentIdentity,

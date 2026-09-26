@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { type CompactionEntryData, createDefaultCompactionStrategy, createSessionEntry, rebuildSessionContext } from "../index.js";
 
 const now = () => new Date("2026-01-01T00:00:00.000Z");

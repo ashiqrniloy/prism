@@ -8,7 +8,7 @@
  * vendor constants: base URLs, model ids and env var names stay in the provider packages.
  */
 import type { CredentialValueSource, JsonObject, Usage } from "@arnilo/prism";
-import { createDefaultRetryPolicy, resolveCredentialValue, trimTrailingSlashes, waitForRetry } from "@arnilo/prism";
+import { createDefaultRetryPolicy, isJsonObject, resolveCredentialValue, trimTrailingSlashes, waitForRetry } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { parseErrorBody, providerHttpError, readRetryAfterMs } from "./retry-http.js";
 
@@ -126,6 +126,19 @@ export class SystemOneRetryExhaustedError extends SystemOneError {
   }
 }
 
+/**
+ * The caller's `AbortSignal` or the call deadline stopped the request before an answer
+ * existed. Thrown by `askSystemOneDecisions` (the shared client itself keeps the native
+ * abort error); `status` is 0 because no HTTP response was read.
+ */
+export class SystemOneAbortedError extends SystemOneError {
+  constructor(message: string, cause?: unknown) {
+    super(message, 0);
+    this.name = "SystemOneAbortedError";
+    if (cause !== undefined) this.cause = cause;
+  }
+}
+
 export interface SystemOneClientOptions {
   /** Name used in error messages and credential resolution, e.g. `"TypeSafe Jev"`. */
   readonly provider: string;
@@ -155,12 +168,41 @@ export function isRetryableSystemOneStatus(status: number): boolean {
   return status === 429 || status >= 500;
 }
 
-/** Minimal success-body gate: an object carrying `model` and an `answers` record. */
+function isProbability(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1;
+}
+
+/** Validate untrusted answers before coercion or exposure to a host. */
+export function isSystemOneAnswer(value: unknown): value is SystemOneAnswer {
+  if (!isJsonObject(value)) return false;
+  if (value.confidence !== undefined && !isProbability(value.confidence)) return false;
+  if (value.probabilities !== undefined && (!isJsonObject(value.probabilities) || !Object.values(value.probabilities).every(isProbability)))
+    return false;
+  switch (value.type) {
+    case "noul":
+      return isProbability(value.noul);
+    case "choice":
+      return typeof value.choice === "string";
+    case "score":
+      return (
+        typeof value.score === "number" &&
+        Number.isFinite(value.score) &&
+        (value.legend === undefined ||
+          (isJsonObject(value.legend) && Object.values(value.legend).every((entry) => typeof entry === "string")))
+      );
+    default:
+      return false;
+  }
+}
+
+/** Success-body gate includes answer values and any reported token counts. */
 export function isSystemOneResponse(value: unknown): value is SystemOneResponse {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const response = value as { readonly model?: unknown; readonly answers?: unknown };
-  return (
-    typeof response.model === "string" && !!response.answers && typeof response.answers === "object" && !Array.isArray(response.answers)
+  if (!isJsonObject(value) || typeof value.model !== "string" || !isJsonObject(value.answers)) return false;
+  if (!Object.values(value.answers).every(isSystemOneAnswer)) return false;
+  if (value.usage === undefined) return true;
+  if (!isJsonObject(value.usage)) return false;
+  return [value.usage.input_tokens, value.usage.output_tokens].every(
+    (count) => count === undefined || (typeof count === "number" && Number.isSafeInteger(count) && count >= 0),
   );
 }
 

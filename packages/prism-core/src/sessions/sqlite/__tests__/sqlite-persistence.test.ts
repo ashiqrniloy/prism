@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it } from "bun:test";
 import { createSecretRedactor } from "@arnilo/prism";
 import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
 import {
@@ -13,7 +13,8 @@ import {
 } from "@arnilo/prism/testing/persistence-schema";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
-import Database from "better-sqlite3";
+import { spawnSync } from "node:child_process";
+import { Database } from "bun:sqlite";
 import {
   MIGRATION_001_INIT,
   MIGRATION_002_USAGE_SCOPE,
@@ -783,4 +784,23 @@ describe("appendSession metadata CAS (008_session_version)", () => {
     assert.deepEqual(bumped, { version: 2 });
     persistence.close();
   });
+});
+
+it("names the Bun runtime when the sqlite modules are imported under node", () => {
+  const targets = [new URL("../persistence.js", import.meta.url), new URL("../../../governance/prompts/sqlite.js", import.meta.url)];
+  for (const target of targets) {
+    const result = spawnSync(
+      "node",
+      [
+        "--input-type=module",
+        "-e",
+        `try { await import(${JSON.stringify(target.href)}); console.log("NO_THROW"); } catch (error) { console.log(error.message); console.log(error.cause?.code ?? ""); }`,
+      ],
+      { encoding: "utf8" },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /requires the Bun runtime \(bun:sqlite\)/);
+    assert.equal(result.stdout.includes("ERR_UNSUPPORTED_ESM_URL_SCHEME"), false);
+    assert.match(result.stdout, /MODULE_NOT_FOUND/);
+  }
 });

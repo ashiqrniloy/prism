@@ -18,9 +18,9 @@
  * still gates.
  *
  * Usage:
- *   node scripts/benchmark-0.1.0.mjs                       # report to stdout
- *   node scripts/benchmark-0.1.0.mjs --out scripts/benchmark-0.1.0.json
- *   PRISM_TEST_POSTGRES_URL="postgresql://…" node scripts/benchmark-0.1.0.mjs --out …
+ *   bun scripts/benchmark-0.1.0.mjs                       # report to stdout
+ *   bun scripts/benchmark-0.1.0.mjs --out scripts/benchmark-0.1.0.json
+ *   PRISM_TEST_POSTGRES_URL="postgresql://…" bun scripts/benchmark-0.1.0.mjs --out …
  *
  * Exit code 1 on any frozen-ceiling breach (BUDGET FAIL lines on stderr).
  */

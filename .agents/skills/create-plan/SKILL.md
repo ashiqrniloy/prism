@@ -71,9 +71,23 @@ Create or update actionable, numbered, documentation-backed implementation plans
 
 ## Compromises Made
 - To be filled after tasks are completed and tests pass.
+- Backlog handoff (plan end only, after this section is reviewed — not while drafting): append every compromise here to `plans/backlog.md` as a task. Create that file if missing; do not create it when this section has no items. Copy, do not remove these items. Skip an entry that already has the same source plan, section, and title; update it in place. After writing, add one line here: `Recorded in plans/backlog.md.` Entry shape:
+  - `## <task title>` — the follow-up that revisits or undoes the compromise
+  - Section: `Compromises Made`
+  - Priority: `P1` | `P2` | `P3` | `P4` (`P1` highest; assign one if the item has none, and record it here too)
+  - Source: `plans/<this-plan-file>.md`
+  - Compromise: what compromise was made
+  - Implications: what that compromise costs or risks
 
 ## Further Actions
 - To be filled after task completion with improvements, rationale, and priority.
+- Backlog handoff (plan end only, after this section is reviewed — not while drafting): append every item here to `plans/backlog.md`. Create that file if missing; do not create it when this section has no items. Copy, do not remove these items. Skip an entry that already has the same source plan, section, and title; update it in place. After writing, add one line here: `Recorded in plans/backlog.md.` Entry shape:
+  - `## <title>`
+  - Section: `Further Actions`
+  - Priority: `P1` | `P2` | `P3` | `P4` (`P1` highest; assign one if the item has none, and record it here too)
+  - Source: `plans/<this-plan-file>.md`
+  - What: what the task is
+  - Why: why it is needed
 ```
 
 ## Task Writing Rules
@@ -91,6 +105,7 @@ Create or update actionable, numbered, documentation-backed implementation plans
 - **Any task that changes an error contract (a code, an error class, or a refusal shape) must plan a repo-wide search for the retired name, not just a `packages/` sweep.** Put "grep `scripts/`, `examples/`, and every workspace for the old code/class/string" in that task's acceptance criteria (or its test cases). Plan 080 Task 3 replaced "ownership mismatch" with a silent miss plus a generic CAS conflict, updated the adapters and the sqlite test, and left `packages/prism-core/src/sessions/postgres/__tests__/postgres-integration.test.ts` and `scripts/fixtures/phase12-restart-worker.mjs` asserting the retired error until plan 084 Task 8.
 - **A plan that ships a new opt-in cost or durability knob states its sizing trade-off in the owning docs page**, not only in the plan: one line naming the new write/request/latency per unit of work (for example a checkpoint per provider turn) and the default that avoids it.
 - Do not fill `Compromises Made` or `Further Actions` before execution unless known constraints already exist.
+- Do not write `plans/backlog.md` while drafting. The Compromises Made and Further Actions backlog handoffs run only at plan-end review, after those sections are filled.
 
 ## Executing a Plan
 

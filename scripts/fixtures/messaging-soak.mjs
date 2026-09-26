@@ -6,9 +6,9 @@
  * listUnresolved/reconcile → prune — against a throwaway sqlite file and a mock provider.
  * No network, no chat accounts, no credentials: it is a script, not a library daemon.
  *
- *   node scripts/fixtures/messaging-soak.mjs --durationMs 3000            # CI smoke
- *   node scripts/fixtures/messaging-soak.mjs --durationMs 259200000       # 72h operator soak
- *   node scripts/fixtures/messaging-soak.mjs --iterations 200 --lanes 8   # iteration-bounded
+ *   bun scripts/fixtures/messaging-soak.mjs --durationMs 3000            # CI smoke
+ *   bun scripts/fixtures/messaging-soak.mjs --durationMs 259200000       # 72h operator soak
+ *   bun scripts/fixtures/messaging-soak.mjs --iterations 200 --lanes 8   # iteration-bounded
  *
  * Prints one JSON summary line, exits 0 when the run is clean (or interrupted by SIGINT/SIGTERM).
  * The final sweep prunes with a future `now` so a short CI run still exercises deletion; a real
@@ -23,7 +23,7 @@ import { createSqlitePersistence } from "../../packages/prism-core/dist/sessions
 
 const DEFAULT_DURATION_MS = 30_000;
 const MAX_DURATION_MS = 7 * 24 * 60 * 60_000;
-const USAGE = "usage: node scripts/fixtures/messaging-soak.mjs [--durationMs n] [--iterations n] [--lanes n] [--pruneEvery n]";
+const USAGE = "usage: bun scripts/fixtures/messaging-soak.mjs [--durationMs n] [--iterations n] [--lanes n] [--pruneEvery n]";
 
 function boundedInteger(value, fallback, min, max, label) {
   if (value === undefined) return fallback;

@@ -4,13 +4,13 @@
 // additive column + history row) → verify the 008-shape store still works and
 // seeded data survived → re-apply → verify idempotency + data → tamper a
 // checksum row and prove the runner fails closed. SQLite: same flow
-// in-process on a temp file. Requires `npm run build:core` (dist imports).
+// in-process on a temp file. Requires `bun run build:core` (dist imports).
 //
 // Safety: refuses any URL whose host is not localhost/127.0.0.1/::1 — CI and
 // throwaway local databases only. `--self-test` checks that refusal without
 // touching a database.
 //
-// Usage: node scripts/drill-migration-rollback.mjs --url "postgres://prism:prism@localhost:5432/prism"
+// Usage: bun scripts/drill-migration-rollback.mjs --url "postgres://prism:prism@localhost:5432/prism"
 
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -30,7 +30,7 @@ if (invokedDirectly) {
   ({ createPostgresPersistence } = await import("@arnilo/prism-core/sessions/postgres"));
   ({ createSqlitePersistence } = await import("@arnilo/prism-core/sessions/sqlite"));
   Pool = (await import("pg")).Pool;
-  Database = (await import("better-sqlite3")).default;
+  Database = (await import("bun:sqlite")).Database;
 }
 
 const LAST_STEP = "009_run_prompt_version";

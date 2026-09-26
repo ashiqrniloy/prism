@@ -1,7 +1,7 @@
 /** Telemetry (plan 074 Task 6): one redacted `attention_compiled` per mutated turn, counts only,
  *  zero events when the compiler is off or the request is under the ratio. */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import {
   type AgentConfig,
   type AgentEvent,

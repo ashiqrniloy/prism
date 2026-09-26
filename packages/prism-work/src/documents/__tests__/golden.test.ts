@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { generateDocument, isZipContainer, parseDocument } from "../index.js";
 import type { DeckModel, DocModel, SheetModel } from "../types.js";

@@ -10,7 +10,7 @@
  * Responses API; `googleGenerateContentBody` and `toAiSdkPrompt` read the block directly.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { EMPTY_TOOL_RESULT_TEXT, type JsonObject, type Message, type ModelConfig, type ProviderRequest } from "@arnilo/prism";
 import { serializeOpenAIChatMessage, serializeToolResultJson } from "@arnilo/prism/providers/openai";
 import { toAiSdkPrompt } from "../ai-sdk/index.js";

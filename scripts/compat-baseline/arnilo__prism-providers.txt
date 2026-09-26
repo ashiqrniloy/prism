@@ -24,14 +24,22 @@ DEEPSEEK_DEFAULT_BASE_URL	export declare const DEEPSEEK_DEFAULT_BASE_URL = "http
 DEEPSEEK_THINKING_LEVELS	export declare const DEEPSEEK_THINKING_LEVELS: readonly ["low", "high", "max"]
 DEFAULT_ALIBABA_BASE_URL	export declare const DEFAULT_ALIBABA_BASE_URL: string
 DEFAULT_IMAGE_MAX_BYTES	export declare const DEFAULT_IMAGE_MAX_BYTES: number
+DEFAULT_LAYA_BASE_URL	export declare const DEFAULT_LAYA_BASE_URL = "http://localhost:8000"
 DEFAULT_MAX_FRAME_BYTES	export declare const DEFAULT_MAX_FRAME_BYTES = 1048576
+DEFAULT_MAX_SYSTEMONE_STATE_BYTES	export declare const DEFAULT_MAX_SYSTEMONE_STATE_BYTES = 262144
 DEFAULT_MODEL_DISCOVERY_TTL_MS	export declare const DEFAULT_MODEL_DISCOVERY_TTL_MS = 3600000
 DEFAULT_OLLAMA_BASE_URL	export declare const DEFAULT_OLLAMA_BASE_URL: string
 DEFAULT_SPEECH_MAX_AUDIO_BYTES	export declare const DEFAULT_SPEECH_MAX_AUDIO_BYTES: number
+DEFAULT_SYSTEMONE_BOOLEAN_THRESHOLD	export declare const DEFAULT_SYSTEMONE_BOOLEAN_THRESHOLD = 0.5
+DEFAULT_SYSTEMONE_MAX_RETRIES	export declare const DEFAULT_SYSTEMONE_MAX_RETRIES = 2
 GOOGLE_DEFAULT_BASE_URL	export declare const GOOGLE_DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 HARD_MAX_FRAME_BYTES	export declare const HARD_MAX_FRAME_BYTES = 25165824
 HYPER_DEFAULT_BASE_URL	export declare const HYPER_DEFAULT_BASE_URL = "https://hyper.charm.land/v1"
 KIMI_K3_THINKING_LEVELS	export declare const KIMI_K3_THINKING_LEVELS: readonly ["low", "high", "max"]
+LAYA_API_KEY_ENV	export declare const LAYA_API_KEY_ENV = "LAYA_API_KEY"
+MAX_SYSTEMONE_CHOICE_OPTIONS	export declare const MAX_SYSTEMONE_CHOICE_OPTIONS = 255
+MAX_SYSTEMONE_QUESTIONS	export declare const MAX_SYSTEMONE_QUESTIONS = 256
+MAX_SYSTEMONE_SCORE_LEVELS	export declare const MAX_SYSTEMONE_SCORE_LEVELS = 10
 ModelDiscoveryError	export declare class ModelDiscoveryError extends Error
 NEURALWATT_THINKING_LEVELS	export declare const NEURALWATT_THINKING_LEVELS: readonly ["low", "medium", "high", "max"]
 OPENAI_BATCH_COMPLETION_WINDOW	export declare const OPENAI_BATCH_COMPLETION_WINDOW = "24h"
@@ -52,6 +60,14 @@ OPENROUTER_SESSION_ID_MAX_LENGTH	export declare const OPENROUTER_SESSION_ID_MAX_
 RETRYABLE_STATUSES	export declare const RETRYABLE_STATUSES: ReadonlySet<number>
 SUPPORTED_AI_SDK_SPECIFICATION	export declare const SUPPORTED_AI_SDK_SPECIFICATION: "v4"
 SUPPORTED_AI_SDK_VERSION_MATRIX	export declare const SUPPORTED_AI_SDK_VERSION_MATRIX: readonly [
+SystemOneAbortedError	export declare class SystemOneAbortedError extends SystemOneError
+SystemOneAuthError	export declare class SystemOneAuthError extends SystemOneError
+SystemOneError	export declare class SystemOneError extends Error
+SystemOneInvalidRequestError	export declare class SystemOneInvalidRequestError extends SystemOneError
+SystemOneRetryExhaustedError	export declare class SystemOneRetryExhaustedError extends SystemOneError
+SystemOneSchemaError	export declare class SystemOneSchemaError extends Error
+TYPESAFE_API_KEY_ENV	export declare const TYPESAFE_API_KEY_ENV = "TYPESAFE_API_KEY"
+TYPESAFE_DEFAULT_BASE_URL	export declare const TYPESAFE_DEFAULT_BASE_URL = "https://api.typesafe.ai"
 XAI_CONV_ID_MAX_LENGTH	export declare const XAI_CONV_ID_MAX_LENGTH = 128
 XAI_DEFAULT_BASE_URL	export declare const XAI_DEFAULT_BASE_URL = "https://api.x.ai/v1"
 XAI_DEFAULT_CLIENT_ID	export declare const XAI_DEFAULT_CLIENT_ID = "b1a00492-073a-47ea-816f-4c329264a828"
@@ -91,6 +107,7 @@ applyKimiAnthropicCacheControl	export declare function applyKimiAnthropicCacheCo
 applyOpenRouterCacheControl	export declare function applyOpenRouterCacheControl(request: ProviderRequest): readonly Message[]
 applyOpencodeAnthropicCacheControl	export declare function applyOpencodeAnthropicCacheControl(request: ProviderRequest): readonly Message[]
 applyPromptCacheBreakpoints	export declare function applyPromptCacheBreakpoints(request: ProviderRequest): readonly OpenAIBreakpointMessage[]
+askSystemOneDecisions	export declare function askSystemOneDecisions(body: SystemOneBody, options: SystemOneDecisionOptions, signal?: AbortSignal): Promise<SystemOneDecisionResult>
 assertBatchJobsSupported	export { assertBatchJobsSupported, modelSupportsBatchJobs } from "@arnilo/prism"
 assertSupportedAiSdkVersion	export declare function assertSupportedAiSdkVersion(version: string): void
 azureChatCompletionsUrl	export declare function azureChatCompletionsUrl(input:
@@ -123,6 +140,8 @@ commandCodeReasoning	export declare function commandCodeReasoning(request: Provi
 commandCodeThinking	export declare function commandCodeThinking(request: ProviderRequest): JsonObject | undefined
 commandCodeThinkingFamily	export declare function commandCodeThinkingFamily(modelId: string): ThinkingCompatFamily | undefined
 commandCodeThinkingLevels	export declare function commandCodeThinkingLevels(modelId: string): readonly string[] | undefined
+compileSystemOneQuestions	export declare function compileSystemOneQuestions(schema: JsonObject): Readonly<Record<string, SystemOneQuestion>>
+compileSystemOneState	export declare function compileSystemOneState(messages: readonly Message[]): SystemOneState
 computeS256Challenge	export declare function computeS256Challenge(verifier: string): string
 costFromHyperPricing	export declare function costFromHyperPricing(pricing: HyperModelEntry["pricing"]): ModelCost | undefined
 crc32	export declare function crc32(bytes: Uint8Array): number
@@ -154,6 +173,8 @@ createHyperProvider	export declare function createHyperProvider(options?: HyperP
 createHyperProviderPackage	export declare function createHyperProviderPackage(options?: HyperProviderPackageOptions): ProviderPackage
 createKimiCodingProvider	export declare function createKimiCodingProvider(options?: KimiCodingProviderOptions): AIProvider
 createKimiProviderPackage	export declare function createKimiProviderPackage(options?: KimiProviderPackageOptions): ProviderPackage
+createLayaProvider	export declare function createLayaProvider(options?: LayaProviderOptions): AIProvider
+createLayaProviderPackage	export declare function createLayaProviderPackage(options?: LayaProviderPackageOptions): ProviderPackage
 createMoonshotProvider	export declare function createMoonshotProvider(options?: MoonshotProviderOptions): AIProvider
 createNeuralWattProvider	export declare function createNeuralWattProvider(options?: NeuralWattProviderOptions): AIProvider
 createNeuralWattProviderPackage	export declare function createNeuralWattProviderPackage(options?: NeuralWattProviderPackageOptions): ProviderPackage
@@ -177,6 +198,9 @@ createOpenCodeGoProviderPackage	export declare function createOpenCodeGoProvider
 createOpenRouterProvider	export declare function createOpenRouterProvider(options?: OpenRouterProviderOptions): AIProvider
 createOpenRouterProviderPackage	export declare function createOpenRouterProviderPackage(options?: OpenRouterProviderPackageOptions): ProviderPackage
 createPkceVerifier	export declare function createPkceVerifier(bytes?: number): string
+createSystemOneDecisionProvider	export declare function createSystemOneDecisionProvider(options: SystemOneDecisionProviderOptions): AIProvider
+createTypeSafeProvider	export declare function createTypeSafeProvider(options?: TypeSafeProviderOptions): AIProvider
+createTypeSafeProviderPackage	export declare function createTypeSafeProviderPackage(options?: TypeSafeProviderPackageOptions): ProviderPackage
 createVertexProvider	export declare function createVertexProvider(options: VertexProviderOptions): AIProvider
 createVertexProviderPackage	export declare function createVertexProviderPackage(options: VertexProviderPackageOptions): ProviderPackage
 createXaiOAuthProvider	export declare function createXaiOAuthProvider(options?: XaiOAuthOptions): OAuthProvider
@@ -199,11 +223,13 @@ defineDeepSeekModel	export declare function defineDeepSeekModel(config: DeepSeek
 defineGoogleModel	export declare function defineGoogleModel(config: GoogleModelConfig): ModelConfig
 defineHyperModel	export declare function defineHyperModel(config: HyperModelConfig): ModelConfig
 defineKimiModel	export declare function defineKimiModel(config: KimiModelConfig): ModelConfig
+defineLayaModel	export declare function defineLayaModel(config: LayaModelConfig): ModelConfig
 defineNeuralWattModel	export declare function defineNeuralWattModel(config: NeuralWattModelConfig): ModelConfig
 defineOllamaModel	export declare function defineOllamaModel(config: OllamaModelConfig): ModelConfig
 defineOpenAIModel	export declare function defineOpenAIModel(config: OpenAIModelConfig): ModelConfig
 defineOpenCodeGoModel	export declare function defineOpenCodeGoModel(config: OpenCodeGoModelConfig): ModelConfig
 defineOpenRouterModel	export declare function defineOpenRouterModel(config: OpenRouterModelConfig): ModelConfig
+defineTypeSafeModel	export declare function defineTypeSafeModel(config: TypeSafeModelConfig): ModelConfig
 defineXaiModel	export declare function defineXaiModel(config: XaiModelConfig): ModelConfig
 defineZaiModel	export declare function defineZaiModel(config: ZaiModelConfig): ModelConfig
 eventStreamHeader	export declare function eventStreamHeader(message: AwsEventStreamMessage, name: string): string | undefined
@@ -227,6 +253,9 @@ hyperReasoningEffort	export declare function hyperReasoningEffort(request: Provi
 hyperThinking	export declare function hyperThinking(request: ProviderRequest): JsonObject | undefined
 isGlm52Model	export declare function isGlm52Model(modelId: string): boolean
 isGlm53Model	export declare function isGlm53Model(modelId: string): boolean
+isRetryableSystemOneStatus	export declare function isRetryableSystemOneStatus(status: number): boolean
+isSystemOneAnswer	export declare function isSystemOneAnswer(value: unknown): value is SystemOneAnswer
+isSystemOneResponse	export declare function isSystemOneResponse(value: unknown): value is SystemOneResponse
 kimiAnthropicBody	export declare function kimiAnthropicBody(request: ProviderRequest): Promise<JsonObject>
 kimiAnthropicCacheEnabled	export declare function kimiAnthropicCacheEnabled(request: ProviderRequest): boolean
 kimiAnthropicEvents	export declare function kimiAnthropicEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
@@ -237,6 +266,8 @@ kimiReasoningEffort	export declare function kimiReasoningEffort(request: Provide
 kimiThinking	export declare function kimiThinking(request: ProviderRequest): JsonObject | undefined
 kimiThinkingFamily	export declare function kimiThinkingFamily(modelId: string): "reasoning_effort" | "thinking_type" | undefined
 kimiThinkingLevels	export declare function kimiThinkingLevels(modelId: string): readonly string[] | undefined
+layaBaseUrl	export declare function layaBaseUrl(options?:
+layaModels	export declare const layaModels: readonly ModelConfig[]
 listAlibabaModels	export declare function listAlibabaModels(options?: ListAlibabaModelsOptions): Promise<ModelConfig[]>
 listAnthropicModels	export declare function listAnthropicModels(options?: ListAnthropicModelsOptions): Promise<ModelConfig[]>
 listCommandCodeModels	export declare function listCommandCodeModels(options?: ListCommandCodeModelsOptions): Promise<ModelConfig[]>
@@ -266,6 +297,7 @@ mapOllamaModel	export declare function mapOllamaModel(entry: OllamaModelEntry): 
 mapOpenAIModel	export declare function mapOpenAIModel(entry: OpenAIModelEntry, options?:
 mapOpenCodeGoModel	export declare function mapOpenCodeGoModel(entry: OpenCodeGoModelEntry, options?:
 mapOpenRouterModel	export declare function mapOpenRouterModel(entry: OpenRouterModelEntry, options?:
+mapSystemOneUsage	export declare function mapSystemOneUsage(usage: SystemOneUsage | undefined): Usage | undefined
 mapUsage	export declare function mapUsage(usage: LanguageModelV4Usage | undefined): Usage | undefined
 mapXaiModel	export declare function mapXaiModel(entry: XaiModelEntry, options?:
 mapZaiModel	export declare function mapZaiModel(entry: ZaiModelEntry, options?:
@@ -321,12 +353,14 @@ parseNeuralWattComment	export declare function parseNeuralWattComment(text: stri
 parseNeuralWattCost	export declare function parseNeuralWattCost(payload: string): NeuralWattCostTelemetry | undefined
 parseNeuralWattEnergy	export declare function parseNeuralWattEnergy(payload: string): NeuralWattEnergyTelemetry | undefined
 parseXaiTokenCredentials	export declare function parseXaiTokenCredentials(json: OAuthTokenSuccessPayload, previousRefresh?: string, now?: () => number): OAuthCredentials
+postSystemOne	export declare function postSystemOne(body: SystemOneBody, options: SystemOneClientOptions, signal?: AbortSignal): Promise<SystemOneResponse>
 promptCacheKey	export declare function promptCacheKey(options: ProviderRequestOptions | undefined): string | undefined
 promptCacheOptions	export declare function promptCacheOptions(options: ProviderRequestOptions | undefined, model: ModelConfig):
 promptCacheRetention	export declare function promptCacheRetention(options: ProviderRequestOptions | undefined, model: ModelConfig): "24h" | undefined
 providerHttpError	export declare function providerHttpError(providerName: string, decision: RetryDecisionFields, bodyText: string, secrets: readonly (string | undefined)[]): Error
 readAwsEventStream	export declare function readAwsEventStream(body: ReadableStream<Uint8Array>, options?: ReadAwsEventStreamOptions): AsyncGenerator<AwsEventStreamMessage>
 readRetryAfterMs	export declare function readRetryAfterMs(headers: RetryHeaders, bodyRetryAfter?: unknown): number | undefined
+renderSystemOneOutput	export declare function renderSystemOneOutput(answers: Readonly<Record<string, SystemOneAnswer>>, schema: JsonObject, options?: SystemOneRenderOptions): string
 resolveOpenAIReasoning	export declare function resolveOpenAIReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
 resolveOpenRouterReasoning	export declare function resolveOpenRouterReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
 routeForCommandCodeModel	export declare function routeForCommandCodeModel(modelId: string): CommandCodeRoute
@@ -408,6 +442,8 @@ type HyperUsageCost	export { type HyperUsageCost, parseHyperUsageCost } from "./
 type KimiCodingProviderOptions	export { createKimiCodingProvider, type KimiCodingProviderOptions, kimiAnthropicBody, kimiAnthropicEvents, } from "./provider.js"
 type KimiModelConfig	export { defineKimiModel, KIMI_K3_THINKING_LEVELS, type KimiModelConfig, type KimiModelEntry, kimiCodingModels, kimiIsK3Model, kimiThinkingFamily, kimiThinkingLevels, type ListKimiModelsOptions, listKimiModels, mapKimiModel, moonshotKimiModels, } from "./models.js"
 type KimiModelEntry	export { defineKimiModel, KIMI_K3_THINKING_LEVELS, type KimiModelConfig, type KimiModelEntry, kimiCodingModels, kimiIsK3Model, kimiThinkingFamily, kimiThinkingLevels, type ListKimiModelsOptions, listKimiModels, mapKimiModel, moonshotKimiModels, } from "./models.js"
+type LayaModelConfig	export { DEFAULT_LAYA_BASE_URL, defineLayaModel, LAYA_API_KEY_ENV, type LayaModelConfig, layaBaseUrl, layaModels, } from "./models.js"
+type LayaProviderOptions	export { createLayaProvider, type LayaProviderOptions } from "./provider.js"
 type ListAlibabaModelsOptions	export { type AlibabaBasePreset, type AlibabaModelConfig, type AlibabaModelEntry, alibabaBaseUrl, alibabaIsThinkingOnly, alibabaThinkingFamily, alibabaThinkingLevels, DEFAULT_ALIBABA_BASE_URL, defineAlibabaModel, type ListAlibabaModelsOptions, listAlibabaModels, mapAlibabaModel, } from "./models.js"
 type ListAnthropicModelsOptions	export { ANTHROPIC_API_VERSION, ANTHROPIC_DEFAULT_BASE_URL, type AnthropicModelConfig, type AnthropicModelEntry, anthropicModels, defineAnthropicModel, type ListAnthropicModelsOptions, listAnthropicModels, mapAnthropicModel, } from "./models.js"
 type ListDeepSeekModelsOptions	export { DEEPSEEK_THINKING_LEVELS, type DeepSeekModelConfig, type DeepSeekModelEntry, deepseekModels, defineDeepSeekModel, type ListDeepSeekModelsOptions, listDeepSeekModels, mapDeepSeekModel, } from "./models.js"
@@ -465,6 +501,23 @@ type OpenRouterProviderOptions	export { createOpenRouterProvider, type OpenRoute
 type ReadAwsEventStreamOptions	export { type AwsEventStreamErrorCode, AwsEventStreamError, type AwsEventStreamHeaderValue, type AwsEventStreamMessage, crc32, DEFAULT_MAX_FRAME_BYTES, eventStreamHeader, HARD_MAX_FRAME_BYTES, type ReadAwsEventStreamOptions, readAwsEventStream, } from "./eventstream.js"
 type RealtimeTransport	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type OpenAIRealtimeTool, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
 type RealtimeTransportOptions	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type OpenAIRealtimeTool, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
+type SystemOneAnswer	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type SystemOneBody	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type SystemOneChoiceAnswer	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type SystemOneChoiceQuestion	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type SystemOneClientOptions	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type SystemOneInstructions	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type SystemOneNoulAnswer	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type SystemOneNoulQuestion	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type SystemOneQuestion	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type SystemOneResponse	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type SystemOneSchemaErrorCode	export { compileSystemOneQuestions, compileSystemOneState, MAX_SYSTEMONE_CHOICE_OPTIONS, MAX_SYSTEMONE_QUESTIONS, MAX_SYSTEMONE_SCORE_LEVELS, SystemOneSchemaError, type SystemOneSchemaErrorCode, } from "../shared/systemone-schema.js"
+type SystemOneScoreAnswer	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type SystemOneScoreQuestion	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type SystemOneState	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type SystemOneUsage	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
+type TypeSafeModelConfig	export { defineTypeSafeModel, TYPESAFE_API_KEY_ENV, TYPESAFE_DEFAULT_BASE_URL, type TypeSafeModelConfig, typeSafeModels, } from "./models.js"
+type TypeSafeProviderOptions	export { createTypeSafeProvider, type TypeSafeProviderOptions } from "./provider.js"
 type VertexProviderOptions	export { createVertexProvider, createVertexProviderPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
 type VertexProviderPackageOptions	export { createVertexProvider, createVertexProviderPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
 type XaiModelConfig	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, XAI_DEFAULT_BASE_URL, XAI_THINKING_LEVELS, type XaiModelConfig, type XaiModelEntry, xaiModels, xaiThinkingLevels, } from "./models.js"
@@ -474,6 +527,7 @@ type XaiProviderOptions	export { createXaiProvider, toXaiMessage, type XaiProvid
 type ZaiModelConfig	export { defineZaiModel, isGlm52Model, isGlm53Model, type ListZaiModelsOptions, listZaiModels, mapZaiModel, ZAI_GLM_5_2_THINKING_LEVELS, ZAI_GLM_5_3_THINKING_LEVELS, type ZaiModelConfig, type ZaiModelEntry, zaiModels, zaiThinkingFamily, zaiThinkingLevels, } from "./models.js"
 type ZaiModelEntry	export { defineZaiModel, isGlm52Model, isGlm53Model, type ListZaiModelsOptions, listZaiModels, mapZaiModel, ZAI_GLM_5_2_THINKING_LEVELS, ZAI_GLM_5_3_THINKING_LEVELS, type ZaiModelConfig, type ZaiModelEntry, zaiModels, zaiThinkingFamily, zaiThinkingLevels, } from "./models.js"
 type ZaiProviderOptions	export { createZaiProvider, toZaiMessage, ZAI_DEFAULT_BASE_URL, type ZaiProviderOptions, zaiBody, zaiEvents, } from "./provider.js"
+typeSafeModels	export declare const typeSafeModels: readonly ModelConfig[]
 vertexOpenApiBaseUrl	export declare function vertexOpenApiBaseUrl(input:
 withAlibabaCacheMarker	export declare function withAlibabaCacheMarker(contentItem: JsonObject, marker: JsonObject | undefined): JsonObject
 xGrokConvId	export declare function xGrokConvId(request: ProviderRequest): string | undefined

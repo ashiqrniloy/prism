@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import type { ExecutionPolicy, ToolExecutionContext } from "@arnilo/prism";
 import { createReadTool, createShellTool, createWriteTool } from "../index.js";
 

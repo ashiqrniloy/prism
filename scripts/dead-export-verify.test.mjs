@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 
 const root = join(new URL(".", import.meta.url).pathname, "..");
 

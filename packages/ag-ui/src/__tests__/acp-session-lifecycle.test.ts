@@ -4,7 +4,7 @@
  * fails closed before the host sessionFactory/seams see unvetted data.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import {
   type AgentContext,
   client,

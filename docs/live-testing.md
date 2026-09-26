@@ -2,7 +2,7 @@
 
 ## What it does
 
-Prism ships three network-free test tiers by default (`npm test`, per-package `node --test` suites, and packed-consumer journeys) plus an opt-in **live matrix** that runs the same public surface against real credentials. This page documents how to run the live matrix, which credentials each suite needs, and the guarantees the harness gives you: a missing credential skips its suite (never fails), and secrets never enter the repo, logs, or reports.
+Prism ships three network-free test tiers by default (`bun run test`, per-package `bun test` suites, and packed-consumer journeys) plus an opt-in **live matrix** that runs the same public surface against real credentials. This page documents how to run the live matrix, which credentials each suite needs, and the guarantees the harness gives you: a missing credential skips its suite (never fails), and secrets never enter the repo, logs, or reports.
 
 ## When to use it
 

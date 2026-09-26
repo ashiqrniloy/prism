@@ -3,7 +3,7 @@
 // fake-jetstream seam. Real-NATS restart-durable probes stay protected
 // evidence.
 
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { assertStateConcurrencyConforms } from "@arnilo/prism/testing/state-concurrency-conformance";
 import { createNatsAgentEventSource } from "../event-source.js";
 import { FakeJetStream } from "./fake-jetstream.js";

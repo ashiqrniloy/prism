@@ -13,7 +13,7 @@ the package at it.
 ## Install
 
 ```bash
-npm install @arnilo/prism-web-tools @arnilo/prism-mcp
+bun add @arnilo/prism-web-tools @arnilo/prism-mcp
 ```
 
 ## Process lifecycle (`spawnObscuraProcess`)

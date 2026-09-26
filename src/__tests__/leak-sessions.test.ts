@@ -2,7 +2,7 @@
 // not grow the session subscriber registry. Deterministic: every op awaited,
 // no sleeps. Skips when the heap is too small for 200 live sessions.
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { getHeapStatistics } from "node:v8";
 import { EventSubscriber } from "../agent-session/event-subscriber.js";
 import { type AgentEvent, createAgent, createMockProvider } from "../index.js";
@@ -18,7 +18,7 @@ function event(n: number): AgentEvent {
   return { type: "queue_updated", sessionId: "leak", size: n } as AgentEvent;
 }
 
-describe("leak: sessions/subscribers/event-queue return to baseline", { skip: LOW_MEM }, () => {
+describe.skipIf(Boolean(LOW_MEM))("leak: sessions/subscribers/event-queue return to baseline", () => {
   it("200 subscribe/dispose cycles leave zero subscribers", () => {
     const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider: createMockProvider() });
     const session = agent.createSession();

@@ -5,7 +5,7 @@ New in 0.2.8 (plan 028 Task 10 / adoption F3). A thin binary that serves [`creat
 ## Running
 
 ```sh
-npx prism-acp-agent [--config prism-acp-agent.json]
+bunx prism-acp-agent [--config prism-acp-agent.json]
 ```
 
 The agent speaks ACP v1 as newline-delimited JSON on `stdin`/`stdout` (SDK `ndJsonStream` adapter over `Readable.toWeb(process.stdin)` / `Writable.toWeb(process.stdout)`). It serves until the client closes stdin; an `EPIPE` on stdout (client disconnected) is a normal shutdown.
@@ -13,7 +13,7 @@ The agent speaks ACP v1 as newline-delimited JSON on `stdin`/`stdout` (SDK `ndJs
 ```sh
 # a config file must exist; missing/invalid config fails closed with a clear error and exit 1
 printf '%s\n' '{"userId":"local","cwd":"/workspace"}' > prism-acp-agent.json
-npx prism-acp-agent
+bunx prism-acp-agent
 ```
 
 ## Config reference

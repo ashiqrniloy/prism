@@ -1,7 +1,7 @@
 /** scheduler (0.2.5 plan 025 Task 1 split). Moved verbatim from run.ts; public surface unchanged behind the barrel. */
 import type { AgentSession } from "@arnilo/prism";
 import { registerActiveWorkflowRun, unregisterActiveWorkflowRun } from "../active-runs.js";
-import { WorkflowAbortError, WorkflowLoopLimitError, WorkflowRuntimeError } from "../errors.js";
+import { WorkflowAbortError, WorkflowLoopLimitError, WorkflowRuntimeError, WorkflowSuperstepLimitError } from "../errors.js";
 import { createWorkflowEventBus } from "../events.js";
 import { DEFAULT_MAX_CONCURRENCY, DEFAULT_MAX_NESTED_DEPTH, DEFAULT_MAX_NODES } from "../limits.js";
 import type { RunWorkflowOptions, WorkflowEvent, WorkflowEventInput, WorkflowRunResult } from "../types.js";
@@ -10,6 +10,7 @@ import { cloneState, persistCheckpoint } from "./checkpoint.js";
 import type { SchedulerState } from "./main.js";
 import { runNode } from "./node-execution.js";
 import { markRemaining, skipNode } from "./skip.js";
+import { executeSuperstepScheduler } from "./superstep.js";
 import { validateState } from "./validation.js";
 
 export async function executeScheduler(state: SchedulerState, options: RunWorkflowOptions): Promise<WorkflowRunResult> {
@@ -25,6 +26,9 @@ export async function executeScheduler(state: SchedulerState, options: RunWorkfl
   });
 
   try {
+    if (state.workflow.execution === "supersteps") {
+      return await executeSuperstepScheduler(state, options);
+    }
     return await executeSchedulerBody(state, options);
   } finally {
     unregisterActiveWorkflowRun(state.workflow.id, state.runId, options.ownership);
@@ -200,6 +204,7 @@ async function executeSchedulerBody(state: SchedulerState, options: RunWorkflowO
     }
     if (state.status === "failed") {
       if (fatalError instanceof WorkflowLoopLimitError) throw fatalError;
+      if (fatalError instanceof WorkflowSuperstepLimitError) throw fatalError;
       const failed = [...state.nodes.values()].find((node) => node.status === "failed");
       throw new WorkflowRuntimeError(
         failed?.error?.message ?? errorMessage(fatalError) ?? "Workflow failed",

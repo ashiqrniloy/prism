@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { DocumentsParseError, generateDocument, isZipContainer, parseDocument, type DocModel } from "../../documents/index.js";
 
 const enabled = process.env.PRISM_TEST_WORK_SANDBOX === "1";
@@ -26,7 +26,7 @@ describe("in-process parseDocument refuses OLE binaries", () => {
   });
 });
 
-describe("work sandbox legacy convert", { skip: !enabled || !existsSync(docker) }, () => {
+describe.skipIf(!enabled || !existsSync(docker))("work sandbox legacy convert", () => {
   it("converts .doc to zip-PK docx that parseDocument accepts", async () => {
     ensureImage();
     const dir = workspace();

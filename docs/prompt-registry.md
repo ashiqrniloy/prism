@@ -67,7 +67,7 @@ const postgres = await createPostgresPromptStore({
 });
 ```
 
-SQLite uses `better-sqlite3`; PostgreSQL uses a caller-supplied or adapter-owned `pg` pool. Both adapters use the package-owned `prism_prompts` and `prism_prompt_labels` tables, exact ownership predicates, bound values, and an indexed label lookup. Startup applies checked `001_init` migration history and refuses checksum drift. SQLite exposes `applySqlitePromptMigrations` for managed setup tests; PostgreSQL migration setup is guarded by `pg_advisory_xact_lock`.
+SQLite uses the Bun runtime's `bun:sqlite`; PostgreSQL uses a caller-supplied or adapter-owned `pg` pool. Both adapters use the package-owned `prism_prompts` and `prism_prompt_labels` tables, exact ownership predicates, bound values, and an indexed label lookup. Startup applies checked `001_init` migration history and refuses checksum drift. SQLite exposes `applySqlitePromptMigrations` for managed setup tests; PostgreSQL migration setup is guarded by `pg_advisory_xact_lock`.
 
 ## Eval-gated promotion
 

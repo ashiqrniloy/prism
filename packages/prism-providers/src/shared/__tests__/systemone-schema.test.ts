@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { JsonObject, JsonValue, Message } from "@arnilo/prism";
 import {
   compileSystemOneQuestions,
@@ -245,6 +245,33 @@ describe("@arnilo/prism-providers/shared (systemone-schema)", () => {
       verdict: { type: "string", enum: ["run", "reject"] },
     });
     assertSchemaError(() => renderSystemOneOutput({ flag: { type: "noul", noul: 0.9 } }, schema), "missing_answer", "verdict");
+  });
+
+  it("preserves_prototype_named_choice_labels_as_own_wire_options", () => {
+    const schema = objectSchema({ label: { type: "string", enum: ["__proto__", "toString"] } });
+    const question = compileSystemOneQuestions(schema).label;
+    assert.equal(question.type, "choice");
+    if (question.type !== "choice") return;
+    assert.deepEqual(Object.keys(question.criteria), ["__proto__", "toString"]);
+    assert.equal(Object.getOwnPropertyDescriptor(JSON.parse(JSON.stringify(question.criteria)), "__proto__")?.value, "__proto__");
+    assert.deepEqual(JSON.parse(renderSystemOneOutput({ label: { type: "choice", choice: "__proto__" } }, schema)), { label: "__proto__" });
+  });
+
+  it("rejects_inherited_and_malformed_answers_instead_of_coercing_them", () => {
+    const flag = objectSchema({ flag: { type: "boolean" } });
+    assertSchemaError(() => renderSystemOneOutput(Object.create({ flag: { type: "noul", noul: 0.9 } }), flag), "missing_answer", "flag");
+    const score = objectSchema({ flag: { type: "integer", enum: [0, 1], "x-systemone": { levels: ["no", "yes"] } } });
+    for (const [schema, answer] of [
+      [flag, { type: "noul" }],
+      [flag, { type: "noul", noul: "0.9" }],
+      [flag, { type: "noul", noul: -1 }],
+      [flag, { type: "noul", noul: 2 }],
+      [flag, { type: "noul", noul: Number.NaN }],
+      [score, { type: "score", score: Number.NaN }],
+      [score, { type: "score", score: Infinity }],
+    ] as const) {
+      assertSchemaError(() => renderSystemOneOutput({ flag: answer } as never, schema), "invalid_answer", "flag");
+    }
   });
 
   it("compiles_state_from_text_content_only", () => {

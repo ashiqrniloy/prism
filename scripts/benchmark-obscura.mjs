@@ -7,7 +7,7 @@
  * search call 100ms, group close 250ms) from docs/performance.md.
  * Machine-dependent — printed evidence leg, not a release gate.
  *
- * Usage: node scripts/benchmark-obscura.mjs [--json scripts/benchmark-obscura.json]
+ * Usage: bun scripts/benchmark-obscura.mjs [--json scripts/benchmark-obscura.json]
  */
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

@@ -6,7 +6,7 @@
  * operator endpoint (unroutable loopback socket).
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { type AgentIdentity } from "@arnilo/prism";
 import { createOpaPolicyEvaluator } from "../opa.js";
 
@@ -26,8 +26,8 @@ function identity(): AgentIdentity {
   };
 }
 
-describe("@arnilo/prism-core governance/policy/opa live tests", () => {
-  it("live_real_endpoint_maps_decisions", { skip }, async () => {
+describe.skipIf(Boolean(skip))("@arnilo/prism-core governance/policy/opa live tests", () => {
+  it("live_real_endpoint_maps_decisions", async () => {
     const evaluator = createOpaPolicyEvaluator({
       url: OPA_URL!,
       policyId: "live-opa-probe",
@@ -46,7 +46,7 @@ describe("@arnilo/prism-core governance/policy/opa live tests", () => {
     );
   });
 
-  it("live_unreachable_endpoint_fails_closed_deny", { skip }, async () => {
+  it("live_unreachable_endpoint_fails_closed_deny", async () => {
     const evaluator = createOpaPolicyEvaluator({
       // Unroutable discard port: the fetch fails (or is SSRF-refused) and the
       // adapter must answer deny, never allow.

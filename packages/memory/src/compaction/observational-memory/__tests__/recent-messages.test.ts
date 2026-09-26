@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createSessionEntry, type SessionEntry } from "@arnilo/prism";
 import { buildObservationalMemoryContextBlocks, renderRecentMessageWindow, selectRecentMessageEntries } from "../recent-messages.js";
 import { OBSERVATIONS_RECORDED } from "../types.js";

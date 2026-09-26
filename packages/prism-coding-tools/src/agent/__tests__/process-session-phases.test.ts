@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { after, before, test } from "node:test";
+import { afterAll as after, beforeAll as before, test } from "bun:test";
 import { type CheckpointStore, createMemoryLeaseStore } from "@arnilo/prism";
 import { OutputAccumulator } from "../output-accumulator.js";
 import { type CodingProcessEvent, type ProcessPtyHandle, type ProcessSession } from "../process/index.js";

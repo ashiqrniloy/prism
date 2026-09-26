@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AgentEventRecord, RunRecord, SessionEntry, ToolCallRecord, UsageRecord } from "@arnilo/prism";
 import { CheckpointConflictError, LeaseConflictError } from "@arnilo/prism";
 import { assertCheckpointInput, assertLeaseInput, createSessionRowMappers, encodeCheckpointJson } from "../index.js";

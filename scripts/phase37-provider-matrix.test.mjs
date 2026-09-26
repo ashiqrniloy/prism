@@ -6,8 +6,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
+import { NON_ADAPTER_PROVIDER_SUBPATHS } from "./package-truth.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const evidencePath = join(root, "docs/_evidence/phase37-provider-matrix.md");
@@ -15,9 +16,11 @@ const packagesDir = join(root, "packages");
 
 function providerAdapters() {
   // Plan 054 Task 6: adapters live as subpaths of the providers family manifest.
+  // Non-adapter helper subpaths (the shared decision call) are excluded, same as
+  // the generated provider taxonomy in scripts/package-truth.mjs.
   const manifest = JSON.parse(readFileSync(join(packagesDir, "prism-providers", "package.json"), "utf8"));
   return Object.keys(manifest.exports ?? {})
-    .filter((key) => key !== ".")
+    .filter((key) => key !== "." && !NON_ADAPTER_PROVIDER_SUBPATHS.has(key))
     .sort()
     .map((key) => ({ dir: `prism-providers${key.slice(1)}`, name: `@arnilo/prism-providers${key.slice(1)}` }));
 }

@@ -7,7 +7,7 @@
 //   BLOCKED GATE <id> requires=<names> evidence=<surface> hint=<how to unblock>
 //
 // PROTECTED_GATES is the single registry of those legs: the gates print from
-// it, `node scripts/blocked-gate.mjs` audits it ("which legs are blocked
+// it, `bun scripts/blocked-gate.mjs` audits it ("which legs are blocked
 // today?"), and scripts/release-skip-manifest.mjs derives its manual-leg
 // evidence rows from it. Env NAMES only, never values (release-evidence rule).
 //
@@ -15,7 +15,7 @@
 //   "required"  the release profile is expected to run the leg, so its
 //               release-evidence surface (see `surface`) goes blocked when the
 //               infrastructure is absent — phase12/phase22 ride
-//               `npm run test:postgres`, the coding journey rides
+//               `bun run test:postgres`, the coding journey rides
 //               coding-journey.yml.
 //   "protected" a documented gap the release pipeline does not provision: it
 //               stays visible forever and never blocks a release.
@@ -42,8 +42,8 @@ export const PROTECTED_GATES = [
     style: "test",
     requires: ["PRISM_TEST_POSTGRES_URL"],
     evidence: "scripts/phase12-restart-recovery.json",
-    hint: "PRISM_TEST_POSTGRES_URL=<url> npm run test:postgres against a disposable pgvector/pgvector:pg16",
-    runner: "npm run test:postgres",
+    hint: "PRISM_TEST_POSTGRES_URL=<url> bun run test:postgres against a disposable pgvector/pgvector:pg16",
+    runner: "bun run test:postgres",
     manifestClass: "required",
     surface: "test:postgres durable conformance",
   },
@@ -53,8 +53,8 @@ export const PROTECTED_GATES = [
     style: "test",
     requires: ["PRISM_TEST_POSTGRES_URL"],
     evidence: "scripts/phase22-baseline.json",
-    hint: "PRISM_TEST_POSTGRES_URL=<url> npm run test:postgres runs the durable state-concurrency leg",
-    runner: "npm run test:postgres",
+    hint: "PRISM_TEST_POSTGRES_URL=<url> bun run test:postgres runs the durable state-concurrency leg",
+    runner: "bun run test:postgres",
     manifestClass: "required",
     surface: "test:postgres durable conformance",
   },
@@ -64,7 +64,7 @@ export const PROTECTED_GATES = [
     style: "script",
     requires: ["PRISM_TEST_POSTGRES_URL"],
     evidence: "scripts/phase26-baseline.json",
-    hint: "PRISM_TEST_POSTGRES_URL=<url> node --test scripts/phase26-recovery-conformance.test.mjs",
+    hint: "PRISM_TEST_POSTGRES_URL=<url> bun test --timeout=0 scripts/phase26-recovery-conformance.test.mjs",
     runner: "manual protected leg (8/8 recorded in scripts/phase26-baseline.json; not in a release profile)",
     manifestClass: "protected",
   },
@@ -74,7 +74,7 @@ export const PROTECTED_GATES = [
     style: "script",
     requires: ["PRISM_TEST_PTY_BACKEND"],
     evidence: "scripts/phase26-baseline.json",
-    hint: "PRISM_TEST_PTY_BACKEND=<module exporting createPtyBackend()> node --test scripts/phase26-pty-protected.test.mjs",
+    hint: "PRISM_TEST_PTY_BACKEND=<module exporting createPtyBackend()> bun test --timeout=0 scripts/phase26-pty-protected.test.mjs",
     runner: "manual protected leg (4/4 recorded in scripts/phase26-baseline.json; needs a host PTY engine)",
     manifestClass: "protected",
   },
@@ -84,8 +84,8 @@ export const PROTECTED_GATES = [
     style: "script",
     requires: ["PRISM_TEST_POSTGRES_URL", "PRISM_DR_TARGET_URL", "PRISM_PITR_URL"],
     evidence: "docs/_evidence/phase27-dr-evidence.json",
-    hint: "node scripts/phase27-dr.test.mjs --target <loopback-url> --confirm-target prism_dr_restore with the source and PITR containers up; evidence freshness is asserted in-chain by scripts/phase27-erp-journey.test.mjs",
-    runner: "manual disaster-recovery drill (needs a PITR target; never part of npm test)",
+    hint: "bun scripts/phase27-dr.test.mjs --target <loopback-url> --confirm-target prism_dr_restore with the source and PITR containers up; evidence freshness is asserted in-chain by scripts/phase27-erp-journey.test.mjs",
+    runner: "manual disaster-recovery drill (needs a PITR target; never part of the default suite)",
     manifestClass: "protected",
   },
   {
@@ -103,7 +103,7 @@ export const PROTECTED_GATES = [
       "PRISM_CODING_PROVIDER",
     ],
     evidence: "scripts/phase26-coding-journey-report.json",
-    hint: "provision the frozen profile and run node --test scripts/phase26-coding-journey.test.mjs (coding-journey.yml does this on demand)",
+    hint: "provision the frozen profile and run bun test --timeout=0 scripts/phase26-coding-journey.test.mjs (coding-journey.yml does this on demand)",
     runner: "coding-journey.yml (real provider, digest-pinned Docker, forge, Postgres, Playwright)",
     manifestClass: "required",
     surface: "protected coding journey (0.2.6, plan 026)",

@@ -48,7 +48,7 @@ export function createSystemOneDecisionProvider(options: SystemOneDecisionProvid
           {
             provider: options.label,
             baseUrl,
-            apiKey: options.apiKey,
+            apiKey,
             fetch: options.fetch,
             maxRetries: options.maxRetries,
           },

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
@@ -35,15 +35,15 @@ const getWeatherTool: ToolDefinition = {
   execute: (args) => ({ toolCallId: "live", name: "get_weather", value: { city: args.city, temp: "72F" } }),
 };
 
-describe("@arnilo/prism-providers/xai live tests", () => {
-  it("live_text_generation_streams_and_leaks_no_secret", { skip }, async () => {
+(skip ? describe.skip : describe)("@arnilo/prism-providers/xai live tests", () => {
+  it("live_text_generation_streams_and_leaks_no_secret", async () => {
     const events = await assertProviderStreamConforms({ provider: provider(), request: textRequest });
     const text = events.map((e) => (e.type === "content_delta" && e.content.type === "text" ? e.content.text : "")).join("");
     assert.ok(text.length > 0, "live text response was empty");
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_tool_call_loop_conforms_and_leaks_no_secret", { skip }, async () => {
+  it("live_tool_call_loop_conforms_and_leaks_no_secret", async () => {
     const events = await assertProviderStreamConforms({
       provider: provider(),
       request: {
@@ -60,7 +60,7 @@ describe("@arnilo/prism-providers/xai live tests", () => {
 
   // Thinking-effort probe (plan 065 task 15): reasoning_effort must be accepted
   // by the live API (no 400 on the wire field).
-  it("live_reasoning_effort_is_accepted", { skip }, async () => {
+  it("live_reasoning_effort_is_accepted", async () => {
     const events = await assertProviderStreamConforms({
       provider: provider(),
       request: { ...textRequest, options: { compat: { reasoning_effort: "low" } } },
@@ -72,17 +72,17 @@ describe("@arnilo/prism-providers/xai live tests", () => {
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_abort_signal_is_observed_before_first_request", { skip }, async () => {
+  it("live_abort_signal_is_observed_before_first_request", async () => {
     await assertAbortIsObserved({ provider: provider(), request: textRequest });
   });
 
-  it("live_error_response_leaks_no_secret", { skip }, async () => {
+  it("live_error_response_leaks_no_secret", async () => {
     const events = await collectProviderEvents(provider(), { ...textRequest, messages: [] });
     assert.ok(events.at(-1), "live error request produced no events");
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_supergrok_device_code_login_is_operator_only", { skip: oauthSkip }, async () => {
+  (oauthSkip ? it.skip : it)("live_supergrok_device_code_login_is_operator_only", async () => {
     const oauth = createXaiOAuthProvider();
     const credentials = await oauth.login({
       onDeviceCode: ({ userCode, verificationUri }) => {

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import type Database from "better-sqlite3";
+import type { Database } from "bun:sqlite";
 import { PromptMigrationError } from "./errors.js";
 import { PROMPT_INDEX_NAMES, PROMPT_MIGRATION_001_INIT } from "./sqlite-ddl.js";
 
@@ -17,7 +17,7 @@ export const PROMPT_MIGRATION_CONTRACT = Object.freeze([
   }),
 ]);
 
-export function applySqlitePromptMigrations(db: Database.Database): readonly AppliedPromptMigration[] {
+export function applySqlitePromptMigrations(db: Database): readonly AppliedPromptMigration[] {
   return db.transaction(() => {
     db.exec(
       `CREATE TABLE IF NOT EXISTS prism_prompt_migrations (
@@ -47,11 +47,11 @@ export function applySqlitePromptMigrations(db: Database.Database): readonly App
   })();
 }
 
-export function listSqlitePromptMigrations(db: Database.Database): AppliedPromptMigration[] {
+export function listSqlitePromptMigrations(db: Database): AppliedPromptMigration[] {
   return db.prepare("SELECT name, version, checksum FROM prism_prompt_migrations ORDER BY version ASC").all() as AppliedPromptMigration[];
 }
 
-export function assertSqlitePromptSchemaReady(db: Database.Database): void {
+export function assertSqlitePromptSchemaReady(db: Database): void {
   for (const table of ["prism_prompts", "prism_prompt_labels"]) {
     const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table);
     if (!exists) throw new PromptMigrationError(`missing prompt table: ${table}`);

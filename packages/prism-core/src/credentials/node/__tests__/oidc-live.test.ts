@@ -7,7 +7,7 @@
  * the negative legs reuse the cached key set.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { IdentityError } from "@arnilo/prism";
 import { createOidcIdentityVerifier, type OidcClaims } from "../oidc.js";
 
@@ -32,15 +32,15 @@ function verifier() {
   return createOidcIdentityVerifier({ issuer: ISSUER!, audience: AUDIENCE!, jwksUrl: JWKS_URL!, mapClaims });
 }
 
-describe("@arnilo/prism-core credentials/node/oidc live tests", () => {
-  it("live_valid_token_verifies_against_real_jwks", { skip }, async () => {
+describe.skipIf(Boolean(skip))("@arnilo/prism-core credentials/node/oidc live tests", () => {
+  it("live_valid_token_verifies_against_real_jwks", async () => {
     const identity = await verifier().verify(TOKEN);
     assert.equal(typeof identity.tenantId, "string");
     assert.ok(identity.tenantId.length > 0, "mapClaims must supply a tenantId");
     assert.equal(identity.principal.kind, "user");
   });
 
-  it("live_tampered_token_fails_closed", { skip }, async () => {
+  it("live_tampered_token_fails_closed", async () => {
     // Flip the last signature character: same shape, broken signature.
     const [header, payload, signature] = TOKEN!.split(".");
     const flipped = signature!.slice(0, -1) + (signature!.slice(-1) === "A" ? "B" : "A");
@@ -54,7 +54,7 @@ describe("@arnilo/prism-core credentials/node/oidc live tests", () => {
     assert.ok(!String(error).includes(TOKEN!), "error text must never echo the bearer token");
   });
 
-  it("live_garbage_token_fails_closed_without_jwks_traffic", { skip }, async () => {
+  it("live_garbage_token_fails_closed_without_jwks_traffic", async () => {
     const error = await Promise.resolve(verifier().verify("not-a-jwt")).then(
       () => null,
       (caught: unknown) => caught,

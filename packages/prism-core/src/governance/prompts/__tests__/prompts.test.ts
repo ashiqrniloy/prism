@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, it } from "node:test";
-import Database from "better-sqlite3";
+import { afterEach, describe, it } from "bun:test";
+import { Database } from "bun:sqlite";
 import {
   applySqlitePromptMigrations,
   createMemoryPromptStore,
@@ -39,7 +39,7 @@ describe("../index.js", () => {
     reopened.close();
   });
 
-  it("passes PostgreSQL conformance in the protected integration profile", { skip: !process.env.PRISM_TEST_POSTGRES_URL }, async () => {
+  (!process.env.PRISM_TEST_POSTGRES_URL ? it.skip : it)("passes PostgreSQL conformance in the protected integration profile", async () => {
     const { Pool } = await import("pg");
     const pool = new Pool({ connectionString: process.env.PRISM_TEST_POSTGRES_URL });
     const schema = `prism_prompts_test_${process.pid}_${Date.now()}`;

@@ -22,6 +22,8 @@ export interface RecentMessageWindowOptions {
 
 export interface ObservationalMemoryContextOptions extends RecentMessageWindowOptions {
   readonly invalidatedIds?: readonly string[];
+  /** Render recall guidance only when the host exposes a recall capability. See `renderObservationalMemory`. */
+  readonly advertiseRecall?: boolean;
   /** Resolved shared-scope memory (see `resolveSharedScopes`); read-only union with the local memory. */
   readonly shared?: readonly SharedScopeMemory[];
 }
@@ -94,8 +96,15 @@ export function buildObservationalMemoryContextBlocks(
       : undefined;
   const blocks: ContextBlock[] = [];
   const memory = scoped
-    ? renderObservationalMemory(scoped.reflections, scoped.observations, { secrets, outline: scoped.outline })
-    : renderObservationalMemory(projection.reflections, projection.observations, secrets);
+    ? renderObservationalMemory(scoped.reflections, scoped.observations, {
+        secrets,
+        outline: scoped.outline,
+        advertiseRecall: options.advertiseRecall,
+      })
+    : renderObservationalMemory(projection.reflections, projection.observations, {
+        secrets,
+        advertiseRecall: options.advertiseRecall,
+      });
   if (memory) blocks.push({ title: "observational-memory", content: memory, priority: 10 });
   const recent = renderRecentMessageWindow(recentEntries, secrets);
   if (recent) blocks.push({ title: "recent-messages", content: recent, priority: 9 });

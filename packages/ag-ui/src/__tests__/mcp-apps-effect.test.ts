@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AgentIdentity, ToolEffectStore } from "@arnilo/prism";
 import { createMemoryToolEffectStore } from "@arnilo/prism";
 import type { McpAppsBridge } from "@arnilo/prism-mcp";

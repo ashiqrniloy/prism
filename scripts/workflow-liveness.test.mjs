@@ -8,7 +8,7 @@
 // the drift only showed up in a scheduled CI run. This gate resolves every
 // `-w <pkg>` / `--workspace[= ]<pkg>` target against the live workspace inventory
 // and every named npm script against that package's manifest (the root manifest for
-// a bare `npm run x`), so the next rename or retirement fails `npm test` instead.
+// a bare `npm run x`), so the next rename or retirement fails `bun run test` instead.
 //
 // The same drift class lives in `scripts/**`: the phase-26 journey packed
 // `packages/coding-agent`/`-security` and `phase11-auth` imported
@@ -17,9 +17,9 @@
 // specifier in `scripts/**/*.mjs` is resolved against the live package and its
 // `exports` subpaths below.
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -38,12 +38,20 @@ export function workspaceInventory(rootDir = ROOT) {
   return { packages, rootScripts: root.scripts ?? {} };
 }
 
-/** `-w <pkg>`, `-w=<pkg>`, `--workspace <pkg>`, `--workspace=<pkg>` (quoted or not). */
-const WORKSPACE = /(?:^|\s)(?:-w|--workspace)[=\s]+("[^"]+"|'[^']+'|\S+)/;
-/** Script claims only: `npm run <script>` and the `npm test` alias. Installer/utility
- *  commands (`npm ci`, `npm pack --workspaces`, `npm audit`, `npm sbom`) name no
- *  package script and are deliberately not resolved. */
-const NPM_RUN = /\bnpm\s+run\s+([\w:.-]+)/;
+/** `-w <pkg>`, `-w=<pkg>`, `--workspace <pkg>`, `--workspace=<pkg>`, `--filter <pkg>`,
+ *  `-F <pkg>` (quoted or not). `--filter`/`-F` is Bun's workspace selector — Bun has no
+ *  `--workspace <name>` form (plan 124 Task 5). */
+const WORKSPACE = /(?:^|\s)(?:-w|--workspace|-F|--filter)[=\s]+("[^"]+"|'[^']+'|\S+)/;
+/** Script claims only: `npm run <script>`, `bun run <script>` and the `npm test` alias.
+ *  Installer/utility commands (`bun ci`, `npm pack --workspaces`, `bun audit`, `npm sbom`)
+ *  name no package script and are deliberately not resolved. */
+const SCRIPT_RUN = /\b(?:npm|bun)\s+run\s+([\w:.-]+)/;
+/** `bun run --filter <pkg> <script>`: the selector consumes the token `SCRIPT_RUN` would need. */
+const FILTER_RUN = /\b(?:npm|bun)\s+run\s+(?:-F|--filter)[=\s]+\S+\s+([\w:.-]+)/;
+/** Registry toolchain commands allowed to keep npm (plan 125 Task 5's exception list). */
+const NPM_REGISTRY_OPS = new Set(["pack", "publish", "sbom", "view"]);
+/** The one Bun setup action, pinned to a full commit SHA (plan 124 Task 5). */
+const SETUP_BUN = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6";
 
 /**
  * Every unresolvable workspace or script name in one workflow's text, as
@@ -54,9 +62,9 @@ export function workflowReferenceProblems(text, inventory) {
   const problems = [];
   text.split(/\r?\n/).forEach((line, index) => {
     for (const segment of line.split(/&&|\|\||;/)) {
-      if (!segment.includes("npm ")) continue;
+      if (!/\b(?:npm|bun)\s/.test(segment)) continue;
       const workspaceMatch = WORKSPACE.exec(segment);
-      const script = NPM_RUN.exec(segment)?.[1] ?? (/\bnpm\s+test\b/.test(segment) ? "test" : null);
+      const script = FILTER_RUN.exec(segment)?.[1] ?? SCRIPT_RUN.exec(segment)?.[1] ?? (/\bnpm\s+test\b/.test(segment) ? "test" : null);
       if (script === null && workspaceMatch === null) continue;
       const target = workspaceMatch?.[1]?.replace(/^["']|["']$/g, "");
       const pkg = target === undefined ? undefined : inventory.packages.get(target);
@@ -69,6 +77,35 @@ export function workflowReferenceProblems(text, inventory) {
       if (!(script in scripts)) {
         problems.push(`line ${index + 1}: ${target ?? "the root package"} has no "${script}" script`);
       }
+    }
+  });
+  return problems;
+}
+
+/**
+ * npm/npx uses that are not the registry-toolchain exception, as `line N: …` strings.
+ * Bun is the only runner in these workflows (plan 124 Task 5): every step is `bun`/`bun run`/
+ * `bunx`, and the only npm left is the release-host registry ops (plan 125 Task 5).
+ */
+export function nonBunCommandProblems(text) {
+  const problems = [];
+  text.split(/\r?\n/).forEach((line, index) => {
+    const code = line.replace(/#.*$/, "");
+    if (/\bnpx\b/.test(code)) problems.push(`line ${index + 1}: npx is not bunx`);
+    if (/\bnpm\s+run\b/.test(code)) problems.push(`line ${index + 1}: npm run is not bun run`);
+    for (const match of code.matchAll(/\bnpm\s+([\w-]+)/g)) {
+      if (!NPM_REGISTRY_OPS.has(match[1])) problems.push(`line ${index + 1}: npm ${match[1]} is not a registry op`);
+    }
+  });
+  return problems;
+}
+
+/** `scripts/*.mjs` paths a workflow names that are not on disk (retired/renamed scripts). */
+export function missingScriptPaths(text, rootDir = ROOT) {
+  const problems = [];
+  text.split(/\r?\n/).forEach((line, index) => {
+    for (const match of line.matchAll(/\bscripts\/[\w./-]+\.mjs\b/g)) {
+      if (!existsSync(join(rootDir, match[0]))) problems.push(`line ${index + 1}: ${match[0]} does not exist`);
     }
   });
   return problems;
@@ -132,7 +169,7 @@ test("every workflow workspace and script reference resolves", () => {
   const workflows = readWorkflows();
   assert.ok(workflows.length >= 8, `expected the workflow set, found ${workflows.length}`);
   // Non-vacuity: the scan must actually be seeing workspace-targeted commands.
-  const references = workflows.flatMap(({ text }) => text.match(/-w @arnilo\/|--workspace[= ]@arnilo\//g) ?? []);
+  const references = workflows.flatMap(({ text }) => text.match(/(?:-w|--workspace|-F|--filter)[= ]@arnilo\//g) ?? []);
   assert.ok(references.length >= 10, `expected workspace references in the workflows, found ${references.length}`);
   for (const { file, text } of workflows) {
     assert.deepEqual(workflowReferenceProblems(text, inventory), [], `${file} references that do not resolve`);
@@ -208,14 +245,66 @@ test("every workflow action is pinned to a full commit SHA", () => {
   );
 });
 
+test("workflows install Bun and declare no Node leg", () => {
+  const workflows = readWorkflows();
+  // Plan 125 Task 1 retired the two declared Node legs (release.yml's Node 24 smoke and the
+  // `node22-compat` job) with the engines flip: `engines.bun >=1.4.2` is the only declared runtime,
+  // so no workflow sets up Node. The 0.1.x Node matrix stays as the immutable era record in
+  // scripts/phase12-freeze-manifest.json support.node, which no workflow measures any more.
+  const setupNode = workflows.filter(({ text }) => text.includes("actions/setup-node"));
+  assert.deepEqual(
+    setupNode.map(({ file }) => file),
+    [],
+    "no workflow may declare a Node leg after the engines flip (plan 125 Task 1)",
+  );
+  for (const { file, text } of workflows) {
+    assert.ok(text.includes(SETUP_BUN), `${file} must set up Bun from the pinned action SHA`);
+    assert.ok(text.includes('bun-version: "1.4.2"'), `${file} must pin bun-version 1.4.2`);
+    assert.ok(text.includes("bun ci"), `${file} must install with bun ci`);
+  }
+});
+
+test("no workflow step calls npm run or npx, and npm keeps only the registry ops", () => {
+  const problems = readWorkflows().flatMap(({ file, text }) => nonBunCommandProblems(text).map((p) => `${file} ${p}`));
+  assert.deepEqual(problems, [], "workflows must run bun/bun run/bunx; npm is the registry toolchain only");
+  // Non-vacuity: the scan sees the sanctioned Bun forms it is guarding.
+  const bunCommands = readWorkflows().flatMap(({ text }) => text.match(/\bbun (?:ci|run|test|x) /g) ?? []);
+  assert.ok(bunCommands.length >= 20, `expected bun commands to scan, found ${bunCommands.length}`);
+  // No workflow step executes node: the declared Node legs and their public-import smoke retired
+  // with the engines flip (plan 125 Task 1).
+  const nodeSteps = readWorkflows().flatMap(({ file, text }) =>
+    text
+      .split(/\r?\n/)
+      .map((line, index) => [index + 1, line.replace(/#.*$/, "")])
+      .filter(([, code]) => /\bnode\s+\S/.test(code))
+      .map(([line, code]) => `${file}:${line} ${code.trim()}`),
+  );
+  assert.deepEqual(nodeSteps, [], "no workflow step may execute node (plan 125 Task 1)");
+  assert.match(
+    nonBunCommandProblems("      - run: npm run test\n          npx --no-install playwright-core install chromium").join("\n"),
+    /npm run is not bun run[\s\S]*npx is not bunx/,
+    "positive control: npm run and npx must be reported",
+  );
+  // Registry ops stay, in every workflow that needs them.
+  assert.deepEqual(nonBunCommandProblems("          npm pack --json\n          npm sbom --sbom-format spdx\n          npm publish"), []);
+  assert.deepEqual(nonBunCommandProblems("          npm ci"), ["line 1: npm ci is not a registry op"]);
+});
+
+test("every scripts/*.mjs a workflow names exists", () => {
+  const problems = readWorkflows().flatMap(({ file, text }) => missingScriptPaths(text).map((p) => `${file} ${p}`));
+  assert.deepEqual(problems, [], "workflows must not name a retired or renamed script");
+  assert.match(missingScriptPaths("          bun scripts/not-a-real-script.mjs").join("\n"), /does not exist/);
+  assert.deepEqual(missingScriptPaths("          bun scripts/with-build-lock.mjs"), []);
+});
+
 test("non-script npm commands and root scripts are handled without false positives", () => {
   const inventory = workspaceInventory();
   const installers = [
-    "      - run: npm ci",
+    "      - run: bun ci",
     "          npm pack --workspaces --json --pack-destination release-artifacts > out.json",
-    "      - run: npm audit --audit-level=moderate",
+    "      - run: bun audit --audit-level=moderate",
     "          npm sbom --sbom-format spdx > sbom.spdx.json",
-    "      - run: node scripts/benchmark.test.mjs",
+    "      - run: bun test --timeout=0 scripts/benchmark.test.mjs",
   ].join("\n");
   assert.deepEqual(workflowReferenceProblems(installers, inventory), []);
   // Root scripts resolve against the root manifest, and a bogus one is reported.

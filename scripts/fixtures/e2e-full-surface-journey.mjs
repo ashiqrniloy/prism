@@ -315,13 +315,11 @@ await section("@arnilo/prism-core: sessions/*", async () => {
     assert.ok(reopened, "sqlite persistence must reopen");
     await reopened.close();
   } catch (error) {
-    // ponytail: sqlite leg is optional (plan 064 Task 10) — better-sqlite3 is an
-    // optional peer dep the packed consumer may not install; upgrade path: add it
-    // to the consumer fixture if a hermetic sqlite leg is ever required.
+    // ponytail: sqlite leg is optional off Bun — the subpath fails closed with the runtime message.
     assert.match(
-      String(error?.cause?.message ?? error?.message),
-      /better-sqlite3/,
-      "sqlite absence must be the documented optional-peer failure",
+      String(error?.message),
+      /requires the Bun runtime \(bun:sqlite\)/,
+      "sqlite absence must be the documented Bun-runtime failure",
     );
   }
 

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { after, before, describe, it } from "node:test";
+import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { MemoryValidationError } from "../../errors.js";
 import { ingestWikiSource } from "../ingest.js";
 
@@ -201,5 +201,93 @@ describe("ingestWikiSource", () => {
       () => ingestWikiSource({ url: "https://example.com/gone" }, { workspaceRoot: workspace, fetchUrl: async () => null }),
       /returned no content/,
     );
+  });
+
+  it("ingest_hook_owns_pdf_csv_and_selected_images", async () => {
+    const workspace = await staged("hook-first");
+    await mkdir(join(workspace, ".wiki"));
+    let calls = 0;
+    const extractDocument = async () => {
+      calls += 1;
+      return { text: "HOOKED", format: "pdf" };
+    };
+    const pdf = await ingestWikiSource(
+      { bytes: new TextEncoder().encode(UNCOMPRESSED_PDF), filename: "paper.pdf", title: "Paper" },
+      { workspaceRoot: workspace, extractDocument },
+    );
+    assert.equal(pdf.extract, "HOOKED");
+    assert.doesNotMatch(pdf.extract, /Hello/);
+    const csv = await ingestWikiSource(
+      { bytes: new TextEncoder().encode("a,b\n1,2"), filename: "rows.csv", title: "Rows" },
+      { workspaceRoot: workspace, extractDocument },
+    );
+    assert.equal(csv.extract, "HOOKED");
+    assert.equal(calls, 2);
+    const scan = await readFile(new URL("../../../../prism-work/src/document-extraction/__tests__/fixtures/scan.pdf", import.meta.url));
+    const scanned = await ingestWikiSource(
+      { bytes: scan, filename: "scan.pdf", title: "Scan" },
+      { workspaceRoot: workspace, extractDocument: async () => ({ text: "SCANNED", format: "pdf" }) },
+    );
+    assert.equal(scanned.extract, "SCANNED");
+    assert.equal(Buffer.compare(await readFile(join(workspace, scanned.sourcePath)), scan), 0);
+    const image = await ingestWikiSource(
+      { bytes: new Uint8Array([137, 80, 78, 71]), filename: "shot.png", title: "Shot" },
+      { workspaceRoot: workspace, extractDocument, ocrImages: true },
+    );
+    assert.equal(image.extract, "HOOKED");
+    assert.doesNotMatch(image.extract, /No text extraction/);
+  });
+
+  it("ingest_without_hook_keeps_pdf_csv_and_image", async () => {
+    const workspace = await staged("no-hook");
+    const pdf = await ingestWikiSource(
+      { bytes: new TextEncoder().encode(UNCOMPRESSED_PDF), filename: "paper.pdf", title: "Paper" },
+      { workspaceRoot: workspace },
+    );
+    assert.match(pdf.extract, /Hello \(PDF\)/);
+    const csv = await ingestWikiSource(
+      { bytes: new TextEncoder().encode("a,b\n1,2"), filename: "rows.csv", title: "Rows" },
+      { workspaceRoot: workspace },
+    );
+    assert.match(csv.extract, /a,b/);
+    const image = await ingestWikiSource(
+      { bytes: new Uint8Array([137, 80, 78, 71]), filename: "shot.png", title: "Shot" },
+      { workspaceRoot: workspace, extractDocument: async () => ({ text: "NO", format: "png" }) },
+    );
+    assert.match(image.extract, /No text extraction/);
+  });
+
+  it("ingest_hook_refusal_writes_nothing", async () => {
+    const workspace = await staged("refuse");
+    await mkdir(join(workspace, ".wiki"));
+    const secret = "WORKER_SECRET";
+    for (const input of [
+      { bytes: new TextEncoder().encode(UNCOMPRESSED_PDF), filename: "paper.pdf", title: "Paper" },
+      { bytes: new TextEncoder().encode("a,b"), filename: "rows.csv", title: "Rows" },
+      { bytes: new Uint8Array([137, 80, 78, 71]), filename: "shot.png", title: "Shot" },
+    ]) {
+      await assert.rejects(
+        () =>
+          ingestWikiSource(input, {
+            workspaceRoot: workspace,
+            ocrImages: true,
+            extractDocument: async () => null,
+          }),
+        /declined/,
+      );
+      await assert.rejects(
+        () =>
+          ingestWikiSource(input, {
+            workspaceRoot: workspace,
+            ocrImages: true,
+            extractDocument: async () => {
+              throw new Error(secret);
+            },
+          }),
+        /WORKER_SECRET/,
+      );
+    }
+    await assert.rejects(() => readdir(join(workspace, "raw")));
+    await assert.rejects(() => readFile(join(workspace, ".wiki", "log.md"), "utf8"));
   });
 });

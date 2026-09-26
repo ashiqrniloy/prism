@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { dispatchToolCallsInOrder, generateValidateReviseLoop, resolveToolConcurrency, singleShotLoop } from "../agent-loops.js";
 import {
   type AgentEvent,

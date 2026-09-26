@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
-import { test } from "node:test";
+import { test } from "bun:test";
 import type { SessionEntry } from "../contracts.js";
 import { createJsonlSessionStore, readJsonlSessionEntries } from "../node/session-store-jsonl.js";
 import { getSessionBranchEntries, listSessionBranches, rebuildSessionContext } from "../session-stores.js";

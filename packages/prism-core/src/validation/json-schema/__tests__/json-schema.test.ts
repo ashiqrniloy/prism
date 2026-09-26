@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { JsonObject, ToolArgumentValidator, ToolDefinition } from "@arnilo/prism";
 import { createToolRegistry, dispatchToolCall } from "@arnilo/prism";
 import { createJsonSchemaArgumentValidator, createJsonSchemaToolArgumentValidator } from "../json-schema.js";

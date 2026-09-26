@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { Readable, Writable } from "node:stream";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { runCli, usage } from "../cli-runner.js";
 
 class MemoryWritable extends Writable {
@@ -47,7 +47,7 @@ describe("prism dev subcommand (plan 040 Task 4)", () => {
       loadDevCli: async () => undefined,
     });
     assert.equal(code, 2);
-    assert.match(io.stderr.text(), /npm install --save-dev \S*prism-(dev|coding-tools)/);
+    assert.match(io.stderr.text(), /bun add --dev \S*prism-(dev|coding-tools)/);
     assert.equal(io.stdout.text(), "");
   });
 

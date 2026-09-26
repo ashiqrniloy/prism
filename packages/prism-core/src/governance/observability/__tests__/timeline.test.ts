@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "bun:test";
 import type { AgentEvent } from "@arnilo/prism";
 import { createSecretRedactor } from "@arnilo/prism";
 import type { WorkflowCheckpointValue, WorkflowEvent } from "../../../runtime/workflows/types.js";

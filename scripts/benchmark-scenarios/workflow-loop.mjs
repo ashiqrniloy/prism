@@ -4,7 +4,7 @@
  * Five serial loop iterations run a mock-provider refinement body. The frozen
  * p95 budget is one 50 ms node-execution envelope per iteration.
  *
- * Usage: node scripts/benchmark.mjs --scenario workflow-loop
+ * Usage: bun scripts/benchmark.mjs --scenario workflow-loop
  */
 import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";

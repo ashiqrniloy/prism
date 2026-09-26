@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Client-neutrality guard: fails when any configured client name appears in the
 // repo. Names come from PRISM_CLIENT_NAMES (comma-separated) so the list itself
-// never lives in the repository. Wired into `npm run release:gate`.
+// never lives in the repository. Wired into `bun run release:gate`.
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";

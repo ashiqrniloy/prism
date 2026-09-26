@@ -6,7 +6,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { checkReleaseEvidence } from "./release.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -113,7 +113,7 @@ test("protected-named: every protected/live skip class has a reason and required
     assert.equal(manifest.blocked, false, "with the required env declared nothing may be blocked");
     const baseline = latestBaseline();
     const counts = baseline.data.exitGate?.counts ?? {};
-    const core = manifest.surfaces.find((s) => s.name === "core npm test");
+    const core = manifest.surfaces.find((s) => s.name === "core bun run test");
     assert.equal(core.state, "pass");
     assert.equal(
       core.skip,
@@ -175,7 +175,7 @@ test("unexplained-skip-rejected: a skip without reason and required env fails th
         release: "0.2.3",
         surfaces: [
           { name: "documented suite", state: "skip", reason: "needs a real service", requiredEnv: "PRISM_TEST_NATS_URL" },
-          { name: "core npm test", state: "pass", count: 1, skip: 0 },
+          { name: "core bun run test", state: "pass", count: 1, skip: 0 },
         ],
       }),
     );
@@ -202,7 +202,7 @@ test("no-secret: the manifest records env var names only, never values", () => {
 
 test("wiring: release:evidence is emitted before release:gate and retained by CI", () => {
   const scripts = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts;
-  assert.equal(scripts["release:evidence"], "node scripts/release-skip-manifest.mjs");
+  assert.equal(scripts["release:evidence"], "bun scripts/release-skip-manifest.mjs");
   assert.ok(scripts["release:gate"].includes("release-skip-manifest.mjs"), "release:gate must emit the manifest first");
   const workflow = readFileSync(join(ROOT, ".github", "workflows", "release.yml"), "utf8");
   assert.ok(workflow.includes("PRISM_TEST_POSTGRES_URL"), "verify job must declare the postgres release profile");

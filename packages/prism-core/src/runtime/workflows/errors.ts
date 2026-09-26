@@ -29,6 +29,18 @@ export class WorkflowLoopLimitError extends WorkflowRuntimeError {
   }
 }
 
+export class WorkflowSuperstepLimitError extends WorkflowRuntimeError {
+  readonly supersteps: number;
+  readonly maxSupersteps: number;
+
+  constructor(supersteps: number, maxSupersteps: number) {
+    super(`Workflow exceeded maxSupersteps (${supersteps} >= ${maxSupersteps})`, "ERR_PRISM_WORKFLOW_SUPERSTEP_LIMIT");
+    this.name = "WorkflowSuperstepLimitError";
+    this.supersteps = supersteps;
+    this.maxSupersteps = maxSupersteps;
+  }
+}
+
 export class WorkflowCheckpointError extends Error {
   readonly code = "ERR_PRISM_WORKFLOW_CHECKPOINT";
   constructor(message: string) {

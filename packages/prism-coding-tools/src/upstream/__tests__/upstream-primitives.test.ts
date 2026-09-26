@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 
 import { redactPaths as impeccableRedactPaths, UpstreamResolveError as impeccableUpstreamResolveError } from "../../impeccable/upstream.js";
 import { MAX_SKILL_FILE_BYTES, readBoundedFile, redactPaths, UpstreamResolveError } from "../index.js";

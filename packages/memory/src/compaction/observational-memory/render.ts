@@ -8,6 +8,11 @@ export interface RenderObservationalMemoryOptions {
   readonly secrets?: readonly (string | undefined)[];
   readonly maxBytes?: number;
   readonly outline?: readonly WorkScopeOutline[];
+  /**
+   * Include the recall-evidence instruction. Default `true`. Set `false` when the host exposes no
+   * recall capability. An empty pool never advertises recall regardless of this flag.
+   */
+  readonly advertiseRecall?: boolean;
 }
 
 function normalizeRenderOptions(
@@ -25,18 +30,25 @@ export function renderObservationalMemory(
   const options = normalizeRenderOptions(secretsOrOptions);
   const secrets = options.secrets ?? [];
   const maxBytes = options.maxBytes ?? HARD_MAX_RENDERED_MEMORY_BYTES;
-  const lines = [
-    "# Observational Memory",
-    "Use these source-backed memories when relevant. To inspect evidence, call recall with a 12-character id; do not guess ids.",
-    "",
-    ...(options.outline?.length
-      ? ["## Scope Outline", ...options.outline.map((scope) => `- ${scope.id}${scope.label === undefined ? "" : ` — ${scope.label}`}`), ""]
-      : []),
+  const lines = ["# Observational Memory"];
+  if ((options.advertiseRecall ?? true) && (reflections.length || observations.length)) {
+    lines.push(
+      "Use these source-backed memories when relevant. To inspect evidence, call recall with a 12-character id; do not guess ids.",
+      "",
+    );
+  }
+  if (options.outline?.length)
+    lines.push(
+      "## Scope Outline",
+      ...options.outline.map((scope) => `- ${scope.id}${scope.label === undefined ? "" : ` — ${scope.label}`}`),
+      "",
+    );
+  lines.push(
     "## Reflections",
     ...(reflections.length ? reflections.map((item) => `- [${item.id}] ${item.content}`) : ["- none"]),
     "",
     "## Observations",
     ...(observations.length ? observations.map((item) => `- [${item.id}] (${item.relevance}) ${item.content}`) : ["- none"]),
-  ];
+  );
   return redactSecrets(truncateWorkerText(lines.join("\n"), maxBytes), secrets);
 }

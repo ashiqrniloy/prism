@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { ModelConfig, ProviderEvent, ProviderRequest, ToolDefinition, Usage } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
@@ -13,7 +13,7 @@ import { createHyperProvider, hyperModels } from "../index.js";
 //
 // Network-free by default: these tests skip unless BOTH
 // `PRISM_LIVE_PROVIDER_TESTS=1` AND `HYPER_API_KEY` are set. The default
-// `npm test` and CI release verification never set these. To run locally:
+// `bun run test` and CI release verification never set these. To run locally:
 //
 //   PRISM_LIVE_PROVIDER_TESTS=1 HYPER_API_KEY=sk-hyper-... \
 //     npm run test --workspace=@arnilo/prism-providers/hyper
@@ -56,8 +56,8 @@ function usageOf(events: readonly ProviderEvent[]): Usage | undefined {
   return events.find((e) => e.type === "usage")?.usage;
 }
 
-describe("@arnilo/prism-providers/hyper live probes", () => {
-  it("live_text_generation_streams_and_leaks_no_secret", { skip }, async () => {
+(skip ? describe.skip : describe)("@arnilo/prism-providers/hyper live probes", () => {
+  it("live_text_generation_streams_and_leaks_no_secret", async () => {
     const events = await assertProviderStreamConforms({
       provider: provider(),
       request: { model: chatModel, messages: [{ role: "user", content: [{ type: "text", text: "Reply with exactly the word: pong" }] }] },
@@ -67,7 +67,7 @@ describe("@arnilo/prism-providers/hyper live probes", () => {
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_tool_call_loop_conforms_and_leaks_no_secret", { skip }, async () => {
+  it("live_tool_call_loop_conforms_and_leaks_no_secret", async () => {
     const getWeatherTool: ToolDefinition = {
       name: "get_weather",
       description: "Get the current weather for a city.",
@@ -88,14 +88,14 @@ describe("@arnilo/prism-providers/hyper live probes", () => {
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_abort_signal_is_observed_before_first_request", { skip }, async () => {
+  it("live_abort_signal_is_observed_before_first_request", async () => {
     await assertAbortIsObserved({
       provider: provider(),
       request: { model: chatModel, messages: [{ role: "user", content: [{ type: "text", text: "Reply with exactly the word: pong" }] }] },
     });
   });
 
-  it("live_error_response_leaks_no_secret", { skip }, async () => {
+  it("live_error_response_leaks_no_secret", async () => {
     const events = await collectProviderEvents(provider(), { model: chatModel, messages: [] });
     const terminal = events.at(-1);
     assert.ok(terminal, "live error request produced no events");
@@ -103,7 +103,7 @@ describe("@arnilo/prism-providers/hyper live probes", () => {
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_chat_route_reports_cached_tokens_on_warm_prefix_replay", { skip }, async () => {
+  it("live_chat_route_reports_cached_tokens_on_warm_prefix_replay", async () => {
     // Explicit-caching probe (implicit model): same exact prefix on two turns;
     // the second must surface cached input tokens through the shared mapping
     // (prompt_tokens_details.cached_tokens or prompt_cache_hit_tokens).
@@ -136,7 +136,7 @@ describe("@arnilo/prism-providers/hyper live probes", () => {
     assertNoSecretLeak(second, [API_KEY!]);
   });
 
-  it("live_messages_route_cache_control_reports_creation_and_read_tokens", { skip }, async () => {
+  it("live_messages_route_cache_control_reports_creation_and_read_tokens", async () => {
     // Explicit-write probe (cache_control model): system_prompt breakpoint on
     // the Anthropic route; call A creates the cache entry, warm call B reads it.
     const request = (): ProviderRequest => ({
@@ -168,7 +168,7 @@ describe("@arnilo/prism-providers/hyper live probes", () => {
     assertNoSecretLeak(warm, [API_KEY!]);
   });
 
-  it("live_reasoning_effort_is_accepted_on_chat_route", { skip }, async () => {
+  it("live_reasoning_effort_is_accepted_on_chat_route", async () => {
     // Reasoning-param probe: send an effort value from the model's documented
     // effort_levels (xhigh) and capture the wire body. A 400/non-done terminal
     // means Hyper rejects reasoning_effort — drop it from the mapping.
@@ -194,7 +194,7 @@ describe("@arnilo/prism-providers/hyper live probes", () => {
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_responses_route_text_tool_smoke_and_cached_tokens_on_warm_prefix", { skip }, async () => {
+  it("live_responses_route_text_tool_smoke_and_cached_tokens_on_warm_prefix", async () => {
     // Codex-style `/v1/responses` pass-through: plain smoke + cached-token
     // probe (shared Responses machinery maps input_tokens_details.cached_tokens).
     const responsesModel: ModelConfig = { ...chatModel, compat: { ...chatModel.compat, route: "responses" } };

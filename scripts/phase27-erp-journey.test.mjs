@@ -31,7 +31,7 @@ import { createHash, createSign, generateKeyPairSync, randomUUID } from "node:cr
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import {
   applyFieldPolicy,
   createAuditFieldRedactor,
@@ -130,7 +130,7 @@ function approvalAuthority(_tenantId, approver1Id, approver2Id, _requesterId, po
   };
 }
 
-test("Task 9 ERP release journey: all invariants pass against real Postgres + failover", { skip }, async () => {
+(skip ? test.skip : test)("Task 9 ERP release journey: all invariants pass against real Postgres + failover", async () => {
   const pool = new Pool({ connectionString: url, max: 12 });
   const schema = `prism_journey_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   const tenantA = `tenant-a-${randomUUID().slice(0, 8)}`;

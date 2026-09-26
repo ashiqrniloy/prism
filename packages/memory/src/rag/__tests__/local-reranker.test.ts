@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { describe, it } from "node:test";
+import { describe, it, spyOn } from "bun:test";
 import {
   createLocalReranker,
   createTransformersRerankRuntime,
@@ -45,26 +45,30 @@ describe("createLocalReranker", () => {
     await runRerankerConformance(() => createLocalReranker({ runtime }));
   });
 
-  it("loads once, lazily, and scores all 50 candidates in one batched call with no network", async (t) => {
+  it("loads once, lazily, and scores all 50 candidates in one batched call with no network", async () => {
     const state = { loads: 0, scores: 0, batched: [] as readonly number[] };
     let fetches = 0;
-    // Node's own mock seam: the network-free guard rejects hand-patching the
-    // global fetch in a non-live suite, and this restores the original for us.
-    t.mock.method(globalThis, "fetch", () => {
+    const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((() => {
       fetches += 1;
       throw new Error("local reranker must not touch the network");
-    });
-    const reranker = createLocalReranker({ runtime: overlapRuntime(state) });
-    assert.equal(state.loads, 0, "model load is lazy");
-    const candidates = Array.from({ length: 50 }, (_, index) => reliefHit(`src#${String(index + 1).padStart(4, "0")}`, index / 50, index));
-    const ordered = await reranker.rerank({ query: "alpha", hits: candidates });
-    await reranker.rerank({ query: "alpha", hits: candidates });
-    assert.equal(state.loads, 1, "model load is memoized");
-    assert.equal(state.scores, 2, "one batched score call per rerank");
-    assert.equal(state.batched.length, 50, "every candidate is scored in that one call");
-    assert.equal(ordered.length, 50);
-    for (const hit of ordered) assert.ok(candidates.includes(hit), "same hit references move");
-    assert.equal(fetches, 0);
+    }) as typeof fetch);
+    try {
+      const reranker = createLocalReranker({ runtime: overlapRuntime(state) });
+      assert.equal(state.loads, 0, "model load is lazy");
+      const candidates = Array.from({ length: 50 }, (_, index) =>
+        reliefHit(`src#${String(index + 1).padStart(4, "0")}`, index / 50, index),
+      );
+      const ordered = await reranker.rerank({ query: "alpha", hits: candidates });
+      await reranker.rerank({ query: "alpha", hits: candidates });
+      assert.equal(state.loads, 1, "model load is memoized");
+      assert.equal(state.scores, 2, "one batched score call per rerank");
+      assert.equal(state.batched.length, 50, "every candidate is scored in that one call");
+      assert.equal(ordered.length, 50);
+      for (const hit of ordered) assert.ok(candidates.includes(hit), "same hit references move");
+      assert.equal(fetches, 0);
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 
   it("reranks a top-50 candidate set well inside the 300ms median budget on the adapter path", async () => {
@@ -153,7 +157,7 @@ describe("createTransformersRerankRuntime", () => {
     }
   })();
 
-  it("fails loud with install guidance when the optional runtime is absent", { skip: installed }, async () => {
+  it.skipIf(installed)("fails loud with install guidance when the optional runtime is absent", async () => {
     await assert.rejects(createTransformersRerankRuntime().load(DEFAULT_LOCAL_RERANK_MODEL), (error: unknown) => {
       assert.ok(error instanceof RagValidationError);
       assert.match(error.message, /npm i @huggingface\/transformers/);

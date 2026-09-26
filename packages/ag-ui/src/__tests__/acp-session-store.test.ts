@@ -13,7 +13,7 @@
  * Store failure fails the request (host sees it); evict on close/delete.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { type ClientContext, client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import type { AgentRunLifecycle, AgentSession, SecretRedactor } from "@arnilo/prism";
 import {

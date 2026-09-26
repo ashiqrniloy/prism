@@ -1,5 +1,5 @@
 import { LeaseConflictError, type LeaseRecord, type LeaseStore } from "@arnilo/prism";
-import type Database from "better-sqlite3";
+import type { Database } from "bun:sqlite";
 import { assertLeaseInput, assertOwnershipScope } from "../codecs/index.js";
 
 interface Row {
@@ -16,7 +16,7 @@ interface Row {
   updated_at: string;
 }
 
-export function createSqliteLeaseStore(database: Database.Database): LeaseStore {
+export function createSqliteLeaseStore(database: Database): LeaseStore {
   database.exec(`
 CREATE TABLE IF NOT EXISTS prism_leases (
   namespace TEXT NOT NULL, key TEXT NOT NULL, owner_id TEXT NOT NULL, token TEXT NOT NULL,

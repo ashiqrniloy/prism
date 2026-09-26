@@ -20,7 +20,7 @@ import { loadRelease, runRelease } from "./release.mjs";
 const ROOT = import.meta.dirname ? new URL("..", import.meta.url).pathname : process.cwd();
 const BASELINE = process.argv[process.argv.indexOf("--baseline") + 1];
 if (!BASELINE) {
-  console.error("usage: node scripts/phase40-release-dry-run.mjs --baseline <commit-without-packages/prism-dev>");
+  console.error("usage: bun scripts/phase40-release-dry-run.mjs --baseline <commit-without-packages/prism-dev>");
   process.exit(2);
 }
 

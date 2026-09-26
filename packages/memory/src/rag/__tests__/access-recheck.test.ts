@@ -8,7 +8,7 @@
  * with an audit event instead of aborting the query; and abort stays an abort.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createHashEmbedder, createMemoryVectorStore, type MemoryScope, type RagAccessConstraint, type VectorStore } from "../../index.js";
 import { type AccessDenial, chunkText, createAccessRecheck, indexChunks, type RagHit, type Reranker, retrieveContext } from "../index.js";
 
@@ -352,6 +352,8 @@ describe("mid-turn source-grant recheck", () => {
     assert.equal(lookups, 50 * durations.length);
     durations.sort((left, right) => left - right);
     // Median of 5 runs over an in-memory store: the hook's own cost, well inside the budget.
+    // Plan 124 Task 4: re-measured under Bun 1.4.2 (2026-09-25, five back-to-back runs) at
+    // 0.104-0.118ms (same-session Node 0.50-0.66ms), so the 5ms budget stays.
     assert.ok(durations[2]! < 5, `recheck median ${durations[2]}ms exceeds 5ms`);
   });
 });

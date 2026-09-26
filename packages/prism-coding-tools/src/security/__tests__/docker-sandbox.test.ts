@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { buildDockerCreateArgsForTest } from "../docker-sandbox.js";
 import type { DockerCliRequest, DockerCliResult, DockerRunner } from "../index.js";
 import {
@@ -567,7 +567,7 @@ test("maxConcurrentExecs serializes overlapping execFile calls", async () => {
   });
 });
 
-test("protected Docker sandbox matrix", { skip: process.env.PRISM_TEST_DOCKER_SANDBOX !== "1" }, async () => {
+(process.env.PRISM_TEST_DOCKER_SANDBOX !== "1" ? test.skip : test)("protected Docker sandbox matrix", async () => {
   const docker = process.env.PRISM_TEST_DOCKER_BIN;
   const image = process.env.PRISM_TEST_DOCKER_IMAGE;
   assert.ok(docker, "PRISM_TEST_DOCKER_BIN required when PRISM_TEST_DOCKER_SANDBOX=1");

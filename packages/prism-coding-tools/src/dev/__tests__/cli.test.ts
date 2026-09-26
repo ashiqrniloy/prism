@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { Writable } from "node:stream";
-import { after, describe, it } from "node:test";
+import { afterAll as after, describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { runDevCli } from "../cli.js";
 

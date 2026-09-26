@@ -11,7 +11,7 @@
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { after, describe, it } from "node:test";
+import { afterAll as after, describe, it } from "bun:test";
 import { Pool } from "pg";
 import {
   createDeletionPropagator,
@@ -27,7 +27,6 @@ import { chunkText, createRagDeletionHandler, indexChunks, retrieveContext } fro
 import type { RagScope } from "../rag/types.js";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;
-const SKIP_REASON = "set PRISM_TEST_POSTGRES_URL to run the durable deletion-propagation leg";
 
 const scope: Required<MemoryScope> = { tenantId: "t1", resourceId: "r1", threadId: "th1" };
 const ragScope: RagScope = { tenantId: scope.tenantId, resourceId: scope.resourceId, corpusId: scope.threadId };
@@ -86,7 +85,7 @@ function countingPool(pool: Pool): { pool: Pool; counts: PoolCounts } {
   return { pool: wrapper as unknown as Pool, counts };
 }
 
-describe("postgres deletion propagation integration", { skip: postgresUrl ? false : SKIP_REASON }, () => {
+describe.skipIf(!postgresUrl)("postgres deletion propagation integration", () => {
   const pools: Pool[] = [];
 
   after(async () => {

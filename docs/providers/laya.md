@@ -6,6 +6,8 @@
 
 The package registers provider `laya`, checkpoints `laya`, `laya-multilingual`, and `laya-typed-decisions`, and an optional `api_key` auth method. The server Router picks the checkpoint. The `model` field is advisory and is not a client-side force.
 
+For raw probabilities, confidence, and the actual responding checkpoint instead of rendered JSON, use the shared [`decisions`](decisions.md) subpath (re-exported from this package); the adapter deliberately does not copy those values onto events.
+
 ## When to use it
 
 Use it when a host runs `laya-serve` locally or on another machine and wants the same structured decision contract as Jev without a hosted account. Do not use it as a general chat model or a tool-calling agent.
@@ -107,6 +109,7 @@ The default `http://localhost:8000` is plaintext loopback only. A non-loopback `
 
 ## Related APIs
 
+- [System One decisions](decisions.md): raw typed decision calls over the same wire, with probabilities, confidence, actual model, usage, and timing.
 - [TypeSafe Jev](typesafe.md): hosted twin. Schema mapping and event sequence are defined there.
 - [Structured output](../structured-output.md): `options.structuredOutput` contract this adapter requires.
 - [Provider packages](../provider-packages.md): registration and auth-method shape.

@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import type Database from "better-sqlite3";
+import type { Database } from "bun:sqlite";
 import { diffPromptRecords } from "./diff.js";
 import { PromptNotFoundError, PromptValidationError } from "./errors.js";
 import { resolvePromptPageLimit } from "./limits.js";
@@ -9,18 +9,18 @@ import { createPromptStoreOptions } from "./store.js";
 
 const require = createRequire(import.meta.url);
 
-function getSqliteConstructor(): new (filename: string, options?: Database.Options) => Database.Database {
+function loadBunSqlite(): new (filename: string) => Database {
   try {
-    const mod = require("better-sqlite3");
-    return mod.default ?? mod;
+    const ctor = require("bun:sqlite").Database;
+    if (typeof ctor !== "function") throw new Error("bun:sqlite did not export Database");
+    return ctor;
   } catch (error) {
-    throw new Error(
-      "@arnilo/prism-core/governance/prompts: optional peer dependency 'better-sqlite3' is not installed. " +
-        "Install it (npm i better-sqlite3) to use SQLite prompt storage.",
-      { cause: error },
-    );
+    throw new Error("@arnilo/prism-core/governance/prompts requires the Bun runtime (bun:sqlite).", { cause: error });
   }
 }
+
+// ponytail: require() not static import — Node turns `import "bun:sqlite"` into ERR_UNSUPPORTED_ESM_URL_SCHEME before this message. Delete the seam when a non-Bun import is no longer a supported failure.
+const BunSqlite = loadBunSqlite();
 
 import type {
   PromptDiff,
@@ -39,7 +39,7 @@ export interface SqlitePromptStoreOptions extends PromptStoreOptions {
   /** SQLite database file path. Defaults to `:memory:`. */
   readonly filename?: string;
   /** Existing open database handle. Caller owns its lifecycle when supplied. */
-  readonly database?: Database.Database;
+  readonly database?: Database;
   /** Enable SQLite WAL mode. Defaults to `true`. */
   readonly wal?: boolean;
   /** SQLite busy timeout in milliseconds. Defaults to `5000`. */
@@ -50,7 +50,7 @@ export interface SqlitePromptStoreOptions extends PromptStoreOptions {
 
 export interface SqlitePromptStore extends PromptStore {
   readonly name: "sqlite";
-  readonly database: Database.Database;
+  readonly database: Database;
   close(): void;
 }
 
@@ -61,8 +61,7 @@ type PromptRow = Record<string, unknown>;
 export function createSqlitePromptStore(options: SqlitePromptStoreOptions = {}): SqlitePromptStore {
   const { limits, ownership: fallback, now } = createPromptStoreOptions(options);
   const ownsDatabase = options.database === undefined;
-  const DatabaseConstructor = getSqliteConstructor();
-  const database = options.database ?? new DatabaseConstructor(options.filename ?? ":memory:");
+  const database = options.database ?? new BunSqlite(options.filename ?? ":memory:");
   let closed = false;
   const busyTimeoutMs = options.busyTimeoutMs ?? DEFAULT_BUSY_TIMEOUT_MS;
   if (!Number.isSafeInteger(busyTimeoutMs) || busyTimeoutMs < 0 || busyTimeoutMs > 120_000) {
@@ -70,9 +69,9 @@ export function createSqlitePromptStore(options: SqlitePromptStoreOptions = {}):
     throw new PromptValidationError("busyTimeoutMs must be an integer in [0, 120000]", "ERR_PRISM_PROMPT_LIMITS");
   }
   try {
-    database.pragma("foreign_keys = ON");
-    if (options.wal !== false) database.pragma("journal_mode = WAL");
-    database.pragma(`busy_timeout = ${busyTimeoutMs}`);
+    database.exec("PRAGMA foreign_keys = ON");
+    if (options.wal !== false) database.exec("PRAGMA journal_mode = WAL");
+    database.exec(`PRAGMA busy_timeout = ${busyTimeoutMs}`);
     if (!options.skipMigrations) applySqlitePromptMigrations(database);
     else assertSqlitePromptSchemaReady(database);
   } catch (error) {
@@ -199,7 +198,7 @@ export function createSqlitePromptStore(options: SqlitePromptStoreOptions = {}):
          LIMIT 1`,
       )
       .get(...params) as PromptRow | undefined;
-    return row === undefined ? null : normalizeStoredPrompt(row, limits);
+    return row == null ? null : normalizeStoredPrompt(row, limits);
   }
 
   async function diff(

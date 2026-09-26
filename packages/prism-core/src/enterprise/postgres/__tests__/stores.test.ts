@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AgentIdentity, ToolEffectKey } from "@arnilo/prism";
 import { ToolEffectError } from "@arnilo/prism";
 import type { Pool } from "pg";

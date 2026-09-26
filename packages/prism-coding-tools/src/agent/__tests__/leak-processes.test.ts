@@ -5,7 +5,7 @@
 // deterministic, no sleeps. Skips on tiny heaps.
 import assert from "node:assert/strict";
 import { tmpdir } from "node:os";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { getHeapStatistics } from "node:v8";
 import { createSessionsHost } from "../process/sessions-host.js";
 import { startSession } from "../process/sessions-spawn.js";
@@ -16,7 +16,7 @@ const PER_MODE = Math.floor(N / 3);
 const LOW_MEM = getHeapStatistics().heap_size_limit < 512 * 1024 * 1024;
 const TERMINAL = new Set(["exited", "killed", "released", "expired", "unknown"]);
 
-describe("leak: process sessions leave no running residue", { skip: LOW_MEM }, () => {
+describe.skipIf(Boolean(LOW_MEM))("leak: process sessions leave no running residue", () => {
   it("200 spawn/exit cycles stay terminal-only; dispose empties the registry", async () => {
     const host = createSessionsHost({ cwd: tmpdir(), onEvent: () => {}, limits: { maxLifetimeMs: 60_000 } });
     try {

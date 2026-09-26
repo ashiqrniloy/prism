@@ -7,7 +7,7 @@
  * inline pack rides a checkpoint as its pattern rules (guardrail-pack-durability covers the shape).
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import {
   type AgentEvent,
   type ContentBlock,

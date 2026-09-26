@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import test from "node:test";
+import { test } from "bun:test";
 import type { PlaywrightBrowser } from "../../browser/index.js";
 import type { ObscuraPlaywright } from "../cdp.js";
 import { connectObscuraCdp, endpointFromServeArgs, validateObscuraEndpoint } from "../cdp.js";

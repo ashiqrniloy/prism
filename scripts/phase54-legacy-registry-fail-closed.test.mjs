@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { makeFixture, mkdtemp, readState, run } from "./fixtures/phase54-legacy-registry-fixture.mjs";
 
 test("phase54 legacy registry: mismatched tag/warning fails closed with zero mutations; repair resumes", () => {

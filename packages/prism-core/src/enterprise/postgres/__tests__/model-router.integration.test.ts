@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { after, describe, it } from "node:test";
+import { afterAll as after, describe, it } from "bun:test";
 import type { AgentIdentity, AIProvider, ModelConfig } from "@arnilo/prism";
 import { Pool } from "pg";
 import { createModelRouter, ModelRouterError } from "../../../governance/model-router/index.js";

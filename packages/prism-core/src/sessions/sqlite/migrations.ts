@@ -10,7 +10,7 @@ import {
   type PersistenceSchemaShape,
   type PersistenceSchemaShapeForeignKey,
 } from "@arnilo/prism/testing/persistence-schema";
-import type Database from "better-sqlite3";
+import type { Database } from "bun:sqlite";
 import {
   ADAPTER_INDEX_NAMES,
   MIGRATION_001_INIT,
@@ -28,13 +28,13 @@ import { DEFAULT_BUSY_TIMEOUT_MS } from "./types.js";
 
 const MIGRATION_CONTRACT = createPersistenceMigrationContract();
 
-export function configureSqliteDatabase(db: Database.Database, options: Pick<SqlitePersistenceOptions, "wal" | "busyTimeoutMs">): void {
-  db.pragma("foreign_keys = ON");
-  if (options.wal !== false) db.pragma("journal_mode = WAL");
-  db.pragma(`busy_timeout = ${options.busyTimeoutMs ?? DEFAULT_BUSY_TIMEOUT_MS}`);
+export function configureSqliteDatabase(db: Database, options: Pick<SqlitePersistenceOptions, "wal" | "busyTimeoutMs">): void {
+  db.exec("PRAGMA foreign_keys = ON");
+  if (options.wal !== false) db.exec("PRAGMA journal_mode = WAL");
+  db.exec(`PRAGMA busy_timeout = ${options.busyTimeoutMs ?? DEFAULT_BUSY_TIMEOUT_MS}`);
 }
 
-export function applySqliteMigrations(db: Database.Database): readonly AppliedPersistenceMigration[] {
+export function applySqliteMigrations(db: Database): readonly AppliedPersistenceMigration[] {
   return db.transaction(() => {
     let applied = listAppliedMigrations(db);
     const history = assertAppliedPersistenceMigrations(MIGRATION_CONTRACT, applied);
@@ -73,17 +73,17 @@ export function applySqliteMigrations(db: Database.Database): readonly AppliedPe
   })();
 }
 
-export function assertSqliteSchemaReady(db: Database.Database): void {
+export function assertSqliteSchemaReady(db: Database): void {
   assertPersistenceSchemaShape(readSqliteSchemaShape(db), "sqlite", createPersistenceSchemaModel());
 }
 
-export function verifyMigrationIdempotency(db: Database.Database): void {
+export function verifyMigrationIdempotency(db: Database): void {
   const first = listAppliedMigrations(db);
   const second = listAppliedMigrations(db);
   assertMigrationUpAndReopen(MIGRATION_CONTRACT, first, second);
 }
 
-function listAppliedMigrations(db: Database.Database): AppliedPersistenceMigration[] {
+function listAppliedMigrations(db: Database): AppliedPersistenceMigration[] {
   const hasTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'prism_migrations'").get();
   if (!hasTable) return [];
   return db
@@ -91,12 +91,12 @@ function listAppliedMigrations(db: Database.Database): AppliedPersistenceMigrati
     .all() as AppliedPersistenceMigration[];
 }
 
-function backfillLegacyChecksums(db: Database.Database): void {
+function backfillLegacyChecksums(db: Database): void {
   const update = db.prepare("UPDATE prism_migrations SET checksum = ? WHERE name = ? AND version = ? AND checksum IS NULL");
   for (const step of MIGRATION_CONTRACT.steps) update.run(step.checksum, step.name, String(step.version));
 }
 
-function readSqliteSchemaShape(db: Database.Database): PersistenceSchemaShape {
+function readSqliteSchemaShape(db: Database): PersistenceSchemaShape {
   const model = createPersistenceSchemaModel();
   const tables = model.tables.map((table) => {
     const columns = db.prepare(`PRAGMA table_info(${quote(table.name)})`).all() as {
@@ -157,7 +157,7 @@ function readSqliteSchemaShape(db: Database.Database): PersistenceSchemaShape {
   return { tables, indexes };
 }
 
-function indexColumns(db: Database.Database, index: string): string[] {
+function indexColumns(db: Database, index: string): string[] {
   return (db.prepare(`PRAGMA index_info(${quote(index)})`).all() as { seqno: number; name: string }[])
     .sort((a, b) => a.seqno - b.seqno)
     .map((column) => column.name);

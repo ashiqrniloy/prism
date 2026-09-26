@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { makeFixture, mkdtemp, PUBLISHED, readState, run } from "./fixtures/phase54-legacy-registry-fixture.mjs";
 import { legacyMessage } from "./phase54-legacy-registry.mjs";
 import { CONSOLIDATION_SPEC } from "./phase54-package-map.mjs";

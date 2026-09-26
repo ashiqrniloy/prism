@@ -11,7 +11,7 @@ Use for official Telegram Bot API text and bounded media. Private DMs are the de
 Install peer and channel package:
 
 ```bash
-npm install @arnilo/prism @arnilo/prism-channels
+bun add @arnilo/prism @arnilo/prism-channels
 ```
 
 ## Inputs / request

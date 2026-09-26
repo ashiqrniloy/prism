@@ -5,7 +5,7 @@ Bounded MCP client capabilities and explicit Prism MCP server exposure, pinned t
 ## Install
 
 ```bash
-npm install @arnilo/prism-mcp @arnilo/prism
+bun add @arnilo/prism-mcp @arnilo/prism
 ```
 
 ## Usage

@@ -25,7 +25,7 @@ import type {
   WorkflowSuspensionDescriptor,
 } from "../types.js";
 import { createRunId, hashWorkflowDefinition, nowIso, ownershipMatches, redactValue } from "../util.js";
-import { cloneState, parseStateHistory, resultFromRecord } from "./checkpoint.js";
+import { cloneState, deserializePendingActivations, parseStateHistory, resultFromRecord } from "./checkpoint.js";
 import { executeScheduler } from "./scheduler.js";
 
 interface RuntimeNodeState {
@@ -40,6 +40,7 @@ interface RuntimeNodeState {
   stateVersionBefore?: number;
   iteration?: number;
   lastOutput?: unknown;
+  currentIterationStateVersionBefore?: number;
   iterations?: WorkflowLoopIterationRecord[];
 }
 
@@ -72,6 +73,8 @@ export interface SchedulerState {
   lineage?: import("../types.js").WorkflowReplayLineage;
   checkpointChain: Promise<void>;
   stateChain: Promise<void>;
+  superstep?: number;
+  pendingActivations?: Map<string, { from: Set<string>; round: number }>;
 }
 
 /** Return from a workflow node to pause durably before its side effect. */
@@ -105,10 +108,34 @@ export async function runWorkflow(
 
   const remainingIndegree = new Map(graph.indegree);
   const ready: string[] = [];
+  const reachableFromSource = new Set<string>();
+
   for (const [nodeId, degree] of remainingIndegree) {
     if (degree === 0) {
       ready.push(nodeId);
       nodes.get(nodeId)!.status = "ready";
+      const queue = [nodeId];
+      while (queue.length > 0) {
+        const curr = queue.shift();
+        if (!curr) break;
+        reachableFromSource.add(curr);
+        for (const next of graph.successors.get(curr) ?? []) {
+          if (!reachableFromSource.has(next)) {
+            reachableFromSource.add(next);
+            queue.push(next);
+          }
+        }
+      }
+    }
+  }
+
+  if (workflow.execution === "supersteps") {
+    for (const [nodeId, node] of Object.entries(workflow.nodes)) {
+      if (node.activation === "any" && !reachableFromSource.has(nodeId)) {
+        ready.push(nodeId);
+        const nodeState = nodes.get(nodeId);
+        if (nodeState) nodeState.status = "ready";
+      }
     }
   }
   ready.sort((a, b) => a.localeCompare(b));
@@ -136,6 +163,8 @@ export async function runWorkflow(
     stateHistory: new Map([[0, initialState]]),
     checkpointChain: Promise.resolve(),
     stateChain: Promise.resolve(),
+    superstep: workflow.execution === "supersteps" ? 0 : undefined,
+    pendingActivations: workflow.execution === "supersteps" ? new Map() : undefined,
   };
 
   return executeScheduler(state, options);
@@ -160,7 +189,7 @@ export async function resumeWorkflow(
   if (!ownershipMatches(options.ownership, record.ownership)) {
     throw new WorkflowCheckpointError("Checkpoint tenant/ownership mismatch on resume");
   }
-  if (record.value.schemaVersion !== WORKFLOW_CHECKPOINT_SCHEMA_VERSION) {
+  if (record.value.schemaVersion < 1 || record.value.schemaVersion > WORKFLOW_CHECKPOINT_SCHEMA_VERSION) {
     throw new WorkflowCheckpointError(`Unsupported checkpoint schemaVersion ${record.value.schemaVersion}`);
   }
   const definitionHash = hashWorkflowDefinition(workflow);
@@ -250,6 +279,15 @@ export async function resumeWorkflow(
       nodes.get(nodeId)!.status = "ready";
     }
   }
+  if (resumeRecord?.decision === "approve") {
+    if (!ready.includes(resumeRecord.nodeId)) {
+      ready.push(resumeRecord.nodeId);
+    }
+    const approvedNode = nodes.get(resumeRecord.nodeId);
+    if (approvedNode) {
+      approvedNode.status = "ready";
+    }
+  }
   ready.sort((a, b) => a.localeCompare(b));
 
   // Plan 094 Task 3: restore external state (git commit, document versions) before the scheduler
@@ -297,6 +335,12 @@ export async function resumeWorkflow(
     stateVersion: record.value.stateVersion ?? 0,
     stateHistory: parseStateHistory(record.value.stateHistory, record.value.state ?? {}),
     lineage: record.value.lineage,
+    superstep: record.value.execution?.superstep ?? (workflow.execution === "supersteps" ? 0 : undefined),
+    pendingActivations: record.value.execution?.pending
+      ? deserializePendingActivations(record.value.execution.pending)
+      : workflow.execution === "supersteps"
+        ? new Map()
+        : undefined,
     checkpointChain: Promise.resolve(),
     stateChain: Promise.resolve(),
   };

@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import {
   buildNativeSpawnCommand,
   createNativeSandbox,
@@ -62,7 +62,7 @@ test("T8: root must be absolute, existing, and readable", async () => {
   });
 });
 
-test("T9: native reports truthful capabilities — filesystem/process/privilege false, network truth", { skip: !NETNS_OK }, async () => {
+(!NETNS_OK ? test.skip : test)("T9: native reports truthful capabilities — filesystem/process/privilege false, network truth", async () => {
   await withRoot(async (root) => {
     const sb = await createNativeSandbox({ root });
     assert.deepEqual(sb.capabilities, {
@@ -165,7 +165,7 @@ test("T4: NUL bytes are rejected in exec commands and execFile paths/args", () =
   assert.throws(() => validateRunArgs({ file: "/bin/echo", args: ["\u0000"] }), /without NUL/);
 });
 
-test("T7: stop/kill transition state and terminate running work", { skip: !NETNS_OK }, async () => {
+(!NETNS_OK ? test.skip : test)("T7: stop/kill transition state and terminate running work", async () => {
   await withRoot(async (root) => {
     const sb = await createNativeSandbox({ root });
     try {
@@ -182,7 +182,7 @@ test("T7: stop/kill transition state and terminate running work", { skip: !NETNS
   });
 });
 
-test("T2: timeout kills the whole process group", { skip: !NETNS_OK }, async () => {
+(!NETNS_OK ? test.skip : test)("T2: timeout kills the whole process group", async () => {
   await withRoot(async (root) => {
     const sb = await createNativeSandbox({ root, limits: { stopGraceMs: 100 } });
     try {
@@ -198,7 +198,7 @@ test("T2: timeout kills the whole process group", { skip: !NETNS_OK }, async () 
   });
 });
 
-test("T2: output byte cap kills the command and surfaces the error", { skip: !NETNS_OK }, async () => {
+(!NETNS_OK ? test.skip : test)("T2: output byte cap kills the command and surfaces the error", async () => {
   await withRoot(async (root) => {
     const sb = await createNativeSandbox({ root, limits: { maxOutputBytes: 1024 } });
     try {
@@ -209,7 +209,7 @@ test("T2: output byte cap kills the command and surfaces the error", { skip: !NE
   });
 });
 
-test("T1: egress is denied by construction inside the sandbox; host loopback stays reachable", { skip: !NETNS_OK }, async () => {
+(!NETNS_OK ? test.skip : test)("T1: egress is denied by construction inside the sandbox; host loopback stays reachable", async () => {
   await withRoot(async (root) => {
     const sb = await createNativeSandbox({ root });
     try {
@@ -240,7 +240,7 @@ test("T1: egress is denied by construction inside the sandbox; host loopback sta
   });
 });
 
-test("conformance: exec/execFile/status/close parity with the reference surface", { skip: !NETNS_OK }, async () => {
+(!NETNS_OK ? test.skip : test)("conformance: exec/execFile/status/close parity with the reference surface", async () => {
   await withRoot(async (root) => {
     await writeFile(join(root, "hello.txt"), "hello\n");
     const sb = await createNativeSandbox({ root });

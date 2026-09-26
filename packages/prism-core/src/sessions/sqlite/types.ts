@@ -1,5 +1,5 @@
 import type { SecretRedactor } from "@arnilo/prism";
-import type Database from "better-sqlite3";
+import type { Database } from "bun:sqlite";
 
 /** Default busy timeout in milliseconds (SQLite `busy_timeout` pragma). */
 export const DEFAULT_BUSY_TIMEOUT_MS = 5000;
@@ -18,5 +18,5 @@ export interface SqlitePersistenceOptions {
   /** Redacts feedback comments/tags/metadata before durable storage. */
   readonly feedbackRedactor?: SecretRedactor;
   /** Existing open database handle (advanced). Caller owns lifecycle when set. */
-  readonly database?: Database.Database;
+  readonly database?: Database;
 }

@@ -7,7 +7,7 @@
  */
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
-import { test } from "node:test";
+import { test } from "bun:test";
 
 const manifest = JSON.parse(readFileSync(new URL("./phase11-freeze-manifest.json", import.meta.url), "utf8"));
 

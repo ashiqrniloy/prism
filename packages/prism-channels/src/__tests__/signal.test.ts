@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { Duplex } from "node:stream";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import {
   type CheckpointStore,
   createAgent,

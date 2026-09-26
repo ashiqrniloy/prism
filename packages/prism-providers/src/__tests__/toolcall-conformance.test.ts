@@ -4,7 +4,7 @@
  * tool-capable static catalog entries are deliberately explicit unknowns.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { ModelCapabilities, ModelConfig } from "@arnilo/prism";
 import { anthropicModels } from "../anthropic/index.js";
 import { clinePassModels } from "../clinepass/index.js";

@@ -98,7 +98,7 @@ Identity-bound MCP connected-app sessions admit host-selected transports and reg
 
 ## Operator / release honesty (not a host API break)
 
-- `npm run test:postgres` writes gitignored `scripts/postgres-evidence.json` bound to `git rev-parse HEAD`. `release:gate` reports the Postgres surface as pass only when that evidence matches this tree. A stale phase baseline is **blocked**.
+- `bun run test:postgres` writes gitignored `scripts/postgres-evidence.json` bound to `git rev-parse HEAD`. `release:gate` reports the Postgres surface as pass only when that evidence matches this tree. A stale phase baseline is **blocked**.
 - Coverage artifact keys must equal live workspace package names (`@arnilo/prism-work`, not `@arnilo/prism-office`).
 
 ## Upgrade steps
@@ -108,7 +108,7 @@ Identity-bound MCP connected-app sessions admit host-selected transports and reg
 3. Adopt §6–§9 only where the host wants channels, connected apps, durable-run checkpoints, or the work sandbox. Omitted, request bytes and tool lists stay 0.7.0.
 4. Re-read §2–§5 if the host runs observational-memory workers, messaging channels, AG-UI, or inspects checkpoint ownership errors.
 5. Build and run the host suite. No new session-store schema version ships in 0.8.0; channel journals and work HTTP state are new stores a 0.7.0 host never opened.
-6. Optional: `PRISM_TEST_POSTGRES_URL=… npm run test:postgres` then `npm run release:gate` to reproduce this-tree Postgres evidence.
+6. Optional: `PRISM_TEST_POSTGRES_URL=… bun run test:postgres` then `bun run release:gate` to reproduce this-tree Postgres evidence.
 
 ## Rollback
 

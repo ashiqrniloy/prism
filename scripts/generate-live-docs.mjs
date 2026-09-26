@@ -10,8 +10,8 @@
  *   <!-- generated:live-matrix:end -->
  *
  * Usage:
- *   node scripts/generate-live-docs.mjs --write   regenerate docs/live-testing.md
- *   node scripts/generate-live-docs.mjs --check   exit 1 if the doc is stale (CI)
+ *   bun scripts/generate-live-docs.mjs --write   regenerate docs/live-testing.md
+ *   bun scripts/generate-live-docs.mjs --check   exit 1 if the doc is stale (CI)
  *   (import)  liveMatrixTable(suites) -> markdown lines
  */
 import { readFileSync, writeFileSync } from "node:fs";

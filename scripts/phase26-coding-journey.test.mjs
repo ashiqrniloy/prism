@@ -8,7 +8,7 @@
  *
  * Protected profile (never a passing skip): without PRISM_CODING_JOURNEY=1 or
  * any required frozen env/service, this script prints a BLOCKED GATE message
- * and exits 1. Default `npm test` does not run this script; the protected
+ * and exits 1. Default `bun run test` does not run this script; the protected
  * release profile runs it (locally or in .github/workflows/coding-journey.yml)
  * with every service provisioned. release-skip-manifest.mjs consumes the
  * retained report: state pass -> pass, blocked/partial -> blocked, not_run or
@@ -34,7 +34,7 @@ import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { after, before, describe, it } from "node:test";
+import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { blockedGate } from "./blocked-gate.mjs";
 import { createPackedConsumer, installedVersion, repoRoot, resolveFromConsumer } from "./fixtures/packed-consumer.mjs";
 
@@ -104,7 +104,9 @@ before(() => {
   consumer = packed;
   if (packed.installStatus !== 0) return;
   if (process.env.PRISM_LIVE_PLAYWRIGHT === "1") {
-    playwrightInstall = spawnSync("npm", ["install", "--no-save", "--no-audit", "--no-fund", "playwright-core@1.63.0"], {
+    // Plan 125 Task 2: the consumer runtime is Bun; `bun add --no-save` installs the optional live
+    // dependency without touching the consumer manifest (probed: package.json unchanged).
+    playwrightInstall = spawnSync("bun", ["add", "--no-save", "playwright-core@1.63.0"], {
       cwd: packed.consumer,
       encoding: "utf8",
       timeout: 300_000,

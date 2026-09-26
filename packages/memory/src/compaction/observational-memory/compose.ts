@@ -17,6 +17,7 @@ import type { ObservationalMemoryAppendOptions } from "./append-custom.js";
 
 export type { ObservationalMemoryAppendOptions } from "./append-custom.js";
 
+import { foldObservationalMemoryLedger } from "./ledger.js";
 import { buildObservationalMemoryContextBlocks } from "./recent-messages.js";
 import type { ObservationalMemoryFlushOptions, ObservationalMemoryRuntime, ObservationalMemoryWorkerRuntimeConfig } from "./runtime.js";
 import { createObservationalMemoryRuntime } from "./runtime.js";
@@ -196,6 +197,7 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
             keepRecentEntries: settings.context.recentMessages,
             maxTokens: settings.context.recentMessageMaxTokens,
             secrets: options.secrets,
+            advertiseRecall: options.compaction?.advertiseRecall,
             ...(shared.length ? { shared } : {}),
           });
         },
@@ -205,7 +207,7 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
         if (runDepth > 0) return;
         settingsHolder.value = await resolveObservationalMemorySettings(options.settings, settingsOverrides);
         if (settingsHolder.value.passive) return;
-        await runtime.flush(flushOptions);
+        const flush = await runtime.flush(flushOptions);
         const entries = await session.entries();
         const shouldCompact = await resolveShouldCompact(
           { trigger: compactionTrigger, compactAfterTokens: settingsHolder.value.context.compactAfterTokens },
@@ -219,6 +221,14 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
           },
         );
         if (!shouldCompact) return;
+        // A skipped or failed observer pass leaves no observation coverage. Folding messages into a
+        // summary that does not cover them would silently drop usable context, so automatic
+        // compaction defers until a pass (including a successful empty one) advances coverage.
+        // With partial coverage the strategy retains the still-uncovered entries instead.
+        if (flush.skipped && !foldObservationalMemoryLedger(entries).latestObservationCoverageId) {
+          options.debug?.("observational-memory:compaction-deferred", { skipped: flush.skipped });
+          return;
+        }
         await session.compact({
           strategy: compactionStrategy,
           keepRecentEntries: settingsHolder.value.context.recentMessages,

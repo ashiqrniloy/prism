@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createServer, type RequestListener, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { MediaContentError } from "../content.js";
 import { boundResponse, pinnedFetch, resolvePinnedAddress } from "../pinned-fetch.js";
 

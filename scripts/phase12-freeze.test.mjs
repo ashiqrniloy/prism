@@ -8,7 +8,7 @@
  */
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { test } from "node:test";
+import { test } from "bun:test";
 
 const url = (path) => new URL(path, import.meta.url);
 const manifest = JSON.parse(readFileSync(url("./phase12-freeze-manifest.json"), "utf8"));
@@ -35,7 +35,12 @@ test("feature freeze is active with structured deviation log", () => {
 test("node support agrees with engines and CI legs", () => {
   const node = manifest.support.node;
   assert.ok(node.supported.length >= 2, "at least two supported Node lines");
-  assert.equal(node.enginesRange, rootPkg.engines.node, "enginesRange matches package.json engines.node");
+  // Plan 125 Task 1: the live manifests declare `engines.bun >=1.4.2` and this manifest keeps the
+  // 0.1.x era floor as immutable record, so the assertion is now "the record still names the floor
+  // the era shipped, and the live root manifest has moved to the Bun contract".
+  assert.equal(node.enginesRange, ">=22", "the era engines range stays as recorded");
+  assert.equal(rootPkg.engines.bun, ">=1.4.2", "the live root manifest declares the Bun runtime floor");
+  assert.equal(rootPkg.engines.node, undefined, "the live root manifest no longer declares engines.node");
   // Plan 071 Task 2: the floor is derived from the manifest's own enginesRange so a
   // floor change touches the manifest, not this assertion.
   const floor = Number(node.enginesRange.match(/\d+/)?.[0]);
@@ -134,9 +139,16 @@ test("capacity ceilings are positive and inherited tolerance is bounded", () => 
 
 test("release.yml CI legs match the support matrix", () => {
   const workflow = readFileSync(url("../.github/workflows/release.yml"), "utf8");
+  // Plan 125 Task 1 retired the declared Node legs with the engines flip (the manifests declare
+  // `engines.bun >=1.4.2` now). The support.node block above stays the immutable 0.1.x era record —
+  // this file never edits the manifest — and the live workflow must declare no Node leg at all.
   for (const major of manifest.support.node.supported) {
-    assert.ok(workflow.includes(`node-version: "${major}"`), `release.yml missing a Node ${major} leg`);
+    assert.ok(
+      !workflow.includes(`node-version: "${major}"`),
+      `release.yml must not carry a Node ${major} leg after the engines flip (plan 125 Task 1)`,
+    );
   }
+  assert.ok(!workflow.includes("actions/setup-node"), "release.yml must not set up Node after the engines flip");
   assert.ok(workflow.includes(manifest.support.postgres.ciImage), "release.yml postgres image drifts from the freeze manifest");
   assert.ok(workflow.includes("sdk:ready"), "release.yml verify leg must run sdk:ready");
 });

@@ -9,7 +9,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import http from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { after, before, describe, it } from "node:test";
+import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { BrowserError, createBrowserManager, normalizeTarget, type PlaywrightBrowser } from "../index.js";
 import { waitFor } from "./wait-for.js";
 
@@ -33,7 +33,7 @@ const HOSTILE_HTML = `<!doctype html>
 </body>
 </html>`;
 
-describe("protected Playwright browser matrix", { skip: !enabled }, () => {
+describe.skipIf(!enabled)("protected Playwright browser matrix", () => {
   let server: http.Server;
   let baseUrl = "";
   let browser: PlaywrightBrowser;

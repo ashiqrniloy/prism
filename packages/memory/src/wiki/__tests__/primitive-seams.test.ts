@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { createExtensionKernel } from "@arnilo/prism";
 import {

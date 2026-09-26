@@ -71,7 +71,7 @@ export function prepareCheckpointRecord(
   },
 ): WorkflowCheckpointRecord {
   throwIfAborted(input.signal);
-  if (input.value.schemaVersion !== WORKFLOW_CHECKPOINT_SCHEMA_VERSION) {
+  if (input.value.schemaVersion < 1 || input.value.schemaVersion > WORKFLOW_CHECKPOINT_SCHEMA_VERSION) {
     throw new WorkflowCheckpointError(`Unsupported checkpoint schemaVersion ${input.value.schemaVersion}`);
   }
   for (const node of Object.values(input.value.nodes)) {
@@ -131,6 +131,11 @@ export function parseCheckpointValue(raw: unknown, maxNodeOutputBytes = HARD_MAX
         : undefined;
   if (!value?.nodes || typeof value.nodes !== "object" || Array.isArray(value.nodes)) {
     throw new WorkflowCheckpointError("Invalid checkpoint value payload");
+  }
+  if (value.schemaVersion !== undefined) {
+    if (value.schemaVersion < 1 || value.schemaVersion > WORKFLOW_CHECKPOINT_SCHEMA_VERSION) {
+      throw new WorkflowCheckpointError(`Unsupported checkpoint schemaVersion ${value.schemaVersion}`);
+    }
   }
   for (const node of Object.values(value.nodes)) {
     validateLoopCheckpointFields(node, maxNodeOutputBytes);

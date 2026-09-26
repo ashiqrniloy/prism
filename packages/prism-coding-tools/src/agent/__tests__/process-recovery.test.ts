@@ -13,7 +13,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { type CheckpointStore, createMemoryCheckpointStore, createMemoryLeaseStore, type LeaseStore } from "@arnilo/prism";
 import {
   acquireRecordLease,

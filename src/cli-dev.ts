@@ -27,7 +27,7 @@ export interface PrismDevSubcommandRuntime {
 
 const installHint =
   "prism dev requires the dev inspector package in this project.\n" +
-  "  npm install --save-dev @arnilo/prism-coding-tools\n" +
+  "  bun add --dev @arnilo/prism-coding-tools\n" +
   "(Scaffolded projects from newer `prism init` templates already include it.)\n";
 
 /**

@@ -1,13 +1,13 @@
 // scripts/phase23-build-race.test.mjs — Task 1 stress regression.
 //
 // Proves build serialization (scripts/with-build-lock.mjs, Option A): a concurrent dist
-// consumer must never observe a partially-emitted dist/. Runs inside `npm test`'s gate
+// consumer must never observe a partially-emitted dist/. Runs inside `bun run test`'s gate
 // segment (unwrapped — the gate segment is not a dist-consuming leaf), so its own children
 // acquire the REAL lock.
 //
 // The four named orchestrator combos (build+test, two builds, typecheck+test, coverage+test)
 // reduce to the same wrapped leaves, so each scenario runs the actual leaf commands
-// concurrently. Spawning full `npm test` inside `npm test` would recurse (phase23 runs in
+// concurrently. Spawning full `bun run test` inside `bun run test` would recurse (phase23 runs in
 // the gate segment); the leaves are what the orchestrators serialize.
 //
 // Deterministic pre-fix repro: the "partial dist" sensitivity test proves the importer's
@@ -19,7 +19,7 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 
 const ROOT = join(import.meta.dirname, "..");
 const LOCK = join(ROOT, "node_modules", ".prism-build.lock");
@@ -27,9 +27,8 @@ const READERS = `${LOCK}.readers`;
 
 function run(execPath, args, { cwd = ROOT, env = {} } = {}) {
   return new Promise((resolve) => {
-    // NODE_TEST_* env leaks from the test-worker parent would make nested `node --test`
-    // runs skip everything ("recursively within a test file"); strip it so the importer
-    // really runs the suite.
+    // NODE_TEST_* env leaks from a Node test-worker parent would make nested node:test runs skip
+    // everything; strip it so a leaf that ever runs on Node really runs its suite (Bun sets none).
     const childEnv = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith("NODE_TEST_")));
     const child = spawn(execPath, args, {
       cwd,
@@ -42,18 +41,17 @@ function run(execPath, args, { cwd = ROOT, env = {} } = {}) {
     child.on("close", (code, signal) => resolve({ code, signal, out }));
   });
 }
-const npm = (...args) => run(process.platform === "win32" ? "npm.cmd" : "npm", args);
-// Node-only-flag leaves (`--test`) spawn `node` by name: under a Bun parent `process.execPath`
-// is a Bun child and `bun --test` is a script run, not a test runner (plan 115 Task 3). The
-// coverage leaf is the Bun instrument that ships (`bun test --coverage`, plan 115 Task 6) and
-// spawns `bun` by name for the same reason. The `-e` snippets and the lock wrapper stay on
-// `process.execPath` — Bun's `-e` exists, and the wrapper's leaf is `node` by name already.
+const bunRun = (...args) => run("bun", args);
+// Node-only-flag leaves used to spawn `node` by name (plan 115 Task 3); plan 124 Task 2 flipped the
+// runner to Bun, so the importer leaf is `bun test` and every leaf here is a Bun child. The
+// coverage leaf is the Bun instrument that ships (`bun test --coverage`, plan 115 Task 6). The `-e`
+// snippets and the lock wrapper run through `process.execPath` (Bun) — Bun's `-e` exists.
 const helper = (...args) => run(process.execPath, [join("scripts", "with-build-lock.mjs"), ...args]);
 const helperWithEnv = (env, ...args) => run(process.execPath, [join("scripts", "with-build-lock.mjs"), ...args], { env });
 
-// The importer leaf (the consume side of `npm test`): run one small core test file that
+// The importer leaf (the consume side of `bun test`): run one small core test file that
 // imports the full dist module graph (dist/__tests__/index.test.js imports ../index.js).
-const IMPORTER = ["--test", join("dist", "__tests__", "index.test.js")];
+const IMPORTER = ["test", "--timeout=0", join("dist", "__tests__", "index.test.js")];
 // The importer must actually run tests (a vacuous run exits 0 having skipped everything):
 // Node reports `ℹ pass N`, Bun reports ` N pass` — either runner counts only above zero.
 function importerRan(r) {
@@ -116,7 +114,7 @@ test("temp fixture directories are atomically unique and cleaned up even on asse
 test("stale lock (dead holder) is reclaimed and the child runs", async () => {
   // 2147483647 is beyond the Linux pid max — process.kill(pid, 0) is always ESRCH.
   writeFileSync(LOCK, "2147483647 0\n");
-  const r = await helper("node", "-e", "1");
+  const r = await helper("bun", "-e", "1");
   assert.equal(r.code, 0, `stale lock must be reclaimed; got: ${r.out}`);
   let released = true;
   try {
@@ -132,7 +130,7 @@ test("live lock is not stolen: the second acquirer fails closed on timeout", asy
   const fd = openSync(LOCK, "wx");
   writeFileSync(fd, `${process.pid} ${Date.now()}\n`);
   try {
-    const r = await helperWithEnv({ PRISM_BUILD_LOCK_TIMEOUT_MS: "500" }, "node", "-e", "1");
+    const r = await helperWithEnv({ PRISM_BUILD_LOCK_TIMEOUT_MS: "500" }, "bun", "-e", "1");
     assert.notEqual(r.code, 0, "a live lock must never be stolen; holder pid was ours");
   } finally {
     rmSync(LOCK, { force: true });
@@ -155,8 +153,8 @@ function window(out, label) {
 }
 
 const hold = (label, ms) => `console.log("${label}-start", Date.now()); setTimeout(() => console.log("${label}-end", Date.now()), ${ms})`;
-const reader = (ms = 900, label = "R") => helper("--shared", "node", "-e", hold(label, ms));
-const writer = (ms = 0, label = "W") => helper("node", "-e", hold(label, ms));
+const reader = (ms = 900, label = "R") => helper("--shared", "bun", "-e", hold(label, ms));
+const writer = (ms = 0, label = "W") => helper("bun", "-e", hold(label, ms));
 
 test("shared readers overlap — the workspace-stage trim's whole point", async () => {
   const [a, b] = await Promise.all([reader(900, "A"), reader(900, "B")]);
@@ -208,8 +206,8 @@ test("a writer reclaims a dead reader marker and an abandoned unparseable one", 
   assert.equal(existsSync(abandoned), false, "abandoned reader marker must be reclaimed");
 });
 
-test("scenario 1: concurrent npm run build + importer never observe partial dist", async () => {
-  const [build, importer] = await Promise.all([npm("run", "build"), run("node", IMPORTER)]);
+test("scenario 1: concurrent bun run build + importer never observe partial dist", async () => {
+  const [build, importer] = await Promise.all([bunRun("run", "build"), run("bun", IMPORTER)]);
   assert.equal(build.code, 0, `concurrent build failed:\n${build.out}`);
   assert.equal(importer.code, 0, `importer observed a bad dist:\n${importer.out}`);
   assert.ok(importerRan(importer), `importer must actually run tests:\n${importer.out}`);
@@ -217,7 +215,7 @@ test("scenario 1: concurrent npm run build + importer never observe partial dist
 });
 
 test("scenario 2: two concurrent builds both complete, dist stays consistent", async () => {
-  const [a, b, importer] = await Promise.all([npm("run", "build:core"), npm("run", "build:core"), run("node", IMPORTER)]);
+  const [a, b, importer] = await Promise.all([bunRun("run", "build:core"), bunRun("run", "build:core"), run("bun", IMPORTER)]);
   assert.equal(a.code, 0, `build A failed:\n${a.out}`);
   assert.equal(b.code, 0, `build B failed:\n${b.out}`);
   assert.equal(importer.code, 0, `importer observed a bad dist:\n${importer.out}`);
@@ -225,8 +223,8 @@ test("scenario 2: two concurrent builds both complete, dist stays consistent", a
   assert.equal(await distConsistent(), true);
 });
 
-test("scenario 3: concurrent npm run typecheck + importer never observe partial dist", async () => {
-  const [tc, importer] = await Promise.all([npm("run", "typecheck"), run("node", IMPORTER)]);
+test("scenario 3: concurrent bun run typecheck + importer never observe partial dist", async () => {
+  const [tc, importer] = await Promise.all([bunRun("run", "typecheck"), run("bun", IMPORTER)]);
   assert.equal(tc.code, 0, `concurrent typecheck failed:\n${tc.out}`);
   assert.equal(importer.code, 0, `importer observed a bad dist:\n${importer.out}`);
   assert.ok(importerRan(importer), `importer must actually run tests:\n${importer.out}`);
@@ -239,7 +237,7 @@ test("scenario 4: concurrent coverage leaf + build never observe partial dist", 
   // No gate thresholds here: the point is the emit/consume race, not the core gate (which is
   // enforced by the real test:coverage leaf over the full suite).
   const coverage = ["test", "--coverage", "--timeout=0", join("dist", "__tests__", "index.test.js")];
-  const [cov, build] = await Promise.all([run("bun", coverage), npm("run", "build:core")]);
+  const [cov, build] = await Promise.all([run("bun", coverage), bunRun("run", "build:core")]);
   assert.equal(cov.code, 0, `coverage leaf failed:\n${cov.out}`);
   assert.ok(importerRan(cov), `coverage leaf must actually run tests:\n${cov.out}`);
   assert.equal(build.code, 0, `concurrent build failed:\n${build.out}`);

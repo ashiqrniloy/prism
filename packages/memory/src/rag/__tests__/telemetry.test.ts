@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createHashEmbedder, createMemoryVectorStore } from "../../index.js";
 import { chunkText, indexChunks, replaceSource, retrieveContext } from "../index.js";
 import type { RagTelemetry, RagTelemetryAttributeValue, RagTelemetrySpan } from "../telemetry.js";

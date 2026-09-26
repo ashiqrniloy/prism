@@ -72,6 +72,8 @@ pages. Read at most two references per task.
 7. Repeat from 2 until implementation and verification tasks are complete.
 8. Run final verification for the plan, then fill `Compromises Made` and
    `Further Actions` with actual deviations, deferred work, rationale, priority.
+   Then run the create-plan backlog handoff for both sections: append each
+   compromise and each further action to `plans/backlog.md`.
 
 ## Stop conditions — how much context to pull
 

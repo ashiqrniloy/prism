@@ -11,7 +11,7 @@ Importing or constructing the adapter does nothing: it never downloads, spawns, 
 Use only after an operator records acceptable-use and GPL distribution decisions for an already-operated Signal account. Not an official bot API; not for groups, topics, attachments, identity linking, bulk messaging (including `MessagingRuntime.notify`, which is unicast to one existing DM binding only), automated account creation, or streaming previews (Signal has no Bot API draft equivalent, so this adapter ignores `MessagingRuntimeOptions.onAssistantDelta`).
 
 ```bash
-npm install @arnilo/prism @arnilo/prism-channels
+bun add @arnilo/prism @arnilo/prism-channels
 ```
 
 ## Inputs / request

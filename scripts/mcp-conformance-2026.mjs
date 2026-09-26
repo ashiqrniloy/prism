@@ -13,7 +13,7 @@
 // capability, session-based SSE polling, non-text tool content blocks) are
 // recorded in scripts/mcp-conformance-2026-baseline.yaml.
 //
-// Usage: node scripts/mcp-conformance-2026.mjs [--suite all|active] [--spec-version 2025-11-25]
+// Usage: bun scripts/mcp-conformance-2026.mjs [--suite all|active] [--spec-version 2025-11-25]
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { createPrismMcpServer, createPrismMcpWebHandler } from "../packages/mcp/dist/server.js";

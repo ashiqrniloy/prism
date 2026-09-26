@@ -12,7 +12,7 @@ import type {
   SubscribeOptions,
   ToolDefinition,
 } from "@arnilo/prism";
-import type { WORKFLOW_CHECKPOINT_SCHEMA_VERSION, WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION } from "./limits.js";
+import type { WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION } from "./limits.js";
 
 export type WorkflowRunStatus = "queued" | "running" | "suspended" | "succeeded" | "failed" | "denied" | "aborted";
 
@@ -60,7 +60,7 @@ export interface WorkflowResumeValidationInput {
 
 export type WorkflowResumeValidator = (input: WorkflowResumeValidationInput) => void | Promise<void>;
 
-export type WorkflowNodeKind = "agent" | "function" | "tool" | "conditional" | "fan_out" | "join" | "workflow" | "loop";
+export type WorkflowNodeKind = "agent" | "function" | "tool" | "conditional" | "fan_out" | "join" | "workflow" | "loop" | "route";
 
 export interface WorkflowStateUpdateOptions {
   readonly mode?: "merge" | "replace";
@@ -109,6 +109,8 @@ export interface WorkflowNodeBase {
   readonly retries?: number;
   readonly timeoutMs?: number;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly activation?: "all" | "any";
+  readonly scope?: string;
 }
 
 export interface AgentNodeDefinition extends WorkflowNodeBase {
@@ -202,6 +204,15 @@ export interface NestedWorkflowNodeDefinition extends WorkflowNodeBase {
   readonly output?: (result: WorkflowRunResult, ctx: WorkflowNodeContext) => unknown | Promise<unknown>;
 }
 
+export interface RouteNodeDefinition extends WorkflowNodeBase {
+  readonly kind: "route";
+  readonly select: (
+    ctx: WorkflowNodeContext,
+  ) => readonly string[] | WorkflowSuspension<unknown> | Promise<readonly string[] | WorkflowSuspension<unknown>>;
+}
+
+export type RouteNodeConfig = Omit<RouteNodeDefinition, "kind">;
+
 export type WorkflowNodeDefinition =
   | AgentNodeDefinition
   | FunctionNodeDefinition
@@ -210,12 +221,14 @@ export type WorkflowNodeDefinition =
   | ConditionalNodeDefinition
   | FanOutNodeDefinition
   | JoinNodeDefinition
-  | NestedWorkflowNodeDefinition;
+  | NestedWorkflowNodeDefinition
+  | RouteNodeDefinition;
 
 export interface WorkflowLimits {
   readonly maxNodes?: number;
   readonly maxFanOut?: number;
   readonly maxConcurrency?: number;
+  readonly maxSupersteps?: number;
   readonly maxNodeOutputBytes?: number;
   readonly maxCheckpointBytes?: number;
   readonly maxNestedDepth?: number;
@@ -232,6 +245,7 @@ export interface WorkflowDefinition {
   readonly limits?: WorkflowLimits;
   readonly state?: WorkflowStateConfig;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly execution?: "supersteps";
 }
 
 export interface WorkflowLoopIterationRecord {
@@ -242,6 +256,8 @@ export interface WorkflowLoopIterationRecord {
   /** True when this record satisfied `until` and terminalized the loop. */
   readonly done: boolean;
   readonly output?: unknown;
+  /** State version captured before this iteration executed. */
+  readonly stateVersionBefore?: number;
 }
 
 export interface WorkflowNodeCheckpoint {
@@ -270,8 +286,20 @@ export interface WorkflowReplayLineage {
   readonly createdAt: string;
 }
 
+export interface WorkflowExecutionPendingActivation {
+  readonly from: readonly string[];
+  readonly round: number;
+}
+
+export interface WorkflowExecutionCheckpoint {
+  readonly mode: "supersteps";
+  readonly superstep: number;
+  readonly maxSupersteps?: number;
+  readonly pending: Readonly<Record<string, WorkflowExecutionPendingActivation>>;
+}
+
 export interface WorkflowCheckpointValue {
-  readonly schemaVersion: typeof WORKFLOW_CHECKPOINT_SCHEMA_VERSION;
+  readonly schemaVersion: number;
   readonly workflowId: string;
   readonly runId: string;
   readonly definitionHash: string;
@@ -290,6 +318,7 @@ export interface WorkflowCheckpointValue {
   readonly stateHistory?: Readonly<Record<string, JsonObject>>;
   readonly lineage?: WorkflowReplayLineage;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly execution?: WorkflowExecutionCheckpoint;
 }
 
 export interface WorkflowCheckpointSaveInput {
@@ -390,6 +419,7 @@ export type WorkflowEvent =
       readonly workflowId: string;
       readonly runId: string;
       readonly nodeId: string;
+      readonly iteration?: number;
       readonly timestamp: string;
       readonly sequence: number;
     }
@@ -398,6 +428,7 @@ export type WorkflowEvent =
       readonly workflowId: string;
       readonly runId: string;
       readonly nodeId: string;
+      readonly iteration?: number;
       readonly timestamp: string;
       readonly sequence: number;
     }

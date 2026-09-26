@@ -3,7 +3,7 @@ import { realpathSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import type { BashOperations, BashSpawnContext } from "../shell.js";
 import { createShellTool } from "../shell.js";

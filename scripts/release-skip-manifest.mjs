@@ -40,7 +40,7 @@ function envSet(name) {
 }
 
 function postgresEvidenceForCurrentHead(path) {
-  if (!existsSync(path)) return { reason: "no postgres evidence for this run (run npm run test:postgres)" };
+  if (!existsSync(path)) return { reason: "no postgres evidence for this run (run bun run test:postgres)" };
   let evidence;
   try {
     evidence = JSON.parse(readFileSync(path, "utf8"));
@@ -118,15 +118,15 @@ function workspacePackages() {
 function buildSurfaces({ baseline, artifact, thresholds, packages, postgresEvidence }) {
   const surfaces = [];
 
-  // Required: core npm test.
+  // Required: core suite. Surface name is the Bun command; counts still come from exitGate.counts.npmTest.
   const counts = countsOf(baseline);
   const testCounts = npmTestCounts(counts.npmTest ?? "");
   if (!testCounts) {
-    surfaces.push({ name: "core npm test", state: "blocked", reason: "no npmTest counts in baseline" });
+    surfaces.push({ name: "core bun run test", state: "blocked", reason: "no npmTest counts in baseline" });
   } else if (testCounts.fail > 0) {
-    surfaces.push({ name: "core npm test", state: "blocked", reason: `npm test failed (${testCounts.fail} failures)` });
+    surfaces.push({ name: "core bun run test", state: "blocked", reason: `bun run test failed (${testCounts.fail} failures)` });
   } else {
-    surfaces.push({ name: "core npm test", state: "pass", count: testCounts.tests, skip: testCounts.skip });
+    surfaces.push({ name: "core bun run test", state: "pass", count: testCounts.tests, skip: testCounts.skip });
   }
 
   // Required: security threat suites.
@@ -137,7 +137,7 @@ function buildSurfaces({ baseline, artifact, thresholds, packages, postgresEvide
       : {
           name: "security:threat-suites",
           state: "blocked",
-          reason: "no threat-suites evidence in baseline (run npm run security:threat-suites)",
+          reason: "no threat-suites evidence in baseline (run bun run security:threat-suites)",
         },
   );
 
@@ -171,7 +171,7 @@ function buildSurfaces({ baseline, artifact, thresholds, packages, postgresEvide
       surfaces.push({
         name: `${name} suite`,
         state: "blocked",
-        reason: "no coverage-summary.json evidence (run npm run test:coverage first)",
+        reason: "no coverage-summary.json evidence (run bun run test:coverage first)",
       });
     } else if (!row) {
       surfaces.push({ name: `${name} suite`, state: "blocked", reason: "missing from coverage artifact" });
@@ -223,7 +223,7 @@ function buildSurfaces({ baseline, artifact, thresholds, packages, postgresEvide
     });
   }
 
-  // Protected: real NATS JetStream legs. `npm run test:nats` exists, but
+  // Protected: real NATS JetStream legs. `bun run test:nats` exists, but
   // release CI has no broker to run it against.
   surfaces.push({
     name: "test:nats real JetStream legs",
@@ -232,7 +232,7 @@ function buildSurfaces({ baseline, artifact, thresholds, packages, postgresEvide
     live: true,
     requiredEnv: "PRISM_TEST_NATS_URL",
     reason:
-      "no NATS service in release CI; npm run test:nats requires PRISM_TEST_NATS_URL and runs the real JetStream suite outside default network-free runs",
+      "no NATS service in release CI; bun run test:nats requires PRISM_TEST_NATS_URL and runs the real JetStream suite outside default network-free runs",
   });
 
   // Protected: provider live legs (offline conformance suites cover the same
@@ -341,7 +341,7 @@ function buildSurfaces({ baseline, artifact, thresholds, packages, postgresEvide
 
   // Protected: the documented-gap legs from the blocked-gate registry
   // (scripts/blocked-gate.mjs) — one row per leg, so the manifest and
-  // `node scripts/blocked-gate.mjs` can never disagree about what is blocked.
+  // `bun scripts/blocked-gate.mjs` can never disagree about what is blocked.
   surfaces.push(...protectedGateSurfaces());
 
   return surfaces;
@@ -386,7 +386,7 @@ if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
   const blocked = auditBlockedGates();
   const profile = blocked.filter((row) => row.manifestClass === "required").map((row) => row.id);
   console.log(
-    `protected legs not runnable here: ${blocked.length} (release-profile: ${profile.length ? profile.join(", ") : "none"}); audit: node scripts/blocked-gate.mjs`,
+    `protected legs not runnable here: ${blocked.length} (release-profile: ${profile.length ? profile.join(", ") : "none"}); audit: bun scripts/blocked-gate.mjs`,
   );
   console.log(`manifest: ${MANIFEST_PATH}`);
 }

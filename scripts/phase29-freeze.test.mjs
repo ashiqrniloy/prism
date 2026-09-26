@@ -3,7 +3,7 @@
  */
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { test } from "node:test";
+import { test } from "bun:test";
 
 const url = (path) => new URL(path, import.meta.url);
 const manifest = JSON.parse(readFileSync(url("./phase29-freeze-manifest.json"), "utf8"));

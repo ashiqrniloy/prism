@@ -15,7 +15,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/openai/__tests__/live.test.ts",
-      "command": "node --test dist/openai/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/openai/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
@@ -36,7 +36,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/anthropic/__tests__/live.test.ts",
-      "command": "node --test dist/anthropic/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/anthropic/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
@@ -58,7 +58,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/google/__tests__/live.test.ts",
-      "command": "node --test dist/google/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/google/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS"
@@ -83,7 +83,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/alibaba/__tests__/live.test.ts",
-      "command": "node --test dist/alibaba/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/alibaba/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
@@ -104,7 +104,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/clinepass/__tests__/live.test.ts",
-      "command": "node --test dist/clinepass/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/clinepass/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
@@ -125,7 +125,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/commandcode/__tests__/live.test.ts",
-      "command": "node --test dist/commandcode/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/commandcode/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
@@ -156,7 +156,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/deepseek/__tests__/live.test.ts",
-      "command": "node --test dist/deepseek/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/deepseek/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
@@ -177,7 +177,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/hyper/__tests__/live.test.ts",
-      "command": "node --test dist/hyper/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/hyper/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
@@ -203,7 +203,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/kimi/__tests__/live.test.ts",
-      "command": "node --test dist/kimi/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/kimi/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
@@ -225,7 +225,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/neuralwatt/__tests__/live.test.ts",
-      "command": "node --test dist/neuralwatt/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/neuralwatt/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
@@ -246,7 +246,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/opencode-go/__tests__/live.test.ts",
-      "command": "node --test dist/opencode-go/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/opencode-go/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
@@ -267,7 +267,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/openrouter/__tests__/live.test.ts",
-      "command": "node --test dist/openrouter/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/openrouter/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
@@ -288,7 +288,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/xai/__tests__/live.test.ts",
-      "command": "node --test dist/xai/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/xai/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
@@ -313,7 +313,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/zai/__tests__/live.test.ts",
-      "command": "node --test dist/zai/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/zai/__tests__/live.test.js",
       "cwd": "packages/prism-providers",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
@@ -335,7 +335,7 @@
       "package": "@arnilo/prism-web-tools",
       "status": "active",
       "source": "packages/web-tools/src/__tests__/live.test.ts",
-      "command": "node --test dist/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/__tests__/live.test.js",
       "cwd": "packages/web-tools",
       "requires": [
         "PRISM_LIVE_WEB",
@@ -349,7 +349,7 @@
       "package": "@arnilo/prism-web-tools",
       "status": "active",
       "source": "packages/web-tools/src/__tests__/live.test.ts",
-      "command": "node --test dist/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/__tests__/live.test.js",
       "cwd": "packages/web-tools",
       "requires": [
         "PRISM_LIVE_WEB",
@@ -363,7 +363,7 @@
       "package": "@arnilo/prism-web-tools",
       "status": "active",
       "source": "packages/web-tools/src/__tests__/live.test.ts",
-      "command": "node --test dist/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/__tests__/live.test.js",
       "cwd": "packages/web-tools",
       "requires": [
         "PRISM_LIVE_WEB",
@@ -377,7 +377,7 @@
       "package": "@arnilo/prism-web-tools",
       "status": "active",
       "source": "packages/web-tools/src/browser/__tests__/live.test.ts",
-      "command": "node --test dist/browser/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/browser/__tests__/live.test.js",
       "cwd": "packages/web-tools",
       "requires": [],
       "requiresAny": [
@@ -392,7 +392,7 @@
       "package": "@arnilo/prism-web-tools",
       "status": "active",
       "source": "packages/web-tools/src/obscura/__tests__/live.test.ts",
-      "command": "node --test dist/obscura/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/obscura/__tests__/live.test.js",
       "cwd": "packages/web-tools",
       "requires": [
         "PRISM_LIVE_OBSCURA",
@@ -406,7 +406,7 @@
       "package": "@arnilo/prism-memory",
       "status": "active",
       "source": "packages/memory/src/compaction/observational-memory/__tests__/live.test.ts",
-      "command": "node --test dist/compaction/observational-memory/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/compaction/observational-memory/__tests__/live.test.js",
       "cwd": "packages/memory",
       "requires": [
         "PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS",
@@ -427,7 +427,7 @@
       "package": "@arnilo/prism-memory",
       "status": "active",
       "source": "packages/memory/src/compaction/llm/__tests__/live.test.ts",
-      "command": "node --test dist/compaction/llm/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/compaction/llm/__tests__/live.test.js",
       "cwd": "packages/memory",
       "requires": [
         "PRISM_LIVE_COMPACTION_TESTS"
@@ -440,7 +440,7 @@
       "package": "@arnilo/prism-work",
       "status": "active",
       "source": "packages/prism-work/src/documents/__tests__/golden.test.ts",
-      "command": "node --test dist/documents/__tests__/golden.test.js",
+      "command": "bun test --timeout=0 dist/documents/__tests__/golden.test.js",
       "cwd": "packages/prism-work",
       "requires": [
         "PRISM_TEST_LIBREOFFICE"
@@ -453,7 +453,7 @@
       "package": "@arnilo/prism-work",
       "status": "active",
       "source": "packages/prism-work/src/diagrams/__tests__/drawio-live.test.ts",
-      "command": "node --test dist/diagrams/__tests__/drawio-live.test.js",
+      "command": "bun test --timeout=0 dist/diagrams/__tests__/drawio-live.test.js",
       "cwd": "packages/prism-work",
       "requires": [],
       "requiresAny": [
@@ -468,7 +468,7 @@
       "package": "@arnilo/prism-core",
       "status": "active",
       "source": "packages/prism-core/src/sessions/postgres/__tests__/postgres-persistence.test.ts",
-      "command": "npm run test:postgres --workspace=@arnilo/prism-core",
+      "command": "bun run --filter @arnilo/prism-core test:postgres",
       "requires": [
         "PRISM_TEST_POSTGRES_URL"
       ],
@@ -480,7 +480,7 @@
       "package": "@arnilo/prism-core",
       "status": "active",
       "source": "packages/prism-core/src/sessions/nats/__tests__/nats.integration.test.ts",
-      "command": "npm run test:nats --workspace=@arnilo/prism-core",
+      "command": "bun run --filter @arnilo/prism-core test:nats",
       "requires": [
         "PRISM_TEST_NATS_URL"
       ],
@@ -492,7 +492,7 @@
       "package": "@arnilo/prism-coding-tools",
       "status": "active",
       "source": "packages/prism-coding-tools/src/security/__tests__/docker-sandbox.test.ts",
-      "command": "node --test dist/security/__tests__/docker-sandbox.test.js",
+      "command": "bun test --timeout=0 dist/security/__tests__/docker-sandbox.test.js",
       "cwd": "packages/prism-coding-tools",
       "requires": [
         "PRISM_TEST_DOCKER_SANDBOX",
@@ -508,7 +508,7 @@
       "package": "@arnilo/prism-coding-tools",
       "status": "active",
       "source": "packages/prism-coding-tools/src/security/__tests__/e2b-sandbox-live.test.ts",
-      "command": "node --test dist/security/__tests__/e2b-sandbox-live.test.js",
+      "command": "bun test --timeout=0 dist/security/__tests__/e2b-sandbox-live.test.js",
       "cwd": "packages/prism-coding-tools",
       "requires": [
         "PRISM_TEST_E2B_API_KEY"
@@ -521,7 +521,7 @@
       "package": "@arnilo/prism-work",
       "status": "active",
       "source": "packages/prism-work/src/document-reader/__tests__/mistral-ocr-live.test.ts",
-      "command": "node --test dist/document-reader/__tests__/mistral-ocr-live.test.js",
+      "command": "bun test --timeout=0 dist/document-reader/__tests__/mistral-ocr-live.test.js",
       "cwd": "packages/prism-work",
       "requires": [
         "PRISM_TEST_MISTRAL_API_KEY"
@@ -534,7 +534,7 @@
       "package": "@arnilo/prism-core",
       "status": "active",
       "source": "packages/prism-core/src/credentials/node/__tests__/credentials-node.test.ts",
-      "command": "node --test dist/credentials/node/__tests__/credentials-node.test.js",
+      "command": "bun test --timeout=0 dist/credentials/node/__tests__/credentials-node.test.js",
       "cwd": "packages/prism-core",
       "requires": [
         "PRISM_TEST_KEYCHAIN"
@@ -547,7 +547,7 @@
       "package": "@arnilo/prism-acp-agent",
       "status": "active",
       "source": "scripts/acp-client-smoke.mjs",
-      "command": "node scripts/acp-client-smoke.mjs",
+      "command": "bun scripts/acp-client-smoke.mjs",
       "requires": [
         "PRISM_TEST_ACP_CLIENT"
       ],
@@ -559,7 +559,7 @@
       "package": "@arnilo/prism",
       "status": "active",
       "source": "scripts/live-canary.mjs",
-      "command": "node scripts/live-canary.mjs",
+      "command": "bun scripts/live-canary.mjs",
       "requires": [
         "PRISM_LIVE_CANARIES"
       ],
@@ -575,7 +575,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/azure/__tests__/live.test.ts",
-      "command": "node --test dist/azure/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/azure/__tests__/live.test.js",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "AZURE_OPENAI_ENDPOINT",
@@ -600,7 +600,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/bedrock/__tests__/live.test.ts",
-      "command": "node --test dist/bedrock/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/bedrock/__tests__/live.test.js",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "AWS_ACCESS_KEY_ID",
@@ -624,7 +624,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/vertex/__tests__/live.test.ts",
-      "command": "node --test dist/vertex/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/vertex/__tests__/live.test.js",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "GOOGLE_VERTEX_PROJECT",
@@ -647,7 +647,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/ollama/__tests__/live.test.ts",
-      "command": "node --test dist/ollama/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/ollama/__tests__/live.test.js",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "OLLAMA_BASE_URL"
@@ -669,7 +669,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/ai-sdk/__tests__/live.test.ts",
-      "command": "node --test dist/ai-sdk/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/ai-sdk/__tests__/live.test.js",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "OPENAI_API_KEY"
@@ -691,7 +691,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/model-discovery/__tests__/live.test.ts",
-      "command": "node --test dist/model-discovery/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/model-discovery/__tests__/live.test.js",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS"
       ],
@@ -709,7 +709,7 @@
       "package": "@arnilo/prism",
       "status": "active",
       "source": "scripts/usage-calibration-live.test.mjs",
-      "command": "node --test scripts/usage-calibration-live.test.mjs",
+      "command": "bun test --timeout=0 scripts/usage-calibration-live.test.mjs",
       "cwd": ".",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS"
@@ -756,7 +756,7 @@
       "package": "@arnilo/prism-memory",
       "status": "active",
       "source": "packages/memory/src/rag/__tests__/live.test.ts",
-      "command": "node --test dist/rag/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/rag/__tests__/live.test.js",
       "requires": [],
       "optional": [
         "PRISM_TEST_HOSTED_RERANK_URL"
@@ -787,7 +787,7 @@
       "package": "@arnilo/prism-memory",
       "status": "active",
       "source": "packages/memory/src/rag/__tests__/local-reranker-live.test.ts",
-      "command": "node --test dist/rag/__tests__/local-reranker-live.test.js",
+      "command": "bun test --timeout=0 dist/rag/__tests__/local-reranker-live.test.js",
       "cwd": "packages/memory",
       "requires": [
         "PRISM_TEST_LOCAL_RERANK"
@@ -811,7 +811,7 @@
       "package": "@arnilo/prism-memory",
       "status": "active",
       "source": "packages/memory/src/rag/__tests__/google-drive-live.test.ts",
-      "command": "node --test dist/rag/__tests__/google-drive-live.test.js",
+      "command": "bun test --timeout=0 dist/rag/__tests__/google-drive-live.test.js",
       "requires": [
         "PRISM_TEST_DRIVE_ACCESS_TOKEN"
       ],
@@ -828,7 +828,7 @@
       "package": "@arnilo/prism-coding-tools",
       "status": "active",
       "source": "packages/prism-coding-tools/src/openapi/__tests__/live.test.ts",
-      "command": "node --test dist/openapi/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/openapi/__tests__/live.test.js",
       "requires": [
         "PRISM_LIVE_OPENAPI_TOOLS"
       ],
@@ -841,7 +841,7 @@
       "package": "@arnilo/prism-coding-tools",
       "status": "active",
       "source": "packages/prism-coding-tools/src/computer-use-linux/__tests__/live.test.ts",
-      "command": "node --test dist/computer-use-linux/__tests__/live.test.js",
+      "command": "bun test --timeout=0 dist/computer-use-linux/__tests__/live.test.js",
       "requires": [
         "PRISM_TEST_COMPUTER_USE",
         "PRISM_COMPUTER_USE_BIN"
@@ -856,7 +856,7 @@
       "package": "@arnilo/prism-mcp",
       "status": "active",
       "source": "scripts/mcp-client-smoke.mjs",
-      "command": "node scripts/mcp-client-smoke.mjs",
+      "command": "bun scripts/mcp-client-smoke.mjs",
       "requires": [
         "PRISM_TEST_MCP_CLIENT"
       ],
@@ -871,13 +871,13 @@
       "package": "@arnilo/prism-core",
       "status": "active",
       "source": "packages/prism-core/src/governance/policy/__tests__/opa-live.test.ts",
-      "command": "npm run test",
+      "command": "bun run test",
       "requires": [
         "PRISM_TEST_OPA_URL"
       ],
       "scope": "Operator-hosted OPA REST endpoint (optionally token-gated).",
       "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
-      "notes": "Real decision evaluations (\u22642 requests) + fail-closed deny probe on an unroutable endpoint. npm test runs the whole prism-core dist suite; live files skip without their env.",
+      "notes": "Real decision evaluations (\u22642 requests) + fail-closed deny probe on an unroutable endpoint. bun run test runs the whole prism-core dist suite; live files skip without their env.",
       "cwd": "packages/prism-core",
       "cost": "<=3 decision requests to the operator OPA endpoint; fail-closed probe never reaches the wire."
     },
@@ -886,7 +886,7 @@
       "package": "@arnilo/prism-core",
       "status": "active",
       "source": "packages/prism-core/src/credentials/node/__tests__/oidc-live.test.ts",
-      "command": "npm run test",
+      "command": "bun run test",
       "requires": [
         "PRISM_TEST_OIDC_ISSUER",
         "PRISM_TEST_OIDC_AUDIENCE",
@@ -903,7 +903,7 @@
       "package": "@arnilo/prism-core",
       "status": "active",
       "source": "packages/prism-core/src/runtime/server/__tests__/webhooks-live.test.ts",
-      "command": "npm run test",
+      "command": "bun run test",
       "requires": [
         "PRISM_TEST_WEBHOOK_URL"
       ],
@@ -918,7 +918,7 @@
       "package": "@arnilo/prism-core",
       "status": "active",
       "source": "packages/prism-core/src/runtime/server/__tests__/artifact-bodies-live.test.ts",
-      "command": "npm run test",
+      "command": "bun run test",
       "requires": [
         "PRISM_TEST_S3_ENDPOINT",
         "PRISM_TEST_S3_KEY",
@@ -936,7 +936,7 @@
       "package": "@arnilo/prism",
       "status": "active",
       "source": "scripts/e2e-cli-live.test.mjs",
-      "command": "node --test scripts/e2e-cli-live.test.mjs",
+      "command": "bun test --timeout=0 scripts/e2e-cli-live.test.mjs",
       "cwd": ".",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS"
@@ -959,7 +959,7 @@
       "id": "memory/postgres",
       "status": "active",
       "source": "packages/memory/src/__tests__/postgres-memory.integration.test.ts",
-      "command": "npm run test:postgres",
+      "command": "bun run test:postgres",
       "cwd": "packages/memory",
       "requires": [
         "PRISM_TEST_POSTGRES_URL"
@@ -973,7 +973,7 @@
       "id": "memory/wiki",
       "status": "active",
       "source": "packages/memory/src/wiki/__tests__/commands.test.ts",
-      "command": "node --test dist/wiki/__tests__/*.test.js",
+      "command": "bun test --timeout=0 dist/wiki/__tests__/*.test.js",
       "cwd": "packages/memory",
       "requires": [],
       "scope": "Wiki lifecycle over real fs trees (init/refresh/lint/search fallback; qmd child-process client degrades without the binary).",
@@ -986,7 +986,7 @@
       "status": "active",
       "package": "@arnilo/prism-coding-tools",
       "source": "packages/prism-coding-tools/src/agent/__tests__/language-intelligence.test.ts",
-      "command": "node --test dist/agent/__tests__/language-intelligence.test.js dist/agent/__tests__/language-diagnostics.test.js dist/agent/__tests__/forge-github.test.js",
+      "command": "bun test --timeout=0 dist/agent/__tests__/language-intelligence.test.js dist/agent/__tests__/language-diagnostics.test.js dist/agent/__tests__/forge-github.test.js",
       "cwd": "packages/prism-coding-tools",
       "requires": [],
       "scope": "LSP/language-intelligence + forge suites: real child-process spawns over the real LSP/forge wire protocols against fixture binaries.",
@@ -998,7 +998,7 @@
       "status": "active",
       "package": "@arnilo/prism-ag-ui",
       "source": "packages/ag-ui/src/__tests__",
-      "command": "npm run test",
+      "command": "bun run test",
       "cwd": "packages/ag-ui",
       "requires": [],
       "scope": "AG-UI + ACP conformance suites: real-event replay over the acp/a2a/ag-ui protocol surfaces (fixture agents, real event-source wire semantics).",
@@ -1010,7 +1010,7 @@
       "package": "@arnilo/prism-providers",
       "status": "active",
       "source": "packages/prism-providers/src/__tests__/thinking-conformance.test.ts",
-      "command": "node --test dist/__tests__/thinking-conformance.test.js",
+      "command": "bun test --timeout=0 dist/__tests__/thinking-conformance.test.js",
       "cwd": "packages/prism-providers",
       "requires": [],
       "scope": "Plan-065 machine-checked thinking coverage: every first-party reasoning catalog model declares capabilities.thinkingLevels + a compat.thinkingFamily stamp and emits a legal effort field on the wire (14 catalogs walked hermetically).",
@@ -1023,7 +1023,7 @@
       "package": "@arnilo/prism-channels",
       "status": "active",
       "source": "packages/prism-channels/src/__tests__/telegram-live.test.ts",
-      "command": "node --test dist/__tests__/telegram-live.test.js",
+      "command": "bun test --timeout=0 dist/__tests__/telegram-live.test.js",
       "cwd": "packages/prism-channels",
       "requires": ["PRISM_LIVE_TELEGRAM", "TELEGRAM_BOT_TOKEN"],
       "optional": ["PRISM_LIVE_TELEGRAM_CHAT_ID"],
@@ -1036,7 +1036,7 @@
       "package": "@arnilo/prism-channels",
       "status": "active",
       "source": "packages/prism-channels/src/__tests__/signal-live.test.ts",
-      "command": "node --test dist/__tests__/signal-live.test.js",
+      "command": "bun test --timeout=0 dist/__tests__/signal-live.test.js",
       "cwd": "packages/prism-channels",
       "requires": [
         "PRISM_LIVE_SIGNAL",

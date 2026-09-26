@@ -4,7 +4,7 @@
  * frozen byte caps, and the sessionId handoff contract.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { type AgentContext, client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import type { AgentRunLifecycle, AgentSession } from "@arnilo/prism";
 import {

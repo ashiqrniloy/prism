@@ -196,7 +196,7 @@ Sizing: the local reranker declares no inference dependency — the built-in loa
 3. Re-read §1–§4 if the host tails durable agent events, parses provider-turn metadata, uses progressive disclosure or prompt caching, or bills usage for vendors that report no usage.
 4. Adopt §5–§13 only where the host wants the new surfaces. Omitted, request bytes, stores, and tool lists stay 0.8.
 5. Run the new migration 004 on SQLite/Postgres stores if the host wants indexed session search; existing tables and columns are untouched, and 0.8 stores open unchanged.
-6. Optional: `PRISM_TEST_POSTGRES_URL=… npm run test:postgres` then `npm run release:gate` to reproduce this-tree Postgres evidence.
+6. Optional: `PRISM_TEST_POSTGRES_URL=… bun run test:postgres` then `bun run release:gate` to reproduce this-tree Postgres evidence.
 
 ## Rollback
 

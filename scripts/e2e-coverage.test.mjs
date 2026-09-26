@@ -1,13 +1,13 @@
 /**
  * E2E surface coverage gate tests (plans/064 Task 3). Hermetic: fixture
  * package trees in tmp dirs + one real-repo baseline leg. Registered in the
- * root `npm test` chain.
+ * root `bun run test` chain.
  */
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { computeCoverage, discoverSurfaces, REPO_ROOT } from "./e2e-coverage-gate.mjs";
 
 /** Fixture repo: root pkg with one file surface, workspace pkg with one dir
@@ -132,7 +132,7 @@ test("real repo: manifest covers every exports surface in baseline mode", () => 
   assert.equal(coverage.mode, "baseline", "flip to full after plans/064 Tasks 4-9 land");
   const { errors, summary } = computeCoverage(REPO_ROOT, coverage, { mode: coverage.mode });
   assert.deepEqual(errors, [], errors.join("\n"));
-  assert.equal(summary.total, 109); // 107 post-plan-107 + @arnilo/prism-providers/laya + /typesafe (plan 121)
+  assert.equal(summary.total, 111); // 107 post-plan-107 + @arnilo/prism-providers/laya + /typesafe (plan 121) + /decisions (plan 122 Task 3) + @arnilo/prism-work/document-extraction (plan 132 Task 4)
   assert.equal(summary.pending, 0, "Tasks 4-9 will re-introduce pending entries as planned suites register");
 });
 

@@ -7,7 +7,7 @@
  * must stay ≤ JACCARD_MAX (0.35). Anthropic proprietary headers or outbound-secret
  * instructions fail the script before any dest write.
  *
- *   node scripts/vendor-hermes-skills.mjs [--dry-run] [--sha SHA] [--source DIR] [--anthropic-source DIR] [--dest DIR]
+ *   bun scripts/vendor-hermes-skills.mjs [--dry-run] [--sha SHA] [--source DIR] [--anthropic-source DIR] [--dest DIR]
  */
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";

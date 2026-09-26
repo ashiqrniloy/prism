@@ -43,7 +43,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { workspacePackageCounts, workspaceShape } from "./package-truth.mjs";
 import { effectiveTestChain } from "./run-all-tests.mjs";

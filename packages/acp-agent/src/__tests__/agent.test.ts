@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { client, methods, ndJsonStream, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import { type AIProvider, providerDone, toolCallContent } from "@arnilo/prism";
 import { ConfigError } from "../config.js";

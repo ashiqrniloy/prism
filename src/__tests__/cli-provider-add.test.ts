@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync,
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Readable, Writable } from "node:stream";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import {
   createProviderProject,
@@ -167,11 +167,19 @@ describe("prism providers add", () => {
         version: string;
         sideEffects: boolean;
         peerDependencies: Record<string, string>;
+        scripts: Record<string, string | undefined>;
+        packageManager?: string;
+        engines?: Record<string, string>;
       };
       assert.equal(pkg.name, "acme");
       assert.equal(pkg.version, VERSION);
       assert.equal(pkg.sideEffects, false);
       assert.equal(pkg.peerDependencies["@arnilo/prism"], VERSION);
+      // Plan 125 Task 3: provider scaffolds emit Bun commands and no engines guess.
+      assert.equal(pkg.packageManager, "bun@1.4.2");
+      assert.equal(pkg.engines, undefined);
+      assert.equal(pkg.scripts.test, "bun run build && bun test dist/__tests__/");
+      assert.equal(pkg.scripts["pack:dry-run"], "npm pack --dry-run");
 
       const providerSource = readFileSync(join(target, "src/provider.ts"), "utf8");
       assert.match(providerSource, /ACME_DEFAULT_BASE_URL = "https:\/\/api\.acme\.example\/v1"/);
@@ -184,7 +192,10 @@ describe("prism providers add", () => {
       const cache = readFileSync(join(target, "src/cache.ts"), "utf8");
       assert.match(cache, /ACME_PROMPT_CACHE_KEY_MAX_LENGTH/);
       assert.ok(readFileSync(join(target, "docs/providers/acme.md"), "utf8").includes("# acme provider"));
-      assert.ok(readFileSync(join(target, "README.md"), "utf8").includes("ACME_API_KEY"));
+      const readme = readFileSync(join(target, "README.md"), "utf8");
+      assert.ok(readme.includes("ACME_API_KEY"));
+      assert.match(readme, /bun add acme @arnilo\/prism/);
+      assert.match(readme, /`bun test` builds the package/);
       const testSource = readFileSync(join(target, "src/__tests__/provider.test.ts"), "utf8");
       assert.match(testSource, /@arnilo\/prism\/testing\/provider-conformance/);
       assert.match(testSource, /assertNoSecretLeak/);
@@ -260,6 +271,7 @@ describe("prism providers add", () => {
       });
       assert.equal(code, 0);
       assert.match(io2.stdout.text(), /Scaffolded provider package/);
+      assert.match(io2.stdout.text(), /\n {2}bun install\n {2}bun test\n/);
       assert.ok(readFileSync(join(root, "acme", "src", "provider.ts"), "utf8").includes("ACME_DEFAULT_BASE_URL"));
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -285,12 +297,11 @@ describe("prism providers add", () => {
       );
       assert.equal(typecheck.status, 0, `typecheck failed:\n${typecheck.stdout}\n${typecheck.stderr}`);
 
-      const test = runInProject("node", ["--test", join(target, "dist", "__tests__", "provider.test.js")], target);
+      // Plan 124 Task 2: the scaffolded suite runs under `bun test` — the only runner the
+      // contributor toolchain installs. The pass count proves the child executed tests.
+      const test = runInProject("bun", ["test", "--timeout=0", join(target, "dist", "__tests__", "provider.test.js")], target);
       assert.equal(test.status, 0, `fixture test failed:\n${test.stdout}\n${test.stderr}`);
-      // `ℹ pass N` is Node's spec reporter: it proves the child was a Node test run that
-      // executed tests, not just an exit code (a Bun child fails with "Cannot use describe
-      // outside of the test runner").
-      assert.match(`${test.stdout}\n${test.stderr}`, /ℹ pass [1-9]/);
+      assert.match(`${test.stdout}\n${test.stderr}`, /\b[1-9]\d* pass\b/);
 
       // scaffold output never lands in the repo graph: fixture dir removed below; nothing tracked
       assert.ok(readdirSync(fixtureRoot).includes("acme"));

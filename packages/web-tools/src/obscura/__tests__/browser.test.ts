@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import test from "node:test";
+import { test } from "bun:test";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import {
   createBrowserTools,

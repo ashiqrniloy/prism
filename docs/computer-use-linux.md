@@ -98,7 +98,7 @@ async function installDesktop(hostSkills: { register(skill: Skill): void }, host
 
 ## Extension and configuration notes
 
-- Install and configure the host binary separately: `npm install -g @agent-sh/computer-use-linux` or another host-managed installation. Prism has no runtime dependency on that binary and never downloads it.
+- Install and configure the host binary separately: `bun add -g @agent-sh/computer-use-linux` or another host-managed installation. Prism has no runtime dependency on that binary and never downloads it.
 - The factory exposes unprefixed upstream names. Unknown or future upstream names are omitted until Prism classifies them.
 - `setup_accessibility` and `setup_window_targeting` are host-only and omitted unless `includeSetupTools: true` is explicitly selected. The bundled skill never instructs agent turns to perform setup.
 - `connect` is an injectable bridge factory for fake MCP tests. The package's normal path uses `connectMcpTools` with stdio `{ command, args: ["mcp"] }`.
@@ -118,7 +118,7 @@ A live leg drives the host's real `computer-use-linux` MCP binary over stdio —
 
 ```bash
 PRISM_TEST_COMPUTER_USE=1 PRISM_COMPUTER_USE_BIN="$(command -v computer-use-linux)" \
-  node --test packages/prism-coding-tools/dist/computer-use-linux/__tests__/live.test.js
+  bun test packages/prism-coding-tools/dist/computer-use-linux/__tests__/live.test.js
 ```
 
 Skips (never fails) when the flag, binary path, or a desktop session is unavailable. The suite performs no network I/O, so screenshot bytes cannot leave the process. Registered in `scripts/live-matrix.json` as `coding-tools/computer-use-live`.

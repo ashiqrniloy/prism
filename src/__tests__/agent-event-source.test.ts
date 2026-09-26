@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AgentEventRecord, AgentEventSource, AgentEventType } from "../contracts.js";
 import { AgentEventSourceError, createMemoryAgentEventSource, isTerminalAgentEventType } from "../index.js";
 import { assertAgentEventSourceConforms } from "../testing/agent-event-source-conformance.js";

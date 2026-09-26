@@ -24,7 +24,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { cpus, hostname } from "node:os";
 import { dirname, join, sep } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { createHashEmbedder, createMemoryVectorStore } from "../../index.js";
 import type { Embedder } from "../../types.js";
@@ -43,7 +43,6 @@ import {
 import { reliefHit } from "./rerank-fixtures.js";
 
 const GATED = process.env.PRISM_TEST_LOCAL_RERANK === "1";
-const SKIP_REASON = "set PRISM_TEST_LOCAL_RERANK=1 to run the real local cross-encoder (downloads or reuses cached weights)";
 const MODEL = process.env.PRISM_LIVE_LOCAL_RERANK_MODEL?.trim() || DEFAULT_LOCAL_RERANK_MODEL;
 /** Documented default for x86 CPU hosts (docs/rag.md sizing paragraph). */
 const DTYPE = "q8";
@@ -602,8 +601,8 @@ describe("rerank recall measurement (hermetic)", () => {
   });
 });
 
-describe("local reranker live (real transformers.js runtime)", () => {
-  it("local_reranker_live_is_conformant_orders_by_relevance_and_records_evidence", { skip: !GATED && SKIP_REASON }, async () => {
+describe.skipIf(!GATED)("local reranker live (real transformers.js runtime)", () => {
+  it("local_reranker_live_is_conformant_orders_by_relevance_and_records_evidence", async () => {
     const cachedBefore = cachedBytes(CACHE_DIR, MODEL);
     const load: { model: string; loadMs: number }[] = [];
     const reranker = resolveReranker({

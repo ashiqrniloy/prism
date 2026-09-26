@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import test from "node:test";
+import { test } from "bun:test";
 // @ts-expect-error stdlib-only release security scripts intentionally ship as runnable JavaScript.
 import { runCanaries } from "../../scripts/live-canary.mjs";
 // @ts-expect-error stdlib-only release security scripts intentionally ship as runnable JavaScript.
@@ -115,12 +115,9 @@ test("security workflows pin actions, isolate live secrets, and gate publication
   const release = workflows[0]!;
   const security = workflows[1]!;
   const live = workflows[2]!;
-  // Plan 071 Task 2: the compatibility leg is named after the declared engines floor.
-  const floor = (JSON.parse(readFileSync("package.json", "utf8")) as { engines: { node: string } }).engines.node.replace(/\D+/g, "");
-  assert.match(
-    release,
-    new RegExp(`needs: \\[verify, node${floor}-compat, postgres-integration, office-validation, codeql-release, supply-chain\\]`),
-  );
+  // Plan 125 Task 1: the declared Node legs retired with the engines flip, so publish waits on the
+  // five remaining gates.
+  assert.match(release, /needs: \[verify, postgres-integration, office-validation, codeql-release, supply-chain\]/);
   assert.match(release, /attestations:\s*write/);
   assert.match(release, /subject-path: release-artifacts\/\*\.tgz/);
   assert.match(release, /134217728/);

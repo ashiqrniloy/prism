@@ -1,6 +1,6 @@
 import { ok, strictEqual, throws } from "node:assert";
 import { createHash } from "node:crypto";
-import test from "node:test";
+import { test } from "bun:test";
 import {
   canonicalizeDrawioXml,
   DiagramsFormatError,

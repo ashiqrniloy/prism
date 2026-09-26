@@ -211,6 +211,36 @@ const timeline = projectWorkflowTimeline(workflowEvents, {
 
 See runnable host demo in `examples/execution-timeline.ts` for offline workflow timeline projection, cockpit summary, and Mermaid diagram export.
 
+### Host step loops and ledger persistence
+
+When the host owns the step loop (one business step per `session.run()`), correlate its own
+`stepId` / `actionId` / `attemptId` with the Prism `sessionId` / `runId` in the host ledger envelope:
+Prism's events already carry those ids, so the timeline needs no extra correlation field. Project one
+incremental folder per step:
+
+```ts
+const subscription = session.subscribe(); // before run — see ordering note below
+const folder = createTimelineFolder({ content: "metadata" });
+const consume = (async () => {
+  for await (const event of subscription) folder.push(event);
+})();
+const result = await session.run(prompt); // result.sessionId / result.runId
+await consume;
+const timeline = folder.snapshot(); // per-step frozen projection
+```
+
+`subscribe()` registers synchronously, while `session.run()` emits `agent_started` before it returns —
+so start the subscription *before* the run, or the folder misses the run identity and `timeline.runId`
+stays empty. Persist the frozen timeline (default `metadata` policy) into the host ledger as
+newline-delimited JSON. Keep any legacy prose trace as display-only data beside the structural record:
+budgets, turns and stop reasons come from the typed fields, never from parsing prose. External host
+evidence (commits, verifications) is host authority, not a Prism effect — attach it to the ledger
+envelope with an explicit host marker instead of adding a timeline step.
+
+Runnable: [`examples/host-step-loop-timeline.ts`](../examples/host-step-loop-timeline.ts) — eight steps,
+one tool round persisting a `sha256:` argument hash instead of raw args, and external commit evidence
+on the last step.
+
 ### Stop reasons
 
 Run-level `stopReason` mirrors `agent_finished.finishReason` when the loop stopped on a ceiling or a host turn policy (`"host_policy"`); `status` reads `finished:<stopReason>` for those runs and `succeeded` for a natural end. `stopDetail` carries the host's `turnPolicy.stop` reason, bounded to 256 bytes and redacted at the runtime boundary. See [Runs and usage ledger § Clean stops and stop reasons](runs-and-usage.md#clean-stops-and-stop-reasons).

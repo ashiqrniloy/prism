@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createSecretRedactor } from "@arnilo/prism";
 import { buildWebhookEnvelope, createWebhookNotifier, retryWebhookDelivery, signWebhookBody } from "../webhooks.js";
 

@@ -1,5 +1,5 @@
 import { deepStrictEqual, ok, rejects, strictEqual, throws } from "node:assert";
-import test from "node:test";
+import { test } from "bun:test";
 import {
   createDrawioEmbed,
   DiagramsOriginError,

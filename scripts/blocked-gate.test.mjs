@@ -9,7 +9,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import {
   auditBlockedGates,
   BLOCKED_RECORD_TEMPLATE,
@@ -39,8 +39,11 @@ function scrubbedEnv(extra = {}) {
 }
 
 function runGate(row) {
-  const args = row.style === "test" ? ["--test", row.script] : [row.script];
-  return spawnSync(process.execPath, args, { cwd: ROOT, encoding: "utf8", env: scrubbedEnv(), timeout: 120_000 });
+  // Plan 124 Task 2: the runner is Bun, where `bun --test` is a script run, not a test runner
+  // (docs/_evidence/phase124-bun-only-inventory.md §6.9). Spawn `bun` by name so the gate works
+  // from either parent.
+  const args = row.style === "test" ? ["test", "--timeout=0", row.script] : [row.script];
+  return spawnSync("bun", args, { cwd: ROOT, encoding: "utf8", env: scrubbedEnv(), timeout: 120_000 });
 }
 
 test("registry: every protected gate is a real file with env-NAME-only requirements", () => {
@@ -104,11 +107,15 @@ test("fail-closed: every protected gate prints one canonical record and exits no
   for (const row of PROTECTED_GATES) {
     const result = runGate(row);
     const output = `${result.stdout}${result.stderr}`;
+    const cleanOutput = output.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, "");
     seen.push(row.id);
     assert.notEqual(result.status, 0, `${row.id} must fail closed, not skip:\n${output}`);
     // Exactly one canonical record line (the test reporter repeats the message
     // inside its AssertionError line, which is not a record line).
-    const records = output.split("\n").filter((line) => line.startsWith("BLOCKED GATE "));
+    const records = cleanOutput
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("BLOCKED GATE "));
     assert.equal(records.length, 1, `${row.id} must print exactly one canonical record, got ${JSON.stringify(records)}`);
     const match = RECORD.exec(records[0]);
     assert.ok(match, `${row.id} record is not canonical: ${records[0]}`);
@@ -174,7 +181,7 @@ test("wiring: release evidence derives the documented-gap rows from the registry
       timeout: 120_000,
     });
     assert.equal(result.status, 0, `emitter failed:\n${result.stderr}`);
-    assert.match(result.stdout, /audit: node scripts\/blocked-gate\.mjs/, "the emitter must point at the audit command");
+    assert.match(result.stdout, /audit: bun scripts\/blocked-gate\.mjs/, "the emitter must point at the audit command");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     for (const row of derived) {
       const surface = manifest.surfaces.find((entry) => entry.name === row.name);

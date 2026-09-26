@@ -1,6 +1,6 @@
 # SQLite persistence
 
-> **Optional peer install:** `better-sqlite3` — see [Optional peer dependencies](peer-dependencies.md).
+> **Runtime:** Bun's built-in `bun:sqlite`. No optional peer. See [Optional peer dependencies](peer-dependencies.md) for the drivers that still are peers (`pg`).
 
 ## What it does
 
@@ -16,11 +16,11 @@ Factory:
 - `SqlitePersistenceOptions`
 - `SqlitePersistence.close()`
 
-The adapter uses `better-sqlite3@^12.11.1`, enables WAL and foreign keys, applies versioned migrations from the shared Plan 056 schema model, and passes the full session-store and run-ledger conformance suites including process reopen.
+The adapter uses the Bun runtime's `bun:sqlite`, enables WAL and foreign keys, applies versioned migrations from the shared Plan 056 schema model, and passes the full session-store and run-ledger conformance suites including process reopen.
 
 ## When to use it
 
-Use this package when you want a small, file-backed persistence layer on Node without operating a database server:
+Use this package when you want a small, file-backed persistence layer on the Bun runtime without operating a database server:
 
 - local CLI tools and desktop hosts
 - single-writer or low-concurrency deployments
@@ -41,7 +41,7 @@ import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
 | `busyTimeoutMs` | `number` | SQLite `busy_timeout` in milliseconds. Defaults to `5000`. |
 | `feedbackRedactor` | `SecretRedactor` | Optional redaction for feedback comment/tags/metadata before insert. |
 | `fileMode` | `number` | Unix file mode for newly created database files. Defaults to `0o600`. |
-| `database` | `Database` | Advanced: supply an existing `better-sqlite3` handle (caller owns lifecycle). |
+| `database` | `Database` | Advanced: supply an existing `bun:sqlite` handle (caller owns lifecycle). |
 
 ## Outputs / response / events
 
@@ -102,7 +102,7 @@ For resume/timeline flows, use `queryRuns`, `queryEvents`, `queryToolCalls`, and
 - Hosts choose the database path and own backup, retention enforcement, and filesystem permissions.
 - `SessionAppendOptions` idempotency rows are durable in `prism_session_append_idempotency` and survive reopen.
 - Schema version **6** applies `001_init`, `002_usage_scope`, `003_run_feedback`, `004_session_search`, `005_lifecycle_hold_quota`, and `006_agent_event_source`. Migration 006 backfills `prism_agent_event_streams` and uses it to allocate unique per-run event sequences inside the SQLite append transaction. It is sequence-compatible with PostgreSQL but remains local/file-backed; it does not expose distributed subscriptions. Migration 003 adds immutable `prism_run_feedback` rows with run FK/cascade deletion and owner/run/trace cursor indexes. Migration 004 adds session search FTS (FTS5 virtual table `prism_session_search_fts` dual-written on append) plus `prism_sessions(updated_at, id)` cursor index; existing entries are backfilled once. `persistence.feedback` validates exact run ownership, bounds/redacts through optional `feedbackRedactor`, queries bounded pages, and deletes only exact-owned IDs. Search hits never include credentials; ownership filters apply when present. PostgreSQL shares the same model with dialect-local DDL.
-- Pass an existing `better-sqlite3` `Database` via `database` when your host already manages connections.
+- Pass an existing `bun:sqlite` `Database` via `database` when your host already manages connections.
 
 ## Durable events
 

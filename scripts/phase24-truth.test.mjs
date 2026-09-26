@@ -1,11 +1,11 @@
-// Plan 024 Task 2: package-truth generator conformance. Runs in the npm test
+// Plan 024 Task 2: package-truth generator conformance. Runs in the bun run test
 // gate segment after phase23-quality-gates.test.mjs.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { pathToFileURL } from "node:url";
 import { computePackageTruth, expandWorkspaceDirs, readManifest, workspacePackageCounts } from "./package-truth.mjs";
 
@@ -32,12 +32,12 @@ test("generator reproducible: two runs byte-identical modulo generatedAt", () =>
   assert.deepEqual(stripStamp(computePackageTruth()), stripStamp(computePackageTruth()));
 });
 
-test("committed artifact equals the generator output (regenerate via node scripts/package-truth.mjs)", () => {
+test("committed artifact equals the generator output (regenerate via bun scripts/package-truth.mjs)", () => {
   const artifact = JSON.parse(readFileSync(join(ROOT, "scripts", "package-truth.json"), "utf8"));
   assert.deepEqual(
     stripStamp(artifact),
     stripStamp(computePackageTruth()),
-    "scripts/package-truth.json is stale; run: node scripts/package-truth.mjs",
+    "scripts/package-truth.json is stale; run: bun scripts/package-truth.mjs",
   );
 });
 
@@ -157,15 +157,18 @@ test("profile closures match manifests", () => {
   }
 });
 
-test("engines floor lockstep: every workspace manifest declares the root engines floor", () => {
-  // Plan 071 Task 2: the support floor is a host-visible contract, so a package
-  // drifting to a looser engines.node (or a stale floor after a raise) fails here.
+test("engines floor lockstep: every publishable manifest declares the Bun runtime floor", () => {
+  // Plan 125 Task 1: the runtime contract is Bun, so the lockstep is engines.bun — a package
+  // drifting to a looser floor, or keeping the retired engines.node, fails here.
   const root = readManifest(join(ROOT, "package.json"));
+  assert.equal(root.engines?.bun, ">=1.4.2", "root manifest must declare the Bun runtime floor");
+  assert.equal(root.engines?.node, undefined, "root manifest must not declare the retired engines.node");
   const dirs = expandWorkspaceDirs(ROOT, root.workspaces);
   assert.ok(dirs.length > 0, "workspace globs must match at least one package");
   for (const dir of dirs) {
     const manifest = readManifest(join(dir, "package.json"));
-    assert.equal(manifest.engines?.node, root.engines.node, `${manifest.name} must declare the root engines floor ${root.engines.node}`);
+    assert.equal(manifest.engines?.bun, root.engines.bun, `${manifest.name} must declare the root engines floor ${root.engines.bun}`);
+    assert.equal(manifest.engines?.node, undefined, `${manifest.name} must not declare the retired engines.node`);
   }
 });
 
@@ -279,7 +282,7 @@ test("workspace glob matching no directory exits non-zero", () => {
 test("built dist exposes the manifest version and the frozen surface resolves", async () => {
   const root = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
   const distIndex = join(ROOT, "dist", "index.js");
-  assert.ok(existsSync(distIndex), "dist/index.js missing — run npm run build before this leg");
+  assert.ok(existsSync(distIndex), "dist/index.js missing — run bun run build before this leg");
   const mod = await import(pathToFileURL(distIndex).href);
   assert.equal(mod.version, root.version, "dist version export must equal the root manifest version");
   assert.equal(typeof mod.resumeAgentRunStream, "function", "frozen public surface must resolve from the built dist");

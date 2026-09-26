@@ -2,15 +2,15 @@
 // bounded accumulators (coding-agent LSP framing, coding-security sandbox tar) and
 // the audit-only confirmation that work-tools CLI capture is already linear.
 //
-// Runs in the npm test gate segment after the workspace tests. The dist is built
-// before this runs (`npm test` begins with `npm run build`), so the package imports
+// Runs in the bun run test gate segment after the workspace tests. The dist is built
+// before this runs (`bun run test` begins with `bun run build`), so the package imports
 // resolve via the workspace symlinks.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { encodeLspFrame, LspFrameReader } from "../packages/prism-coding-tools/dist/agent/index.js";
 import { createImportTarStream, SandboxTarError, summarizeTarStream } from "../packages/prism-coding-tools/dist/security/index.js";
 

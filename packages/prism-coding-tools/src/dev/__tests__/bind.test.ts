@@ -3,7 +3,7 @@
  * unless an explicit remoteAuthorize callback opts in.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createPrismDevInspector, DevInspectorError } from "../index.js";
 

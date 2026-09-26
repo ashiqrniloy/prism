@@ -1,5 +1,5 @@
 // One-off Task 1 helper: diff a package's built dist surface against its checked-in baseline.
-// Usage: node scripts/phase25-compat-diff.mjs [pkgPath]   (default ".")
+// Usage: bun scripts/phase25-compat-diff.mjs [pkgPath]   (default ".")
 // Stdlib-only; reuses release-gates.mjs surface extraction.
 
 import { existsSync, readFileSync } from "node:fs";

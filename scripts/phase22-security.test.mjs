@@ -26,7 +26,7 @@
  * even when the remaining tests pass.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createEventMultiplexer, EventMultiplexerError, SessionMetadataConflictError } from "@arnilo/prism";
 import { createMemoryModelRouterStateStore } from "@arnilo/prism-core/governance/model-router";
 import { createNatsAgentEventSource } from "@arnilo/prism-core/sessions/nats";

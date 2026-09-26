@@ -5,7 +5,7 @@ __PROVIDER_ID__ provider package for Prism (OpenAI-compatible Chat Completions).
 ## Quick start
 
 ```bash
-npm install __PACKAGE_NAME__ @arnilo/prism
+bun add __PACKAGE_NAME__ @arnilo/prism
 ```
 
 Wire the provider and models into your Prism host. The package registers an
@@ -31,7 +31,7 @@ docs-verified model metadata (limits, costs, cache behavior) before publishing.
 
 ## Conformance
 
-`npm test` builds the package and runs the offline conformance suite wired to
+`bun test` builds the package and runs the offline conformance suite wired to
 `@arnilo/prism/testing/provider-conformance` (stream shape, tool-call delta
 reconstruction, header ownership, secret-leak redaction, serialized content
 coverage).

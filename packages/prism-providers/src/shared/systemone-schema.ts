@@ -26,6 +26,7 @@
 import type { JsonObject, JsonValue, Message } from "@arnilo/prism";
 import { isJsonObject } from "@arnilo/prism";
 import type { SystemOneAnswer, SystemOneChoiceQuestion, SystemOneNoulQuestion, SystemOneQuestion, SystemOneState } from "./systemone.js";
+import { isSystemOneAnswer } from "./systemone.js";
 
 /** Choice questions accept at most this many options (System One API limit). */
 export const MAX_SYSTEMONE_CHOICE_OPTIONS = 255;
@@ -99,8 +100,13 @@ export function renderSystemOneOutput(
   }
   const output: Record<string, JsonValue> = {};
   for (const field of compileSystemOneFields(schema)) {
+    if (!Object.hasOwn(answers, field.id)) {
+      throw new SystemOneSchemaError("missing_answer", field.id, `no answer for question "${field.id}"`);
+    }
     const answer = answers[field.id];
-    if (!answer) throw new SystemOneSchemaError("missing_answer", field.id, `no answer for question "${field.id}"`);
+    if (!isSystemOneAnswer(answer)) {
+      throw new SystemOneSchemaError("invalid_answer", field.id, `invalid answer for question "${field.id}"`);
+    }
     setFieldValue(output, field.id, renderAnswer(field, answer, threshold));
   }
   return JSON.stringify(output);
@@ -187,12 +193,13 @@ function compileEnum(property: JsonObject, id: string): CompiledSystemOneField {
   if (rubric) return rubric;
 
   const options = readExtensionObject(extension, "options");
-  const criteria: Record<string, string> = {};
-  for (const value of values) {
-    const key = String(value);
-    const described = options?.[key];
-    criteria[key] = typeof described === "string" ? described : key;
-  }
+  const criteria = Object.fromEntries(
+    values.map((value) => {
+      const key = String(value);
+      const described = options?.[key];
+      return [key, typeof described === "string" ? described : key];
+    }),
+  );
   const question: SystemOneChoiceQuestion = { type: "choice", instructions: readInstructions(property, id), criteria };
   return { id, question, enumValues: values };
 }

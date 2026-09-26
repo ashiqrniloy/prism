@@ -1,6 +1,6 @@
 /** Plan 103 T5: `usageEstimation: "strict"` refuses a usage-less turn instead of estimating it. */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type {
   AgentEvent,
   AgentSession,

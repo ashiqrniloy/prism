@@ -192,6 +192,27 @@ The adapter executes an explicit six-stage lifecycle for every call:
    - Usage recording errors: Propagate out on success so persistence failures are not concealed.
    - Invokes `onSettlement` callback with `GovernedInvocationSettlement` telemetry.
 
+### Aggregate budgets across host step loops
+
+A host that runs one business step per `session.run()` can keep one aggregate liability pool by
+supplying the **same `taskId`** to every call: reservations and usage aggregate at the task/owner
+level, so a per-run token cap is never a per-run reset. The model stays pinned (configure one fixed
+`model` and no fallbacks) — this is policy-preserving accounting, not model routing. Run three
+sequential calls plus auxiliary paid work (for example a compaction attempt admitted through
+`router.resolve`) and read `router.readBudget({ identity, taskId })` for the remaining aggregate;
+never represent that number by faking a context-window or attention threshold.
+
+- **Hold renewal fencing**: renew a long hold with `router.renewBudget()` or
+  `governedProvider.renewBudget()`. The fencing token advances and the pre-renewal handle fails
+  closed with `ERR_PRISM_MODEL_ROUTER_STATE` instead of committing twice.
+- **Unknown liability**: a provider that reports no usage settles the *reserved* amount as
+  `unknownUsage: true` (never zero), visible on `GovernedInvocationSettlement` and in diagnostics.
+- **Durability boundary**: without a `stateStore` the pool is process-local; surviving worker
+  restarts needs a durable store (for example [enterprise PostgreSQL state](enterprise-postgres-state.md)).
+
+Runnable composition: [`examples/model-router-aggregate-budgets.ts`](../examples/model-router-aggregate-budgets.ts)
+(offline, three `session.run()` calls plus one auxiliary call on a fixed pin).
+
 ### Synchronous facade (`providerSource`) governance matrix
 
 The synchronous `router.providerSource(model)` facade is strictly intended for simple synchronous resolution where allow-lists and residency checks are sufficient. Any configuration requiring asynchronous state or multi-candidate evaluations fails closed at call time:

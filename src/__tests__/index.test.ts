@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { description, name, version } from "../index.js";
 
 const ROOT_VERSION = JSON.parse(

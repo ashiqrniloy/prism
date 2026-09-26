@@ -6,7 +6,7 @@ Prism seam — no Prism internals, no new runtime dependency, `@arnilo/prism` as
 only peer.
 
 ```bash
-npm install @arnilo/prism @arnilo/prism-hooks
+bun add @arnilo/prism @arnilo/prism-hooks
 ```
 
 ```ts

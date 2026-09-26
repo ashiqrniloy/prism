@@ -2,7 +2,7 @@
 // harness (checkpoints + events; router/idempotency/sessions legs run in the
 // adapter packages where those stores live).
 
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createMemoryAgentEventSource } from "../agent-event-source.js";
 import { createMemoryCheckpointStore } from "../checkpoints.js";
 import { assertStateConcurrencyConforms } from "../testing/state-concurrency-conformance.js";

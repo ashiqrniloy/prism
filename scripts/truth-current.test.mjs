@@ -1,14 +1,14 @@
 // Plan 057 Task 2: current-invariant truth suite (a) — workspace manifests ↔
 // lockfile ↔ package-truth.json consistency, and (c) release/security gate
 // integrity. Replaces the historical phase13–34 freeze/release closeout
-// assertions (retired from npm test by plan 057 Task 1): every expected value
+// assertions (retired from bun run test by plan 057 Task 1): every expected value
 // here derives from computePackageTruth() or the filesystem — zero
 // hard-coded package counts.
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import {
   applyGeneratedBlock,
   computePackageTruth,
@@ -26,7 +26,7 @@ const ROOT = join(import.meta.dirname, "..");
 const stripStamp = ({ generatedAt, ...rest }) => rest;
 const readJson = (p) => JSON.parse(readFileSync(join(ROOT, p), "utf8"));
 
-test("committed package-truth.json equals the live generator output (regen: node scripts/package-truth.mjs)", () => {
+test("committed package-truth.json equals the live generator output (regen: bun scripts/package-truth.mjs)", () => {
   const artifact = readJson("scripts/package-truth.json");
   assert.deepEqual(stripStamp(artifact), stripStamp(computePackageTruth(ROOT)), "scripts/package-truth.json is stale");
 });
@@ -117,7 +117,7 @@ test("generated docs blocks match the live renderer on every target page", () =>
       assert.equal(
         text.slice(start, finish + end.length),
         rendered,
-        `${file} ${type} block is stale — regenerate: node scripts/package-truth.mjs --emit-docs`,
+        `${file} ${type} block is stale — regenerate: bun scripts/package-truth.mjs --emit-docs`,
       );
     }
   }
@@ -133,7 +133,7 @@ test("package-truth generated docs include current Phase 54 evidence", () => {
   assert.equal(
     stripGenerated(actual),
     stripGenerated(expected),
-    "Phase 54 evidence is stale; run: node scripts/package-truth.mjs --emit-docs",
+    "Phase 54 evidence is stale; run: bun scripts/package-truth.mjs --emit-docs",
   );
 });
 
@@ -163,7 +163,7 @@ test("gate integrity: every scripts/*.mjs referenced by package.json scripts exi
   }
 });
 
-test("gate integrity: release/security gates stay in the npm test run", () => {
+test("gate integrity: release/security gates stay in the bun run test run", () => {
   const testScript = effectiveTestChain();
   for (const gate of ["release-gate", "tooling-gate", "budget-gate", "phase23-quality-gates", "truth-current", "packaging-current"]) {
     assert.ok(testScript.includes(`scripts/${gate}.test.mjs`), `test script must run scripts/${gate}.test.mjs`);
@@ -176,7 +176,7 @@ test("gate integrity: release/security gates stay in the npm test run", () => {
   );
 });
 
-test("gate integrity: retired historical freeze/release gates stay out of npm test", () => {
+test("gate integrity: retired historical freeze/release gates stay out of bun run test", () => {
   const testScript = effectiveTestChain();
   const retired = readdirSync(join(ROOT, "scripts"))
     .filter((f) => /^phase\d+-(freeze|release)\.test\.mjs$/.test(f))
@@ -185,7 +185,7 @@ test("gate integrity: retired historical freeze/release gates stay out of npm te
   for (const file of retired) {
     assert.ok(
       !testScript.includes(`scripts/${file}`),
-      `retired gate scripts/${file} must not run in npm test (plan 057); audit standalone: node --test scripts/${file}`,
+      `retired gate scripts/${file} must not run in bun run test (plan 057); audit standalone: node --test scripts/${file}`,
     );
   }
   // the files themselves remain as immutable release evidence

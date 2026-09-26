@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { type AgentIdentity, createSecretRedactor, MediaContentError, pinnedFetch } from "@arnilo/prism";
 import { createMemoryPolicyDecisionStore, createOpaPolicyEvaluator, evaluateAndAppend, PolicyError } from "../index.js";
 import type { OpaDecisionDocument } from "../opa.js";

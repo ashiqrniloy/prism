@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { MAX_MCP_ELICITATION_MESSAGE_BYTES, mcpElicitationDecision, mcpElicitationResultFromDecision } from "../elicitation.js";
 import { McpBridgeError } from "../types.js";
 

@@ -5,14 +5,14 @@ The `@arnilo/prism-coding-tools` family package unifies Prism's coding agent too
 ## Installation
 
 ```bash
-npm install @arnilo/prism @arnilo/prism-coding-tools
+bun add @arnilo/prism @arnilo/prism-coding-tools
 ```
 
 For document reading or specialized integrations, install the optional peer dependencies as needed:
 
 ```bash
 # PDF and DOCX document extraction
-npm install pdf-parse mammoth
+bun add pdf-parse mammoth
 ```
 
 ## Subpaths Map
@@ -31,7 +31,7 @@ npm install pdf-parse mammoth
 
 ```bash
 # Start the loopback dev inspector
-npx prism-dev --port 4311
+bunx prism-dev --port 4311
 ```
 
 ## Usage Examples

@@ -4,7 +4,7 @@
  * Concurrent sessions, supervisor fan-out/saturation, workflow agent nodes,
  * tool concurrency, and abort settle — mock providers, in-process stores.
  *
- * Usage: node scripts/benchmark.mjs --scenario multi-agent-runtime
+ * Usage: bun scripts/benchmark.mjs --scenario multi-agent-runtime
  */
 import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";

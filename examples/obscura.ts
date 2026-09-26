@@ -1,7 +1,7 @@
 /**
  * Obscura composition example (plan 039): one host-installed binary, three generic
  * surfaces — agent tools, managed CDP + Playwright, and the full MCP surface.
- * Install first: `npm install @arnilo/prism-web-tools @arnilo/prism-mcp` and install the Obscura CLI
+ * Install first: `bun add @arnilo/prism-web-tools @arnilo/prism-mcp` and install the Obscura CLI
  * (https://github.com/h4ckf0r0day/obscura). Every factory fails closed until the
  * binary exists; hosts need no Obscura-specific branch because everything here is
  * a plain `ToolDefinition[]`.

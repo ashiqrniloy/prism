@@ -51,6 +51,7 @@ export function ingestOptionsFrom(options: WikiExtensionOptions): WikiIngestOpti
     workspaceRoot: options.workspaceRoot,
     wikiRoot: options.wikiRoot,
     extractDocument: options.extractDocument,
+    ocrImages: options.ocrImages,
     fetchUrl: options.fetchUrl,
   };
 }
@@ -222,29 +223,31 @@ export async function ingestWikiSource(input: WikiIngestInput, options: WikiInge
   const extractAbsPath = join(rawDir, "extract.md");
   const sourceRelPath = toPosix(relative(workspaceRoot, sourceAbsPath));
 
-  // Extract text per the matrix; fail closed on anything the built-ins cannot handle.
+  // Extract text per the matrix. A set hook owns PDF and CSV (no built-in fallback) and images only when selected.
+  const hook = options.extractDocument;
+  const image = Boolean(IMAGE_MEDIA_TYPES[`.${ext}`]);
+  const selected = Boolean(hook) && (mediaType === "application/pdf" || ext === "csv" || (image && options.ocrImages === true));
   let extract: string;
-  if (mediaType && TEXT_MEDIA_TYPES[`.${ext}`]) {
+  if (selected && hook) {
+    const hooked = await hook({ bytes, filename, mediaType, title });
+    if (!hooked || typeof hooked.text !== "string") {
+      throw new MemoryValidationError(`ingest extractDocument declined: ${toSingleLine(filename)}`);
+    }
+    extract = hooked.text;
+  } else if (mediaType && TEXT_MEDIA_TYPES[`.${ext}`]) {
     try {
       extract = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     } catch {
       throw new MemoryValidationError(`ingest source is not valid UTF-8: ${toSingleLine(filename)}`);
     }
   } else if (mediaType === "application/pdf") {
-    try {
-      // ponytail: built-in parser is capped at the RAG hard cap (8 MiB); larger PDFs need the host hook.
-      const parsed = await pdfParser.parse(
-        { uri: "wiki-ingest", mediaType, data: bytes },
-        { maxBytes: Math.min(maxInputBytes, HARD_MAX_DOCUMENT_BYTES_CAP) },
-      );
-      extract = parsed.text;
-    } catch (error) {
-      if (!options.extractDocument) throw error;
-      const hooked = await options.extractDocument({ bytes, filename, mediaType, title });
-      if (!hooked) throw error;
-      extract = hooked.text;
-    }
-  } else if (mediaType && IMAGE_MEDIA_TYPES[`.${ext}`]) {
+    // ponytail: built-in parser is capped at the RAG hard cap (8 MiB). No hook means that error stands.
+    const parsed = await pdfParser.parse(
+      { uri: "wiki-ingest", mediaType, data: bytes },
+      { maxBytes: Math.min(maxInputBytes, HARD_MAX_DOCUMENT_BYTES_CAP) },
+    );
+    extract = parsed.text;
+  } else if (image) {
     extract = [
       `# Ingested image: ${title}`,
       "",

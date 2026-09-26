@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
 import { applyDefaultProviderRequestOptions, applyThinkingLevelForModel } from "@arnilo/prism";
 import {

@@ -5,7 +5,7 @@
  * client capabilities read from initialize default closed.
  */
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "bun:test";
 import type { AgentCapabilities } from "@agentclientprotocol/sdk";
 import { type AcpCapabilitiesSource, resolveAcpAgentCapabilities, resolveAcpClientCapabilities } from "../acp/capabilities.js";
 

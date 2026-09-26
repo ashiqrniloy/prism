@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { loadWorkSkills, MAX_SKILL_FILE_BYTES, WORK_SKILL_NAMES, WORK_SKILL_TOOLS } from "../index.js";
 
 const packageRoot = resolve(import.meta.dirname, "../../..");

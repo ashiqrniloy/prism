@@ -9,10 +9,10 @@ Use when agents must read or mutate tenant mail/calendar/files/tasks through a h
 ## Install
 
 ```bash
-npm install @arnilo/prism @arnilo/prism-work
+bun add @arnilo/prism @arnilo/prism-work
 # host separately:
-#   npm i -g @pnp/cli-microsoft365
-#   npm i -g @googleworkspace/cli
+#   bun add -g @pnp/cli-microsoft365
+#   bun add -g @googleworkspace/cli
 ```
 
 ## API

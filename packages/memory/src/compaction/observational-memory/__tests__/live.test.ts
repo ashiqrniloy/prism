@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AIProvider, SessionEntry } from "@arnilo/prism";
 import { createMemorySessionStore } from "@arnilo/prism";
 import { createOpenAIResponsesProvider, defineOpenAIModel } from "@arnilo/prism-providers/openai";
@@ -7,7 +7,7 @@ import { createObservationalMemoryRuntime, OBSERVATIONS_RECORDED, REFLECTIONS_RE
 
 // Network-free by default. Protected operator gate:
 //   PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS=1 OPENAI_API_KEY=sk-... \
-//     npm test -w @arnilo/prism-compaction-observational-memory
+//     bun test --timeout=0 packages/memory/dist/compaction/observational-memory/__tests__/live.test.js
 //
 // When the gate env is set, missing OPENAI_API_KEY fails closed (not skip).
 
@@ -46,7 +46,7 @@ function trackedProvider(label: string, inner: AIProvider, seen: string[]): AIPr
   };
 }
 
-describe("observational memory live tests", { skip: !LIVE }, () => {
+describe.skipIf(!LIVE)("observational memory live tests", () => {
   it("live_observer_and_reflector_use_distinct_models_end_to_end", async () => {
     if (!API_KEY) {
       assert.fail("PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS=1 requires OPENAI_API_KEY for observer/reflector worker canary");

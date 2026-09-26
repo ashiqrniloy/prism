@@ -13,7 +13,7 @@
  * disabled — every prompt and tool call goes through the host authorize gate
  * and the four-outcome approval path.
  *
- * Usage: PRISM_TEST_ACP_CLIENT=1 node scripts/acp-client-smoke.mjs
+ * Usage: PRISM_TEST_ACP_CLIENT=1 bun scripts/acp-client-smoke.mjs
  */
 
 import assert from "node:assert/strict";

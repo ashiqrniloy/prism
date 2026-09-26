@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import {
   assembleProviderInput,
   DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS,

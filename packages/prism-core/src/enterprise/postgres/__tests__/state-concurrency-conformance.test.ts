@@ -1,9 +1,9 @@
 // plan 022 Task 4: enterprise-store legs of the state-concurrency harness.
-// Memory run executes in the default npm test; the durable run is gated by
+// Memory run executes in the default bun run test; the durable run is gated by
 // test:postgres (skips without PRISM_TEST_POSTGRES_URL).
 
 import { randomUUID } from "node:crypto";
-import { after, describe, it } from "node:test";
+import { afterAll as after, describe, it } from "bun:test";
 import { assertStateConcurrencyConforms } from "@arnilo/prism/testing/state-concurrency-conformance";
 import { Pool } from "pg";
 import { createMemoryModelRouterStateStore } from "../../../governance/model-router/index.js";

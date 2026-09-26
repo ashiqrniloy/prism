@@ -56,9 +56,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: "24"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: "1.4.2"
@@ -67,13 +64,16 @@ jobs:
       - name: generate and verify SPDX SBOM
         run: |
           mkdir -p security-artifacts
+          # release-host registry toolchain — runner images ship Node; contributors never invoke npm
+          # Registry-toolchain exception (plan 125 Task 5): pack and sbom run on the runner
+          # image's preinstalled Node — no setup-node step pins it on purpose.
           npm sbom --sbom-format spdx > security-artifacts/sbom.spdx.json
-          node scripts/verify-sbom.mjs security-artifacts/sbom.spdx.json security/license-policy.json
+          bun scripts/verify-sbom.mjs security-artifacts/sbom.spdx.json security/license-policy.json
       - name: scan tracked source and packed public artifacts
         run: |
-          git ls-files -z | xargs -0 node scripts/scan-secrets.mjs
+          git ls-files -z | xargs -0 bun scripts/scan-secrets.mjs
           mkdir -p security-artifacts/tarballs security-artifacts/unpacked
-          npm run build
+          bun run build
           npm pack --json --pack-destination security-artifacts/tarballs >/dev/null
           npm pack --workspaces --json --pack-destination security-artifacts/tarballs >/dev/null
           test "$(du -sb security-artifacts/tarballs | cut -f1)" -le 134217728
@@ -82,7 +82,7 @@ jobs:
             mkdir -p "$dir"
             tar -xzf "$archive" -C "$dir"
           done
-          node scripts/scan-secrets.mjs security-artifacts/unpacked
+          bun scripts/scan-secrets.mjs security-artifacts/unpacked
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: security-sbom-${{ github.sha }}

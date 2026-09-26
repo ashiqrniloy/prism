@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
-import { after, describe, it } from "node:test";
+import { afterAll as after, describe, it } from "bun:test";
 import { Pool } from "pg";
 import { createPostgresPersistence } from "../packages/prism-core/dist/sessions/postgres/index.js";
 import { blockedGate } from "./blocked-gate.mjs";
@@ -19,7 +19,7 @@ import { blockedGate } from "./blocked-gate.mjs";
  *
  * Blocked-gate semantics: without PRISM_TEST_POSTGRES_URL the suite records a
  * named, visible BLOCKED GATE failure instead of a passing skip (this file is
- * wired into `npm run test:postgres`, which requires the URL first).
+ * wired into `bun run test:postgres`, which requires the URL first).
  *
  * Evidence recording: set PRISM_PHASE12_RECORD_EVIDENCE=1 to write
  * scripts/phase12-restart-recovery.json (checked in as the recorded evidence

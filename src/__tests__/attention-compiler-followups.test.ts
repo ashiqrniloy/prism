@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { parseAttentionStickyFrontier, restoreAttentionStickyFrontier, serializeAttentionStickyFrontier } from "../attention-compiler.js";
 import { createAttentionTruncationTrigger, resolveShouldCompact } from "../index.js";
 

@@ -42,7 +42,7 @@ import {
   type UsageQuery,
   type UsageRecord,
 } from "@arnilo/prism";
-import type Database from "better-sqlite3";
+import type { Database } from "bun:sqlite";
 import {
   clipSearchSnippet,
   createSessionRowMappers,
@@ -64,18 +64,18 @@ import {
 
 const require = createRequire(import.meta.url);
 
-function getSqliteConstructor(): new (filename: string, options?: Database.Options) => Database.Database {
+function loadBunSqlite(): new (filename: string) => Database {
   try {
-    const mod = require("better-sqlite3");
-    return mod.default ?? mod;
+    const ctor = require("bun:sqlite").Database;
+    if (typeof ctor !== "function") throw new Error("bun:sqlite did not export Database");
+    return ctor;
   } catch (error) {
-    throw new Error(
-      "@arnilo/prism-core/sessions/sqlite: optional peer dependency 'better-sqlite3' is not installed. " +
-        "Install it (npm i better-sqlite3) to use SQLite persistence.",
-      { cause: error },
-    );
+    throw new Error("@arnilo/prism-core/sessions/sqlite requires the Bun runtime (bun:sqlite).", { cause: error });
   }
 }
+
+// ponytail: require() not static import — Node turns `import "bun:sqlite"` into ERR_UNSUPPORTED_ESM_URL_SCHEME before this message. Delete the seam when a non-Bun import is no longer a supported failure.
+const BunSqlite = loadBunSqlite();
 
 const {
   agentEventRecordToRow,
@@ -116,7 +116,7 @@ export interface SqlitePersistence extends SessionStore, RunLedger, ProductionPe
   readonly metadata: Readonly<{
     readonly kind: "sqlite";
     readonly multiProcess: true;
-    readonly driver: "better-sqlite3";
+    readonly driver: "bun:sqlite";
   }>;
   close(): void;
 }
@@ -362,7 +362,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     leases: createSqliteLeaseStore(db),
     feedback,
     lifecycle: createSqlitePersistenceLifecycle(db),
-    metadata: { kind: "sqlite", multiProcess: true, driver: "better-sqlite3" },
+    metadata: { kind: "sqlite", multiProcess: true, driver: "bun:sqlite" },
 
     async append(entry: SessionEntry, appendOptions?: SessionAppendOptions): Promise<void> {
       const now = new Date().toISOString();
@@ -816,18 +816,17 @@ export function reopenSqlitePersistence(options: SqlitePersistenceOptions): Sqli
   return createSqlitePersistence(options);
 }
 
-function openDatabase(options: SqlitePersistenceOptions): Database.Database {
+function openDatabase(options: SqlitePersistenceOptions): Database {
   if (options.filename !== ":memory:") {
     mkdirSync(dirname(options.filename), { recursive: true });
   }
-  const DatabaseConstructor = getSqliteConstructor();
-  const db = new DatabaseConstructor(options.filename);
+  const db = new BunSqlite(options.filename);
   configureSqliteDatabase(db, options);
   maybeRestrictFileMode(options.filename, options.fileMode);
   return db;
 }
 
-function findLatestLeafId(db: Database.Database, sessionId: string): string | undefined {
+function findLatestLeafId(db: Database, sessionId: string): string | undefined {
   const row = db
     .prepare(
       `SELECT e.id FROM prism_session_entries e
@@ -843,7 +842,7 @@ function findLatestLeafId(db: Database.Database, sessionId: string): string | un
   return row?.id;
 }
 
-function searchSqliteSessions(db: Database.Database, query: SessionSearchQuery): PersistencePage<SessionSearchHit> {
+function searchSqliteSessions(db: Database, query: SessionSearchQuery): PersistencePage<SessionSearchHit> {
   const q = resolveSessionSearchQuery(query);
   q.signal?.throwIfAborted();
 
@@ -1046,7 +1045,7 @@ function ownershipParams(scope: { tenantId?: string; accountId?: string; userId?
 }
 
 function queryTable<T>(
-  db: Database.Database,
+  db: Database,
   table: string,
   query: { cursor?: string; limit?: number; order?: "asc" | "desc"; tenantId?: string; accountId?: string; userId?: string },
   filters: string[],

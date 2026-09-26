@@ -3,7 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { after, before, describe, it } from "node:test";
+import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { createSkillRegistry } from "@arnilo/prism";
 import { deployWikiSkills, loadBundledSkills, parseSkillMarkdown, wikiMaintainerSkill } from "../skills.js";
 

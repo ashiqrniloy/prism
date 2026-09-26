@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import { assertProviderStreamConforms, assertSerializedRequestCoversContent } from "@arnilo/prism/testing/provider-conformance";
 import { createOpenAIResponsesProvider } from "../responses.js";

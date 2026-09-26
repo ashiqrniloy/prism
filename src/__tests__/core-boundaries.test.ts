@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 
 // Architectural boundary invariants for the core package. These are deliberate
 // forbidden-string / contract-shape scans: they assert absences and seam shapes

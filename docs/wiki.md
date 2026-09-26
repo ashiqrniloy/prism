@@ -52,23 +52,23 @@ The Karpathy LLM Wiki pattern is structured into 3 distinct tiers:
 
 ```bash
 # Initialize wiki in project
-npx prism-wiki init --profile codebase
+bunx prism-wiki init --profile codebase
 
 # Refresh wiki after code edits
-npx prism-wiki refresh
+bunx prism-wiki refresh
 
 # Check wiki health: dead anchors, broken links, orphans, pruned sources
-npx prism-wiki lint
+bunx prism-wiki lint
 
 # Search wiki from terminal
-npx prism-wiki search "How does authentication work?" --mode query
+bunx prism-wiki search "How does authentication work?" --mode query
 
 # Stage an external source for the wiki
-npx prism-wiki ingest --path notes/paper.pdf --title "Paper"
+bunx prism-wiki ingest --path notes/paper.pdf --title "Paper"
 
 # `--url` is a usage error in the standalone CLI:
 # the wiki package never fetches — URL ingest needs a host fetchUrl hook
-npx prism-wiki ingest --url https://example.com/rfc.pdf   # → exit 1
+bunx prism-wiki ingest --url https://example.com/rfc.pdf   # → exit 1
 ```
 
 Lint output is one summary line plus per-issue detail, and the report shape is `{ deadAnchors, brokenLinks, orphans, gaps, prunedSources, ok }`. **Pruned sources are not a failure**: a page whose raw sources were retired (`retireWikiSources`), re-pointed to a path that does not exist, or deleted out-of-band is maintainer work, so it is reported as `prunedSources` entries (`{ page, missing }`, both workspace-relative, capped to the first few paths in command/CLI text) while the health check stays `ok` and the CLI exits 0. The `wiki-maintainer` skill covers the response: re-read the surviving sources and re-file the page, or delete it when none remain.
@@ -85,14 +85,15 @@ The staging primitive behind `/wiki-ingest`, `wiki_ingest`, and the CLI. Accepts
 
 | Input | Parse behavior |
 | :--- | :--- |
-| Text-like files and `text` | Decoded as UTF-8 (RAG text/markdown/html parsers) |
-| Uncompressed PDF | Parsed by the RAG PDF parser (bounded pages/bytes) |
-| Compressed PDF / DOCX | Throws a named error unless the host supplies `options.extractDocument` (e.g. wire `createDocumentReader()` from `@arnilo/prism-work/document-reader`) |
+| Text-like files and `text` | Decoded as UTF-8, except `.csv` when `extractDocument` is set |
+| PDF | Built-in RAG parser when no hook is set. With `extractDocument`, the hook runs first and a null or throw writes nothing — no built-in fallback |
+| CSV | UTF-8 when no hook is set. With `extractDocument`, the hook runs first and a null or throw writes nothing |
+| DOCX / other binaries | Throws unless `extractDocument` returns text |
 | `url` | `assertSsrfAllowedUrl` runs first (private/link-local hosts rejected before any fetch); then the host `fetchUrl` hook supplies the bytes/text — missing or empty hook output fails closed. Staged filename comes from the hook, the URL extension (`doc.pdf`), or `source.md` |
-| Images | Staged as-is; stub extract points at the staged `source.*` — no OCR; view the file |
+| Images | Stub extract, no OCR. `ocrImages: true` with `extractDocument` replaces the stub only on success; null or throw writes nothing |
 | Unknown binary | Fails closed unless `extractDocument` claims it |
 
-Caps: 32 MiB per staged input, 2 MiB per extract. `path` must resolve inside the workspace root (realpath containment). `log.md` gains an `**Ingested**` entry only when the wiki root exists.
+Caps: 32 MiB per staged input, 2 MiB per extract. `path` must resolve inside the workspace root (realpath containment). `log.md` gains an `**Ingested**` entry only when the wiki root exists. The wiki does not fetch links inside an extract. Standalone `prism-wiki ingest` has no extractor flag; hosts pass `extractDocument` to `createWikiExtension`.
 
 Wiring a `fetchUrl` hook (the wiki package ships no HTTP client — hosts bring their own, e.g. Obscura):
 

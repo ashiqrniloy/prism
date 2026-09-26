@@ -66,21 +66,27 @@ function cap(name: string, value: number, hard: number): number {
   return value;
 }
 
-function detectKind(buffer: Buffer): "pdf" | "image" | null {
-  if (buffer.length >= PDF_MAGIC.length && buffer.toString("latin1", 0, PDF_MAGIC.length) === PDF_MAGIC) return "pdf";
-  if (buffer.length >= 8 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return "image";
-  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return "image";
-  if (buffer.length >= 6 && buffer.toString("ascii", 0, 3) === "GIF") return "image";
-  if (buffer.length >= 12 && buffer.toString("ascii", 0, 4) === "RIFF" && buffer.toString("ascii", 8, 12) === "WEBP") {
+/** Zero-copy `Buffer` view: `toString`/`base64` need it once the parser accepts plain `Uint8Array`. */
+function byteView(bytes: Uint8Array): Buffer {
+  return Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+}
+
+function detectKind(bytes: Uint8Array): "pdf" | "image" | null {
+  const view = byteView(bytes);
+  if (bytes.length >= PDF_MAGIC.length && view.toString("latin1", 0, PDF_MAGIC.length) === PDF_MAGIC) return "pdf";
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "image";
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image";
+  if (bytes.length >= 6 && view.toString("ascii", 0, 3) === "GIF") return "image";
+  if (bytes.length >= 12 && view.toString("ascii", 0, 4) === "RIFF" && view.toString("ascii", 8, 12) === "WEBP") {
     return "image";
   }
   return null;
 }
 
-function imageMediaType(buffer: Buffer): string {
-  if (buffer[0] === 0x89) return "image/png";
-  if (buffer[0] === 0xff) return "image/jpeg";
-  if (buffer.toString("ascii", 0, 3) === "GIF") return "image/gif";
+function imageMediaType(bytes: Uint8Array): string {
+  if (bytes[0] === 0x89) return "image/png";
+  if (bytes[0] === 0xff) return "image/jpeg";
+  if (byteView(bytes).toString("ascii", 0, 3) === "GIF") return "image/gif";
   return "image/webp";
 }
 
@@ -231,13 +237,13 @@ export function createMistralOcrParser(options: CreateMistralOcrParserOptions): 
 
   return {
     format: "ocr",
-    detect: (buffer) => detectKind(buffer) !== null,
-    extract: async (buffer, { maxPages, maxTextBytes, signal }) => {
+    detect: (bytes) => detectKind(bytes) !== null,
+    extract: async (bytes, { maxPages, maxTextBytes, signal }) => {
       signal?.throwIfAborted();
-      if (buffer.byteLength > maxBytes) {
+      if (bytes.byteLength > maxBytes) {
         throw new DocumentReaderError(`mistral-ocr document exceeds maxBytes cap (${maxBytes})`);
       }
-      const kind = detectKind(buffer);
+      const kind = detectKind(bytes);
       if (!kind) throw new DocumentReaderError("mistral-ocr: buffer is not a PDF or image");
       const pageCap = Math.min(maxPages, parserMaxPages);
       const endpoint = new URL("/v1/ocr", origin);
@@ -246,8 +252,8 @@ export function createMistralOcrParser(options: CreateMistralOcrParserOptions): 
           ? { type: "document_url", document_url: documentUrl }
           : { type: "image_url", image_url: documentUrl }
         : kind === "pdf"
-          ? { type: "document_url", document_url: `data:application/pdf;base64,${buffer.toString("base64")}` }
-          : { type: "image_url", image_url: `data:${imageMediaType(buffer)};base64,${buffer.toString("base64")}` };
+          ? { type: "document_url", document_url: `data:application/pdf;base64,${byteView(bytes).toString("base64")}` }
+          : { type: "image_url", image_url: `data:${imageMediaType(bytes)};base64,${byteView(bytes).toString("base64")}` };
       const payload = JSON.stringify({
         model,
         document,
@@ -290,7 +296,7 @@ export function createMistralOcrParser(options: CreateMistralOcrParserOptions): 
         await options.recordUsage?.({
           model: body.model,
           pagesProcessed: body.pagesProcessed,
-          bytes: buffer.byteLength,
+          bytes: bytes.byteLength,
         });
         if (body.pages.length > pageCap) {
           throw new DocumentReaderError(`document has ${body.pages.length} pages, exceeds maxPages cap (${pageCap}); refusing to extract`);

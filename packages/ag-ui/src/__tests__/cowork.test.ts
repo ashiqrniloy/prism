@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { EventSchemas, EventType } from "@ag-ui/core";
 import { createAgent, createSecretRedactor, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createAcpEventMapper } from "../acp/index.js";

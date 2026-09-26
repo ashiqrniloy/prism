@@ -1,3 +1,4 @@
+import { WorkflowDefinitionError } from "./errors.js";
 import type {
   AgentNodeDefinition,
   ConditionalNodeDefinition,
@@ -7,6 +8,8 @@ import type {
   LoopNodeConfig,
   LoopNodeDefinition,
   NestedWorkflowNodeDefinition,
+  RouteNodeConfig,
+  RouteNodeDefinition,
   ToolNodeDefinition,
 } from "./types.js";
 
@@ -40,4 +43,11 @@ export function joinNode(config: Omit<JoinNodeDefinition, "kind"> = {}): JoinNod
 
 export function workflowNode(config: Omit<NestedWorkflowNodeDefinition, "kind">): NestedWorkflowNodeDefinition {
   return { ...config, kind: "workflow" };
+}
+
+export function routeNode(config: RouteNodeConfig): RouteNodeDefinition {
+  if (typeof config?.select !== "function") {
+    throw new WorkflowDefinitionError("Route node requires select()");
+  }
+  return { ...config, kind: "route" };
 }

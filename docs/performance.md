@@ -10,7 +10,7 @@ This page states Prism runtime limits that keep slow consumers and long sessions
 
 `scripts/benchmark-0.1.0.mjs` composes the six phase benchmark scripts
 (0.0.23–0.0.28) into one 0.1.0 capacity envelope; the merged evidence is
-checked in as `scripts/benchmark-0.1.0.json` and re-gated on every `npm test`
+checked in as `scripts/benchmark-0.1.0.json` and re-gated on every `bun run test`
 by `scripts/benchmark-0.1.0.test.mjs` against the Task 0 freeze-manifest
 capacity contract (`scripts/phase12-freeze-manifest.json`): a row that drifts
 above its frozen p95 ceiling, a startup import above 250 ms, or a root pack
@@ -24,16 +24,16 @@ Measured on Node v24.18.0 / Linux x64 (local hardware; values are environment
 evidence, not universal SLOs). Regenerate with:
 
 ```bash
-node scripts/benchmark-0.1.0.mjs --out scripts/benchmark-0.1.0.json
-PRISM_TEST_POSTGRES_URL="postgresql://…" node scripts/benchmark-0.1.0.mjs --out scripts/benchmark-0.1.0.json  # adds protected legs
+bun scripts/benchmark-0.1.0.mjs --out scripts/benchmark-0.1.0.json
+PRISM_TEST_POSTGRES_URL="postgresql://…" bun scripts/benchmark-0.1.0.mjs --out scripts/benchmark-0.1.0.json  # adds protected legs
 ```
 
 ## Multi-agent runtime concurrency (phase 35)
 
-`node scripts/benchmark.mjs --scenario multi-agent-runtime` is network-free (mock providers, in-process memory stores, no credentials). It measures concurrent independent sessions (1/4/16/32), supervisor fan-out and saturation (32 attempted delegates vs `maxActiveChildren`), parallel workflow fan-out maps (8×20 ms items at concurrency 2, ≥1.75× vs sequential), parallel workflow agent nodes, in-run tool concurrency, and an abort storm. Each result row carries p50/p95, throughput, heap delta, queued/dropped events, peak active provider calls, completions, and abort settle. Ceilings live in `scripts/budgets.json#multiAgentRuntime` (sanity bounds, machine-dependent). Exhaustive 59-manifest classification and recorded numbers: [`docs/_evidence/phase35-ai-runtime-package-matrix.md`](./_evidence/phase35-ai-runtime-package-matrix.md). Schema/safety/invariants: `scripts/benchmark-multi-agent.test.mjs`. Fan-out row: 8×20 ms items at concurrency 2, ≥1.75× vs sequential, peak workers ≤ 2. Supervisor saturation: 32 attempted delegates vs `maxActiveChildren` 4, overflow rejected, `activeAfter` 0.
+`bun scripts/benchmark.mjs --scenario multi-agent-runtime` is network-free (mock providers, in-process memory stores, no credentials). It measures concurrent independent sessions (1/4/16/32), supervisor fan-out and saturation (32 attempted delegates vs `maxActiveChildren`), parallel workflow fan-out maps (8×20 ms items at concurrency 2, ≥1.75× vs sequential), parallel workflow agent nodes, in-run tool concurrency, and an abort storm. Each result row carries p50/p95, throughput, heap delta, queued/dropped events, peak active provider calls, completions, and abort settle. Ceilings live in `scripts/budgets.json#multiAgentRuntime` (sanity bounds, machine-dependent). Exhaustive 59-manifest classification and recorded numbers: [`docs/_evidence/phase35-ai-runtime-package-matrix.md`](./_evidence/phase35-ai-runtime-package-matrix.md). Schema/safety/invariants: `scripts/benchmark-multi-agent.test.mjs`. Fan-out row: 8×20 ms items at concurrency 2, ≥1.75× vs sequential, peak workers ≤ 2. Supervisor saturation: 32 attempted delegates vs `maxActiveChildren` 4, overflow rejected, `activeAfter` 0.
 
 ```bash
-node scripts/benchmark.mjs --scenario multi-agent-runtime --out /tmp/prism-multi-agent.json
+bun scripts/benchmark.mjs --scenario multi-agent-runtime --out /tmp/prism-multi-agent.json
 ```
 
 Recorded 2026-08-27, Node v24.19.0 / Linux x64, 5 warmups + 20 waves, 8 ms mock delay. 32 independent sessions p95 10.1 ms (vs 9.0 ms at n=1); supervisor cap-4 fan-out p95 9.4 ms; workflow 4 agent nodes at concurrency 2 p95 17.9 ms; 8 tools at concurrency 4 p95 17.4 ms; abort storm settled in 5.5 ms with zero leftover provider calls. Dropped events: 0 on every row. Task 6 three-run median p95 (2026-08-28, same fixture): sessions 9.9/9.9/10.6/12.0, supervisorFanOut 10.4, supervisorSaturation 10.3, workflowFanOut 84.5 (1.87×, peak workers 2), workflowAgentNodes 19.7, toolConcurrency 19.1, abortStorm 3.3 — all under `scripts/budgets.json#multiAgentRuntime` ceilings. Protected PostgreSQL (`PRISM_TEST_POSTGRES_URL`) skipped on this host; `release:gate` blocked until durable evidence exists. Memory-store router 16/32-worker reservations do not oversubscribe.
@@ -50,7 +50,7 @@ allocate an encoded buffer per provider event.
 Run with the existing network-free fixture:
 
 ```bash
-node scripts/benchmark.mjs --scenario multi-agent-runtime
+bun scripts/benchmark.mjs --scenario multi-agent-runtime
 ```
 
 Recorded 2026-08-28 on Node v24.19.0 / Linux x64, 5 warmups + 20 measured waves.
@@ -67,30 +67,30 @@ newest-history preservation remain covered by the root context-budget tests.
 
 ## Tool progressive disclosure (plan 041)
 
-`node scripts/benchmark.mjs --scenario tool-search` is network-free (mock assembly, in-memory, no credentials). It builds a 128-tool fixture registry and assembles the provider input once per mode through `assembleProviderInput`: `toolsDisclosure "all"` (default, full tool set) vs `"search"` (top-k 16 plus the generated `search_tools` tool), then asserts provider-request tool-definition bytes shrink ≥ 60% and the index+score pass stays well under a turn. Frozen caps live in `scripts/budgets.json#toolSearch` (reduction floor 0.6, index+score ceiling 50 ms, disclosed-count ceiling 33 — sanity bounds, machine-dependent). Schema/caps/network-free gating in `npm test`: `scripts/benchmark-tool-search.test.mjs`.
+`bun scripts/benchmark.mjs --scenario tool-search` is network-free (mock assembly, in-memory, no credentials). It builds a 128-tool fixture registry and assembles the provider input once per mode through `assembleProviderInput`: `toolsDisclosure "all"` (default, full tool set) vs `"search"` (top-k 16 plus the generated `search_tools` tool), then asserts provider-request tool-definition bytes shrink ≥ 60% and the index+score pass stays well under a turn. Frozen caps live in `scripts/budgets.json#toolSearch` (reduction floor 0.6, index+score ceiling 50 ms, disclosed-count ceiling 33 — sanity bounds, machine-dependent). Schema/caps/network-free gating in `bun run test`: `scripts/benchmark-tool-search.test.mjs`.
 
 ```bash
-node scripts/benchmark.mjs --scenario tool-search --out /tmp/prism-tool-search.json
+bun scripts/benchmark.mjs --scenario tool-search --out /tmp/prism-tool-search.json
 ```
 
 Recorded 2026-08-30, Node v24.19.0 / Linux x64: tool bytes 31,923 → 4,329 (**86.4% reduction**, floor 60%), index+score 1.9–2.5 ms across three runs, disclosed 17 tools (top-k 16 + `search_tools`). Tool-accuracy fixtures (mock provider picking by name among 64/128 distractors, scripted scanner reading only the disclosed list) show search mode at full-exposure pick accuracy in both sizes — the conformance floor `search ≥ all` holds (`src/__tests__/tool-search.test.ts`).
 
 ## Workflow loop refinement (plan 045)
 
-`node scripts/benchmark.mjs --scenario workflow-loop` is network-free: five serial `loopNode` iterations each run one refinement through a mock provider and an in-memory checkpoint adapter. The frozen budget in `scripts/budgets.json#workflowLoop` allows 50 ms p95 per node execution, or 250 ms across all five iterations. The scenario also checks five provider calls, five finished iteration records, peak provider concurrency of one, and zero active work after completion.
+`bun scripts/benchmark.mjs --scenario workflow-loop` is network-free: five serial `loopNode` iterations each run one refinement through a mock provider and an in-memory checkpoint adapter. The frozen budget in `scripts/budgets.json#workflowLoop` allows 50 ms p95 per node execution, or 250 ms across all five iterations. The scenario also checks five provider calls, five finished iteration records, peak provider concurrency of one, and zero active work after completion.
 
 Recorded 2026-08-31 on Node v24.19.0 / Linux x64: 5 warmups + 20 measured runs, p50 **2.356 ms**, p95 **6.443 ms** (**1.289 ms/iteration**), 352.88 runs/s. `maxNodes` remains the declared-node count; `maxIterations` is the independent runtime budget and stays hard-capped at 64. These timings are local evidence, not portable SLOs.
 
 ```bash
-node scripts/benchmark.mjs --scenario workflow-loop --out /tmp/prism-workflow-loop.json
+bun scripts/benchmark.mjs --scenario workflow-loop --out /tmp/prism-workflow-loop.json
 ```
 
 ## Secret redaction (plan 070)
 
-`node scripts/benchmark.mjs --scenario redaction` is network-free (in-memory, no credentials). It builds one transcript-scale string (≥ 1 MiB) and one small entry-shaped object, both carrying 16 realistic secret-shaped needles, and measures `redactSecrets` against a local copy of the ordered `needles.reduce(split/join)` loop it replaced for large strings: the two must stay byte-identical and no needle may survive either path. Caps live in `scripts/budgets.json#redaction` (same-process speedup floor 5, transcript p95 ceiling 250 ms, small-entry p95 ceiling 25 ms — sanity bounds, machine-dependent). Schema/caps/network-free gating in `npm test`: `scripts/benchmark-redaction.test.mjs`.
+`bun scripts/benchmark.mjs --scenario redaction` is network-free (in-memory, no credentials). It builds one transcript-scale string (≥ 1 MiB) and one small entry-shaped object, both carrying 16 realistic secret-shaped needles, and measures `redactSecrets` against a local copy of the ordered `needles.reduce(split/join)` loop it replaced for large strings: the two must stay byte-identical and no needle may survive either path. Caps live in `scripts/budgets.json#redaction` (same-process speedup floor 5, transcript p95 ceiling 250 ms, small-entry p95 ceiling 25 ms — sanity bounds, machine-dependent). Schema/caps/network-free gating in `bun run test`: `scripts/benchmark-redaction.test.mjs`.
 
 ```bash
-node scripts/benchmark.mjs --scenario redaction --out /tmp/prism-redaction.json
+bun scripts/benchmark.mjs --scenario redaction --out /tmp/prism-redaction.json
 ```
 
 Recorded 2026-09-11, Node v24.19.0 / Linux x64: 1 MiB transcript × 16 needles **9.39 ms → 0.69 ms p50 (13.7×, floor 5×)**, small entry 0.15 ms p50 / 0.22 ms p95. Strings below 16 KB keep the ordered loop (`src/redaction.ts`): the equivalence check that guards the single scan costs more than the passes it saves below ~4 KB.
@@ -116,14 +116,14 @@ import fails above `startupImportMsCeiling` (250 ms) on a quiet machine — see 
 startup-gate note below for how the in-chain check stays load-tolerant; root
 packed bytes and
 file count fail above baseline × 1.05. Labels: **network-free** = runs in
-`npm test` evidence, no network; **protected** = requires live PostgreSQL.
+`bun run test` evidence, no network; **protected** = requires live PostgreSQL.
 
-**Startup gate (plan 071 Task 3).** The in-`npm test` check in
+**Startup gate (plan 071 Task 3).** The in-`bun run test` check in
 `scripts/budget-gate.test.mjs` asserts a *machine-relative ratio* rather than a raw
 millisecond bound: cold-process `import('./dist/index.js')` wall time (trimmed mean
 of five spawns, min/max dropped) over the median empty `node -e ''` process start
 measured in the same run. External CPU load inflates both numbers, so the ratio held
-at 3.3 idle, 3.5–4.1 with a full `npm test` running concurrently, and up to 7.2 with
+at 3.3 idle, 3.5–4.1 with a full `bun run test` running concurrently, and up to 7.2 with
 40 competing processes, while the absolute import alone moved 60 ms → 258 ms — the
 same contention that failed the old fixed 250 ms check (273 ms at plan 070 Task 11,
 1104.8 ms at Task 13, both at load average ~25). Off load
@@ -194,7 +194,7 @@ Task 3 packed-install journeys and Task 4 restart-recovery evidence (see
 
 ## Release 0.0.28 enterprise auth, policy, MCP OAuth, API, and artifact adapters
 
-`node scripts/benchmark-0.0.28.mjs` is network-free (in-process fake JWKS/OPA/API fetches plus loopback fixture servers for the authorization server, Prism MCP server, and S3-compatible object store). Checked `scripts/benchmark-0.0.28.json` (Node v24.18.0/Linux x64): 20 warmups, 100 measured ops per seam.
+`node scripts/benchmark-0.0.28.mjs` is network-free (in-process fake JWKS/OPA/API fetches plus loopback fixture servers for the authorization server, Prism MCP server, and S3-compatible object store). Checked `scripts/benchmark-0.0.28.json` (Node v24.18.0/Linux x64): 20 warmups, 100 measured ops per seam. (Node-era command)
 
 | Scenario | Recorded p95 ms | Ceiling |
 | --- | ---: | ---: |
@@ -211,7 +211,7 @@ Conformance: `scripts/phase11-conformance.test.mjs` (5 network-free cases: compo
 
 ## Release 0.0.25 durable loops and human-in-the-loop
 
-`node scripts/benchmark-0.0.25.mjs` is network-free (in-memory checkpoint store). Checked `scripts/benchmark-0.0.25.json` (Node v24.18.0/Linux x64): 20 warmups, 100 measured ops, 32 pending decisions, ~250 KiB snapshot, 64 A2UI ops/message.
+`node scripts/benchmark-0.0.25.mjs` is network-free (in-memory checkpoint store). Checked `scripts/benchmark-0.0.25.json` (Node v24.18.0/Linux x64): 20 warmups, 100 measured ops, 32 pending decisions, ~250 KiB snapshot, 64 A2UI ops/message. (Node-era command)
 
 | Scenario | Recorded p95 ms | Ceiling |
 | --- | ---: | ---: |
@@ -224,7 +224,7 @@ Conformance: `scripts/phase8-conformance.test.mjs` (8 network-free cases). Value
 
 ## Release 0.0.26 coding intelligence, processes, forge, and egress
 
-`node scripts/benchmark-0.0.26.mjs` is network-free (fake LSP/forge/proxy, synthetic 100k-file repo, real process spill). Checked `scripts/benchmark-0.0.26.json` (Node v24.18.0/Linux x64): 5 warmups, 20 measured ops, 100k enumeration files, 1 GiB process spill, 1,000 LSP diagnostics, 100 forge pages × 100 items, 64 MiB proxy download.
+`node scripts/benchmark-0.0.26.mjs` is network-free (fake LSP/forge/proxy, synthetic 100k-file repo, real process spill). Checked `scripts/benchmark-0.0.26.json` (Node v24.18.0/Linux x64): 5 warmups, 20 measured ops, 100k enumeration files, 1 GiB process spill, 1,000 LSP diagnostics, 100 forge pages × 100 items, 64 MiB proxy download. (Node-era command)
 
 | Scenario | Recorded p95 ms | Ceiling |
 | --- | ---: | ---: |
@@ -240,7 +240,7 @@ Conformance: `scripts/phase9-conformance.test.mjs` (8 network-free cases: compos
 
 ## Release 0.0.24 distributed events and tool effects
 
-`node scripts/benchmark-0.0.24.mjs` is an explicit protected PostgreSQL benchmark behind `PRISM_TEST_POSTGRES_URL`. Checked `scripts/benchmark-0.0.24.json` (Node v24.18.0/Linux x64, PostgreSQL 16.14): 10 tenants × 10 principals × 1,000 events/owner, 16 producers/subscribers, 100 warmups, 1,000 measured ops, 10,000-event sustained replay, 100-row cleanup.
+`node scripts/benchmark-0.0.24.mjs` is an explicit protected PostgreSQL benchmark behind `PRISM_TEST_POSTGRES_URL`. Checked `scripts/benchmark-0.0.24.json` (Node v24.18.0/Linux x64, PostgreSQL 16.14): 10 tenants × 10 principals × 1,000 events/owner, 16 producers/subscribers, 100 warmups, 1,000 measured ops, 10,000-event sustained replay, 100-row cleanup. (Node-era command)
 
 | Scenario | Recorded p95 ms | Ceiling |
 | --- | ---: | ---: |
@@ -252,7 +252,7 @@ Sustained replay delivered 160,000 subscriber-events at 101.34 events/s. Five `E
 
 ## Release 0.0.23 enterprise PostgreSQL evidence
 
-`node scripts/benchmark-0.0.23.mjs` is an explicit protected PostgreSQL benchmark, not part of `npm test` or `sdk:ready`. It requires `PRISM_TEST_POSTGRES_URL`, creates/drops an isolated schema, and checks frozen p95 ceilings from `scripts/budgets.json`. The checked `scripts/benchmark-0.0.23.json` evidence was recorded on Node v24.18.0/Linux x64 with `postgres:16-alpine`: 10 tenants × 10 principals × 1,000 policy/evaluation rows, 10,000 router keys, 16 pool clients, 100 warmups, 1,000 measured operations, and 100-row cleanup batches.
+`node scripts/benchmark-0.0.23.mjs` is an explicit protected PostgreSQL benchmark, not part of `npm test` or `sdk:ready`. It requires `PRISM_TEST_POSTGRES_URL`, creates/drops an isolated schema, and checks frozen p95 ceilings from `scripts/budgets.json`. The checked `scripts/benchmark-0.0.23.json` evidence was recorded on Node v24.18.0/Linux x64 with `postgres:16-alpine`: 10 tenants × 10 principals × 1,000 policy/evaluation rows, 10,000 router keys, 16 pool clients, 100 warmups, 1,000 measured operations, and 100-row cleanup batches. (Node-era command)
 
 | Scenario | Recorded p95 ms | Ceiling |
 | --- | ---: | ---: |
@@ -268,8 +268,8 @@ The same run accepted 1,000 rate claims, accumulated 16,000 budget tokens, grant
 
 Release 0.0.16 is a simplification/readiness release: it added no performance-affecting code, so the six network-free scenario medians are held at the 0.0.15 baseline and the win is a smaller published artifact. Budgets live in `scripts/budgets.json` (measured baselines + tolerance) and are enforced two ways:
 
-- **Fast gate (every `npm test`)** — `scripts/budget-gate.test.mjs` re-packs the root tarball (`npm pack --dry-run --json`) and fails if packed bytes, unpacked bytes, or file count exceed baseline + 5%, and fails if cold-process `import('./dist/index.js')` exceeds the 250 ms sanity ceiling. Negative fixtures prove an inflated/regressed value fails.
-- **Release evidence runner** — `node scripts/benchmark-0.0.16.mjs` re-measures root pack + startup, spawns `benchmark-0.0.15.mjs` for the six scenario medians (reused unchanged), compares every value to `budgets.json` (throughput floor / latency ceiling at ±25%), prints the evidence report below, and exits non-zero on any regression. *(0.1.3, plan 015 Task 1: the per-version runners were consolidated into the parameterized runner `scripts/benchmark.mjs --scenario <name>`; the 0.0.16 evidence below is the historical record, budgets.json medians unchanged.)*
+- **Fast gate (every `bun run test`)** — `scripts/budget-gate.test.mjs` re-packs the root tarball (`npm pack --dry-run --json`) and fails if packed bytes, unpacked bytes, or file count exceed baseline + 5%, and fails if cold-process `import('./dist/index.js')` exceeds the 250 ms sanity ceiling. Negative fixtures prove an inflated/regressed value fails.
+- **Release evidence runner** — `node scripts/benchmark-0.0.16.mjs` re-measures root pack + startup, spawns `benchmark-0.0.15.mjs` for the six scenario medians (reused unchanged), compares every value to `budgets.json` (throughput floor / latency ceiling at ±25%), prints the evidence report below, and exits non-zero on any regression. *(0.1.3, plan 015 Task 1: the per-version runners were consolidated into the parameterized runner `scripts/benchmark.mjs --scenario <name>`; the 0.0.16 evidence below is the historical record, budgets.json medians unchanged.)* (Node-era command)
 
 **Artifact diet (the 0.0.16 finding).** The Task 1 tarball deny list dropped the historical `docs/review-coverage-*.md` (11 files, 283,022 bytes) from the root package: the root tarball went from **659,478 packed / 2,310,686 unpacked / 281 files** (0.0.15) to a budgeted **≈575,680 packed / 2,043,402 unpacked / 270 files**. The per-release `scripts/benchmark-0.0.*.mjs` history never shipped in artifacts (root `files` is `dist`/`docs`/`templates`/`CHANGELOG.md` only — zero `scripts/` entries packed), so no archive move was needed; `benchmark-0.0.16.mjs` consolidates the current evidence behind one budget-gating runner.
 
@@ -284,7 +284,7 @@ Release 0.0.16 is a simplification/readiness release: it added no performance-af
 | Startup `import('./dist/index.js')` | ~38 ms | ceiling 250 ms |
 | Six scenario medians (below) | 0.0.15 baseline | ±25% |
 
-**0.0.16 measured evidence** (`node scripts/benchmark-0.0.16.mjs`, 100 iterations each, network-free, 0 backpressure / 0 resource-limit signals; all 22 budget checks passed):
+**0.0.16 measured evidence** (`node scripts/benchmark-0.0.16.mjs`, 100 iterations each, network-free, 0 backpressure / 0 resource-limit signals; all 22 budget checks passed): (Node-era command)
 
 | Scenario | throughput/s | p50 ms | p95 ms |
 | --- | --- | --- | --- |
@@ -299,7 +299,7 @@ Root startup measured ≈37.7 ms (ceiling 250 ms). Timing is machine-dependent, 
 
 ## Release 0.0.15 provider, RAG, and memory evidence
 
-Run `node scripts/benchmark-0.0.15.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.15.test.mjs`. Default mode is network-free: fake Responses SSE/WebSocket transports, a fake AI SDK v4 model, zero-fetch provider-package registration, hash embeddings, in-memory RAG replacement/reranking/retrieval/status, and in-memory memory retention/export/rebuild.
+Run `node scripts/benchmark-0.0.15.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.15.test.mjs`. Default mode is network-free: fake Responses SSE/WebSocket transports, a fake AI SDK v4 model, zero-fetch provider-package registration, hash embeddings, in-memory RAG replacement/reranking/retrieval/status, and in-memory memory retention/export/rebuild. (Node-era command)
 
 Scenarios: `openai-hosted-continuation`, `openai-realtime-envelope`, `ai-sdk-v4-stream-mapping`, `provider-package-metadata`, `rag-parse-replace-rerank-retrieve`, and `memory-retention-export-rebuild`.
 
@@ -337,7 +337,7 @@ These values are dated local comparison evidence, not portable thresholds.
 
 Reconnect is one ownership-scoped redacted durable page plus an optional bounded live subscriber. It is at-least-once at a page boundary, never a polling loop or terminal-run rerun. ACP uses the same event/byte/queue caps. Coding compaction reuses LLM summary/reserve/error/file-operation bounds (16,384 / 131,072 summary and reserve tokens; 1 / 8 KiB summary errors) and makes no additional provider call.
 
-Run `node scripts/benchmark-0.0.12.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.12.test.mjs`. Default mode is network-free and reports mapper/handler/replay throughput and p50/p95, peak emitted queue rows, event bytes, heap, and coding-preparation overhead. Bounds and hostile-input fixtures—not these host-local timings—are release gates.
+Run `node scripts/benchmark-0.0.12.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.12.test.mjs`. Default mode is network-free and reports mapper/handler/replay throughput and p50/p95, peak emitted queue rows, event bytes, heap, and coding-preparation overhead. Bounds and hostile-input fixtures—not these host-local timings—are release gates. (Node-era command)
 
 2026-07-22 baseline: Node v24.18.0, Linux x64, 100 iterations/scenario, network=false, credentials=false.
 
@@ -365,15 +365,15 @@ Finite caps (defaults / hard) — full matrix in [Phase 6 evidence](_evidence/re
 | Context omission rows | 256 / 1024 |
 | Pending steers | 8 messages / 64 KiB |
 
-Run `node scripts/benchmark-0.0.11.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.11.test.mjs`. Default mode is network-free: memory-linear `searchSessions` (label + query) plus assembler `contextBudget` eviction/fit. Emits environment, scenario mode, throughput, p50/p95 latency, heap, disk bytes, process counts, zero external cost, backpressure, and resource-limit signals. Search never default-scans an unbounded store; budget fails closed on mandatory prefix overflow; steer overflow fails closed. These are evidence fields, not CI timing gates.
+Run `node scripts/benchmark-0.0.11.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.11.test.mjs`. Default mode is network-free: memory-linear `searchSessions` (label + query) plus assembler `contextBudget` eviction/fit. Emits environment, scenario mode, throughput, p50/p95 latency, heap, disk bytes, process counts, zero external cost, backpressure, and resource-limit signals. Search never default-scans an unbounded store; budget fails closed on mandatory prefix overflow; steer overflow fails closed. These are evidence fields, not CI timing gates. (Node-era command)
 
 ## Release 0.0.10 reproducible workspace-mode evidence
 
-Run `node scripts/benchmark-0.0.10.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.10.test.mjs`. Default mode is network-free: host-composition write/read/list plus sandbox-fake composition write/read/list/search (in-memory `DisposableSandbox`). Emits environment, scenario mode, throughput, p50/p95 latency, heap, disk bytes, process counts, zero external cost, backpressure, and resource-limit signals. Optional `PRISM_BENCH_DOCKER=1` (with `PRISM_TEST_DOCKER_*`) appends real local Docker composition rows. Unified workspace mode reuses existing sandbox/repo hard caps and adds no unbounded host↔container sync. These are evidence fields, not CI timing gates.
+Run `node scripts/benchmark-0.0.10.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.10.test.mjs`. Default mode is network-free: host-composition write/read/list plus sandbox-fake composition write/read/list/search (in-memory `DisposableSandbox`). Emits environment, scenario mode, throughput, p50/p95 latency, heap, disk bytes, process counts, zero external cost, backpressure, and resource-limit signals. Optional `PRISM_BENCH_DOCKER=1` (with `PRISM_TEST_DOCKER_*`) appends real local Docker composition rows. Unified workspace mode reuses existing sandbox/repo hard caps and adds no unbounded host↔container sync. These are evidence fields, not CI timing gates. (Node-era command)
 
 ## Release 0.0.9 reproducible coding/browser evidence
 
-Run `node scripts/benchmark-0.0.9.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.9.test.mjs`. Default mode is network-free fake/in-process only and emits environment, scenario mode, throughput, p50/p95 latency, heap, disk bytes, process counts, zero external cost, backpressure, and resource-limit signals for repository list/search, Git status, and browser open/snapshot/action/close. Optional `PRISM_BENCH_DOCKER=1` (with `PRISM_TEST_DOCKER_*`) and `PRISM_BENCH_PLAYWRIGHT=1` append real local Docker / protected Playwright rows. These are evidence fields, not CI timing gates.
+Run `node scripts/benchmark-0.0.9.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.9.test.mjs`. Default mode is network-free fake/in-process only and emits environment, scenario mode, throughput, p50/p95 latency, heap, disk bytes, process counts, zero external cost, backpressure, and resource-limit signals for repository list/search, Git status, and browser open/snapshot/action/close. Optional `PRISM_BENCH_DOCKER=1` (with `PRISM_TEST_DOCKER_*`) and `PRISM_BENCH_PLAYWRIGHT=1` append real local Docker / protected Playwright rows. These are evidence fields, not CI timing gates. (Node-era command)
 
 2026-07-21 baseline: Node v24.18.0, Linux x64, 100 iterations/scenario, network=false, credentials=false, docker=false, playwright=false.
 
@@ -388,7 +388,7 @@ Rows exercise shipped repository/Git helpers and fake Playwright APIs only. Real
 
 ## Release 0.0.8 reproducible synthetic evidence
 
-Run `node scripts/benchmark-0.0.8.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000. Script uses no network/credentials and emits environment, throughput, p50/p95 latency, heap, synthetic disk bytes, zero external cost, and backpressure signals. These are evidence fields, not CI timing gates.
+Run `node scripts/benchmark-0.0.8.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000. Script uses no network/credentials and emits environment, throughput, p50/p95 latency, heap, synthetic disk bytes, zero external cost, and backpressure signals. These are evidence fields, not CI timing gates. (Node-era command)
 
 2026-07-20 baseline: Node v24.18.0, Linux x64, 1,000 operations/scenario.
 
@@ -419,7 +419,7 @@ Durable coding plan/checkpoint defaults/hard caps: plan Markdown 256 KiB/1 MiB; 
 
 Browser automation defaults/hard caps from the `browser` subpath: pages 4/16; actions 100/256; queued actions 16/64; snapshot refs 2,000/10,000; depth 30/100; snapshot bytes 256 KiB/2 MiB; navigation 30 s/120 s; action 10 s/60 s; wait 30 s/120 s; run wall 20 min/30 min; popups 4/16; dialogs 16/64; listeners 64/256; action input 64 KiB/256 KiB; close grace 5 s/30 s; network requests 1,000/10,000 with 10/32 redirects per request and 8/32 WebSockets; screenshots 16/64 with 16/64 megapixels and 10 MiB/32 MiB encoded; uploads 8/32 files, 16 MiB/64 MiB each, 64 MiB/256 MiB aggregate; downloads 8/32 files, 32 MiB/256 MiB each, 64 MiB/512 MiB aggregate. Caps charge before context/page/action/queue/snapshot/network/artifact retention. Host supplies Playwright and egress proxy attestation; package import launches nothing.
 
-0.0.14 co-work defaults/hard caps (frozen in [Phase 9 evidence](_evidence/review-coverage-2026-07-25-phase-9.md)): conversation thread list pages 50/200, active branches per thread 16/64, replay/export page 100/500 events; artifact revisions per artifact 32/128, artifacts per thread 64/256, metadata record 8/64 KiB, preview 16/64 KiB, citations 32/128 (2/8 KiB each), delivery-link TTL 5 min/24 h, delivery token 4/16 KiB, compare exactly 2 revisions; memory retention batch 500/5000; proactive capability TTL 24 h/31 d, capability token record 16 KiB; browser checkpoint URL 8 KiB/16 KiB, domain-state hash 256 B/1 KiB, host-data ref 2 KiB/8 KiB, 16/64 checkpoints per run; device stream chunk 1 MiB/8 MiB, concurrent device sessions per identity 1/4 (device wall/turns/tool calls consume shared `RunLimits`). All caps charge before persist/emit and fail closed on overflow. Benchmark placeholder: `node scripts/benchmark-0.0.14.mjs` (release Task 12) reports conversation replay, memory injection/consent, artifact revision/delivery, AG-UI co-work mapping, and connector refresh overhead against these budgets.
+0.0.14 co-work defaults/hard caps (frozen in [Phase 9 evidence](_evidence/review-coverage-2026-07-25-phase-9.md)): conversation thread list pages 50/200, active branches per thread 16/64, replay/export page 100/500 events; artifact revisions per artifact 32/128, artifacts per thread 64/256, metadata record 8/64 KiB, preview 16/64 KiB, citations 32/128 (2/8 KiB each), delivery-link TTL 5 min/24 h, delivery token 4/16 KiB, compare exactly 2 revisions; memory retention batch 500/5000; proactive capability TTL 24 h/31 d, capability token record 16 KiB; browser checkpoint URL 8 KiB/16 KiB, domain-state hash 256 B/1 KiB, host-data ref 2 KiB/8 KiB, 16/64 checkpoints per run; device stream chunk 1 MiB/8 MiB, concurrent device sessions per identity 1/4 (device wall/turns/tool calls consume shared `RunLimits`). All caps charge before persist/emit and fail closed on overflow. Benchmark placeholder: `node scripts/benchmark-0.0.14.mjs` (release Task 12) reports conversation replay, memory injection/consent, artifact revision/delivery, AG-UI co-work mapping, and connector refresh overhead against these budgets. (Node-era command)
 
 Current surfaces:
 
@@ -797,13 +797,13 @@ Optional health/drain/rate-limit/replay/deployment-lease helpers on `@arnilo/pri
 
 ### 0.0.13 Phase 8 identity, policy, router, and work connectors (2026-07-24)
 
-Enterprise governance and connector caps (defaults / hard). Timings: `node scripts/benchmark-0.0.13.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.13.test.mjs`. Default mode is network-free and reports identity/policy/router/work-connector/deployment throughput and p50/p95 with frozen budget refs in the report JSON. Bounds and hostile-input fixtures—not these host-local timings—are release gates.
+Enterprise governance and connector caps (defaults / hard). Timings: `node scripts/benchmark-0.0.13.mjs`; `PRISM_BENCH_ITERATIONS` accepts 10–100,000 (default 100). Schema/bounds test: `node --test scripts/benchmark-0.0.13.test.mjs`. Default mode is network-free and reports identity/policy/router/work-connector/deployment throughput and p50/p95 with frozen budget refs in the report JSON. Bounds and hostile-input fixtures—not these host-local timings—are release gates. (Node-era command)
 
 Offline behavior tests (identity propagation, policy export, router deny paths, fake CLI argv) are release gates; live tenant canaries remain operator-gated.
 
 ### 0.3.x Phase 39 Obscura browser-engine envelopes (2026-08-29)
 
-`obscura` binary-backed legs, network-free, driven by a deterministic fake CLI: `node scripts/benchmark-obscura.mjs` (3 runs, medians vs reviewed ceilings; artifact `scripts/benchmark-obscura.json`). Startup leg probes SIG-0 liveness after spawn — a real host waits on its readiness endpoint inside the same bound.
+`obscura` binary-backed legs, network-free, driven by a deterministic fake CLI: `bun scripts/benchmark-obscura.mjs` (3 runs, medians vs reviewed ceilings; artifact `scripts/benchmark-obscura.json`). Startup leg probes SIG-0 liveness after spawn — a real host waits on its readiness endpoint inside the same bound.
 
 | Leg | Median (3 runs) | Ceiling | Notes |
 | --- | --- | --- | --- |

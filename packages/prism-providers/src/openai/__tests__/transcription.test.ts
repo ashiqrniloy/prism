@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { type TranscriptEvent, TranscriptionError } from "@arnilo/prism";
 import { runTranscriptionConformance } from "@arnilo/prism/testing/provider-conformance";
 import { createOpenAITranscriptionProvider, OPENAI_TRANSCRIPTION_MAX_AUDIO_BYTES } from "../index.js";

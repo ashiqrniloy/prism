@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { BLOCKED_RECORD_TEMPLATE, blockedRecord, PROTECTED_GATES } from "./blocked-gate.mjs";
 
 const manifest = JSON.parse(readFileSync("scripts/phase27-freeze-manifest.json", "utf8"));

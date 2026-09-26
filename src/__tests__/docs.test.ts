@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 
 const docsDir = "docs";
 
@@ -199,8 +199,8 @@ function freezeCorpus(): string {
   return [...roots.filter((f) => existsSync(f)), ...history].map((f) => readFileSync(f, "utf8")).join("\n");
 }
 
-// Plan 070 Task 15: the root `npm test` entry is a one-line delegate to
-// scripts/run-all-tests.mjs, so "is this gate wired into npm test?" must read the
+// Plan 070 Task 15: the root `bun run test` entry is a one-line delegate to
+// scripts/run-all-tests.mjs, so "is this gate wired into bun run test?" must read the
 // runner's stage list too — `package.json` alone no longer names any gate file.
 function npmTestChain(): string {
   return `${readFileSync("package.json", "utf8")}\n${readFileSync("scripts/run-all-tests.mjs", "utf8")}`;
@@ -219,13 +219,18 @@ function withHistory(live: string, match: (file: string) => boolean): string {
   return parts.join("\n");
 }
 const migrationDoc = () => withHistory("docs/migration.md", (f) => /migration-0\.[0-4]\.md$/.test(f));
-const releaseDoc = () => withHistory("docs/release-and-install.md", (f) => /release-handoffs\.md$/.test(f));
+// Plan 125 Task 4: the 0.1.x Node support story moved to the archive, so the live+archive
+// union carries the era phrases the 0.1.x-era gates pin (presence only; absence asserts read the
+// live file directly).
+const releaseDoc = () => withHistory("docs/release-and-install.md", (f) => /(?:release-handoffs|retire-node-runtime)\.md$/.test(f));
 
-// Plan 071 Task 2: the Node compatibility leg is named after the declared engines
-// floor (`node22-compat` for `>=22`), so raising the floor edits the manifest —
-// not these assertions.
+// Plan 125 Task 1 flipped the live manifests to `engines.bun`, so the era's declared Node floor is
+// read from the immutable support-matrix record (scripts/phase12-freeze-manifest.json) rather than
+// from package.json. The page rows these helpers pin are the 0.1.x matrix section, kept as the era
+// record; the live runtime contract is Bun.
 function declaredEngines(): string {
-  return (JSON.parse(readFileSync("package.json", "utf8")) as { engines: { node: string } }).engines.node;
+  return (JSON.parse(readFileSync("scripts/phase12-freeze-manifest.json", "utf8")) as { support: { node: { enginesRange: string } } })
+    .support.node.enginesRange;
 }
 function enginesFloorMajor(): string {
   return declaredEngines().replace(/\D+/g, "");
@@ -409,7 +414,7 @@ describe("docs", () => {
       `${truth.counts.provider} provider adapters`,
       `${truth.counts.prismFamily} \`prism-*\` family packages`,
       `${truth.counts.capability} capability packages`,
-      "node scripts/package-truth.mjs",
+      "bun scripts/package-truth.mjs",
       "scripts/package-truth.json",
     ]) {
       assert.ok(canonical.includes(token), `release-and-install.md missing canonical token: ${token}`);
@@ -999,7 +1004,7 @@ describe("docs", () => {
     ])
       assert.ok(performance.includes(token), `performance.md missing ${token}`);
     assert.ok(readiness.includes("0.1.0 capacity envelope (frozen performance contract)"), "readiness missing envelope gate row");
-    assert.ok(npmTestChain().includes("scripts/benchmark-0.1.0.test.mjs"), "npm test missing envelope regression gate");
+    assert.ok(npmTestChain().includes("scripts/benchmark-0.1.0.test.mjs"), "bun run test missing envelope regression gate");
     assert.ok(existsSync("scripts/benchmark-0.1.0.json"), "missing checked-in envelope evidence");
     assert.ok(freezeCorpus().includes("0.1.0 capacity envelopes"), "freeze corpus missing envelope entry");
   });
@@ -1028,7 +1033,7 @@ describe("docs", () => {
     for (const token of ["ENTERPRISE JOURNEY OK", "CODING JOURNEY OK", "e2eJourneyFixtureMsCeiling"])
       assert.ok(readiness.includes(token), `readiness missing ${token}`);
     for (const file of ["scripts/e2e-enterprise-journey.test.mjs", "scripts/e2e-coding-journey.test.mjs"])
-      assert.ok(npmTestChain().includes(file), `npm test missing ${file}`);
+      assert.ok(npmTestChain().includes(file), `bun run test missing ${file}`);
     assert.ok(existsSync("scripts/fixtures/e2e-enterprise-journey.mjs"), "missing enterprise journey fixture");
     assert.ok(existsSync("scripts/fixtures/e2e-coding-journey.mjs"), "missing coding journey fixture");
   });
@@ -1543,7 +1548,7 @@ describe("docs", () => {
       assert.ok(existsSync(file), `missing ${file}`);
     }
     const testScript = npmTestChain();
-    assert.ok(testScript.includes("scripts/budget-gate.test.mjs"), "npm test does not run the budget gate");
+    assert.ok(testScript.includes("scripts/budget-gate.test.mjs"), "bun run test does not run the budget gate");
   });
 
   it("phase 10 docs reconcile provider compatibility and RAG/memory trust surfaces", () => {
@@ -2368,57 +2373,56 @@ describe("docs", () => {
 
     assert.equal(
       packageJson.scripts["sdk:ready"],
-      "npm run typecheck && npm run lint && npm run format:check && npm test && npm run test:coverage && npm run pack:dry-run && npm run release:gate",
+      "bun run typecheck && bun run lint && bun run format:check && bun run test && bun run test:coverage && bun run pack:dry-run && bun run release:gate",
       "sdk:ready should compose typecheck/lint/format/test/coverage/pack/gate scripts only",
     );
-    assert.equal(packageJson.scripts["release:dry-run"], "npm run sdk:ready", "release:dry-run should mirror CI verify");
+    assert.equal(packageJson.scripts["release:dry-run"], "bun run sdk:ready", "release:dry-run should mirror CI verify");
     assert.ok(
       packageJson.scripts.typecheck.startsWith("bun run build &&"),
       "clean typecheck must build cross-workspace declarations first",
     );
-    assert.ok(workflow.includes("npm run sdk:ready"), "release workflow verify must run sdk:ready");
+    assert.ok(workflow.includes("bun run sdk:ready"), "release workflow verify must run sdk:ready on Bun");
     assert.match(workflow, /actions\/checkout@[a-f0-9]{40}/, "checkout action must use an immutable revision");
-    assert.match(workflow, /actions\/setup-node@[a-f0-9]{40}/, "setup-node action must use an immutable revision");
+    // Plan 125 Task 1 retired the declared Node legs with the engines flip: the workflow declares
+    // no Node runtime at all, and the Node 22/24 support story is the 0.1.x era record.
+    assert.ok(!workflow.includes("actions/setup-node"), "no release-workflow step may set up Node after the engines flip");
+    assert.ok(!workflow.includes("node-version:"), "no release-workflow step may pin a Node version after the engines flip");
     assert.ok(!workflow.includes("run: npm test\n"), "release workflow verify must not skip typecheck by running npm test directly");
-    const floor = enginesFloorMajor();
-    const compatJob = `node${floor}-compat`;
-    assert.ok(workflow.includes(`node-version: "${floor}"`), `release workflow must include Node ${floor} compatibility coverage`);
-    assert.ok(workflow.includes(compatJob), `release workflow must name the Node ${floor} compatibility job`);
-    assert.ok(workflow.includes("Object.values(pkg.exports)"), `Node ${floor} compatibility job must import public exports`);
     assert.ok(workflow.includes("postgres-integration"), "release workflow must include PostgreSQL live adapter job");
     assert.ok(workflow.includes("PRISM_TEST_POSTGRES_URL"), "postgres-integration must set PRISM_TEST_POSTGRES_URL");
-    assert.ok(workflow.includes("npm run test:postgres"), "postgres-integration must run test:postgres");
+    assert.ok(workflow.includes("bun run test:postgres"), "postgres-integration must run test:postgres on Bun");
     assert.ok(
-      workflow.includes(`needs: [verify, ${compatJob}, postgres-integration, office-validation, codeql-release, supply-chain]`),
-      "publish must wait for compatibility, PostgreSQL, and supply-chain coverage",
+      workflow.includes("needs: [verify, postgres-integration, office-validation, codeql-release, supply-chain]"),
+      "publish must wait for PostgreSQL, office, code-scanning, and supply-chain coverage",
     );
     assert.equal(
       packageJson.scripts["test:postgres"],
-      "node scripts/postgres-evidence.mjs",
+      "bun scripts/postgres-evidence.mjs",
       "root test:postgres must write this-tree evidence",
     );
     assert.equal(
       packageJson.scripts["test:postgres:run"],
-      "node scripts/require-postgres-url.mjs && npm run test:postgres --workspace @arnilo/prism-core --if-present && npm run test:postgres --workspace @arnilo/prism-memory && npm run test:postgres --workspace @arnilo/prism-channels && node --test scripts/phase7-conformance.test.mjs scripts/phase12-restart-recovery.test.mjs scripts/phase22-conformance.test.mjs",
+      "bun scripts/require-postgres-url.mjs && bun run --filter @arnilo/prism-core test:postgres && bun run --filter @arnilo/prism-memory test:postgres && bun run --filter @arnilo/prism-channels test:postgres && bun test --timeout=0 scripts/phase7-conformance.test.mjs scripts/phase12-restart-recovery.test.mjs scripts/phase22-conformance.test.mjs",
       "test:postgres runner should require an explicit PostgreSQL URL and cover adapters plus Phase 7/12/22 process conformance, restart recovery, and state concurrency",
     );
 
+    const floor = enginesFloorMajor(); // the era Node floor from the freeze manifest (see declaredEngines)
     for (const phrase of [
       "Full SDK readiness gate (typecheck + offline tests + pack)",
-      "`npm run sdk:ready`",
+      "`bun run sdk:ready`",
       "It composes existing scripts only",
       "examples/workspace typecheck",
       "network-free core tests (docs/export/package/install smoke included)",
       "workspace tests",
       "pack dry-run",
       "Optional live smoke tests stay separate from SDK readiness",
+      // Era evidence: this one lives in docs/history/release-handoffs.md, which keeps its recorded command.
       "PRISM_LIVE_PROVIDER_TESTS=1 npm run test --workspaces --if-present",
       "remaining network-free",
-      "allowed to exceed the `npm test` budget",
+      "allowed to exceed the `bun run test` budget",
       "Local release dry-run mirrors the GitHub Actions `verify` job and delegates to the SDK readiness gate",
-      "`npm run release:dry-run` is an alias for the same gate",
-      "The GitHub Actions `verify` job runs `bun ci` and `npm run sdk:ready`",
-      compatJob,
+      "`bun run release:dry-run` is an alias for the same gate",
+      "The GitHub Actions `verify` job runs `bun ci` and `bun run sdk:ready`",
       "postgres-integration",
       "PRISM_TEST_POSTGRES_URL",
       "imports every public root `exports` default target",
@@ -2436,8 +2440,8 @@ describe("docs", () => {
     };
     const workflow = readFileSync(".github/workflows/release.yml", "utf8");
     const release = readFileSync("scripts/release.mjs", "utf8");
-    assert.equal(pkg.scripts["release:check"], "node scripts/release.mjs check");
-    assert.equal(pkg.scripts["release:publish"], "node scripts/release.mjs publish");
+    assert.equal(pkg.scripts["release:check"], "bun scripts/release.mjs check");
+    assert.equal(pkg.scripts["release:publish"], "bun scripts/release.mjs publish");
     for (const phrase of ["topologicalOrder", "bun.lock", "--provenance", "--access", "public", "--tag", "latest"]) {
       assert.ok(release.includes(phrase), `release script missing ${phrase}`);
     }
@@ -2523,6 +2527,47 @@ describe("docs", () => {
     for (const [value, page] of found) {
       assert.equal(value, pin.replace(/\s+/g, ""), `${page} restates a different budget pin than ${pin}`);
     }
+    // Plan 124 Task 6: the same drift class, one layer down — a page that keeps describing the
+    // retired `node --test` runner after the suite moved to the Bun binary. The pages below are the
+    // stage-runner surfaces (the stage table, its two summaries, the budget paragraph, and the
+    // test-tier sentence); era evidence (`docs/history/**`, `docs/_evidence/**`) and per-page
+    // command transcripts keep their recorded commands.
+    for (const page of ["README.md", "docs/index.md", "docs/testing.md", "docs/release-and-install.md", "docs/live-testing.md"]) {
+      assert.ok(
+        !readFileSync(page, "utf8").includes("node --test"),
+        `${page} names the retired node --test runner as a current stage runner`,
+      );
+    }
+  });
+
+  // Plan 125 Task 4: one install voice across the live pages. Hosts install with `bun add`; a page
+  // that still tells them to `npm install @arnilo/prism`, or that states a Node support claim
+  // without recording the 0.12.0 retirement, is the drift this test exists to catch. Archived pages
+  // (`docs/history/**`, `docs/_evidence/**`) are era records and keep their recorded commands.
+  it("live pages carry one Bun install voice and no current Node support claim", () => {
+    const pages = [
+      "README.md",
+      ...markdownFiles("docs").filter((file) => !file.startsWith("docs/history/") && !file.startsWith("docs/_evidence/")),
+      ...readdirSync("packages", { withFileTypes: true })
+        .filter((entry) => entry.isDirectory() && existsSync(join("packages", entry.name, "README.md")))
+        .map((entry) => join("packages", entry.name, "README.md")),
+    ];
+    assert.ok(pages.length > 40, `expected the live page set, found ${pages.length}`);
+    let bunAdds = 0;
+    for (const page of pages) {
+      const text = readFileSync(page, "utf8");
+      assert.doesNotMatch(text, /npm (?:install|i) @arnilo\/prism/, `${page} still tells hosts to install Prism with npm`);
+      bunAdds += [...text.matchAll(/bun add /g)].length;
+      for (const line of text.split("\n")) {
+        if (!/engines\.node|Node (?:22|24)[^.]{0,60}support/i.test(line)) continue;
+        assert.match(
+          line,
+          /retired|0\.12\.0|engines\.bun|era record/i,
+          `${page} states a Node support claim without retiring it: ${line.trim()}`,
+        );
+      }
+    }
+    assert.ok(bunAdds >= 50, `expected the install voice across the live pages, found ${bunAdds} bun add lines`);
   });
 
   it("peer-version policy (plan 030 Task 9): caret ranges, independent packages, migration note", () => {
@@ -3409,7 +3454,8 @@ describe("docs", () => {
       const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
       for (const file of demos) {
         const jsFile = join(examplesDir, file.replace(/^examples\//, "").replace(/\.ts$/, ".js"));
-        const result = spawnSync(process.execPath, [jsFile], { encoding: "utf8" });
+        // Demos that import bun:sqlite cannot load under the branch audit's node parent.
+        const result = spawnSync("bun", [jsFile], { encoding: "utf8" });
         assert.equal(result.status, 0, `${file} exited ${result.status}\n${result.stderr}`);
         const out = `${result.stdout}\n${result.stderr}`;
         assert.ok(out.trim().length > 0, `${file} produced no output`);
@@ -4159,6 +4205,64 @@ describe("docs", () => {
     assert.ok(changelog.includes("## [0.8.0] - 2026-09-18"), "CHANGELOG.md must carry the 0.8.0 entry");
     assert.ok(changelog.includes("@arnilo/prism-channels"), "CHANGELOG.md must name messaging channels");
     assert.ok(changelog.includes("@arnilo/prism-work"), "CHANGELOG.md must name the work family");
+  });
+
+  it("0.12.0 migration note is linked once and current commands use Bun", () => {
+    const index = readFileSync("docs/index.md", "utf8");
+    const note = readFileSync("docs/history/migrate-to-0.12.0.md", "utf8");
+    const changelog = readFileSync("CHANGELOG.md", "utf8");
+    const extraction = readFileSync("docs/document-extraction.md", "utf8");
+    const links = index.match(/history\/migrate-to-0\.12\.0\.md/g) ?? [];
+    assert.equal(links.length, 1, "docs/index.md must link the 0.12.0 migration note once");
+    for (const phrase of [
+      "engines.bun >=1.4.2",
+      "bun add",
+      "bun:sqlite",
+      "Uint8Array",
+      "bigint",
+      ["better", "sqlite3"].join("-"),
+      "packageManager",
+      "npm pack",
+      "@firecrawl/anydoc",
+      "docling/ocr.py",
+      "never uploads",
+      "HF_HUB_OFFLINE",
+      "one OCR job",
+    ]) {
+      assert.ok(note.includes(phrase), `migrate-to-0.12.0.md missing ${phrase}`);
+    }
+    assert.ok(changelog.includes("## [0.12.0] - 2026-09-26"), "CHANGELOG.md missing the 0.12.0 entry");
+    assert.ok(changelog.includes("document-extraction"), "CHANGELOG.md missing document extraction");
+    assert.ok(changelog.includes("bun:sqlite"), "CHANGELOG.md missing the sqlite migration");
+    assert.ok(!extraction.includes("0.12.0"), "document-extraction.md must not carry release narrative");
+    assert.ok(readFileSync("docs/migrate-to-0.6.md", "utf8").includes("npm test"), "0.6.0 historical wording must stay");
+    const pages = [
+      "docs/performance.md",
+      "docs/mcp-tools.md",
+      "docs/disaster-recovery.md",
+      "docs/attention-compiler.md",
+      "docs/rag.md",
+      "docs/operations.md",
+      "docs/openapi-tools.md",
+      "docs/model-registry.md",
+      "docs/evaluations.md",
+      "docs/computer-use-linux.md",
+      "docs/cli-rpc.md",
+      "docs/runs-and-usage.md",
+    ];
+    for (const page of pages) {
+      for (const [n, line] of readFileSync(page, "utf8").split("\n").entries()) {
+        if (line.includes("Node-era command")) continue;
+        assert.ok(!line.includes("node --test") && !line.includes("node scripts/"), `${page}:${n + 1} still names a retired Node command`);
+      }
+    }
+    for (const file of readdirSync("scripts", { recursive: true }) as string[]) {
+      if (!file.endsWith(".mjs")) continue;
+      for (const [n, line] of readFileSync(join("scripts", file), "utf8").split("\n").entries()) {
+        if (!/Usage:|usage:/.test(line) && !/^[ \t]*\*[ \t]+node scripts\//.test(line)) continue;
+        assert.ok(!line.includes("node scripts/"), `scripts/${file}:${n + 1} usage header still says node`);
+      }
+    }
   });
 
   it("use_case_model_selection_contract_is_documented", () => {

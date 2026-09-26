@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { Ajv } from "ajv";
 import { DocumentsValidationError, deckModelSchema, docModelSchema, documentModelSchema, sheetModelSchema } from "../index.js";
 

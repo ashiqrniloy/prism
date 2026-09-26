@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import type { CheckpointStore, LeaseStore } from "@arnilo/prism";
 import { createMemoryCheckpointStore, createMemoryLeaseStore } from "@arnilo/prism";
 import type { ArtifactReference, GitFingerprint, GitOperations, GitWorktreeEntry } from "../git.js";

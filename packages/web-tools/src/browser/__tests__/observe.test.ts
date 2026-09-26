@@ -4,7 +4,7 @@
  * body/cookie/auth-header never-captured invariant.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { BrowserError, createBrowserManager } from "../index.js";
 import { createObservationRing, installCdpObservation } from "../observe.js";
 import type { CdpNetworkEntry } from "../types.js";

@@ -21,7 +21,7 @@ Use [A2A interoperability](a2a.md) for remote agent-to-agent JSON-RPC/HTTPS task
 Install the optional package beside the core runtime (it becomes publishable with the 0.0.12 release graph):
 
 ```bash
-npm install @arnilo/prism @arnilo/prism-ag-ui
+bun add @arnilo/prism @arnilo/prism-ag-ui
 ```
 
 `createAgUiHandler()` takes host-owned callbacks:

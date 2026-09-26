@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "bun:test";
 import { createSessionEntry, type Message, type SessionEntry } from "@arnilo/prism";
 import { collectFileOperations, formatFileOperations } from "../file-ops.js";
 import { serializeCompactionConversation } from "../serialize.js";

@@ -149,6 +149,59 @@ An explicit citation is `[evidence:<ref>]`, immediately after its claim (within 
 
 With `onViolation: "block"`, the standard `GuardrailError` has `reason: "claim_ungrounded"` and bounded metadata `{ claim, contentIndex, start, end }` — never a full response body. `"flag"` returns `action: "allow"` plus that same metadata and `violation: true`, so the response stays visible while the normal `guardrail_decision` event and run ledger preserve the flag. Strict mode treats every standalone number (including dates, percentages, and versions) as a claim; use the option only where that law is wanted.
 
+## Field-evidence provenance
+
+`createFieldEvidenceGuardrail(options)` is a deterministic `tool_input` guardrail for one host-selected
+tool. It verifies that each required field carries a typed source reference and that the claimed
+value's revision and normalized value match the host's evidence set. It performs no retrieval, calls
+no model, and grants no authority: retrieval, grants, digest freeze, and commit-time validation stay
+with the host.
+
+```ts
+import { createFieldEvidenceGuardrail } from "@arnilo/prism";
+
+const provenance = createFieldEvidenceGuardrail({
+  toolName: "synapta:proposal",
+  required: ["amount", "vendor.id"],
+  evidence: ({ toolCallId }) => hostLedger.evidenceFor(toolCallId), // current rows only
+  normalize: (value) => (typeof value === "string" ? Number(value.replace(/[$,]/g, "")) : value),
+});
+
+const agent = createAgent({ model, provider, guardrails: { toolInput: [provenance] } });
+```
+
+A required field must hold a provenance envelope:
+
+```json
+{
+  "amount": { "value": 1250, "source": "tool:invoice_fetch", "path": "invoice.total", "revision": 7 }
+}
+```
+
+Evidence rows are `{ source, path, value, revision? }` — the source's current value. `source` and
+`path` are matched literally; `revision` must match exactly (a claim without a revision cannot match
+an evidence row that has one, and vice versa). After `normalize`, values compare exactly
+(`Object.is`), so a normalizer that returns objects never matches. `required` supports dot paths
+(`vendor.id`), bounded to 256 entries and 256 chars per path; evidence is capped at 4096 rows per call
+and a larger set fails closed instead of truncating.
+
+| Violation | Meaning |
+| --- | --- |
+| `missing_field` | The required path is absent from the call arguments. |
+| `malformed_claim` | The path holds a plain value or an incomplete envelope (missing `value`, `source`, or `path`; invalid `revision`). |
+| `missing_evidence` | The host evidence source returned no valid rows for this call. |
+| `unknown_source` | No evidence row matches the claimed `source` + `path` (invented field or wrong object). |
+| `stale_revision` | Matching rows exist but none carries the claimed revision. |
+| `value_mismatch` | A fresh row exists but its normalized value differs. |
+| `evidence_over_limit` | More than 4096 valid evidence rows; fails closed instead of truncating. |
+
+A violation blocks the call before lookup, permission, validation, or execution: the decision is
+`{ action: "block", reason: "field_evidence", metadata: { field, violation } }`, the blocked
+`ToolResult` stays neutral, and the `guardrail_decision` event carries only the field path and code —
+never the claimed value, evidence value, or any commit/approval semantics. Calls to other tools are
+allowed untouched. The host decides which fields require evidence and supplies it per call; the
+guardrail never widens, rewrites, or commits anything.
+
 ## Extension and configuration notes
 
 Guardrails are callbacks supplied by the host. Prism does not discover, load, retry, or persist callback code. `createSecureAgent()` keeps configured guardrails and only appends run-level checks; it never lets a run remove secure defaults. Custom loops receive guarded `LoopContext.generate()` and `LoopContext.dispatchToolCall()`; host code that directly calls a provider or `ToolDefinition.execute()` is outside the runtime boundary. Guardrail packs follow the same rule: they are host-supplied config, compiled in memory per session, never discovered from disk. Their compiled identity and pack-owned state persist only inside an opt-in durable checkpoint (`persistSessionState`, see above) and nowhere else.

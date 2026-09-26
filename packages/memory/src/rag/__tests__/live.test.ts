@@ -11,7 +11,7 @@
  * any error transcript.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 
 import { createOpenAiCompatibleReranker } from "../hosted-rerankers.js";
 import { createTeiReranker } from "../tei-reranker.js";
@@ -60,9 +60,7 @@ function assertPermutation(before: readonly RagHit[], after: readonly RagHit[]):
 }
 
 describe("rag rerankers live (operator endpoints)", () => {
-  it("TEI reranker orders real hits", {
-    skip: !TEI_URL && "set PRISM_TEST_TEI_RERANKER_URL to probe a deployed TEI /rerank endpoint",
-  }, async () => {
+  it.skipIf(!TEI_URL)("TEI reranker orders real hits", async () => {
     // The TEI adapter is credential-free by design; an optional gateway key
     // rides a trusted custom transport (the adapter's documented seam).
     const transport = TEI_KEY
@@ -81,9 +79,7 @@ describe("rag rerankers live (operator endpoints)", () => {
     });
   });
 
-  it("OpenAI-compatible hosted reranker orders real hits", {
-    skip: !HOSTED_URL && "set PRISM_TEST_HOSTED_RERANK_URL (+ PRISM_TEST_HOSTED_RERANK_KEY) to probe a hosted /rerank endpoint",
-  }, async () => {
+  it.skipIf(!HOSTED_URL)("OpenAI-compatible hosted reranker orders real hits", async () => {
     const reranker = createOpenAiCompatibleReranker({
       baseUrl: HOSTED_URL!,
       apiKey: HOSTED_KEY,

@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { SCENARIOS } from "./benchmark.mjs";
 import { LOOP_ITERATIONS, runWorkflowLoop } from "./benchmark-scenarios/workflow-loop.mjs";
 import { loadBudgets } from "./budget-gates.mjs";

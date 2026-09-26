@@ -1,13 +1,13 @@
 # @arnilo/prism-memory
 
-Optional memory and context family for Prism agents: working/semantic memory at the root plus `/rag`, `/compaction/llm`, `/compaction/observational-memory`, and `/wiki` subpaths (including the `prism-wiki` bin and bundled skills).
+Optional memory and context family for Prism agents: working/semantic memory at the root plus `/rag`, `/compaction/llm`, `/compaction/observational-memory`, and `/wiki` subpaths (including the `prism-wiki` bin and bundled skills). Wiki `extractDocument` is a host hook; this package does not import `@arnilo/prism-work`.
 
 Install explicitly. This package is not included in profile bundles until a size/use review. Ordinary Prism sessions do not require a vector backend.
 
 ## Install
 
 ```bash
-npm install @arnilo/prism-memory @arnilo/prism
+bun add @arnilo/prism-memory @arnilo/prism
 ```
 
 PostgreSQL/pgvector support uses the package `pg` dependency. Live adapter tests require `PRISM_TEST_POSTGRES_URL` and the `vector` extension.

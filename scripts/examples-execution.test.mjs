@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import test from "node:test";
+import { test } from "bun:test";
 
 const ROOT = join(import.meta.dirname, "..");
 const REASON = /^(env-gated|network|interactive|long-running|known-broken:\S+)$/;

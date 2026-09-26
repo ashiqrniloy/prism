@@ -2,7 +2,7 @@
  * Hermetic doc checks. Two artifacts must stay in sync with the repo:
  *
  * - `docs/live-testing.md` credential matrix ↔ `scripts/live-matrix.json`
- *   (regenerate with `node scripts/generate-live-docs.mjs --write`)
+ *   (regenerate with `bun scripts/generate-live-docs.mjs --write`)
  * - `docs/peer-dependencies.md` peer matrix ↔ every workspace manifest's
  *   third-party `peerDependencies`, and `docs/options-index.md` ↔ the declared
  *   `*Options`/`*Limits`/`*Config` types in source (plan 070 Task 19).
@@ -12,7 +12,7 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import test from "node:test";
+import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { loadManifest, regeneratedDoc } from "./generate-live-docs.mjs";
 
@@ -22,7 +22,7 @@ const read = (relative) => readFileSync(join(ROOT, relative), "utf8");
 test("docs/live-testing.md credential matrix is in sync with scripts/live-matrix.json", () => {
   const doc = read("docs/live-testing.md");
   const expected = regeneratedDoc(doc, loadManifest());
-  assert.equal(doc, expected, "docs/live-testing.md is stale — run: node scripts/generate-live-docs.mjs --write");
+  assert.equal(doc, expected, "docs/live-testing.md is stale — run: bun scripts/generate-live-docs.mjs --write");
 });
 
 test("credential matrix keeps the least-privilege scope column populated", () => {
@@ -124,8 +124,8 @@ test("every peer matrix row names live package subpaths, install specs, and its 
       );
     }
 
-    const specs = row.install.replace(/^npm i\s+/, "").split(/\s+/);
-    assert.ok(row.install.startsWith("npm i "), `row ${row.peer}: Install must be an npm command`);
+    const specs = row.install.replace(/^bun add\s+/, "").split(/\s+/);
+    assert.ok(row.install.startsWith("bun add "), `row ${row.peer}: Install must be a bun add command`);
     const named = (spec) => spec.match(/^(@[^/]+\/[^@]+)/)?.[1] ?? spec.match(/^([^@]+)/)?.[1];
     const own = specs.find((spec) => named(spec) === row.peer);
     assert.ok(own, `row ${row.peer}: Install must name ${row.peer}`);

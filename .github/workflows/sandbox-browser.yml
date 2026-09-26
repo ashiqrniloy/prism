@@ -25,9 +25,6 @@ jobs:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           persist-credentials: false
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
-        with:
-          node-version: "24"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: "1.4.2"
@@ -35,20 +32,20 @@ jobs:
         run: bun ci
       - name: build coding/browser packages
         run: |
-          npm run build:core
-          npm run build -w @arnilo/prism-core
-          npm run build -w @arnilo/prism-ag-ui
-          npm run build -w @arnilo/prism-coding-tools
-          npm run build -w @arnilo/prism-web-tools
-          npm run build -w @arnilo/prism-work
+          bun run build:core
+          bun run --filter @arnilo/prism-core build
+          bun run --filter @arnilo/prism-ag-ui build
+          bun run --filter @arnilo/prism-coding-tools build
+          bun run --filter @arnilo/prism-web-tools build
+          bun run --filter @arnilo/prism-work build
       - name: network-free adversarial eval fixtures
         run: |
-          npm test -w @arnilo/prism-coding-tools -- --test-name-pattern "adversarial"
-          npm test -w @arnilo/prism-web-tools -- --test-name-pattern "adversarial"
+          bun run --filter @arnilo/prism-coding-tools test -- --test-name-pattern "adversarial"
+          bun run --filter @arnilo/prism-web-tools test -- --test-name-pattern "adversarial"
       - name: sandbox isolation + egress denial legs (network-free)
         run: |
-          npm test -w @arnilo/prism-coding-tools -- --test-name-pattern "egress|dns pin"
-          npm test -w @arnilo/prism-web-tools -- --test-name-pattern "browser Task 6 policy"
+          bun run --filter @arnilo/prism-coding-tools test -- --test-name-pattern "egress|dns pin"
+          bun run --filter @arnilo/prism-web-tools test -- --test-name-pattern "browser Task 6 policy"
       - name: protected Docker sandbox matrix
         if: ${{ vars.PRISM_TEST_DOCKER_IMAGE != '' }}
         timeout-minutes: 5
@@ -57,21 +54,22 @@ jobs:
           PRISM_TEST_DOCKER_BIN: /usr/bin/docker
           PRISM_TEST_DOCKER_IMAGE: ${{ vars.PRISM_TEST_DOCKER_IMAGE }}
           PRISM_TEST_DOCKER_USER: ${{ vars.PRISM_TEST_DOCKER_USER }}
-        run: npm test -w @arnilo/prism-coding-tools -- --test-name-pattern "protected Docker"
+        run: bun run --filter @arnilo/prism-coding-tools test -- --test-name-pattern "protected Docker"
       - name: native sandbox capability evidence (plan 020 Task 5)
         timeout-minutes: 5
         run: |
           set +e
-          out=$(npm test -w @arnilo/prism-coding-tools 2>&1)
+          out=$(bun run --filter @arnilo/prism-coding-tools test -- --test-name-pattern "T9: native reports truthful capabilities" 2>&1)
           rc=$?
           set -e
           printf '%s' "$out" | grep "T9: native reports truthful capabilities" | tail -5
-          # Match the T9 line itself: node --test ignores --test-name-pattern after
-          # file args, so the full suite runs and unrelated skips must not count.
+          # Match the T9 line itself: the pattern filters the package suite to this one
+          # test, and Bun's reporter lists a filtered skip as "(skip) T9: …", so
+          # unrelated skips elsewhere in the suite must not count.
           t9=$(printf '%s' "$out" | grep "T9: native reports truthful capabilities" || true)
           if [ "$rc" -ne 0 ] || [ -z "$t9" ]; then
             echo "native_capability=failed" >> "$GITHUB_ENV"
-          elif printf '%s' "$t9" | grep -q "# SKIP"; then
+          elif printf '%s' "$t9" | grep -q "(skip) T9:"; then
             echo "native_capability=skipped" >> "$GITHUB_ENV"
           else
             echo "native_capability=passed" >> "$GITHUB_ENV"
@@ -98,13 +96,13 @@ jobs:
           key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('node_modules/playwright-core/package.json') }}
       - name: install Playwright chromium (host-pinned)
         if: ${{ vars.PRISM_ENABLE_PLAYWRIGHT_GATE == '1' }}
-        run: npx --no-install playwright-core install chromium
+        run: bunx --no-install playwright-core install chromium
       - name: protected Playwright browser matrix
         if: ${{ vars.PRISM_ENABLE_PLAYWRIGHT_GATE == '1' }}
         timeout-minutes: 5
         env:
           PRISM_LIVE_PLAYWRIGHT: "1"
-        run: npm run test:live -w @arnilo/prism-web-tools
+        run: bun run --filter @arnilo/prism-web-tools test:live
       - name: protected Obscura binary leg (plan 039)
         if: ${{ vars.PRISM_ENABLE_OBSCURA_GATE == '1' }}
         timeout-minutes: 5
@@ -112,8 +110,8 @@ jobs:
           PRISM_LIVE_OBSCURA: "1"
           PRISM_OBSCURA_BIN: ${{ vars.PRISM_OBSCURA_BIN }}
         run: |
-          npm test -w @arnilo/prism-web-tools -- --test-name-pattern "hostile|oversize|garbage|loopback|insecure"
-          npm run test:live -w @arnilo/prism-web-tools
+          bun run --filter @arnilo/prism-web-tools test -- --test-name-pattern "hostile|oversize|garbage|loopback|insecure"
+          bun run --filter @arnilo/prism-web-tools test:live
       - name: protected self-hosted draw.io leg (plan 053 Task 4)
         if: ${{ vars.PRISM_ENABLE_DRAWIO_GATE == '1' }}
         timeout-minutes: 5
@@ -124,14 +122,14 @@ jobs:
           # fails per its contract; the retired @arnilo/prism-diagrams package's
           # `test:drawio` script no longer exists. Plan 071 Task 4.
           PRISM_LIVE_FILTER: office/drawio-live
-        run: node scripts/live-matrix.mjs
+        run: bun scripts/live-matrix.mjs
       - name: benchmark schema (network-free)
         env:
           PRISM_BENCH_ITERATIONS: "10"
-        run: node --test scripts/benchmark.test.mjs
+        run: bun test --timeout=0 scripts/benchmark.test.mjs
       - name: unused-code sweep (non-blocking report, plan 015 Task 3)
         continue-on-error: true
-        run: npm run sweep:unused
+        run: bun run sweep:unused
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         if: always()
         with:
@@ -142,7 +140,7 @@ jobs:
       - name: write redacted aggregate evidence
         if: always()
         run: |
-          node -e 'const fs=require("fs"); fs.writeFileSync("sandbox-browser-report.json", JSON.stringify({generatedAt:new Date().toISOString(), docker:Boolean(process.env.PRISM_TEST_DOCKER_IMAGE), dockerEvidence:Boolean(process.env.PRISM_TEST_DOCKER_IMAGE), nativeCapability:process.env.NATIVE_CAPABILITY || "unset", capabilities:true, playwright:process.env.PRISM_ENABLE_PLAYWRIGHT_GATE==="1", obscura:process.env.PRISM_ENABLE_OBSCURA_GATE==="1", network:false, credentials:false}, null, 2))'
+          bun -e 'const fs=require("fs"); fs.writeFileSync("sandbox-browser-report.json", JSON.stringify({generatedAt:new Date().toISOString(), docker:Boolean(process.env.PRISM_TEST_DOCKER_IMAGE), dockerEvidence:Boolean(process.env.PRISM_TEST_DOCKER_IMAGE), nativeCapability:process.env.NATIVE_CAPABILITY || "unset", capabilities:true, playwright:process.env.PRISM_ENABLE_PLAYWRIGHT_GATE==="1", obscura:process.env.PRISM_ENABLE_OBSCURA_GATE==="1", network:false, credentials:false}, null, 2))'
         env:
           PRISM_TEST_DOCKER_IMAGE: ${{ vars.PRISM_TEST_DOCKER_IMAGE }}
           PRISM_ENABLE_PLAYWRIGHT_GATE: ${{ vars.PRISM_ENABLE_PLAYWRIGHT_GATE }}

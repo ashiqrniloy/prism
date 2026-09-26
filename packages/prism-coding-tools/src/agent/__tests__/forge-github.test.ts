@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createServer, type IncomingMessage, type Server } from "node:http";
-import { test } from "node:test";
+import { test } from "bun:test";
 import type { ExecutionPolicy } from "@arnilo/prism";
 import { createMemoryToolEffectStore } from "@arnilo/prism";
 import { createGitHubForge, ForgeError } from "../forge/index.js";

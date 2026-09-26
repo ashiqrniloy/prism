@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { Readable, Writable } from "node:stream";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { InstructionInjector, ProviderRequest } from "../contracts.js";
 import { createAgent, createContributionRegistry, createMockProvider } from "../index.js";
 import { runRpcServer } from "../rpc.js";

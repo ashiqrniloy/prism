@@ -7,7 +7,7 @@
  * `createPrismAcpAgent` + SDK in-process transport; the client answers fs and
  * terminal methods from memory, so nothing leaves the process.
  *
- * Usage: node scripts/benchmark.mjs --scenario phase10-acp
+ * Usage: bun scripts/benchmark.mjs --scenario phase10-acp
  */
 import { performance } from "node:perf_hooks";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";

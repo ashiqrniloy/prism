@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { ModerationError, type ModerationResult } from "@arnilo/prism";
 import { runModerationConformance } from "@arnilo/prism/testing/provider-conformance";
 import { createOpenAIModerationProvider, OPENAI_MODERATION_DEFAULT_MODEL, OPENAI_MODERATION_INPUT_MAX_CHARS } from "../index.js";

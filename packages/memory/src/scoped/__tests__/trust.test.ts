@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { MemoryLimitError, MemoryValidationError } from "../../errors.js";
 import { readFabricBlock } from "../../fabric/blocks.js";
 import { createMemoryFabric } from "../../fabric/index.js";

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { generateWorkbookSync } from "@office-open/xlsx";
 import {
   HARD_MAX_COLUMNS,

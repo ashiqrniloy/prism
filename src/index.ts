@@ -426,6 +426,16 @@ export {
   runFeedbackPageLimit,
 } from "./feedback.js";
 export type {
+  FieldEvidenceContext,
+  FieldEvidenceGuardrailOptions,
+  FieldEvidenceNormalizer,
+  FieldEvidenceRecord,
+  FieldEvidenceSource,
+  FieldEvidenceViolation,
+  FieldProvenanceClaim,
+} from "./field-evidence.js";
+export { createFieldEvidenceGuardrail } from "./field-evidence.js";
+export type {
   ApplyFieldPolicyOptions,
   AuditFieldRedaction,
   AuditFieldRedactorLike,
@@ -811,5 +821,5 @@ export {
 } from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.11.1";
+export const version = "0.12.0";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";

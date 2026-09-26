@@ -6,6 +6,8 @@
 
 The package registers provider `typesafe`, models `jev-latest` and `jev-preview`, and an `api_key` auth method through `createExtensionKernel().load([...])`. Versioned pins (`jev-1.13.0`) go through `defineTypeSafeModel`.
 
+For raw probabilities, confidence, and the actual responding checkpoint instead of rendered JSON, use the shared [`decisions`](decisions.md) subpath (re-exported from this package); the adapter deliberately does not copy those values onto events.
+
 ## When to use it
 
 Use it when a host wants a hosted yes/no, pick-one, or rubric decision and already has a JSON object schema. Do not use it as a general chat model, a tool-calling agent, or a streaming text model.
@@ -75,7 +77,7 @@ Curated models declare `capabilities: { input: ["text"], output: ["text"], tools
 | `done` | `stopReason: "end_turn"`, same usage when present. |
 | `error` | Terminal event for gate failures, HTTP failures, and render failures. `401` is not retried. `422` is not retried and the message includes the API field detail. `429` and `5xx` (including `529`) retry, honoring `Retry-After`. |
 
-Booleans come from noul vs `boolean_threshold`. Enums come from the choice string (whole-number options stay numbers). Rubric integers are `Math.round` of the score, half rounds up, clamped to the rubric. Nested objects are reassembled from dotted ids. Confidence, probabilities, and score distributions are not copied onto events; the text must stay schema-valid.
+Booleans come from noul vs `boolean_threshold`. Enums come from the choice string (whole-number options stay numbers). Rubric integers are `Math.round` of the score, half rounds up, clamped to the rubric. Nested objects are reassembled from dotted ids. Confidence, probabilities, and score distributions are not copied onto events; the text must stay schema-valid. Success bodies are validated before output: malformed answer types, missing/non-finite numeric values, probabilities outside `0..1`, and invalid token counts produce an error rather than a coerced decision. Finite rubric scores still round and clamp as described above.
 
 ## Request/response example
 
@@ -133,12 +135,13 @@ A request must carry `options.structuredOutput`. The answer arrives as one text 
 ## Security and performance notes
 
 - **Egress.** State text and compiled questions leave the process for TypeSafe's hosted API (`https://api.typesafe.ai` unless `baseUrl` overrides it). Do not put secrets in the state.
-- **Credentials.** The bearer token is resolved at the provider edge and redacted from error events. It is never logged.
+- **Credentials.** The bearer token is resolved once per request under the provider id; that same value is used for transport and error redaction. It is never logged.
 - **Cost and latency.** One `POST /v1/systemone` round trip per structured-output request. Questions are free in parallel; state tokens are the cost. Output tokens are not billed (`output: 0`). There is no streaming and no second hop for model discovery.
 - **Fail closed.** Missing schema, tools, an out-of-range threshold, and unsupported fields fail before fetch.
 
 ## Related APIs
 
+- [System One decisions](decisions.md): raw typed decision calls over the same wire, with probabilities, confidence, actual model, usage, and timing.
 - [Laya](laya.md): same wire and schema mapping against a self-hosted `laya-serve`.
 - [Structured output](../structured-output.md): `options.structuredOutput` contract this adapter requires.
 - [Provider packages](../provider-packages.md): registration and auth-method shape.

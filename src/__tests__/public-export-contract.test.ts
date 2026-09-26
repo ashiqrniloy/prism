@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -91,6 +91,7 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "checkCitationIntegrity",
   "citationBindingDigest",
   "createClaimGroundingGuardrail",
+  "createFieldEvidenceGuardrail",
   "HARD_CITATION_EXCERPT_BYTES",
   "DEFAULT_DEVICE_MAX_CHUNK_BYTES",
   "DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS",
@@ -671,6 +672,13 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "ClaimGroundingEvidenceExtractor",
   "ClaimGroundingEvidenceExtractorContext",
   "ClaimGroundingGuardrailOptions",
+  "FieldEvidenceContext",
+  "FieldEvidenceGuardrailOptions",
+  "FieldEvidenceNormalizer",
+  "FieldEvidenceRecord",
+  "FieldEvidenceSource",
+  "FieldEvidenceViolation",
+  "FieldProvenanceClaim",
   "ArtifactDecisionState",
   "ArtifactDeliveryToken",
   "ArtifactRecord",

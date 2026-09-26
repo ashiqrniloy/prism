@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createHashEmbedder, createMemoryVectorStore, type MemoryVectorHit, type VectorStore } from "../index.js";
 import {
   chunkText,

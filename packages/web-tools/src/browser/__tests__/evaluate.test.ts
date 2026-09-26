@@ -3,7 +3,7 @@
  * Fakes-based: no real browser; policy gating via the side-effect hook.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { boundedJson, evaluateInPage } from "../evaluate.js";
 import { BrowserError, createBrowserManager, createBrowserTools } from "../index.js";
 import { FakeBrowser, FakeCdpSession } from "./fake-playwright.js";

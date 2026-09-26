@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 
 const apiKey = process.env.PRISM_TEST_E2B_API_KEY;
 
-describe("e2b sandbox live", { skip: apiKey ? false : "set PRISM_TEST_E2B_API_KEY to probe a real E2B sandbox" }, () => {
+describe.skipIf(!apiKey)("e2b sandbox live", () => {
   it("creates, execs, pauses filesystem-only, and deletes", async () => {
     const { connectE2BSandbox, createE2BSandbox } = await import("../e2b-sandbox.js");
     const sandbox = await createE2BSandbox({

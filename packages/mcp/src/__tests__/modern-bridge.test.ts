@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createServer, type Server as HttpServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it } from "bun:test";
 import { Client, type Transport } from "@modelcontextprotocol/client";
 import {
   acceptedContent,

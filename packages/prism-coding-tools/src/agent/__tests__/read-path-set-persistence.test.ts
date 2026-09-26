@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { createMemoryCheckpointStore } from "@arnilo/prism";
 import { createReadPathSet, createReadPathSetPersistence, READ_PATH_SET_NAMESPACE } from "../read-path-set.js";
 

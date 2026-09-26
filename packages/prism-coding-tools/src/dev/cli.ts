@@ -53,8 +53,8 @@ function resolveScaffoldAgent(cwd: string, stderr: Writable): Promise<Agent | un
       // Missing entry → not built yet; anything else → the scaffold's own deps.
       stderr.write(
         existsSync(entry)
-          ? `prism dev: cannot load ${entry} — missing dependency in the scaffold (run npm install).\n  ${cause.split("\n")[0]}\n`
-          : `prism dev: cannot load ${entry} — build the project first (npm run build), then re-run prism dev.\n`,
+          ? `prism dev: cannot load ${entry} — missing dependency in the scaffold (run bun install).\n  ${cause.split("\n")[0]}\n`
+          : `prism dev: cannot load ${entry} — build the project first (bun run build), then re-run prism dev.\n`,
       );
       return undefined;
     },

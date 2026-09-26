@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { CacheControlledMessage, JsonObject, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "../anthropic-messages.js";
 

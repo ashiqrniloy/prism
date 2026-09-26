@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { ImageGenerationError } from "@arnilo/prism";
 import { runImageGenerationConformance } from "@arnilo/prism/testing/provider-conformance";
 import { createOpenAIImageGenerationProvider, OPENAI_IMAGE_MAX_COUNT, OPENAI_IMAGE_PROMPT_MAX_CHARS } from "../index.js";

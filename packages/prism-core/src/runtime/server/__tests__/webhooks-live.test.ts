@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createSecretRedactor } from "@arnilo/prism";
 import { createWebhookNotifier, signWebhookBody } from "../webhooks.js";
 
@@ -47,7 +47,7 @@ function verifySignature(rawBody: string, header: string | undefined): boolean {
 }
 
 describe("@arnilo/prism-core runtime/server/webhooks live tests", () => {
-  it("live_signed_delivery_reaches_operator_receiver", { skip }, async () => {
+  it.skipIf(Boolean(skip))("live_signed_delivery_reaches_operator_receiver", async () => {
     const notifier = createWebhookNotifier({ targets: [{ url: TARGET_URL!, events: ["run.completed"] }], signer, redactor });
     notifier.notify({ event: "run.completed", runId: "live-webhook-probe", status: "completed", timestamp: new Date().toISOString() });
     await waitForDelivered(notifier, 1);
@@ -56,7 +56,7 @@ describe("@arnilo/prism-core runtime/server/webhooks live tests", () => {
     assert.ok(!JSON.stringify(diagnostics).includes(SECRET), "diagnostics must never carry the signing secret");
   });
 
-  it("live_retries_after_5xx_and_verifies_signature_over_loopback", { skip: skip || false }, async () => {
+  it.skipIf(Boolean(skip))("live_retries_after_5xx_and_verifies_signature_over_loopback", async () => {
     const seen: { raw: string; signature?: string }[] = [];
     let mode500 = true;
     const server: Server = createServer((request: IncomingMessage, response: ServerResponse) => {

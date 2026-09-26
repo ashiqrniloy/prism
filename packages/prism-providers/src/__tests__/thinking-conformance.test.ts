@@ -7,7 +7,7 @@
  * an illegal value must always land on a legal wire field for the family.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { JsonObject, ModelConfig } from "@arnilo/prism";
 import { applyThinkingLevelForModel, type ProviderRequest, type ProviderRequestOptions, THINKING_LEVELS } from "@arnilo/prism";
 import { anthropicMessagesBody, anthropicModels } from "../anthropic/index.js";

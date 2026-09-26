@@ -28,7 +28,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { AGENT_RUN_STATE_NAMESPACE, AgentRunError, createAgent } from "@arnilo/prism";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -58,10 +58,11 @@ describe("phase23 security conformance (plan 023 Task 5, built public entrypoint
   it("T1 [matrix item 4]: concurrent emit builds plus an importer never observe partial dist", async () => {
     blockerIds.add("matrix-4-build-race");
     for (let round = 1; round <= 2; round += 1) {
-      // npm run build:core resolves node_modules/.bin for the tsc leaf (phase23-build-race precedent)
+      // bun run build:core resolves node_modules/.bin for the tsc leaf (phase23-build-race precedent);
+      // plan 124 Task 2 runs it through `bun run`, which resolves the same bin.
       const [build, importer] = await Promise.all([
-        Promise.resolve().then(() => spawn("npm", ["run", "build:core"])),
-        Promise.resolve().then(() => spawn("node", [LOCK, "node", "--test", IMPORTER])),
+        Promise.resolve().then(() => spawn("bun", ["run", "build:core"])),
+        Promise.resolve().then(() => spawn("bun", [LOCK, "bun", "test", "--timeout=0", IMPORTER])),
       ]);
       assert.equal(build.status, 0, `emit round ${round} failed:\n${build.stdout}\n${build.stderr}`);
       assert.equal(
@@ -75,7 +76,7 @@ describe("phase23 security conformance (plan 023 Task 5, built public entrypoint
 
   it("T2 [matrix item 12]: workspace coverage excludes imported core dist and records protected skips", () => {
     blockerIds.add("matrix-12-coverage-denominator");
-    // Fast path: the same-run artifact from npm run test:coverage (CI runs
+    // Fast path: the same-run artifact from bun run test:coverage (CI runs
     // threat-suites after test:coverage). Fallback: produce one with permissive
     // thresholds so the assertion runs self-contained without the gate's files.
     let artifact = null;
@@ -98,7 +99,7 @@ describe("phase23 security conformance (plan 023 Task 5, built public entrypoint
             packages: Object.fromEntries(Object.entries(real.packages).map(([name, value]) => [name, { ...value, lines: 0 }])),
           }),
         );
-        const result = spawn("node", [SUMMARY], {
+        const result = spawn("bun", [SUMMARY], {
           env: { PRISM_COVERAGE_THRESHOLDS: thresholds, PRISM_COVERAGE_ARTIFACT: join(tmp, "artifact.json") },
         });
         assert.equal(result.status, 0, `coverage-summary failed:\n${result.stdout}\n${result.stderr}`);

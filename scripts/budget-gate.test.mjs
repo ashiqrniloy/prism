@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import {
   assertAll,
   checkCeiling,
@@ -25,7 +25,7 @@ import {
 } from "./budget-gates.mjs";
 import { packedFilePaths } from "./release-gates.mjs";
 
-// Fast performance-budget gate (plan 079, Task 8). Runs in `npm test`: gates the
+// Fast performance-budget gate (plan 079, Task 8). Runs in `bun run test`: gates the
 // deterministic root artifact size and a non-flaky startup bound against
 // scripts/budgets.json. The six benchmark medians are gated by the release
 // evidence runner scripts/benchmark.mjs (timing is machine-dependent).
@@ -33,7 +33,7 @@ import { packedFilePaths } from "./release-gates.mjs";
 // Plan 071 Task 3 (plan 070 FA 4): the startup bound is a *ratio* — import wall
 // time over an empty-process start measured on the same machine in the same run —
 // because external CPU load inflates both numbers together (measured: ratio
-// 3.45-4.05 while a full `npm test` ran concurrently and up to 7.2 with 40
+// 3.45-4.05 while a full `bun run test` ran concurrently and up to 7.2 with 40
 // competing processes, against 3.3 idle, while the absolute import went 60ms ->
 // 258ms). The absolute ceiling in budgets.json is the tight bound off load and the
 // evidence-of-record bound (scripts/benchmark.mjs) either way.
@@ -311,12 +311,13 @@ describe("performance budget gate", () => {
       // 750, not 800: Date.now() is millisecond-granular while the sample uses
       // hrtime, so the planted loop can exit a fraction of a millisecond early.
       assert.ok(importMs >= 750, `planted import must measure its own delay, got ${importMs}ms`);
-      // Denominator floor: an empty node start measured 17-19ms idle here and cannot
-      // realistically go below 20ms anywhere, so importMs/20 is an *upper* bound on
+      // Denominator floor: an empty Bun start measured 2.50-7.20ms here (plan 124
+      // Task 4; Node's 17-19ms floor is in plan 071's task text) and cannot
+      // realistically go below 2ms anywhere, so importMs/2 is an *upper* bound on
       // the real ratio — the control stays deterministic whatever the load is, and it
       // is judged against the widest ceiling the gate could apply.
       const ceiling = selectStartupRatioCeiling(budgets.startup, true);
-      const check = checkCeiling("startup ratio", importMs / 20, ceiling);
+      const check = checkCeiling("startup ratio", importMs / 2, ceiling);
       assert.equal(
         check.ok,
         false,

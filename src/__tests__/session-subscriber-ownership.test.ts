@@ -9,7 +9,7 @@
  * cannot park the consumer.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { RuntimeAgentSession } from "../agent-session/session.js";
 import {
   type AgentEvent,

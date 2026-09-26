@@ -19,6 +19,7 @@ export interface WorkflowGraphNode {
   readonly metadata?: Readonly<Record<string, string | number | boolean>>;
   readonly nestedWorkflowId?: string;
   readonly loop?: { readonly maxIterations: number };
+  readonly activation?: "all" | "any";
 }
 
 export interface WorkflowGraphEdge {
@@ -34,6 +35,7 @@ export interface WorkflowGraphView {
   readonly definitionHash: string;
   readonly nodes: readonly WorkflowGraphNode[];
   readonly edges: readonly WorkflowGraphEdge[];
+  readonly limits?: { readonly maxSupersteps?: number };
 }
 
 // ─── Graph Run Overlay Types (R-G3) ───────────────────────────────────────────
@@ -126,6 +128,7 @@ export function serializeWorkflowGraph(workflow: WorkflowDefinition): WorkflowGr
       ...(metadata ? { metadata } : {}),
       ...(node.kind === "workflow" && node.workflow?.id ? { nestedWorkflowId: node.workflow.id } : {}),
       ...(node.kind === "loop" && typeof node.maxIterations === "number" ? { loop: { maxIterations: node.maxIterations } } : {}),
+      ...(node.activation ? { activation: node.activation } : {}),
     };
     return Object.freeze(graphNode);
   });
@@ -159,6 +162,7 @@ export function serializeWorkflowGraph(workflow: WorkflowDefinition): WorkflowGr
     definitionHash: hashWorkflowDefinition(workflow),
     nodes: Object.freeze(nodes),
     edges: Object.freeze(edges),
+    ...(workflow.limits?.maxSupersteps !== undefined ? { limits: { maxSupersteps: workflow.limits.maxSupersteps } } : {}),
   });
 }
 

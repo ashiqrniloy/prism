@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createGoogleDriveConnector } from "../connectors/google-drive.js";
 import { RagSyncCursorError, RagSyncThrottleError } from "../errors.js";
 

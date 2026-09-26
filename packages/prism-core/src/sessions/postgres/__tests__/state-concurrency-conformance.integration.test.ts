@@ -4,7 +4,7 @@
 // PRISM_TEST_POSTGRES_URL).
 
 import { randomUUID } from "node:crypto";
-import { after, describe, it } from "node:test";
+import { afterAll as after, describe, it } from "bun:test";
 import { assertStateConcurrencyConforms } from "@arnilo/prism/testing/state-concurrency-conformance";
 import { Pool } from "pg";
 import { createPostgresPersistence } from "../persistence.js";

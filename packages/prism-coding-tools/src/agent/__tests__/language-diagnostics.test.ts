@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { diagnosticDelta, type NormalizedDiagnostic, normalizeDiagnostics } from "../diagnostics.js";
 import { createLanguageIntelligence, LanguageIntelligenceError } from "../language/intelligence.js";

@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 
 const enabled = process.env.PRISM_TEST_WORK_SANDBOX === "1";
 const docker = process.env.PRISM_TEST_DOCKER_BIN ?? "/usr/bin/docker";
 const context = join(dirname(fileURLToPath(import.meta.url)), "../packages/prism-work");
 
-describe("work sandbox image", { skip: !enabled }, () => {
+describe.skipIf(!enabled)("work sandbox image", () => {
   it("installs python office libs, soffice, and pdftoppm", () => {
     const build = spawnSync(docker, ["build", "-f", join(context, "sandbox/Dockerfile"), "-t", "prism-work-sandbox:test", context], {
       encoding: "utf8",

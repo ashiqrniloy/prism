@@ -119,14 +119,16 @@ const liveAgent = createAgent({
 const session = liveAgent.createSession();
 const folder = createTimelineFolder({ content: "metadata" });
 
-const [agentResult] = await Promise.all([
-  session.run("Stream events"),
-  (async () => {
-    for await (const event of session.subscribe()) {
-      folder.push(event);
-    }
-  })(),
-]);
+// Subscribe before starting the run: `session.run` emits `agent_started` before it returns, so a
+// subscriber attached afterwards misses the run identity (`timeline.runId` stays empty).
+const subscription = session.subscribe();
+const consume = (async () => {
+  for await (const event of subscription) {
+    folder.push(event);
+  }
+})();
+const agentResult = await session.run("Stream events");
+await consume;
 
 const liveTimeline = folder.snapshot();
 const liveSummary = summarizeTimeline(liveTimeline);

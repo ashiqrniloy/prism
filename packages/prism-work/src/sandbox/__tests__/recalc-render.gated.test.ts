@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { generateDocument, parseDocument, type DeckModel, type SheetModel } from "../../documents/index.js";
 
 const enabled = process.env.PRISM_TEST_WORK_SANDBOX === "1";
@@ -37,7 +37,7 @@ describe("in-process SheetModel does not evaluate formulas", () => {
   });
 });
 
-describe("work sandbox recalc and render", { skip: !enabled || !existsSync(docker) }, () => {
+describe.skipIf(!enabled || !existsSync(docker))("work sandbox recalc and render", () => {
   it("recalculates =SUM(1,2) to cached 3", async () => {
     ensureImage();
     const dir = workspace();

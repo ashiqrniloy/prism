@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "bun:test";
 import type { ToolDefinition, ToolEffectDeclaration, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import type { ConnectMcpToolsOptions, McpToolBridge } from "@arnilo/prism-mcp";
 import { isObscuraReadTool } from "../classify.js";

@@ -308,8 +308,8 @@ export async function runInitCommand(argv: readonly string[], runtime: InitRunti
         "",
         "Next:",
         `  cd ${shellQuote(displayPath(result.targetDir, runtime.cwd ?? process.cwd()))}`,
-        "  npm install",
-        "  npm test",
+        "  bun install",
+        "  bun test",
         "",
       ].join("\n"),
     );
@@ -596,8 +596,8 @@ function buildTokens(input: {
     : `# No API key required for the mock provider.\n# Switch providers with: prism init <dir> --provider openai --force\n`;
 
   const nextStepsLive = input.provider.envKey
-    ? `2. Copy \`.env.example\` to \`.env\` and set \`${input.provider.envKey}\`.\n3. Run \`npm start\` for a live provider call.`
-    : `2. Run \`npm start\` (mock provider; no network or credentials).`;
+    ? `2. Copy \`.env.example\` to \`.env\` and set \`${input.provider.envKey}\`.\n3. Run \`bun run start\` for a live provider call.`
+    : `2. Run \`bun run start\` (mock provider; no network or credentials).`;
 
   const optionalDocs = [
     ...(input.withWorkflows ? ["- `src/workflows-example.ts` — tiny DAG example using `@arnilo/prism-workflows`."] : []),

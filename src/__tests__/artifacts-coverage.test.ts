@@ -7,7 +7,7 @@
 // and the thread-scoped checkpoint key.
 
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "bun:test";
 import {
   ARTIFACT_BODY_ERROR_CODES,
   type ArtifactApproval,

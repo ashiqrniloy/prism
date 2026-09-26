@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { estimateMessageTokens, estimateTextTokens, type Message } from "../index.js";
 import { estimateTextTokensForFamily } from "../usage-estimation.js";
 

@@ -5,7 +5,7 @@ Unified provider family for Prism agents: all 19 first-party provider adapters a
 ## Install
 
 ```bash
-npm install @arnilo/prism @arnilo/prism-providers
+bun add @arnilo/prism @arnilo/prism-providers
 ```
 
 The required `@arnilo/prism` peer is the only dependency. The `/ai-sdk` adapter additionally uses `@ai-sdk/provider` as an optional peer (host-supplied).

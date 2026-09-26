@@ -25,8 +25,9 @@ import { boundNodeOutput, combineSignals, errorCode, errorMessage, isAbortError,
 import { cloneState, isWorkflowSuspension, persistCheckpoint } from "./checkpoint.js";
 import type { SchedulerState } from "./main.js";
 import { resolveMaxFanOut, resumeWorkflow, runWorkflow, suspend } from "./main.js";
-import { applyConditionalSkip, releaseSuccessors } from "./skip.js";
+import { applyConditionalSkip, applyRouteSkip, releaseSuccessors } from "./skip.js";
 import { updateWorkflowState } from "./validation.js";
+import { createScopedState } from "../scoped.js";
 
 export async function runNode(
   state: SchedulerState,
@@ -47,15 +48,20 @@ export async function runNode(
       ...(iteration === nodeState.iteration! - 1 && nodeState.lastOutput !== undefined ? { output: nodeState.lastOutput } : {}),
     }));
   }
+  const isSupersteps = state.workflow.execution === "supersteps";
+  const iteration = isSupersteps ? (nodeState.iteration ?? 0) : undefined;
   nodeState.status = "running";
   emit({
     type: "node_started",
     workflowId: state.workflow.id,
     runId: state.runId,
     nodeId,
+    ...(iteration !== undefined ? { iteration } : {}),
     timestamp: nowIso(),
   });
-  await persistCheckpoint(state, options, emit);
+  if (!isSupersteps) {
+    await persistCheckpoint(state, options, emit);
+  }
 
   const retries = node.retries ?? 0;
   let attempt = 0;
@@ -65,6 +71,7 @@ export async function runNode(
     attempt += 1;
     nodeState.attempt = attempt;
     nodeState.stateVersionBefore ??= state.stateVersion;
+    nodeState.currentIterationStateVersionBefore = state.stateVersion;
     try {
       if (options.signal?.aborted) throw new WorkflowAbortError();
 
@@ -177,29 +184,7 @@ export async function runNode(
         redactor: options.redactor,
       });
 
-      nodeState.status = "succeeded";
-      nodeState.output = output;
-      nodeState.lastOutput = undefined;
-      nodeState.error = undefined;
-      if (result.sessionId) nodeState.sessionId = result.sessionId;
-      if (result.leafId) nodeState.leafId = result.leafId;
-      if (result.runId) nodeState.runId = result.runId;
-      state.outputs.set(nodeId, output);
-      state.completed.add(nodeId);
-
-      if (node.kind === "conditional") {
-        applyConditionalSkip(state, nodeId, Boolean(output), emit);
-      }
-
-      emit({
-        type: "node_finished",
-        workflowId: state.workflow.id,
-        runId: state.runId,
-        nodeId,
-        timestamp: nowIso(),
-      });
-      releaseSuccessors(state, nodeId, emit);
-      await persistCheckpoint(state, options, emit);
+      await onNodeSucceeded(state, nodeId, output, result, options, emit);
       return;
     } catch (error) {
       lastError = error;
@@ -241,6 +226,98 @@ export async function runNode(
   }
 
   throw lastError instanceof Error ? lastError : new WorkflowRuntimeError(errorMessage(lastError));
+}
+
+export async function onNodeSucceeded(
+  state: SchedulerState,
+  nodeId: string,
+  output: unknown,
+  result: { sessionId?: string; leafId?: string; runId?: string },
+  options: RunWorkflowOptions,
+  emit: (event: WorkflowEventInput) => void,
+): Promise<void> {
+  const node = state.workflow.nodes[nodeId];
+  const nodeState = state.nodes.get(nodeId);
+  if (!node || !nodeState) return;
+  const isSupersteps = state.workflow.execution === "supersteps";
+  const iteration = nodeState.iteration ?? 0;
+
+  nodeState.status = "succeeded";
+  nodeState.output = output;
+  nodeState.lastOutput = undefined;
+  nodeState.error = undefined;
+  if (result.sessionId) nodeState.sessionId = result.sessionId;
+  if (result.leafId) nodeState.leafId = result.leafId;
+  if (result.runId) nodeState.runId = result.runId;
+  state.outputs.set(nodeId, output);
+  state.completed.add(nodeId);
+
+  if (isSupersteps) {
+    if (node.kind !== "loop") {
+      const iterations = nodeState.iterations ?? [];
+      nodeState.iterations = iterations;
+      iterations.push({
+        schemaVersion: WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION,
+        iteration,
+        iterationId: workflowLoopIterationId(state.workflow.id, state.runId, nodeId, iteration, options.ownership?.tenantId),
+        done: false,
+        ...(output === undefined ? {} : { output }),
+        ...(nodeState.currentIterationStateVersionBefore !== undefined
+          ? { stateVersionBefore: nodeState.currentIterationStateVersionBefore }
+          : {}),
+      });
+      nodeState.iteration = iteration + 1;
+      nodeState.lastOutput = output;
+    }
+
+    emit({
+      type: "node_finished",
+      workflowId: state.workflow.id,
+      runId: state.runId,
+      nodeId,
+      iteration,
+      timestamp: nowIso(),
+    });
+
+    postSuperstepActivations(state, nodeId, node, output);
+  } else {
+    if (node.kind === "conditional") {
+      applyConditionalSkip(state, nodeId, Boolean(output), emit);
+    } else if (node.kind === "route") {
+      applyRouteSkip(state, nodeId, (output as readonly string[]) ?? [], emit);
+    }
+    emit({
+      type: "node_finished",
+      workflowId: state.workflow.id,
+      runId: state.runId,
+      nodeId,
+      timestamp: nowIso(),
+    });
+    releaseSuccessors(state, nodeId, emit);
+    await persistCheckpoint(state, options, emit);
+  }
+}
+
+function postSuperstepActivations(state: SchedulerState, nodeId: string, node: WorkflowNodeDefinition, output: unknown): void {
+  let targets: readonly string[];
+  if (node.kind === "route") {
+    targets = Array.isArray(output) ? (output as readonly string[]) : [];
+  } else if (node.kind === "conditional") {
+    const passed = Boolean(output);
+    const successors = state.successors.get(nodeId) ?? [];
+    targets = passed ? (node.then ?? successors) : (node.else ?? []);
+  } else {
+    targets = state.successors.get(nodeId) ?? [];
+  }
+
+  for (const target of targets) {
+    let pending = state.pendingActivations?.get(target);
+    if (!pending) {
+      pending = { from: new Set(), round: state.superstep ?? 0 };
+      state.pendingActivations?.set(target, pending);
+    }
+    pending.from.add(nodeId);
+  }
 }
 
 function createContext(state: SchedulerState, nodeId: string, options: RunWorkflowOptions, signal?: AbortSignal): WorkflowNodeContext {
@@ -323,6 +400,26 @@ async function executeNode(
       return { output: await node.execute(ctx) };
     case "conditional":
       return { output: await node.when(ctx) };
+    case "route": {
+      const selected = await node.select(ctx);
+      if (isWorkflowSuspension(selected)) return { output: selected };
+      if (!Array.isArray(selected)) {
+        throw new WorkflowRuntimeError(
+          `Route node "${ctx.nodeId}" select() must return an array of target node ids`,
+          "ERR_PRISM_WORKFLOW_ROUTE_TARGET",
+        );
+      }
+      const declaredSuccessors = new Set(state.successors.get(ctx.nodeId) ?? []);
+      for (const target of selected) {
+        if (typeof target !== "string" || !declaredSuccessors.has(target)) {
+          throw new WorkflowRuntimeError(
+            `Route node "${ctx.nodeId}" selected undeclared successor "${target}"`,
+            "ERR_PRISM_WORKFLOW_ROUTE_TARGET",
+          );
+        }
+      }
+      return { output: [...new Set(selected)] };
+    }
     case "fan_out": {
       const items = await node.items(ctx);
       const effectiveLimit = resolveMaxFanOut(state.workflow, node);
@@ -460,7 +557,7 @@ async function executeNode(
           options.nestedDepthLimit ?? DEFAULT_MAX_NESTED_DEPTH,
           state.workflow.limits?.maxNestedDepth ?? DEFAULT_MAX_NESTED_DEPTH,
         ),
-        initialState: cloneState(state.state),
+        initialState: node.scope ? createScopedState(state.state, node.scope) : cloneState(state.state),
         eventBus: bus,
         metadata: {
           ...options.metadata,
@@ -512,7 +609,11 @@ async function executeNode(
           }),
         };
       }
-      await ctx.updateState(result.state, { mode: "replace" });
+      if (node.scope) {
+        await ctx.updateState({ [node.scope]: result.state }, { mode: "merge" });
+      } else {
+        await ctx.updateState(result.state, { mode: "replace" });
+      }
       return { output: node.output ? await node.output(result, ctx) : result.outputs, runId: result.runId };
     }
     case "agent": {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it } from "bun:test";
 import { createSecretRedactor, createToolRegistry, dispatchToolCall } from "@arnilo/prism";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { McpServer } from "@modelcontextprotocol/server";
@@ -178,7 +178,7 @@ describe("attachMcpToolBridge", () => {
     await bridge.close();
   });
 
-  it("returns an attributable error when a remote call exceeds callTimeoutMs", { timeout: 5_000 }, async () => {
+  it("returns an attributable error when a remote call exceeds callTimeoutMs", async () => {
     const fixture = await createFixture([
       {
         name: "hang",
@@ -202,7 +202,7 @@ describe("attachMcpToolBridge", () => {
     assert.match(result.error.message, /timed out|abort/i);
     assert.equal(result.name, "mcp:hung:hang");
     await bridge.close();
-  });
+  }, 5_000);
 
   it("refreshes tool list after list_changed invalidates cache", async () => {
     const fixture = await createFixture([

@@ -63,6 +63,10 @@ exactly as it would during the run. `storage.*.kind` comes from the store's decl
 and is reduced to a plain token (`[a-z0-9_.-]`, ≤64 chars); anything URL-shaped is reported as `custom`, so a
 connection string can never reach a pinned artifact.
 
+`requestPolicies` lists agent-level policies followed by run-level policies, in execution order.
+Run policies extend the agent chain; even an empty run-level list does not remove agent policies.
+Policy names, not policy implementations or credentials, enter the snapshot.
+
 ## Example
 
 ```ts

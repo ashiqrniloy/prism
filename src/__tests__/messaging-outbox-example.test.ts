@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { test } from "node:test";
+import { test } from "bun:test";
 
 interface OutboxSummary {
   admission: string;
@@ -19,7 +19,9 @@ interface OutboxSummary {
 // the host transaction (BEGIN → append → COMMIT) before the reply reaches the transport, the
 // payload carries correlation ids only, and there is exactly one row per delivered reply.
 test("messaging_outbox_example_appends_a_correlation_row_before_the_handoff", () => {
-  const result = spawnSync(process.execPath, ["examples/messaging-outbox.ts"], { encoding: "utf8", timeout: 60_000 });
+  // The example imports bun:sqlite. The branch audit's parent is node, so process.execPath
+  // cannot run it. Spawn bun by name.
+  const result = spawnSync("bun", ["examples/messaging-outbox.ts"], { encoding: "utf8", timeout: 60_000 });
   assert.equal(result.status, 0, `messaging-outbox.ts exited ${result.status}\n${result.stderr}`);
 
   const summary = JSON.parse(result.stdout.trim().split("\n").at(-1) ?? "{}") as OutboxSummary;

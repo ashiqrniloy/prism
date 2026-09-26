@@ -3,7 +3,7 @@ import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
-import { after, before, describe, it } from "node:test";
+import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { parseCliArgs, runCli } from "../cli-runner.js";
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "../index.js";
 

@@ -10,7 +10,9 @@ import type {
 } from "@arnilo/prism";
 import { redactSecrets, resolveCredentialValue, resolveUseCaseModel, useCaseCredentialProviderId } from "@arnilo/prism";
 import { appendCustomEntry, type ObservationalMemoryAppendOptions } from "./append-custom.js";
+
 export type { ObservationalMemoryAppendOptions } from "./append-custom.js";
+
 import {
   eligibleObservationSources,
   eligibleObservationTokenCount,
@@ -18,8 +20,8 @@ import {
   unscannedEntries,
 } from "./coverage-helpers.js";
 import { activeObservations, foldObservationalMemoryLedger } from "./ledger.js";
-import { createWorkScopeController, foldWorkScopeMap, type WorkBindRef } from "./scopes.js";
 import { type MemoryWorkerLimitOptions, type ResolvedMemoryWorkerLimits, resolveMemoryWorkerLimits, truncateWorkerText } from "./limits.js";
+import { createWorkScopeController, foldWorkScopeMap, type WorkBindRef } from "./scopes.js";
 import {
   assertNoRemovedFlatKeys,
   type ObservationalMemorySettings,
@@ -79,11 +81,14 @@ export interface ObservationalMemoryFlushOptions {
   readonly fullReflectionRebuild?: boolean;
 }
 
+/** Why a flush did not run or did not complete. A successful pass has no `skipped` value. */
+export type ObservationalMemoryFlushSkipReason = "in_flight" | "run_active" | "passive" | "missing_model" | "missing_credentials" | "error";
+
 export interface ObservationalMemoryFlushResult {
   readonly observations: number;
   readonly reflections: number;
   readonly dropped: number;
-  readonly skipped?: string;
+  readonly skipped?: ObservationalMemoryFlushSkipReason;
 }
 
 export function createObservationalMemoryRuntime(options: ObservationalMemoryRuntimeOptions): ObservationalMemoryRuntime {

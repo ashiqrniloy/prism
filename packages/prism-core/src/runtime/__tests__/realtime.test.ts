@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { type RealtimeEvent, type RealtimeSession, resolveDevicePolicy, type ToolCallContent, type ToolResult } from "@arnilo/prism";
 import { defineScorer } from "../../governance/evals/scorer.js";
 import { createRealtimeVoiceBridge, type RealtimeVoiceSnapshot } from "../realtime.js";

@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { after, before, test } from "node:test";
+import { afterAll as after, beforeAll as before, test } from "bun:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -26,6 +26,7 @@ before(async () => {
   // Extract under a tmp dir inside the workspace root so packed files resolve
   // hoisted prod deps; removed in after().
   packedDir = mkdtempSync(join(ROOT, "node_modules", ".prism-work-packed-"));
+  // release-host registry toolchain — runner images ship Node; contributors never invoke npm
   const tgz = execFileSync("npm", ["pack", "-w", "@arnilo/prism-work", "--pack-destination", packedDir], {
     cwd: ROOT,
     encoding: "utf8",

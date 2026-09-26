@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { copyFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { after, before, describe, it } from "node:test";
+import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { createPackedConsumer, installedVersion, repoRoot, resolveFromConsumer } from "./fixtures/packed-consumer.mjs";
 
 const freeze = JSON.parse(readFileSync(join(repoRoot, "scripts/phase12-freeze-manifest.json"), "utf8"));
@@ -63,10 +63,10 @@ describe("packed-install enterprise journey", () => {
     assert.ok(!resolved.includes(repoRoot), "must not resolve into the workspace tree");
   });
 
-  it("completes the enterprise journey from packed public exports", (t) => {
+  it("completes the enterprise journey from packed public exports", () => {
     assert.equal(run.status, 0, run.stdout + run.stderr);
     const skipLine = run.stdout.split("\n").find((line) => line.startsWith("SKIP durable postgres leg:"));
-    if (skipLine) t.diagnostic(skipLine);
+    if (skipLine) console.log(skipLine);
     if (process.env.PRISM_TEST_POSTGRES_URL !== undefined && !consumerHasPg) {
       assert.ok(skipLine, "an ambient PRISM_TEST_POSTGRES_URL without a resolvable pg driver must be reported as a skipped durable leg");
     }

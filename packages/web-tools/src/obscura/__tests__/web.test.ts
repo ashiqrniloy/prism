@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "bun:test";
 import { DEFAULT_OBSCURA_SEARCH_PROFILE } from "../search-profile.js";
 import { createObscuraWebTools } from "../web.js";
 import { fakeObscuraCliPath } from "./fake-cli.js";

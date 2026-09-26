@@ -3,7 +3,7 @@ import { Buffer } from "node:buffer";
 import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import type { EditOperations } from "../edit.js";
 import { createEditTool } from "../edit.js";

@@ -23,7 +23,7 @@ Observational memory composes four independent layers for long sessions (Mastra-
 
 The opt-in work-scope index filters the observation and reflection layers for a host-selected working set. It is not a fifth context layer, retrieval system, or session scope.
 
-Activation is explicit: `createObservationalMemory().attach()` coordinates post-run observe/reflect/drop and compaction — by default `context.compactAfterTokens`, or whatever host gate `trigger` / `shouldCompact` supplies. Import and extension `setup` start nothing. Recall, commands, and utilities fail closed on invalid ids, wrong `sessionId`, ambiguous tool input, or oversized pages. Pass `secrets` for exact-value redaction in render/recall/worker paths. Branch isolation: hosts supply current-branch `appendEntry` and `getEntries`; mismatched store/session pairs fail closed after append.
+Activation is explicit: `createObservationalMemory().attach()` coordinates post-run observe/reflect/drop and compaction — by default `context.compactAfterTokens`, or whatever host gate `trigger` / `shouldCompact` supplies. Import and extension `setup` start nothing. Recall, commands, and utilities fail closed on invalid ids, wrong `sessionId`, ambiguous tool input, or oversized pages. Pass `secrets` for exact-value redaction in render/recall/worker paths. Branch isolation: hosts supply current-branch `appendEntry` and `getEntries`; mismatched store/session pairs fail closed after append. Automatic compaction is coverage-safe: entries no observation pass covers are retained, or compaction is deferred — see the coverage-safe admission contract under Outputs for the details and prompt-sizing trade-off.
 
 See `examples/observational-memory-lifecycle.ts` for attach → turn → projection/recall/page without live credentials.
 
@@ -85,14 +85,14 @@ Key exports:
 | `buildObservationalMemoryContextBlocks()` | Render observational-memory + recent-messages context blocks for provider input. Same `invalidatedIds` option. |
 | `selectRecentMessageEntries()` / `renderRecentMessageWindow()` | Bounded exact recent-message suffix; count via `keepRecentEntries`, optional token trim via `estimateEntryTokens`. |
 | `createFoldedMemoryDetails()` | Create JSON details for compaction `data.memory`. |
-| `renderObservationalMemory()` | Render reflections and observations into a prepared memory summary. |
+| `renderObservationalMemory()` | Render reflections and observations into a prepared memory summary. `advertiseRecall: false` omits the recall-evidence instruction; an empty pool never advertises recall. |
 | `recallObservationalMemory()` | Recover source evidence for a known observation/reflection id from supplied current-branch entries. `invalidatedIds` withholds content (`reason: "revoked"`) without injecting derived text. |
 | `listInvalidatedIds()` (`@arnilo/prism-memory`) | Read the ids one exact scope currently withholds (`corrected` stays) and pass them as `invalidatedIds`, so blocks that rest on a source revoked mid-turn go stale on the next build. Empty for stores without lineage invalidation. |
 | `createObservationalMemoryDropHandler()` | The OM leg of `createDeletionPropagator`: folds the session ledger once and appends one `om.observations.dropped` entry naming every active observation whose id or `sourceEntryIds` intersect the tombstone set (`coversUpToId` omitted — a tombstone set is not a coverage position). Register with `{ session, appendEntry }`; pair it with `listInvalidatedIds()` for the read path. |
 | `recallObservationalMemoryBranchPage()` | Page eligible user/assistant/tool messages around a cursor entry id (`forward`/`backward`, optional `detail: summary|full`). |
 | `createMemoryId()` / `isMemoryId()` | Create/check 12-character ids. |
 | `resolveObservationalMemorySettings()` | Merge `observational-memory` settings with defaults and overrides. |
-| `createObservationalMemory()` / `attach()` | One activation wires post-run observe/reflect/drop and compaction (`compactAfterTokens`, or a host `trigger` / `shouldCompact`); returns proxied session, runtime, context provider, and strategy. |
+| `createObservationalMemory()` / `attach()` | One activation wires post-run observe/reflect/drop and coverage-safe compaction (`compactAfterTokens`, or a host `trigger` / `shouldCompact`); returns proxied session, runtime, context provider, and strategy. |
 | `createObservationalMemoryRuntime()` | Low-level explicit flush for advanced hosts or tests. |
 | `createObservationalMemoryCompactionStrategy()` | Render existing folded memory as a standard Prism compaction summary with `data.memory`. |
 | `createObservationalMemoryExtension()` | Inert extension helper that registers the strategy contribution unless disabled. |
@@ -101,6 +101,16 @@ Key exports:
 | `createObservationalMemoryCommands()` | Convenience factory returning status and view commands. |
 
 Pure utilities create no events, workers, tools, commands, credentials, or provider requests. `createObservationalMemoryExtension()` and import alone start nothing. `createObservationalMemory().attach()` runs workers only after proxied `run`/`prompt`/`stream`/`compact` complete (or after `wrapResumeRun` / `wrapResumeStream`). `createObservationalMemoryRuntime().flush()` remains for manual/advanced use. Attached `contextProvider` renders two blocks each turn: `observational-memory` (active reflections/observations aligned to the recent-message boundary) and `recent-messages` (last `keepRecentEntries` message entries in branch order, optionally trimmed by `recentMessageMaxTokens` using `estimateEntryTokens`; oldest dropped first). Compaction uses the same `keepRecentEntries` setting. Observer input includes only eligible `message` entries (`user`, `assistant`, `tool`); memory/compaction/bookkeeping entries advance `coversUpToId` scan coverage without entering the observer prompt. Successful observer/reflector runs append coverage markers even when they record zero facts. Reflection uses only active observations recorded after the last `om.reflections.recorded` entry unless `flush({ fullReflectionRebuild: true })`. Attached `flush()` skips with `run_active` while a proxied run is in flight. The compaction strategy is O(n) over supplied entries and makes no provider call.
+
+### Coverage-safe automatic compaction
+
+Automatic compaction admits only entries an observation pass covers. `flush()` returns a typed `skipped` reason (`run_active`, `passive`, `in_flight`, `missing_model`, `missing_credentials`, `error`) distinct from a successful pass, including one that records zero observations. The attach loop then behaves as:
+
+- Flush skipped or failed **and no `om.observations.recorded` coverage marker exists** — compaction is deferred: no compaction entry is written, so no message prefix is folded into a summary that does not cover it. `debug` receives `observational-memory:compaction-deferred` with the skip reason. A successful pass — even a zero-observation one — advances coverage and compacts normally, so "observer never ran" and "observer ran empty" stay distinguishable.
+- Flush skipped or failed **with partial coverage** — compaction runs, but the strategy adds every eligible message after the coverage cursor to `keepEntryIds`, so uncovered entries survive the next `rebuildSessionContext()` beside the summary. Fully covered sessions get exactly the previous recent-window behavior. Manual `session.compact()` keeps its explicit-host-action semantics and relies on the same retention.
+- Revocation still wins: an `om.observations.dropped` entry excludes an observation from the rendered summary and folded payload regardless of what admission retains.
+
+Sizing trade-off: retaining uncovered entries grows the next prompt by their tokens until an observer pass covers them. The existing `compactAfterTokens` / `trigger` gate still decides when compaction is attempted — it no longer bounds context when retention is active, but the uncovered set is bounded by what arrived since the last successful observation pass, and a deferred compaction writes nothing. Hosts that expose no recall capability pass `compaction: { advertiseRecall: false }` to `createObservationalMemory()` (or `advertiseRecall: false` to `renderObservationalMemory()` / `buildObservationalMemoryContextBlocks()`); an empty pool never advertises recall even with the flag on.
 
 ### Revocation wiring (plan 102 Tasks 2/8)
 

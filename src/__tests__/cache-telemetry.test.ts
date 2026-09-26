@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { ModelConfig, Usage } from "../index.js";
 import { CACHE_TELEMETRY_OVERFLOW_KEY, CacheTelemetryError, createCacheTelemetry } from "../index.js";
 

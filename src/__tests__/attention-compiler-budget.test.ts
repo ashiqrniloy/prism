@@ -4,7 +4,7 @@
  *  `examples/attention-budget-axes.ts` so the shipped example and this suite cannot drift. */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { resolveRunAttentionCompiler } from "../attention-compiler.js";
 import {
   type AgentEvent,

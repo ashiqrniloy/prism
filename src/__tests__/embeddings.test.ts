@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { EmbeddingsProvider, EmbeddingsResult } from "../contracts.js";
 import { assertEmbeddingsSupported, EmbeddingsError, modelSupportsEmbeddings } from "../contracts.js";
 import { runEmbeddingsConformance } from "../testing/provider-conformance.js";

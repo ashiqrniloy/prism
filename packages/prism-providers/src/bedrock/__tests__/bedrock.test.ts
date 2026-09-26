@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { JsonObject, ModelConfig } from "@arnilo/prism";
 import { assertAbortIsObserved, assertNoFetches, assertNoForeignCacheFields } from "@arnilo/prism/testing/provider-conformance";
 import { bedrockRuntimeEndpoint, createBedrockProvider, createBedrockProviderPackage, signAwsRequest } from "../index.js";

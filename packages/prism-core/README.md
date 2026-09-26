@@ -5,20 +5,19 @@ Unified core runtime, sessions, governance, credentials, and enterprise persiste
 ## Installation
 
 ```bash
-npm install @arnilo/prism @arnilo/prism-core
+bun add @arnilo/prism @arnilo/prism-core
 ```
 
-For persistence, install the required optional database driver peer:
+SQLite persistence uses the Bun runtime's built-in `bun:sqlite`. No package to install.
+
+For PostgreSQL, install the optional peer:
 
 ```bash
-# SQLite sessions & prompt storage
-npm install better-sqlite3
-
 # PostgreSQL sessions, enterprise persistence & prompt storage
-npm install pg
+bun add pg
 
 # NATS distributed event stream
-npm install @nats-io/jetstream @nats-io/transport-node
+bun add @nats-io/jetstream @nats-io/transport-node
 ```
 
 ## Subpath Imports
@@ -31,14 +30,14 @@ npm install @nats-io/jetstream @nats-io/transport-node
 
 ### Sessions
 - `@arnilo/prism-core/sessions/codecs`: Checkpoint, cursor, feedback, and search serialization codecs.
-- `@arnilo/prism-core/sessions/sqlite`: SQLite session store, leases, lifecycle, and schema migrations (`better-sqlite3` peer).
+- `@arnilo/prism-core/sessions/sqlite`: SQLite session store, leases, lifecycle, and schema migrations (`bun:sqlite`, built in).
 - `@arnilo/prism-core/sessions/postgres`: PostgreSQL session store, event source, and migrations (`pg` peer).
 - `@arnilo/prism-core/sessions/nats`: NATS JetStream distributed event source (`@nats-io/*` peer).
 
 ### Governance
 - `@arnilo/prism-core/governance/policy`: Capability admission, tool execution approvals, audit log exporter, and OPA evaluator.
 - `@arnilo/prism-core/governance/evals`: Offline evaluation runs, scorers, judges, threshold assertions, and trace curation.
-- `@arnilo/prism-core/governance/prompts`: Versioned prompt registry, promotion gating, rollback, and storage (`better-sqlite3` / `pg`).
+- `@arnilo/prism-core/governance/prompts`: Versioned prompt registry, promotion gating, rollback, and storage (`bun:sqlite` / `pg`).
 - `@arnilo/prism-core/governance/model-router`: Cost- and latency-aware model routing, token reservations, and failover.
 - `@arnilo/prism-core/governance/observability`: OpenTelemetry instrumentation and event tracing.
 

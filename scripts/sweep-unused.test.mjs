@@ -9,7 +9,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 
 const root = join(new URL(".", import.meta.url).pathname, "..");
 const run = (cmd, args, cwd = root) => spawnSync(cmd, args, { cwd, encoding: "utf8" });

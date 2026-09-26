@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "bun:test";
 import type { AgentIdentity, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { createConnectedAppSession } from "../index.js";
 import { McpBridgeError } from "../types.js";

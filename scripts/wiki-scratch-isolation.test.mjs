@@ -26,13 +26,14 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 
 const ROOT = join(import.meta.dirname, "..");
 const MEMORY = join(ROOT, "packages", "memory");
 const WIKI_SUITE_DIR = join(MEMORY, "dist", "wiki", "__tests__");
-// The glob is expanded by the child runner, so it must be relative to that cwd.
-const suiteGlob = (cwd) => `${relative(cwd, WIKI_SUITE_DIR).split("\\").join("/")}/*.test.js`;
+// The suite directory is passed as a directory argument, relative to that cwd: `bun test` receives
+// explicit paths (it does not expand globs itself), and a directory keeps the set cwd-scoped.
+const suiteDir = (cwd) => relative(cwd, WIKI_SUITE_DIR).split("\\").join("/");
 const FIXTURE_NAMES = [".manifest.json", "SCHEMA.md", "log.md"];
 const FIXTURE_DIR = join("packages", "memory", ".wiki");
 // Pre-isolation scratch locations: `join(process.cwd(), "dist/__tests__", …)`.
@@ -82,24 +83,19 @@ function detectPollution(repoRoot, cwd, body) {
 
 function runWikiSuites(cwd) {
   const label = cwd.slice(ROOT.length + 1) || ".";
-  // A nested `node --test` refuses to run ("skipping running files") while
-  // NODE_TEST_CONTEXT is inherited — it exits 0 with no output, so a gate that
-  // spawns the runner must strip it and assert a pass count afterwards. The child is
-  // `node` by name, never `process.execPath`: under a Bun parent that is a Bun child,
-  // and `bun --test` is a script run, not a test runner (plan 115 Task 3).
-  const result = spawnSync("node", ["--test", "--test-isolation=none", suiteGlob(cwd)], {
-    cwd,
-    encoding: "utf8",
-    env: { ...process.env, NODE_TEST_CONTEXT: undefined, NODE_TEST_WORKER_ID: undefined },
-  });
+  // Plan 124 Task 2 isolation verdict (docs/_evidence/phase124-bun-only-inventory.md §2): a plain
+  // sequential `bun test` runs every file in one process — the guarantee Node's isolation-off flag
+  // gave — and needs no NODE_TEST_* strip (Bun sets and reads neither; Task 1 §7).
+  const result = spawnSync("bun", ["test", "--timeout=0", suiteDir(cwd)], { cwd, encoding: "utf8" });
   const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
   assert.equal(result.status, 0, `wiki suites must pass with cwd=${label}:\n${output.slice(-4000)}`);
-  assert.match(output, /ℹ pass [1-9]/, `wiki suites reported no passing tests with cwd=${label}`);
+  assert.match(output, /\b[1-9]\d* pass\b/, `wiki suites reported no passing tests with cwd=${label}`);
 }
 
-test("nested wiki runner uses one process while retaining pollution checks", () => {
+test("nested wiki runner is one sequential Bun process while retaining pollution checks", () => {
   const source = readFileSync(join(ROOT, "scripts", "wiki-scratch-isolation.test.mjs"), "utf8");
-  assert.match(source, /\["--test", "--test-isolation=none", suiteGlob\(cwd\)\]/);
+  assert.match(source, /\["test", "--timeout=0", suiteDir\(cwd\)\]/);
+  assert.ok(!source.includes(`--${["test", "isolation"].join("-")}`), "the Node-only isolation flag is gone (plan 124 Task 2)");
 });
 
 test("wiki suites are hermetic: tracked fixtures and the repository root stay untouched", () => {

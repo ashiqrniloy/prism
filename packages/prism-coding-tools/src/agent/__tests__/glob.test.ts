@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { expandGlobBraces, matchGlobPattern, validateGlobPattern } from "../glob-match.js";
 import { createCodingTools, createGlobTool, createReadOnlyTools } from "../index.js";

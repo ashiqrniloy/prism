@@ -32,7 +32,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { workspacePackageCounts, workspaceShape } from "./package-truth.mjs";
 import { effectiveTestChain } from "./run-all-tests.mjs";
 

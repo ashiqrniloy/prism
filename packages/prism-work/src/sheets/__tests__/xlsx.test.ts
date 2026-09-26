@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { generateWorkbookSync } from "@office-open/xlsx";
 import { parseWorkbook, SheetsCapError, SheetsFormatError, SheetsValidationError } from "../index.js";
 import type { SheetsTelemetry, SheetsTelemetryAttributeValue, SheetsTelemetrySpan } from "../telemetry.js";

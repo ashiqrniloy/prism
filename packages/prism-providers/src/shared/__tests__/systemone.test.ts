@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import {
   DEFAULT_SYSTEMONE_MAX_RETRIES,
   isRetryableSystemOneStatus,
@@ -150,6 +150,23 @@ describe("@arnilo/prism-providers/shared (systemone)", () => {
       return true;
     });
     assert.equal(calls.length, 3, "bounded by maxRetries");
+  });
+
+  it("systemone_rejects_malformed_answers_and_usage_without_retry", async () => {
+    for (const response of [
+      { ...OK_RESPONSE, answers: { risky: { type: "noul" } } },
+      { ...OK_RESPONSE, answers: { risky: { type: "noul", noul: "0.9" } } },
+      { ...OK_RESPONSE, answers: { risky: { type: "noul", noul: 1.1 } } },
+      { ...OK_RESPONSE, answers: { risky: { type: "score", score: null } } },
+      { ...OK_RESPONSE, answers: { risky: { type: "choice", choice: 1 } } },
+      { ...OK_RESPONSE, usage: { input_tokens: -1 } },
+      { ...OK_RESPONSE, usage: { input_tokens: "96" } },
+      { ...OK_RESPONSE, usage: { input_tokens: 0.5 } },
+    ]) {
+      const { impl, calls } = fakeFetch(() => jsonResponse(response));
+      await assert.rejects(postSystemOne(BODY, options(impl)), { code: "response_body_shape" });
+      assert.equal(calls.length, 1);
+    }
   });
 
   it("systemone_already_aborted_signal_never_fetches", async () => {

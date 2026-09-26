@@ -6,7 +6,7 @@ Session storage, durable adapters, migrations, conversations, enterprise state.
 
 - [session-stores.md](../../../../docs/session-stores.md): `SessionStore` contract, branches, bounded search — start here.
 - [database-persistence.md](../../../../docs/database-persistence.md): contracts, checksummed migrations, retention, conformance harnesses.
-- [sqlite-persistence.md](../../../../docs/sqlite-persistence.md): `better-sqlite3` adapter.
+- [sqlite-persistence.md](../../../../docs/sqlite-persistence.md): `bun:sqlite` adapter.
 - [postgres-persistence.md](../../../../docs/postgres-persistence.md): pooled `pg` adapter, advisory-locked migrations.
 - [enterprise-postgres-state.md](../../../../docs/enterprise-postgres-state.md): governance/router/ERP state, outbox/inbox.
 - [conversations.md](../../../../docs/conversations.md): threads, version/CAS metadata, legal-hold deletion.

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createGoogleModelDiscovery, createOpenAiCompatibleModelDiscovery, runModelDiscoveryConformance } from "../index.js";
 
 const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
@@ -23,12 +23,12 @@ function createDiscovery() {
   return createGoogleModelDiscovery({ provider: "google", apiKey: () => GEMINI_KEY as string });
 }
 
-describe("@arnilo/prism-providers/model-discovery live tests", () => {
-  it("live_listing_conforms_over_real_provider_wire", { skip }, async () => {
+(skip ? describe.skip : describe)("@arnilo/prism-providers/model-discovery live tests", () => {
+  it("live_listing_conforms_over_real_provider_wire", async () => {
     await runModelDiscoveryConformance(createDiscovery);
   });
 
-  it("live_listing_returns_a_known_model_id", { skip }, async () => {
+  it("live_listing_returns_a_known_model_id", async () => {
     const { models } = await createDiscovery().listModels({ ttlMs: 0 });
     assert.ok(models.length > 0, "live listing returned no models");
   });

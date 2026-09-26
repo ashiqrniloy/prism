@@ -175,7 +175,7 @@ event onto the seams above — no Prism internals, `@arnilo/prism` as its only p
 runtime dependency. It compiles the five events marked *compiled* in the map.
 
 ```bash
-npm install @arnilo/prism @arnilo/prism-hooks
+bun add @arnilo/prism @arnilo/prism-hooks
 ```
 
 ```ts

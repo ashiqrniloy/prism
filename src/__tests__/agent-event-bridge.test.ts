@@ -4,7 +4,7 @@
  * lifecycle dispatches are one middleware call per session, not per turn.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AgentEvent, ExtensionEvent } from "../index.js";
 import {
   createAgent,

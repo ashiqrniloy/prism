@@ -28,7 +28,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { effectiveTestChain } from "./run-all-tests.mjs";
 
 const url = (path) => new URL(path, import.meta.url);

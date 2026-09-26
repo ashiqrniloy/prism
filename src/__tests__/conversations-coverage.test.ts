@@ -8,7 +8,7 @@
 // and marker serialization.
 
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "bun:test";
 import type { SessionRecord } from "../contracts.js";
 import {
   CONVERSATION_METADATA_KEY,

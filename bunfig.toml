@@ -1,6 +1,6 @@
 # Plan 113 Task 2: Bun is the contributor package manager.
-# Hoisted matches how npm consumers resolve optional native peers (better-sqlite3,
-# pg, @napi-rs/keyring); the isolated linker would change that resolution.
+# Hoisted matches how npm consumers resolve optional native peers (pg,
+# @napi-rs/keyring); the isolated linker would change that resolution.
 [install]
 linker = "hoisted"
 saveTextLockfile = true

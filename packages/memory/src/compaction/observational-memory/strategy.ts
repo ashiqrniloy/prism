@@ -6,7 +6,8 @@ import {
   redactSecrets,
   type SessionEntry,
 } from "@arnilo/prism";
-import { activeObservations, type ObservationalMemoryLedger } from "./ledger.js";
+import { eligibleObservationSources, unscannedEntries } from "./coverage-helpers.js";
+import { activeObservations, foldObservationalMemoryLedger, type ObservationalMemoryLedger } from "./ledger.js";
 import { boundMemoryPayload, HARD_MAX_FOLDED_PAYLOAD_BYTES } from "./memory-bounds.js";
 import { buildObservationalMemoryProjection, createFoldedMemoryDetails } from "./projection.js";
 import { DEFAULT_KEEP_RECENT_ENTRIES, selectRecentMessageEntryIds } from "./recent-messages.js";
@@ -20,6 +21,8 @@ export interface ObservationalMemoryCompactionStrategyOptions {
   readonly keepRecentEntries?: number;
   readonly observationsPoolMaxTokens?: number;
   readonly secrets?: readonly (string | undefined)[];
+  /** Render recall guidance in the summary only when the host exposes recall. Default `true`. */
+  readonly advertiseRecall?: boolean;
 }
 
 const DEFAULT_OBSERVATIONS_POOL_MAX_TOKENS = 20_000;
@@ -33,7 +36,7 @@ export function createObservationalMemoryCompactionStrategy(
     compact(context) {
       throwIfAborted(context.signal);
       const keepRecentEntries = Math.max(0, context.keepRecentEntries ?? options.keepRecentEntries ?? DEFAULT_KEEP_RECENT_ENTRIES);
-      const keepEntryIds = selectRecentMessageEntryIds(context.entries, keepRecentEntries);
+      const keepEntryIds = coverageAwareKeepEntryIds(context.entries, keepRecentEntries);
       const firstKeptEntryId = keepEntryIds[0];
       const firstKeptIndex = firstKeptEntryId
         ? context.entries.findIndex((entry) => entry.id === firstKeptEntryId)
@@ -72,6 +75,7 @@ export function createObservationalMemoryCompactionStrategy(
       const scoped = projectScopedMemory(context.entries, memory);
       const summary = renderObservationalMemory(scoped.reflections, scoped.observations, {
         secrets,
+        advertiseRecall: options.advertiseRecall,
         ...(scoped.outline.length ? { outline: scoped.outline } : {}),
       });
       const data: CompactionEntryData & { readonly memory: unknown } = {
@@ -88,6 +92,21 @@ export function createObservationalMemoryCompactionStrategy(
       } satisfies CompactionResult;
     },
   };
+}
+
+/**
+ * Keep recent messages plus every eligible message after the observation coverage cursor. A
+ * skipped or failed observer pass leaves the tail unscanned; retaining it keeps evidence out of a
+ * summary that does not cover it, so the next context rebuild cannot lose it silently. Fully
+ * covered sessions get exactly the previous recent-window behavior.
+ */
+function coverageAwareKeepEntryIds(entries: readonly SessionEntry[], keepRecentEntries: number): readonly string[] {
+  const recent = new Set(selectRecentMessageEntryIds(entries, keepRecentEntries));
+  const ledger = foldObservationalMemoryLedger(entries);
+  const uncovered = new Set(
+    eligibleObservationSources(unscannedEntries(entries, ledger.latestObservationCoverageId)).map((entry) => entry.id),
+  );
+  return entries.filter((entry) => recent.has(entry.id) || uncovered.has(entry.id)).map((entry) => entry.id);
 }
 
 /**

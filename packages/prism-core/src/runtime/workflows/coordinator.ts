@@ -17,6 +17,7 @@ import type {
   WorkflowDefinition,
   WorkflowNodeCheckpoint,
   WorkflowRunResult,
+  WorkflowRunStatus,
 } from "./types.js";
 import { combineSignals, createRunId, hashWorkflowDefinition, nowIso } from "./util.js";
 
@@ -103,6 +104,8 @@ export interface WorkflowAdmissionPolicy {
   /** List pages scanned per `pollOnce`. Default 4, hard 16. */
   readonly maxPagesPerPoll?: number;
   readonly onMetric?: (event: WorkflowAdmissionMetric) => void;
+  /** Run statuses polled for admission. Defaults to ["queued", "running"]. */
+  readonly statuses?: readonly WorkflowRunStatus[];
 }
 
 export interface WorkflowCoordinatorOptions {
@@ -166,10 +169,11 @@ export function createWorkflowCoordinator(options: WorkflowCoordinatorOptions): 
     let pages = 0;
     let wrapped = false;
     const origin = listCursor;
+    const statuses = admission.statuses ?? ["queued", "running"];
     while (pages < maxPagesPerPoll && active.size < maxConcurrentRuns) {
       const page = await options.checkpoints.list({
         ownership: options.ownership,
-        status: ["queued", "running"],
+        status: statuses as WorkflowRunStatus[],
         limit: pageSize,
         cursor: listCursor,
       });
@@ -207,7 +211,7 @@ export function createWorkflowCoordinator(options: WorkflowCoordinatorOptions): 
           metric("skipped_lease", className);
           continue;
         }
-        const job = executeClaim(record.workflowId, record.runId, lease, runOwnership)
+        const job = executeClaim(record.workflowId, record.runId, lease, runOwnership, record.version)
           .catch((error) => options.onError?.(error, { workflowId: record.workflowId, runId: record.runId }))
           .finally(() => active.delete(id));
         active.set(id, { tenant, class: className, job });
@@ -238,6 +242,7 @@ export function createWorkflowCoordinator(options: WorkflowCoordinatorOptions): 
     runId: string,
     lease: LeaseRecord,
     runOwnership: OwnershipScope | undefined,
+    checkpointVersion?: number,
   ): Promise<void> => {
     const workflow = typeof options.workflows === "function" ? await options.workflows(workflowId) : options.workflows[workflowId];
     if (!workflow) {
@@ -287,11 +292,20 @@ export function createWorkflowCoordinator(options: WorkflowCoordinatorOptions): 
       if (await options.checkpoints.isCancelRequested?.({ workflowId, runId, ownership: runOwnership })) {
         controller.abort(new WorkflowAbortError("Workflow cancellation requested"));
       }
+      const resumeOptions = options.runOptions?.resume
+        ? {
+            resume: {
+              ...options.runOptions.resume,
+              expectedVersion: options.runOptions.resume.expectedVersion ?? checkpointVersion,
+            },
+          }
+        : {};
       const result = await resumeWorkflow(
         workflow,
         { workflowId, runId },
         {
           ...options.runOptions,
+          ...resumeOptions,
           checkpoints: options.checkpoints,
           ownership: runOwnership,
           fencingToken: lease.fencingToken,

@@ -8,7 +8,7 @@
  * projection allow-list, capped at acpLocationsPerUpdate/acpDiffBytes.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import type { AgentSession } from "@arnilo/prism";
 import { createSecretRedactor } from "@arnilo/prism";

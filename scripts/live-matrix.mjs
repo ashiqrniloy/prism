@@ -6,9 +6,9 @@
  * This module loads + validates the manifest, resolves per-suite state against
  * the environment, and (Task 2) spawns the runnable suites with accounting:
  *
- *   node scripts/live-matrix.mjs --check          validate + per-suite skip/run table
- *   node scripts/live-matrix.mjs                  run what creds allow (npm run test:live)
- *   PRISM_LIVE_DRY_RUN=1 node scripts/live-matrix.mjs   accounting only, no spawns
+ *   bun scripts/live-matrix.mjs --check          validate + per-suite skip/run table
+ *   bun scripts/live-matrix.mjs                  run what creds allow (bun run test:live)
+ *   PRISM_LIVE_DRY_RUN=1 bun scripts/live-matrix.mjs   accounting only, no spawns
  *
  * Contracts encoded here:
  * - Skip, never fail: a suite whose required env vars are absent is skipped
@@ -95,8 +95,8 @@ export function validateMatrix(matrix, root = REPO_ROOT) {
       if (typeof suite.source !== "string" || !existsSync(join(root, suite.source))) {
         errors.push(`${label}: active suite source does not exist: ${suite.source}`);
       }
-      if (typeof suite.command !== "string" || !(suite.command.startsWith("node ") || suite.command.startsWith("npm run "))) {
-        errors.push(`${label}: command must be a node / npm run invocation`);
+      if (typeof suite.command !== "string" || !(suite.command.startsWith("bun ") || suite.command.startsWith("bun run "))) {
+        errors.push(`${label}: command must be a bun / bun run invocation (plan 124 Task 2)`);
       }
     } else {
       if (suite.plan !== "plans/064-E2E-Live-Test-Coverage-Matrix.md") {
@@ -265,7 +265,7 @@ export async function runLiveMatrix(opts) {
     dryRun: false,
     concurrency: 1,
     timeoutMs: 600_000,
-    build: "npm run build",
+    build: "bun run build",
     log: console.log,
     ...opts,
   };
@@ -397,7 +397,7 @@ function writeReport(root, report) {
 
 function usage() {
   console.log(
-    `usage: node scripts/live-matrix.mjs [--check]\n\n  --check            validate manifest + per-suite skip/run table (no spawns)\n  (default)          run active suites whose credentials are present; skip the rest\n\nenv:\n  PRISM_LIVE_ENV_FILE      credential file (default: scripts/live.env when present)\n  PRISM_LIVE_FILTER=<sub>  only suites whose id contains <sub>\n  PRISM_LIVE_STRICT=1      any skip fails the run\n  PRISM_LIVE_DRY_RUN=1     accounting only, no spawns\n  PRISM_LIVE_CONCURRENCY=n parallel suites (default 1, sequential)\n  PRISM_LIVE_SUITE_TIMEOUT_MS  per-suite kill timer (default 600000)`,
+    `usage: bun scripts/live-matrix.mjs [--check]\n\n  --check            validate manifest + per-suite skip/run table (no spawns)\n  (default)          run active suites whose credentials are present; skip the rest\n\nenv:\n  PRISM_LIVE_ENV_FILE      credential file (default: scripts/live.env when present)\n  PRISM_LIVE_FILTER=<sub>  only suites whose id contains <sub>\n  PRISM_LIVE_STRICT=1      any skip fails the run\n  PRISM_LIVE_DRY_RUN=1     accounting only, no spawns\n  PRISM_LIVE_CONCURRENCY=n parallel suites (default 1, sequential)\n  PRISM_LIVE_SUITE_TIMEOUT_MS  per-suite kill timer (default 600000)`,
   );
 }
 

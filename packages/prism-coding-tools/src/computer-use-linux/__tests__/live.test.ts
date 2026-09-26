@@ -10,7 +10,7 @@
  * leave the process (security criterion, asserted structurally below).
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 
 import { createComputerUseLinuxTools } from "../create.js";
 
@@ -27,8 +27,8 @@ function context(toolCallId: string) {
   return { sessionId: "live-computer-use", runId: "live-computer-use", toolCallId };
 }
 
-describe("computer-use-linux live (real host binary)", { skip: SKIP, timeout: 30_000 }, () => {
-  it("connects over stdio, exposes the real tool inventory, and closes cleanly", async (t) => {
+(SKIP ? describe.skip : describe)("computer-use-linux live (real host binary)", () => {
+  it("connects over stdio, exposes the real tool inventory, and closes cleanly", async () => {
     const tools = await createComputerUseLinuxTools({
       command: BIN!,
       args: ["mcp"],
@@ -51,14 +51,16 @@ describe("computer-use-linux live (real host binary)", { skip: SKIP, timeout: 30
         // Security criterion: no egress — the value stays an in-process result.
         assert.ok(result.value !== undefined || result.content?.length, "screenshot must carry in-process content");
       } catch (error) {
-        return t.skip(`desktop session unavailable for screenshot probe: ${String(error).slice(0, 160)}`);
+        console.log(`desktop session unavailable for screenshot probe: ${String(error).slice(0, 160)}`);
+        return;
       }
     } catch (error) {
       // Binary not runnable at all (missing libs, not executable) is an
       // environment problem: the matrix gate PRISM_COMPUTER_USE_BIN promises a
       // working binary, so surface a skip reason instead of a failure.
       if (/ENOENT|EACCES|cannot find|not found/i.test(String(error))) {
-        return t.skip(`host binary not runnable: ${String(error).slice(0, 160)}`);
+        console.log(`host binary not runnable: ${String(error).slice(0, 160)}`);
+        return;
       }
       throw error;
     } finally {

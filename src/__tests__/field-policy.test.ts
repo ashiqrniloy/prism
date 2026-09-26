@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, test } from "node:test";
+import { describe, test } from "bun:test";
 import type { AgentEvent, Message, ProviderRequest, SessionEntry } from "../contracts.js";
 import type { FieldPolicy } from "../field-policy.js";
 import {
@@ -337,6 +337,12 @@ const coverageActive = process.execArgv.some((a) => /^--test-coverage-(?:lines|f
     // Interleaved A/B measurement: each iteration runs BOTH phases back to back so
     // clock drift and background load affect both equally; the fastest of three
     // runs (least GC interference) decides the ratio.
+    // Plan 124 Task 4: re-measured under Bun 1.4.2 (2026-09-25, three back-to-back
+    // runs) at 85-92% of the redactor walk (same-session Node 65-75%), so the 110%
+    // cap stays. Under the branch audit's Node instrument the ratio is meaningless
+    // (more branches than the redactor walk): that run fails this assertion and the
+    // audit tolerates it as an instrumented timing assert — the uninstrumented root
+    // suite is where this budget is owned.
     const iterations = {
       prompt: 2000,
       toolArguments: 3000,

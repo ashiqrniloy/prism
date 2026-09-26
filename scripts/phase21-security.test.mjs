@@ -34,7 +34,7 @@
  */
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createCacheTelemetry, MediaContentError, pinnedFetch, pollDeviceCodeToken } from "@arnilo/prism";
 import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
 import { ProviderTransportError, readBoundedResponseJson } from "@arnilo/prism/providers/transport";

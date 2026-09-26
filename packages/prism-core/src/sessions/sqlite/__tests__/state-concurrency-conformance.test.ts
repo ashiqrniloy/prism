@@ -2,7 +2,7 @@
 // store is the harness's memory leg for conversation metadata (no core memory
 // appendSession exists); checkpoints run on the same instance.
 
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { assertStateConcurrencyConforms } from "@arnilo/prism/testing/state-concurrency-conformance";
 import { createSqlitePersistence } from "../persistence.js";
 

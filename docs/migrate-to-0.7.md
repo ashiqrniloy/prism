@@ -329,7 +329,7 @@ Additive. `@arnilo/prism-providers/bedrock` now ships a native route next to the
 3. Re-check each §4–§17 item your host touches: they are behavioral tightenings inside existing surfaces (accounting, drafts, authorization, narrowing, fidelity), not new opt-ins.
 4. Adopt the opt-in additions only where they matter: §18 attention compiler, §19 memory fabric, §20 work scopes, §21 spawn tools.
 5. Build and run your suite. No persisted-data migration exists or is needed: the 0.7.0 additions write through existing stores (working/vector records, checkpoints, observational-memory entries) under the same schema, and stores still fail closed on unknown or newer schema versions rather than rewriting data.
-6. Optional: re-run `npm run release:gate` locally to reproduce the release evidence matrix.
+6. Optional: re-run `bun run release:gate` locally to reproduce the release evidence matrix.
 
 ## Rollback
 

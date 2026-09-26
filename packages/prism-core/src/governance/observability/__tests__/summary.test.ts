@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "bun:test";
 import type { WorkflowEvent } from "../../../runtime/workflows/types.js";
 import { createInMemoryTelemetry, createOpenTelemetryInstrumentation } from "../instrumentation.js";
 import { MAX_SUMMARY_DISTINCT_TOOLS, summarizeSession, summarizeTimeline } from "../summary.js";

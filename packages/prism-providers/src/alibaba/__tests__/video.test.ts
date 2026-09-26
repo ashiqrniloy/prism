@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { VideoGenerationError } from "@arnilo/prism";
 import { runVideoGenerationConformance } from "@arnilo/prism/testing/provider-conformance";
 import { ALIBABA_VIDEO_MAX_DURATION_SECONDS, ALIBABA_VIDEO_PROMPT_MAX_CHARS, createAlibabaVideoGenerationProvider } from "../index.js";

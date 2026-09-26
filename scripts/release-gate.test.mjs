@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { loadRelease, publishArgs, satisfiesInternalRange, validateRelease } from "./release.mjs";
 import { parseBunLock } from "./bun-lock.mjs";
 import {
@@ -57,9 +57,9 @@ function lockstepFixture({ range = "^0.5.7" } = {}) {
 describe("release gates", () => {
   it("bun.lock reader strips trailing commas without eating commas inside strings", () => {
     const text =
-      '{\n  "lockfileVersion": 2,\n  "packages": {\n    "better-sqlite3@13.0.3": ["better-sqlite3@13.0.3", "", {}, "sha512-a,b,c"],\n  },\n  "workspaces": {\n    "": { "name": "@arnilo/prism" },\n    "packages/core": { "name": "@arnilo/prism-core", "version": "0.5.7" },\n  },\n}\n';
+      '{\n  "lockfileVersion": 2,\n  "packages": {\n    "comma-pkg@1.0.0": ["comma-pkg@1.0.0", "", {}, "sha512-a,b,c"],\n  },\n  "workspaces": {\n    "": { "name": "@arnilo/prism" },\n    "packages/core": { "name": "@arnilo/prism-core", "version": "0.5.7" },\n  },\n}\n';
     const lock = parseBunLock(text);
-    assert.equal(lock.packages["better-sqlite3@13.0.3"][3], "sha512-a,b,c", "comma inside a string must survive");
+    assert.equal(lock.packages["comma-pkg@1.0.0"][3], "sha512-a,b,c", "comma inside a string must survive");
     assert.equal(lock.workspaces[""].version, undefined, "root entry has no version");
     assert.equal(lock.workspaces["packages/core"].version, "0.5.7");
   });
@@ -196,7 +196,7 @@ export * as ns from "./mod.js";
 
   it("compat baselines are current for every package with a built dist/", () => {
     // The release gate's compat leg, runnable without the coverage-evidence preflight
-    // (`node scripts/release.mjs gate` stops at checkReleaseEvidence before reaching it).
+    // (`bun scripts/release.mjs gate` stops at checkReleaseEvidence before reaching it).
     // A stale baseline is a red gate, so this suite fails here rather than at release time.
     const release = loadRelease(join(import.meta.dirname, ".."));
     const stale = [];
@@ -218,7 +218,7 @@ export * as ns from "./mod.js";
     assert.equal(
       stale.length,
       0,
-      `compat baseline stale — review the removals against their owning plans, then run\n  node scripts/release.mjs gate --version <line> --update-baseline\n${stale.join("\n")}`,
+      `compat baseline stale — review the removals against their owning plans, then run\n  bun scripts/release.mjs gate --version <line> --update-baseline\n${stale.join("\n")}`,
     );
   });
 });

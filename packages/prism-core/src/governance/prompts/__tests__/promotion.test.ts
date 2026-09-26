@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AgentRunResult } from "@arnilo/prism";
 import type { Dataset, PairwiseScorer } from "../../evals/index.js";
 import type { PromptStore } from "../index.js";

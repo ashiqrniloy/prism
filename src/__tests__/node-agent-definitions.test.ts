@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AIProvider, ProviderRequest, Skill, ToolDefinition, ToolRegistry, TrustPolicy } from "../index.js";
 import { createContributionRegistries } from "../index.js";
 import { discoverAgentBundles, resolveAgentBundle } from "../node/agent-definitions.js";

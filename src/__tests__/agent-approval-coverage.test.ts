@@ -8,7 +8,7 @@
 // guards, and the legacy-migration resume validation gate.
 
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "bun:test";
 import {
   assertValidAgentRunResume,
   decisionIdentityRef,

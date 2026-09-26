@@ -232,11 +232,18 @@ ExtensionKernel	export type { ActivatedKernelConfig, AgentEventBridgeOptions, Ex
 ExtensionKernelOptions	export type { ActivatedKernelConfig, AgentEventBridgeOptions, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
 ExtensionLoadPolicy	export type { ActivatedKernelConfig, AgentEventBridgeOptions, ExtensionErrorPolicy, ExtensionEventBus, ExtensionEventHandler, ExtensionKernel, ExtensionKernelOptions, ExtensionLoadPolicy, LoadedExtension, } from "./extensions.js"
 FIELD_POLICY_LIMITS	export declare const FIELD_POLICY_LIMITS: Readonly<
+FieldEvidenceContext	export type { FieldEvidenceContext, FieldEvidenceGuardrailOptions, FieldEvidenceNormalizer, FieldEvidenceRecord, FieldEvidenceSource, FieldEvidenceViolation, FieldProvenanceClaim, } from "./field-evidence.js"
+FieldEvidenceGuardrailOptions	export type { FieldEvidenceContext, FieldEvidenceGuardrailOptions, FieldEvidenceNormalizer, FieldEvidenceRecord, FieldEvidenceSource, FieldEvidenceViolation, FieldProvenanceClaim, } from "./field-evidence.js"
+FieldEvidenceNormalizer	export type { FieldEvidenceContext, FieldEvidenceGuardrailOptions, FieldEvidenceNormalizer, FieldEvidenceRecord, FieldEvidenceSource, FieldEvidenceViolation, FieldProvenanceClaim, } from "./field-evidence.js"
+FieldEvidenceRecord	export type { FieldEvidenceContext, FieldEvidenceGuardrailOptions, FieldEvidenceNormalizer, FieldEvidenceRecord, FieldEvidenceSource, FieldEvidenceViolation, FieldProvenanceClaim, } from "./field-evidence.js"
+FieldEvidenceSource	export type { FieldEvidenceContext, FieldEvidenceGuardrailOptions, FieldEvidenceNormalizer, FieldEvidenceRecord, FieldEvidenceSource, FieldEvidenceViolation, FieldProvenanceClaim, } from "./field-evidence.js"
+FieldEvidenceViolation	export type { FieldEvidenceContext, FieldEvidenceGuardrailOptions, FieldEvidenceNormalizer, FieldEvidenceRecord, FieldEvidenceSource, FieldEvidenceViolation, FieldProvenanceClaim, } from "./field-evidence.js"
 FieldPolicy	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
 FieldPolicyAction	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
 FieldPolicyDecision	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
 FieldPolicyError	export declare class FieldPolicyError extends Error
 FieldPolicyInput	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
+FieldProvenanceClaim	export type { FieldEvidenceContext, FieldEvidenceGuardrailOptions, FieldEvidenceNormalizer, FieldEvidenceRecord, FieldEvidenceSource, FieldEvidenceViolation, FieldProvenanceClaim, } from "./field-evidence.js"
 FileContent	export type { AudioContent, DocumentContent, FileContent } from "./content.js"
 FoldToolResultsContext	export type { FoldToolResultsContext, ResolvedToolResultFoldOptions, ToolResultFoldInput, ToolResultFoldOptions, } from "./tool-result-fold.js"
 GuardrailError	export declare class GuardrailError extends Error
@@ -659,6 +666,7 @@ createEventMultiplexer	export declare function createEventMultiplexer<T>(options
 createExplicitCredentialResolver	export declare function createExplicitCredentialResolver(sources: readonly CredentialResolverSource[]): CredentialResolver
 createExtensionEventBus	export declare function createExtensionEventBus(options?: Pick<ExtensionKernelOptions, "errorPolicy" | "secrets">): ExtensionEventBus
 createExtensionKernel	export declare function createExtensionKernel(options?: ExtensionKernelOptions): ExtensionKernel
+createFieldEvidenceGuardrail	export declare function createFieldEvidenceGuardrail(options: FieldEvidenceGuardrailOptions): Guardrail<"tool_input">
 createId	export declare function createId(prefix: string): string
 createInitProject	export declare function createInitProject(options: InitOptions, runtime?: InitRuntime): Promise<InitResult>
 createJsonlSessionStore	export declare function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStoreOptions): SessionStore
@@ -1036,7 +1044,7 @@ validateProviderName	export declare function validateProviderName(name: string):
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
 validationRespectPack	export declare const validationRespectPack: GuardrailPackDefinition
-version	export declare const version = "0.11.1"
+version	export declare const version = "0.12.0"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]

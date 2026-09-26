@@ -3,6 +3,7 @@
   "version": "__PRISM_VERSION__",
   "description": "__PROVIDER_ID__ provider package for Prism.",
   "type": "module",
+  "packageManager": "bun@1.4.2",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -21,18 +22,16 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --test dist/__tests__/*.test.js",
+    "test": "bun run build && bun test dist/__tests__/",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
     "@arnilo/prism": "__PRISM_VERSION__"
   },
   "devDependencies": {
+    "@types/bun": "^1.4.2",
     "@types/node": "^22.0.0",
     "typescript": "^5.7.0"
-  },
-  "engines": {
-    "node": ">=20"
   },
   "license": "MIT",
   "keywords": [

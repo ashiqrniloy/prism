@@ -1,5 +1,5 @@
 import { ok, strictEqual, throws } from "node:assert";
-import test from "node:test";
+import { test } from "bun:test";
 import {
   assertNotVisio,
   DiagramsCapError,

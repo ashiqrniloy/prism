@@ -24,6 +24,23 @@ export function applyConditionalSkip(
   }
 }
 
+export function applyRouteSkip(
+  state: SchedulerState,
+  nodeId: string,
+  selectedTargets: readonly string[],
+  emit: (event: WorkflowEventInput) => void,
+): void {
+  const node = state.workflow.nodes[nodeId];
+  if (node?.kind !== "route") return;
+  const successors = state.successors.get(nodeId) ?? [];
+  const allowed = new Set(selectedTargets);
+  for (const next of successors) {
+    if (!allowed.has(next)) {
+      skipTransitive(state, next, `route ${nodeId} unselected`, emit);
+    }
+  }
+}
+
 function skipTransitive(state: SchedulerState, nodeId: string, reason: string, emit: (event: WorkflowEventInput) => void): void {
   if (state.skipped.has(nodeId) || state.completed.has(nodeId)) return;
   skipNode(state, nodeId, reason, emit);

@@ -35,6 +35,7 @@ export const DEPRECATE_RANGE = "<0.4.0";
 export const LEGACY_TAG = "legacy";
 export const PLAN_REL = "release-artifacts/legacy-registry-plan.json";
 
+// release-host registry toolchain — runner images ship Node; contributors never invoke npm
 const NPM = process.env.PRISM_LEGACY_NPM || "npm";
 
 function npm(args) {
@@ -310,7 +311,7 @@ export async function main(argv = process.argv.slice(2)) {
   const confirmed = argv.includes("--confirm");
   const rootDir = DEFAULT_ROOT;
   if (!wantsGenerate && !wantsDryRun && !wantsApply) {
-    console.error("usage: node scripts/phase54-legacy-registry.mjs [--generate | --dry-run | --apply --confirm]");
+    console.error("usage: bun scripts/phase54-legacy-registry.mjs [--generate | --dry-run | --apply --confirm]");
     return 2;
   }
   if (wantsApply && !confirmed) {

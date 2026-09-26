@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AgentEvent, AgentSession } from "@arnilo/prism";
 import { createAgent, createMemoryAgentEventSource, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import { type A2AAgentCard, type A2ATaskEvent, type A2ATaskLifecycle, createA2AClient } from "@arnilo/prism-core/runtime/supervisor";

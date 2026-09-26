@@ -1,15 +1,15 @@
-#!/usr/bin/env node
-// Plan 070 Task 15: aggregate the root `npm test` chain.
+#!/usr/bin/env bun
+// Plan 070 Task 15: aggregate the root `bun test` chain.
 //
 // The chain used to be a single `&&` list, so the first failing stage hid every
 // later one (VENT 26-08-15/26-08-20/26-09-01: hidden failures and the count drift
 // they caused). This runner executes the same stages in the same order, always
 // runs all of them, prints one summary table, and exits non-zero if any stage
-// failed. Stage output is inherited unchanged, so each stage's own TAP summary —
+// failed. Stage output is inherited unchanged, so each stage's own reporter summary —
 // including its skip lines (release skip-manifest evidence) — still streams.
 //
-//   npm test
-//   node scripts/run-all-tests.mjs
+//   bun run test
+//   bun scripts/run-all-tests.mjs
 //
 // Import-safe (no writes, no exit at module scope) so chain-integrity gate tests
 // can assert the effective chain: `effectiveTestChain()`, `STAGES`, `runStages()`.
@@ -30,6 +30,7 @@ const ROOT = join(import.meta.dirname, "..");
 export const GATE_FILES = [
   "scripts/release-gate.test.mjs",
   "scripts/tooling-gate.test.mjs",
+  "scripts/postgres-evidence.test.mjs",
   "scripts/run-all-tests.test.mjs",
   "scripts/phase8-conformance.test.mjs",
   "scripts/phase9-conformance.test.mjs",
@@ -72,6 +73,7 @@ export const GATE_FILES = [
   "scripts/wiki-scratch-isolation.test.mjs",
   "scripts/blocked-gate.test.mjs",
   "scripts/branch-coverage.test.mjs",
+  "scripts/phase126-sqlite-mapping.test.mjs",
 ];
 
 // The old chain left `dist/__tests__/*.test.js` to the shell. There is no shell
@@ -79,6 +81,7 @@ export const GATE_FILES = [
 // stays inside the shell-free runner (which also names a missing build clearly)
 // even though the declared floor is now >=22 (plan 071 Task 2).
 function expandGlob(arg) {
+  if (arg.startsWith("--")) return [arg]; // flags and --flag=value args (e.g. --path-ignore-patterns=…) are not globs
   const star = arg.indexOf("*");
   if (star === -1) return [arg];
   const dir = arg.slice(0, star).replace(/\/$/, "") || ".";
@@ -93,13 +96,12 @@ function expandGlob(arg) {
   return files.sort().map((file) => join(dir, file));
 }
 
-// Plan 113 Task 3: the measured runner split. `bun test --timeout=0` owns the one file set Task 1's
-// inventory classified `bun-ok` and this task measured faster than `node --test` (the SQLite suites:
-// 24 pass / 0 fail, 356–369 ms vs 388–407 ms). Everything else stays on Node: the root glob is 2.3×
-// slower under Bun (30.1 s vs 13.2 s, Task 1 §4) with a Bun-only failure, the prism-core workspace
-// glob is 2.4× slower (8.9 s vs 3.7 s, Task 3 note), `bun --test` is not `node --test` (Task 1 §1.2),
-// and coverage migration is plan 114's. Children spawn `node` / `bun` by name: under a Bun parent the
-// Node binary is not `process.execPath`, and `bun run --bun` (which symlinks `node` to Bun) is rejected.
+// Plan 124 Task 2: every stage runs the Bun binary. Task 1's inventory (docs/_evidence/
+// phase124-bun-only-inventory.md) measured the flip stage by stage; `bun test --timeout=0` replaces
+// every `node --test`, and `--parallel=4` replaces `--test-concurrency=4` as the worker bound (Task 1
+// §6.1–§6.4: root 20.0 s vs Node 18.5 s at equal file counts, gate 32.1 s vs 32.5 s, sqlite 438 ms vs
+// 470 ms, examples 3.5 s vs 10.0 s). Children spawn `bun` by name: under the Bun parent
+// `process.execPath` is Bun, and `bun --test` is a script run, not a test runner (Task 1 §1.2).
 export const SQLITE_TEST_GLOB = "packages/prism-core/dist/sessions/sqlite/__tests__/*.test.js";
 
 // Plan 115 Task 2: the workspace stage runs one npm process per package behind a bounded
@@ -109,42 +111,62 @@ export const SQLITE_TEST_GLOB = "packages/prism-core/dist/sessions/sqlite/__test
 // pool below overlaps them. `--if-present` keeps npm's skip-a-package-without-test rule.
 const WORKSPACE_LEAVES = readManifest(join(ROOT, "package.json")).workspaces.map((dir) => ({
   name: dir,
-  command: "npm",
-  args: ["run", "test", "--workspace", dir, "--if-present"],
+  command: "bun",
+  args: ["run", "--cwd", dir, "test"],
 }));
 
 // The dist-consuming suites run behind the build lock (they import root dist/ via
 // the @arnilo/prism self-symlink); the build-race gate runs UNWRAPPED on purpose —
 // its children acquire the real lock, which a parent holding it would deadlock.
 export const STAGES = [
-  { name: "build", command: "npm", args: ["run", "build"] },
+  { name: "build", command: "bun", args: ["run", "build"] },
   {
-    // The cold-import check cannot share Node's default parallel test worker pool:
+    // The cold-import check cannot share the parallel test worker pool:
     // its absolute ceiling measures host contention, not Prism import work.
     name: "performance budget",
-    command: "node",
-    args: ["scripts/with-build-lock.mjs", "node", "--test", "scripts/budget-gate.test.mjs"],
+    command: "bun",
+    args: ["scripts/with-build-lock.mjs", "bun", "test", "--timeout=0", "scripts/budget-gate.test.mjs"],
   },
   {
+    // Plan 124 Task 2. The worker bound replaces plan 123's `--test-concurrency=4`: Task 1 §6.1
+    // measured the same 2120 tests at 20.0 s bounded vs 27.4 s at the default pool on a loaded
+    // host, and Task 2's same-load A/B measured 27.1 s vs Node's 29.7 s at this bound.
+    // ponytail: fixed 4 workers — the root suites carry soft real-time budget assertions
+    // (field-policy overhead < 10 %, run-bundle 100-tool snapshot < 5 ms) that flake at the
+    // default worker count under host load. Raise only after Task 4 recalibrates those ceilings.
     name: "root suites",
-    command: "node",
-    args: ["scripts/with-build-lock.mjs", "node", "--test", "dist/__tests__/*.test.js"],
+    command: "bun",
+    args: [
+      "scripts/with-build-lock.mjs",
+      "bun",
+      "test",
+      "--parallel=4",
+      "--timeout=0",
+      // Task 1 §1.3: Bun matches explicit paths by suffix, so two root names
+      // (`content.test.js`, `schema.test.js`) also pull their `packages/*/dist` twins. The
+      // workspace stage runs those twins; this pattern keeps the partition exactly-once.
+      "--path-ignore-patterns=packages/**",
+      "dist/__tests__/*.test.js",
+    ],
   },
   {
     // Task 1 measured this file set `bun-ok` (the database actually opens `:memory:`). `--timeout=0`
     // matches Node's no-default-timeout — Bun's default 5000 ms would fail a slow test Node never
-    // times out — and per-test `{ timeout }` options still fire. prism-core's own Node run excludes
+    // times out — and per-test `{ timeout }` options still fire. prism-core's own run excludes
     // this glob, so each SQLite file runs exactly once.
     name: "sqlite suites",
-    command: "node",
+    command: "bun",
     args: ["scripts/with-build-lock.mjs", "bun", "test", "--timeout=0", SQLITE_TEST_GLOB],
   },
   {
+    // Bounded for the same reason as the root suites: the tool-search benchmark
+    // `index+score` frozen 50 ms ceiling and the redaction benchmark carry absolute-time
+    // assertions that the default worker pool starves under host load (Task 1 §6.3/§6.7).
     name: "gate suites",
-    command: "node",
-    args: ["scripts/with-build-lock.mjs", "node", "--test", ...GATE_FILES],
+    command: "bun",
+    args: ["scripts/with-build-lock.mjs", "bun", "test", "--parallel=4", "--timeout=0", ...GATE_FILES],
   },
-  { name: "build race", command: "node", args: ["--test", "scripts/phase23-build-race.test.mjs"] },
+  { name: "build race", command: "bun", args: ["test", "--timeout=0", "scripts/phase23-build-race.test.mjs"] },
   {
     // packages are independent readers (shared lock), so run them concurrently;
     // a bounded pool keeps package suites from thrashing a small host.
@@ -152,23 +174,27 @@ export const STAGES = [
     // soft real-time budget assertions (prism-work document extract < 2000 ms, memory
     // source-scan < 5 ms) that flaked at 3–4 concurrent leaves (3 leaf failures in 9 pool runs)
     // but stayed green at 2 (2/2). Raise the bound only on a host with idle cores, or bound
-    // each package's own `node --test` worker count first.
+    // each package's own `bun test` worker count first.
     name: "workspace suites",
     parallel: WORKSPACE_LEAVES,
     concurrency: 2,
   },
   {
-    // Plan 120 Task 7. Sequential .ts spawns so each child loads one type stripper.
+    // Plan 120 Task 7. Sequential .ts spawns, one child at a time. Task 1 §6.5 measured the
+    // Bun flip at 3.5 s vs Node's 10.0 s (children are `process.execPath`, which is now Bun and
+    // strips types natively), so the type-stripper rationale is obsolete but the sequential
+    // shape still bounds host contention.
     // ponytail: sequential; Promise.allSettled chunks if this stage exceeds 5 min.
     name: "examples execution",
-    command: "node",
-    args: ["scripts/with-build-lock.mjs", "node", "--test", "scripts/examples-execution.test.mjs"],
+    command: "bun",
+    args: ["scripts/with-build-lock.mjs", "bun", "test", "--timeout=0", "scripts/examples-execution.test.mjs"],
   },
   {
-    // Plan 120 Task 6. Core dist only, after the build. Bun's coverage gate is untouched.
+    // Plan 120 Task 6. Core dist only, after the build. The audit keeps the Node coverage
+    // instrument until its BRDA probe says Bun emits branch records; the wrapper runs under Bun.
     name: "branch coverage",
-    command: "node",
-    args: ["scripts/with-build-lock.mjs", "node", "scripts/branch-coverage-audit.mjs"],
+    command: "bun",
+    args: ["scripts/with-build-lock.mjs", "bun", "scripts/branch-coverage-audit.mjs"],
   },
 ];
 
@@ -184,7 +210,7 @@ function renderStage(stage) {
   return [stage.command, ...stage.args].join(" ");
 }
 
-/** `package.json` `test` plus every stage command — the effective `npm test` chain. */
+/** `package.json` `test` plus every stage command — the effective `bun run test` chain. */
 export function effectiveTestChain(rootDir = ROOT) {
   const { scripts } = readManifest(join(rootDir, "package.json"));
   return [scripts.test, ...STAGES.map(renderStage)].join(" && ");
@@ -246,7 +272,7 @@ export async function runStages(stages = STAGES, { execute = executeStage, write
     results.push({ name: stage.name, status, ms: Date.now() - startedAt });
   }
   write("");
-  write("npm test summary:");
+  write("bun run test summary:");
   for (const result of results) {
     write(`  ${result.status === 0 ? "pass" : "FAIL"}  ${String(result.ms).padStart(7)}ms  ${result.name}`);
   }

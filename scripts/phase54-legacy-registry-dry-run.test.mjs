@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { guide, makeFixture, mkdtemp, NAMES, PUBLISHED, readState, run, UNPUBLISHED } from "./fixtures/phase54-legacy-registry-fixture.mjs";
 import { buildPlanEntries, githubSlug, guideAnchors } from "./phase54-legacy-registry.mjs";
 

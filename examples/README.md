@@ -11,7 +11,7 @@ build is required to typecheck.
 
 ## Execution gate
 
-`npm test` runs `scripts/examples-execution.test.mjs`. It does not respawn an
+`bun run test` runs `scripts/examples-execution.test.mjs`. It does not respawn an
 example already executed by the `docs.test.ts` demo list or by a dedicated
 `spawnSync(process.execPath, ["examples/<file>.ts"])` test. Every other
 `examples/*.ts` must exit 0 within 60s, or be named in
@@ -53,6 +53,7 @@ node examples/extension-package.ts
 node examples/evals.ts
 node examples/evaluation-gate.ts
 node examples/execution-timeline.ts
+node examples/host-step-loop-timeline.ts
 node examples/behavior-evaluation.ts
 node examples/guardrail-packs.ts
 node examples/coding-browser-evaluation.ts
@@ -67,6 +68,8 @@ node examples/working-semantic-memory.ts
 node examples/rag.ts
 node examples/drive-rag-sync.ts
 node examples/scanned-document-rag.ts
+node examples/revocation-propagation.ts
+node examples/host-composition-compat.ts
 node examples/web-standard-server.ts
 node examples/mcp-server.ts
 node examples/connected-slack-mcp.ts
@@ -75,6 +78,8 @@ node examples/workflow-multimodal-document.ts
 node examples/workflow-postgres-resume.ts # skips unless PRISM_TEST_POSTGRES_URL is set
 node examples/workflow-distributed-coordinator.ts
 node examples/workflow-schedules-replay.ts
+node examples/cyclic-reflection.ts
+node examples/cyclic-swarm-topology.ts
 node examples/durable-coding-workflow.ts
 node examples/coding-goal-verify.ts
 node examples/autonomous-coding-loop.ts
@@ -109,6 +114,7 @@ Each demo prints a single JSON line with its result.
 - `distributed-events-and-tool-effects.ts` — **demo**: durable event cursor resume + required tool-effect claim/replay/unknown resolve (memory reference, network-free).
 - `enterprise-postgres-state.ts` — compile-checked durable policy/evaluation/work/router composition; host provides the PostgreSQL pool and explicitly schedules cleanup.
 - `governed-provider.ts` — **demo**: opt-in governed `AIProvider` adapter with admission, atomic budget reservation, streaming, and explicit settlement (network-free).
+- `model-router-aggregate-budgets.ts` — **demo**: one `taskId` aggregate token pool across three `session.run()` calls plus an auxiliary compaction call on a pinned model — atomic reservation, renewal fencing, and unknown-usage liability read via `router.readBudget` (network-free).
 - `server-deployment-seams.ts` — **demo**: health, drain, fair workflow admission, operator queue, rate-limit, and deployment lease (network-free).
 - `conversation-durable-replay.ts` — **demo**: durable conversation thread (sqlite `:memory:`) with mock-agent continue and reconnectable redacted replay.
 - `messaging-agent.ts` — **demo**: sqlite journal + mock agent through `createMessagingRuntime`; admit → drain → persisted reply → opt-in `notify` notice to the bound pair, then stop (network-free).
@@ -127,6 +133,7 @@ Each demo prints a single JSON line with its result.
 - `evals.ts` — deterministic scorers, dataset snapshot, and bounded `runExperiment` over mock agent results.
 - `evaluation-gate.ts` — network-free experiment threshold that exits non-zero on regression.
 - `execution-timeline.ts` — **demo**: offline workflow execution timeline projection, cockpit summary, and Mermaid diagram export (network-free).
+- `host-step-loop-timeline.ts` — **demo**: eight-step host loop correlating host action/attempt ids with Prism session/run ids, incremental per-step `ExecutionTimeline` projection, metadata-only NDJSON host ledger with `sha256:` tool-arg hashes, display-only legacy prose beside structural fields, and external host commit evidence kept out of Prism effects (network-free).
 - `guardrail-packs.ts` — **demo**: guardrail packs end to end — two built-in packs refusing a `shell`/`write` call with the rule named, `createGuardrailPackScorer()` grading the denial, a durable `ask` rule suspending and being approved, and a `secrets-hygiene` refusal that never echoes the token (network-free).
 - `behavior-evaluation.ts` — **demo**: host-journey packs that execute `trials: 3` (`sampleCount`), `runScenario` clarify/refuse, denyTools/unknownEffect/failStore injection, Task 8 stale draft revision, revoked-ACL citations, and `validateReleaseEvalManifest` (network-free).
 - `coding-browser-evaluation.ts` — network-free coding/browser adversarial dataset + scorers + CI threshold, plus a test-oracle `toEnvironment` file-hash gate (no Docker/Playwright binary).
@@ -141,6 +148,8 @@ Each demo prints a single JSON line with its result.
 - `rag.ts` — optional bounded Markdown chunk/index/retrieve/citation flow using Phase 7 in-memory vector primitives.
 - `drive-rag-sync.ts` — **demo**: fake Drive connector through `syncKnowledge` (checkpointed cursor, ACL grants, hash skip; network-free).
 - `scanned-document-rag.ts` — **demo**: fake Mistral OCR `fetch` through `createMistralOcrParser` into `replaceDocument` (no default parser, usage hook; network-free).
+- `revocation-propagation.ts` — **demo**: cross-layer revocation proof — grant loss vs. deletion, lineage-closed `createDeletionPropagator` with RAG + observational-memory handlers, `listInvalidatedIds` read path beside the drop entry, a mid-rerank revoke withheld by the post-rerank gate, and a redacted fail-closed denial (network-free).
+- `host-composition-compat.ts` — **compat contract**: the Synapta-shaped packed-install consumer — host tools only, `snapshotRunBundle` policy chain, per-step stop reasons plus usage/attention trace fields, coverage-admission OM retention, and typed System One decisions over an injected transport; emits a JSON check report for the packed-install suite (network-free).
 - `realtime-voice-host.ts` — **demo**: governed realtime voice bridge over a mock `RealtimeSession` (barge-in before effect, no microphone, network-free).
 - `web-standard-server.ts` — optional framework-free authorized `Request -> Response` agent run using the offline mock provider.
 - `mcp-server.ts` — dual-era authorized Prism tool exposure: factory-based serving over in-memory (default), stdio (`--stdio`), and a commented modern HTTP wiring through SDK `createMcpHandler`.
@@ -214,6 +223,8 @@ Each demo prints a single JSON line with its result.
 - `workflow-rpc-cancel.ts` — **demo**: `cancelWorkflowRun` mid-flight then `resumeWorkflow` — the programmatic surface behind `createWorkflowCommands()`.
 - `workflow-distributed-coordinator.ts` — **demo**: two coordinator instances over independent SQLite handles atomically claim one queued run using durable leases and fencing.
 - `workflow-schedules-replay.ts` — **demo**: ownership-scoped one-time schedule → existing coordinator background run → nested shared-state workflow → immutable-lineage replay.
+- `cyclic-reflection.ts` — **demo**: cyclic reflection workflow with worker drafting, reviewer agent structured state evaluation, conditional routeNode back-edge, and observable maxSupersteps budget breach (network-free).
+- `cyclic-swarm-topology.ts` — **demo**: event-driven multi-agent swarm workflow with central swarmRouterNode, topic subscriptions, per-agent state scoping via withNodeScope, and idle-drain termination (network-free).
 - `durable-coding-workflow.ts` — **demo**: durable coding plan/todos as workspace Markdown, workflow `state.coding` checkpoint metadata, approval suspend/resume with fingerprint/hash revalidation, background cancel, and host-owned PR handoff (no network).
 - `coding-goal-verify.ts` — **demo**: `runCodingGoalVerify` thin goal→verify helper (failing check → suspend → approve → bounded handoff; no Goal table / network).
 - `autonomous-coding-loop.ts` — **demo**: composite autonomous build loop (goal → roadmap → supervisor children with per-child models → `runCodingGoalVerify`-style validation → OM attach/compact/recall → human gate with simulated restart → host-side bounded iterate-until-done and budget exhaustion). Mock providers only.

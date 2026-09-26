@@ -1,5 +1,5 @@
 // Offline pre-publish gates: API surface diff, tarball allow/deny, version ranges.
-// Stdlib-only. Used by `release.mjs gate` and wired into `npm run sdk:ready`.
+// Stdlib-only. Used by `release.mjs gate` and wired into `bun run sdk:ready`.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -180,6 +180,7 @@ export function assertTarballAllowDeny(pkgName, filePaths) {
 }
 
 export function packedFilePaths(root, pkgPath) {
+  // release-host registry toolchain — runner images ship Node; contributors never invoke npm
   const result = spawnSync("npm", ["pack", "--dry-run", "--json"], {
     cwd: pkgPath === "." ? root : join(root, pkgPath),
     encoding: "utf8",
@@ -209,7 +210,7 @@ export function runGates({ release, version, independent = false, allowBreak = f
     if (!existsSync(distDir)) {
       // Manifest-only profiles ship no code; nothing to diff.
       if (!pkg.manifest.types && !pkg.manifest.main && !pkg.manifest.exports) continue;
-      errors.push(`compat: ${pkg.manifest.name} has no dist/ — run npm run build first`);
+      errors.push(`compat: ${pkg.manifest.name} has no dist/ — run bun run build first`);
       continue;
     }
     const surface = extractDeclaredSurface(distDir);

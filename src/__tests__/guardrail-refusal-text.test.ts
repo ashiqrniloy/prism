@@ -7,7 +7,7 @@
  * `tool_execution_blocked` event, stays under the 200-byte cap, and never carries arguments.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import {
   type AgentEvent,
   type ContentBlock,

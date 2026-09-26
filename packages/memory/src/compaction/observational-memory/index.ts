@@ -77,6 +77,7 @@ export { renderObservationalMemory } from "./render.js";
 export type {
   ObservationalMemoryFlushOptions,
   ObservationalMemoryFlushResult,
+  ObservationalMemoryFlushSkipReason,
   ObservationalMemoryRuntime,
   ObservationalMemoryRuntimeStatus,
   ObservationalMemoryWorkerRuntimeConfig,

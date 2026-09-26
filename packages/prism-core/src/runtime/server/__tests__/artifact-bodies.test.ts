@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createServer, type IncomingMessage } from "node:http";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it } from "bun:test";
 import { type ArtifactBodyRef, type ArtifactBodyStore, ArtifactBodyStoreError } from "@arnilo/prism";
 import { createS3ArtifactBodyStore, type S3ArtifactBodyError, s3ObjectKey } from "../artifact-bodies.js";
 import { sha256Hex, signV4 } from "../artifact-bodies-s3.js";

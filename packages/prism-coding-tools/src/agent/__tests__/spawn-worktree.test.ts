@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { type Agent, createMemoryCheckpointStore, createMemoryLeaseStore } from "@arnilo/prism";
 import type { DelegationChildContext, DelegationCompletion } from "@arnilo/prism-core/runtime/supervisor";
 import type { GitOperations } from "../git.js";

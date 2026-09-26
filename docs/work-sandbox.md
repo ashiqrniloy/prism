@@ -105,6 +105,7 @@ Do not enable macros. Encrypted OOXML stays dropped. No in-process OLE parser.
 - LibreOffice wrapper: private `/tmp/lo-profile`, `--headless`, no macro enable, `--accept` refused. No listening socket. Legacy convert uses the same wrapper.
 - Zip bombs: existing office parse caps; sandbox export uses existing export caps.
 - Image build is CI/protected, not default unit tests. Composition construct is in-process with a fake sandbox.
+- Document OCR does not use `execFile`. That request has no stdin. The host runner for [document extraction](document-extraction.md) spawns `docling/ocr.py` with scrubbed env, stdin bytes, and a kill on abort. Pin Docling and the model dir in the image; do not give the worker network or token env.
 
 ## Related APIs
 
@@ -112,4 +113,5 @@ Do not enable macros. Encrypted OOXML stays dropped. No in-process OLE parser.
 - [Work tools](work-tools.md) — host-side connectors
 - [Documents](documents.md) — `createOfficeTools`
 - [Document reader](document-reader.md) — optional `reader` injection
+- [Document extraction](document-extraction.md) — optional Docling OCR runner, not `work_exec`
 - [Context and skills](context-and-skills.md) — `loadWorkSkills()` (`docx`, `xlsx`, `powerpoint`, `pdf`)

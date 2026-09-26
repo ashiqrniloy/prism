@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { ProviderRequest, ToolDefinition } from "@arnilo/prism";
 import { assertNoSecretLeak, assertProviderStreamConforms, collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
 import { anthropicModels, createAnthropicMessagesProvider } from "../index.js";
@@ -45,15 +45,15 @@ const toolRequest: ProviderRequest = {
   tools: [getWeatherTool],
 };
 
-describe("@arnilo/prism-providers/anthropic live tests", () => {
-  it("live_text_generation_streams_and_leaks_no_secret", { skip }, async () => {
+(skip ? describe.skip : describe)("@arnilo/prism-providers/anthropic live tests", () => {
+  it("live_text_generation_streams_and_leaks_no_secret", async () => {
     const events = await assertProviderStreamConforms({ provider: provider(), request: textRequest });
     const text = events.map((e) => (e.type === "content_delta" && e.content.type === "text" ? e.content.text : "")).join("");
     assert.ok(text.length > 0, "live text response was empty");
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_tool_call_loop_conforms_and_leaks_no_secret", { skip }, async () => {
+  it("live_tool_call_loop_conforms_and_leaks_no_secret", async () => {
     const events = await assertProviderStreamConforms({ provider: provider(), request: toolRequest });
     assert.ok(
       events.some((e) => e.type === "tool_call" || e.type === "tool_call_delta"),
@@ -64,7 +64,7 @@ describe("@arnilo/prism-providers/anthropic live tests", () => {
 
   // Thinking-effort probe (plan 065 task 15): the adapter's output_config.effort
   // patch must be accepted by the live API (no 400 on the wire field).
-  it("live_output_config_effort_is_accepted", { skip }, async () => {
+  it("live_output_config_effort_is_accepted", async () => {
     const events = await assertProviderStreamConforms({
       provider: provider(),
       request: { ...textRequest, options: { compat: { effort: "low" } } },
@@ -81,7 +81,7 @@ describe("@arnilo/prism-providers/anthropic live tests", () => {
   // warranted; if it rejects, the task-3 move to output_config.effort is final.
   // Either outcome ends the stream (done or error); interpretation is recorded in
   // docs/_evidence/thinking-coverage-2026-09-05.md.
-  it("live_legacy_top_level_effort_outcome", { skip }, async () => {
+  it("live_legacy_top_level_effort_outcome", async () => {
     const events = await collectProviderEvents(provider(), {
       ...textRequest,
       options: { extra: { effort: "low" } },

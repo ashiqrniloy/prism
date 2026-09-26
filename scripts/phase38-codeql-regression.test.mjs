@@ -20,7 +20,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { performance } from "node:perf_hooks";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { sanitizeCacheKey, trimTrailingSlashes } from "@arnilo/prism";
 import { htmlParser, pdfParser } from "@arnilo/prism-memory/rag";
 import { parseMarkdownHeading, parseSkillMarkdown } from "@arnilo/prism-memory/wiki";

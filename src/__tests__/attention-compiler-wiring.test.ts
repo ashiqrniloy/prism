@@ -1,7 +1,7 @@
 /** Opt-in wiring (plan 074 Task 5): `AgentConfig` / `AgentDefinition` / `RunOptions.attentionCompiler`,
  *  the narrowing run overlay, and the session-owned sticky frontier. */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { asSessionHost } from "../agent-session/session/types.js";
 import {
   type AgentConfig,

@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { buildPackageMap, generateMarkdown } from "./phase54-package-map.mjs";
 
@@ -134,7 +134,7 @@ test("phase54 package map: generated markdown evidence file matches output", () 
   assert.equal(
     stripGen(onDisk),
     stripGen(md),
-    "docs/_evidence/phase54-package-map.md is stale; run: node scripts/package-truth.mjs --emit-docs",
+    "docs/_evidence/phase54-package-map.md is stale; run: bun scripts/package-truth.mjs --emit-docs",
   );
   assert.ok(onDisk.includes("# Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence"));
   assert.ok(onDisk.includes("## 1. Executive Summary & Counts"));

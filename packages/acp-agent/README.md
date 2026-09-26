@@ -13,7 +13,7 @@ The binary is pure wiring — every protocol detail lives in `@arnilo/prism-ag-u
 ## Usage
 
 ```sh
-npx prism-acp-agent [--config prism-acp-agent.json]
+bunx prism-acp-agent [--config prism-acp-agent.json]
 ```
 
 The agent speaks ACP over newline-delimited JSON on stdio. It serves until the client closes stdin.

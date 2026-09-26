@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { createAgent, createMockProvider, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import { createCitationIntegrityScorer } from "../citations.js";
 import { defineDataset } from "../dataset.js";

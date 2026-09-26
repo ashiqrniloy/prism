@@ -17,7 +17,7 @@
 //     rejected 400 without consuming a version or executing the tool; the
 //     valid decision still applies with the unchanged expectedVersion.
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import {
   createAgent,
   createMemoryAgentEventSource,

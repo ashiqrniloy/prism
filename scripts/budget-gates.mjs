@@ -35,6 +35,7 @@ export function checkCeiling(label, measured, ceiling) {
 }
 
 export function measureRootPack(cwd = process.cwd()) {
+  // release-host registry toolchain — runner images ship Node; contributors never invoke npm
   const out = execFileSync("npm", ["pack", "--dry-run", "--json"], { cwd, stdio: ["pipe", "pipe", "pipe"] }).toString();
   // npm 12 emits an object keyed by package name; npm 11 and earlier emitted an array of entries.
   const parsed = JSON.parse(out);
@@ -93,7 +94,13 @@ export function measureProcessStartupMs(runs = 3, spawn = spawnSync) {
 // evidence-of-record (scripts/benchmark.mjs) instead of an in-chain assertion. The
 // machine-relative ratio gate is always on. loadavg() reports zeros on Windows,
 // which reads as "unloaded" and keeps the absolute check active there.
-export const LOADED_LOADAVG_PER_CPU = 1.5;
+// Plan 124 Task 4 lowered it from 1.5 for the Bun instrument: Bun's cold import is
+// more contention-sensitive than its empty process start (measured 2026-09-25 on 16
+// CPUs: import 43ms -> 122-196ms at load/cpu 0.66 and 326ms at 0.93, while the empty
+// start stayed at 2.8-7.2ms), so the ratio reaches 38 at load/cpu 1.27 — inside the
+// band the Node-calibrated 1.5 called "not loaded". Half a core per core is where
+// "something else is eating the machine" starts for this instrument.
+export const LOADED_LOADAVG_PER_CPU = 0.5;
 
 export function loadPerCpu() {
   const [oneMinute] = loadavg();
@@ -105,11 +112,12 @@ export function isMachineLoaded(threshold = LOADED_LOADAVG_PER_CPU) {
 }
 
 // Plan 071 Task 3: which ratio ceiling applies. Off-load the tight ceiling catches
-// a ~2.4x startup regression; under load a wider ceiling tolerates the observed
-// contention spikes (import alone spiked to 258ms while a process start stayed at
-// 33ms, and plan 070 recorded a 1104.8ms import) while still catching a >3x
+// a startup regression; under load a wider ceiling tolerates the observed contention
+// spikes (plan 070 recorded a 1104.8ms import under load) while still catching a >3x
 // regression. The absolute importMs ceiling in budgets.json is the tight bound off
-// load and evidence-of-record in scripts/benchmark.mjs.
+// load and evidence-of-record in scripts/benchmark.mjs. Plan 124 Task 4 re-measured
+// both ceilings on Bun 1.4.2 (idle 6.04-15.22 over 35 runs, max 38.27 at load/cpu
+// 1.27) — see the budgets.json $comment for the full table.
 export function selectStartupRatioCeiling(startup, loaded = isMachineLoaded()) {
   return loaded ? startup.importRatioCeilingUnderLoad : startup.importRatioCeiling;
 }

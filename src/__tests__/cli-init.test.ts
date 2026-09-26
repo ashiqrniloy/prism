@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, wr
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { Readable, Writable } from "node:stream";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import {
   createInitProject,
@@ -145,6 +145,23 @@ describe("prism init", () => {
     assert.match(io.stdout.text(), /--with-workflows/);
   });
 
+  it("prints Bun next steps for a generated project", async () => {
+    const root = mkdtempSync(join(tmpdir(), "prism-init-hint-"));
+    try {
+      const io = streams();
+      const code = await runInitCommand([join(root, "demo"), "--provider", "mock"], {
+        ...io,
+        templatesRoot,
+        packageVersion: "0.0.13",
+        cwd: root,
+      });
+      assert.equal(code, 0);
+      assert.match(io.stdout.text(), /\n {2}bun install\n {2}bun test\n/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("generates a mock project that typechecks and passes offline tests", async () => {
     const root = mkdtempSync(join(tmpdir(), "prism-init-mock-"));
     const packDir = mkdtempSync(join(tmpdir(), "prism-init-pack-"));
@@ -178,11 +195,19 @@ describe("prism init", () => {
         dependencies: Record<string, string>;
         devDependencies: Record<string, string>;
         scripts: Record<string, string | undefined>;
+        packageManager?: string;
+        engines?: Record<string, string>;
       };
       assert.deepEqual(Object.keys(pkg.dependencies).sort(), ["@arnilo/prism"]);
       // Plan 040 Task 4: scaffolded projects gain the inspector dev script.
       assert.equal(pkg.scripts.dev, "prism dev");
       assert.equal(pkg.dependencies["@arnilo/prism"], "0.0.13");
+      // Plan 125 Task 3: the scaffold emits Bun commands, pins the host package manager, and
+      // makes no engines guess — the generated project's runtime is the host's.
+      assert.equal(pkg.packageManager, "bun@1.4.2");
+      assert.equal(pkg.engines, undefined);
+      assert.equal(pkg.scripts.test, "bun run build && bun test dist/__tests__/agent.test.js");
+      assert.equal(pkg.scripts.start, "bun run build && bun dist/index.js");
 
       const packed = runInProject("npm", ["pack", "--pack-destination", packDir], repoRoot);
       assert.equal(packed.status, 0, packed.stderr || packed.stdout);
@@ -192,15 +217,19 @@ describe("prism init", () => {
       pkg.dependencies["@arnilo/prism"] = join(packDir, tarball!);
       writeFileSync(join(target, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
 
-      const install = runInProject("npm", ["install"], target);
+      const install = runInProject("bun", ["install"], target);
       assert.equal(install.status, 0, install.stderr || install.stdout);
 
-      const typecheck = runInProject("npm", ["run", "typecheck"], target);
+      const typecheck = runInProject("bun", ["run", "typecheck"], target);
       assert.equal(typecheck.status, 0, typecheck.stderr || typecheck.stdout);
 
-      const test = runInProject("npm", ["test"], target);
+      const test = runInProject("bun", ["test"], target);
       assert.equal(test.status, 0, test.stderr || test.stdout);
-      assert.match(`${test.stdout}\n${test.stderr}`, /Hello from mock|ℹ pass 1|pass 1/);
+      const cleanOutput = `${test.stdout}\n${test.stderr}`.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, "");
+      assert.match(cleanOutput, /(?:✓|\(pass\))\s+generated agent\s+>\s+runs offline with the mock provider/);
+      const readme = readFileSync(join(target, "README.md"), "utf8");
+      assert.match(readme, /bun install\nbun test/);
+      assert.doesNotMatch(readme, /npm (install|test|start)/);
 
       // Default install must stay tiny versus Mastra's 439 MB scaffold.
       const nm = join(target, "node_modules");

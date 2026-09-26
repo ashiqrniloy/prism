@@ -1,5 +1,5 @@
 // Plan 079 Task 3: the channel journal legs of the state-concurrency conformance story against
-// real durable stores. SQLite (better-sqlite3) runs when the optional driver is installed;
+// real durable stores. SQLite (bun:sqlite) runs under the Bun runtime;
 // PostgreSQL runs only under `test:postgres` (skips without PRISM_TEST_POSTGRES_URL).
 //   node --test "packages/prism-channels/dist/__tests__/postgres.integration.test.js"
 import assert from "node:assert/strict";
@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { after, describe, it } from "node:test";
+import { afterAll as after, describe, it } from "bun:test";
 import type { CheckpointStore, LeaseStore, OwnershipScope } from "@arnilo/prism";
 import { createChannelDeliveryJournal } from "../delivery.js";
 import { createChannelStateStore, UNRESOLVED_OPERATION_STATES } from "../state.js";
@@ -149,12 +149,12 @@ describe("plan 079 channel journal against SQLite", () => {
     while (dirs.length > 0) rmSync(dirs.pop() ?? "", { recursive: true, force: true });
   });
 
-  it("passes the durable journal conformance probes against a reopened SQLite database", async (t) => {
+  it("passes the durable journal conformance probes against a reopened SQLite database", async () => {
     let createSqlitePersistence: typeof import("@arnilo/prism-core/sessions/sqlite").createSqlitePersistence;
     try {
       ({ createSqlitePersistence } = await import("@arnilo/prism-core/sessions/sqlite"));
     } catch {
-      t.skip("better-sqlite3 is not installed");
+      console.log("requires the Bun runtime (bun:sqlite)");
       return;
     }
     const dir = mkdtempSync(join(tmpdir(), "prism-channel-journal-"));

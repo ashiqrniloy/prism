@@ -25,12 +25,12 @@
  *
  * Registered as matrix suite `calibration/vendor-count-tokens`; not in
  * `GATE_FILES` and not under the root `dist/__tests__/*.test.js` glob, so the
- * default `npm test` chain pays nothing.
+ * default `bun run test` chain pays nothing.
  */
 import assert from "node:assert/strict";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { after, test } from "node:test";
+import { afterAll as after, test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { estimateMessageTokens } from "@arnilo/prism";
 
@@ -241,17 +241,13 @@ test("the evidence row regenerates with fixture ids, model ids, endpoints, and n
   }
 });
 
-test("anthropic count_tokens lands the shipped row inside the recorded band", {
-  skip: gateReason ?? (anthropicKey ? false : "missing ANTHROPIC_API_KEY"),
-}, async () => {
+test.skipIf(Boolean(gateReason ?? !anthropicKey))("anthropic count_tokens lands the shipped row inside the recorded band", async () => {
   measurements.anthropic = await runVendor("anthropic", ANTHROPIC_MODEL, ANTHROPIC_ENDPOINT, (messages) =>
     countAnthropic(anthropicKey, messages),
   );
 });
 
-test("google countTokens lands the shipped row inside the recorded band", {
-  skip: gateReason ?? (googleKey ? false : "missing one of GEMINI_API_KEY, GOOGLE_API_KEY"),
-}, async () => {
+test.skipIf(Boolean(gateReason ?? !googleKey))("google countTokens lands the shipped row inside the recorded band", async () => {
   measurements.google = await runVendor("google", GOOGLE_MODEL, GOOGLE_ENDPOINT, (messages) => countGoogle(googleKey, messages));
 });
 

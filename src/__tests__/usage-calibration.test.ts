@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { estimateMessageTokens, type Message, MODEL_FAMILY_TOKENS, type ModelFamily, resolveModelFamily } from "../index.js";
 // The text projection is the seam the fixture records: no chat-template overhead.
 // Module-private by design (not re-exported from the root barrel).

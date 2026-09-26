@@ -1,6 +1,6 @@
 /** Plan 103 T4: snapshot-keyed `contextMeter()` cache — identity, invalidation, parity, and poll cost. */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AgentSession, ContextMeter, Message, ModelConfig } from "../index.js";
 import { createAgent, createMemorySessionStore, providerDone, providerTextDelta, resolveInputCap } from "../index.js";
 

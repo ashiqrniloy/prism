@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { ProviderRequest, ToolDefinition } from "@arnilo/prism";
 import { assertNoSecretLeak, assertProviderStreamConforms } from "@arnilo/prism/testing/provider-conformance";
 import { createGoogleGenerateContentProvider, googleModels } from "../index.js";
@@ -45,15 +45,15 @@ const toolRequest: ProviderRequest = {
   tools: [getWeatherTool],
 };
 
-describe("@arnilo/prism-providers/google live tests", () => {
-  it("live_text_generation_streams_and_leaks_no_secret", { skip }, async () => {
+(skip ? describe.skip : describe)("@arnilo/prism-providers/google live tests", () => {
+  it("live_text_generation_streams_and_leaks_no_secret", async () => {
     const events = await assertProviderStreamConforms({ provider: provider(), request: textRequest });
     const text = events.map((e) => (e.type === "content_delta" && e.content.type === "text" ? e.content.text : "")).join("");
     assert.ok(text.length > 0, "live text response was empty");
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_tool_call_loop_conforms_and_leaks_no_secret", { skip }, async () => {
+  it("live_tool_call_loop_conforms_and_leaks_no_secret", async () => {
     const events = await assertProviderStreamConforms({ provider: provider(), request: toolRequest });
     assert.ok(
       events.some((e) => e.type === "tool_call" || e.type === "tool_call_delta"),
@@ -64,7 +64,7 @@ describe("@arnilo/prism-providers/google live tests", () => {
 
   // Thinking-effort probe (plan 065 task 15): thinkingLevel must be accepted by
   // the live API (no 400 on generationConfig.thinkingConfig.thinkingLevel).
-  it("live_thinking_level_is_accepted", { skip }, async () => {
+  it("live_thinking_level_is_accepted", async () => {
     const events = await assertProviderStreamConforms({
       provider: provider(),
       request: { ...textRequest, options: { compat: { thinkingLevel: "low" } } },

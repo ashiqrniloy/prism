@@ -6,7 +6,7 @@ import {
   PersistenceLifecycleError,
   type PersistenceLifecycleStore,
 } from "@arnilo/prism";
-import type Database from "better-sqlite3";
+import type { Database } from "bun:sqlite";
 import {
   assertLifecycleOwnership as assertOwnership,
   assertOwnershipScope,
@@ -16,7 +16,7 @@ import {
   rowToTenantQuota as rowToQuota,
 } from "../codecs/index.js";
 
-export function createSqlitePersistenceLifecycle(db: Database.Database): PersistenceLifecycleStore {
+export function createSqlitePersistenceLifecycle(db: Database): PersistenceLifecycleStore {
   return {
     async putLegalHold(input) {
       assertOwnership(input);
@@ -264,7 +264,7 @@ export function createSqlitePersistenceLifecycle(db: Database.Database): Persist
   };
 }
 
-function discoverSessions(db: Database.Database, input: ApplyRetentionInput, limit: number): string[] {
+function discoverSessions(db: Database, input: ApplyRetentionInput, limit: number): string[] {
   const maxAgeDays = input.policy.maxAgeDays;
   if (maxAgeDays === undefined) return [];
   const cutoff = new Date(Date.now() - maxAgeDays * 86_400_000).toISOString();

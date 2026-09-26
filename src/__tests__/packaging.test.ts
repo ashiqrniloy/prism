@@ -2,8 +2,12 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
+import {
+  NON_ADAPTER_PROVIDER_SUBPATHS,
+  // @ts-expect-error stdlib-only package-truth helper intentionally ships as directly runnable JavaScript.
+} from "../../scripts/package-truth.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -317,7 +321,7 @@ describe("packaging guard", () => {
     );
   });
 
-  it("provider family exports exactly the 22 adapter subpaths with no activating root barrel", () => {
+  it("provider family exports exactly the 22 adapter subpaths plus declared non-adapter helpers", () => {
     const manifest = readPkg("packages/prism-providers");
     assert.equal(manifest.dependencies, undefined, "provider family must not add runtime dependencies");
     const exports = manifest.exports as Record<string, Record<string, string>>;
@@ -347,8 +351,8 @@ describe("packaging guard", () => {
     ];
     assert.deepEqual(
       Object.keys(exports).sort(),
-      adapters.map((a) => `./${a}`).sort(),
-      "provider family exports must be exactly the 22 adapter subpaths",
+      [...adapters.map((a) => `./${a}`), ...NON_ADAPTER_PROVIDER_SUBPATHS].sort(),
+      "provider family exports must be exactly the 22 adapter subpaths plus the declared non-adapter helpers",
     );
     assert.equal(exports["."], undefined, "provider family must have no root barrel: no adapter may activate at family-root import");
     // Adapter isolation: compiled adapter code only imports its own directory and
@@ -366,9 +370,15 @@ describe("packaging guard", () => {
           .filter((resolved) => resolved !== adapter && !resolved.startsWith(`${adapter}/`));
         // Plan 055 deliberate family-internal reuse: `shared/` serializers (Task 1,
         // every adapter) and the hyper → openai Responses-machinery import (Task 8,
-        // plan-approved reuse over copying). Everything else must stay adapter-local.
+        // plan-approved reuse over copying). Plan 122 Task 3 adds the non-adapter
+        // `decisions/` host helper, re-exported by the Jev/Laya subpaths only.
+        // Everything else must stay adapter-local.
         // (Foreign paths are repo-relative to dist/, e.g. "shared/anthropic-messages.js".)
-        const allowed: readonly string[] = ["shared/", ...(adapter === "hyper" ? ["openai/"] : [])];
+        const allowed: readonly string[] = [
+          "shared/",
+          ...(adapter === "laya" || adapter === "typesafe" ? ["decisions/"] : []),
+          ...(adapter === "hyper" ? ["openai/"] : []),
+        ];
         const violations = foreign.filter((resolved) => !allowed.some((prefix) => resolved.startsWith(prefix)));
         assert.deepEqual(violations, [], `${adapter} compiled output imports outside its own adapter: ${violations.join(", ")}`);
       }
@@ -384,6 +394,7 @@ describe("packaging guard", () => {
       "./connectors/google-workspace",
       "./connectors/microsoft365",
       "./diagrams",
+      "./document-extraction",
       "./document-reader",
       "./documents",
       "./sandbox",
@@ -401,6 +412,8 @@ describe("packaging guard", () => {
       "dist/documents/index.js",
       "dist/sheets/index.js",
       "dist/diagrams/index.js",
+      "dist/document-extraction/index.js",
+      "docling/ocr.py",
       "dist/document-reader/index.js",
       "dist/sandbox/index.js",
       "dist/skills/index.js",

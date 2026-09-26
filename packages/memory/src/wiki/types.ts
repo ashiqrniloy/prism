@@ -109,9 +109,11 @@ export interface WikiExtensionOptions {
   readonly workspaceRoot?: string;
   /** Callback to auto-deploy skills to .agents/skills/ on setup/init. Defaults to true. */
   readonly autoDeploySkills?: boolean;
-  /** Optional host-injected extractor for formats the built-ins reject (compressed PDF, DOCX,
-   *  unknown binaries). Return null to fail closed. e.g. `createDocumentReader().extract`. */
+  /** Optional host-injected extractor. When set, PDF and CSV try it before the built-ins and do not
+   *  fall back. Images stay on the stub unless `ocrImages` is set. Return null to fail closed. */
   readonly extractDocument?: (input: WikiIngestHookInput) => Promise<{ text: string; format: string } | null>;
+  /** Call `extractDocument` for images instead of the no-OCR stub. No effect without the hook. */
+  readonly ocrImages?: boolean;
   /** Optional host-injected fetcher for `url` ingest sources. The wiki never fetches itself.
    *  Return null to fail closed. e.g. an Obscura `web_fetch` wrapper. */
   readonly fetchUrl?: (input: WikiIngestUrlHookInput) => Promise<WikiIngestFetch | null>;
@@ -133,7 +135,7 @@ export interface WikiIngestInput {
   readonly title?: string;
 }
 
-/** Arguments passed to `WikiExtensionOptions.extractDocument` for formats the built-ins reject. */
+/** Arguments passed to `extractDocument`. Bytes are the staged source; the hook must not fetch links in the result. */
 export interface WikiIngestHookInput {
   readonly bytes: Uint8Array;
   readonly filename?: string;
@@ -166,8 +168,10 @@ export interface WikiIngestOptions {
   readonly maxInputBytes?: number;
   /** Extract byte cap; larger extracts are truncated. Defaults to 2 MiB. */
   readonly maxExtractBytes?: number;
-  /** Host extractor for compressed PDF/DOCX/unknown binaries. Return null to fail closed. */
+  /** Host extractor. When set, PDF and CSV try it first and do not fall back. Images need `ocrImages`. */
   readonly extractDocument?: (input: WikiIngestHookInput) => Promise<{ text: string; format: string } | null>;
+  /** Replace the image stub with `extractDocument`. Refusal writes nothing. */
+  readonly ocrImages?: boolean;
   /** Host fetcher for `url` sources (wiki never fetches). Return null to fail closed. */
   readonly fetchUrl?: (input: WikiIngestUrlHookInput) => Promise<WikiIngestFetch | null>;
 }

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createOpenAI } from "@ai-sdk/openai";
 import type { ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
 import { assertAbortIsObserved, assertNoSecretLeak, assertProviderStreamConforms } from "@arnilo/prism/testing/provider-conformance";
@@ -38,15 +38,15 @@ const toolRequest: ProviderRequest = {
   tools: [getWeatherTool],
 };
 
-describe("@arnilo/prism-providers/ai-sdk live tests", () => {
-  it("live_text_generation_streams_over_real_ai_sdk_provider", { skip }, async () => {
+(skip ? describe.skip : describe)("@arnilo/prism-providers/ai-sdk live tests", () => {
+  it("live_text_generation_streams_over_real_ai_sdk_provider", async () => {
     const events = await assertProviderStreamConforms({ provider: provider(), request: textRequest });
     const text = events.map((e) => (e.type === "content_delta" && e.content.type === "text" ? e.content.text : "")).join("");
     assert.ok(text.length > 0, "live text response was empty");
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_tool_call_loop_conforms_and_leaks_no_secret", { skip }, async () => {
+  it("live_tool_call_loop_conforms_and_leaks_no_secret", async () => {
     const events = await assertProviderStreamConforms({ provider: provider(), request: toolRequest });
     for (const call of events.filter((e: ProviderEvent) => e.type === "tool_call")) {
       if (call.type === "tool_call") assert.ok(call.call.name, "live tool call missing name");
@@ -54,7 +54,7 @@ describe("@arnilo/prism-providers/ai-sdk live tests", () => {
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_abort_signal_is_observed_before_first_request", { skip }, async () => {
+  it("live_abort_signal_is_observed_before_first_request", async () => {
     await assertAbortIsObserved({ provider: provider(), request: textRequest });
   });
 });

@@ -2,7 +2,7 @@ import { ok, strictEqual } from "node:assert";
 import { existsSync, readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { join } from "node:path";
-import test from "node:test";
+import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
 
 const drawioUrl = process.env.PRISM_LIVE_DRAWIO_URL ?? process.env.PRISM_TEST_DRAWIO_URL;
@@ -17,15 +17,13 @@ const drawioUrl = process.env.PRISM_LIVE_DRAWIO_URL ?? process.env.PRISM_TEST_DR
  *   save, and export ("xmlsvg") workflows against the Apache-2.0 jgraph/drawio instance.
  * - Verifies that foreign origin/source postMessages are dropped inside a real browser.
  */
-test("live: self-hosted draw.io webapp embed lifecycle (init -> load -> merge -> export xmlsvg)", {
-  skip: !drawioUrl ? "set PRISM_LIVE_DRAWIO_URL (e.g. http://localhost:8080) to run live draw.io acceptance tests" : false,
-}, async (t) => {
+test.skipIf(!drawioUrl)("live: self-hosted draw.io webapp embed lifecycle (init -> load -> merge -> export xmlsvg)", async () => {
   // Dynamic import to allow running without playwright-core in pure Node test runs
   let playwright: typeof import("playwright-core");
   try {
     playwright = await import("playwright-core");
   } catch {
-    t.diagnostic("playwright-core not installed; skipping live test");
+    console.log("playwright-core not installed; skipping live test");
     return;
   }
 
@@ -66,11 +64,11 @@ test("live: self-hosted draw.io webapp embed lifecycle (init -> load -> merge ->
   const page = await browser.newPage();
 
   try {
-    t.diagnostic(`Navigating to fixture: ${fixtureUrl!}`);
+    console.log(`Navigating to fixture: ${fixtureUrl!}`);
     await page.goto(fixtureUrl!, { waitUntil: "domcontentloaded", timeout: 30_000 });
 
     // 1. Wait for handshake init event
-    t.diagnostic("Waiting for draw.io embed 'init' event...");
+    console.log("Waiting for draw.io embed 'init' event...");
     await page.waitForFunction(() => (window as unknown as { __IS_INITIALIZED: boolean }).__IS_INITIALIZED === true, { timeout: 45_000 });
 
     // 2. Load initial diagram model
@@ -94,7 +92,7 @@ test("live: self-hosted draw.io webapp embed lifecycle (init -> load -> merge ->
     }, mergeXml);
 
     // 4. Request export with format 'xmlsvg'
-    t.diagnostic("Requesting export format xmlsvg...");
+    console.log("Requesting export format xmlsvg...");
     await page.evaluate(() => {
       const win = window as unknown as {
         __embed: { exportDiagram: (fmt: string) => void };
@@ -145,7 +143,7 @@ test("live: self-hosted draw.io webapp embed lifecycle (init -> load -> merge ->
     );
     ok(droppedEvents.length > 0, "Security handler must have recorded dropped foreign message");
 
-    t.diagnostic("Live draw.io acceptance run completed successfully");
+    console.log("Live draw.io acceptance run completed successfully");
   } finally {
     await browser.close();
     await new Promise<void>((resolve) => server.close(() => resolve()));

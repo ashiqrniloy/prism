@@ -6,6 +6,12 @@ import { fileURLToPath } from "node:url";
 import { runGates } from "./release-gates.mjs";
 import { lockWorkspace, readBunLock } from "./bun-lock.mjs";
 
+// The registry interface is the ONLY npm surface left in this repository (plan 125 Task 5).
+// Probed 2026-09-25 on Bun 1.4.2: `bun pack`, `bun dist-tag` and `bun deprecate` do not exist
+// ("error: Script not found"), and `bun publish --help` has no --provenance flag. OIDC
+// attestations are a shipped security artifact, so `bun publish` is rejected rather than
+// deferred: pack, publish, sbom and view stay on npm, on the release host only.
+
 const INTERNAL_SCOPE = "@arnilo/";
 const DEPENDENCY_FIELDS = ["dependencies", "optionalDependencies", "peerDependencies"];
 
@@ -379,6 +385,7 @@ export async function runRelease({
   const publish =
     publisher ??
     ((pkg) => {
+      // release-host registry toolchain — runner images ship Node; contributors never invoke npm
       const result = spawnSync("npm", publishArgs(pkg, dryRun), {
         cwd: release.root,
         encoding: "utf8",
@@ -422,7 +429,7 @@ export async function runRelease({
 
 export function checkReleaseEvidence({ manifestPath, root = process.cwd() } = {}) {
   const path = resolve(root, manifestPath ?? "scripts/release-evidence.json");
-  if (!existsSync(path)) throw new Error(`release evidence missing at ${path}; run npm run release:evidence`);
+  if (!existsSync(path)) throw new Error(`release evidence missing at ${path}; run bun run release:evidence`);
   let manifest;
   try {
     manifest = JSON.parse(readFileSync(path, "utf8"));

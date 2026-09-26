@@ -21,7 +21,7 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { after, before, describe, it } from "node:test";
+import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { blockedGate } from "./blocked-gate.mjs";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;

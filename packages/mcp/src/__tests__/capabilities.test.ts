@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it } from "bun:test";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { attachMcpCapabilities, createMcpCapabilityClient } from "../capabilities.js";
 import { createPrismMcpServer } from "../server.js";

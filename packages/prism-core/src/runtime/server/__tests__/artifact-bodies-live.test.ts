@@ -8,7 +8,7 @@
  * (PUT, GET, DELETE; presign is signature-only).
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { ArtifactBodyRef } from "@arnilo/prism";
 import { createS3ArtifactBodyStore, type S3ArtifactBodyStoreOptions } from "../artifact-bodies.js";
 
@@ -64,7 +64,7 @@ async function readAll(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> 
 }
 
 describe("@arnilo/prism-core runtime/server artifact-bodies S3 live tests", () => {
-  it("live_put_get_presign_delete_lifecycle", { skip }, async () => {
+  it.skipIf(Boolean(skip))("live_put_get_presign_delete_lifecycle", async () => {
     const hash = await sha256Hex(PLAINTEXT);
     const bodyRef = ref(hash, PLAINTEXT.byteLength);
     const store = createS3ArtifactBodyStore(storeOptions());

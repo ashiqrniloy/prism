@@ -2,14 +2,14 @@
 
 ## What it does
 
-`@arnilo/prism-core/runtime/workflows` is an optional package for typed, bounded DAG orchestration over Prism sessions, tools, events, and persistence seams. Hosts define acyclic workflows with agent/function/tool/conditional/fan-out/join/nested-workflow/loop nodes; the package runs a Kahn-style scheduler with a bounded worker pool, emits package-local `WorkflowEvent`s, checkpoints progress, can coordinate queued runs across multiple host processes using durable leases and fencing, and can run bounded linear sagas with durable compensation.
+`@arnilo/prism-core/runtime/workflows` is an optional package for typed, bounded DAG and cyclic graph orchestration over Prism sessions, tools, events, and persistence seams. Hosts define acyclic or cyclic workflows with agent/function/tool/conditional/fan-out/join/nested-workflow/loop/route nodes; the package runs a Kahn-style scheduler for DAGs and a wave-based superstep engine for cyclic graphs and dynamic routing, emits package-local `WorkflowEvent`s, checkpoints progress, can coordinate queued runs across multiple host processes using durable leases and fencing, and can run bounded linear sagas with durable compensation.
 
 Primary exports:
 
 | Export | Purpose |
 | --- | --- |
-| `defineWorkflow` / `buildGraph` | Validate definitions (acyclicity, edge refs, limits) and build deterministic successor/indegree maps |
-| `agentNode`, `functionNode`, `loopNode`, `toolNode`, `conditionalNode`, `fanOutNode`, `joinNode`, `workflowNode` | Typed node factories, including bounded iterative refinement and composition through the same runner |
+| `defineWorkflow` / `buildGraph` | Validate definitions (cycle policy, edge refs, limits) and build deterministic successor/indegree maps |
+| `agentNode`, `functionNode`, `loopNode`, `toolNode`, `conditionalNode`, `fanOutNode`, `joinNode`, `workflowNode`, `routeNode` | Typed node factories, including dynamic branch routing, bounded iterative refinement, and composition through the same runner |
 | `runWorkflow` / `resumeWorkflow` / `suspend` / `replayWorkflow` | Execute, durably suspend, exactly-once resume, or create an immutable-lineage replay from a succeeded node |
 | `createMemoryWorkflowCheckpoints` | In-process `WorkflowCheckpointAdapter` over core `createMemoryCheckpointStore()` |
 | `createWorkflowCheckpoints` | Adapt core `CheckpointStore` (including SQLite/PostgreSQL persistence capabilities) to workflow checkpoint shapes |
@@ -20,7 +20,7 @@ Primary exports:
 | `defineSaga` / `runSaga` / `resumeSaga` | Bounded linear durable forward steps, reverse compensation, unknown-outcome reconciliation, lease fencing, and manual resolution over existing checkpoint/lease stores |
 | `createWorkflowSchedules` | Explicit ownership-scoped one-time/interval/host-calculated schedules over existing checkpoint/lease stores |
 | `createProactiveScheduleCapabilities` | Scoped, expiring, revocable capability tokens that enable proactive schedules; revocation stops firing fail-closed |
-| `serializeWorkflowGraph` / `collectWorkflowGraphs` | Pure JSON serialization of workflow DAGs (`WorkflowGraphView`) without functions/closures; collect nested graphs |
+| `serializeWorkflowGraph` / `collectWorkflowGraphs` | Pure JSON serialization of workflow graphs (`WorkflowGraphView`) without functions/closures; collect nested graphs |
 | `workflowGraphToMermaid` / `workflowGraphToDot` | Deterministic Mermaid flowchart and Graphviz DOT exporters with node shapes by kind and label escaping |
 | `projectWorkflowGraphRun` / `createWorkflowGraphRunFolder` | Run overlay view (`WorkflowGraphRunView`) from checkpoints, timelines, or live event stream |
 
@@ -28,7 +28,7 @@ Included through the `@arnilo/prism` / `@arnilo/prism-core` family packages; ins
 
 ## When to use it
 
-Use this package when a host needs multi-node dependency scheduling, conditionals, bounded fan-out/join, retries/timeouts, workflow events, or checkpoint/resume — without putting graph vocabulary into core.
+Use this package when a host needs multi-node dependency scheduling, conditionals, dynamic routing, cyclic reflection loops, bounded fan-out/join, retries/timeouts, workflow events, or checkpoint/resume — without putting graph vocabulary into core.
 
 Use `createWorkflowCoordinator()` when multiple processes share SQLite/PostgreSQL persistence and must claim queued work exclusively. It is a database-backed coordinator, not a separate broker, DSL parser, provider abstraction, or terminal UI. Agent nodes call public `AgentSession.run()` only; tool nodes go through ordinary `ToolDefinition` dispatch and optional `ExecutionPolicy`.
 
@@ -42,8 +42,9 @@ Use `defineSaga`/`runSaga` for a linear business sequence whose remote effects n
 | --- | --- |
 | `id` | Stable workflow id (required) |
 | `revision` | Non-empty host-authored definition revision (required); parent and nested revisions enter `definitionHash` |
-| `nodes` | Record of node definitions (`kind` + typed fields) |
-| `edges` | `[from, to]` pairs; must be acyclic; unknown ids rejected |
+| `nodes` | Record of node definitions (`kind` + typed fields + optional `activation`) |
+| `edges` | `[from, to]` pairs; cycles permitted when `limits.maxSupersteps` is declared; undeclared cycles fail closed; unknown node ids and self-edges rejected |
+| `limits.maxSupersteps` | Required on cyclic graphs, optional opt-in on DAG graphs; default none / hard cap 256 |
 | `limits.maxNodes` | Default 1,000 / hard cap 10,000 |
 | `limits.maxFanOut` | Default 64 / hard cap 1,024 |
 | `limits.maxConcurrency` | Default 8 / hard cap 256 |
@@ -65,9 +66,12 @@ Use `defineSaga`/`runSaga` for a linear business sequence whose remote effects n
 | `loop` | `loopNode` | Runs one bounded inline or function/tool body repeatedly until `until(ctx)` is true |
 | `tool` | `toolNode` | Dispatches one registered tool, optionally behind durable approval |
 | `conditional` | `conditionalNode` | Evaluates a predicate and skips configured successors |
+| `route` | `routeNode` | Evaluates dynamic branch selection via `select(ctx)`, returning a subset of declared successor node IDs |
 | `fan_out` | `fanOutNode` | Maps a bounded list with workflow concurrency |
 | `join` | `joinNode` | Reduces an upstream array |
 | `workflow` | `workflowNode` | Runs a nested workflow with inherited capabilities |
+
+Nodes default to `activation: "all"` (requires all declared predecessors to complete before becoming ready). Setting `activation: "any"` enables a node to fire in any wave where at least one predecessor completes (requires at least one predecessor).
 
 All workflow limits and runtime `concurrency` reject non-safe integers, zero, negatives, NaN, `Infinity`, and values above the named hard cap. Node retries allow 0–100; an explicit node timeout allows 1–86,400,000 ms. Omitting `timeoutMs` remains an explicit host choice.
 
@@ -94,7 +98,7 @@ All workflow limits and runtime `concurrency` reject non-safe integers, zero, ne
 | `validateState` | Host validator for every initial/restored/updated state; required when workflow declares `state.schema` |
 | `initialState` | Optional host initial state override; nested workflows receive parent state automatically |
 
-A function node returns `suspend({ reason, data?, resumeSchema? })` to persist `status: "suspended"`. Its next invocation receives `ctx.resume` only after an approved resume. `resumeWorkflow(workflow, { runId }, options)` validates schema/version/ownership/`definitionHash`, claims the checkpoint before node execution, and continues the suspended node. Denial persists terminal `denied` status without invoking it. Existing failed/aborted checkpoint resume remains available without a human decision.
+A function node returns `suspend({ reason, data?, resumeSchema? })` to persist `status: "suspended"`. Its next invocation receives `ctx.resume` only after an approved resume. `resumeWorkflow(workflow, { runId }, options)` validates schema/version/ownership/`definitionHash`, claims the checkpoint before node execution, and continues the suspended node. Denial persists terminal `denied` status without invoking it. Existing failed/aborted checkpoint resume remains available without a human decision. Workflow checkpoints persist `schemaVersion: 2`, recording an `execution` block with `{ superstep, pending, maxSupersteps }` alongside `outputs`, `state`, and `status`. Cyclic and superstep-enabled workflows resume from the persisted superstep and pending queue without re-executing completed wave work; legacy v1 checkpoints upgrade to v2 transparently on resume.
 
 Restore hooks make the resume all-or-nothing across layers: workflow checkpoints carry the host's `metadata` (git commit, document version, workspace fingerprint), `restoreHooks` put each recorded layer back, and only when every hook succeeds does the scheduler claim the checkpoint and continue. Each hook receives `{ workflowId, runId, version, status, metadata, checkpoint }` and an `AbortSignal`; the successful run's `workflow_resumed` event carries `restore: { hooks: [{ hook, durationMs }], durationMs }`. No hooks ⇒ no hook call and no `restore` field. Compensation is the same rule as agent resumes: an object-form handler may declare `compensate`, a failed restore undoes the applied layers in reverse (failing hook first) under the same per-hook timeout, and `CheckpointRestoreError.compensation` reports `{ ran, failed? }` best-effort while the checkpoint stays unclaimed and resumable. A successful resume's audit also reaches the review surface: `projectWorkflowTimeline` carries the same `ExecutionTimeline.restore` as the agent timeline.
 
@@ -112,7 +116,7 @@ Coding-agent ask-user glue (opt-in, no Goal DB): `suspendAskUserDecision(request
 
 Every node receives bounded `ctx.state`, `ctx.stateVersion`, and async `ctx.updateState(patch, { mode: "merge" | "replace" })`. Updates serialize, validate, redact, and snapshot before checkpoint save. A rejected state or checkpoint write stays rejected (nothing committed) and recovers the per-run chain so a later valid write can run. `workflowNode({ workflow })` runs its child with the same ownership, agent/tool registries, execution policy, redactor, signal, checkpoints, and event bus; child state replaces parent state after success.
 
-`replayWorkflow(workflow, { sourceRunId, fromNodeId, runId? }, options)` requires a succeeded source/node, creates a new checkpoint, copies terminal evidence outside the selected node's downstream closure, restores selected-node pre-state, and records `{ sourceRunId, fromNodeId, rootRunId, depth }`. Source evidence is untouched. Copying any prior nested/tool approval is rejected; replay from that approval node or earlier so Phase 8 approval executes again.
+`replayWorkflow(workflow, { sourceRunId, fromNodeId, runId? }, options)` requires a succeeded source/node, creates a new checkpoint, copies terminal evidence outside the selected node's downstream closure, restores selected-node pre-state, and records `{ sourceRunId, fromNodeId, rootRunId, depth }`. For cyclic workflows, the downstream closure includes all nodes reachable across forward- and back-edges from `fromNodeId`, and upstream evidence for predecessor nodes that executed across multiple iterations resolves to their latest succeeded iteration output. Replay from a cyclic node that never succeeded in the source run fails closed. Source evidence is untouched. Copying any prior nested/tool approval is rejected; replay from that approval node or earlier so Phase 8 approval executes again.
 
 `createWorkflowCoordinator({ coordinatorId, workflows, checkpoints, leases, ... })` polls queued/running checkpoints with bounded pages, atomically claims each run, renews its lease, and aborts/fences work after lease loss. Key controls: `leaseTtlMs` (default 30s), `renewalIntervalMs` (default TTL/3), `pollIntervalMs` (default 1s), `maxConcurrentRuns` (default 4), and `pageSize` (default 100, maximum 500). Optional `admission` wraps claims: cursor wrap across pages (default 4 pages/poll, hard 16) so a noisy first page cannot starve later tenants; `perTenant` / `perClass` cap concurrent claims on that worker; `deadlineMs` skips stale `createdAt`; `drain` stops new claims while draining and aborts in-flight after `snapshot().expired`. Workload class is `metadata.workloadClass` (`^[a-z][a-z0-9_-]{0,31}$`, else `default`). `onMetric` labels are `outcome` + `class` only — never tenant or run ids. This is not a second scheduler.
 
@@ -401,6 +405,200 @@ if (!passed(last.outputs)) throw new BudgetExhaustedError(MAX_ITERATIONS);
 
 For a single bounded refinement, prefer `loopNode`. Keep this host-loop pattern when separate run ids, per-run checkpoints, or a new workflow definition are part of the contract.
 
+## Cyclic execution and superstep engine
+
+Workflows support cyclic graphs with directed back-edges for iterative refinement, multi-agent reflection loops, and state-driven rework. Cyclic graphs require `limits.maxSupersteps`. Defining a cyclic graph without `limits.maxSupersteps` fails closed at validation time with `WorkflowDefinitionError`. On acyclic graphs, specifying `limits.maxSupersteps` is an optional opt-in that switches execution from the default Kahn DAG scheduler to the wave-based superstep engine.
+
+### Superstep execution lifecycle
+
+1. **Initialization (Superstep 0)**: Ready nodes (indegree 0 for DAG entry or initial entry nodes) are queued for the first wave.
+2. **Activation Waves**:
+   - Ready nodes execute concurrently up to configured `concurrency` (bounded by `limits.maxConcurrency`).
+   - Succeeded nodes enqueue their downstream successors into the next wave's pending queue.
+   - Nodes configure activation behavior via `activation`:
+     - `"all"` (default): Requires all declared predecessors to complete before the node fires. On cyclic back-edges, predecessors must complete again in subsequent waves to reactivate the node.
+     - `"any"`: Fires in any wave where at least one declared predecessor completes (requires at least one declared predecessor; root nodes cannot specify `activation: "any"`).
+3. **Idle-Drain Success**: When the pending queue becomes empty and no nodes remain in-flight, the workflow completes with `status: "succeeded"`.
+4. **Budget Enforcement**: If the superstep count reaches `limits.maxSupersteps` before the graph drains, execution immediately halts and fails closed with `WorkflowSuperstepLimitError` (error code `ERR_PRISM_WORKFLOW_SUPERSTEP_LIMIT`).
+
+### Checkpoint cadence and sizing trade-off
+
+The superstep engine writes one checkpoint per activation wave (never more than the per-node-completion cadence it replaces); hosts that opt into `limits.maxSupersteps` on acyclic graphs keep the existing cadence.
+
+Requirement default: none for acyclic graphs (uses the standard DAG scheduler); explicitly required for cyclic graphs. The maximum superstep limit is capped at 256 (`HARD_MAX_SUPERSTEPS`).
+
+```ts
+import { defineWorkflow, runWorkflow, agentNode, routeNode } from "@arnilo/prism-core/runtime/workflows";
+
+const worker = agentNode({
+  agent: "worker",
+  input: (ctx) => ({ draft: ctx.state.draft ?? "initial draft", feedback: ctx.state.feedback }),
+});
+
+const reviewer = agentNode({
+  agent: "reviewer",
+  input: (ctx) => ({ draft: ctx.upstream.worker }),
+});
+
+const router = routeNode({
+  select: (ctx) => {
+    const review = ctx.upstream.reviewer as { approved: boolean; feedback?: string };
+    return review.approved ? ["done"] : ["worker"];
+  },
+});
+
+const done = agentNode({
+  agent: "summarizer",
+  input: (ctx) => ctx.upstream.worker,
+});
+
+const workflow = defineWorkflow({
+  id: "cyclic-reflection",
+  revision: "1",
+  nodes: {
+    worker: { ...worker, activation: "any" }, // Worker fires on entry and on rework back-edge
+    reviewer,
+    router,
+    done,
+  },
+  edges: [
+    ["worker", "reviewer"],
+    ["reviewer", "router"],
+    ["router", "done"],
+    ["router", "worker"], // Back-edge forming a cycle
+  ],
+  limits: {
+    maxSupersteps: 10,
+    maxConcurrency: 2,
+  },
+});
+```
+
+### Per-iteration replay forking
+
+Cyclic workflows record checkpoint evidence for each executed iteration of a node. `replayWorkflow` supports targeting a specific zero-based iteration (`iteration`) of a cyclic node, with optional state patch injection (`injectState`) and input override (`injectInput`):
+
+```ts
+const forkedRun = await replayWorkflow(workflow, {
+  sourceRunId: "run-original",
+  fromNodeId: "worker",
+  iteration: 1, // Replay specifically from the 2nd loop iteration
+  injectState: {
+    reviewerGuidance: "Focus strictly on security and error boundary handling",
+  },
+}, { checkpoints, ownership: { tenantId: "t1" } });
+```
+
+When replaying from iteration $N$, prior nodes resolve their upstream dependencies to their recorded outputs at or before iteration $N$, enabling deterministic simulation, prompt engineering counterfactuals, and interactive debugging without restarting the entire cycle.
+
+## Dynamic routing (`routeNode`)
+
+`routeNode` enables dynamic branch selection at runtime based on upstream outputs and workflow state.
+
+```ts
+const router = routeNode({
+  select: async (ctx) => {
+    const verdict = (ctx.upstream.reviewer as { verdict: string }).verdict;
+    if (verdict === "needs_human") return ["escalate"];
+    if (verdict === "retry") return ["worker"];
+    if (verdict === "accept") return ["done"];
+    return []; // Empty array cleanly drains this branch
+  },
+});
+```
+
+- **Target validation**: The node IDs returned by `select(ctx)` must be a subset of the route node's declared successor edges (`targets ⊆ declaredSuccessors`). If `select` returns any target node ID not declared in the workflow edges, execution fails closed with `WorkflowRouteTargetError` (`ERR_PRISM_WORKFLOW_ROUTE_TARGET`).
+- **Empty selection**: Returning an empty array (`[]`) terminates routing along this path without error, allowing the branch or workflow to drain cleanly.
+- **Context and Async**: `select(ctx)` receives `ctx.upstream`, `ctx.state`, and `ctx.iteration`, and can be synchronous or return a Promise.
+- **Topology support**: `routeNode` works identically in both acyclic workflows and cyclic graphs.
+
+## Scoped per-node state and subgraph isolation
+
+In multi-node workflows and cyclic loops, concurrent or collaborating nodes sharing a single un-scoped state dictionary can inadvertently overwrite sibling keys. Prism provides scoped state wrappers to isolate working memory:
+
+### Node-level scoping (`withNodeScope`)
+
+`withNodeScope(scopeKey, node)` wraps any workflow node definition (function, agent, tool, route, conditional, fan_out, join, workflow):
+- Inside the wrapped node, `ctx.state` automatically points to `ctx.state[scopeKey]`.
+- Calling `ctx.updateState(patch)` updates only `ctx.state[scopeKey]`.
+- Un-scoped global workflow state remains accessible via `ctx.rootState`.
+- Scope keys are validated against prototype pollution (`__proto__`, `constructor`, `prototype`).
+
+```ts
+import { functionNode, withNodeScope } from "@arnilo/prism-core/runtime/workflows";
+
+const researcher = withNodeScope(
+  "researcher",
+  functionNode({
+    execute: async (ctx) => {
+      // Isolated read/write: updates state.researcher without colliding with state.verifier
+      await ctx.updateState({ notes: ["discovered leak"], confidence: 0.95 });
+      // Global read: inspect parent config
+      const target = (ctx.rootState as { targetService?: string }).targetService;
+      return ctx.state;
+    },
+  }),
+);
+```
+
+### Nested subgraph isolation (`scopedSubgraphNode`)
+
+`scopedSubgraphNode` executes an entire child workflow within an isolated state sub-namespace, automatically projecting inputs from and deliverables into `ctx.state[scope]`:
+
+```ts
+import { scopedSubgraphNode } from "@arnilo/prism-core/runtime/workflows";
+
+const subResearch = scopedSubgraphNode({
+  scope: "securitySubsystem",
+  workflow: securityAuditWorkflow,
+  input: (scopedCtx) => ({ auditTarget: scopedCtx.state.targetUrl }),
+  output: (childResult, scopedCtx) => ({
+    cveCount: childResult.outputs.scanner,
+  }),
+});
+```
+
+## Declarative event-driven swarm topology
+
+Prism provides first-class support for event-driven multi-agent swarms using cyclic supersteps and dynamic topic routing via `defineSwarmWorkflow`, `swarmRouterNode`, `publishSwarmEvent`, and `getSwarmEvents`:
+
+```ts
+import {
+  defineSwarmWorkflow,
+  functionNode,
+  getSwarmEvents,
+  publishSwarmEvent,
+  withNodeScope,
+} from "@arnilo/prism-core/runtime/workflows";
+
+const swarm = defineSwarmWorkflow({
+  id: "support-swarm",
+  revision: "1",
+  maxSupersteps: 10,
+  agents: {
+    triage: withNodeScope("triage", triageNode),
+    billing: withNodeScope("billing", billingNode),
+    tech: withNodeScope("tech", techNode),
+  },
+  subscriptions: {
+    "ticket:new": ["triage"],
+    "ticket:billing": ["billing"],
+    "ticket:tech": ["tech"],
+  },
+  initialState: {
+    __swarmEvents: [
+      { topic: "ticket:new", sender: "user", payload: { type: "billing" } },
+    ],
+  },
+});
+```
+
+### Swarm event lifecycle
+1. **Topic Subscriptions**: The central `swarmRouterNode` inspects `__swarmEvents` and dispatches each event to subscribed agents. Exact topics (`"ticket:billing"`) and wildcard prefix patterns (`"ticket:*"`, `"*"`) are supported.
+2. **Two-Phase Queueing**: Pending events are promoted to `__swarmActiveEvents` for the executing superstep wave, while newly published events accumulate in `__swarmEvents` for the next wave.
+3. **Scoped Publishing**: Agents call `publishSwarmEvent(ctx, event)` to queue new topic events. Scoped nodes write seamlessly to the root event bus without leaking into their scoped state.
+4. **Idle Drain**: When all agents finish and no further topic events are published, the swarm router selects `[]`, concluding the workflow with `status: "succeeded"`.
+
 ## Extension and configuration notes
 
 - Workflow semantics stay in this optional package; generic checkpoint persistence and bounded event fan-in live in core.
@@ -478,7 +676,11 @@ const graphs = collectWorkflowGraphs(hierarchicalWorkflow);
 
 ## Security and performance notes
 
-- Definitions require a non-empty host-authored `revision` and fail closed on cycles, unknown edges, self-edges, invalid limits, and `maxNodes` overflow. Revision and every nested revision enter the deterministic definition hash; hosts must bump revision when function/tool behavior changes. Loop `maxIterations` is required and capped at 64.
+- Definitions require a non-empty host-authored `revision` and fail closed on undeclared cycles (cycles without `limits.maxSupersteps`), unknown edges, self-edges, invalid limits, and `maxNodes` overflow. Revision and every nested revision enter the deterministic definition hash; hosts must bump revision when function/tool behavior changes. Loop `maxIterations` is required and capped at 64.
+- Dynamic route targets are constrained fail-closed to declared successor edges (`targets ⊆ declaredSuccessors`), preventing arbitrary node injection or dynamic traversal of undeclared paths.
+- Superstep budgets (`limits.maxSupersteps`) are host-unforgeable: validated at definition time, enforced centrally by the superstep engine, and persisted in checkpoint v2 so restarts and resumes cannot tamper with or reset the superstep counter.
+- Checkpoint schemaVersion 2 tracks `execution.superstep`, `execution.pending`, and `execution.maxSupersteps` so wave progression is crash-consistent across restarts.
+- Replay on cyclic graphs computes downstream closure across all cyclic paths (both forward- and back-edges) and resolves upstream pre-state evidence to the latest succeeded iteration output, ensuring deterministic immutable-lineage restarts. Replay from an unexecuted or never-succeeded cyclic node fails closed.
 - Loop bodies run serially inside one scheduler node; every body output and durable iteration record is bounded/redacted with `maxNodeOutputBytes`, and the scheduler persists the completed-iteration cursor before advancing. Approved durable resumes re-enter only the incomplete iteration.
 - Fan-out length is bounded by `maxFanOut`. Independent `map` items run in a local worker pool capped by the resolved workflow `maxConcurrency` (and `options.concurrency`); output stays in input order. Abort or the first map failure stops further items. There is no extra global admission service.
 - Node outputs, shared state/history, schedule input/records, and checkpoints are byte/count/depth bounded. Checkpoint size remains the final aggregate ceiling.
@@ -503,7 +705,7 @@ Use workflows for known, durable, replayable graphs. Use optional supervisor del
 
 ## Related APIs
 
-- Examples: `examples/workflow-research-and-review.ts`, `examples/workflow-parallel-research.ts`, `examples/workflow-tool-approval.ts`, `examples/workflow-multimodal-document.ts`, `examples/workflow-sqlite-resume.ts`, `examples/workflow-postgres-resume.ts`, `examples/workflow-event-sink.ts`, `examples/workflow-rpc-cancel.ts`, `examples/workflow-distributed-coordinator.ts`, `examples/autonomous-coding-loop.ts` (host-loop iterate-until-done) — offline runnable demos; PostgreSQL safely skips unless `PRISM_TEST_POSTGRES_URL` is set.
+- Examples: `examples/cyclic-reflection.ts`, `examples/workflow-research-and-review.ts`, `examples/workflow-parallel-research.ts`, `examples/workflow-tool-approval.ts`, `examples/workflow-multimodal-document.ts`, `examples/workflow-sqlite-resume.ts`, `examples/workflow-postgres-resume.ts`, `examples/workflow-event-sink.ts`, `examples/workflow-rpc-cancel.ts`, `examples/workflow-distributed-coordinator.ts`, `examples/autonomous-coding-loop.ts` (host-loop iterate-until-done) — offline runnable demos; PostgreSQL safely skips unless `PRISM_TEST_POSTGRES_URL` is set.
 - [Workflow orchestration primitives](history/workflow-orchestration-primitives.md): Task 0–1 inventory and locked adapter contracts
 - [Agent/session runtime](agent-session-runtime.md): `AgentSession.run()`/`stream()`, abort, subscribe
 - [Guardrails](guardrails.md): `RunWorkflowOptions.guardrails` routes tool nodes through core dispatch before policy and side effects.

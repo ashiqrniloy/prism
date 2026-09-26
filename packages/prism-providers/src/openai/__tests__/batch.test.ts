@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { BatchJobsError, pollBatch } from "@arnilo/prism";
 import { runBatchJobsConformance } from "@arnilo/prism/testing/provider-conformance";
 import { createOpenAIBatchJobsProvider, OPENAI_BATCH_COMPLETION_WINDOW, OPENAI_BATCH_MAX_REQUESTS } from "../index.js";

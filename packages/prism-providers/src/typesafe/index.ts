@@ -24,6 +24,7 @@ export function createTypeSafeProviderPackage(options: TypeSafeProviderPackageOp
   });
 }
 
+export * from "../decisions/index.js";
 export {
   defineTypeSafeModel,
   TYPESAFE_API_KEY_ENV,

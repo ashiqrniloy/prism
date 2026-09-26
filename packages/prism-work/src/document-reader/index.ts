@@ -11,17 +11,22 @@
  */
 
 import type { SecretRedactor } from "@arnilo/prism";
-import { parseDocument } from "../documents/parse.js";
-import type { CellValue, DocumentKind, DocumentModel } from "../documents/types.js";
+import { reviveWorkerTaskError, runInPool, shouldOffloadToPool } from "../runtime/worker-pool.js";
 import { DocumentReaderError } from "./errors.js";
+import { createDocxParser, createOoxmlParser, createPdfParser } from "./parsers.js";
 
 export { DocumentReaderError };
+export { createDocxParser, createPdfParser } from "./parsers.js";
 
 /** Structural reader contract accepted by coding-tools' host injection seam. */
 export interface DocumentReader {
   readonly maxInputBytes: number;
   readonly maxTextBytes: number;
-  extract(input: { readonly buffer: Buffer; readonly path: string; readonly signal?: AbortSignal }): Promise<DocumentReaderResult | null>;
+  extract(input: {
+    readonly buffer: Uint8Array;
+    readonly path: string;
+    readonly signal?: AbortSignal;
+  }): Promise<DocumentReaderResult | null>;
 }
 
 export interface DocumentReaderResult {
@@ -48,25 +53,22 @@ function validateCap(name: string, value: number, hard: number): number {
   return value;
 }
 
-/** Byte-safe truncation to at most `maxBytes` UTF-8 bytes. */
-function truncateToBytes(text: string, maxBytes: number): string {
-  const buffer = Buffer.from(text, "utf8");
-  if (buffer.byteLength <= maxBytes) return text;
-  return buffer.subarray(0, maxBytes).toString("utf8");
-}
-
 /** Host-selected per-format parser implementation. */
 export interface DocumentParser {
   readonly format: string;
-  /** Cheap magic-byte gate; false means "this buffer is not my format" (never reaches the parser). */
-  detect(buffer: Buffer): boolean;
+  /**
+   * Cheap magic-byte gate; false means "this buffer is not my format" (never reaches the parser).
+   * Receives `Uint8Array` so a worker-shaped payload works without a `Buffer.from` wrap; every
+   * `Buffer`-only helper (`toString`, `includes`) must go through a view first.
+   */
+  detect(bytes: Uint8Array): boolean;
   /**
    * Extract literal text. Must never execute embedded content or fetch
    * external resources. Over-page documents must refuse; over-text results
    * must be truncated with `truncatedBy: "bytes"`.
    */
   extract(
-    buffer: Buffer,
+    bytes: Uint8Array,
     options: { readonly maxPages: number; readonly maxTextBytes: number; readonly signal?: AbortSignal },
   ): Promise<Omit<DocumentReaderResult, "format">>;
 }
@@ -84,139 +86,6 @@ export interface CreateDocumentReaderOptions {
   readonly redactor?: SecretRedactor;
 }
 
-async function loadPeer(name: string): Promise<unknown> {
-  try {
-    const mod = await import(name);
-    // CJS peers expose their export as `default` under Node ESM interop.
-    return (mod as { default?: unknown }).default ?? mod;
-  } catch {
-    throw new DocumentReaderError(
-      `document-reader: optional peer parser "${name}" is not installed. ` +
-        `Install it (npm i ${name}) or supply a host-selected parser via createDocumentReader({ parsers }); ` +
-        `refusing to create a reader that cannot extract this format.`,
-    );
-  }
-}
-
-const PDF_MAGIC = "%PDF-";
-
-/** v2 `PDFParse` surface used by the adapter (typed locally; the package is ambient). */
-type PdfParseResult = { readonly total: number; readonly text: string };
-type PdfParseCtor = new (options: {
-  readonly data: Uint8Array;
-  readonly isEvalSupported?: boolean;
-}) => {
-  getText(options?: { readonly pageJoiner?: string }): Promise<PdfParseResult>;
-  destroy(): Promise<void>;
-};
-
-/** Default PDF parser backed by the optional `pdf-parse` peer (v2 `PDFParse` class). */
-export async function createPdfParser(): Promise<DocumentParser> {
-  const ctor = (await loadPeer("pdf-parse")) as { PDFParse?: unknown };
-  if (typeof ctor.PDFParse !== "function") {
-    throw new DocumentReaderError('document-reader: optional peer "pdf-parse" (v2+) does not export the PDFParse class');
-  }
-  const PDFParse = ctor.PDFParse as PdfParseCtor;
-  return {
-    format: "pdf",
-    detect: (buffer) => buffer.length >= PDF_MAGIC.length && buffer.toString("latin1", 0, PDF_MAGIC.length) === PDF_MAGIC,
-    extract: async (buffer, { maxPages, maxTextBytes, signal }) => {
-      signal?.throwIfAborted();
-      // v2 runs pdf.js in a worker thread and claims the TypedArray (transfer);
-      // the adapter never reuses the buffer after parse, so passing a fresh
-      // Uint8Array view is safe. isEvalSupported:false keeps PDF functions from
-      // executing embedded scripts — the document-reader contract forbids it.
-      const parser = new PDFParse({ data: new Uint8Array(buffer), isEvalSupported: false });
-      let data: { total: number; text: string };
-      try {
-        // pageJoiner:'' keeps v2's page-boundary markers out of extracted text
-        // (v1 emitted none; goldens assert on raw page text).
-        data = await parser.getText({ pageJoiner: "" });
-      } finally {
-        await parser.destroy();
-      }
-      if (data.total > maxPages) {
-        throw new DocumentReaderError(`document has ${data.total} pages, exceeds maxPages cap (${maxPages}); refusing to extract`);
-      }
-      const text = data.text ?? "";
-      if (Buffer.byteLength(text, "utf8") > maxTextBytes) {
-        return { text: truncateToBytes(text, maxTextBytes), pages: data.total, truncatedBy: "bytes" };
-      }
-      return { text, pages: data.total, truncatedBy: null };
-    },
-  };
-}
-
-/** Default DOCX parser backed by the optional `mammoth` peer (raw text only). */
-export async function createDocxParser(): Promise<DocumentParser> {
-  const mammoth = (await loadPeer("mammoth")) as {
-    extractRawText(input: { buffer: Buffer }): Promise<{ value: string }>;
-  };
-  return {
-    format: "docx",
-    // zip container + main document part marker; entry names are stored
-    // uncompressed, so the literal name appears verbatim in the headers.
-    detect: (buffer) =>
-      buffer.length >= 4 &&
-      buffer[0] === 0x50 &&
-      buffer[1] === 0x4b &&
-      buffer[2] === 0x03 &&
-      buffer[3] === 0x04 &&
-      buffer.includes("word/document.xml"),
-    extract: async (buffer, { maxTextBytes, signal }) => {
-      signal?.throwIfAborted();
-      const { value } = await mammoth.extractRawText({ buffer });
-      const text = value ?? "";
-      if (Buffer.byteLength(text, "utf8") > maxTextBytes) {
-        return { text: truncateToBytes(text, maxTextBytes), pages: 1, truncatedBy: "bytes" };
-      }
-      return { text, pages: 1, truncatedBy: null };
-    },
-  };
-}
-
-function cellText(value: CellValue): string {
-  if (value === null) return "";
-  if (typeof value !== "object") return String(value);
-  if ("formula" in value) return value.cachedValue === undefined || value.cachedValue === null ? value.formula : String(value.cachedValue);
-  return value.value;
-}
-
-function modelText(model: DocumentModel): string {
-  if (model.kind === "sheet") {
-    return model.sheets.map((sheet) => [sheet.name, ...sheet.cells.map((row) => row.map(cellText).join("\t"))].join("\n")).join("\n\n");
-  }
-  if (model.kind === "deck") {
-    return model.slides
-      .map((slide, index) => [`Slide ${index + 1}`, slide.title, slide.subtitle, ...(slide.bullets ?? [])].filter(Boolean).join("\n"))
-      .join("\n\n");
-  }
-  return "";
-}
-
-function createOoxmlParser(format: "xlsx" | "pptx", kind: DocumentKind, part: string): DocumentParser {
-  return {
-    format,
-    detect: (buffer) =>
-      buffer.length >= 4 && buffer[0] === 0x50 && buffer[1] === 0x4b && buffer[2] === 0x03 && buffer[3] === 0x04 && buffer.includes(part),
-    extract: async (buffer, { maxPages, maxTextBytes, signal }) => {
-      signal?.throwIfAborted();
-      const model = await parseDocument(buffer, {
-        kind,
-        caps:
-          kind === "sheet"
-            ? { maxBytes: buffer.byteLength, maxSheets: Math.min(maxPages, 1_000) }
-            : { maxBytes: buffer.byteLength, maxSlides: Math.min(maxPages, 2_000) },
-      });
-      const pages = model.kind === "sheet" ? model.sheets.length : model.kind === "deck" ? model.slides.length : 0;
-      const text = modelText(model);
-      return Buffer.byteLength(text, "utf8") > maxTextBytes
-        ? { text: truncateToBytes(text, maxTextBytes), pages, truncatedBy: "bytes" as const }
-        : { text, pages, truncatedBy: null };
-    },
-  };
-}
-
 /**
  * Create a bounded document reader for `createReadTool({ documentReader })`.
  * Throws {@link DocumentReaderError} when a selected format's peer parser is
@@ -227,6 +96,7 @@ export async function createDocumentReader(options: CreateDocumentReaderOptions 
   const maxBytes = validateCap("maxBytes", options.maxBytes ?? DEFAULT_MAX_DOCUMENT_BYTES, HARD_MAX_DOCUMENT_BYTES);
   const maxPages = validateCap("maxPages", options.maxPages ?? DEFAULT_MAX_DOCUMENT_PAGES, HARD_MAX_DOCUMENT_PAGES);
   const maxTextBytes = validateCap("maxTextBytes", options.maxTextBytes ?? DEFAULT_MAX_DOCUMENT_TEXT_BYTES, HARD_MAX_DOCUMENT_TEXT_BYTES);
+  const usesDefaultParsers = options.parsers === undefined;
   const parsers = options.parsers ?? [
     // Default wiring: the optional peers, probed once at creation (fail closed).
     await createPdfParser(),
@@ -248,7 +118,35 @@ export async function createDocumentReader(options: CreateDocumentReaderOptions 
       }
       const parser = parsers.find((candidate) => candidate.detect(input.buffer));
       if (!parser) return null;
-      const result = await parser.extract(input.buffer, { maxPages, maxTextBytes, signal: input.signal });
+      // Plan 127 Task 3 + further action #1: the 250-378 ms default-parser extract runs on the pool
+      // for large buffers, priced in both directions — bytes in at the flat clone rate, and one text
+      // value plus up to `maxPages` page spans back (a cloned string is shared rather than copied:
+      // 27 KiB and 2 MB text payloads both clone in ~0.06 ms, evidence §12). The inline estimate is
+      // the measured ~1 ms per KiB of PDF (§3: 250-378 ms for the 281 KiB fixture).
+      // Host-supplied parsers are functions and stay in-process; caps, redaction and the result
+      // shape stay here. The parser itself never honors a mid-parse abort either, so checking the
+      // signal before and after preserves the existing observable behavior.
+      let result: Omit<DocumentReaderResult, "format">;
+      if (
+        usesDefaultParsers &&
+        shouldOffloadToPool({
+          inputBytes: input.buffer.byteLength,
+          resultValues: 1 + maxPages * 4,
+          computeMs: input.buffer.byteLength / 1024,
+        })
+      ) {
+        try {
+          result = await runInPool({
+            kind: "document.extract",
+            payload: { format: parser.format, bytes: input.buffer, maxPages, maxTextBytes },
+          });
+        } catch (error) {
+          throw reviveWorkerTaskError(error, [DocumentReaderError]) ?? error;
+        }
+      } else {
+        result = await parser.extract(input.buffer, { maxPages, maxTextBytes, signal: input.signal });
+      }
+      input.signal?.throwIfAborted();
       if (Buffer.byteLength(result.text, "utf8") > maxTextBytes) {
         throw new DocumentReaderError(`parser returned text beyond the maxTextBytes cap (${maxTextBytes})`);
       }

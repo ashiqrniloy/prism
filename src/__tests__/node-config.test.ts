@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { defaultUserConfigPath, isNodeErrorCode, loadConfigFiles, readConfigFile } from "../node/config.js";
 
 async function tempFile(name: string, text: string): Promise<string> {

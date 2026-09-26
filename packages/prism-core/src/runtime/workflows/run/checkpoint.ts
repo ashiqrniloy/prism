@@ -7,12 +7,44 @@ import type {
   WorkflowCheckpointRecord,
   WorkflowCheckpointValue,
   WorkflowEventInput,
+  WorkflowExecutionCheckpoint,
+  WorkflowExecutionPendingActivation,
   WorkflowNodeCheckpoint,
   WorkflowRunResult,
   WorkflowSuspension,
 } from "../types.js";
-import { nowIso } from "../util.js";
+import { nowIso, redactValue } from "../util.js";
 import type { SchedulerState } from "./main.js";
+
+export function serializePendingActivations(
+  activations?: Map<string, { from: Set<string>; round: number }>,
+): Record<string, WorkflowExecutionPendingActivation> {
+  const pending: Record<string, WorkflowExecutionPendingActivation> = {};
+  if (!activations) return pending;
+  for (const [nodeId, item] of activations) {
+    if (item.from.size > 0) {
+      pending[nodeId] = {
+        from: [...item.from].sort((a, b) => a.localeCompare(b)),
+        round: item.round,
+      };
+    }
+  }
+  return pending;
+}
+
+export function deserializePendingActivations(
+  pending?: Readonly<Record<string, WorkflowExecutionPendingActivation>>,
+): Map<string, { from: Set<string>; round: number }> {
+  const result = new Map<string, { from: Set<string>; round: number }>();
+  if (!pending) return result;
+  for (const [nodeId, item] of Object.entries(pending)) {
+    result.set(nodeId, {
+      from: new Set(item.from),
+      round: item.round,
+    });
+  }
+  return result;
+}
 
 export async function persistCheckpoint(
   state: SchedulerState,
@@ -40,7 +72,19 @@ export async function persistCheckpoint(
       stateVersionBefore: node.stateVersionBefore,
       iteration: node.iteration,
       lastOutput: node.lastOutput,
-      iterations: node.iterations?.map((iteration) => ({ ...iteration })),
+      iterations: node.iterations?.map((iteration) => ({
+        ...iteration,
+        ...(iteration.output !== undefined ? { output: redactValue(iteration.output, options.redactor) } : {}),
+      })),
+    };
+  }
+  let execution: WorkflowExecutionCheckpoint | undefined;
+  if (state.workflow.execution === "supersteps" || state.superstep !== undefined) {
+    execution = {
+      mode: "supersteps",
+      superstep: state.superstep ?? 0,
+      ...(state.workflow.limits?.maxSupersteps !== undefined ? { maxSupersteps: state.workflow.limits.maxSupersteps } : {}),
+      pending: serializePendingActivations(state.pendingActivations),
     };
   }
   const value: WorkflowCheckpointValue = {
@@ -63,6 +107,7 @@ export async function persistCheckpoint(
     stateHistory: Object.fromEntries([...state.stateHistory].map(([version, value]) => [String(version), cloneState(value)])),
     lineage: state.lineage,
     metadata: options.metadata,
+    ...(execution ? { execution } : {}),
   };
   // Terminal writes must land even when the run signal is already aborted
   // (cancel finalization / durable aborted status for resume).

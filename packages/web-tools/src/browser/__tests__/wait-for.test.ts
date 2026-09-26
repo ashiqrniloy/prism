@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { it } from "node:test";
+import { it } from "bun:test";
 import { waitFor } from "./wait-for.js";
 
 it("bounded poll returns the first satisfying value without waiting out the deadline", async () => {

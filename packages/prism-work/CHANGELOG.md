@@ -8,6 +8,9 @@
 
 ### Changed
 
+- `/document-extraction`: optional `@firecrawl/anydoc@0.2.4` peer converts local Office, OpenDocument, CSV, and text-PDF bytes to Markdown. Scanned PDFs throw `NeedsOcrError` with no Markdown and no hosted OCR.
+- `/document-extraction`: opt-in host-run Docling OCR for `needsOcr` PDFs and explicit image OCR. Python stays host-provisioned. Partial OCR is not returned.
+- `/document-extraction`: `createDocumentIngest` adapts an extractor to a wiki `extractDocument` hook and a RAG parser. Stats are counts and duration only.
 - Plan 083 Task 2: renamed the family to `@arnilo/prism-work` and added `/connectors` plus `/document-reader`; `@arnilo/prism-office` has no compatibility shim.
 - Plan 054 Task 8: the drafted `@arnilo/prism-documents`, `@arnilo/prism-sheets`, and
   `@arnilo/prism-diagrams` packages (plans 051–053) ship as one family package:

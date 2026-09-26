@@ -11,7 +11,7 @@ import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { cpus, tmpdir, totalmem } from "node:os";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
-import Database from "better-sqlite3";
+import { Database } from "bun:sqlite";
 import { createSqlitePersistence } from "../../packages/prism-core/dist/sessions/sqlite/index.js";
 
 const SESSIONS = 200;

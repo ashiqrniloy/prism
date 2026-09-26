@@ -15,7 +15,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { Pool } from "pg";
 import { createMemoryAgentEventSource, createMemoryCheckpointStore } from "../dist/index.js";
 import { assertStateConcurrencyConforms } from "../dist/testing/state-concurrency-conformance.js";

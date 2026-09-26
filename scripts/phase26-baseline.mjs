@@ -4,7 +4,7 @@
  * SHA-256 hashes (or "absent") for every single-editor allowed file across the phase26
  * freeze manifest items plus roadmap.md (byte-immutable until task8).
  *
- * Usage: node scripts/phase26-baseline.mjs
+ * Usage: bun scripts/phase26-baseline.mjs
  * Re-run at Task 8 to record the exit gate (the script preserves an existing non-null
  * exitGate only if --keep-exit-gate is passed; otherwise exitGate resets to null).
  *

@@ -6,7 +6,7 @@
 // helper throws the named violation, not a call count.
 
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "bun:test";
 import { type AgentIdentity, createMemoryToolEffectStore, type ToolEffectRecord, type ToolEffectStore } from "../index.js";
 import { assertToolEffectStoreConforms } from "../testing/tool-effect-store-conformance.js";
 

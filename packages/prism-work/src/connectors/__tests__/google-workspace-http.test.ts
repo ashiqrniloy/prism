@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AgentIdentity, ArtifactBodyStore, ToolExecutionContext } from "@arnilo/prism";
 import { createWorkHttpClient } from "../http.js";
 import {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { after, describe, it } from "node:test";
+import { afterAll as after, describe, it } from "bun:test";
 import type { AgentIdentity, ToolEffectKey, ToolResult } from "@arnilo/prism";
 import { ToolEffectError } from "@arnilo/prism";
 import { assertToolEffectStoreConforms } from "@arnilo/prism/testing/tool-effect-store-conformance";

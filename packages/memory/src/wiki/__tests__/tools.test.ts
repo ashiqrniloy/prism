@@ -3,7 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { after, before, describe, it } from "node:test";
+import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { createWikiIngestTool } from "../tools/ingest.js";
 import { createWikiReadPageTool } from "../tools/read-page.js";
 import { createWikiRecordInsightTool } from "../tools/record-insight.js";

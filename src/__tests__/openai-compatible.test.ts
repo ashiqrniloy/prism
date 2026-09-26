@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { Message, ProviderEvent, ProviderRequest } from "../index.js";
 import { createOpenAICompatibleProvider } from "../providers/openai-compatible.js";
 import { assertSerializedRequestCoversContent } from "../testing/provider-conformance.js";

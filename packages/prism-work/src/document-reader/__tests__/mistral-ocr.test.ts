@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { DocumentReaderError } from "../errors.js";
 import { createDocumentReader } from "../index.js";
 import { createMistralOcrParser } from "../mistral-ocr.js";

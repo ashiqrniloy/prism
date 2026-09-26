@@ -27,6 +27,9 @@ function walk(dir, out = []) {
     return out; // missing dir (e.g. fixture without packages/)
   }
   for (const entry of entries) {
+    // never scan installed deps: a partial install leaves dangling .bin links
+    // that make statSync throw (plan 132 readiness gate)
+    if (entry === "node_modules" || entry.startsWith(".")) continue;
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) walk(full, out);
     else if (full.endsWith(".ts") && !full.includes("__tests__") && !full.endsWith(".d.ts")) out.push(full);

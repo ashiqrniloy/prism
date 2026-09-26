@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { createHashEmbedder, createMemory, revokedIdsAbsent } from "../index.js";
 
 test("072 invariant: revoked id absent from injected snapshot; score 0 cannot be averaged away", async () => {

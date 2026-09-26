@@ -24,6 +24,7 @@ export function createLayaProviderPackage(options: LayaProviderPackageOptions = 
   });
 }
 
+export * from "../decisions/index.js";
 export {
   DEFAULT_LAYA_BASE_URL,
   defineLayaModel,

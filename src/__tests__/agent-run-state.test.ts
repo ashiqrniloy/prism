@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { agentFingerprint, parseAgentRunState, type StoredAgentRunState, saveAgentRunState } from "../agent-run-state.js";
 import {
   AGENT_RUN_STATE_SCHEMA_VERSION,

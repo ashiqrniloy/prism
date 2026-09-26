@@ -30,6 +30,7 @@ function renderMermaidNode(node: WorkflowGraphNode): string {
   const escaped = escapeMermaidLabel(node.label);
   switch (node.kind) {
     case "conditional":
+    case "route":
       return `${node.id}{"${escaped}"}`;
     case "loop":
       return `${node.id}{{"${escaped}"}}`;
@@ -96,6 +97,7 @@ function escapeDotString(text: string): string {
 function getDotShape(kind: string): string {
   switch (kind) {
     case "conditional":
+    case "route":
       return "shape=diamond";
     case "loop":
       return "shape=hexagon";

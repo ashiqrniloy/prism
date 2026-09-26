@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { MemoryValidationError } from "../../errors.js";
 import { createHashEmbedder, createMemory, createMemoryVectorStore, createMemoryWorkingStore } from "../../index.js";
 import { createMemoryFabric, DEFAULT_CONSOLIDATION_THRESHOLD, parseMemoryNoteMetadata } from "../index.js";

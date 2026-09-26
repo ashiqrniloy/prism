@@ -4,7 +4,7 @@
  * suite — this probe only imports one page and asserts a second pass embeds nothing.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createMemoryCheckpointStore } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore } from "../../index.js";
 import { createGoogleDriveConnector } from "../connectors/google-drive.js";
@@ -16,9 +16,7 @@ const FOLDER = process.env.PRISM_TEST_DRIVE_FOLDER_ID;
 const DRIVE = process.env.PRISM_TEST_DRIVE_SHARED_DRIVE_ID;
 
 describe("google drive live", () => {
-  it("imports one page then no-ops embeddings on the replay", {
-    skip: !TOKEN && "set PRISM_TEST_DRIVE_ACCESS_TOKEN to probe a real Drive changes.list",
-  }, async () => {
+  it.skipIf(!TOKEN)("imports one page then no-ops embeddings on the replay", async () => {
     const token = TOKEN!;
     const embedder = createHashEmbedder({ dimensions: 8 });
     let embeds = 0;

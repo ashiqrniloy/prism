@@ -171,7 +171,7 @@ Wire those values where they matter: provider adapters receive the resolved cred
 - `npm audit --audit-level=high`: 0 vulnerabilities at every severity.
 - Lockfile: 162 registry dependency records, all with `resolved` provenance URL and integrity hash; `npm ls --all` reports a clean graph.
 - License inventory: 160 locked third-party packages; all declare permissive MIT, ISC, BSD, Apache-2.0, or compatible dual licenses. No GPL, AGPL, SSPL, or missing lockfile license metadata.
-- Install scripts: only `better-sqlite3@12.11.1` runs an install script (`prebuild-install || node-gyp rebuild --release`), required by the explicitly installed SQLite adapter. Core and other optional packages add no install hook.
+- Install scripts: no package in the family runs an install script.
 - Secret scan: source, tests, docs, workflow files, package metadata, built tests, packed-install canary, and tarball deny-list checks found no private-key block or common live-token prefix. Runtime redaction fixtures cover requests, events, ledgers, stores, checkpoints, provider/OAuth errors, and credential ciphertext.
 - Threat suites pass for parameterized SQL/tenant isolation, HTTP URL/SSRF rejection, realpath/symlink containment, shell-metacharacter approval, schema prototype-pollution/remote-reference bounds, OAuth polling/abort/redaction, credential tamper/wrong-key/KDF floors, MCP result bounds/timeouts, and coding approval/path policy. `security:threat-suites` also gates CodeQL-remediation regressions (plan 038): linear `trimTrailingSlashes`/parsers with no environment regex evaluation, single-pass HTML sanitization, crypto (not `Math.random`) fixture identifiers, and no clear-text error logging on password-handling paths.
 

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, test } from "node:test";
+import { describe, test } from "bun:test";
 import { createMemoryRunFeedbackStore, createSecretRedactor, RunFeedbackError, type RunFeedbackRunResolver } from "../index.js";
 import { runFeedbackConformance } from "../testing/feedback.js";
 

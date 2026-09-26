@@ -96,7 +96,7 @@ export function snapshotRunBundle(input: RunBundleSnapshotInput): RunBundleSnaps
   const model = run?.model ?? config.model;
   const effectiveLoop = run?.loop ?? config.loop;
   const systemPrompt = run?.systemPrompt ?? config.systemPrompt;
-  const policies = run?.providerRequestPolicies ?? config.providerRequestPolicies;
+  const policies = [config.providerRequestPolicies, run?.providerRequestPolicies].flatMap((policy) => policy ?? []);
 
   const snapshot: Omit<RunBundleSnapshot, "digest"> = {
     schemaVersion: RUN_BUNDLE_SCHEMA_VERSION,
@@ -139,7 +139,7 @@ export function snapshotRunBundle(input: RunBundleSnapshotInput): RunBundleSnaps
       provider: typeof model === "string" ? (config.provider?.id ?? null) : (model?.provider ?? null),
       model: typeof model === "string" ? model : (model?.model ?? null),
     },
-    requestPolicies: policies === undefined ? [] : (Array.isArray(policies) ? policies : [policies]).map((policy) => policy.name),
+    requestPolicies: policies.map((policy) => policy.name),
     storage: {
       sessionStore: kindOf(describeStorage(input.config?.store ?? config.store, undefined)),
       checkpoints: kindOf(describeStorage(undefined, (run?.runState ?? config.runState)?.checkpoints)),

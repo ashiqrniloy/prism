@@ -14,7 +14,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { workspacePackageCounts, workspaceShape } from "./package-truth.mjs";
 import { packedFilePaths } from "./release-gates.mjs";
@@ -308,7 +308,7 @@ test("sweep is non-blocking and isolated: sweep:unused exists, npm test never ru
   assert.ok(rootPkg.scripts["sweep:unused"].includes("scripts/sweep-unused.mjs"), "sweep:unused runs the driver");
   assert.ok(!effectiveTestChain().includes("sweep:unused"), "npm test must not run the sweep (non-blocking gate isolation)");
   const workflow = readFileSync(url("../.github/workflows/sandbox-browser.yml"), "utf8");
-  assert.ok(workflow.includes("npm run sweep:unused"), "CI runs the sweep");
+  assert.ok(workflow.includes("bun run sweep:unused"), "CI runs the sweep");
   assert.ok(workflow.includes("continue-on-error: true"), "CI sweep step is non-blocking");
   assert.ok(workflow.includes("unused-sweep-report"), "CI archives the sweep report");
   const release = readFileSync(url("../.github/workflows/release.yml"), "utf8");

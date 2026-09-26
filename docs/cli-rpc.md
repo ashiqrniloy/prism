@@ -18,7 +18,7 @@ An env-gated e2e journey drives the packed `prism` bin end to end — `init` sca
 
 ```bash
 PRISM_LIVE_PROVIDER_TESTS=1 OPENAI_API_KEY=sk-... \
-  node --test scripts/e2e-cli-live.test.mjs
+  bun test scripts/e2e-cli-live.test.mjs
 ```
 
 The provider is the first init-catalog entry whose credential env var is present; override with `PRISM_LIVE_CLI_PROVIDER=<id>`. Wire legs skip (never fail) when the provider rejects the credential (401/403) — refresh the key and rerun. Registered in `scripts/live-matrix.json` as `cli/journey`.
@@ -227,7 +227,7 @@ prism init my-research --template deep-research
 prism init my-assistant --template personal-assistant
 prism init my-worker --template business-worker
 prism init --list-templates
-cd my-agent && npm install && npm test
+cd my-agent && bun install && bun test
 
 ```
 

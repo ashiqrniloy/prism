@@ -2,13 +2,13 @@
  * Live credential matrix gate (plans/064 Task 1).
  * Hermetic: validates scripts/live-matrix.json shape, the skip contract
  * (missing credential => skip, never fail), and model-selection entries.
- * Registered in the root `npm test` chain.
+ * Registered in the root `bun run test` chain.
  */
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { loadMatrix, parseEnvFile, REPO_ROOT, resolveSuiteState, runLiveMatrix, validateMatrix } from "./live-matrix.mjs";
 
 const matrix = loadMatrix();
@@ -117,7 +117,7 @@ function fixtureRoot() {
         package: "@arnilo/x",
         status: "active",
         source: "scripts/needs-key.mjs",
-        command: "node scripts/ok.mjs",
+        command: "bun scripts/ok.mjs",
         requires: ["FAKE_KEY"],
         model: [{ env: "FAKE_MODEL", default: "m-default", wired: true }],
       },
@@ -126,7 +126,7 @@ function fixtureRoot() {
         package: "@arnilo/x",
         status: "active",
         source: "scripts/fails.mjs",
-        command: "node scripts/boom.mjs",
+        command: "bun scripts/boom.mjs",
         requires: ["FAKE_KEY"],
       },
       {
@@ -134,7 +134,7 @@ function fixtureRoot() {
         package: "@arnilo/x",
         status: "active",
         source: "scripts/either.mjs",
-        command: "node scripts/ok.mjs",
+        command: "bun scripts/ok.mjs",
         requiresAny: ["FAKE_A", "FAKE_B"],
       },
       {
@@ -228,7 +228,7 @@ test("runner skips never spawn: a requires-missing suite with a broken command s
   const root = fixtureRoot();
   // break the needs-key command; with no FAKE_KEY the runner must not spawn it
   const manifest = JSON.parse(readFileSync(join(root, "scripts", "live-matrix.json"), "utf8"));
-  manifest.suites[0].command = "node scripts/definitely-missing.mjs";
+  manifest.suites[0].command = "bun scripts/definitely-missing.mjs";
   writeFileSync(join(root, "scripts", "live-matrix.json"), JSON.stringify(manifest));
   const { totals, exitCode } = await runLiveMatrix({ root, env: { ...process.env, FAKE_A: "1" }, build: null, log: SILENT });
   assert.equal(totals.failed, 0);

@@ -1,6 +1,6 @@
 /** Plan 091 T2: usage fallback at the `recordUsage` seam and the session context meter. */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createUsageAccumulator } from "../agent-session/helpers.js";
 import { recordProviderUsage } from "../agent-session/session/provider-round.js";
 import type { RoundContext, SessionHost } from "../agent-session/session/types.js";

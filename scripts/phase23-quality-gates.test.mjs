@@ -1,11 +1,11 @@
 // Plan 023 Task 4 regression: quality-gate stabilization (Biome migration,
 // warning/info resolution, timing-assertion quarantine, machine-readable
-// reports). Runs in the npm test gate segment after sweep-unused.test.mjs.
+// reports). Runs in the bun run test gate segment after sweep-unused.test.mjs.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 
 const ROOT = join(import.meta.dirname, "..");
 const run = (cmd, args) => spawnSync(cmd, args, { cwd: ROOT, encoding: "utf8" });

@@ -1,4 +1,4 @@
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { InstructionContext, InstructionContribution, InstructionInjector, InstructionTiming } from "../index.js";
 
 // ponytail: compile-only type test — no runtime assertions. Tasks 5/6 add behavior tests.

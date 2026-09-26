@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { ImageGenerationError } from "@arnilo/prism";
 import { runImageGenerationConformance } from "@arnilo/prism/testing/provider-conformance";
 import { ALIBABA_IMAGE_MAX_COUNT, createAlibabaImageGenerationProvider } from "../index.js";

@@ -10,10 +10,10 @@
  * scenarios as child processes; humans can run one scenario directly.
  *
  * Usage:
- *   node scripts/benchmark.mjs --list
- *   node scripts/benchmark.mjs --scenario <name>            # report to stdout
- *   node scripts/benchmark.mjs --scenario <name> --out <file>
- *   PRISM_TEST_POSTGRES_URL="postgresql://…" node scripts/benchmark.mjs --scenario phase6-postgres
+ *   bun scripts/benchmark.mjs --list
+ *   bun scripts/benchmark.mjs --scenario <name>            # report to stdout
+ *   bun scripts/benchmark.mjs --scenario <name> --out <file>
+ *   PRISM_TEST_POSTGRES_URL="postgresql://…" bun scripts/benchmark.mjs --scenario phase6-postgres
  *
  * Protected scenarios (phase6-postgres, phase7-postgres) require
  * PRISM_TEST_POSTGRES_URL and fail loud without it — blocked-gate semantics,
@@ -51,7 +51,7 @@ function main() {
   }
   const index = args.indexOf("--scenario");
   if (index === -1 || !args[index + 1]) {
-    console.error("usage: node scripts/benchmark.mjs --scenario <name> [--out <file>] | --list");
+    console.error("usage: bun scripts/benchmark.mjs --scenario <name> [--out <file>] | --list");
     console.error(`scenarios: ${Object.keys(SCENARIOS).join(", ")}`);
     process.exitCode = 1;
     return;

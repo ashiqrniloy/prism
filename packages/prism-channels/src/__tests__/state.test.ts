@@ -3,7 +3,7 @@
 // Run explicitly (nested-suite glob caveat in the Task 1 review):
 //   node --test "packages/prism-core/dist/integrations/channels/__tests__/state.test.js"
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { type CheckpointStore, createMemoryCheckpointStore, type OwnershipScope } from "@arnilo/prism";
 import { createChannelDeliveryJournal } from "../delivery.js";
 import { createChannelPairingStore } from "../pairing.js";

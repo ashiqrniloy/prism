@@ -1,11 +1,12 @@
-# Multi-agent patterns: handoff, crew, supervisor, spawn tool, A2A
+# Multi-agent patterns: handoff, crew, supervisor, spawn tool, A2A, event-driven swarm
 
 ## What it does
 
-Maps five Prism answers for "more than one agent" onto one decision table. All five compose existing seams — none introduces a new runtime:
+Maps six Prism answers for "more than one agent" onto one decision table. All six compose existing seams — none introduces a new runtime:
 
 - **In-session handoff (swarm)** — agent A transfers control of the ongoing conversation to agent B by calling a host-built `handoff` tool; the host resolves the target `AgentDefinition` with `resolveAgentDefinition` and opens the specialist against the same session (same store + session id, previous run's `leafId`). One transcript, no new session. No helper primitive ships; the tool factory lives in [`examples/handoff-swarm.ts`](../examples/handoff-swarm.ts).
 - **Hierarchical crew** — a manager agent decomposes a goal into typed tasks (`{ tasks: [{ role, instruction }] }`) via structured output ([`Artifact*`](structured-output.md)), fans out to parallel role specialists with bounded `maxFanOut` ([`fanOutNode`](workflows.md)), aggregates deliverables with host reduce ([`joinNode`](workflows.md)), and validates outputs with conditional routing to completion or revision ([`conditionalNode`](workflows.md)). The entire process is a deterministic DAG workflow with zero new runtime primitives. Live demo in [`examples/crew-hierarchy.ts`](../examples/crew-hierarchy.ts).
+- **Event-driven swarm topology** — autonomous specialist agents communicate dynamically over a shared event router node using topic subscriptions ([`defineSwarmWorkflow`](workflows.md#declarative-event-driven-swarm-topology), [`swarmRouterNode`](workflows.md#declarative-event-driven-swarm-topology), [`publishSwarmEvent`](workflows.md#declarative-event-driven-swarm-topology)), per-node scoped working memory ([`withNodeScope`](workflows.md#scoped-per-node-state-and-subgraph-isolation)), and wave-based cyclic supersteps. Runnable proof: [`examples/cyclic-swarm-topology.ts`](../examples/cyclic-swarm-topology.ts).
 - **Supervisor delegation** — `@arnilo/prism-core/runtime/supervisor` `delegate()` invokes allow-listed child agents as bounded runs and returns their result to the parent. Separate child transcripts, hooks, budgets, narrowing.
 - **In-process spawn tool** — `createSpawnAgentTool({ supervisor })` gives a parent model non-exclusive sync or bounded async `spawn_agent` calls over that same host-owned supervisor catalog; `wait_agent` / `cancel_agent` join or abort local handles. It is an API adapter, not a runtime.
 - **A2A 1.0** — cross-service interop over the JSON-RPC/HTTPS binding; the remote peer's lifecycle is host-owned behind `A2ATaskLifecycle`.
@@ -16,11 +17,12 @@ Maps five Prism answers for "more than one agent" onto one decision table. All f
 | --- | --- | --- | --- | --- |
 | In-session handoff | One host, one ongoing conversation; the model decides **when** to transfer; specialists are alternate definitions of the same app | One continuous transcript chain (same store, session id, `leafId`) | Same session scope; give the specialist its own identity via its definition (`AgentConfig.identity` / `RunOptions.identity`) | Attribution is per-run: each `session.run()`'s events/result belong to the active definition — record the swap in host bookkeeping; no `delegated_agent_step` event exists for in-process swaps |
 | Hierarchical crew | A goal requires dynamic decomposition by a manager LLM, parallel execution by role specialists, host aggregation, and conditional validation/revision loop | Workflow DAG execution — each specialist executes a bounded child task session; final deliverable returns to host | Workflow tenant/ownership scopes propagate; specialists activate only their own narrowed `tools` | Workflow node events (`node_started`/`node_finished`/`agent_event`); task attribution per role in the aggregated deliverable |
+| Event-driven swarm | Multiple specialist agents collaborate asynchronously by publishing and subscribing to topic events; decentralized cyclic workflow | Workflow cyclic supersteps — agents run in waves triggered by matching event topics; state isolated per agent scope | Workflow tenant/ownership scopes propagate; each agent updates only its scoped slice of state and emits topic events | Wave-level checkpoints with `node_started`/`node_finished`/`agent_event` pairs per iteration; published swarm events recorded in state |
 | Supervisor delegation | Host code dynamically selects a bounded child run | Separate runs; child result returns to the host | Parent identity/effectStore propagate; child factories receive derived resource/thread ids and AND-composed permission | Dedicated `delegation_started/finished/rejected/error` events, projectable through observability `handleDelegation()`; opt-in `delegation_child_event` passthrough |
 | In-process spawn tool | Parent model needs an allow-listed child as a non-exclusive tool call | Separate runs; sync result returns through `spawn_agent`, async handle joins through `wait_agent` | Host owns catalog, tools, scopes, limits, and local handles; schema accepts only child ID/input/thread ID/mode plus policy args the host ceiling allows | Same supervisor `delegation_*` events; with host opt-in, `child_milestone` / `delegation_child_event` (redacted, capped, rate-coalesced) |
 | A2A 1.0 | The other agent is owned by a **different service/deployment**; cross-org or cross-cluster; needs durable task lifecycle, push configs, streaming | Protocol boundary (JSON-RPC/HTTPS agent card); replay/reconnect via host-owned task adapter | Exact-origin verified client, `A2AAuthorization` per operation, principal-scoped push configs | Host-owned task adapter records the remote lifecycle; Prism creates no worker/store |
 
-Rule of thumb: same conversation → handoff; dynamic task decomposition + parallel execution → hierarchical crew; host-selected same-process subtask → supervisor delegation; model-requested allow-listed subtask → in-process spawn tool; different deployment/trust boundary → A2A.
+Rule of thumb: same conversation → handoff; dynamic task decomposition + parallel execution → hierarchical crew; decentralized asynchronous event routing → event-driven swarm; host-selected same-process subtask → supervisor delegation; model-requested allow-listed subtask → in-process spawn tool; different deployment/trust boundary → A2A.
 
 ## How in-session handoff works
 
@@ -138,7 +140,78 @@ Live demo: [`examples/crew-hierarchy.ts`](../examples/crew-hierarchy.ts) — man
 | **Process (Sequential / Hierarchical)** | Workflow DAG ([`defineWorkflow`](workflows.md) / Edges) | Edges define data and execution dependencies; no unconstrained agent-to-agent loops. |
 | **Task Output Aggregation** | Join Node ([`joinNode`](workflows.md) + `reduce`) | Host-controlled reduction aggregating specialist outputs and computing per-role attribution. |
 | **Validation & Quality Review** | Conditional Node ([`conditionalNode`](workflows.md)) | Deterministic branch routing to `complete` or `revise` based on validation criteria. |
-| **Process Revision Loop** | Node Retries / DAG Branching / Loop Node ([`loopNode`](workflows.md)) | Bounded retry/revision path or bounded in-graph loop iteration. |
+| **Process Revision Loop** | Node Retries / DAG Branching / Loop Node ([`loopNode`](workflows.md)) | Bounded retry/revision path, in-graph loop iteration, or cyclic workflow reflection loops with back-edges under `limits.maxSupersteps`. |
+
+## How event-driven swarm topology works
+
+In an event-driven swarm topology, autonomous specialist agents collaborate asynchronously by publishing typed topic events to a central router node (`swarmRouterNode`). The router matches published topics against declared subscriptions and activates matching subscriber agents in wave-based cyclic supersteps:
+
+```mermaid
+flowchart TD
+  Event["Swarm Event Stream (__swarmEvents)"] --> Router["Swarm Router Node (routeNode)"]
+  Router -- "incident:new" --> Triage["Triage Specialist (withNodeScope)"]
+  Router -- "research:security" --> Researcher["Security Researcher (withNodeScope)"]
+  Router -- "verify:patch" --> Verifier["Patch Verifier (withNodeScope)"]
+  Triage -. "publishSwarmEvent(research:security)" .-> Router
+  Researcher -. "publishSwarmEvent(verify:patch)" .-> Router
+  Verifier -. "No further events (Idle Drain)" .-> Success["Workflow Succeeded"]
+```
+
+```ts
+import {
+  defineSwarmWorkflow,
+  functionNode,
+  getSwarmEvents,
+  publishSwarmEvent,
+  runWorkflow,
+  withNodeScope,
+} from "@arnilo/prism-core/runtime/workflows";
+
+// 1. Specialist agents wrapped with withNodeScope maintain isolated working memory
+const triage = withNodeScope("triage", functionNode({
+  execute: async (ctx) => {
+    const events = getSwarmEvents(ctx);
+    const incident = events.find((e) => e.topic === "incident:new");
+    await ctx.updateState({ incidentId: (incident?.payload as { id?: string })?.id });
+
+    // Publish event for downstream specialists
+    await publishSwarmEvent(ctx, {
+      topic: "research:security",
+      sender: "triage",
+      payload: { query: "Analyze CVE impact" },
+    });
+    return "triaged";
+  },
+}));
+
+// 2. Define the swarm with cyclic topic subscriptions and a wave limit
+const swarm = defineSwarmWorkflow({
+  id: "security-swarm",
+  revision: "1",
+  maxSupersteps: 12,
+  agents: { triage, researcher, verifier },
+  subscriptions: {
+    "incident:new": ["triage"],
+    "research:*": ["researcher"],
+    "verify:*": ["verifier"],
+  },
+  initialState: {
+    __swarmEvents: [
+      { topic: "incident:new", sender: "gateway", payload: { id: "INC-8802" } },
+    ],
+  },
+});
+
+const result = await runWorkflow(swarm, null);
+```
+
+Live demo: [`examples/cyclic-swarm-topology.ts`](../examples/cyclic-swarm-topology.ts) — complete triage → security research → patch verification cycle with per-agent state scoping and clean idle-drain termination.
+
+### Core swarm properties
+- **Topic Subscriptions**: Match exact strings (`"ticket:billing"`) or wildcard prefix patterns (`"ticket:*"` or `"*"`).
+- **Two-Phase Queueing**: Pending events are promoted to `__swarmActiveEvents` during the active superstep wave, while newly published events accumulate in `__swarmEvents` for the next wave.
+- **Scoped Working Memory**: `withNodeScope` guarantees agents only read/write their dedicated state slice without risking key collisions across concurrent or cyclic steps.
+- **Deterministic Termination**: The cycle drains cleanly to `status: "succeeded"` as soon as no more events are emitted, protected by `limits.maxSupersteps`.
 
 ## How the in-process spawn tool works
 

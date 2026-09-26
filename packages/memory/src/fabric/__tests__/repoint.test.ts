@@ -8,7 +8,7 @@
  * the no-op count, and the scope guard that keeps a mis-wired composition from cross-writing.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { RepointStore } from "../../repoint.js";
 import type { DeletionPropagationContext } from "../../propagation.js";
 import type { MemoryScope, MemoryVectorRecord, VectorStore } from "../../types.js";

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createServer as createHttpServer, request as httpRequest } from "node:http";
 import { createServer as createNetServer, connect as netConnect } from "node:net";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { buildDockerCreateArgsForTest } from "../docker-sandbox.js";
 import type { EgressAuditRecord } from "../index.js";
 import {

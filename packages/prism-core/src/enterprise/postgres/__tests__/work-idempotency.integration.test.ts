@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { after, describe, it } from "node:test";
+import { afterAll as after, describe, it } from "bun:test";
 import type { AgentIdentity, ToolExecutionContext } from "@arnilo/prism";
 import { createMemoryIdempotencyStore, createMicrosoft365CliAdapter, createWorkTools } from "@arnilo/prism-work/connectors";
 import { Pool } from "pg";

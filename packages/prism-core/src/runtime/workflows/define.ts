@@ -18,6 +18,7 @@ export interface DefineWorkflowInput {
   readonly limits?: WorkflowLimits;
   readonly state?: WorkflowDefinition["state"];
   readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly execution?: "supersteps";
 }
 
 export function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition {
@@ -37,15 +38,34 @@ export function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition {
 
   const nodeSet = new Set(nodeIds);
   const edges = input.edges ?? [];
+  const predecessors = new Map<string, string[]>();
+  for (const id of nodeIds) {
+    predecessors.set(id, []);
+  }
   for (const [from, to] of edges) {
     if (!nodeSet.has(from)) throw new WorkflowDefinitionError(`Edge references unknown node "${from}"`);
     if (!nodeSet.has(to)) throw new WorkflowDefinitionError(`Edge references unknown node "${to}"`);
     if (from === to) throw new WorkflowDefinitionError(`Self-edge is not allowed on node "${from}"`);
+    predecessors.get(to)!.push(from);
   }
 
-  assertAcyclic(nodeIds, edges);
+  const cyclic = hasCycle(nodeIds, edges);
+  if (cyclic && input.limits?.maxSupersteps === undefined) {
+    throw new WorkflowDefinitionError("Workflow graph contains a cycle");
+  }
 
   for (const [nodeId, node] of Object.entries(input.nodes)) {
+    if (node.activation !== undefined && node.activation !== "all" && node.activation !== "any") {
+      throw new WorkflowDefinitionError(`Node "${nodeId}" activation must be "all" or "any"`);
+    }
+    if (node.activation === "any" && (predecessors.get(nodeId)?.length ?? 0) === 0) {
+      throw new WorkflowDefinitionError(`Node "${nodeId}" has activation "any" but has zero predecessors`);
+    }
+    if (node.kind === "route") {
+      if (typeof node.select !== "function") {
+        throw new WorkflowDefinitionError(`Route node "${nodeId}" requires select()`);
+      }
+    }
     if (node.kind === "conditional") {
       for (const target of [...(node.then ?? []), ...(node.else ?? [])]) {
         if (!nodeSet.has(target)) {
@@ -92,6 +112,9 @@ export function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition {
     }
   }
 
+  const hasRoute = Object.values(input.nodes).some((n) => n.kind === "route");
+  const execution = cyclic || input.limits?.maxSupersteps !== undefined || hasRoute ? ("supersteps" as const) : undefined;
+
   return Object.freeze({
     id,
     revision,
@@ -106,10 +129,11 @@ export function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition {
         })
       : undefined,
     metadata: input.metadata ? Object.freeze({ ...input.metadata }) : undefined,
+    ...(execution ? { execution } : {}),
   });
 }
 
-function assertAcyclic(nodeIds: readonly string[], edges: readonly (readonly [string, string])[]): void {
+function hasCycle(nodeIds: readonly string[], edges: readonly (readonly [string, string])[]): boolean {
   const successors = new Map<string, string[]>();
   const indegree = new Map<string, number>();
   for (const id of nodeIds) {
@@ -137,9 +161,7 @@ function assertAcyclic(nodeIds: readonly string[], edges: readonly (readonly [st
     }
   }
 
-  if (visited !== nodeIds.length) {
-    throw new WorkflowDefinitionError("Workflow graph contains a cycle");
-  }
+  return visited !== nodeIds.length;
 }
 
 /** Build adjacency helpers used by the Kahn scheduler. */
@@ -158,7 +180,7 @@ export function buildGraph(workflow: WorkflowDefinition): {
   }
   for (const [from, to] of workflow.edges) {
     successors.get(from)!.push(to);
-    predecessors.get(to)!.push(from);
+    predecessors.get(to)?.push(from);
     indegree.set(to, (indegree.get(to) ?? 0) + 1);
   }
   // Deterministic successor order for joins / event ordering.

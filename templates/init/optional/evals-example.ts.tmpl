@@ -2,7 +2,7 @@ import type { AgentRunResult } from "@arnilo/prism";
 import { defineScorer, scoreRun } from "@arnilo/prism-evals";
 
 /**
- * Deterministic scorer example. Not wired into `npm start` — call after a run.
+ * Deterministic scorer example. Not wired into `bun run start` — call after a run.
  */
 export const greetsScorer = defineScorer({
   id: "greets",

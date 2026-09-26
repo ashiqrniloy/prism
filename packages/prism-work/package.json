@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-work",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "description": "Prism work connectors, Office document capabilities, and bounded document-reader subpaths.",
   "type": "module",
   "exports": {
@@ -32,6 +32,10 @@
       "types": "./dist/diagrams/index.d.ts",
       "default": "./dist/diagrams/index.js"
     },
+    "./document-extraction": {
+      "types": "./dist/document-extraction/index.d.ts",
+      "default": "./dist/document-extraction/index.js"
+    },
     "./document-reader": {
       "types": "./dist/document-reader/index.d.ts",
       "default": "./dist/document-reader/index.js"
@@ -53,6 +57,7 @@
     "dist",
     "!dist/**/__tests__",
     "!dist/**/*.map",
+    "docling",
     "sandbox",
     "vendor",
     "vendor-lock.json",
@@ -62,10 +67,10 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "build": "bun ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node ../../scripts/with-build-lock.mjs --shared node --test dist/connectors/__tests__/*.test.js dist/document-reader/__tests__/*.test.js dist/documents/__tests__/*.test.js dist/sandbox/__tests__/*.test.js dist/skills/__tests__/*.test.js dist/tools/__tests__/*.test.js dist/sheets/__tests__/*.test.js dist/diagrams/__tests__/*.test.js",
-    "test:office": "PRISM_TEST_LIBREOFFICE=1 node ../../scripts/with-build-lock.mjs --shared node --test dist/documents/__tests__/golden.test.js",
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 dist/connectors/__tests__/*.test.js dist/document-extraction/__tests__/*.test.js dist/document-reader/__tests__/*.test.js dist/documents/__tests__/*.test.js dist/sandbox/__tests__/*.test.js dist/skills/__tests__/*.test.js dist/tools/__tests__/*.test.js dist/sheets/__tests__/*.test.js dist/diagrams/__tests__/*.test.js dist/runtime/__tests__/*.test.js",
+    "test:office": "PRISM_TEST_LIBREOFFICE=1 bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 dist/documents/__tests__/golden.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
@@ -77,11 +82,15 @@
     "fast-xml-parser": "5.11.1"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.11.1",
+    "@arnilo/prism": "^0.12.0",
+    "@firecrawl/anydoc": "0.2.4",
     "mammoth": "^1.8.0",
     "pdf-parse": "^2.4.5"
   },
   "peerDependenciesMeta": {
+    "@firecrawl/anydoc": {
+      "optional": true
+    },
     "mammoth": {
       "optional": true
     },
@@ -91,12 +100,13 @@
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
+    "@firecrawl/anydoc": "0.2.4",
     "mammoth": "^1.8.0",
     "pdf-parse": "^2.4.5",
     "playwright-core": "1.63.0"
   },
   "engines": {
-    "node": ">=22"
+    "bun": ">=1.4.2"
   },
   "license": "MIT",
   "repository": {

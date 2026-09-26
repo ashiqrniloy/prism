@@ -1,4 +1,4 @@
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AgentConfig, CredentialResolver, Extension, SettingsProvider } from "../index.js";
 
 type ExpectFalse<T extends false> = T;

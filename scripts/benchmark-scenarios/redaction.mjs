@@ -10,7 +10,7 @@
  * survive either path. The measured win is a same-process ratio, so the floor travels
  * across machines; the p95 ceilings are non-flaky sanity bounds. Network-free.
  *
- * Usage: node scripts/benchmark.mjs --scenario redaction
+ * Usage: bun scripts/benchmark.mjs --scenario redaction
  * Caps: scripts/budgets.json#redaction
  */
 import { cpus, totalmem } from "node:os";
@@ -60,6 +60,10 @@ function measure(run, operations) {
     last = run();
     samples.push(performance.now() - startedAt);
   }
+  return { ...stats(samples, operations), last };
+}
+
+function stats(samples, operations) {
   const p50Ms = percentile(samples, 0.5);
   const p95Ms = percentile(samples, 0.95);
   return {
@@ -67,8 +71,30 @@ function measure(run, operations) {
     p50Ms: Number(p50Ms.toFixed(3)),
     p95Ms: Number(p95Ms.toFixed(3)),
     throughputPerSecond: Number((operations / Math.max(samples.reduce((sum, ms) => sum + ms, 0) / 1000, 0.000001)).toFixed(2)),
-    last,
   };
+}
+
+/**
+ * Interleaved A/B: each iteration times BOTH paths back to back, so clock drift and
+ * background load (the gate stage runs four files in parallel) hit both phases equally
+ * — the same method src/__tests__/field-policy.test.ts uses for its ratio. Plan 124
+ * Task 4: measured under three concurrent gate files, the sequential form dropped to
+ * 3.18 (Bun's single scan is the more contention-sensitive side) while the interleaved
+ * form stays in a 3.5-4.5 band, so the frozen floor keeps its meaning.
+ */
+function measurePair(shippedRun, legacyRun, operations) {
+  const shippedSamples = [];
+  const legacySamples = [];
+  let last;
+  for (let index = 0; index < operations; index += 1) {
+    let startedAt = performance.now();
+    last = shippedRun();
+    shippedSamples.push(performance.now() - startedAt);
+    startedAt = performance.now();
+    legacyRun();
+    legacySamples.push(performance.now() - startedAt);
+  }
+  return { shipped: stats(shippedSamples, operations), legacy: stats(legacySamples, operations), last };
 }
 
 export async function runScenario() {
@@ -84,8 +110,12 @@ export async function runScenario() {
   const legacyText = orderedLoopRedact(text, needles);
   const shippedEntry = redactSecrets(entry, needles);
 
-  const shipped = measure(() => Buffer.byteLength(redactSecrets(text, needles), "utf8"), fixture.measuredOperations);
-  const legacy = measure(() => Buffer.byteLength(orderedLoopRedact(text, needles), "utf8"), fixture.measuredOperations);
+  const pair = measurePair(
+    () => Buffer.byteLength(redactSecrets(text, needles), "utf8"),
+    () => Buffer.byteLength(orderedLoopRedact(text, needles), "utf8"),
+    fixture.measuredOperations,
+  );
+  const { shipped, legacy } = pair;
   const small = measure(() => redactSecrets(entry, needles), fixture.smallOperations);
   const speedup = legacy.p50Ms / Math.max(shipped.p50Ms, 0.000001);
 

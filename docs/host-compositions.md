@@ -102,10 +102,10 @@ Always install containing packages directly. **NPM install never accepts subpath
 
 ```bash
 # Correct — install containing published packages:
-npm install @arnilo/prism @arnilo/prism-core @arnilo/prism-providers @arnilo/prism-work
+bun add @arnilo/prism @arnilo/prism-core @arnilo/prism-providers @arnilo/prism-work
 
 # Never install subpaths:
-# npm install @arnilo/prism-work/connectors (WRONG: fails with 404 / E404)
+# bun add @arnilo/prism-work/connectors (WRONG: fails with 404 / E404)
 ```
 
 In your application code, import from documented subpaths:

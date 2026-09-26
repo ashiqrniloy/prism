@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AgentIdentity, ToolExecutionContext } from "@arnilo/prism";
 import {
   assertSafeArgv,

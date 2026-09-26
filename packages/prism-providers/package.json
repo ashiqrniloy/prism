@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-providers",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "description": "Unified provider family: all 21 first-party Prism provider adapters as explicit subpaths (openai, anthropic, google, azure, bedrock, vertex, deepseek, xai, zai, alibaba, kimi, clinepass, neuralwatt, ollama, opencode-go, openrouter, ai-sdk, hyper, commandcode, typesafe, laya). Importing one adapter never evaluates another.",
   "license": "MIT",
   "type": "module",
@@ -32,6 +32,10 @@
     "./commandcode": {
       "types": "./dist/commandcode/index.d.ts",
       "default": "./dist/commandcode/index.js"
+    },
+    "./decisions": {
+      "types": "./dist/decisions/index.d.ts",
+      "default": "./dist/decisions/index.js"
     },
     "./deepseek": {
       "types": "./dist/deepseek/index.d.ts",
@@ -103,14 +107,14 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "build": "bun ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node ../../scripts/with-build-lock.mjs --shared node --test dist/*/__tests__/*.test.js",
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 dist",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
     "@ai-sdk/provider": "4.0.13",
-    "@arnilo/prism": "^0.11.1"
+    "@arnilo/prism": "^0.12.0"
   },
   "peerDependenciesMeta": {
     "@ai-sdk/provider": {
@@ -123,7 +127,7 @@
     "@arnilo/prism": "file:../.."
   },
   "engines": {
-    "node": ">=22"
+    "bun": ">=1.4.2"
   },
   "repository": {
     "type": "git",

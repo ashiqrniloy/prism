@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import test from "node:test";
-import { ARTIFACT, assertBranchFloor, BRANCH_FLOOR, isKnownFlake, parseBranchCoverage } from "./branch-coverage-audit.mjs";
+import { test } from "bun:test";
+import {
+  ARTIFACT,
+  assertBranchFloor,
+  BRANCH_FLOOR,
+  isKnownFlake,
+  lcovHasBranchRecords,
+  parseBranchCoverage,
+  probeBunBranchRecords,
+} from "./branch-coverage-audit.mjs";
 
 const SAMPLE = [
   "ℹ file | line % | branch % | funcs % | uncovered lines",
@@ -28,6 +36,19 @@ test("instrumented timing asserts are ignored; any other failure is real", () =>
   assert.equal(isKnownFlake(`${cold}${flake}ℹ fail 2\n`, 1), true);
   assert.equal(isKnownFlake("AssertionError [ERR_ASSERTION]: expected 1\nℹ fail 1\n", 1), false);
   assert.equal(isKnownFlake(`${flake}ℹ fail 2\n`, 1), false);
+});
+
+test("lcov branch records are the delete signal", () => {
+  assert.equal(lcovHasBranchRecords("DA:1,1\nLF:1\nLH:1\n"), false);
+  assert.equal(lcovHasBranchRecords("BRDA:2,0,0,1\n"), true);
+});
+
+test("this Bun still emits no BRDA, so the Node instrument stays", () => {
+  assert.equal(
+    probeBunBranchRecords(),
+    false,
+    "Bun now emits BRDA. Delete the Node spawn in branch-coverage-audit.mjs and its tooling-gate exception, then remove this assertion.",
+  );
 });
 
 test("artifact meets the branch floor", () => {

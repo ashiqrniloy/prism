@@ -41,13 +41,15 @@ export const HARD_MAX_SCHEDULE_INPUT_BYTES = 1 * 1024 * 1024;
 export const DEFAULT_CAPABILITY_TTL_MS = 24 * 3_600_000;
 export const HARD_CAPABILITY_TTL_MS = 31 * 24 * 3_600_000;
 export const HARD_CAPABILITY_TOKEN_BYTES = 16 * 1024;
+export const HARD_MAX_SUPERSTEPS = 256;
 
-export const WORKFLOW_CHECKPOINT_SCHEMA_VERSION = 1 as const;
+export const WORKFLOW_CHECKPOINT_SCHEMA_VERSION = 2 as const;
 
 const LIMIT_CAPS: Readonly<Record<keyof WorkflowLimits, number>> = {
   maxNodes: HARD_MAX_NODES,
   maxFanOut: HARD_MAX_FAN_OUT,
   maxConcurrency: HARD_MAX_CONCURRENCY,
+  maxSupersteps: HARD_MAX_SUPERSTEPS,
   maxNodeOutputBytes: HARD_MAX_NODE_OUTPUT_BYTES,
   maxCheckpointBytes: HARD_MAX_CHECKPOINT_BYTES,
   maxNestedDepth: HARD_MAX_NESTED_DEPTH,

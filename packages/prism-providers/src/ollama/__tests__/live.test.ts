@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
 import { assertAbortIsObserved, assertNoSecretLeak, assertProviderStreamConforms } from "@arnilo/prism/testing/provider-conformance";
 import { createOllamaProvider, listOllamaModels } from "../index.js";
@@ -42,19 +42,19 @@ const toolRequest: ProviderRequest = {
   tools: [getWeatherTool],
 };
 
-describe("@arnilo/prism-providers/ollama live tests", () => {
-  it("live_local_server_healthgate_discovers_models", { skip: healthSkip }, async () => {
+(healthSkip ? describe.skip : describe)("@arnilo/prism-providers/ollama live tests", () => {
+  it("live_local_server_healthgate_discovers_models", async () => {
     assert.ok(available.length > 0, "health gate found no models");
   });
 
-  it("live_text_generation_streams_and_accounts_usage", { skip: healthSkip }, async () => {
+  it("live_text_generation_streams_and_accounts_usage", async () => {
     const events = await assertProviderStreamConforms({ provider: provider(), request: textRequest });
     const text = events.map((e) => (e.type === "content_delta" && e.content.type === "text" ? e.content.text : "")).join("");
     assert.ok(text.length > 0, "live text response was empty");
     assertNoSecretLeak(events, [BASE_URL!]);
   });
 
-  it("live_tool_call_loop_conforms", { skip: healthSkip }, async () => {
+  it("live_tool_call_loop_conforms", async () => {
     const events = await assertProviderStreamConforms({ provider: provider(), request: toolRequest });
     for (const call of events.filter((e: ProviderEvent) => e.type === "tool_call")) {
       if (call.type === "tool_call") assert.ok(call.call.name, "live tool call missing name");
@@ -62,7 +62,7 @@ describe("@arnilo/prism-providers/ollama live tests", () => {
     assertNoSecretLeak(events, [BASE_URL!]);
   });
 
-  it("live_abort_signal_is_observed_before_first_request", { skip: healthSkip }, async () => {
+  it("live_abort_signal_is_observed_before_first_request", async () => {
     await assertAbortIsObserved({ provider: provider(), request: textRequest });
   });
 });

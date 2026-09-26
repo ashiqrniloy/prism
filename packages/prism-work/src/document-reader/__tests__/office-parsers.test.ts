@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { generateDocument, type DeckModel, type SheetModel } from "../../documents/index.js";
 import { createDocumentReader } from "../index.js";
 
@@ -27,7 +27,8 @@ test("reader extracts bounded TSV and slide outlines from OOXML", async () => {
   const reader = await createDocumentReader();
   const [xlsx, pptx] = await Promise.all([generateDocument(sheet, { format: "xlsx" }), generateDocument(deck, { format: "pptx" })]);
 
-  const sheetResult = await reader.extract({ buffer: Buffer.from(xlsx.bytes), path: "revenue.xlsx" });
+  // Plain Uint8Array for the sheet (the worker/structured-clone shape), Buffer for the deck.
+  const sheetResult = await reader.extract({ buffer: xlsx.bytes, path: "revenue.xlsx" });
   assert.equal(sheetResult?.format, "xlsx");
   if (!sheetResult) throw new Error("xlsx reader returned no result");
   assert.match(sheetResult.text, /Revenue\nRegion\tAmount\nNorth\t1500000/);

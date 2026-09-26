@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { withFileMutationQueue } from "../file-mutation-queue.js";
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));

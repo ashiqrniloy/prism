@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { EventType } from "@ag-ui/core";
 import { createAgent, providerDone, providerTextDelta, type ToolDefinition, toolCallContent } from "@arnilo/prism";
 import type { A2AClient, A2AStreamEvent, A2ATask } from "@arnilo/prism-core/runtime/supervisor";

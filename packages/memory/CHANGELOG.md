@@ -7,6 +7,7 @@
 ## [Unreleased] (plan 054 Task 5)
 
 ### Changed
+- `/wiki` ingest: a set `extractDocument` hook runs before the built-in PDF parser and before CSV UTF-8. `ocrImages` replaces the image stub only on success. No hook keeps the old paths. The package does not import work.
 - **Memory/context family conversion**: `@arnilo/prism-rag` (with `/loaders` and `/parsers`), `@arnilo/prism-compaction-llm`, `@arnilo/prism-compaction-observational-memory`, `@arnilo/prism-graft`, and `@arnilo/prism-wiki` fold into this package as `./rag`, `./rag/loaders`, `./rag/parsers`, `./compaction/llm`, `./compaction/observational-memory`, `./graft`, and `./wiki` subpaths. The `prism-wiki` bin and bundled `skills/` ship from this tarball; Graft stays optional-peer gated on `@nanonets/graft`; the root memory entry stays dependency-free apart from `pg` and imports no subpath code. Extension identifiers move to the subpath names (`@arnilo/prism-memory/graft`, `/wiki`, `/compaction/*`).
 
 ## [0.3.2] - 2026-08-31 (plan 044)

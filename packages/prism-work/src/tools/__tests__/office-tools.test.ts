@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "bun:test";
 import type { ArtifactBodyRef, ArtifactBodyStore, JsonObject, ToolDefinition, ToolExecutionContext } from "@arnilo/prism";
 import { createOfficeTools } from "../index.js";
 

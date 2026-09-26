@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { Pool } from "pg";
 import { createEnterpriseStateCleanup } from "../cleanup.js";
 import { decodeBoundedJson, encodeBoundedJson } from "../codecs.js";

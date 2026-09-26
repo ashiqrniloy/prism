@@ -8,6 +8,8 @@ page instead and note the archive where provenance matters.
 - `release-handoffs.md`: operator publish handoffs per release line (the live [release and install](../release-and-install.md) page keeps current install, inventory, gates, and peer policy).
 - `migrate-to-0.4.md`: retired 0.3-era package reorganization guide (current line: [migrate-to-0.5.md](../migrate-to-0.5.md)).
 - `0.1.0-readiness.md`: frozen 0.1.x readiness record.
+- `retire-node-runtime.md`: the 0.1.x–0.11.x Node 22/24 support story, its two measured CI legs, and the 0.0.16 Node compatibility matrix — retired in 0.12.0 with the `engines.bun` flip.
+- `migrate-to-0.12.0.md`: 0.11 → 0.12 host checklist (Bun runtime, `bun:sqlite` mapping, optional anydoc/Docling).
 - `persistence-credentials-multimodality-primitives.md`, `workflow-orchestration-primitives.md`, `workflow-tui-primitives.md`: plan-era primitive-review inventories.
 - `079-messaging-primitive-review.md`, `080-messaging-followon-primitive-review.md`: messaging-channel primitive reviews (079 shipped runtime; 080 follow-ons + 0.8.0 cut).
 - `081-connected-apps-primitive-review.md`: connected-apps / work-HTTP primitive review (081; page written in 081 Task 1).

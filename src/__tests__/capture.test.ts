@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createProviderCapture } from "../capture.js";
 import type { AgentEvent, Message, ProviderRequest } from "../index.js";
 import { createMiddlewareRegistry } from "../index.js";

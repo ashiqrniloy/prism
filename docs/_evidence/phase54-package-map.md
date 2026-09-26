@@ -1,7 +1,7 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-09-24T14:01:54.892Z`
-Repository root version: `0.11.1`
+Generated: `2026-09-26T17:00:10.752Z`
+Repository root version: `0.12.0`
 
 ## 1. Executive Summary & Counts
 
@@ -18,7 +18,7 @@ Repository root version: `0.11.1`
 | # | Active Package | Role | Status | Subpaths / Exports | Key Bins | Optional Peers / Drivers |
 |---|---|---|---|---|---|---|
 | 1 | `@arnilo/prism` | root | retained | ., ./providers/openai-compatible, ./providers/transport +22 more | `prism` | none |
-| 2 | `@arnilo/prism-core` | family | new | /runtime/server, /runtime/realtime, /runtime/supervisor +14 more | none | `better-sqlite3`, `pg`, `@nats-io/jetstream`, `@nats-io/transport-node` |
+| 2 | `@arnilo/prism-core` | family | new | /runtime/server, /runtime/realtime, /runtime/supervisor +14 more | none | `pg`, `@nats-io/jetstream`, `@nats-io/transport-node` |
 | 3 | `@arnilo/prism-channels` | family | new | ., /telegram, /signal | none | none |
 | 4 | `@arnilo/prism-providers` | family | retained-converted | /ai-sdk, /alibaba, /anthropic +14 more | none | `@ai-sdk/provider` |
 | 5 | `@arnilo/prism-coding-tools` | family | new | /agent, /security, /document-reader +6 more | `prism-dev` | `mammoth`, `pdf-parse`, `@dietrichgebert/ponytail` |
@@ -83,7 +83,7 @@ Repository root version: `0.11.1`
   - `@arnilo/prism-core/enterprise/postgres`
   - `@arnilo/prism-core/integrations/work`
   - `@arnilo/prism-core/validation/json-schema`
-- **Optional Peers / Host Drivers:** `better-sqlite3`, `pg`, `@nats-io/jetstream`, `@nats-io/transport-node`
+- **Optional Peers / Host Drivers:** `pg`, `@nats-io/jetstream`, `@nats-io/transport-node`
 - **Security & Trust Boundaries:**
   - /sessions/postgres & /enterprise/postgres: PostgreSQL transaction isolation, schema migrations, and parameterized query execution.
   - /sessions/sqlite: SQLite file locking, synchronous journal modes, and path containment.
@@ -308,7 +308,7 @@ The three draft office manifests created in plans 051–053 consolidate into `@a
 
 | Subpath / Family | Requirement | Category | Failure Mode / Enforcement |
 |---|---|---|---|
-| `@arnilo/prism-core/sessions/sqlite` | `better-sqlite3` | Optional Peer | Fail-closed before opening SQLite db; emits install hint |
+| `@arnilo/prism-core/sessions/sqlite` | Bun runtime (`bun:sqlite`) | Runtime | Fail-closed when imported outside Bun |
 | `@arnilo/prism-core/sessions/postgres` | `pg` | Optional Peer | Fail-closed before pool connection; emits install hint |
 | `@arnilo/prism-core/sessions/nats` | `@nats-io/jetstream`, `@nats-io/transport-node` | Optional Peer | Fail-closed before NATS client connect |
 | `@arnilo/prism-core/credentials/node` | `@napi-rs/keyring` | Hard Dependency | Native keyring backend for secure token storage |
@@ -569,12 +569,12 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 
 | Package Name | Declared Public Exports (dist) | Budget-Gated Exports (src) | Snapshot Baseline File |
 |---|---|---|---|
-| `@arnilo/prism` | 1042 | 1465 | `scripts/compat-baseline/arnilo__prism.txt` |
+| `@arnilo/prism` | 1050 | 1473 | `scripts/compat-baseline/arnilo__prism.txt` |
 | `@arnilo/prism-mcp` | 132 | 139 | `scripts/compat-baseline/arnilo__prism-mcp.txt` |
-| `@arnilo/prism-providers` | 531 | 582 | `scripts/compat-baseline/arnilo__prism-providers.txt` |
-| `@arnilo/prism-memory` | 783 | 861 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
-| `@arnilo/prism-work` | 328 | 406 | `scripts/compat-baseline/arnilo__prism-work.txt` |
-| `@arnilo/prism-core` | 1291 | 1418 | `scripts/compat-baseline/arnilo__prism-core.txt` |
+| `@arnilo/prism-providers` | 550 | 588 | `scripts/compat-baseline/arnilo__prism-providers.txt` |
+| `@arnilo/prism-memory` | 784 | 862 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
+| `@arnilo/prism-work` | 353 | 442 | `scripts/compat-baseline/arnilo__prism-work.txt` |
+| `@arnilo/prism-core` | 1321 | 1450 | `scripts/compat-baseline/arnilo__prism-core.txt` |
 | `@arnilo/prism-channels` | 91 | 106 | `scripts/compat-baseline/arnilo__prism-channels.txt` |
 | `@arnilo/prism-coding-tools` | 890 | 939 | `scripts/compat-baseline/arnilo__prism-coding-tools.txt` |
 | `@arnilo/prism-ag-ui` | 299 | 313 | `scripts/compat-baseline/arnilo__prism-ag-ui.txt` |

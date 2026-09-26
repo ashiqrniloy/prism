@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-mcp",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "description": "Bounded MCP tools, resources, prompts, client callbacks, and authorized Streamable HTTP sessions.",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,9 +19,9 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "node ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "build": "bun ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node ../../scripts/with-build-lock.mjs --shared node --test dist/__tests__/*.test.js",
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 dist/__tests__/*.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
@@ -30,13 +30,13 @@
     "zod": "^4.6.2"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.11.1"
+    "@arnilo/prism": "^0.12.0"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../.."
   },
   "engines": {
-    "node": ">=22"
+    "bun": ">=1.4.2"
   },
   "license": "MIT",
   "repository": {

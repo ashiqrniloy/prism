@@ -22,7 +22,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { currentVersion, expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
 import { parseBunLock } from "./bun-lock.mjs";
 

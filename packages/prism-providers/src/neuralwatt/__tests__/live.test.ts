@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
@@ -13,7 +13,7 @@ import { createNeuralWattProvider, neuralWattModels } from "../index.js";
 //
 // Network-free by default: these tests skip unless BOTH
 // `PRISM_LIVE_PROVIDER_TESTS=1` AND `NEURALWATT_API_KEY` are set. The default
-// `npm test` and CI release verification never set these. To run locally:
+// `bun run test` and CI release verification never set these. To run locally:
 //
 //   PRISM_LIVE_PROVIDER_TESTS=1 NEURALWATT_API_KEY=... \
 //     npm run test --workspace=@arnilo/prism-providers/neuralwatt
@@ -53,15 +53,15 @@ const toolRequest: ProviderRequest = {
   tools: [getWeatherTool],
 };
 
-describe("@arnilo/prism-providers/neuralwatt live tests", () => {
-  it("live_text_generation_streams_and_leaks_no_secret", { skip }, async () => {
+(skip ? describe.skip : describe)("@arnilo/prism-providers/neuralwatt live tests", () => {
+  it("live_text_generation_streams_and_leaks_no_secret", async () => {
     const events = await assertProviderStreamConforms({ provider: provider(), request: textRequest });
     const text = events.map((e) => (e.type === "content_delta" && e.content.type === "text" ? e.content.text : "")).join("");
     assert.ok(text.length > 0, "live text response was empty");
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_tool_call_loop_conforms_and_leaks_no_secret", { skip }, async () => {
+  it("live_tool_call_loop_conforms_and_leaks_no_secret", async () => {
     const events = await assertProviderStreamConforms({ provider: provider(), request: toolRequest });
     const toolCalls = events.filter((e: ProviderEvent) => e.type === "tool_call");
     for (const call of toolCalls) {
@@ -70,11 +70,11 @@ describe("@arnilo/prism-providers/neuralwatt live tests", () => {
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_abort_signal_is_observed_before_first_request", { skip }, async () => {
+  it("live_abort_signal_is_observed_before_first_request", async () => {
     await assertAbortIsObserved({ provider: provider(), request: textRequest });
   });
 
-  it("live_error_response_leaks_no_secret", { skip }, async () => {
+  it("live_error_response_leaks_no_secret", async () => {
     const badRequest: ProviderRequest = { ...textRequest, messages: [] };
     const events = await collectProviderEvents(provider(), badRequest);
     const terminal = events.at(-1);

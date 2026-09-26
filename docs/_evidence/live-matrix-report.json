@@ -1,33 +1,868 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-05T18:34:04.230Z",
+  "generatedAt": "2026-09-25T08:39:09.731Z",
   "envFile": null,
   "strict": false,
   "dryRun": false,
-  "filter": "obscura",
+  "filter": null,
   "totals": {
-    "ran": 1,
-    "skipped": 0,
+    "ran": 4,
+    "skipped": 52,
     "failed": 0,
-    "planned": 0
+    "planned": 1
   },
   "coverage": {
     "ok": true,
-    "total": 98,
-    "covered": 98,
+    "total": 110,
+    "covered": 110,
     "pending": 0,
     "mode": "baseline"
   },
   "results": [
     {
+      "id": "providers/openai",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, OPENAI_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/openai/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_OPENAI_MODEL",
+          "value": "gpt-5.1",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/anthropic",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, ANTHROPIC_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/anthropic/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_ANTHROPIC_MODEL",
+          "value": "claude-haiku-4-5",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/google",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/google/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_GOOGLE_MODEL",
+          "value": "gemini-2.5-flash-lite",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/alibaba",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, PRISM_LIVE_DASHSCOPE_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/alibaba/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_DASHSCOPE_MODEL",
+          "value": "text-embedding-v4",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/clinepass",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, CLINE_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/clinepass/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_CLINEPASS_MODEL",
+          "value": "cline-pass/deepseek-v4-flash",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/commandcode",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, COMMAND_CODE_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/commandcode/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_CHAT_MODEL",
+          "value": "Qwen/Qwen3.8-Flash",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_MESSAGES_MODEL",
+          "value": "claude-haiku-4-5-20251001",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_GPT_MODEL",
+          "value": "gpt-5.6-luna",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/deepseek",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, DEEPSEEK_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/deepseek/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_DEEPSEEK_MODEL",
+          "value": "deepseek-v4-flash",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/hyper",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, HYPER_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/hyper/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_HYPER_CHAT_MODEL",
+          "value": "deepseek-v4-pro",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_HYPER_MESSAGES_MODEL",
+          "value": "qwen3.6-plus",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/kimi",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, KIMI_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/kimi/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_KIMI_MODEL",
+          "value": "kimi-for-coding",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/neuralwatt",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, NEURALWATT_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/neuralwatt/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_NEURALWATT_MODEL",
+          "value": "glm-5.2",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/opencode-go",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, OPENCODE_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/opencode-go/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_OPENCODE_MODEL",
+          "value": "mimo-v2.5",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/openrouter",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, OPENROUTER_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/openrouter/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_OPENROUTER_MODEL",
+          "value": "anthropic/claude-sonnet-4",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/xai",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, XAI_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/xai/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_XAI_MODEL",
+          "value": "grok-4.6",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/zai",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, ZAI_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/zai/__tests__/live.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [
+        {
+          "env": "PRISM_LIVE_ZAI_MODEL",
+          "value": "glm-5.2",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "web-tools/brave",
+      "package": "@arnilo/prism-web-tools",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_WEB, PRISM_BRAVE_SEARCH_TOKEN",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/__tests__/live.test.js",
+      "cwd": "packages/web-tools",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "web-tools/exa",
+      "package": "@arnilo/prism-web-tools",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_WEB, PRISM_EXA_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/__tests__/live.test.js",
+      "cwd": "packages/web-tools",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "web-tools/firecrawl",
+      "package": "@arnilo/prism-web-tools",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_WEB, PRISM_FIRECRAWL_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/__tests__/live.test.js",
+      "cwd": "packages/web-tools",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "web-tools/browser-live",
+      "package": "@arnilo/prism-web-tools",
+      "status": "skipped",
+      "reason": "missing one of PRISM_LIVE_PLAYWRIGHT, PRISM_TEST_PLAYWRIGHT",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/browser/__tests__/live.test.js",
+      "cwd": "packages/web-tools",
+      "models": [],
+      "outputTail": ""
+    },
+    {
       "id": "web-tools/obscura-live",
       "package": "@arnilo/prism-web-tools",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_OBSCURA, PRISM_OBSCURA_BIN",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/obscura/__tests__/live.test.js",
+      "cwd": "packages/web-tools",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "memory/observational-live",
+      "package": "@arnilo/prism-memory",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS, OPENAI_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/compaction/observational-memory/__tests__/live.test.js",
+      "cwd": "packages/memory",
+      "models": [
+        {
+          "env": "PRISM_LIVE_OPENAI_MODEL",
+          "value": "gpt-5.1",
+          "wired": false
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "memory/compaction-llm-live",
+      "package": "@arnilo/prism-memory",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_COMPACTION_TESTS",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/compaction/llm/__tests__/live.test.js",
+      "cwd": "packages/memory",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "work/libreoffice-golden",
+      "package": "@arnilo/prism-work",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_LIBREOFFICE",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/documents/__tests__/golden.test.js",
+      "cwd": "packages/prism-work",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "work/drawio-live",
+      "package": "@arnilo/prism-work",
+      "status": "skipped",
+      "reason": "missing one of PRISM_LIVE_DRAWIO_URL, PRISM_TEST_DRAWIO_URL",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/diagrams/__tests__/drawio-live.test.js",
+      "cwd": "packages/prism-work",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "core/postgres",
+      "package": "@arnilo/prism-core",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_POSTGRES_URL",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun run --filter @arnilo/prism-core test:postgres",
+      "cwd": null,
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "core/nats",
+      "package": "@arnilo/prism-core",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_NATS_URL",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun run --filter @arnilo/prism-core test:nats",
+      "cwd": null,
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "coding-tools/docker-sandbox",
+      "package": "@arnilo/prism-coding-tools",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_DOCKER_SANDBOX, PRISM_TEST_DOCKER_BIN, PRISM_TEST_DOCKER_IMAGE, PRISM_TEST_DOCKER_USER",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/security/__tests__/docker-sandbox.test.js",
+      "cwd": "packages/prism-coding-tools",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "coding-tools/e2b-sandbox-live",
+      "package": "@arnilo/prism-coding-tools",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_E2B_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/security/__tests__/e2b-sandbox-live.test.js",
+      "cwd": "packages/prism-coding-tools",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "work/mistral-ocr-live",
+      "package": "@arnilo/prism-work",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_MISTRAL_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/document-reader/__tests__/mistral-ocr-live.test.js",
+      "cwd": "packages/prism-work",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "core/keychain",
+      "package": "@arnilo/prism-core",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_KEYCHAIN",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/credentials/node/__tests__/credentials-node.test.js",
+      "cwd": "packages/prism-core",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "acp/client-smoke",
+      "package": "@arnilo/prism-acp-agent",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_ACP_CLIENT",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun scripts/acp-client-smoke.mjs",
+      "cwd": null,
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "canaries/deployed",
+      "package": "@arnilo/prism",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_CANARIES",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun scripts/live-canary.mjs",
+      "cwd": null,
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/azure",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, PRISM_LIVE_AZURE_MODEL",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/azure/__tests__/live.test.js",
+      "cwd": null,
+      "models": [
+        {
+          "env": "PRISM_LIVE_AZURE_MODEL",
+          "value": "gpt-5.1",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/bedrock",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/bedrock/__tests__/live.test.js",
+      "cwd": null,
+      "models": [
+        {
+          "env": "PRISM_LIVE_BEDROCK_MODEL",
+          "value": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/vertex",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, GOOGLE_VERTEX_PROJECT, PRISM_VERTEX_ACCESS_TOKEN",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/vertex/__tests__/live.test.js",
+      "cwd": null,
+      "models": [
+        {
+          "env": "PRISM_LIVE_VERTEX_MODEL",
+          "value": "gemini-2.5-flash",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/ollama",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, OLLAMA_BASE_URL",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/ollama/__tests__/live.test.js",
+      "cwd": null,
+      "models": [
+        {
+          "env": "PRISM_LIVE_OLLAMA_MODEL",
+          "value": "(first model served by OLLAMA_BASE_URL)",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/ai-sdk",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS, OPENAI_API_KEY",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/ai-sdk/__tests__/live.test.js",
+      "cwd": null,
+      "models": [
+        {
+          "env": "PRISM_LIVE_AISDK_MODEL",
+          "value": "gpt-5.1",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "providers/model-discovery",
+      "package": "@arnilo/prism-providers",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/model-discovery/__tests__/live.test.js",
+      "cwd": null,
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "calibration/vendor-count-tokens",
+      "package": "@arnilo/prism",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 scripts/usage-calibration-live.test.mjs",
+      "cwd": ".",
+      "models": [
+        {
+          "env": "PRISM_LIVE_ANTHROPIC_MODEL",
+          "value": "claude-haiku-4-5",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_GOOGLE_MODEL",
+          "value": "gemini-2.5-flash-lite",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "memory/rag-rerankers-live",
+      "package": "@arnilo/prism-memory",
+      "status": "skipped",
+      "reason": "missing one of PRISM_TEST_TEI_RERANKER_URL, PRISM_TEST_HOSTED_RERANK_URL",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/rag/__tests__/live.test.js",
+      "cwd": "packages/memory",
+      "models": [
+        {
+          "env": "PRISM_LIVE_TEI_RERANKER_MODEL",
+          "value": "(endpoint default model)",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_HOSTED_RERANK_MODEL",
+          "value": "(endpoint default model)",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "memory/local-rerank-live",
+      "package": "@arnilo/prism-memory",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_LOCAL_RERANK",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/rag/__tests__/local-reranker-live.test.js",
+      "cwd": "packages/memory",
+      "models": [
+        {
+          "env": "PRISM_LIVE_LOCAL_RERANK_MODEL",
+          "value": "Xenova/bge-reranker-base",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "memory/drive-sync-live",
+      "package": "@arnilo/prism-memory",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_DRIVE_ACCESS_TOKEN",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/rag/__tests__/google-drive-live.test.js",
+      "cwd": "packages/memory",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "coding-tools/openapi-live",
+      "package": "@arnilo/prism-coding-tools",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_OPENAPI_TOOLS",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/openapi/__tests__/live.test.js",
+      "cwd": "packages/prism-coding-tools",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "coding-tools/computer-use-live",
+      "package": "@arnilo/prism-coding-tools",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_COMPUTER_USE, PRISM_COMPUTER_USE_BIN",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/computer-use-linux/__tests__/live.test.js",
+      "cwd": "packages/prism-coding-tools",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "mcp/client-smoke",
+      "package": "@arnilo/prism-mcp",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_MCP_CLIENT",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun scripts/mcp-client-smoke.mjs",
+      "cwd": ".",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "core/opa-live",
+      "package": "@arnilo/prism-core",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_OPA_URL",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun run test",
+      "cwd": "packages/prism-core",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "core/oidc-live",
+      "package": "@arnilo/prism-core",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_OIDC_ISSUER, PRISM_TEST_OIDC_AUDIENCE, PRISM_TEST_OIDC_TOKEN",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun run test",
+      "cwd": "packages/prism-core",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "core/webhooks-live",
+      "package": "@arnilo/prism-core",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_WEBHOOK_URL",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun run test",
+      "cwd": "packages/prism-core",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "core/artifact-bodies-s3-live",
+      "package": "@arnilo/prism-core",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_S3_ENDPOINT, PRISM_TEST_S3_KEY, PRISM_TEST_S3_SECRET, PRISM_TEST_S3_BUCKET",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun run test",
+      "cwd": "packages/prism-core",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "cli/journey",
+      "package": "@arnilo/prism",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_PROVIDER_TESTS",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 scripts/e2e-cli-live.test.mjs",
+      "cwd": ".",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "memory/postgres",
+      "package": "@arnilo/prism-memory",
+      "status": "skipped",
+      "reason": "missing PRISM_TEST_POSTGRES_URL",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun run test:postgres",
+      "cwd": "packages/memory",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "memory/wiki",
+      "package": "@arnilo/prism-memory",
       "status": "ran",
       "reason": null,
       "exitCode": 0,
-      "durationMs": 22928,
-      "command": "node --test dist/obscura/__tests__/live.test.js",
-      "cwd": "packages/web-tools",
+      "durationMs": 183,
+      "command": "bun test --timeout=0 dist/wiki/__tests__/*.test.js",
+      "cwd": "packages/memory",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "coding-tools/lsp-forge",
+      "package": "@arnilo/prism-coding-tools",
+      "status": "ran",
+      "reason": null,
+      "exitCode": 0,
+      "durationMs": 2149,
+      "command": "bun test --timeout=0 dist/agent/__tests__/language-intelligence.test.js dist/agent/__tests__/language-diagnostics.test.js dist/agent/__tests__/forge-github.test.js",
+      "cwd": "packages/prism-coding-tools",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "ag-ui/conformance",
+      "package": "@arnilo/prism-ag-ui",
+      "status": "ran",
+      "reason": null,
+      "exitCode": 0,
+      "durationMs": 981,
+      "command": "bun run test",
+      "cwd": "packages/ag-ui",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "prism-providers/conformance",
+      "package": "@arnilo/prism-providers",
+      "status": "ran",
+      "reason": null,
+      "exitCode": 0,
+      "durationMs": 120,
+      "command": "bun test --timeout=0 dist/__tests__/thinking-conformance.test.js",
+      "cwd": "packages/prism-providers",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "channels/telegram-live",
+      "package": "@arnilo/prism-channels",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_TELEGRAM, TELEGRAM_BOT_TOKEN",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/__tests__/telegram-live.test.js",
+      "cwd": "packages/prism-channels",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "channels/signal-live",
+      "package": "@arnilo/prism-channels",
+      "status": "skipped",
+      "reason": "missing PRISM_LIVE_SIGNAL, PRISM_LIVE_SIGNAL_SOCKET, PRISM_LIVE_SIGNAL_ACCOUNT, PRISM_LIVE_SIGNAL_TERMS_VERSION",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": "bun test --timeout=0 dist/__tests__/signal-live.test.js",
+      "cwd": "packages/prism-channels",
+      "models": [],
+      "outputTail": ""
+    },
+    {
+      "id": "cli/live-journey",
+      "package": "@arnilo/prism",
+      "status": "planned",
+      "reason": "Task 5.",
+      "exitCode": null,
+      "durationMs": 0,
+      "command": null,
+      "cwd": null,
       "models": [],
       "outputTail": ""
     }

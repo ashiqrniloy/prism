@@ -17,7 +17,7 @@ Use when a host already operates a chat bot (or plans to) and wants selected Pri
 Install the required `@arnilo/prism` peer plus this package. `createMessagingRuntime` takes `MessagingRuntimeOptions`: `authorize`, `resolveAgent`, `deliver`, optional `limits` (`ChannelLimits`), `redactor`, `checkpoints`, `leases`, and `resolveBinding`. Durable writers are also constructed with `ChannelStateStoreOptions`, `ChannelDeliveryJournalOptions`, and `ChannelPairingStoreOptions`.
 
 ```bash
-npm install @arnilo/prism @arnilo/prism-channels
+bun add @arnilo/prism @arnilo/prism-channels
 ```
 
 ## Request/response example

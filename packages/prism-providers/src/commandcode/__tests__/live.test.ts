@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { ProviderEvent, ProviderRequest, ToolDefinition, Usage } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
@@ -13,7 +13,7 @@ import { commandCodeModels, createCommandCodeProvider } from "../index.js";
 //
 // Network-free by default: these tests skip unless BOTH
 // `PRISM_LIVE_PROVIDER_TESTS=1` AND `COMMAND_CODE_API_KEY` are set. The default
-// `npm test` and CI release verification never set these. To run locally:
+// `bun run test` and CI release verification never set these. To run locally:
 //
 //   PRISM_LIVE_PROVIDER_TESTS=1 COMMAND_CODE_API_KEY=cmd_... \
 //     npm run test --workspace=@arnilo/prism-providers/commandcode
@@ -68,8 +68,8 @@ function usageOf(events: readonly ProviderEvent[]): Usage | undefined {
   return events.find((e) => e.type === "usage")?.usage;
 }
 
-describe("@arnilo/prism-providers/commandcode live probes", () => {
-  it("live_chat_route_text_generation_streams_and_leaks_no_secret", { skip }, async () => {
+(skip ? describe.skip : describe)("@arnilo/prism-providers/commandcode live probes", () => {
+  it("live_chat_route_text_generation_streams_and_leaks_no_secret", async () => {
     const events = await assertProviderStreamConforms({
       provider: provider(),
       request: { model: chatModel, messages: [{ role: "user", content: [{ type: "text", text: "Reply with exactly the word: pong" }] }] },
@@ -79,7 +79,7 @@ describe("@arnilo/prism-providers/commandcode live probes", () => {
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_messages_route_text_generation_streams_and_leaks_no_secret", { skip }, async () => {
+  it("live_messages_route_text_generation_streams_and_leaks_no_secret", async () => {
     const events = await assertProviderStreamConforms({
       provider: provider(),
       request: {
@@ -92,7 +92,7 @@ describe("@arnilo/prism-providers/commandcode live probes", () => {
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_tool_call_loop_conforms_and_leaks_no_secret", { skip }, async () => {
+  it("live_tool_call_loop_conforms_and_leaks_no_secret", async () => {
     const getWeatherTool: ToolDefinition = {
       name: "get_weather",
       description: "Get the current weather for a city.",
@@ -113,14 +113,14 @@ describe("@arnilo/prism-providers/commandcode live probes", () => {
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_abort_signal_is_observed_before_first_request", { skip }, async () => {
+  it("live_abort_signal_is_observed_before_first_request", async () => {
     await assertAbortIsObserved({
       provider: provider(),
       request: { model: chatModel, messages: [{ role: "user", content: [{ type: "text", text: "Reply with exactly the word: pong" }] }] },
     });
   });
 
-  it("live_error_response_leaks_no_secret", { skip }, async () => {
+  it("live_error_response_leaks_no_secret", async () => {
     const events = await collectProviderEvents(provider(), { model: chatModel, messages: [] });
     const terminal = events.at(-1);
     assert.ok(terminal, "live error request produced no events");
@@ -128,7 +128,7 @@ describe("@arnilo/prism-providers/commandcode live probes", () => {
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_chat_route_reports_cached_tokens_on_warm_prefix_replay", { skip }, async () => {
+  it("live_chat_route_reports_cached_tokens_on_warm_prefix_replay", async () => {
     // Implicit-caching probe (chat route): same exact prefix on two turns;
     // the second must surface cached input tokens through the shared mapping
     // (prompt_tokens_details.cached_tokens or prompt_cache_hit_tokens).
@@ -161,7 +161,7 @@ describe("@arnilo/prism-providers/commandcode live probes", () => {
     assertNoSecretLeak(second, [API_KEY!]);
   });
 
-  it("live_messages_route_cache_control_reports_creation_and_read_tokens", { skip }, async () => {
+  it("live_messages_route_cache_control_reports_creation_and_read_tokens", async () => {
     // Explicit-write probe (cache_control model): system_prompt breakpoint on
     // the Anthropic route; call A creates the cache entry, warm call B reads it.
     const request = (): ProviderRequest => ({
@@ -193,7 +193,7 @@ describe("@arnilo/prism-providers/commandcode live probes", () => {
     assertNoSecretLeak(warm, [API_KEY!]);
   });
 
-  it("live_gpt56_prompt_cache_key_passthrough_probe", { skip }, async () => {
+  it("live_gpt56_prompt_cache_key_passthrough_probe", async () => {
     // GPT-5.6 explicit-caching probe: the docs price cache writes for the
     // GPT-5.6 tiers but never document `prompt_cache_key` on the chat route.
     // Inject the OpenAI explicit-cache field on two identical turns; the
@@ -249,7 +249,7 @@ describe("@arnilo/prism-providers/commandcode live probes", () => {
     assertNoSecretLeak(second, [API_KEY!]);
   });
 
-  it("live_reasoning_effort_is_accepted_on_chat_route", { skip }, async () => {
+  it("live_reasoning_effort_is_accepted_on_chat_route", async () => {
     // Reasoning-param probe: the docs never document a reasoning parameter on
     // the chat route; probe whether the OpenAI-standard `reasoning_effort`
     // field is accepted (200) or rejected (400). A rejected value means any
@@ -274,7 +274,7 @@ describe("@arnilo/prism-providers/commandcode live probes", () => {
     assertNoSecretLeak(events, [API_KEY!]);
   });
 
-  it("live_zdr_route_probe_is_opt_in_and_routable", { skip }, async () => {
+  it("live_zdr_route_probe_is_opt_in_and_routable", async () => {
     // ZDR probe: the docs claim x-cmd-zdr: 1 routes only through ZDR-capable
     // upstreams (which may cost more, and may not exist for a given model →
     // 422 cmd_zdr_no_providers). Opt-in here: clearly labeled, uses the

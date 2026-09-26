@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { after, before, test } from "node:test";
+import { afterAll as after, beforeAll as before, test } from "bun:test";
 import type { ExecutionPolicy } from "@arnilo/prism";
 import { type CodingProcessEvent, createProcessSessions, type ProcessSandboxBackend, ProcessSessionError } from "../process/index.js";
 

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it } from "bun:test";
 import { type AIProvider, createAgent, createSecretRedactor, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
 import { createSqlitePersistence, type SqlitePersistence } from "../../../sessions/sqlite/index.js";
 import { type ConversationService, createConversationHandler, createConversationService } from "../conversations.js";

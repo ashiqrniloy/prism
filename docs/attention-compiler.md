@@ -338,7 +338,7 @@ await resumeAgentRun(agent, { runId, sessionId }, { decision: "continue", expect
 - Compaction stays a task boundary: the compiler never writes the store and never triggers compaction mid-run (`session.compact()` still refuses while a run is active), and it never rewrites observational memory.
 - Telemetry stays payload-free: the `attention_compiled` event carries `used`, `usedAfter`, `inputCap`, `triggerRatio`, `droppedThinkingTurns`, `stubbedToolResults`, `stubbedBytes`, and `truncated` only.
 - `applyContextBudget` is not the compiler's last resort — overflowing after all eligible stages throws `AttentionBudgetError` so the frozen prefix (system instructions, `AGENTS.md`, skill catalog, tool declarations) cannot be silently evicted.
-- Measured on the hermetic fixture in [`docs/_evidence/phase74-attention-measurements.md`](_evidence/phase74-attention-measurements.md): 63.7 % fewer input tokens, one cache bust on the turn the gate trips (compiler-off is append-only), and a volatile provider block that re-sends everything behind it every turn — which is why pinning a block stays a host recipe (`resolve` once per session) rather than compiler behavior. Regenerate with `node scripts/benchmark.mjs --scenario attention-compiler`.
+- Measured on the hermetic fixture in [`docs/_evidence/phase74-attention-measurements.md`](_evidence/phase74-attention-measurements.md): 63.7 % fewer input tokens, one cache bust on the turn the gate trips (compiler-off is append-only), and a volatile provider block that re-sends everything behind it every turn — which is why pinning a block stays a host recipe (`resolve` once per session) rather than compiler behavior. Regenerate with `bun scripts/benchmark.mjs --scenario attention-compiler`.
 
 ## Related APIs
 

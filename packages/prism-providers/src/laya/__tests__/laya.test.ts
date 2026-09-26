@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AIProvider, AuthMethod, JsonObject, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import { assertNoSecretLeak, collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
 import {
@@ -116,6 +116,45 @@ describe("@arnilo/prism-providers/laya", () => {
     const { impl, calls } = fakeFetch(() => jsonResponse(OK_RESPONSE));
     await collectProviderEvents(createLayaProvider({ apiKey: "sk-secret", fetch: impl }), request);
     assert.equal(new Headers(calls[0]!.init?.headers).get("authorization"), "Bearer sk-secret");
+  });
+
+  it("laya_resolves_credentials_once_with_provider_id_and_redacts_transport_failures", async () => {
+    let resolutions = 0;
+    const secret = "rotating-systemone-test-credential";
+    const events = await collectProviderEvents(
+      createLayaProvider({
+        apiKey: {
+          resolve: ({ provider }) => {
+            resolutions += 1;
+            assert.equal(provider, "laya");
+            return { type: "api_key", value: secret };
+          },
+        },
+        fetch: (async (_input, init) => {
+          assert.equal(new Headers(init?.headers).get("authorization"), `Bearer ${secret}`);
+          throw new Error(`transport failed with ${secret}`);
+        }) as typeof fetch,
+      }),
+      request,
+    );
+    assert.equal(resolutions, 1);
+    assert.equal(events.at(-1)?.type, "error");
+    assertNoSecretLeak(events, [secret]);
+  });
+
+  it("laya_rejects_malformed_success_without_emitting_a_decision", async () => {
+    for (const answer of [
+      { type: "choice", choice: "reject", confidence: 2 },
+      { type: "choice", choice: "reject", probabilities: { reject: "0.9" } },
+      { type: "choice", choice: "reject", probabilities: { reject: -1 } },
+    ]) {
+      const { impl } = fakeFetch(() => jsonResponse({ ...OK_RESPONSE, answers: { verdict: answer } }));
+      const events = await collectProviderEvents(createLayaProvider({ fetch: impl }), request);
+      assert.deepEqual(
+        events.map((event) => event.type),
+        ["error"],
+      );
+    }
   });
 
   it("laya_base_url_override_trims_trailing_slash", async () => {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { evidenceFromRagCitation } from "../citations.js";
 import type { RagCitation } from "../types.js";
 

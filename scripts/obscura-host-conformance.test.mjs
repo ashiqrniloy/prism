@@ -8,7 +8,7 @@
  * effects, and abort ownership intact.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { client as acpClient, methods as acpMethods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import { createAgent, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";

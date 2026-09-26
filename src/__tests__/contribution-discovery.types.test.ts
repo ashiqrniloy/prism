@@ -1,4 +1,4 @@
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { ContributionFileKind, DiscoveredContribution } from "../index.js";
 
 // ponytail: compile-only type test — no runtime assertions. Task 5 adds behavior tests.

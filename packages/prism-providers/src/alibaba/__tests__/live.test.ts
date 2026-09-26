@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { alibabaBody, createAlibabaEmbedder, defineAlibabaModel } from "../index.js";
 
 // Opt-in live probe against the real DashScope compatible-mode endpoint.

@@ -11,7 +11,7 @@
  * unclassified throw.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 
 import type { ToolEffectDeclaration } from "@arnilo/prism";
 import { createOpenApiTools, OpenApiToolError } from "../index.js";
@@ -26,9 +26,7 @@ function context(toolCallId: string) {
   return { sessionId: "live-openapi", runId: "live-openapi", toolCallId };
 }
 
-describe("openapi live (real public spec + API)", {
-  skip: !FLAG && "set PRISM_LIVE_OPENAPI_TOOLS=1 to run the live OpenAPI wire probe",
-}, () => {
+describe.skipIf(!FLAG)("openapi live (real public spec + API)", () => {
   it("compiles the real public spec into bounded read-only tools", async () => {
     const response = await fetch(SPEC_URL);
     assert.equal(response.status, 200, `spec fetch failed: ${response.status}`);

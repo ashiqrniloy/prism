@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "bun:test";
 import type { Agent, AgentRunResult, AIProvider, BeforeProviderTurnPayload } from "@arnilo/prism";
 import { createAgent, createMiddlewareRegistry, providerDone } from "@arnilo/prism";
 import type { ExecutionStep, ExecutionTimeline } from "../../observability/timeline-types.js";

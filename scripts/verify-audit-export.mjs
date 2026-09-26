@@ -5,7 +5,7 @@
  * signature, cursor continuity, tenant, and expected first/last sequence.
  *
  * Usage:
- *   node scripts/verify-audit-export.mjs --batch ./batch.json \
+ *   bun scripts/verify-audit-export.mjs --batch ./batch.json \
  *     --public-key ./audit.pem --tenant acme \
  *     [--previous-digest <hex>] [--first <n>] [--last <n>]
  *

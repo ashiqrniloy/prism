@@ -4,7 +4,7 @@
 // cwd) so root and workspace leaves contend the SAME lock — required because workspace tests
 // import root dist/ via the @arnilo/prism self-symlink. Wrap emit-producing leaves (tsc) and
 // dist-consuming test leaves (node --test dist/__tests__/*.test.js) ONLY; never the
-// orchestrator scripts (npm test / sdk:ready) — leaf-only acquisition avoids nested deadlock.
+// orchestrator scripts (bun run test / sdk:ready) — leaf-only acquisition avoids nested deadlock.
 // PRISM_BUILD_LOCK_HELD=1 is exported to the child as a non-nesting guard: if a wrapped leaf
 // ever spawns another wrapped leaf, the grandchild skips acquisition (already inside the
 // critical section).

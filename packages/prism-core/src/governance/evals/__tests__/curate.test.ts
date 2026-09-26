@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AgentEventRecord, OwnershipScope, PersistencePage, ProductionPersistenceStore, RunRecord } from "@arnilo/prism";
 import { createMemoryRunFeedbackStore, createSecretRedactor, type RunFeedbackStore } from "@arnilo/prism";
 import { datasetFromRuns, defineDataset, EvalError } from "../index.js";

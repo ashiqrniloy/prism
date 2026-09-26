@@ -23,7 +23,7 @@
  * Prism does speak (bridge-side MRTR over real HTTP) is covered by
  * packages/mcp/src/__tests__/modern-bridge.test.ts.
  *
- * Usage: PRISM_TEST_MCP_CLIENT=1 node scripts/mcp-client-smoke.mjs
+ * Usage: PRISM_TEST_MCP_CLIENT=1 bun scripts/mcp-client-smoke.mjs
  */
 
 import assert from "node:assert/strict";

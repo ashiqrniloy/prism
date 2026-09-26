@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { BrowserError, createBrowserCheckpointLedger, DEFAULT_MAX_CHECKPOINTS_PER_RUN, resolveBrowserCheckpointLimits } from "../index.js";
 
 function input(overrides: Partial<{ runId: string; url: string; domainStateHash: string; hostDataRef: string }> = {}) {

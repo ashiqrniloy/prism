@@ -4,7 +4,7 @@
 // Run explicitly (nested-suite glob caveat in the Task 1 review):
 //   node --test "packages/prism-core/dist/integrations/channels/__tests__/recovery.test.js"
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import {
   type Agent,
   type AgentIdentity,

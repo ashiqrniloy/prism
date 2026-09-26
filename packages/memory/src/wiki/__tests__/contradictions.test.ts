@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { ContradictionEngine } from "../engine/contradictions.js";
 import type { ExtractedEntityDraft } from "../profiles/codebase.js";
 import type { WikiEntityMetadata } from "../types.js";

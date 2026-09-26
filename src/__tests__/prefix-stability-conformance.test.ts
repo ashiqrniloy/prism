@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createAgent } from "../agent-session/create-agent.js";
 import type { AgentSession, Message, PromptBuildRequest, ProviderRequest, Skill } from "../contracts.js";
 import { createMiddlewareRegistry, type MiddlewareRegistry } from "../middleware.js";

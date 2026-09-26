@@ -21,12 +21,12 @@
  * carries `status`, `exitCode`, and a redacted `tail` of the child's output
  * (scripts/coverage-failure.mjs), so a bare `suite failed` is never the whole
  * story (plan 071 Task 15).
- * Requires `npm run build` first. No third-party coverage tooling; reuses Bun's
+ * Requires `bun run build` first. No third-party coverage tooling; reuses Bun's
  * built-in coverage.
  *
  * Env overrides: PRISM_COVERAGE_THRESHOLDS (thresholds file path),
  * PRISM_COVERAGE_ARTIFACT (artifact output path), and the captured-core seam
- * PRISM_COVERAGE_CORE_OUTPUT + PRISM_COVERAGE_CORE_EXIT (`npm run test:coverage` runs the
+ * PRISM_COVERAGE_CORE_OUTPUT + PRISM_COVERAGE_CORE_EXIT (`bun run test:coverage` runs the
  * core suite first and hands that run over, so the core row is read instead of measured).
  */
 import { spawnSync } from "node:child_process";
@@ -66,7 +66,7 @@ function redactTail(tail) {
 
 const coreTests = join(root, "dist/__tests__");
 if (!existsSync(coreTests)) {
-  console.error("coverage-summary: no dist/__tests__ — run `npm run build` first");
+  console.error("coverage-summary: no dist/__tests__ — run `bun run build` first");
   process.exit(1);
 }
 const { createSecretRedactor } = await import(pathToFileURL(join(root, "dist", "index.js")).href);
@@ -183,7 +183,10 @@ let anyFailed = false;
 const artifact = { captured: new Date().toISOString(), core: {}, packages: {}, belowThreshold: [] };
 
 console.log(`Combined coverage summary (bun test --coverage; core gate ${CORE_GATE} + per-package lines thresholds; protected exempt)`);
-const core = capturedCoreRun() ?? runCoverage(findTestFiles(root));
+// Bun matches explicit paths and a bare `dist/__tests__/` by suffix, so the two root names
+// also run workspace twins (plan 124 Task 1). spawnSync has no shell, and Bun 1.4.2 does not
+// expand a literal `*.test.js` argv, so expand here and pass the measured ignore pattern.
+const core = capturedCoreRun() ?? runCoverage(["--path-ignore-patterns=packages/**", ...findTestFiles(root)]);
 let corePass = true;
 let coreNote = `[gate ${CORE_GATE}]`;
 if (core.lines === undefined) {

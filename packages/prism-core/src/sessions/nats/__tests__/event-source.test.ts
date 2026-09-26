@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { AgentEventRecord, AgentEventSourceError, OwnershipScope } from "@arnilo/prism";
 import { createNatsAgentEventSource } from "../event-source.js";
 import { FakeJetStream } from "./fake-jetstream.js";

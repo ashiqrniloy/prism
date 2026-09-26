@@ -79,7 +79,7 @@ export const CONSOLIDATION_SPEC = {
       peers: {
         "@arnilo/prism": "^0.4.0",
       },
-      optionalPeers: ["better-sqlite3", "pg", "@nats-io/jetstream", "@nats-io/transport-node"],
+      optionalPeers: ["pg", "@nats-io/jetstream", "@nats-io/transport-node"],
       securityBoundaries: [
         "/sessions/postgres & /enterprise/postgres: PostgreSQL transaction isolation, schema migrations, and parameterized query execution.",
         "/sessions/sqlite: SQLite file locking, synchronous journal modes, and path containment.",
@@ -921,9 +921,7 @@ export function generateMarkdown(map) {
   lines.push("");
   lines.push("| Subpath / Family | Requirement | Category | Failure Mode / Enforcement |");
   lines.push("|---|---|---|---|");
-  lines.push(
-    "| `@arnilo/prism-core/sessions/sqlite` | `better-sqlite3` | Optional Peer | Fail-closed before opening SQLite db; emits install hint |",
-  );
+  lines.push("| `@arnilo/prism-core/sessions/sqlite` | Bun runtime (`bun:sqlite`) | Runtime | Fail-closed when imported outside Bun |");
   lines.push("| `@arnilo/prism-core/sessions/postgres` | `pg` | Optional Peer | Fail-closed before pool connection; emits install hint |");
   lines.push(
     "| `@arnilo/prism-core/sessions/nats` | `@nats-io/jetstream`, `@nats-io/transport-node` | Optional Peer | Fail-closed before NATS client connect |",

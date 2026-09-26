@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { crc32 } from "node:zlib";
 import { type DocModel, generateDocument, importDocument, parseDocument, reportImportFidelity } from "../index.js";
 

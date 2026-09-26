@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it, setSystemTime } from "bun:test";
 import {
   type Agent,
   type AgentEvent,
@@ -678,27 +678,31 @@ describe("child lifetime and report policy", () => {
     assert.deepEqual(predicateTurns, [1, 2, 3]);
   });
 
-  it("coalesces child events above the per-child rate cap", async (t) => {
-    t.mock.timers.enable({ apis: ["Date"] });
-    const supervisor = createSupervisor({
-      ownership,
-      childEvents: true,
-      limits: { maxChildEventsPerSecond: 1 },
-      children: { child: { createAgent: () => toolTurnAgent(4) } },
-    });
-    const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
-    await supervisor.delegate({ childId: "child", input: "x" });
-    const types: string[] = [];
-    let dropped = 0;
-    for (;;) {
-      const next = await iterator.next();
-      if (next.done) break;
-      types.push(next.value.type);
-      if (next.value.type === "delegation_child_events_coalesced") dropped = next.value.dropped;
-      if (next.value.type === "delegation_finished") break;
+  it("coalesces child events above the per-child rate cap", async () => {
+    setSystemTime(new Date());
+    try {
+      const supervisor = createSupervisor({
+        ownership,
+        childEvents: true,
+        limits: { maxChildEventsPerSecond: 1 },
+        children: { child: { createAgent: () => toolTurnAgent(4) } },
+      });
+      const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
+      await supervisor.delegate({ childId: "child", input: "x" });
+      const types: string[] = [];
+      let dropped = 0;
+      for (;;) {
+        const next = await iterator.next();
+        if (next.done) break;
+        types.push(next.value.type);
+        if (next.value.type === "delegation_child_events_coalesced") dropped = next.value.dropped;
+        if (next.value.type === "delegation_finished") break;
+      }
+      assert.equal(types.filter((type) => type === "delegation_child_event").length, 1);
+      assert.ok(dropped > 1, `expected coalesced drops, got ${dropped}`);
+    } finally {
+      setSystemTime();
     }
-    assert.equal(types.filter((type) => type === "delegation_child_event").length, 1);
-    assert.ok(dropped > 1, `expected coalesced drops, got ${dropped}`);
   });
 
   it("enforces a spawn budget share and attributes the limit that fired", async () => {

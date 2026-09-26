@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { loadSystemPromptFiles } from "../node/system-project-prompts.js";
 import { createPathTrustPolicy } from "../node/trust.js";
 import { createStaticTrustPolicy } from "../security.js";

@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { EventSchemas, EventType } from "@ag-ui/core";
 import {
   AgentDecisionError,

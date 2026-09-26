@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { MemoryValidationError } from "../../errors.js";
 import { createMemoryFabric } from "../../fabric/index.js";
 import { createHashEmbedder, createMemory } from "../../index.js";

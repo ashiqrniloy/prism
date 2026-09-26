@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { createAgent, createMemorySessionStore, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createWorkScopeController, foldWorkScopeMap, SESSION_WORK_SCOPE_ID, withWorkScope } from "../index.js";
 

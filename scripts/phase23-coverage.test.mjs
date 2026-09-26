@@ -1,6 +1,6 @@
 // scripts/phase23-coverage.test.mjs — Task 2 regression.
 //
-// Runs at the END of `npm run test:coverage`, immediately AFTER coverage-summary.mjs
+// Runs at the END of `bun run test:coverage`, immediately AFTER coverage-summary.mjs
 // wrote the real artifact (scripts/coverage-summary.json), so the well-formedness and
 // reproduction checks read it directly. The fail-closed check spawns ONE extra run with
 // PRISM_COVERAGE_THRESHOLDS + PRISM_COVERAGE_ARTIFACT overrides (sabotaged temp files),
@@ -15,7 +15,7 @@ import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 
 import { failureRow, MAX_TAIL_CHARS, TAIL_LINES, tailOf } from "./coverage-failure.mjs";
 import { computePackageTruth } from "./package-truth.mjs";
@@ -182,6 +182,11 @@ test("standalone: with no seam set the summary still measures the core suite its
     });
     const artifact = JSON.parse(readFileSync(tempArtifact, "utf8"));
     assert.equal(spawnCount(log), workspaceNames.length + 1, "the core row must be measured when the seam is absent");
+    assert.match(
+      readFileSync(log, "utf8").split("\n")[0],
+      /--path-ignore-patterns=packages\/\*\*/,
+      "standalone core run must drop the workspace suffix twins",
+    );
     assert.equal(artifact.core.status, "failed", "a dead core child still fails the row like a measured run");
     assert.equal(artifact.core.exitCode, 3);
     assert.equal(artifact.core.lines, null);

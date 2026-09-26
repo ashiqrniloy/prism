@@ -17,7 +17,7 @@ Use it when iterating on prompts in a local Prism host and you want a inspectabl
 ### Quickstart — `prism dev` (plan 040 Task 4)
 
 ```bash
-npm install --save-dev @arnilo/prism-coding-tools/dev
+bun add --dev @arnilo/prism-coding-tools/dev
 cd my-agent && npm run dev   # → prism dev → http://127.0.0.1:4311
 ```
 

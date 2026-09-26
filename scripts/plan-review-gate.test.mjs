@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 
 const ROOT = join(import.meta.dirname, "..");
 
@@ -588,4 +588,143 @@ const PLAN_120_TASK_0 = {
 
 test("plan 120 Task 0 primitive review exists, names every inventory row, and skips no rejection", () => {
   assertPrimitiveReview(PLAN_120_TASK_0);
+});
+
+/** Plan 124 Task 1 — the measured inventory the Bun-only runner flip consumes (plan 125+ owns the rest). */
+const PLAN_124_TASK_1 = {
+  plan: "plans/124-Bun-Only-Toolchain-And-Test-Runner.md",
+  evidence: "docs/_evidence/phase124-bun-only-inventory.md",
+  required: [
+    // the runner contract the inventory measures
+    "scripts/run-all-tests.mjs:L119",
+    "GATE_FILES",
+    "WORKSPACE_LEAVES",
+    "scripts/with-build-lock.mjs:L67",
+    "scripts/wiki-scratch-isolation.test.mjs:L90",
+    "scripts/blocked-gate.test.mjs:L43",
+    "scripts/postgres-evidence.mjs:L11",
+    "--test-concurrency=4",
+    // discovery truth
+    "discovery",
+    "suffix",
+    "Ran 2 tests across 1227 files",
+    "node_modules",
+    ".test.mjs",
+    // isolation semantics
+    "--no-isolate",
+    "--parallel",
+    // reporter shape
+    "Ran",
+    "(skip)",
+    "(todo)",
+    // native modules
+    "better-sqlite3",
+    "@napi-rs/keyring",
+    "playwright-core",
+    // parity and hygiene
+    "with-build-lock.mjs",
+    "E2BIG",
+    "NODE_TEST_CONTEXT",
+  ],
+  rejected: ["rename the twins first", "port the Node ceilings", "node --test"],
+  completeTask: /^- \[x\] Task 1:/m,
+};
+
+test("plan 124 Task 1 Bun-only inventory exists, names every probe, and skips no rejection", () => {
+  assertPrimitiveReview(PLAN_124_TASK_1);
+});
+
+/** Plan 126 Task 1 — bun:sqlite vs better-sqlite3 mapping the swap consumes. */
+const PLAN_126_TASK_1 = {
+  plan: "plans/126-Bun-Native-Sqlite.md",
+  evidence: "docs/_evidence/phase126-bun-sqlite.md",
+  required: [
+    "bun:sqlite",
+    "FTS5",
+    "Uint8Array",
+    "lastInsertRowid",
+    "busy_timeout",
+    "transaction",
+    "WAL",
+    "SQLITE_BUSY",
+    "packages/prism-core/src/governance/prompts/sqlite.ts:L202",
+    "packages/prism-core/src/sessions/sqlite/migrations.ts:L32",
+    "packages/prism-core/src/sessions/sqlite/ddl.ts:L287",
+    "packages/prism-core/src/sessions/sqlite/persistence.ts:L69",
+    "scripts/run-all-tests.mjs:L104",
+    "scripts/phase126-sqlite-mapping.test.mjs",
+    "24 pass",
+    "3.53.2",
+    "safeIntegers",
+    "foreign_keys",
+  ],
+  rejected: ["better-sqlite3 stays", "port the numbers", "skip the conformance net"],
+  completeTask: /^- \[x\] Task 1:/m,
+};
+
+test("plan 126 Task 1 bun:sqlite mapping exists, names every probe, and skips no rejection", () => {
+  assertPrimitiveReview(PLAN_126_TASK_1);
+});
+
+/** Plan 127 Task 1 — the measured CPU-bound inventory the worker-pool decision consumes. */
+const PLAN_127_TASK_1 = {
+  plan: "plans/127-Bun-Runtime-Concurrency-Performance.md",
+  evidence: "docs/_evidence/phase127-bun-concurrency.md",
+  required: [
+    // verdict vocabulary
+    "io-bound",
+    "cpu-inline",
+    "cpu-offload-candidate",
+    // offload cost basis
+    "round-trip",
+    "worker_threads",
+    "Bun.gc(true)",
+    "cold worker spawn",
+    "break-even",
+    // every classified surface, with its span
+    "50 ms",
+    "scripts/benchmark.mjs --scenario tool-search",
+    "scripts/benchmark.mjs --scenario redaction",
+    "scripts/benchmark.mjs --scenario attention-compiler",
+    "src/tool-search.ts:L20",
+    "src/attention-compiler.ts:L269",
+    "packages/memory/src/wiki/manifest.ts:L36",
+    "packages/memory/src/rag/chunk.ts:L10",
+    "packages/memory/src/rag/fusion.ts:L16",
+    "packages/prism-work/src/document-reader/index.ts:L226",
+    "packages/prism-work/src/documents/parse.ts:L250",
+    "packages/prism-work/src/sheets/xlsx.ts:L245",
+    "packages/prism-work/src/sheets/csv.ts:L250",
+    "src/node/session-store-jsonl.ts:L154",
+    "packages/prism-core/src/sessions/sqlite/persistence.ts:L124",
+    // plan 124 carry-overs
+    "fixed-compute",
+    "scripts/budget-gates.mjs:L81",
+    "sha256-64mib",
+    "BRDA",
+    "scripts/branch-coverage-audit.mjs:L136",
+    // the named winners / the declined bodies
+    "HARD_MAX_TOOLS_INDEX",
+    "thousand-page.pdf",
+    "retained heap",
+  ],
+  rejected: ["parallelize everything", "rewrite node: imports", "pays for itself"],
+  completeTask: /^- \[x\] Task 1:/m,
+};
+
+test("plan 127 Task 1 CPU-bound inventory exists, classifies every surface, and skips no rejection", () => {
+  assertPrimitiveReview(PLAN_127_TASK_1);
+});
+
+/** Plan 128 Task 1 — Context-API probe and census freeze. */
+const PLAN_128_TASK_1 = {
+  plan: "plans/128-Test-Import-Migration.md",
+  evidence: "docs/_evidence/phase128-test-import-migration.md",
+  required: ["bun:test", "t.skip", "t.diagnostic", "1059", "polyfill"],
+  rejected: ["assert rewrite", "jest", "rewrite by hand"],
+  completeTask: /^- \[x\] Task 1:/m,
+};
+
+test("plan 128 Task 1 context-API probe and census freeze exists, names every probe, and skips no rejection", () => {
+  assertPrimitiveReview(PLAN_128_TASK_1);
 });

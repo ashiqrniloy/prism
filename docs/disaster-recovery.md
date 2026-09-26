@@ -29,7 +29,7 @@ This page is the operator runbook for backup, restore, migration rollback, point
 ```sh
 # Protected drill (standard tools only, orchestrated by the script):
 PRISM_PITR_URL=postgresql://user:***@localhost:55436/postgres \
-  node scripts/phase27-dr.test.mjs \
+  bun scripts/phase27-dr.test.mjs \
     --source "$PRISM_TEST_POSTGRES_URL" \
     --target postgresql://user:***@localhost:55432/prism_dr_target \
     --confirm-target prism_dr_restore

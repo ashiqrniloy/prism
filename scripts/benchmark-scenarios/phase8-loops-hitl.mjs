@@ -5,7 +5,7 @@
  * A2UI paint ≤ 10 ms / 64 ops. Fixture uses practical gate max (32 pending) — hard 128 is
  * a batch reject ceiling, not a collectable pending count under DEFAULT_MAX_PENDING_DECISIONS.
  *
- * Usage: node scripts/benchmark.mjs --scenario phase8-loops-hitl
+ * Usage: bun scripts/benchmark.mjs --scenario phase8-loops-hitl
  */
 import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";

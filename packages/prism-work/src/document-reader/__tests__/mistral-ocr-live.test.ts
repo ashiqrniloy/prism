@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 
 const apiKey = process.env.PRISM_TEST_MISTRAL_API_KEY;
 const FIXTURES = new URL("../../../src/document-reader/__tests__/fixtures/", import.meta.url);
 
-describe("mistral ocr live", { skip: apiKey ? false : "set PRISM_TEST_MISTRAL_API_KEY to probe Mistral OCR" }, () => {
+describe.skipIf(!apiKey)("mistral ocr live", () => {
   it("extracts page text from the sample PDF", async () => {
     const { createMistralOcrParser } = await import("../mistral-ocr.js");
     const parser = createMistralOcrParser({ apiKey: apiKey!, maxPages: 4, timeoutMs: 60_000 });

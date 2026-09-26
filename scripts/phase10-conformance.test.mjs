@@ -10,7 +10,7 @@
  * ladder at/above frozen caps, malformed payloads, secret redaction.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import { createSecretRedactor } from "@arnilo/prism";
 import { createPrismAcpAgent } from "../packages/ag-ui/dist/acp/index.js";

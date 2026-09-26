@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { type CheckpointStore, createMemoryCheckpointStore } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore } from "../../index.js";
 import { RagSyncCursorError, RagSyncThrottleError, RagValidationError } from "../errors.js";

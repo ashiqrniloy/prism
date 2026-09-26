@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { Readable, Writable } from "node:stream";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { CliOptions } from "../cli-runner.js";
 import { parseCliArgs, runCli } from "../cli-runner.js";
 import { createAgent, createMockProvider, providerDone, providerError, providerTextDelta } from "../index.js";

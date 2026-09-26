@@ -36,16 +36,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: "24"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: "1.4.2"
       - run: bun ci
-      - run: npm run build
+      - run: bun run build
       - name: install Playwright chromium (host-pinned)
-        run: npx --no-install playwright-core install chromium
+        run: bunx --no-install playwright-core install chromium
       - name: materialize provider adapter (real LLM provider, host-pinned)
         run: |
           # Resides inside the workspace so the bare provider specifier
@@ -191,7 +188,7 @@ jobs:
           PRISM_CODING_PROVIDER_API_KEY: ${{ secrets.PRISM_CODING_PROVIDER_API_KEY }}
           PRISM_CODING_PROVIDER_MODEL: ${{ vars.PRISM_CODING_PROVIDER_MODEL }}
           PRISM_TEST_PTY_BACKEND: /tmp/prism-journey-pty-host.mjs
-        run: node --test scripts/phase26-coding-journey.test.mjs
+        run: bun test --timeout=0 scripts/phase26-coding-journey.test.mjs
       - name: retain the protected coding journey report
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6

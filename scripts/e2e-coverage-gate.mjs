@@ -18,10 +18,10 @@
  *   "mode": "full" in the manifest after Tasks 4-9 land.
  *
  * CLI:
- *   node scripts/e2e-coverage-gate.mjs              run gate (mode from manifest)
- *   node scripts/e2e-coverage-gate.mjs --baseline   force baseline mode
- *   node scripts/e2e-coverage-gate.mjs --generate   regenerate skeleton, preserving annotations
- *   node scripts/e2e-coverage-gate.mjs --json       machine-readable summary
+ *   bun scripts/e2e-coverage-gate.mjs              run gate (mode from manifest)
+ *   bun scripts/e2e-coverage-gate.mjs --baseline   force baseline mode
+ *   bun scripts/e2e-coverage-gate.mjs --generate   regenerate skeleton, preserving annotations
+ *   bun scripts/e2e-coverage-gate.mjs --json       machine-readable summary
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";

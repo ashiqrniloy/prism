@@ -25,7 +25,7 @@
  * seeded secret canaries are never emitted to the manifest or console.
  *
  * Usage:
- *   node scripts/phase27-dr.test.mjs \
+ *   bun scripts/phase27-dr.test.mjs \
  *     --source "$PRISM_TEST_POSTGRES_URL" \
  *     --target "$PRISM_DR_TARGET_URL" \
  *     --confirm-target prism_dr_restore

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { EventType } from "@ag-ui/core";
 import type { AgentEvent, ThinkingContent } from "@arnilo/prism";
 import { createAgUiEventMapper } from "../ag-ui-mapper.js";

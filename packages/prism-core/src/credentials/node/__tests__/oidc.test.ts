@@ -7,7 +7,7 @@
  * tenant mapping, key confusion, SSRF, redirects, single-flight.
  */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { IdentityError, MediaContentError, pinnedFetch } from "@arnilo/prism";
 import { createOidcIdentityVerifier, type OidcClaims } from "../oidc.js";
 

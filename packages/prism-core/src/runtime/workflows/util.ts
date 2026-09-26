@@ -9,7 +9,7 @@ export function utf8ByteLength(value: string): number {
 }
 
 export function stableStringify(value: unknown): string {
-  return JSON.stringify(sortValue(value));
+  return JSON.stringify(sortValue(value)) ?? "null";
 }
 
 function sortValue(value: unknown): unknown {
@@ -37,6 +37,7 @@ function hashWorkflow(workflow: WorkflowDefinition, active: Set<WorkflowDefiniti
     nodes[id] = {
       kind: node.kind,
       metadata: node.metadata,
+      ...(node.activation ? { activation: node.activation } : {}),
       ...(node.kind === "workflow" ? { workflowHash: hashWorkflow(node.workflow, active) } : {}),
     };
   }

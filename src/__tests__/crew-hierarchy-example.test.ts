@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { test } from "node:test";
+import { test } from "bun:test";
 
 // Hierarchical "Crew" workflow pattern smoke test:
 // Verifies manager structured output, fan_out specialist dispatch, join aggregation,
