@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { describe, test } from "bun:test";
+import assert from "node:assert/strict";
 import type { AgentEvent, Message, ProviderRequest, SessionEntry } from "../contracts.js";
 import type { FieldPolicy } from "../field-policy.js";
 import {
@@ -307,9 +307,16 @@ describe("field policy seams at boundary owners (ERP-T9)", () => {
 // Coverage instrumentation (node --experimental-test-coverage) inserts per-node
 // bookkeeping that slows the policy walk disproportionately (more branches/nodes
 // than redactSecrets), so the ratio is not meaningful under instrumentation.
-// node --test injects --test-coverage-*=0 defaults even when coverage is off; coverage
-// is actually enabled when any threshold is non-zero (e.g. --test-coverage-lines=60).
-const coverageActive = process.execArgv.some((a) => /^--test-coverage-(?:lines|functions|branches)=([1-9]\d*)$/.test(a));
+// node --test injects --test-coverage-*=0 defaults and strips --experimental-test-coverage
+// from the child argv, so the in-process signal is the run's coverage filters (the branch
+// audit passes --test-coverage-include/--test-coverage-exclude) or a non-zero threshold
+// (e.g. --test-coverage-lines=60).
+const coverageActive = process.execArgv.some(
+  (a) =>
+    a.startsWith("--test-coverage-include=") ||
+    a.startsWith("--test-coverage-exclude=") ||
+    /^--test-coverage-(?:lines|functions|branches)=([1-9]\d*)$/.test(a),
+);
 (coverageActive ? describe.skip : describe)("field policy microbenchmark vs frozen representative payload sizes", () => {
   // classificationFixtureBytes from scripts/phase27-freeze-manifest.json
   const fixtures = {

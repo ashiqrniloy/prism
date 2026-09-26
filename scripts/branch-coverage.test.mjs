@@ -1,6 +1,6 @@
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { test } from "bun:test";
 import {
   ARTIFACT,
   assertBranchFloor,
@@ -36,6 +36,8 @@ test("instrumented timing asserts are ignored; any other failure is real", () =>
   assert.equal(isKnownFlake(`${cold}${flake}ℹ fail 2\n`, 1), true);
   assert.equal(isKnownFlake("AssertionError [ERR_ASSERTION]: expected 1\nℹ fail 1\n", 1), false);
   assert.equal(isKnownFlake(`${flake}ℹ fail 2\n`, 1), false);
+  // The reporter repeats each failure in its summary block; a repeat is not a second failure.
+  assert.equal(isKnownFlake(`${flake}${flake}`, 1), true);
 });
 
 test("lcov branch records are the delete signal", () => {

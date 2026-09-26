@@ -34,9 +34,10 @@ export function isKnownFlake(output, exitCode) {
   const fails = [...output.matchAll(/^ℹ fail (\d+)\s*$/gm)];
   const count = Number(fails.at(-1)?.[1]);
   if (!Number.isInteger(count) || count < 1) return false;
-  const messages = [...output.matchAll(/AssertionError(?: \[ERR_ASSERTION\])?: ([^\n]+)/g)].map((match) => match[1]);
-  if (messages.length !== count) return false;
-  return messages.every((message) => TIMING_ASSERT.test(message));
+  // Distinct messages: the reporter repeats each failure in its summary block.
+  const messages = new Set([...output.matchAll(/AssertionError(?: \[ERR_ASSERTION\])?: ([^\n]+)/g)].map((match) => match[1]));
+  if (messages.size !== count) return false;
+  return [...messages].every((message) => TIMING_ASSERT.test(message));
 }
 
 export function assertBranchFloor(artifact) {
@@ -65,6 +66,20 @@ function tail(output) {
     .split("\n")
     .slice(-40)
     .join("\n");
+}
+
+/** Failing test names and messages first: the coverage table floods `tail`. */
+function failureDigest(output) {
+  const cleaned = output
+    .split(root)
+    .join("<repo>")
+    .split(process.env.HOME || "\u0000")
+    .join("<home>");
+  const names = [...new Set([...cleaned.matchAll(/^\s*[\u2716\u00d7] (.+)$/gm)].map((match) => match[1]))];
+  const messages = [
+    ...new Set([...cleaned.matchAll(/(?:AssertionError(?: \[ERR_ASSERTION\])?|Error): ([^\n]+)/g)].map((match) => match[1])),
+  ];
+  return [...names.slice(0, 12), ...messages.slice(0, 12)].join("\n");
 }
 
 function writeArtifact(artifact) {
@@ -213,6 +228,7 @@ export function auditBranchCoverage() {
   }
   if ((result.status ?? 1) !== 0 && !flake) {
     console.error("branch-coverage: suite failed for a reason other than an instrumented timing assertion");
+    console.error(failureDigest(output));
     console.error(tail(output));
     return 1;
   }
