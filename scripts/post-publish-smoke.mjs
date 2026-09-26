@@ -65,7 +65,7 @@ if (local) {
 }
 console.log(`post-publish smoke: ${local ? "local tarballs" : "registry"} — ${specs.join(" ")}`);
 
-run("bun", ["install", ...specs, "--prefer-offline", "--no-audit", "--no-fund"], { cwd: consumer });
+run("bun", ["install", ...specs, "--no-audit", "--no-fund", ...(local ? ["--prefer-offline"] : [])], { cwd: consumer });
 writeFileSync(join(consumer, "smoke.mjs"), smokeSource());
 run("bun", ["smoke.mjs"], { cwd: consumer });
 
