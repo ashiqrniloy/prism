@@ -2,11 +2,12 @@
  * Plan 030 Task 2 — independent versioning machinery (dual-mode).
  * Tmp fixtures, injectable git/baseline seams, fake registry. No real git, no network.
  */
+
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "bun:test";
 import {
   bumpPackage,
   incrementVersion,
@@ -25,6 +26,7 @@ function writeGraph(dir, pkgs) {
       name: p.name,
       version: p.version,
       publishConfig: { access: "public" },
+      ...(p.independent ? { prismVersionLine: "independent" } : {}),
       ...(p.deps ? { dependencies: p.deps } : {}),
     };
     const rel = p.path === "." ? "package.json" : `${p.path}/package.json`;
@@ -32,12 +34,15 @@ function writeGraph(dir, pkgs) {
     writeFileSync(join(dir, rel), `${JSON.stringify(manifest, null, 2)}\n`);
     byPath[p.path === "." ? "" : p.path] = manifest;
   }
-  const lock = {
-    name: "@arnilo/prism",
-    lockfileVersion: 3,
-    packages: Object.fromEntries(Object.entries(byPath).map(([path, m]) => [path, { version: m.version }])),
-  };
-  writeFileSync(join(dir, "package-lock.json"), JSON.stringify(lock, null, 2));
+  // Bun 1.2+ lockfile shape (scripts/bun-lock.mjs): workspace entries under `workspaces[<path>]`,
+  // and the root entry (`""`) carries no version. The fixture used to write a package-lock.json,
+  // which release.mjs no longer reads, so every validator test here failed on a missing file.
+  const workspaces = {};
+  for (const [path, manifest] of Object.entries(byPath)) {
+    workspaces[path] = path === "" ? { name: manifest.name } : { name: manifest.name, version: manifest.version };
+  }
+  const lock = { lockfileVersion: 1, workspaces };
+  writeFileSync(join(dir, "bun.lock"), `${JSON.stringify(lock, null, 2)}\n`);
   return loadRelease(dir);
 }
 
@@ -96,6 +101,33 @@ describe("phase30 release: explicit lockstep mode", () => {
       codingRange: "0.2.9",
     });
     assert.throws(() => validateRelease(mixed, "0.2.9"), /version is 0\.3\.0, expected 0\.2\.9/);
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("phase30 release: independent version lines (plan 140)", () => {
+  it("a lockstep cut validates and orders without the independent-line package", () => {
+    const dir = mkdtempSync(join(tmpdir(), "prism-rel-"));
+    const release = writeGraph(dir, [
+      { path: "packages/core", name: CORE, version: "0.3.1" },
+      // The app owns its own line: 0.4.0 here, and it is not a 0.3.x participant.
+      { path: "packages/app", name: "@arnilo/prism-app", version: "0.4.0", independent: true, deps: { [CORE]: "^0.3.0" } },
+      { path: ".", name: ROOT, version: "0.3.1", deps: { [CORE]: "^0.3.1", "@arnilo/prism-app": "^0.4.0" } },
+    ]);
+    const order = validateRelease(release, "0.3.1").map((pkg) => pkg.manifest.name);
+    assert.ok(!order.includes("@arnilo/prism-app"), "an independent package never ships with a lockstep cut");
+    assert.deepEqual(order.slice(-1), [ROOT], "the root still publishes last");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("a lockstep cut still fails on a real lockstep drift", () => {
+    const dir = mkdtempSync(join(tmpdir(), "prism-rel-"));
+    const release = writeGraph(dir, [
+      { path: "packages/core", name: CORE, version: "0.3.0" },
+      { path: "packages/app", name: "@arnilo/prism-app", version: "0.4.0", independent: true },
+      { path: ".", name: ROOT, version: "0.3.0", deps: { [CORE]: "^0.3.0" } },
+    ]);
+    assert.throws(() => validateRelease(release, "0.3.1"), /expected 0\.3\.1/);
     rmSync(dir, { recursive: true, force: true });
   });
 });

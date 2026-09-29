@@ -3,8 +3,8 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { runGates } from "./release-gates.mjs";
 import { lockWorkspace, readBunLock } from "./bun-lock.mjs";
+import { runGates } from "./release-gates.mjs";
 
 // The registry interface is the ONLY npm surface left in this repository (plan 125 Task 5).
 // Probed 2026-09-25 on Bun 1.4.2: `bun pack`, `bun dist-tag` and `bun deprecate` do not exist
@@ -23,10 +23,13 @@ export function loadRelease(root = process.cwd()) {
       if (entry.isDirectory() && existsSync(join(packagesDir, entry.name, "package.json"))) paths.push(`packages/${entry.name}`);
     }
   }
-  const packages = paths.map((path) => ({
-    path,
-    manifest: JSON.parse(readFileSync(join(root, path, "package.json"), "utf8")),
-  }));
+  const packages = paths.map((path) => {
+    const manifest = JSON.parse(readFileSync(join(root, path, "package.json"), "utf8"));
+    // `prismVersionLine: "independent"` marks a package that owns its version line (plan 140:
+    // @arnilo/prism-agent-sdk and @arnilo/prism-code publish from their own tags). A lockstep cut
+    // must neither pin, validate, nor publish it.
+    return { path, manifest, independent: manifest.prismVersionLine === "independent" };
+  });
   const byName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
   const release = { root, packages, byName };
   release.validate = (version) => validateRelease(release, version);
@@ -42,7 +45,8 @@ export function loadRelease(root = process.cwd()) {
  */
 function lockVersionErrors(release, lock, versionFor) {
   const errors = [];
-  for (const pkg of release.packages) {
+  // An independent package's lockfile entry follows its own manifest version, never the cut's.
+  for (const pkg of release.packages.filter((candidate) => !candidate.independent)) {
     const entry = lockWorkspace(lock, pkg.path);
     const expected = versionFor(pkg);
     if (!entry) errors.push(`bun.lock missing ${pkg.path}`);
@@ -56,6 +60,8 @@ function lockVersionErrors(release, lock, versionFor) {
 export function validateRelease(release, version) {
   const errors = [];
   for (const pkg of release.packages) {
+    // Independent-line packages are released by their own tag, not by this cut.
+    if (pkg.independent) continue;
     if (pkg.manifest.private) errors.push(`${pkg.manifest.name} is private`);
     if (pkg.manifest.version !== version) errors.push(`${pkg.manifest.name} version is ${pkg.manifest.version}, expected ${version}`);
     if (pkg.manifest.publishConfig?.access !== "public") errors.push(`${pkg.manifest.name} must set publishConfig.access to public`);
@@ -65,7 +71,9 @@ export function validateRelease(release, version) {
         // (`<version>`) or caret (`^<version>`). A range that merely *satisfies*
         // it (one minor behind at the cut) means two installs of one release line
         // can resolve different first-party minors, so the gate fails closed instead.
-        if (release.byName.has(name) && range !== version && range !== `^${version}`)
+        const target = release.byName.get(name);
+        // A range into an independent line is pinned by that line, not by this cut.
+        if (target && !target.independent && range !== version && range !== `^${version}`)
           errors.push(`${pkg.manifest.name} ${field}.${name} is ${range}, expected ${version}`);
       }
     }
@@ -74,7 +82,8 @@ export function validateRelease(release, version) {
   const lock = readBunLock(release.root);
   errors.push(...lockVersionErrors(release, lock, () => version));
   if (errors.length) throw new Error(errors.join("\n"));
-  return topologicalOrder(release);
+  // The publish set of a lockstep cut: independent-line packages ship from their own tag.
+  return topologicalOrder(release).filter((pkg) => !pkg.independent);
 }
 
 export function topologicalOrder(release) {
