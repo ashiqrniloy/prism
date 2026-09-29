@@ -51,19 +51,21 @@ jobs:
         # `${NODE_AUTH_TOKEN}` reference so no token is written to disk in the clear.
         run: printf '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}\n' >> "$HOME/.npmrc"
       - name: deprecate
+        # The inputs travel as environment variables, never interpolated into the script body: a
+        # deprecation message legitimately contains quotes, pipes, and redirects.
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          SPEC: ${{ inputs.package }}
+          MESSAGE: ${{ inputs.message }}
         run: |
           set -euo pipefail
-          spec='${{ inputs.package }}'
-          message='${{ inputs.message }}'
-          name="${spec%@*}"; version="${spec##*@}"
-          if [ -z "$version" ] || [ "$version" = "$spec" ]; then
+          name="${SPEC%@*}"; version="${SPEC##*@}"
+          if [ -z "$version" ] || [ "$version" = "$SPEC" ]; then
             echo "package must carry a version or range, e.g. @scope/name@<1.2.3" >&2
             exit 1
           fi
           echo "--- before ---"
           npm view "$name" deprecated --json || true
-          npm deprecate "$spec" "$message"
+          npm deprecate "$SPEC" "$MESSAGE"
           echo "--- after ---"
           npm view "$name" deprecated --json
