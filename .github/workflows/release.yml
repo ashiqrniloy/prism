@@ -229,7 +229,9 @@ jobs:
           npm pack --json --pack-destination release-artifacts > release-artifacts/core-pack.json
           npm pack --workspaces --json --pack-destination release-artifacts > release-artifacts/workspace-pack.json
           sha256sum release-artifacts/*.tgz > release-artifacts/SHA256SUMS
-          npm sbom --sbom-format spdx > release-artifacts/sbom.spdx.json
+          # Same peer edge as the supply-chain job: TypeScript 7 vs bun-ffi-structs' ^5 peer makes
+          # npm's tree validation abort before it writes the SBOM.
+          npm sbom --sbom-format spdx --legacy-peer-deps > release-artifacts/sbom.spdx.json
           bun scripts/verify-sbom.mjs release-artifacts/sbom.spdx.json security/license-policy.json
           test "$(du -sb release-artifacts | cut -f1)" -le 134217728
           mkdir -p release-artifacts/unpacked

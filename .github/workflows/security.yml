@@ -67,7 +67,10 @@ jobs:
           # release-host registry toolchain — runner images ship Node; contributors never invoke npm
           # Registry-toolchain exception (plan 125 Task 5): pack and sbom run on the runner
           # image's preinstalled Node — no setup-node step pins it on purpose.
-          npm sbom --sbom-format spdx > security-artifacts/sbom.spdx.json
+          # --legacy-peer-deps: the repo builds with TypeScript 7 while @opentui/core's
+          # bun-ffi-structs peer-requires ^5, and npm's tree validation rejects that edge
+          # (ESBOMPROBLEMS) even though bun installed a working tree.
+          npm sbom --sbom-format spdx --legacy-peer-deps > security-artifacts/sbom.spdx.json
           bun scripts/verify-sbom.mjs security-artifacts/sbom.spdx.json security/license-policy.json
       - name: scan tracked source and packed public artifacts
         run: |
