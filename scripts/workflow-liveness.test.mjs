@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { test } from "bun:test";
 // workflow-liveness gate — plan 071 Task 4 (plan 070 FA 3).
 //
 // `.github/workflows/*.yml` name workspaces and npm scripts, and nothing used to
@@ -19,7 +20,6 @@
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "bun:test";
 import { expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -49,7 +49,8 @@ const SCRIPT_RUN = /\b(?:npm|bun)\s+run\s+([\w:.-]+)/;
 /** `bun run --filter <pkg> <script>`: the selector consumes the token `SCRIPT_RUN` would need. */
 const FILTER_RUN = /\b(?:npm|bun)\s+run\s+(?:-F|--filter)[=\s]+\S+\s+([\w:.-]+)/;
 /** Registry toolchain commands allowed to keep npm (plan 125 Task 5's exception list). */
-const NPM_REGISTRY_OPS = new Set(["pack", "publish", "sbom", "view"]);
+// deprecate is the same class as publish: a registry mutation that needs the publish auth.
+const NPM_REGISTRY_OPS = new Set(["pack", "publish", "sbom", "view", "deprecate"]);
 /** The one Bun setup action, pinned to a full commit SHA (plan 124 Task 5). */
 const SETUP_BUN = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6";
 
@@ -257,10 +258,13 @@ test("workflows install Bun and declare no Node leg", () => {
     [],
     "no workflow may declare a Node leg after the engines flip (plan 125 Task 1)",
   );
+  // Registry-only workflows run no repo code (npm deprecate touches the registry and nothing else),
+  // so they carry the Bun setup for the runner contract but skip the dependency install.
+  const registryOnly = new Set(["npm-deprecate.yml"]);
   for (const { file, text } of workflows) {
     assert.ok(text.includes(SETUP_BUN), `${file} must set up Bun from the pinned action SHA`);
     assert.ok(text.includes('bun-version: "1.4.2"'), `${file} must pin bun-version 1.4.2`);
-    assert.ok(text.includes("bun ci"), `${file} must install with bun ci`);
+    if (!registryOnly.has(file)) assert.ok(text.includes("bun ci"), `${file} must install with bun ci`);
   }
 });
 
