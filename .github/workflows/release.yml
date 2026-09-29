@@ -15,7 +15,9 @@ permissions:
 # the loser reports E409. The queued run resumes instead: `--resume` skips what the first one
 # published, and the post-publish smoke re-verifies the registry.
 concurrency:
-  group: release
+  # Tag pushes serialize against each other (they publish the same closure and would race into E409);
+  # branch and PR runs get their own group so a verify on main never blocks a release tag.
+  group: release-${{ startsWith(github.ref, 'refs/tags/') && github.ref || github.run_id }}
   cancel-in-progress: false
 
 jobs:
