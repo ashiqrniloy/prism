@@ -26,10 +26,10 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.12.1",
-    "@arnilo/prism-coding-tools": "^0.12.1",
-    "@arnilo/prism-hooks": "^0.12.1",
-    "@arnilo/prism-mcp": "^0.12.1"
+    "@arnilo/prism": "^0.12.0",
+    "@arnilo/prism-coding-tools": "^0.12.0",
+    "@arnilo/prism-hooks": "^0.12.0",
+    "@arnilo/prism-mcp": "^0.12.0"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

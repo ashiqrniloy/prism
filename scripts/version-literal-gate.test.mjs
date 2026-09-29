@@ -124,6 +124,10 @@ export function claimViolations(files, current) {
     for (const field of ["dependencies", "peerDependencies", "optionalDependencies"]) {
       for (const [name, range] of Object.entries(pkg[field] ?? {})) {
         if (!name.startsWith(INTERNAL_PACKAGE) || String(range).startsWith("file:")) continue;
+        // A package on its own version line owns its pins *into* the lockstep line: a cut must not
+        // rewrite them, or the next release --resume sees a manifest the registry does not have. Its
+        // pin on another independent line (the app on the SDK) is still a claim.
+        if (INDEPENDENT_LINES.has(pkg.name) && !INDEPENDENT_LINES.has(name)) continue;
         if (range !== `^${expected(name)}`) problems.push(`${path}: ${field}.${name} is ${range}, expected ^${expected(name)}`);
       }
     }

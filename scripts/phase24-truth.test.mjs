@@ -1,11 +1,12 @@
 // Plan 024 Task 2: package-truth generator conformance. Runs in the bun run test
 // gate segment after phase23-quality-gates.test.mjs.
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
 import { pathToFileURL } from "node:url";
 import { computePackageTruth, expandWorkspaceDirs, readManifest, workspacePackageCounts } from "./package-truth.mjs";
 
@@ -173,6 +174,27 @@ test("engines floor lockstep: every publishable manifest declares the Bun runtim
   }
 });
 
+/**
+ * A code package on the lockstep line pins `@arnilo/prism` at the caret of the current version. A
+ * package that owns its version line (scripts/independent-packages.json) pins the same 0.x line at a
+ * floor instead: a lockstep cut rewriting it would change an already-published manifest, and the next
+ * release --resume then refuses ("already exists on the registry") because the local manifest no
+ * longer matches the registry's.
+ */
+export function assertCorePin(dep, range, rootVersion, owner) {
+  const independent = new Set(JSON.parse(readFileSync(join(ROOT, "scripts", "independent-packages.json"), "utf8")).packages);
+  if (independent.has(owner)) {
+    const [major, minor] = rootVersion.split(".");
+    assert.match(
+      range ?? "",
+      new RegExp(`^\\^${major}\\.${minor}\\.\\d+$`),
+      `${owner} must depend on ${dep} with a caret on the ${major}.${minor} line, got ${range}`,
+    );
+    return;
+  }
+  assert.equal(range, `^${rootVersion}`, `${owner} must depend on ${dep}@^${rootVersion}`);
+}
+
 test("peer policy Decision B: all code packages peer the caret current line", () => {
   const t = computePackageTruth();
   const root = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
@@ -186,15 +208,16 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
   const app = pkgs.find((p) => p.name === "@arnilo/prism-code");
   if (app) {
     for (const dep of ["@arnilo/prism", "@arnilo/prism-providers", "@arnilo/prism-hooks"]) {
-      assert.equal(app.dependencies?.[dep], `^${t.root.version}`, `@arnilo/prism-code must depend on ${dep}@^${t.root.version}`);
+      assertCorePin(dep, app.dependencies?.[dep], t.root.version, "@arnilo/prism-code");
     }
     assert.equal(app.peerDependencies, undefined, "@arnilo/prism-code declares no peers");
   }
   const secondPeers = {};
   for (const p of codeWithPeer) {
     const spec = p.peerDependencies["@arnilo/prism"];
-    // Plan 071 Task 1 (plan 070 FA 10): the caret tracks the computed root version.
-    assert.equal(spec, `^${t.root.version}`, `${p.name} must peer @arnilo/prism@^${t.root.version}, got ${spec}`);
+    // Plan 071 Task 1 (plan 070 FA 10): the caret tracks the computed root version, or the same 0.x
+    // line at a floor for a package that owns its version line (see assertCorePin).
+    assertCorePin("@arnilo/prism", spec, t.root.version, p.name);
     assert.match(spec, /^\^\d+\.\d+\.\d+$/, `${p.name} peer spec must be a 0.x caret range, got ${spec}`);
     const extra = Object.keys(p.peerDependencies).filter((n) => n.startsWith("@arnilo/prism-"));
     if (extra.length > 0) secondPeers[p.name] = extra;

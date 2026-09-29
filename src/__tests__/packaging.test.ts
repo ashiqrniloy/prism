@@ -1,8 +1,8 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
-import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import {
   NON_ADAPTER_PROVIDER_SUBPATHS,
@@ -16,6 +16,25 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 // suite derives from it instead of hardcoding the cut. `scripts/version-literal-gate.test.mjs`
 // asserts the same surfaces (manifests, caret ranges, lockfile, version constant).
 const releaseVersion = (): string => readPkg(".").version as string;
+/**
+ * A code package on the lockstep line pins the core at the caret of the current version. A package
+ * that owns its version line (scripts/independent-packages.json) pins the same 0.x line at a floor:
+ * a lockstep cut that rewrote it would change an already-published manifest, and the next release
+ * --resume would then refuse because the local manifest no longer matches the registry's.
+ */
+const INDEPENDENT_LINES = new Set(
+  (JSON.parse(readFileSync(join(repoRoot, "scripts", "independent-packages.json"), "utf8")) as { packages: string[] }).packages,
+);
+const corePin = (owner: string, range: string | undefined): string | undefined => {
+  if (!INDEPENDENT_LINES.has(owner)) return range;
+  const [major, minor] = (releaseVersion() as string).split(".");
+  assert.match(
+    range ?? "",
+    new RegExp(`^\\^${major}\\.${minor}\\.\\d+$`),
+    `${owner} must pin the core with a caret on the ${major}.${minor} line, got ${range}`,
+  );
+  return range;
+};
 
 // ponytail: data-driven guard; one entry per published package, drive every assertion from this list
 const packages: Array<{
@@ -164,18 +183,21 @@ describe("packaging guard", () => {
         it("depends on @arnilo/prism and declares no peers", () => {
           const manifest = readPkg(pkg.dir);
           const deps = manifest.dependencies as Record<string, string> | undefined;
-          assert.equal(deps?.["@arnilo/prism"], `^${releaseVersion()}`);
+          corePin(pkg.name, deps?.["@arnilo/prism"]);
           assert.equal(manifest.peerDependencies, undefined);
         });
       } else if (!pkg.isCore && !pkg.isMeta) {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
-          assert.equal(
-            peers?.["@arnilo/prism"],
-            `^${releaseVersion()}`,
-            `${pkg.name} @arnilo/prism peer must be ^${releaseVersion()}, got ${peers?.["@arnilo/prism"]}`,
-          );
+          corePin(pkg.name, peers?.["@arnilo/prism"]);
+          if (!INDEPENDENT_LINES.has(pkg.name)) {
+            assert.equal(
+              peers?.["@arnilo/prism"],
+              `^${releaseVersion()}`,
+              `${pkg.name} @arnilo/prism peer must be ^${releaseVersion()}, got ${peers?.["@arnilo/prism"]}`,
+            );
+          }
           const meta = manifest.peerDependenciesMeta as Readonly<Record<string, { readonly optional?: boolean }>> | undefined;
           assert.ok(!meta?.["@arnilo/prism"]?.optional, `${pkg.name} must not mark the @arnilo/prism peer optional`);
         });
