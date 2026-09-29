@@ -1,6 +1,7 @@
 name: deprecate
 
-# Operator-dispatched registry deprecation for a published version range. The registry tool needs the
+# Operator-dispatched registry deprecation for a published version range. `npm deprecate` is a
+# release-host registry toolchain operation (plan 125 Task 5): it needs the
 # same registry auth as the publish job, and publish auth is CI-only OIDC/NPM_TOKEN, so the operator
 # action lives here instead of on a laptop. Plan 140 Task 6: the pre-0.4.0 `@arnilo/prism-code`
 # releases are the coding-agent profile *library*; 0.4.0+ is the terminal app, so `npm install
@@ -51,6 +52,8 @@ jobs:
         # `${NODE_AUTH_TOKEN}` reference so no token is written to disk in the clear.
         run: printf '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}\n' >> "$HOME/.npmrc"
       - name: deprecate
+        # release-host registry toolchain (plan 125 Task 5): the runner image's Node runs npm, no
+        # setup-node step pins it, and contributors never invoke npm.
         # The inputs travel as environment variables, never interpolated into the script body: a
         # deprecation message legitimately contains quotes, pipes, and redirects.
         env:
