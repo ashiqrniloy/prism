@@ -2,6 +2,13 @@
 
 ## [0.4.0] - 2026-09-29
 
+> **Published 2026-09-29.** `bun add -g @arnilo/prism-code`, or the standalone binary via
+> `curl -fsSL https://raw.githubusercontent.com/ashiqrniloy/prism/main/install.sh | sh`
+> (`prism-code-v0.4.0` release, six targets, `SHA256SUMS` verified). Every earlier
+> `@arnilo/prism-code` version is **deprecated on npm**: it was the coding-agent profile library,
+> which now lives in `@arnilo/prism-coding-tools` and `@arnilo/prism-agent-sdk`. The app requires
+> the `@arnilo/prism` 0.12.1 line for `capToolResultSummary`.
+
 ### Changed
 
 - **Breaking: `@arnilo/prism-code` is now the Prism Code terminal app.** `0.3.0` and earlier published the coding-agent profile library under this name; that surface moved to `@arnilo/prism-coding-tools` and `@arnilo/prism-agent-sdk`. Stay on `@arnilo/prism-code@0.3` only if you still need the old library.

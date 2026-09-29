@@ -183,3 +183,17 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/137-Prism-Code-Agent-Loop-And-Skills.md
 - What: Give the tool-use-heavy task leg its own model env var instead of running on whatever key is configured.
 - Why: Haiku-class models can flake on multi-step file/test work, which would read as a CLI regression in the live matrix.
+
+## `--max-cost` fails closed on any catalog-unknown model
+- Section: Further Actions
+- Priority: P2
+- Source: plans/140-Prism-Code-Distribution-And-Release.md
+- What: A model that is not in the provider's static catalog (every `opencode-go` gateway model, for example) reports `observed: null` for the maxCost axis, so `--max-cost <n>` aborts the run with `Run limit exceeded: maxCost` before the first token. Treat an unpriced model as zero-cost-with-a-warning, or price it from the live model list, instead of failing closed.
+- Why: Plan 140 Task 6's live acceptance could not set a cost cap on the operator's free gateway model, so the journey shipped with the cap opt-out — the safety net that documentation promises is unreachable exactly where a naive user is most likely to try it.
+
+## Publish evidence for a model that cannot complete the task
+- Section: Further Actions
+- Priority: P2
+- Source: plans/140-Prism-Code-Distribution-And-Release.md
+- What: The observational-memory observer declared `record_observation` with a bare `{ type: "object" }` schema, so a weaker model answered in prose and the pass recorded nothing while `/om:status` reported 0. That is fixed, but the general gap is a provider-capability matrix for structured worker output.
+- Why: Every memory worker (observer, reflector, dropper) depends on tool-call compliance; the live matrix only exercises anthropic/openai-class models, so a weaker or unusual provider looks identical to a memory bug.
