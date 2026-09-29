@@ -11,6 +11,15 @@ export function loadBudgets(file = new URL("./budgets.json", import.meta.url)) {
   return JSON.parse(readFileSync(file, "utf8"));
 }
 
+/**
+ * Wall-clock ceilings are recorded on a developer machine, while a shared CI runner is several times
+ * slower; a same-process *ratio* (see `redaction.minSpeedup`) travels and must never be relaxed.
+ * Use this for every millisecond budget, and keep ratios compared as-is.
+ */
+export function wallClockBudget(ms) {
+  return process.env.CI ? Math.round(ms * 8) : ms;
+}
+
 // Bigger-is-worse (pack bytes, file count, latency): fail above baseline*(1+tolerance).
 export function checkUpperBound(label, measured, baseline, tolerance) {
   const limit = baseline * (1 + tolerance);

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { describe, it } from "bun:test";
 /**
  * Plan 070 Task 9: redaction scenario registration, report schema, network-free posture,
  * byte-identical output, and frozen caps from scripts/budgets.json#redaction. Mirrors the
@@ -8,10 +9,9 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { SCENARIOS } from "./benchmark.mjs";
-import { loadBudgets } from "./budget-gates.mjs";
+import { loadBudgets, wallClockBudget } from "./budget-gates.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const runner = join(here, "benchmark.mjs");
@@ -56,9 +56,9 @@ describe("redaction benchmark scenario (plan 070)", () => {
       `single-scan speedup ${speedup} below frozen floor ${budgets.minSpeedup}`,
     );
     const transcript = rows.redact_transcript_single_scan;
-    assert.ok(transcript.p95Ms <= budgets.transcriptP95CeilingMs, `transcript p95 ${transcript.p95Ms}ms above ceiling`);
+    assert.ok(transcript.p95Ms <= wallClockBudget(budgets.transcriptP95CeilingMs), `transcript p95 ${transcript.p95Ms}ms above ceiling`);
     const small = rows.redact_small_entry;
-    assert.ok(small.p95Ms <= budgets.smallP95CeilingMs, `small-entry p95 ${small.p95Ms}ms above ceiling`);
+    assert.ok(small.p95Ms <= wallClockBudget(budgets.smallP95CeilingMs), `small-entry p95 ${small.p95Ms}ms above ceiling`);
     assert.ok(small.p50Ms > 0, "small-entry timing was measured");
   });
 });

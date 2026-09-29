@@ -16,7 +16,7 @@
 import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";
 import { redactSecrets } from "../../dist/index.js";
-import { loadBudgets } from "../budget-gates.mjs";
+import { loadBudgets, wallClockBudget } from "../budget-gates.mjs";
 
 const REDACTED = "[REDACTED]";
 
@@ -141,7 +141,7 @@ export async function runScenario() {
       transcriptBytes: Buffer.byteLength(text, "utf8"),
       secretOccurrences: fixture.needleCount * 2,
     },
-    ceilingsMs: { transcript: budget.transcriptP95CeilingMs, small: budget.smallP95CeilingMs },
+    ceilingsMs: { transcript: wallClockBudget(budget.transcriptP95CeilingMs), small: wallClockBudget(budget.smallP95CeilingMs) },
     results: [
       {
         name: "redact_transcript_single_scan",
@@ -171,8 +171,8 @@ export async function runScenario() {
       { name: "ordered_loop_identical", pass: identical },
       { name: "no_needle_survives", pass: leaked.length === 0 },
       { name: "speedup_ge_min", pass: speedup >= budget.minSpeedup },
-      { name: "transcript_p95_le_ceiling", pass: shipped.p95Ms <= budget.transcriptP95CeilingMs },
-      { name: "small_p95_le_ceiling", pass: small.p95Ms <= budget.smallP95CeilingMs },
+      { name: "transcript_p95_le_ceiling", pass: shipped.p95Ms <= wallClockBudget(budget.transcriptP95CeilingMs) },
+      { name: "small_p95_le_ceiling", pass: small.p95Ms <= wallClockBudget(budget.smallP95CeilingMs) },
       { name: "transcript_bytes_ge_min", pass: Buffer.byteLength(text, "utf8") >= 1024 * 1024 },
     ],
   };
