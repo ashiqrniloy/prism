@@ -56,9 +56,11 @@ export const TARGETS = {
 /** Shared-library allow-list for the portability guard (`ldd` / `otool -L` output). */
 const SYSTEM_LIBRARY = {
   // Loader paths come absolute from ldd on some hosts and bare on others, and the glibc loader is
-  // ld-linux-<arch>.so.<n> on every Linux arch (x86-64 ships it under /lib64, aarch64 under /lib),
-  // so both spellings must pass or the aarch64 build fails its own portability guard.
-  linux: /^(linux-vdso\.so|linux-gate\.so|lib(c|pthread|dl|m|rt)\.so|.*\/ld-linux[^/]*\.so|.*\/ld-musl-[^/]*\.so|.*\/libc\.musl-[^/]*\.so)/,
+  // ld-linux-<arch>.so.<n> on every Linux arch (x86-64 ships it under /lib64, aarch64 under /lib);
+  // musl reports libc.musl-<arch>.so.<n> or /lib/ld-musl-<arch>.so.<n>. Both spellings must pass or
+  // the build fails its own portability guard.
+  linux:
+    /^(linux-vdso\.so|linux-gate\.so|lib(c|pthread|dl|m|rt)\.so|(\/.*\/)?ld-linux[^/]*\.so|(\/.*\/)?ld-musl-[^/]*\.so|(\/.*\/)?libc\.musl-[^/]*\.so)/,
   // The official musl Bun runtime itself links the C++ runtime: Alpine hosts need
   // `apk add libstdc++ libgcc` (documented), exactly as for Bun on Alpine.
   musl: /^(libstdc\+\+\.so\.6|libgcc_s\.so\.1)$/,

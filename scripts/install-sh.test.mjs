@@ -269,11 +269,33 @@ const dockerEnabled =
   process.platform === "linux" &&
   process.env.PRISM_INSTALL_SH_DOCKER === "1" &&
   spawnSync(DOCKER, ["info"], { stdio: "ignore" }).status === 0;
-const dockerIt = dockerEnabled ? it : it.skip;
 
-async function runInContainer(image, { alpine = false } = {}) {
+/**
+ * Local musl image with curl baked in. The leg runs the installer as the caller's uid (a root-owned
+ * /work leaves the host unable to read or clean the temp home, and the installer must not need root),
+ * while `apk add` only works as root — so curl goes into the image at build time instead.
+ */
+const MUSL_IMAGE_TAG = "prism-install-sh-musl:local";
+async function buildMuslImage() {
+  const dir = mkdtempSync(join(tmpdir(), "prism-install-sh-image-"));
+  try {
+    writeFileSync(join(dir, "Dockerfile"), `FROM oven/bun:1.4.2-alpine\nRUN apk add --no-cache curl\n`);
+    const build = Bun.spawnSync([DOCKER, "build", "-q", "-t", MUSL_IMAGE_TAG, dir], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    return build.exitCode === 0 ? MUSL_IMAGE_TAG : undefined;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+const muslImage = dockerEnabled ? await buildMuslImage() : undefined;
+const muslIt = muslImage ? it : it.skip;
+if (dockerEnabled && !muslImage) console.log("SKIP musl container leg (could not build the local image)");
+
+async function runInContainer(image) {
   const home = makeHome();
-  const command = alpine ? "apk add --no-cache curl >/dev/null 2>&1 && sh /repo/install.sh" : "sh /repo/install.sh";
   const child = Bun.spawn(
     [
       DOCKER,
@@ -302,7 +324,10 @@ async function runInContainer(image, { alpine = false } = {}) {
       image,
       "sh",
       "-ec",
-      command,
+      // Hand the installed tree back to whoever owns /work: on a rootful runner the container runs
+      // as root, on a rootless one the mapping already matches, and the host must be able to read
+      // the binary and remove the temp home either way.
+      'sh /repo/install.sh && chown -R "$(stat -c %u /work):$(stat -c %g /work)" /work/.prism',
     ],
     { stdin: "ignore", stdout: "pipe", stderr: "pipe" },
   );
@@ -311,11 +336,11 @@ async function runInContainer(image, { alpine = false } = {}) {
   return home;
 }
 
-dockerIt(
+muslIt(
   "installs inside a musl container and detects musl",
   async () => {
     state.latest = "0.4.0";
-    const home = await runInContainer("oven/bun:1.4.2-alpine", { alpine: true });
+    const home = await runInContainer(muslImage);
     expect(requestedRows().at(-1)).toContain(`prism-code-linux-${process.arch === "arm64" ? "arm64" : "x64"}-musl.tar.gz`);
     expect(readFileSync(installedBin(home), "utf8")).toContain("0.4.0");
   },
