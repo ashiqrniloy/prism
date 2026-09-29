@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-29T12:24:27.345Z",
+  "generatedAt": "2026-09-29T18:14:35.863Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.12.1"
@@ -18,7 +18,7 @@
     "@arnilo/prism-acp-agent": "0.12.1",
     "@arnilo/prism-hooks": "0.12.1",
     "@arnilo/prism-agent-sdk": "0.1.0",
-    "@arnilo/prism-code": "0.4.0"
+    "@arnilo/prism-code": "0.4.1"
   },
   "counts": {
     "publishable": 14,

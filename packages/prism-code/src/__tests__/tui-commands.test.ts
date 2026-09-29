@@ -1,6 +1,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert";
 import { createMemorySessionStore, type ModelConfig } from "@arnilo/prism";
+import { BoxRenderable } from "@opentui/core";
 import { createTestRenderer } from "@opentui/core/testing";
 import { MemoryStoredCredentialStore, PrismCodeCredentialManager } from "../credentials.js";
 import { describeProviderCredentialStatus, getShippedProvider } from "../index.js";
@@ -84,6 +85,53 @@ describe("TUI Slash Commands & Picker Filtering", () => {
     assert.ok(selected);
     assert.strictEqual(picker.isVisible, false);
 
+    env.renderer.destroy();
+  });
+
+  it("PickerComponent keeps each option on its own row inside the TUI column", async () => {
+    const env = await createTestRenderer({ width: 80, height: 24 });
+    const column = new BoxRenderable(env.renderer, { flexDirection: "column", width: "100%", height: "100%" });
+    const stream = new BoxRenderable(env.renderer, { flexGrow: 1 });
+    const picker = new PickerComponent(env.renderer);
+    const input = new BoxRenderable(env.renderer, { height: 3 });
+    column.add(stream);
+    column.add(picker.root);
+    column.add(input);
+    env.renderer.root.add(column);
+
+    const showPromise = picker.show("Select AI Provider", [
+      { name: "Anthropic (Claude)", value: "anthropic", description: "not configured" },
+      {
+        name: "OpenAI",
+        value: "openai",
+        description: "env OPENAI_API_KEY | api_key | GPT-4o, o1, o3, o4-mini via OpenAI Responses API",
+      },
+      { name: "OpenAI Codex", value: "openai-codex", description: "not configured" },
+      { name: "DeepSeek", value: "deepseek", description: "not configured" },
+      { name: "Google (Gemini)", value: "google", description: "not configured" },
+      { name: "xAI (Grok)", value: "xai", description: "not configured" },
+      { name: "Ollama", value: "ollama", description: "ambient" },
+      { name: "OpenRouter", value: "openrouter", description: "not configured" },
+    ]);
+    await env.renderOnce();
+
+    const items = picker.root.getChildren()[1];
+    assert.ok(items);
+    const rows = items.getChildren();
+    const ys = rows.map((row) => row.y);
+    assert.strictEqual(new Set(ys).size, ys.length, "option rows must not share a line");
+    assert.ok(
+      rows.every((row) => row.height === 1),
+      "each option is one line",
+    );
+
+    const frame = env.captureCharFrame();
+    assert.ok(frame.includes("Anthropic (Claude)"), frame);
+    assert.ok(frame.includes("OpenAI Codex"), frame);
+    assert.equal(frame.includes("GPT-4o"), false, "a long description must clip, not wrap onto the next name");
+
+    picker.hide();
+    await showPromise;
     env.renderer.destroy();
   });
 

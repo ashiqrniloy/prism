@@ -18,8 +18,12 @@ export class PickerComponent {
   private activeResolver?: (option: UiPickerOption | undefined) => void;
 
   constructor(renderer: CliRenderer) {
+    // ponytail: flexShrink 0 + one-line rows. A fixed overlay if a <16-row terminal still covers the input.
     this.root = new BoxRenderable(renderer, {
       flexDirection: "column",
+      width: "100%",
+      flexShrink: 0,
+      overflow: "hidden",
       border: true,
       borderColor: "#00aaff",
       backgroundColor: "#181818",
@@ -33,11 +37,16 @@ export class PickerComponent {
 
     this.titleText = new TextRenderable(renderer, {
       content: "Select Option",
+      height: 1,
+      wrapMode: "none",
+      truncate: true,
     });
 
     this.itemsBox = new BoxRenderable(renderer, {
       flexDirection: "column",
       marginTop: 1,
+      flexShrink: 0,
+      overflow: "hidden",
     });
 
     this.root.add(this.titleText);
@@ -229,6 +238,10 @@ export class PickerComponent {
       const desc = opt.description ? ` - ${opt.description}` : "";
       const text = new TextRenderable(this.root.ctx, {
         content: `${prefix}${opt.name}${desc}`,
+        height: 1,
+        flexShrink: 0,
+        wrapMode: "none",
+        truncate: true,
       });
       this.itemsBox.add(text);
     }

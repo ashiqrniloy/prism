@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1] - 2026-09-29
+
+### Fixed
+
+- Slash-command pickers no longer paint option text on top of itself. The picker keeps one line per row instead of shrinking into the transcript column.
+- `/provider` rows show the provider name and credential status only. Model names stay in the model picker.
+- `/model` rows show the display name and a short badge, not the id, context window, and status crammed onto one line.
+
 ## [0.4.0] - 2026-09-29
 
 > **Published 2026-09-29.** `bun add -g @arnilo/prism-code`, or the standalone binary via

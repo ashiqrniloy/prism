@@ -952,6 +952,7 @@ export class PrismCodeTui implements CodeUi {
       // 2. If picker is visible, route navigation & search filter keys
       if (this.pickerComponent?.isVisible && !this.completionActive) {
         if (this.pickerComponent.handleKey(key)) {
+          key.preventDefault();
           return;
         }
       }

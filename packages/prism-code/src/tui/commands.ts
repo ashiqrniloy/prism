@@ -469,12 +469,10 @@ async function showModelPicker(
   const desc = getShippedProvider(providerId);
   const pickerOptions: UiPickerOption[] = models.map((m) => {
     const badge = m.isLive ? "[live]" : m.isStale ? "[offline/cached]" : "[catalog]";
-    const name = m.model.displayName ?? m.model.model;
-    const descText = `${badge} ${m.model.limits ? `ctx: ${m.model.limits.contextWindow?.toLocaleString() ?? "?"}` : ""}`;
     return {
-      name: `${m.model.model} (${name})`,
+      name: m.model.displayName ?? m.model.model,
       value: m.model.model,
-      description: descText,
+      description: badge,
     };
   });
 
@@ -497,7 +495,7 @@ export async function executeProviderCommand(context: CommandContext): Promise<S
       return {
         name: p.name,
         value: p.id,
-        description: `${formatProviderCredentialStatus(status)} | ${p.authKinds.join(", ")} | ${p.description}`,
+        description: formatProviderCredentialStatus(status),
       };
     }),
   );
