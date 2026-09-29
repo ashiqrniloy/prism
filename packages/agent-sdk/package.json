@@ -1,7 +1,7 @@
 {
   "name": "@arnilo/prism-agent-sdk",
   "version": "0.1.0",
-  "description": "Assembly-only agent SDK: one defineAgent(config) call wires Prism's tool planes, skills, instructions, MCP bridges, hooks, and session stores into a runnable agentic loop — every plane optional and replaceable.",
+  "description": "Assembly-only agent SDK: one defineAgent(config) call wires Prism's tool planes, skills, instructions, MCP bridges, hooks, and session stores into a runnable agentic loop \u2014 every plane optional and replaceable.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -26,10 +26,10 @@
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.12.0",
-    "@arnilo/prism-coding-tools": "^0.12.0",
-    "@arnilo/prism-hooks": "^0.12.0",
-    "@arnilo/prism-mcp": "^0.12.0"
+    "@arnilo/prism": "^0.12.1",
+    "@arnilo/prism-coding-tools": "^0.12.1",
+    "@arnilo/prism-hooks": "^0.12.1",
+    "@arnilo/prism-mcp": "^0.12.1"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

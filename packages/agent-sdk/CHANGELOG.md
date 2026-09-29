@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-09-29
 
 First published version (independent version line; the package never shipped under the lockstep `0.12.0` number).
 

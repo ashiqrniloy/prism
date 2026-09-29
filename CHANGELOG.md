@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.12.1] - 2026-09-29
+
+> **Twelve publishable packages** (plus the independently versioned `@arnilo/prism-agent-sdk` and `@arnilo/prism-code`). Lockstep patch from 0.12.0. It exists because the published `@arnilo/prism-code@0.4.0` declares `@arnilo/prism@^0.12.0` and imports `capToolResultSummary`, a new root export: without 0.12.1 a fresh `bun add -g @arnilo/prism-code` resolves the published 0.12.0 and fails to load. No breaking changes; every other delta below is additive.
+
 ### Added
 - **Prism Code release pipeline (plan 140 Task 5).** Pushing `@arnilo/prism-code@<version>` runs the independent release verification/publish for that package (already-published lockstep packages are skipped via `--resume`, and the SDK publishes before Prism Code in topological order), then creates the tag-derived `prism-code-v<version>` GitHub Release from the six archives and `SHA256SUMS` with the package `CHANGELOG.md` section as notes; a pre-release version creates a draft instead. `release.yml`'s `post-publish-smoke` job installs `@arnilo/prism-code@<version>` from the registry and runs the published `install.sh` against that release, which must print `<version> (binary)`.
 - **Prism Code native curl installer (plan 140 Task 4).** `install.sh` installs the standalone binary with no Bun or npm: it detects OS/arch/libc (glibc or musl), resolves the version from `--version`/`PRISM_CODE_VERSION` or the npm registry, downloads the release archive and `SHA256SUMS` over HTTPS, verifies the SHA-256, and installs atomically to `${PRISM_HOME:-$HOME/.prism}/bin` (binary `0755`, directories `0700`). It prints the exact bash/zsh/fish PATH line, edits the rc only with `--modify-path`, upgrades in place, and `--uninstall` removes the binary without touching user data. `scripts/install-sh.test.mjs` exercises it against a local HTTPS fixture server, plus an Alpine musl container leg.

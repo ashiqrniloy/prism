@@ -44,6 +44,27 @@ const packsDir = option("--packs");
 const keep = argv.includes("--keep");
 if (registry && packsDir) throw new Error("--registry and --packs are mutually exclusive");
 
+/**
+ * npm replication lag: right after `npm publish` the packument can list the version while its
+ * manifest is not resolvable yet ("No version matching X found (but package exists)"). The
+ * post-publish smoke is the acceptance gate for the release, so it waits for the registry instead
+ * of racing it.
+ */
+async function waitForRegistryVersion(pkg, wanted, timeoutMs = 180_000) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const probe = spawnSync("npm", ["view", `${pkg}@${wanted}`, "version"], { encoding: "utf8" });
+    if (probe.status === 0 && probe.stdout.trim() === wanted) return;
+    if (Date.now() > deadline) {
+      throw new Error(
+        `${pkg}@${wanted} is not installable from the registry after ${Math.round(timeoutMs / 1000)}s: ${(probe.stderr || probe.stdout).trim()}`,
+      );
+    }
+    console.log(`prism-code install smoke: waiting for ${pkg}@${wanted} to become installable…`);
+    await Bun.sleep(10_000);
+  }
+}
+
 /** Workspace manifests keyed by package name. */
 function workspaceManifests() {
   const manifests = new Map();
@@ -119,6 +140,7 @@ try {
   const installStart = performance.now();
   if (registry) {
     console.log(`prism-code install smoke: registry — ${APP}@${version}`);
+    await waitForRegistryVersion(APP, version);
     run(process.execPath, ["add", "-g", `${APP}@${version}`], { cwd: workdir, env: installEnv });
   } else {
     const closure = firstPartyClosure(manifests);

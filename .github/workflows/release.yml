@@ -3,12 +3,20 @@ name: release
 on:
   push:
     branches: [main, master]
-    tags: ["v0.3.0", "v0.4.0", "v0.5.0", "v0.5.1", "v0.5.2", "v0.5.3", "v0.5.4", "v0.5.5", "v0.5.6", "v0.6.0", "v0.7.0", "v0.8.0", "v0.9.0", "v0.10.0", "v0.11.0", "v0.11.1", "v0.12.0", "@arnilo/*@*"]
+    tags: ["v0.3.0", "v0.4.0", "v0.5.0", "v0.5.1", "v0.5.2", "v0.5.3", "v0.5.4", "v0.5.5", "v0.5.6", "v0.6.0", "v0.7.0", "v0.8.0", "v0.9.0", "v0.10.0", "v0.11.0", "v0.11.1", "v0.12.0", "v0.12.1", "@arnilo/*@*"]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# One release at a time. Two independent tags (e.g. @arnilo/prism-agent-sdk@0.1.0 and
+# @arnilo/prism-code@0.4.0) publish the same dependency closure, so concurrent runs race on npm and
+# the loser reports E409. The queued run resumes instead: `--resume` skips what the first one
+# published, and the post-publish smoke re-verifies the registry.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   verify:

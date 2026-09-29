@@ -1,22 +1,22 @@
 {
-  "generatedAt": "2026-09-29T11:07:02.796Z",
+  "generatedAt": "2026-09-29T12:24:27.345Z",
   "root": {
     "name": "@arnilo/prism",
-    "version": "0.12.0"
+    "version": "0.12.1"
   },
   "versions": {
-    "@arnilo/prism": "0.12.0",
-    "@arnilo/prism-mcp": "0.12.0",
-    "@arnilo/prism-providers": "0.12.0",
-    "@arnilo/prism-memory": "0.12.0",
-    "@arnilo/prism-work": "0.12.0",
-    "@arnilo/prism-core": "0.12.0",
-    "@arnilo/prism-channels": "0.12.0",
-    "@arnilo/prism-coding-tools": "0.12.0",
-    "@arnilo/prism-ag-ui": "0.12.0",
-    "@arnilo/prism-web-tools": "0.12.0",
-    "@arnilo/prism-acp-agent": "0.12.0",
-    "@arnilo/prism-hooks": "0.12.0",
+    "@arnilo/prism": "0.12.1",
+    "@arnilo/prism-mcp": "0.12.1",
+    "@arnilo/prism-providers": "0.12.1",
+    "@arnilo/prism-memory": "0.12.1",
+    "@arnilo/prism-work": "0.12.1",
+    "@arnilo/prism-core": "0.12.1",
+    "@arnilo/prism-channels": "0.12.1",
+    "@arnilo/prism-coding-tools": "0.12.1",
+    "@arnilo/prism-ag-ui": "0.12.1",
+    "@arnilo/prism-web-tools": "0.12.1",
+    "@arnilo/prism-acp-agent": "0.12.1",
+    "@arnilo/prism-hooks": "0.12.1",
     "@arnilo/prism-agent-sdk": "0.1.0",
     "@arnilo/prism-code": "0.4.0"
   },
@@ -103,7 +103,7 @@
   "profiles": {},
   "peerPolicy": {
     "decision": "B",
-    "spec": "^0.12.0",
+    "spec": "^0.12.1",
     "atomicUpgrade": false
   }
 }

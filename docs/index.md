@@ -2,8 +2,9 @@
 
 Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, tools, credentials, storage, and behavior; Prism supplies contracts, registries, events, and replaceable runtime primitives.
 
-## Current line (0.12.0)
+## Current line (0.12.1)
 
+- **Prism Code release support**: `capToolResultSummary` (the tool-result fold) is exported from `@arnilo/prism` and consumed by the published `@arnilo/prism-code@0.4.0` app, so 0.12.1 is the floor for that install. The other 0.12.1 changes are additive exports only.
 - **Resilient MCP plane**: `assembleMcpPlane` connects every allowed server in parallel with a per-server `connectTimeoutMs` (default 15 s), returns per-server `connected`/`failed`/`disabled` status instead of aborting startup on the first failure, enforces the host `mcp.allow` list, redacts header values from status errors, and exposes `reconnect(serverId)` plus `close()` while keeping the agent's tool registry in sync. HTTP specs accept `headers` and OAuth `auth`.
 - **Memory-store branch reads**: the built-in memory session store implements `readBranchPath`. A snapshot walks the branch once and clones each kept entry once.
 - **JSONL parse cache**: a read after an in-process append reuses the parsed file when size and mtime match. A same-size write inside one filesystem timestamp tick can still look unchanged.
@@ -11,7 +12,7 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 - **In-memory lease sweep**: expired lease rows are deleted once the map reaches 1,024. A swept key starts its next fence at 1. A released key still in the map keeps `fencingToken + 1`. SQLite and Postgres adapters still keep the counter on the row.
 - **Shared text token estimate**: plain-text estimates use one `ceil(length/4)` helper. Message and entry estimates are unchanged.
 - **System One decision models**: `@arnilo/prism-providers/typesafe` (hosted Jev) and `@arnilo/prism-providers/laya` (self-hosted `laya-serve`) answer only `options.structuredOutput` requests, one `POST /v1/systemone` round trip, no tools or streaming; `@arnilo/prism-providers/decisions` adds a typed host call that preserves raw probabilities, confidence, the responding checkpoint, usage, and timing.
-- **14 publishable packages** at current **0.12.0** lockstep, with the migration guide reachable from the release section below — inventory below.
+- **14 publishable packages** at current **0.12.1** lockstep, with the migration guide reachable from the release section below — inventory below.
 
 ### Carried from the 0.10.0 line
 
@@ -280,18 +281,18 @@ The generated inventory below derives from [`scripts/package-truth.json`](../scr
 
 | package | version | notes |
 | --- | --- | --- |
-| `@arnilo/prism` | 0.12.0 | core — runtime, CLI/RPC, templates, docs |
-| `@arnilo/prism-channels` | 0.12.0 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
-| `@arnilo/prism-coding-tools` | 0.12.0 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /impeccable subpaths |
-| `@arnilo/prism-core` | 0.12.0 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths |
-| `@arnilo/prism-providers` | 0.12.0 | family — all provider adapters as `/<adapter>` subpaths |
-| `@arnilo/prism-acp-agent` | 0.12.0 | capability — ACP adapter |
-| `@arnilo/prism-ag-ui` | 0.12.0 | capability — AG-UI/A2A/A2UI adapter |
+| `@arnilo/prism` | 0.12.1 | core — runtime, CLI/RPC, templates, docs |
+| `@arnilo/prism-channels` | 0.12.1 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
+| `@arnilo/prism-coding-tools` | 0.12.1 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /impeccable subpaths |
+| `@arnilo/prism-core` | 0.12.1 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths |
+| `@arnilo/prism-providers` | 0.12.1 | family — all provider adapters as `/<adapter>` subpaths |
+| `@arnilo/prism-acp-agent` | 0.12.1 | capability — ACP adapter |
+| `@arnilo/prism-ag-ui` | 0.12.1 | capability — AG-UI/A2A/A2UI adapter |
 | `@arnilo/prism-agent-sdk` | 0.1.0 | capability — configurable agent runtime assembly over tool planes, skills, instructions, MCP, and hooks |
 | `@arnilo/prism-code` | 0.4.0 | capability — terminal coding agent app: TUI, headless print/json, and ACP surfaces with bundled coding tools, repo sessions, observational memory, and optional web/wiki planes |
-| `@arnilo/prism-hooks` | 0.12.0 | capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams |
-| `@arnilo/prism-mcp` | 0.12.0 | capability — MCP client/server/OAuth interop |
-| `@arnilo/prism-memory` | 0.12.0 | capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths |
-| `@arnilo/prism-web-tools` | 0.12.0 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
-| `@arnilo/prism-work` | 0.12.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths |
+| `@arnilo/prism-hooks` | 0.12.1 | capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams |
+| `@arnilo/prism-mcp` | 0.12.1 | capability — MCP client/server/OAuth interop |
+| `@arnilo/prism-memory` | 0.12.1 | capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths |
+| `@arnilo/prism-web-tools` | 0.12.1 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
+| `@arnilo/prism-work` | 0.12.1 | capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths |
 <!-- generated:package-truth:inventory end -->
