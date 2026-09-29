@@ -64,6 +64,5 @@
   "sideEffects": false,
   "publishConfig": {
     "access": "public"
-  },
-  "prismVersionLine": "independent"
+  }
 }

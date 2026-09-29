@@ -14,6 +14,7 @@ import { runGates } from "./release-gates.mjs";
 
 const INTERNAL_SCOPE = "@arnilo/";
 const DEPENDENCY_FIELDS = ["dependencies", "optionalDependencies", "peerDependencies"];
+const INDEPENDENT_PACKAGES_FILE = "independent-packages.json";
 
 export function loadRelease(root = process.cwd()) {
   const paths = ["."];
@@ -23,12 +24,14 @@ export function loadRelease(root = process.cwd()) {
       if (entry.isDirectory() && existsSync(join(packagesDir, entry.name, "package.json"))) paths.push(`packages/${entry.name}`);
     }
   }
+  // Packages that own their version line (plan 140) come from release tooling data, never from a
+  // manifest field: a manifest is published bytes, and touching one after its version shipped makes
+  // the next `--resume` see a different package than the registry has.
+  const independentFile = join(root, "scripts", INDEPENDENT_PACKAGES_FILE);
+  const independentNames = new Set(existsSync(independentFile) ? (JSON.parse(readFileSync(independentFile, "utf8")).packages ?? []) : []);
   const packages = paths.map((path) => {
     const manifest = JSON.parse(readFileSync(join(root, path, "package.json"), "utf8"));
-    // `prismVersionLine: "independent"` marks a package that owns its version line (plan 140:
-    // @arnilo/prism-agent-sdk and @arnilo/prism-code publish from their own tags). A lockstep cut
-    // must neither pin, validate, nor publish it.
-    return { path, manifest, independent: manifest.prismVersionLine === "independent" };
+    return { path, manifest, independent: independentNames.has(manifest.name) };
   });
   const byName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
   const release = { root, packages, byName };

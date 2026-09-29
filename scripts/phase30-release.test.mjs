@@ -21,14 +21,17 @@ import {
 
 function writeGraph(dir, pkgs) {
   const byPath = {};
+  // Independent-line membership lives in release tooling data (scripts/independent-packages.json),
+  // not in a manifest field, exactly as the real repository does it.
+  const independent = new Set();
   for (const p of pkgs) {
     const manifest = {
       name: p.name,
       version: p.version,
       publishConfig: { access: "public" },
-      ...(p.independent ? { prismVersionLine: "independent" } : {}),
       ...(p.deps ? { dependencies: p.deps } : {}),
     };
+    if (p.independent) independent.add(p.name);
     const rel = p.path === "." ? "package.json" : `${p.path}/package.json`;
     mkdirSync(join(dir, p.path), { recursive: true });
     writeFileSync(join(dir, rel), `${JSON.stringify(manifest, null, 2)}\n`);
@@ -43,6 +46,8 @@ function writeGraph(dir, pkgs) {
   }
   const lock = { lockfileVersion: 1, workspaces };
   writeFileSync(join(dir, "bun.lock"), `${JSON.stringify(lock, null, 2)}\n`);
+  mkdirSync(join(dir, "scripts"), { recursive: true });
+  writeFileSync(join(dir, "scripts", "independent-packages.json"), `${JSON.stringify({ packages: [...independent] })}\n`);
   return loadRelease(dir);
 }
 

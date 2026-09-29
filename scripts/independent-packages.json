@@ -1,0 +1,7 @@
+{
+  "$comment": "Packages that own their version line (plan 140). A lockstep v* cut neither pins, validates, nor publishes them; each ships from its own @arnilo/<name>@<version> tag. Kept out of the manifests on purpose: a manifest is published bytes, and changing one after a version ships breaks release --resume.",
+  "packages": [
+    "@arnilo/prism-agent-sdk",
+    "@arnilo/prism-code"
+  ]
+}
