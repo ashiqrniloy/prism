@@ -12,7 +12,7 @@ import {
   type OwnershipScope,
 } from "@arnilo/prism";
 import type { Pool, PoolClient } from "pg";
-import { type AgentEventRow, createSessionRowMappers } from "../codecs/index.js";
+import { type AgentEventRow, canonicalSessionTimestamp, createSessionRowMappers } from "../codecs/index.js";
 import { qualifyTable } from "./identifiers.js";
 
 const CHANNEL = "prism_agent_events";
@@ -85,6 +85,17 @@ export function createPostgresAgentEventSource(options: PostgresAgentEventSource
   const hub = new ListenerHub(options.pool, limits);
   let closed = false;
 
+  async function ensureSessionActivity(client: PoolClient, sessionId: string, timestamp: string): Promise<void> {
+    const activityAt = canonicalSessionTimestamp(timestamp);
+    await client.query(
+      `INSERT INTO ${sessions} (id, created_at, updated_at)
+       VALUES ($1, $2, $3)
+       ON CONFLICT(id) DO UPDATE SET updated_at = EXCLUDED.updated_at
+       WHERE EXCLUDED.updated_at::timestamptz > ${sessions}.updated_at::timestamptz`,
+      [sessionId, activityAt, activityAt],
+    );
+  }
+
   const source: ClosablePostgresAgentEventSource = {
     async append(input) {
       assertOpen();
@@ -99,12 +110,7 @@ export function createPostgresAgentEventSource(options: PostgresAgentEventSource
           await client.query("COMMIT");
           return existing;
         }
-        await client.query(
-          `INSERT INTO ${sessions} (id, created_at, updated_at)
-           VALUES ($1, $2, $3)
-           ON CONFLICT(id) DO UPDATE SET updated_at = EXCLUDED.updated_at`,
-          [record.sessionId, record.timestamp, record.timestamp],
-        );
+        await ensureSessionActivity(client, record.sessionId, record.timestamp);
         const sequenceResult = await client.query(
           `INSERT INTO ${streams} (session_id, run_id, next_sequence, updated_at)
            VALUES ($1, $2, 2, $3)
@@ -163,12 +169,7 @@ export function createPostgresAgentEventSource(options: PostgresAgentEventSource
       const client = await options.pool.connect();
       try {
         await client.query("BEGIN");
-        await client.query(
-          `INSERT INTO ${sessions} (id, created_at, updated_at)
-           VALUES ($1, $2, $3)
-           ON CONFLICT(id) DO UPDATE SET updated_at = EXCLUDED.updated_at`,
-          [record.sessionId, record.timestamp, record.timestamp],
-        );
+        await ensureSessionActivity(client, record.sessionId, record.timestamp);
         const sequenceResult = await client.query(
           `INSERT INTO ${streams} (session_id, run_id, next_sequence, updated_at)
            VALUES ($1, $2, 2, $3)

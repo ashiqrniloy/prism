@@ -2,11 +2,12 @@
  * Failure-injection tests for extracted process session phases.
  * These paths lived inside the createProcessSessions closure and could not be reached directly.
  */
+
+import { afterAll as after, beforeAll as before, test } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll as after, beforeAll as before, test } from "bun:test";
 import { type CheckpointStore, createMemoryLeaseStore } from "@arnilo/prism";
 import { OutputAccumulator } from "../output-accumulator.js";
 import { type CodingProcessEvent, type ProcessPtyHandle, type ProcessSession } from "../process/index.js";

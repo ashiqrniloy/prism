@@ -212,6 +212,9 @@ export const PACKAGE_NOTES = {
   "@arnilo/prism-work":
     "capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths",
   "@arnilo/prism-web-tools": "capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths",
+  "@arnilo/prism-agent-sdk": "capability — configurable agent runtime assembly over tool planes, skills, instructions, MCP, and hooks",
+  "@arnilo/prism-code":
+    "capability — terminal coding agent app: TUI, headless print/json, and ACP surfaces with bundled coding tools, repo sessions, observational memory, and optional web/wiki planes",
 };
 
 const blockBegin = (type) => `<!-- generated:package-truth:${type} begin -->`;

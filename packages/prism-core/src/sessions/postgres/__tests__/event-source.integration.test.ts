@@ -1,6 +1,6 @@
+import { afterAll as after, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { afterAll as after, describe, it } from "bun:test";
 import { type AgentEventRecord, assertAgentEventSourceConforms } from "@arnilo/prism";
 import { Pool } from "pg";
 import { qualifyTable } from "../identifiers.js";

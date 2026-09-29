@@ -1,3 +1,4 @@
+import type { Database } from "bun:sqlite";
 import { randomUUID } from "node:crypto";
 import { chmodSync, existsSync } from "node:fs";
 import {
@@ -10,7 +11,6 @@ import {
   type PersistenceSchemaShape,
   type PersistenceSchemaShapeForeignKey,
 } from "@arnilo/prism/testing/persistence-schema";
-import type { Database } from "bun:sqlite";
 import {
   ADAPTER_INDEX_NAMES,
   MIGRATION_001_INIT,

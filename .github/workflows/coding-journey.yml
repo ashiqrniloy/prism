@@ -197,3 +197,19 @@ jobs:
           path: scripts/phase26-coding-journey-report.json
           if-no-files-found: warn
           retention-days: 30
+
+  hermetic-pty-tui-e2e:
+    name: "hermetic PTY TUI end-to-end (plan 139 Task 7)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.2"
+      - run: bun ci
+      - run: bun run build
+      - name: run the hermetic PTY TUI journeys (mock provider, temp PRISM_HOME)
+        run: bun test scripts/e2e-prism-code-tui.test.mjs

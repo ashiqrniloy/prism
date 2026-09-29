@@ -1,8 +1,8 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "bun:test";
 import { createMemoryCheckpointStore, createSecretRedactor, type JsonObject } from "@arnilo/prism";
 import { createWorkflowCheckpoints } from "@arnilo/prism-core/runtime/workflows";
 import {

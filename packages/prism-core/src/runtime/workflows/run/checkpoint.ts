@@ -46,12 +46,32 @@ export function deserializePendingActivations(
   return result;
 }
 
+const checkpointFailures = new WeakSet<object>();
+
+export function isCheckpointFailure(error: unknown): boolean {
+  return typeof error === "object" && error !== null && checkpointFailures.has(error);
+}
+
 export async function persistCheckpoint(
   state: SchedulerState,
   options: RunWorkflowOptions,
   emit: (event: WorkflowEventInput) => void,
 ): Promise<void> {
   if (!options.checkpoints) return;
+  try {
+    await saveCheckpoint(state, options, emit);
+  } catch (error) {
+    const failure = typeof error === "object" && error !== null ? error : new WorkflowCheckpointError(String(error));
+    checkpointFailures.add(failure);
+    throw failure;
+  }
+}
+
+async function saveCheckpoint(
+  state: SchedulerState,
+  options: RunWorkflowOptions,
+  emit: (event: WorkflowEventInput) => void,
+): Promise<void> {
   if (options.checkpointGuard && !options.checkpointGuard()) {
     throw new WorkflowCheckpointError("Workflow lease lost; checkpoint write fenced");
   }

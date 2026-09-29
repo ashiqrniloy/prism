@@ -1,0 +1,221 @@
+name: prism-code binaries
+
+# Plan 140 Task 3: standalone `bun build --compile` binaries of Prism Code, one per target, each
+# compiled and self-tested on a native runner so the embedded platform packages (OpenTUI native
+# library, @napi-rs/keyring addon) are the host's own. Every leg runs the built binary
+# (`--version` + cold-start budget, headless mock prompt, `doctor --json`, keychain probe, a
+# `tools.add` module, PTY launch/exit) before archiving `prism-code-<target>.tar.gz`; the `checksums`
+# job writes SHA256SUMS and attests the archives, and the `release` job (plan 140 Task 5) creates
+# the tag-derived `prism-code-v<version>` GitHub Release with those assets.
+
+on:
+  push:
+    tags: ["@arnilo/prism-code@*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x64, runner: ubuntu-24.04 }
+          - { target: linux-arm64, runner: ubuntu-24.04-arm }
+          # musl legs build inside the official Alpine Bun image. Plain `docker run` rather than a
+          # job `container:` — JavaScript actions cannot run in Alpine containers on arm64 runners.
+          - { target: linux-x64-musl, runner: ubuntu-24.04, alpine: "oven/bun:1.4.2-alpine" }
+          - { target: linux-arm64-musl, runner: ubuntu-24.04-arm, alpine: "oven/bun:1.4.2-alpine" }
+          - { target: darwin-x64, runner: macos-15-intel }
+          - { target: darwin-arm64, runner: macos-15 }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: resolve version
+        # Tag-derived on tag pushes (and it must match the manifest); the manifest on dispatch.
+        run: |
+          manifest=$(sed -n 's/^  "version": "\(.*\)",$/\1/p' packages/prism-code/package.json)
+          version="$manifest"
+          case "$GITHUB_REF" in
+            refs/tags/@arnilo/prism-code@*)
+              version="${GITHUB_REF#refs/tags/@arnilo/prism-code@}"
+              if [ "$version" != "$manifest" ]; then
+                echo "tag version $version does not match packages/prism-code/package.json $manifest" >&2
+                exit 1
+              fi
+              ;;
+          esac
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        if: ${{ !matrix.alpine }}
+        with:
+          bun-version: "1.4.2"
+      - name: build, self-test, and archive
+        if: ${{ !matrix.alpine }}
+        run: |
+          bun ci
+          bun run build
+          bun scripts/build-prism-code-binaries.mjs --target "${{ matrix.target }}" --version "$VERSION" --out dist-bin --self-test --archive
+      - name: build, self-test, and archive (Alpine)
+        if: ${{ matrix.alpine }}
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo \
+            -e SOURCE_DATE_EPOCH -e VERSION -e TARGET="${{ matrix.target }}" \
+            "${{ matrix.alpine }}" sh -euc '
+              bun ci
+              bun run build
+              bun scripts/build-prism-code-binaries.mjs --target "$TARGET" --version "$VERSION" --out dist-bin --self-test --archive
+            '
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: prism-code-${{ matrix.target }}
+          path: |
+            dist-bin/prism-code-${{ matrix.target }}.tar.gz
+            dist-bin/${{ matrix.target }}/build-report.json
+          if-no-files-found: error
+          retention-days: 30
+
+  installer-fixture:
+    name: install.sh fixture tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      # Runs the Alpine musl leg too (docker and network are available on this runner). The host
+      # `sh` leg runs in the gate chain; this job adds the container target detection. The real
+      # installed release is verified by release.yml's post-publish smoke (plan 140 Task 5).
+      PRISM_INSTALL_SH_DOCKER: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.2"
+      - name: install.sh against the HTTPS fixture server
+        run: bun test --timeout=0 scripts/install-sh.test.mjs
+
+  checksums:
+    name: SHA256SUMS + provenance
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.2"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: prism-code-*
+          path: dist-bin
+          merge-multiple: true
+      - name: write SHA256SUMS
+        run: |
+          test "$(ls dist-bin/prism-code-*.tar.gz | wc -l)" -eq 6
+          bun scripts/build-prism-code-binaries.mjs --checksums dist-bin
+          (cd dist-bin && sha256sum -c SHA256SUMS)
+          {
+            echo "### prism-code binaries"
+            echo '```'
+            cat dist-bin/SHA256SUMS
+            echo '```'
+            echo "| target | binary bytes | archive bytes | cold --version ms | TUI first frame ms |"
+            echo "| --- | --- | --- | --- | --- |"
+            for report in dist-bin/*/build-report.json; do
+              bun -e 'const r = JSON.parse(await Bun.file(process.argv[1]).text()); console.log(`| ${r.target} | ${r.bytes} | ${r.archiveBytes} | ${r.versionMedianMs} | ${r.firstFrameMs ?? "n/a"} |`)' "$report"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: attest binary archives
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: |
+            dist-bin/prism-code-*.tar.gz
+            dist-bin/SHA256SUMS
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: prism-code-binaries
+          path: |
+            dist-bin/prism-code-*.tar.gz
+            dist-bin/SHA256SUMS
+            dist-bin/*/build-report.json
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: GitHub Release
+    needs: checksums
+    # Tag-derived: a push of `@arnilo/prism-code@<version>` publishes the release, and a manual
+    # dispatch with the workflow ref set to that tag is the dry run. A pre-release version
+    # (contains "-") creates a draft instead, so nothing goes live before the stable tag.
+    if: startsWith(github.ref, 'refs/tags/@arnilo/prism-code@')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: resolve version
+        run: |
+          manifest=$(sed -n 's/^  "version": "\(.*\)",$/\1/p' packages/prism-code/package.json)
+          version="${GITHUB_REF#refs/tags/@arnilo/prism-code@}"
+          if [ "$version" != "$manifest" ]; then
+            echo "tag version $version does not match packages/prism-code/package.json $manifest" >&2
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: prism-code-binaries
+          path: dist-bin
+      - name: write release notes from the package CHANGELOG
+        run: |
+          test "$(find dist-bin -maxdepth 1 -name 'prism-code-*.tar.gz' | wc -l)" -eq 6
+          awk -v ver="$VERSION" '
+            index($0, "## [" ver "]") == 1 { found = 1; next }
+            found && index($0, "## [") == 1 { exit }
+            found { print }
+          ' packages/prism-code/CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "Prism Code $VERSION standalone binaries. See packages/prism-code/CHANGELOG.md." > notes.md
+          fi
+          {
+            echo
+            echo "Install with the curl installer:"
+            echo
+            echo '```sh'
+            echo "curl -fsSL https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/install.sh | sh"
+            echo '```'
+          } >> notes.md
+      - name: create or update the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          tag="prism-code-v$VERSION"
+          extra=()
+          case "$VERSION" in
+            *-*) extra=(--draft --prerelease) ;;
+          esac
+          # A re-run after a partial failure updates the existing release instead of failing.
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --notes-file notes.md
+            gh release upload "$tag" dist-bin/prism-code-*.tar.gz dist-bin/SHA256SUMS --clobber
+          else
+            gh release create "$tag" dist-bin/prism-code-*.tar.gz dist-bin/SHA256SUMS \
+              --target "$GITHUB_SHA" --title "Prism Code v$VERSION" --notes-file notes.md "${extra[@]}"
+          fi

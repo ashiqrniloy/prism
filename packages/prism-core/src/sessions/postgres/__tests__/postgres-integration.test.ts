@@ -1,8 +1,9 @@
+import { afterAll as after, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { afterAll as after, describe, it } from "bun:test";
 import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
 import {
+  assertPersistenceBranchQueryConforms,
   assertPersistenceQueryPaginationConforms,
   assertTenantScopedQueryIsolation,
   createPersistenceMigrationContract,
@@ -10,6 +11,7 @@ import {
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
 import { Pool } from "pg";
+import { assertPersistenceSearchQueryParity } from "../../codecs/__tests__/query-conformance.js";
 import {
   buildMigration001Ddl,
   buildMigration002Ddl,
@@ -54,6 +56,12 @@ describeIntegration("createPostgresPersistence integration", () => {
     });
   });
 
+  it("shares filter-only search ordering, scoping, and cursor semantics", async () => {
+    const persistence = await createPostgresPersistence({ pool: createPool(), schema: uniqueSchema() });
+    await assertPersistenceSearchQueryParity(persistence);
+    await persistence.close();
+  });
+
   it("passes run-ledger conformance with reopen and tenant isolation", async () => {
     const schema = uniqueSchema();
     const pool = createPool();
@@ -86,6 +94,108 @@ describeIntegration("createPostgresPersistence integration", () => {
     await runFeedbackConformance(() => persistence.feedback);
     const reopened = await createPostgresPersistence({ pool, schema });
     assert.equal((await reopened.feedback.query({ tenantId: "feedback-tenant", userId: "feedback-user" })).items.length, 1);
+  });
+
+  it("keeps session activity monotonic across run, usage, and event writes", async () => {
+    const pool = createPool();
+    const schema = uniqueSchema();
+    const persistence = await createPostgresPersistence({ pool, schema });
+    const appendSession = persistence.appendSession;
+    if (!appendSession) throw new Error("appendSession required");
+    const sessionId = "activity-session";
+    const old = "2026-01-01T00:00:00.000Z";
+    const recent = "2026-01-03T00:00:00.001Z";
+    await appendSession({
+      id: sessionId,
+      tenantId: "tenant-a",
+      createdAt: old,
+      updatedAt: "2026-01-01T01:00:00+01:00",
+      metadata: { title: "first" },
+    });
+    assert.equal((await persistence.querySessions({ id: sessionId })).items[0]?.updatedAt, old);
+    await persistence.appendRun({ id: "new-run", sessionId, startedAt: recent });
+    await persistence.appendUsage({
+      id: "older-usage",
+      sessionId,
+      runId: "new-run",
+      scope: "run_total",
+      recordedAt: "2026-01-03T00:30:00+01:00",
+      usage: { totalTokens: 1 },
+    });
+    await persistence.appendEvent({
+      id: "older-event",
+      sessionId,
+      runId: "new-run",
+      tenantId: "tenant-a",
+      timestamp: old,
+      type: "agent_started",
+      redacted: true,
+      event: { type: "agent_started", sessionId, runId: "new-run" },
+    });
+    assert.equal((await persistence.querySessions({ id: sessionId, tenantId: "tenant-a" })).items[0]?.updatedAt, recent);
+
+    // A pre-existing non-canonical row must compare as an instant, not lexically.
+    const legacy = "2026-01-03T01:00:00.001+01:00";
+    await pool.query(`UPDATE "${schema}".prism_sessions SET updated_at = $1 WHERE id = $2`, [legacy, sessionId]);
+    await persistence.appendRun({ id: "older-run", sessionId, startedAt: "2026-01-03T00:00:00.000Z" });
+    assert.equal((await persistence.querySessions({ id: sessionId })).items[0]?.updatedAt, legacy);
+
+    // Metadata CAS remains caller-authoritative, including an explicit backdated timestamp.
+    assert.deepEqual(
+      await appendSession({
+        id: sessionId,
+        tenantId: "tenant-a",
+        createdAt: old,
+        updatedAt: old,
+        expectedVersion: 1,
+        metadata: { title: "second" },
+      }),
+      { version: 2 },
+    );
+    assert.equal((await persistence.querySessions({ id: sessionId })).items[0]?.updatedAt, old);
+    await Promise.all([
+      persistence.appendRun({ id: "racing-new", sessionId, startedAt: "2026-01-04T00:00:00.000Z" }),
+      persistence.appendUsage({
+        id: "racing-old",
+        sessionId,
+        runId: "new-run",
+        scope: "run_total",
+        recordedAt: old,
+        usage: { totalTokens: 1 },
+      }),
+    ]);
+    await persistence.appendUsage({
+      id: "same-instant",
+      sessionId,
+      runId: "new-run",
+      scope: "run_total",
+      recordedAt: "2026-01-04T01:00:00+01:00",
+      usage: { totalTokens: 1 },
+    });
+    await persistence.appendUsage({
+      id: "newer-millisecond",
+      sessionId,
+      runId: "new-run",
+      scope: "run_total",
+      recordedAt: "2026-01-04T01:00:00.002+01:00",
+      usage: { totalTokens: 1 },
+    });
+    await persistence.appendEvent({
+      id: "newer-event",
+      sessionId,
+      runId: "new-run",
+      tenantId: "tenant-a",
+      timestamp: "2026-01-04T00:00:00.003Z",
+      type: "turn_started",
+      redacted: true,
+      event: { type: "turn_started", sessionId, runId: "new-run", turn: 1 },
+    });
+    const current = (await persistence.querySessions({ id: sessionId, tenantId: "tenant-a" })).items[0];
+    assert.equal(current?.updatedAt, "2026-01-04T00:00:00.003Z");
+    assert.deepEqual(current?.metadata, { title: "second" });
+    assert.equal((await persistence.querySessions({ id: sessionId, tenantId: "tenant-b" })).items.length, 0);
+    await assert.rejects(appendSession({ id: "invalid-time", createdAt: old, updatedAt: "2026-01-04T00:00:00" }), RangeError);
+    assert.equal((await persistence.querySessions({ id: "invalid-time" })).items.length, 0);
   });
 
   it("exposes durable generic checkpoints across persistence instances", async () => {
@@ -315,6 +425,155 @@ describeIntegration("createPostgresPersistence integration", () => {
       },
       queryEntries: (query) => persistence.queryEntries(query),
     });
+    await persistence.close();
+  });
+
+  it("limits SQL branch-path pages while preserving root-to-leaf offset cursors", async () => {
+    const pool = createPool();
+    const schema = uniqueSchema();
+    const persistence = await createPostgresPersistence({ pool, schema });
+    if (!persistence.readBranchPath) throw new Error("readBranchPath required");
+    const queryPool = pool.query.bind(pool);
+    const counts: number[] = [];
+    const sql: string[] = [];
+    pool.query = ((text: string, params?: unknown[]) =>
+      queryPool(text, params).then((result) => {
+        if (text.includes("WITH RECURSIVE branch_path")) {
+          sql.push(text);
+          counts.push(result.rows.length);
+        }
+        return result;
+      })) as typeof pool.query;
+    for (let i = 0; i < 300; i++) {
+      await persistence.append({
+        id: `entry-${i}`,
+        sessionId: "long-branch",
+        parentId: i ? `entry-${i - 1}` : undefined,
+        timestamp: "2026-01-01T00:00:00.000Z",
+        kind: "label",
+        label: `${i}`,
+      });
+    }
+    await pool.query(`ANALYZE ${qualifyTable(schema, "prism_session_entries")}`);
+    const query = { sessionId: "long-branch", leafId: "entry-299", limit: 2 };
+    const first = await persistence.readBranchPath(query);
+    assert.deepEqual(
+      first.items.map((entry) => entry.id),
+      ["entry-0", "entry-1"],
+    );
+    assert.equal(first.nextCursor, "2");
+    assert.deepEqual(
+      (await persistence.readBranchPath({ ...query, cursor: first.nextCursor })).items.map((entry) => entry.id),
+      ["entry-2", "entry-3"],
+    );
+    const deep = await persistence.readBranchPath({ ...query, cursor: "296" });
+    assert.deepEqual(
+      deep.items.map((entry) => entry.id),
+      ["entry-296", "entry-297"],
+    );
+    assert.equal(deep.nextCursor, "298");
+    const last = await persistence.readBranchPath({ ...query, cursor: deep.nextCursor });
+    assert.deepEqual(
+      last.items.map((entry) => entry.id),
+      ["entry-298", "entry-299"],
+    );
+    assert.equal(last.nextCursor, undefined);
+    assert.deepEqual(counts.slice(0, 4), [3, 3, 3, 2]);
+    assert.ok(sql.every((text) => /LIMIT \$4 OFFSET \$5/.test(text)));
+    assert.deepEqual((await persistence.readBranchPath({ ...query, cursor: "300" })).items, []);
+    assert.deepEqual((await persistence.readBranchPath({ ...query, cursor: String(Number.MAX_SAFE_INTEGER) })).items, []);
+    assert.deepEqual((await persistence.readBranchPath({ sessionId: "foreign", leafId: query.leafId, limit: 2 })).items, []);
+    assert.deepEqual((await persistence.readBranchPath({ ...query, leafId: "missing" })).items, []);
+    for (const cursor of ["", "1e3", "9007199254740992", "-1", "9".repeat(10_000)]) {
+      await assert.rejects(persistence.readBranchPath({ ...query, cursor }), /Invalid branch pagination cursor/);
+    }
+    await assert.rejects(persistence.readBranchPath({ ...query, limit: 0 }), RangeError);
+    assert.equal((await persistence.readBranchPath({ sessionId: query.sessionId, leafId: query.leafId })).items.length, 300);
+  }, 15_000);
+
+  it("filters and keyset-paginates branch entry queries", async () => {
+    const persistence = await createPostgresPersistence({ pool: createPool(), schema: uniqueSchema() });
+    await assertPersistenceBranchQueryConforms({
+      seedEntries: async (entries) => {
+        for (const entry of entries) await persistence.append(entry);
+      },
+      queryEntries: (query) => persistence.queryEntries(query),
+    });
+    await persistence.close();
+  });
+
+  it("scopes ordinary and leaf entry queries to the owning session", async () => {
+    const persistence = await createPostgresPersistence({ pool: createPool(), schema: uniqueSchema() });
+    const appendSession = persistence.appendSession;
+    if (!appendSession) throw new Error("appendSession required");
+    const timestamp = "2026-01-01T00:00:00.000Z";
+    for (const [sessionId, tenantId, accountId, userId] of [
+      ["session-a", "tenant-a", "account-a", "user-a"],
+      ["session-b", "tenant-b", "account-b", "user-b"],
+    ] as const) {
+      await appendSession({ id: sessionId, tenantId, accountId, userId, createdAt: timestamp, updatedAt: timestamp });
+      await persistence.append({ id: `${sessionId}-root`, sessionId, timestamp, kind: "label", label: "root" });
+      await persistence.append({
+        id: `${sessionId}-leaf`,
+        sessionId,
+        parentId: `${sessionId}-root`,
+        timestamp,
+        kind: "label",
+        label: "leaf",
+      });
+    }
+    const own = { sessionId: "session-a", tenantId: "tenant-a", accountId: "account-a", userId: "user-a" };
+    async function assertEmpty(query: Parameters<typeof persistence.queryEntries>[0]) {
+      const page = await persistence.queryEntries(query);
+      assert.deepEqual(page.items, []);
+      assert.equal(page.nextCursor, undefined);
+    }
+    const first = await persistence.queryEntries({ ...own, limit: 1 });
+    assert.deepEqual(
+      first.items.map((entry) => entry.id),
+      ["session-a-leaf"],
+    );
+    assert.ok(first.nextCursor);
+    assert.deepEqual(
+      (await persistence.queryEntries({ ...own, limit: 1, cursor: first.nextCursor })).items.map((entry) => entry.id),
+      ["session-a-root"],
+    );
+    assert.deepEqual(
+      (await persistence.queryEntries({ ...own, leafId: "session-a-leaf" })).items.map((entry) => entry.id),
+      ["session-a-leaf", "session-a-root"],
+    );
+    assert.deepEqual(
+      (await persistence.queryEntries({ tenantId: "tenant-a" })).items.map((entry) => entry.sessionId),
+      ["session-a", "session-a"],
+    );
+    assert.equal((await persistence.queryEntries({ sessionId: "session-a" })).items.length, 2);
+    assert.equal((await persistence.queryEntries({ sessionId: "session-a", leafId: "session-a-leaf" })).items.length, 2);
+    for (const mismatch of [
+      { tenantId: "tenant-b" },
+      { accountId: "account-b" },
+      { userId: "user-b" },
+      { tenantId: "" },
+      { ...own, userId: "user-b" },
+      { tenantId: "' OR '1'='1" },
+    ]) {
+      await assertEmpty({ sessionId: "session-a", ...mismatch });
+      await assertEmpty({ sessionId: "session-a", leafId: "session-a-leaf", ...mismatch });
+    }
+    await assertEmpty({ ...own, sessionId: "session-b" });
+    await assertEmpty({ tenantId: "tenant-a", accountId: "account-b" });
+    await assertEmpty({ ...own, leafId: "session-b-leaf" });
+    await assertEmpty({ ...own, sessionId: "session-a' OR 1=1 --" });
+    await persistence.append({
+      id: "cross-session-parent",
+      sessionId: "session-a",
+      parentId: "session-b-root",
+      timestamp,
+      kind: "label",
+    });
+    assert.deepEqual(
+      (await persistence.queryEntries({ ...own, leafId: "cross-session-parent" })).items.map((entry) => entry.id),
+      ["cross-session-parent"],
+    );
     await persistence.close();
   });
 

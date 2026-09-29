@@ -54,14 +54,15 @@ test("counts match manifests at the truth graph", () => {
     Number(hasSheetsPackage) +
     Number(hasDiagramsPackage);
   if (hasWorkPackage) {
-    // Current package set: delegated CLI adapter removed; provider family has 22 subpaths (plan 062 added ./model-discovery; plan 121 added ./typesafe and ./laya).
-    assert.equal(t.counts.publishable, 12);
-    assert.equal(t.counts.workspace, 11);
+    // Current package set: delegated CLI adapter removed; provider family has 22 subpaths (plan 062 added ./model-discovery; plan 121 added ./typesafe and ./laya; plan 134 added @arnilo/prism-agent-sdk; plan 135 added @arnilo/prism-code).
+    assert.equal(t.counts.publishable, 14);
+    assert.equal(t.counts.workspace, 13);
     assert.equal(t.counts.provider, 22);
     assert.equal(t.counts.prismFamily, 4);
-    assert.equal(t.counts.capability, 7);
-    assert.equal(t.counts.codeWithPeer, 11);
-    assert.equal(t.counts.pureManifest, 0);
+    assert.equal(t.counts.capability, 9);
+    // Plan 140 Task 1: the @arnilo/prism-code app owns @arnilo/prism as a dependency, not a peer.
+    assert.equal(t.counts.codeWithPeer, 12);
+    assert.equal(t.counts.pureManifest, 1);
   } else if (hasCodingToolsPackage) {
     assert.equal(t.counts.publishable, 17);
     assert.equal(t.counts.workspace, 16);
@@ -181,6 +182,14 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
   }));
   const codeWithPeer = pkgs.filter((p) => p.peerDependencies?.["@arnilo/prism"] !== undefined);
   assert.equal(codeWithPeer.length, t.counts.codeWithPeer, "code packages with a core peer");
+  // Plan 140 Task 1: the terminal app is self-sufficient on a global install.
+  const app = pkgs.find((p) => p.name === "@arnilo/prism-code");
+  if (app) {
+    for (const dep of ["@arnilo/prism", "@arnilo/prism-providers", "@arnilo/prism-hooks"]) {
+      assert.equal(app.dependencies?.[dep], `^${t.root.version}`, `@arnilo/prism-code must depend on ${dep}@^${t.root.version}`);
+    }
+    assert.equal(app.peerDependencies, undefined, "@arnilo/prism-code declares no peers");
+  }
   const secondPeers = {};
   for (const p of codeWithPeer) {
     const spec = p.peerDependencies["@arnilo/prism"];
@@ -200,6 +209,7 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
     assert.deepEqual(secondPeers, {
       "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui", "@arnilo/prism-providers"],
       "@arnilo/prism-ag-ui": ["@arnilo/prism-core", "@arnilo/prism-mcp"],
+      "@arnilo/prism-agent-sdk": ["@arnilo/prism-coding-tools", "@arnilo/prism-hooks", "@arnilo/prism-mcp"],
       "@arnilo/prism-core": ["@arnilo/prism-memory"], // type-only optional peer: rag telemetry seam
       "@arnilo/prism-web-tools": ["@arnilo/prism-mcp"],
     });
@@ -239,9 +249,10 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
     assert.equal(ponytail.peerDependencies["@dietrichgebert/ponytail"], "^4.9.0");
   }
   // Plan 054 Task 8: profile manifests are deleted; every workspace package is a
-  // code package with a core peer, so nothing may lack one.
+  // code package with a core peer, so nothing may lack one. Plan 140 Task 1: the
+  // terminal app is the exception; it depends on core (asserted above).
   if (hasWorkPackage) {
-    for (const p of pkgs) {
+    for (const p of pkgs.filter((p) => p.name !== "@arnilo/prism-code")) {
       assert.notEqual(p.peerDependencies?.["@arnilo/prism"], undefined, `${p.name} must peer @arnilo/prism`);
     }
   }

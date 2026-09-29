@@ -11,6 +11,14 @@ import type {
   UsageRecord,
 } from "@arnilo/prism";
 
+export function canonicalSessionTimestamp(value: string): string {
+  const parsed = typeof value === "string" ? Date.parse(value) : NaN;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) || !Number.isFinite(parsed)) {
+    throw new RangeError("Invalid session activity timestamp");
+  }
+  return new Date(parsed).toISOString();
+}
+
 /** How a store represents the boolean `redacted` flag in a row (SQLite INTEGER vs Postgres BOOLEAN). */
 export interface RedactedCodec<R> {
   encode(value: boolean): R;
@@ -419,7 +427,9 @@ export function createSessionRowMappers<R>(redacted: RedactedCodec<R>): SessionR
     },
     decodeEntryCursor(cursor: string): { timestamp: string; id: string } {
       const split = cursor.indexOf("\u0000");
-      if (split < 0) throw new Error("Invalid entry pagination cursor");
+      if (split <= 0 || split === cursor.length - 1 || cursor.indexOf("\u0000", split + 1) !== -1) {
+        throw new Error("Invalid entry pagination cursor");
+      }
       return { timestamp: cursor.slice(0, split), id: cursor.slice(split + 1) };
     },
     parentKey(parentId: string | undefined): string {

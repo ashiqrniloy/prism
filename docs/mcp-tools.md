@@ -21,6 +21,8 @@ await bridge.close();   // close client + transport
 
 Advanced hosts that manage their own `Client` + `Transport` can call `attachMcpToolBridge()` or `attachMcpCapabilities()` after connect. `connectMcpCapabilities()` keeps resources/prompts as host-facing facades rather than converting them into model tools, and declares roots/sampling/elicitation only when callbacks are supplied.
 
+Hosts that prefer declarative assembly can use `@arnilo/prism-agent-sdk`: `defineAgent({ mcp })` connects servers in parallel with per-server timeouts and status, maps `headers`/`auth` onto the transport, enforces a host `mcp.allow` list, and re-bridges one server through `reconnect(serverId)`. See [Agent SDK: resilient MCP plane](agent-sdk.md#resilient-mcp-plane-status-headers-and-reconnect).
+
 MCP Apps is an explicit opt-in on the normal bridge:
 
 ```ts

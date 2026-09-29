@@ -22,7 +22,7 @@ import type {
   WorkflowSuspensionDescriptor,
 } from "../types.js";
 import { boundNodeOutput, combineSignals, errorCode, errorMessage, isAbortError, nowIso, sleep, workflowLoopIterationId } from "../util.js";
-import { cloneState, isWorkflowSuspension, persistCheckpoint } from "./checkpoint.js";
+import { cloneState, isCheckpointFailure, isWorkflowSuspension, persistCheckpoint } from "./checkpoint.js";
 import type { SchedulerState } from "./main.js";
 import { resolveMaxFanOut, resumeWorkflow, runWorkflow, suspend } from "./main.js";
 import { applyConditionalSkip, applyRouteSkip, releaseSuccessors } from "./skip.js";
@@ -72,6 +72,7 @@ export async function runNode(
     nodeState.attempt = attempt;
     nodeState.stateVersionBefore ??= state.stateVersion;
     nodeState.currentIterationStateVersionBefore = state.stateVersion;
+    let result: Awaited<ReturnType<typeof executeNode>>;
     try {
       if (options.signal?.aborted) throw new WorkflowAbortError();
 
@@ -79,7 +80,7 @@ export async function runNode(
       const signal = combineSignals([options.signal, timeoutSignal]);
       const ctx = createContext(state, nodeId, options, signal);
 
-      const result = await executeNode(
+      result = await executeNode(
         node,
         ctx,
         state,
@@ -137,56 +138,8 @@ export async function runNode(
             }
           : undefined,
       );
-      if (isWorkflowSuspension(result.output)) {
-        if (!options.checkpoints) {
-          throw new WorkflowRuntimeError("Durable workflow suspension requires checkpoints", "ERR_PRISM_WORKFLOW_SUSPEND");
-        }
-        if (state.suspension && state.suspension.nodeId !== nodeId) {
-          // ponytail: one durable review cursor; queue concurrent suspension requests
-          // and rerun that node after the current review resolves.
-          nodeState.status = "ready";
-          if (!state.ready.includes(nodeId)) {
-            state.ready.push(nodeId);
-            state.ready.sort((a, b) => a.localeCompare(b));
-          }
-          await persistCheckpoint(state, options, emit);
-          return;
-        }
-        const descriptor: WorkflowSuspensionDescriptor = {
-          nodeId,
-          reason: result.output.reason,
-          data:
-            result.output.data === undefined
-              ? undefined
-              : boundNodeOutput(result.output.data, {
-                  maxNodeOutputBytes: state.workflow.limits?.maxNodeOutputBytes,
-                  redactor: options.redactor,
-                }),
-          resumeSchema: result.output.resumeSchema,
-          requestedAt: nowIso(),
-        };
-        nodeState.status = "suspended";
-        nodeState.error = undefined;
-        state.status = "suspended";
-        state.suspension = descriptor;
-        emit({
-          type: "workflow_suspended",
-          workflowId: state.workflow.id,
-          runId: state.runId,
-          suspension: descriptor,
-          timestamp: descriptor.requestedAt,
-        });
-        await persistCheckpoint(state, options, emit);
-        return;
-      }
-      const output = boundNodeOutput(result.output, {
-        maxNodeOutputBytes: state.workflow.limits?.maxNodeOutputBytes,
-        redactor: options.redactor,
-      });
-
-      await onNodeSucceeded(state, nodeId, output, result, options, emit);
-      return;
     } catch (error) {
+      if (isCheckpointFailure(error)) throw error;
       lastError = error;
       activeSessions.delete(nodeId);
       if (isAbortError(error) || options.signal?.aborted) {
@@ -223,6 +176,55 @@ export async function runNode(
       state.status = "failed";
       throw error instanceof Error ? error : new WorkflowRuntimeError(errorMessage(error));
     }
+
+    if (isWorkflowSuspension(result.output)) {
+      if (!options.checkpoints) {
+        throw new WorkflowRuntimeError("Durable workflow suspension requires checkpoints", "ERR_PRISM_WORKFLOW_SUSPEND");
+      }
+      if (state.suspension && state.suspension.nodeId !== nodeId) {
+        // ponytail: one durable review cursor; queue concurrent suspension requests
+        // and rerun that node after the current review resolves.
+        nodeState.status = "ready";
+        if (!state.ready.includes(nodeId)) {
+          state.ready.push(nodeId);
+          state.ready.sort((a, b) => a.localeCompare(b));
+        }
+        await persistCheckpoint(state, options, emit);
+        return;
+      }
+      const descriptor: WorkflowSuspensionDescriptor = {
+        nodeId,
+        reason: result.output.reason,
+        data:
+          result.output.data === undefined
+            ? undefined
+            : boundNodeOutput(result.output.data, {
+                maxNodeOutputBytes: state.workflow.limits?.maxNodeOutputBytes,
+                redactor: options.redactor,
+              }),
+        resumeSchema: result.output.resumeSchema,
+        requestedAt: nowIso(),
+      };
+      nodeState.status = "suspended";
+      nodeState.error = undefined;
+      state.status = "suspended";
+      state.suspension = descriptor;
+      await persistCheckpoint(state, options, emit);
+      emit({
+        type: "workflow_suspended",
+        workflowId: state.workflow.id,
+        runId: state.runId,
+        suspension: descriptor,
+        timestamp: descriptor.requestedAt,
+      });
+      return;
+    }
+    const output = boundNodeOutput(result.output, {
+      maxNodeOutputBytes: state.workflow.limits?.maxNodeOutputBytes,
+      redactor: options.redactor,
+    });
+    await onNodeSucceeded(state, nodeId, output, result, options, emit);
+    return;
   }
 
   throw lastError instanceof Error ? lastError : new WorkflowRuntimeError(errorMessage(lastError));
@@ -270,15 +272,6 @@ export async function onNodeSucceeded(
       nodeState.lastOutput = output;
     }
 
-    emit({
-      type: "node_finished",
-      workflowId: state.workflow.id,
-      runId: state.runId,
-      nodeId,
-      iteration,
-      timestamp: nowIso(),
-    });
-
     postSuperstepActivations(state, nodeId, node, output);
   } else {
     if (node.kind === "conditional") {
@@ -286,6 +279,7 @@ export async function onNodeSucceeded(
     } else if (node.kind === "route") {
       applyRouteSkip(state, nodeId, (output as readonly string[]) ?? [], emit);
     }
+    await persistCheckpoint(state, options, emit);
     emit({
       type: "node_finished",
       workflowId: state.workflow.id,
@@ -294,7 +288,6 @@ export async function onNodeSucceeded(
       timestamp: nowIso(),
     });
     releaseSuccessors(state, nodeId, emit);
-    await persistCheckpoint(state, options, emit);
   }
 }
 

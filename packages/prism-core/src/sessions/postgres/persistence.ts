@@ -10,6 +10,7 @@ import {
   DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
   type LeaseStore,
   type MigrationQuery,
+  type OwnershipScope,
   type PersistencePage,
   type ProductionPersistenceStore,
   prepareRunFeedback,
@@ -42,6 +43,7 @@ import {
 } from "@arnilo/prism";
 import type { Pool, PoolConfig } from "pg";
 import {
+  canonicalSessionTimestamp,
   clipSearchSnippet,
   createSessionRowMappers,
   decodeBranchCursor,
@@ -52,6 +54,7 @@ import {
   type SessionEntryRow,
   safeSearchMetadata,
 } from "../codecs/index.js";
+import { ownershipColumns } from "../query-semantics.js";
 import { createPostgresCheckpointStore } from "./checkpoints.js";
 import { createPostgresAgentEventSource } from "./event-source.js";
 import { qualifyTable } from "./identifiers.js";
@@ -153,11 +156,13 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
   });
 
   async function ensureSession(sessionId: string, timestamp: string): Promise<void> {
+    const activityAt = canonicalSessionTimestamp(timestamp);
     await pool.query(
       `INSERT INTO ${sessions} (id, created_at, updated_at)
        VALUES ($1, $2, $3)
-       ON CONFLICT(id) DO UPDATE SET updated_at = EXCLUDED.updated_at`,
-      [sessionId, timestamp, timestamp],
+       ON CONFLICT(id) DO UPDATE SET updated_at = EXCLUDED.updated_at
+       WHERE EXCLUDED.updated_at::timestamptz > ${sessions}.updated_at::timestamptz`,
+      [sessionId, activityAt, activityAt],
     );
   }
 
@@ -252,6 +257,43 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
     },
   };
 
+  async function readEntryBranch(query: SessionBranchRead, scope?: OwnershipScope): Promise<PersistencePage<SessionEntry>> {
+    const start = query.cursor === undefined ? 0 : decodeBranchCursor(query.cursor);
+    if (query.limit !== undefined && (!Number.isSafeInteger(query.limit) || query.limit < 1 || query.limit >= Number.MAX_SAFE_INTEGER)) {
+      throw new RangeError("Invalid branch pagination limit");
+    }
+    const leafId = query.leafId ?? (await findLatestLeafId(pool, entries, query.sessionId));
+    if (!leafId) return { items: [] };
+    const ownership = buildOwnershipFilters(scope ?? {}, 3);
+    const ownerClause = ownership.filters.length
+      ? `AND EXISTS (SELECT 1 FROM ${sessions} s WHERE s.id = seed.session_id AND ${ownership.filters.map((filter) => `s.${filter}`).join(" AND ")})`
+      : "";
+
+    // ponytail: no limit preserves full-chain reads; default paging needs the reader's 64-page cap revisited first.
+    const result = await pool.query(
+      `WITH RECURSIVE branch_path(id, depth) AS (
+         SELECT seed.id, 0 FROM ${entries} seed
+         WHERE seed.id = $1 AND seed.session_id = $2 ${ownerClause}
+         UNION ALL
+         SELECT parent.id, bp.depth + 1
+         FROM branch_path bp
+         INNER JOIN ${entries} current ON current.id = bp.id
+         INNER JOIN ${entries} parent ON parent.id = current.parent_id AND parent.session_id = current.session_id
+         WHERE current.session_id = $${3 + ownership.params.length}
+       )
+       SELECT e.* FROM ${entries} e
+       INNER JOIN branch_path bp ON e.id = bp.id
+       ORDER BY bp.depth DESC, e.timestamp ASC, e.id ASC
+       LIMIT $${4 + ownership.params.length} OFFSET $${5 + ownership.params.length}`,
+      [leafId, query.sessionId, ...ownership.params, query.sessionId, query.limit === undefined ? null : query.limit + 1, start],
+    );
+    const rows = result.rows as SessionEntryRow[];
+    return {
+      items: (query.limit === undefined ? rows : rows.slice(0, query.limit)).map(rowToSessionEntry),
+      nextCursor: query.limit !== undefined && rows.length > query.limit ? encodeBranchCursor(start + query.limit) : undefined,
+    };
+  }
+
   const persistence: PostgresPersistence = {
     name: "postgres",
     checkpoints: createPostgresCheckpointStore(pool, schema),
@@ -270,7 +312,8 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
         await client.query(
           `INSERT INTO ${sessions} (id, created_at, updated_at)
            VALUES ($1, $2, $3)
-           ON CONFLICT(id) DO UPDATE SET updated_at = EXCLUDED.updated_at`,
+           ON CONFLICT(id) DO UPDATE SET updated_at = EXCLUDED.updated_at
+           WHERE EXCLUDED.updated_at::timestamptz > ${sessions}.updated_at::timestamptz`,
           [entry.sessionId, now, now],
         );
 
@@ -371,35 +414,7 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
       return row ? rowToSessionEntry(row) : undefined;
     },
 
-    async readBranchPath(query: SessionBranchRead): Promise<PersistencePage<SessionEntry>> {
-      const leafId = query.leafId ?? (await findLatestLeafId(pool, entries, query.sessionId));
-      if (!leafId) return { items: [] };
-
-      const result = await pool.query(
-        `WITH RECURSIVE branch_path(id, depth) AS (
-           SELECT id, 0 FROM ${entries} WHERE id = $1 AND session_id = $2
-           UNION ALL
-           SELECT parent.id, bp.depth + 1
-           FROM branch_path bp
-           INNER JOIN ${entries} current ON current.id = bp.id
-           INNER JOIN ${entries} parent ON parent.id = current.parent_id
-           WHERE current.session_id = $3
-         )
-         SELECT e.* FROM ${entries} e
-         INNER JOIN branch_path bp ON e.id = bp.id
-         ORDER BY bp.depth DESC, e.timestamp ASC, e.id ASC`,
-        [leafId, query.sessionId, query.sessionId],
-      );
-      const rows = result.rows as SessionEntryRow[];
-      const limit = query.limit ?? rows.length;
-      const start = query.cursor ? decodeBranchCursor(query.cursor) : 0;
-      const slice = rows.slice(start, start + limit);
-      const nextStart = start + slice.length;
-      return {
-        items: slice.map(rowToSessionEntry),
-        nextCursor: nextStart < rows.length ? encodeBranchCursor(nextStart) : undefined,
-      };
-    },
+    readBranchPath: readEntryBranch,
 
     async appendRun(record: RunRecord): Promise<void> {
       await ensureSession(record.sessionId, record.startedAt);
@@ -552,7 +567,7 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
           record.agentDefinitionId ?? null,
           record.agentDefinitionVersion ?? null,
           record.createdAt,
-          record.updatedAt,
+          canonicalSessionTimestamp(record.updatedAt),
           record.expiresAt ?? null,
           record.retentionPolicyId ?? null,
           record.metadata === undefined ? null : JSON.stringify(record.metadata),
@@ -606,52 +621,77 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
     },
 
     async queryEntries(query: SessionEntryQuery): Promise<PersistencePage<SessionEntry>> {
+      if (query.leafId !== undefined && !query.sessionId) throw new TypeError("leafId requires sessionId");
+      if (query.limit !== undefined && (!Number.isSafeInteger(query.limit) || query.limit < 1)) {
+        throw new RangeError("Entry query limit must be a positive safe integer");
+      }
       const filters: string[] = [];
       const params: unknown[] = [];
+      let branchSql = "";
+      if (query.leafId !== undefined) {
+        const ownership = buildOwnershipFilters(query, 3);
+        const ownerClause = ownership.filters.length
+          ? `AND EXISTS (SELECT 1 FROM ${sessions} s WHERE s.id = seed.session_id AND ${ownership.filters.map((filter) => `s.${filter}`).join(" AND ")})`
+          : "";
+        branchSql = `WITH RECURSIVE branch_path(id) AS (
+          SELECT seed.id FROM ${entries} seed WHERE seed.id = $1 AND seed.session_id = $2 ${ownerClause}
+          UNION ALL
+          SELECT parent.id FROM branch_path bp
+          JOIN ${entries} current ON current.id = bp.id
+          JOIN ${entries} parent ON parent.id = current.parent_id AND parent.session_id = current.session_id
+          WHERE current.session_id = $${3 + ownership.params.length}
+        )`;
+        params.push(query.leafId, query.sessionId, ...ownership.params, query.sessionId);
+      }
       if (query.sessionId) {
-        filters.push(`session_id = $${params.length + 1}`);
+        filters.push(`e.session_id = $${params.length + 1}`);
         params.push(query.sessionId);
       }
       if (query.runId) {
-        filters.push(`run_id = $${params.length + 1}`);
+        filters.push(`e.run_id = $${params.length + 1}`);
         params.push(query.runId);
       }
       if (query.parentId) {
-        filters.push(`parent_id = $${params.length + 1}`);
+        filters.push(`e.parent_id = $${params.length + 1}`);
         params.push(query.parentId);
       }
-      if (query.leafId) {
-        const chain = await persistence.readBranchPath!({ sessionId: query.sessionId ?? "", leafId: query.leafId });
-        return { items: chain.items.slice(0, query.limit ?? chain.items.length) };
+      if (query.leafId === undefined) {
+        const ownership = buildOwnershipFilters(query, params.length + 1);
+        if (ownership.filters.length) {
+          filters.push(
+            `EXISTS (SELECT 1 FROM ${sessions} s WHERE s.id = e.session_id AND ${ownership.filters.map((filter) => `s.${filter}`).join(" AND ")})`,
+          );
+          params.push(...ownership.params);
+        }
       }
       if (query.kind) {
         if (Array.isArray(query.kind)) {
           const placeholders = query.kind.map((_, index) => `$${params.length + index + 1}`).join(", ");
-          filters.push(`kind IN (${placeholders})`);
+          filters.push(query.kind.length ? `e.kind IN (${placeholders})` : "1 = 0");
           params.push(...query.kind);
         } else {
-          filters.push(`kind = $${params.length + 1}`);
+          filters.push(`e.kind = $${params.length + 1}`);
           params.push(query.kind);
         }
       }
       if (query.fromTimestamp) {
-        filters.push(`timestamp >= $${params.length + 1}`);
+        filters.push(`e.timestamp >= $${params.length + 1}`);
         params.push(query.fromTimestamp);
       }
       if (query.toTimestamp) {
-        filters.push(`timestamp <= $${params.length + 1}`);
+        filters.push(`e.timestamp <= $${params.length + 1}`);
         params.push(query.toTimestamp);
       }
       const order = query.order === "desc" ? "DESC" : "ASC";
-      if (query.cursor) {
+      if (query.cursor !== undefined) {
         const cursor = decodeEntryCursor(query.cursor);
         const tsParam = params.length + 1;
         const idParam = params.length + 3;
         if (order === "ASC") {
-          filters.push(`(timestamp > $${tsParam} OR (timestamp = $${tsParam + 1} AND id > $${idParam}))`);
+          filters.push(`(e.timestamp > $${tsParam} OR (e.timestamp = $${tsParam + 1} AND e.id > $${idParam}))`);
           params.push(cursor.timestamp, cursor.timestamp, cursor.id);
         } else {
-          filters.push(`(timestamp < $${tsParam} OR (timestamp = $${tsParam + 1} AND id < $${idParam}))`);
+          filters.push(`(e.timestamp < $${tsParam} OR (e.timestamp = $${tsParam + 1} AND e.id < $${idParam}))`);
           params.push(cursor.timestamp, cursor.timestamp, cursor.id);
         }
       }
@@ -660,8 +700,8 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
       const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
       const limitParam = params.length + 1;
       const result = await pool.query(
-        `SELECT * FROM ${entries} ${where}
-         ORDER BY timestamp ${order}, id ${order}
+        `${branchSql} SELECT e.* FROM ${entries} e ${query.leafId !== undefined ? "JOIN branch_path bp ON bp.id = e.id" : ""} ${where}
+         ORDER BY e.timestamp ${order}, e.id ${order}
          LIMIT $${limitParam}`,
         [...params, limit + 1],
       );
@@ -1021,28 +1061,12 @@ function buildPostgresSearchCte(
      )`;
 }
 
-function buildOwnershipFilters(
-  scope: { tenantId?: string; accountId?: string; userId?: string },
-  startIndex: number,
-): { filters: string[]; params: unknown[] } {
-  const filters: string[] = [];
-  const params: unknown[] = [];
-  let index = startIndex;
-  if (scope.tenantId) {
-    filters.push(`tenant_id = $${index}`);
-    params.push(scope.tenantId);
-    index += 1;
-  }
-  if (scope.accountId) {
-    filters.push(`account_id = $${index}`);
-    params.push(scope.accountId);
-    index += 1;
-  }
-  if (scope.userId) {
-    filters.push(`user_id = $${index}`);
-    params.push(scope.userId);
-  }
-  return { filters, params };
+function buildOwnershipFilters(scope: OwnershipScope, startIndex: number): { filters: string[]; params: string[] } {
+  const columns = ownershipColumns(scope);
+  return {
+    filters: columns.map(([column], index) => `${column} = $${startIndex + index}`),
+    params: columns.map(([, value]) => value),
+  };
 }
 
 async function queryTable<T>(

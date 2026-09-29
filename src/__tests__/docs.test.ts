@@ -122,6 +122,7 @@ const apiPages = [
   "docs/telegram-channel.md",
   "docs/signal-channel.md",
   "docs/messaging-channel-operations.md",
+  "docs/prism-code.md",
 ];
 
 const providerPackagePages: ReadonlyArray<[string, string]> = [
@@ -481,9 +482,16 @@ describe("docs", () => {
       // (release decisions, plan/phase cites, version-pinned tags).
       const retired = [...readFileSync("docs/_evidence/phase54-package-map.md", "utf8").matchAll(/^\| `(@arnilo\/prism-[a-z0-9-]+)` \|/gm)]
         .map((m) => m[1])
-        // Current 0.4 packages and never-published draft names are not retired.
+        // Current packages and never-published draft names are not retired.
         .filter((n) => !/prism-(documents|sheets|diagrams)$/.test(n) && !(n in truth.versions));
-      assert.ok(retired.length === 55, `phase54 evidence must enumerate the 55 retired 0.3 packages, got ${retired.length}`);
+      // 55 legacy names were retired in 0.4; `@arnilo/prism-code` is a current
+      // manifest again (plan 135), so the live-docs sweep covers the 54 names that
+      // are still not publishable. The 55-entry legacy registry plan stays frozen
+      // in the evidence file and is asserted by the packaging suite.
+      assert.ok(
+        retired.length === 54,
+        `phase54 evidence must enumerate the 54 retired 0.3 packages (one name reused), got ${retired.length}`,
+      );
       const exemptPages = new Set(["docs/migration.md"]); // per-era records live under docs/history/ (skipped above)
       const historyLine =
         /@arnilo\/prism[\w-]*@\d+\.\d+\.\d+|\*\*Decision: GO|\bplan \d{3}\b|\bPhase \d+\b|lockstep|historical|\bretired\b|replaces `@arnilo\/prism-all`|deleting the `@arnilo\/prism-[\w-]+` profile|at exact `0\.\d|\b0\.0\.1\d+`? (?:graph|line)/;
@@ -1822,8 +1830,8 @@ describe("docs", () => {
       ],
       ["providers/anthropic.md", anthropic, ["createAnthropicProviderPackage", "listAnthropicModels", "cache_control"]],
       ["providers/google.md", google, ["createGoogleProviderPackage", "listGoogleModels", "generateContent"]],
-      ["sqlite-persistence.md", sqlite, ["searchSessions", "Schema version **6**", "006_agent_event_source"]],
-      ["postgres-persistence.md", postgres, ["searchSessions", "Schema version **6**", "006_agent_event_source"]],
+      ["sqlite-persistence.md", sqlite, ["searchSessions", "Schema version **9**", "006_agent_event_source"]],
+      ["postgres-persistence.md", postgres, ["searchSessions", "Schema version **9**", "006_agent_event_source"]],
       ["index.md", index, ["providers/anthropic.md", "providers/google.md"]],
     ] as const) {
       for (const token of tokens) {
@@ -1872,19 +1880,9 @@ describe("docs", () => {
       .filter((dir) => existsSync(join(dir, "package.json")))
       .filter((dir) => !JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private);
     const release = readFileSync("docs/release-and-install.md", "utf8");
-    assert.equal(
-      dirs.length,
-      existsSync("packages/prism-work/src")
-        ? 12
-        : existsSync("packages/prism-providers/src")
-          ? 17
-          : existsSync("packages/prism-coding-tools")
-            ? 34
-            : existsSync("packages/prism-core")
-              ? 50
-              : 65,
-      "publishable package documentation count drifted",
-    );
+    const count = (JSON.parse(readFileSync("scripts/package-truth.json", "utf8")) as { counts: { publishable: number } }).counts
+      .publishable;
+    assert.equal(dirs.length, count, "publishable package documentation count drifted");
     for (const dir of dirs) {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string; files?: string[] };
       const readme = readFileSync(join(dir, "README.md"), "utf8");
@@ -1892,6 +1890,10 @@ describe("docs", () => {
       assert.ok(readme.includes(manifest.name), `${dir}/README.md missing package name ${manifest.name}`);
       if (manifest.name === "@arnilo/prism-channels") {
         assert.ok(changelog.includes("## [Unreleased] (plan 079 Task 4)"), `${dir}/CHANGELOG.md missing extraction entry`);
+      } else if (manifest.name === "@arnilo/prism-code" || manifest.name === "@arnilo/prism-agent-sdk") {
+        // Plan 140 Task 1: own version lines, no lockstep anchor sections.
+        const { version } = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { version: string };
+        assert.ok(changelog.includes(`## [${version}]`), `${dir}/CHANGELOG.md missing ${version} section`);
       } else {
         assert.ok(changelog.includes("## [0.1.0] - 2026-08-09"), `${dir}/CHANGELOG.md missing finalized 0.1.0 section`);
         assert.ok(changelog.includes("## [0.0.28] - 2026-08-08"), `${dir}/CHANGELOG.md missing prior 0.0.28 section`);
@@ -2538,6 +2540,55 @@ describe("docs", () => {
         `${page} names the retired node --test runner as a current stage runner`,
       );
     }
+  });
+
+  it("current install, coverage, and SQL adapter docs match manifests and migrations", () => {
+    const truth = JSON.parse(readFileSync("scripts/package-truth.json", "utf8")) as {
+      root: { version: string };
+      versions: Record<string, string>;
+      counts: { publishable: number; provider: number };
+    };
+    const readme = readFileSync("README.md", "utf8");
+    const release = readFileSync("docs/release-and-install.md", "utf8");
+    const index = readFileSync("docs/index.md", "utf8");
+    assert.ok(readme.includes(`current ${truth.root.version} line`), "README current line must match the root manifest");
+    assert.ok(readme.includes(`${truth.counts.provider} provider adapter subpaths`), "README provider count must match package truth");
+    assert.ok(release.includes(`current **${truth.root.version}** line has **${truth.counts.publishable} publishable manifests**`));
+    assert.ok(release.includes(`current declared peer is \`@arnilo/prism@^${truth.root.version}\``));
+    const inventory = (text: string) =>
+      text.match(/<!-- generated:package-truth:inventory begin -->[\s\S]*?<!-- generated:package-truth:inventory end -->/)?.[0];
+    assert.ok(inventory(readme));
+    assert.equal(inventory(readme), inventory(release));
+    assert.equal(inventory(readme), inventory(index));
+    for (const [page, text] of [
+      ["README.md", readme],
+      ["docs/release-and-install.md", release],
+    ] as const) {
+      for (const command of text.matchAll(/\bbun add ([^`\n#]+)/g)) {
+        for (const spec of command[1]!
+          .trim()
+          .split(/\s+/)
+          .filter((part) => part.startsWith("@arnilo/"))) {
+          assert.ok(Object.hasOwn(truth.versions, spec), `${page}: install package, not subpath: ${spec}`);
+        }
+      }
+    }
+    assert.equal((readme.match(/^\| `bun run test:coverage` \|/gm) ?? []).length, 1);
+    assert.equal((release.match(/`npm test` also runs a Node branch-coverage audit/g) ?? []).length, 1);
+    const example = release.split("## Request/response example")[1]?.split("## Implementation example")[0] ?? "";
+    assert.ok(example.includes(`"@arnilo/prism-providers": "^${truth.root.version}"`));
+    assert.doesNotMatch(example, /"@arnilo\/prism-[^"]+\/[^"]+"\s*:/, "dependency keys must be packages, not subpaths");
+    const schema = Number(readFileSync("src/testing/persistence-schema.ts", "utf8").match(/PERSISTENCE_SCHEMA_VERSION = (\d+)/)?.[1]);
+    for (const page of ["docs/sqlite-persistence.md", "docs/postgres-persistence.md"]) {
+      const text = readFileSync(page, "utf8");
+      assert.equal((text.match(/bounded `searchSessions`/g) ?? []).length, 1, `${page}: duplicate search description`);
+      assert.ok(text.includes(`schema-v${schema}`), `${page}: stale schema version`);
+      assert.ok(text.includes(`Schema version **${schema}**`), `${page}: stale migration list`);
+      for (const step of ["007_agent_event_retention_index", "008_session_version", "009_run_prompt_version"]) {
+        assert.ok(text.includes(step), `${page}: missing migration ${step}`);
+      }
+    }
+    assert.equal((readFileSync("docs/sqlite-persistence.md", "utf8").match(/^## Durable events$/gm) ?? []).length, 1);
   });
 
   // Plan 125 Task 4: one install voice across the live pages. Hosts install with `bun add`; a page
@@ -3312,10 +3363,12 @@ describe("docs", () => {
       assert.equal(existsSync(file), true, `missing ${file}`);
       assert.ok(readme.includes(file.replace("examples/", "")), `examples/README.md missing ${file}`);
     }
+    const count = (JSON.parse(readFileSync("scripts/package-truth.json", "utf8")) as { counts: { publishable: number } }).counts
+      .publishable;
     for (const phrase of [
       "all provider adapters ship as `dist/<adapter>` subpaths in one tarball",
-      "**49 publishable manifests**: the root `@arnilo/prism` core package plus **48 workspace packages**",
-      "All 56 manifests (root + 55 workspace packages: 49 code packages + 6 pure-manifest family/profile packages",
+      `**${count} publishable manifests**`,
+      "Each publishable manifest declares",
       "eight provider packages' `src/__tests__/live.test.ts`",
       "Enterprise PostgreSQL package/docs/example gate",
       "dist/index.js` + `dist/index.d.ts`",
@@ -4372,19 +4425,9 @@ describe("docs", () => {
     const manifests = ["package.json", ...readdirSync("packages").map((name) => join("packages", name, "package.json"))]
       .filter(existsSync)
       .map((path) => JSON.parse(readFileSync(path, "utf8")) as { private?: boolean });
-    assert.equal(
-      manifests.filter((manifest) => !manifest.private).length,
-      existsSync("packages/prism-work/src")
-        ? 12
-        : existsSync("packages/prism-providers/src")
-          ? 17
-          : existsSync("packages/prism-coding-tools")
-            ? 34
-            : existsSync("packages/prism-core")
-              ? 50
-              : 65,
-      "frozen publishable package count drifted",
-    );
+    const count = (JSON.parse(readFileSync("scripts/package-truth.json", "utf8")) as { counts: { publishable: number } }).counts
+      .publishable;
+    assert.equal(manifests.filter((manifest) => !manifest.private).length, count, "publishable package count drifted");
   });
 
   it("phase47 neuralwatt cache/reasoning/tool docs cover required topics and index links them", () => {

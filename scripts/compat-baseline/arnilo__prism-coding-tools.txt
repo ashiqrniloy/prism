@@ -198,6 +198,12 @@ DEFAULT_MAX_TERMINAL_ROWS	export declare const DEFAULT_MAX_TERMINAL_ROWS = 40
 DEFAULT_MAX_TERMINAL_TERM_BYTES	export declare const DEFAULT_MAX_TERMINAL_TERM_BYTES = 64
 DEFAULT_MAX_TEXT_SCAN_BYTES	export declare const DEFAULT_MAX_TEXT_SCAN_BYTES: number
 DEFAULT_MAX_TODOS	export declare const DEFAULT_MAX_TODOS = 1000
+DEFAULT_MAX_TODO_CONTENT_BYTES	export declare const DEFAULT_MAX_TODO_CONTENT_BYTES = 512
+DEFAULT_MAX_TODO_ID_BYTES	export declare const DEFAULT_MAX_TODO_ID_BYTES = 128
+DEFAULT_MAX_TODO_ITEMS	export declare const DEFAULT_MAX_TODO_ITEMS = 50
+DEFAULT_MAX_TODO_NO_PROGRESS	export declare const DEFAULT_MAX_TODO_NO_PROGRESS = 2
+DEFAULT_MAX_TODO_STEER_BYTES	export declare const DEFAULT_MAX_TODO_STEER_BYTES = 4096
+DEFAULT_MAX_TODO_STEER_ITEMS	export declare const DEFAULT_MAX_TODO_STEER_ITEMS = 20
 DEFAULT_MAX_TODO_TEXT_BYTES	export declare const DEFAULT_MAX_TODO_TEXT_BYTES = 512
 DEFAULT_MAX_TOTAL_OUTPUT_BYTES	export declare const DEFAULT_MAX_TOTAL_OUTPUT_BYTES: number
 DEFAULT_MAX_WORKSPACE_CLEANUP_OPERATIONS	export declare const DEFAULT_MAX_WORKSPACE_CLEANUP_OPERATIONS = 100
@@ -397,6 +403,12 @@ HARD_MAX_TERMINAL_ROWS	export declare const HARD_MAX_TERMINAL_ROWS = 200
 HARD_MAX_TERMINAL_TERM_BYTES	export declare const HARD_MAX_TERMINAL_TERM_BYTES = 256
 HARD_MAX_TEXT_SCAN_BYTES	export declare const HARD_MAX_TEXT_SCAN_BYTES: number
 HARD_MAX_TODOS	export declare const HARD_MAX_TODOS = 10000
+HARD_MAX_TODO_CONTENT_BYTES	export declare const HARD_MAX_TODO_CONTENT_BYTES = 4096
+HARD_MAX_TODO_ID_BYTES	export declare const HARD_MAX_TODO_ID_BYTES = 512
+HARD_MAX_TODO_ITEMS	export declare const HARD_MAX_TODO_ITEMS = 200
+HARD_MAX_TODO_NO_PROGRESS	export declare const HARD_MAX_TODO_NO_PROGRESS = 20
+HARD_MAX_TODO_STEER_BYTES	export declare const HARD_MAX_TODO_STEER_BYTES = 16384
+HARD_MAX_TODO_STEER_ITEMS	export declare const HARD_MAX_TODO_STEER_ITEMS = 50
 HARD_MAX_TODO_TEXT_BYTES	export declare const HARD_MAX_TODO_TEXT_BYTES = 4096
 HARD_MAX_TOTAL_OUTPUT_BYTES	export declare const HARD_MAX_TOTAL_OUTPUT_BYTES: number
 HARD_MAX_WORKSPACE_CLEANUP_OPERATIONS	export declare const HARD_MAX_WORKSPACE_CLEANUP_OPERATIONS = 1000
@@ -584,7 +596,16 @@ SubagentRecoveryOutcome	export type { CodingLifecycleEmitter, CodingLifecycleEve
 SubagentStartedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 SubagentStoppedEvent	export type { CodingLifecycleEmitter, CodingLifecycleEvent, CodingLifecycleLimits, ConfigurationChangedEvent, CreateCodingLifecycleEmitterOptions, FileChangedEvent, FileChangeOp, PermissionDeniedEvent, ResolvedCodingLifecycleLimits, SubagentFailure, SubagentRecovery, SubagentRecoveryOutcome, SubagentStartedEvent, SubagentStoppedEvent, WorktreeChangedEvent, } from "./lifecycle.js"
 SuspendAskUserDecisionOptions	export type { AskUserDecisionAnswer, AskUserDecisionHandler, AskUserDecisionOption, AskUserDecisionRequest, AskUserDecisionSelectionMode, AskUserDecisionSuspendData, AskUserDecisionToolOptions, ResolvedAskUserDecisionAnswer, ResolvedAskUserDecisionLimits, SuspendAskUserDecisionOptions, } from "./ask-user-decision.js"
+TODO_STATUSES	export declare const TODO_STATUSES: readonly TodoStatus[]
+TODO_WRITE_TOOL_NAME	export declare const TODO_WRITE_TOOL_NAME: "todo_write"
 TextFileClient	export type { TextFileClient } from "./acp-operations.js"
+TodoContinuationStopHook	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
+TodoContinuationStopHookOptions	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
+TodoItem	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
+TodoListMetadata	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
+TodoNoProgressStopInfo	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
+TodoStatus	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
+TodoWriteToolOptions	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
 TransformImage	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
 TransformImageInput	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
 UI_CSP	export declare const UI_CSP: string
@@ -720,6 +741,8 @@ createSecretRedactor	export declare function createSecretRedactor(secrets?: read
 createSessionsHost	export declare function createSessionsHost(options: CreateProcessSessionsOptions): SessionsHost
 createShellTool	export declare function createShellTool(cwd: string, options?: ShellToolOptions): ToolDefinition
 createTempArtifactWriter	export declare function createTempArtifactWriter(prefix?: string): ArtifactWriter
+createTodoContinuationStopHook	export declare function createTodoContinuationStopHook(options?: TodoContinuationStopHookOptions): TodoContinuationStopHook
+createTodoWriteTool	export declare function createTodoWriteTool(options?: TodoWriteToolOptions): ToolDefinition
 createWorktreeChildFactory	export declare function createWorktreeChildFactory(factory: (context: WorktreeChildContext) => Agent | Promise<Agent>, options: WorktreeChildFactoryOptions): WorktreeChildFactory
 createWriteTool	export declare function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDefinition
 decodeDockerProcessRef	export declare function decodeDockerProcessRef(ref: string): DockerProcessRefData | null
@@ -745,6 +768,7 @@ expandGlobBraces	export declare function expandGlobBraces(pattern: string, optio
 expandPath	export declare function expandPath(filePath: string): string
 fingerprintJson	export declare function fingerprintJson(value: unknown): string
 formatSize	export declare function formatSize(bytes: number): string
+formatTodoList	export declare function formatTodoList(todos: readonly TodoItem[]): string
 fuzzyFindText	export declare function fuzzyFindText(content: string, oldText: string): FuzzyMatchResult
 generateDiffString	export declare function generateDiffString(oldContent: string, newContent: string, contextLines?: number): EditDiffResult
 generateUnifiedPatch	export declare function generateUnifiedPatch(path: string, oldContent: string, newContent: string, contextLines?: number): string
@@ -771,6 +795,7 @@ isPrivateAddress	export declare function isPrivateAddress(address: string): bool
 isTerminalState	export declare function isTerminalState(state: ProcessSessionState): boolean
 killProcessTree	export declare function killProcessTree(pid: number): void
 kindFromDirent	export declare function kindFromDirent(dirent: Dirent): RepoEntryKind
+latestTodoList	export declare function latestTodoList(history: readonly Message[]): readonly TodoItem[] | undefined
 listLocal	export declare function listLocal(request: RepositoryListRequest, defaults: ResolvedRepositoryLimits, walk: RepositoryWalk): Promise<RepositoryListResult>
 loadComputerUseLinuxSkill	export declare function loadComputerUseLinuxSkill(): Skill
 loadImpeccableSkill	export declare function loadImpeccableSkill(root: string, skillRelativePath: string, expectedDigest?: string): Skill
@@ -792,6 +817,8 @@ parseCodingPlanTodos	export declare function parseCodingPlanTodos(markdown: stri
 parseGitLsFilesZ	export declare function parseGitLsFilesZ(buffer: Buffer): string[]
 parseInspectorCompareBody	export declare function parseInspectorCompareBody(text: string): InspectorComparison
 parsePorcelainV2	export declare function parsePorcelainV2(stdout: Buffer, options?:
+parseTodoListMetadata	export declare function parseTodoListMetadata(metadata: unknown): readonly TodoItem[] | undefined
+parseTodoWriteArgs	export declare function parseTodoWriteArgs(args: JsonObject, limits?: ResolvedTodoWriteLimits): readonly TodoItem[]
 pathExists	export declare function pathExists(filePath: string): Promise<boolean>
 persistRecoveryUnknown	export declare function persistRecoveryUnknown(host: SessionsHost, current: ProcessRecoveryRecord, version: number, signal?: AbortSignal): Promise<boolean>
 persistTransition	export declare function persistTransition(host: SessionsHost, record: SessionRecord): void
@@ -836,6 +863,7 @@ resolveRepositoryLimits	export declare function resolveRepositoryLimits(options?
 resolveSandboxCapabilities	export declare function resolveSandboxCapabilities(sandbox: SandboxAdapter | undefined): SandboxCapabilities
 resolveTerminal	export declare function resolveTerminal(host: SessionsHost, terminal: ProcessTerminalRequest | undefined):
 resolveToCwd	export declare function resolveToCwd(filePath: string, cwd: string): string
+resolveTodoWriteLimits	export declare function resolveTodoWriteLimits(options?: TodoWriteToolOptions): ResolvedTodoWriteLimits
 resolveUnderRoot	export declare function resolveUnderRoot(root: string, candidate: string): string
 resolveUpstreamRoot	export declare function resolveUpstreamRoot(options: ResolveUpstreamRootOptions): ResolvedImpeccableUpstream
 resolveWorkspaceLimits	export declare function resolveWorkspaceLimits(options?: WorkspaceLimitOptions): ResolvedWorkspaceLimits
@@ -857,6 +885,7 @@ sweepExpired	export declare function sweepExpired(host: SessionsHost): void
 terminateRecord	export declare function terminateRecord(host: SessionsHost, record: SessionRecord, state: ProcessSessionState, exitCode: number | null): void
 toAskUserDecisionSuspendData	export declare function toAskUserDecisionSuspendData(request:
 toRepoRelative	export declare function toRepoRelative(root: string, absolutePath: string): string
+todoPinnedEntryIds	export declare function todoPinnedEntryIds(entries: readonly SessionEntry[]): readonly string[]
 truncateHead	export declare function truncateHead(content: string, options?: TruncationOptions): TruncationResult
 truncateLine	export declare function truncateLine(line: string, maxChars?: number):
 truncateTail	export declare function truncateTail(content: string, options?: TruncationOptions): TruncationResult

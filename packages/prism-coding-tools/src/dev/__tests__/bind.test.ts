@@ -2,8 +2,9 @@
  * Plan 040 Task 1 — bind policy: loopback by default, non-loopback refused
  * unless an explicit remoteAuthorize callback opts in.
  */
-import assert from "node:assert/strict";
+
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createPrismDevInspector, DevInspectorError } from "../index.js";
 

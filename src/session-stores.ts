@@ -302,12 +302,13 @@ export function createMemorySessionStore(
       }
     }
     if (byId.has(entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
+    const snapshot = cloneEntry(entry);
     if (dedupKey !== undefined) rememberIdempotencyKey(idempotencySeen, dedupKey);
-    byId.set(entry.id, entry);
-    const entries = bySession.get(entry.sessionId) ?? [];
-    entries.push(entry);
-    bySession.set(entry.sessionId, entries);
-    leafBySession.set(entry.sessionId, entry.id);
+    byId.set(snapshot.id, snapshot);
+    const entries = bySession.get(snapshot.sessionId) ?? [];
+    entries.push(snapshot);
+    bySession.set(snapshot.sessionId, entries);
+    leafBySession.set(snapshot.sessionId, snapshot.id);
   }
 }
 

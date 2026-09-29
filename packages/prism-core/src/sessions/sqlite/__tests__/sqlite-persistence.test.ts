@@ -1,20 +1,22 @@
+import { Database } from "bun:sqlite";
+import { afterEach, describe, it } from "bun:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, it } from "bun:test";
 import { createSecretRedactor } from "@arnilo/prism";
 import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
 import {
+  assertPersistenceBranchQueryConforms,
   assertPersistenceQueryPaginationConforms,
   assertTenantScopedQueryIsolation,
   createPersistenceMigrationContract,
 } from "@arnilo/prism/testing/persistence-schema";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import { runSessionStoreConformance } from "@arnilo/prism/testing/session-store-conformance";
-import { spawnSync } from "node:child_process";
-import { Database } from "bun:sqlite";
+import { assertPersistenceSearchQueryParity } from "../../codecs/__tests__/query-conformance.js";
 import {
   MIGRATION_001_INIT,
   MIGRATION_002_USAGE_SCOPE,
@@ -135,6 +137,110 @@ describe("createSqlitePersistence", () => {
       (await persistence.queryUsage({ scope: "run_total" })).items.map((row) => row.id),
       ["total"],
     );
+    persistence.close();
+  });
+
+  it("keeps session activity monotonic across run, usage, and event writes", async () => {
+    const filename = tempDbPath("activity");
+    const persistence = createSqlitePersistence({ filename });
+    const appendSession = persistence.appendSession;
+    if (!appendSession) throw new Error("appendSession required");
+    const sessionId = "activity-session";
+    const old = "2026-01-01T00:00:00.000Z";
+    const recent = "2026-01-03T00:00:00.001Z";
+    await appendSession({
+      id: sessionId,
+      tenantId: "tenant-a",
+      createdAt: old,
+      updatedAt: "2026-01-01T01:00:00+01:00",
+      metadata: { title: "first" },
+    });
+    assert.equal((await persistence.querySessions({ id: sessionId })).items[0]?.updatedAt, old);
+    await persistence.appendRun({ id: "new-run", sessionId, startedAt: recent });
+    await persistence.appendUsage({
+      id: "older-usage",
+      sessionId,
+      runId: "new-run",
+      scope: "run_total",
+      recordedAt: "2026-01-03T00:30:00+01:00",
+      usage: { totalTokens: 1 },
+    });
+    await persistence.appendEvent({
+      id: "older-event",
+      sessionId,
+      runId: "new-run",
+      tenantId: "tenant-a",
+      timestamp: old,
+      type: "agent_started",
+      redacted: true,
+      event: { type: "agent_started", sessionId, runId: "new-run" },
+    });
+    assert.equal((await persistence.querySessions({ id: sessionId, tenantId: "tenant-a" })).items[0]?.updatedAt, recent);
+
+    // A pre-existing non-canonical row must compare as an instant, not lexically.
+    const legacy = "2026-01-03T01:00:00.001+01:00";
+    const raw = new Database(filename);
+    raw.prepare("UPDATE prism_sessions SET updated_at = ? WHERE id = ?").run(legacy, sessionId);
+    raw.close();
+    await persistence.appendRun({ id: "older-run", sessionId, startedAt: "2026-01-03T00:00:00.000Z" });
+    assert.equal((await persistence.querySessions({ id: sessionId })).items[0]?.updatedAt, legacy);
+
+    // Metadata CAS remains caller-authoritative, including an explicit backdated timestamp.
+    assert.deepEqual(
+      await appendSession({
+        id: sessionId,
+        tenantId: "tenant-a",
+        createdAt: old,
+        updatedAt: old,
+        expectedVersion: 1,
+        metadata: { title: "second" },
+      }),
+      { version: 2 },
+    );
+    assert.equal((await persistence.querySessions({ id: sessionId })).items[0]?.updatedAt, old);
+    await Promise.all([
+      persistence.appendRun({ id: "racing-new", sessionId, startedAt: "2026-01-04T00:00:00.000Z" }),
+      persistence.appendUsage({
+        id: "racing-old",
+        sessionId,
+        runId: "new-run",
+        scope: "run_total",
+        recordedAt: old,
+        usage: { totalTokens: 1 },
+      }),
+    ]);
+    await persistence.appendUsage({
+      id: "same-instant",
+      sessionId,
+      runId: "new-run",
+      scope: "run_total",
+      recordedAt: "2026-01-04T01:00:00+01:00",
+      usage: { totalTokens: 1 },
+    });
+    await persistence.appendUsage({
+      id: "newer-millisecond",
+      sessionId,
+      runId: "new-run",
+      scope: "run_total",
+      recordedAt: "2026-01-04T01:00:00.002+01:00",
+      usage: { totalTokens: 1 },
+    });
+    await persistence.appendEvent({
+      id: "newer-event",
+      sessionId,
+      runId: "new-run",
+      tenantId: "tenant-a",
+      timestamp: "2026-01-04T00:00:00.003Z",
+      type: "turn_started",
+      redacted: true,
+      event: { type: "turn_started", sessionId, runId: "new-run", turn: 1 },
+    });
+    const current = (await persistence.querySessions({ id: sessionId, tenantId: "tenant-a" })).items[0];
+    assert.equal(current?.updatedAt, "2026-01-04T00:00:00.003Z");
+    assert.deepEqual(current?.metadata, { title: "second" });
+    assert.equal((await persistence.querySessions({ id: sessionId, tenantId: "tenant-b" })).items.length, 0);
+    await assert.rejects(appendSession({ id: "invalid-time", createdAt: old, updatedAt: "2026-01-04T00:00:00" }), RangeError);
+    assert.equal((await persistence.querySessions({ id: "invalid-time" })).items.length, 0);
     persistence.close();
   });
 
@@ -262,6 +368,160 @@ describe("createSqlitePersistence", () => {
       },
       queryEntries: (query) => persistence.queryEntries(query),
     });
+    persistence.close();
+  });
+
+  it("limits SQL branch-path pages while preserving root-to-leaf offset cursors", async () => {
+    const filename = tempDbPath("branch-pages");
+    const db = new Database(filename);
+    const prepare = db.prepare.bind(db);
+    const counts: number[] = [];
+    const sql: string[] = [];
+    db.prepare = ((text: string) => {
+      const statement = prepare(text);
+      if (text.includes("WITH RECURSIVE branch_path")) {
+        sql.push(text);
+        const all = statement.all.bind(statement) as (...params: unknown[]) => unknown[];
+        statement.all = ((...params: unknown[]) => {
+          const rows = all(...params);
+          counts.push(rows.length);
+          return rows;
+        }) as typeof statement.all;
+      }
+      return statement;
+    }) as typeof db.prepare;
+    const persistence = createSqlitePersistence({ filename, database: db });
+    if (!persistence.readBranchPath) throw new Error("readBranchPath required");
+    for (let i = 0; i < 300; i++) {
+      await persistence.append({
+        id: `entry-${i}`,
+        sessionId: "long-branch",
+        parentId: i ? `entry-${i - 1}` : undefined,
+        timestamp: "2026-01-01T00:00:00.000Z",
+        kind: "label",
+        label: `${i}`,
+      });
+    }
+    const query = { sessionId: "long-branch", leafId: "entry-299", limit: 2 };
+    const first = await persistence.readBranchPath(query);
+    assert.deepEqual(
+      first.items.map((entry) => entry.id),
+      ["entry-0", "entry-1"],
+    );
+    assert.equal(first.nextCursor, "2");
+    assert.deepEqual(
+      (await persistence.readBranchPath({ ...query, cursor: first.nextCursor })).items.map((entry) => entry.id),
+      ["entry-2", "entry-3"],
+    );
+    const deep = await persistence.readBranchPath({ ...query, cursor: "296" });
+    assert.deepEqual(
+      deep.items.map((entry) => entry.id),
+      ["entry-296", "entry-297"],
+    );
+    assert.equal(deep.nextCursor, "298");
+    const last = await persistence.readBranchPath({ ...query, cursor: deep.nextCursor });
+    assert.deepEqual(
+      last.items.map((entry) => entry.id),
+      ["entry-298", "entry-299"],
+    );
+    assert.equal(last.nextCursor, undefined);
+    assert.deepEqual(counts.slice(0, 4), [3, 3, 3, 2]);
+    assert.ok(sql.every((text) => /LIMIT \? OFFSET \?/.test(text)));
+    assert.deepEqual((await persistence.readBranchPath({ ...query, cursor: "300" })).items, []);
+    assert.deepEqual((await persistence.readBranchPath({ ...query, cursor: String(Number.MAX_SAFE_INTEGER) })).items, []);
+    assert.deepEqual((await persistence.readBranchPath({ sessionId: "foreign", leafId: query.leafId, limit: 2 })).items, []);
+    assert.deepEqual((await persistence.readBranchPath({ ...query, leafId: "missing" })).items, []);
+    for (const cursor of ["", "1e3", "9007199254740992", "-1", "9".repeat(10_000)]) {
+      await assert.rejects(persistence.readBranchPath({ ...query, cursor }), /Invalid branch pagination cursor/);
+    }
+    await assert.rejects(persistence.readBranchPath({ ...query, limit: 0 }), RangeError);
+    assert.equal((await persistence.readBranchPath({ sessionId: query.sessionId, leafId: query.leafId })).items.length, 300);
+    db.close();
+  });
+
+  it("filters and keyset-paginates branch entry queries", async () => {
+    const persistence = createSqlitePersistence({ filename: tempDbPath("branch-query") });
+    await assertPersistenceBranchQueryConforms({
+      seedEntries: async (entries) => {
+        for (const entry of entries) await persistence.append(entry);
+      },
+      queryEntries: (query) => persistence.queryEntries(query),
+    });
+    persistence.close();
+  });
+
+  it("scopes ordinary and leaf entry queries to the owning session", async () => {
+    const persistence = createSqlitePersistence({ filename: tempDbPath("entry-ownership") });
+    const appendSession = persistence.appendSession;
+    if (!appendSession) throw new Error("appendSession required");
+    const timestamp = "2026-01-01T00:00:00.000Z";
+    for (const [sessionId, tenantId, accountId, userId] of [
+      ["session-a", "tenant-a", "account-a", "user-a"],
+      ["session-b", "tenant-b", "account-b", "user-b"],
+    ] as const) {
+      await appendSession({ id: sessionId, tenantId, accountId, userId, createdAt: timestamp, updatedAt: timestamp });
+      await persistence.append({ id: `${sessionId}-root`, sessionId, timestamp, kind: "label", label: "root" });
+      await persistence.append({
+        id: `${sessionId}-leaf`,
+        sessionId,
+        parentId: `${sessionId}-root`,
+        timestamp,
+        kind: "label",
+        label: "leaf",
+      });
+    }
+    const own = { sessionId: "session-a", tenantId: "tenant-a", accountId: "account-a", userId: "user-a" };
+    async function assertEmpty(query: Parameters<typeof persistence.queryEntries>[0]) {
+      const page = await persistence.queryEntries(query);
+      assert.deepEqual(page.items, []);
+      assert.equal(page.nextCursor, undefined);
+    }
+    const first = await persistence.queryEntries({ ...own, limit: 1 });
+    assert.deepEqual(
+      first.items.map((entry) => entry.id),
+      ["session-a-leaf"],
+    );
+    assert.ok(first.nextCursor);
+    assert.deepEqual(
+      (await persistence.queryEntries({ ...own, limit: 1, cursor: first.nextCursor })).items.map((entry) => entry.id),
+      ["session-a-root"],
+    );
+    assert.deepEqual(
+      (await persistence.queryEntries({ ...own, leafId: "session-a-leaf" })).items.map((entry) => entry.id),
+      ["session-a-leaf", "session-a-root"],
+    );
+    assert.deepEqual(
+      (await persistence.queryEntries({ tenantId: "tenant-a" })).items.map((entry) => entry.sessionId),
+      ["session-a", "session-a"],
+    );
+    assert.equal((await persistence.queryEntries({ sessionId: "session-a" })).items.length, 2);
+    assert.equal((await persistence.queryEntries({ sessionId: "session-a", leafId: "session-a-leaf" })).items.length, 2);
+    for (const mismatch of [
+      { tenantId: "tenant-b" },
+      { accountId: "account-b" },
+      { userId: "user-b" },
+      { tenantId: "" },
+      { ...own, userId: "user-b" },
+      { tenantId: "' OR '1'='1" },
+    ]) {
+      await assertEmpty({ sessionId: "session-a", ...mismatch });
+      await assertEmpty({ sessionId: "session-a", leafId: "session-a-leaf", ...mismatch });
+    }
+    await assertEmpty({ ...own, sessionId: "session-b" });
+    await assertEmpty({ tenantId: "tenant-a", accountId: "account-b" });
+    await assertEmpty({ ...own, leafId: "session-b-leaf" });
+    await assertEmpty({ ...own, sessionId: "session-a' OR 1=1 --" });
+    await persistence.append({
+      id: "cross-session-parent",
+      sessionId: "session-a",
+      parentId: "session-b-root",
+      timestamp,
+      kind: "label",
+    });
+    assert.deepEqual(
+      (await persistence.queryEntries({ ...own, leafId: "cross-session-parent" })).items.map((entry) => entry.id),
+      ["cross-session-parent"],
+    );
     persistence.close();
   });
 
@@ -451,6 +711,12 @@ describe("createSqlitePersistence", () => {
     persistence.close();
   });
 
+  it("shares filter-only search ordering, scoping, and cursor semantics", async () => {
+    const persistence = createSqlitePersistence({ filename: tempDbPath("search-query-parity") });
+    await assertPersistenceSearchQueryParity(persistence);
+    persistence.close();
+  });
+
   it("searches sessions by label, FTS message text, workspace, and ownership", async () => {
     const filename = tempDbPath("search");
     const persistence = createSqlitePersistence({ filename });
@@ -484,7 +750,7 @@ describe("createSqlitePersistence", () => {
       `UPDATE prism_sessions
        SET tenant_id = ?, metadata = ?
        WHERE id = ?`,
-    ).run("tenant-a", JSON.stringify({ workspaceRoot: "/repo" }), "search-session");
+    ).run("tenant-a", JSON.stringify({ workspaceRoot: "/repo", title: "Auth flake fix" }), "search-session");
     db.close();
 
     const byLabel = await persistence.searchSessions!({ label: "auth-flake", limit: 10 });
@@ -555,6 +821,9 @@ describe("createSqlitePersistence", () => {
       ["search-session"],
     );
     assert.equal(byWorkspace.items[0]?.metadata?.workspaceRoot, "/repo");
+    // Safe display metadata carries the title; messageCount counts kind='message' entries only.
+    assert.equal(byWorkspace.items[0]?.metadata?.title, "Auth flake fix");
+    assert.equal(byWorkspace.items[0]?.messageCount, 1);
 
     const byProvider = await persistence.searchSessions!({ provider: "anthropic", limit: 10 });
     assert.ok(byProvider.items.some((hit) => hit.sessionId === "search-session"));
@@ -784,6 +1053,39 @@ describe("appendSession metadata CAS (008_session_version)", () => {
     assert.deepEqual(bumped, { version: 2 });
     persistence.close();
   });
+});
+
+it("merges session metadata without clobbering other keys and bumps the CAS version", async () => {
+  const persistence = createSqlitePersistence({ filename: tempDbPath("metadata-merge") });
+  if (!persistence.appendSession) throw new Error("appendSession required");
+  const now = "2026-01-01T00:00:00.000Z";
+  await persistence.appendSession({
+    id: "merge-1",
+    createdAt: now,
+    updatedAt: now,
+    metadata: { workspaceRoot: "/repo", title: "first" },
+  });
+
+  // Merge keeps existing keys and bumps version without touching updated_at.
+  const merged = persistence.mergeSessionMetadata("merge-1", { title: "renamed", extra: { nested: true } }, {});
+  assert.deepEqual(merged, { version: 2 });
+  const row = await persistence.querySessions({ id: "merge-1" });
+  assert.deepEqual(row.items[0]?.metadata, { workspaceRoot: "/repo", title: "renamed", extra: { nested: true } });
+  assert.equal(row.items[0]?.updatedAt, now);
+
+  // onlyIfMissing keeps the first title (first-prompt wins) but still records other keys.
+  const skipped = persistence.mergeSessionMetadata("merge-1", { title: "second" }, { onlyIfMissing: ["title"] });
+  assert.equal(skipped, undefined);
+  const kept = await persistence.querySessions({ id: "merge-1" });
+  assert.equal(kept.items[0]?.metadata?.title, "renamed");
+  assert.equal(Boolean(kept.items[0]?.metadata?.extra), true);
+
+  // Unknown ids and invalid keys fail predictably.
+  assert.equal(persistence.mergeSessionMetadata("missing", { title: "x" }), undefined);
+  assert.throws(() => persistence.mergeSessionMetadata("merge-1", { 'bad"key': "x" }), RangeError);
+  assert.throws(() => persistence.mergeSessionMetadata("merge-1", {}), TypeError);
+
+  persistence.close();
 });
 
 it("names the Bun runtime when the sqlite modules are imported under node", () => {

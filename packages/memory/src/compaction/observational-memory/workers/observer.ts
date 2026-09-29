@@ -29,7 +29,25 @@ export async function runObserver(options: RunObserverOptions): Promise<readonly
   const tool: ToolDefinition = {
     name: "record_observation",
     description: "Record one source-backed observational memory.",
-    parameters: { type: "object" },
+    // The schema must describe the arguments: a bare `{ type: "object" }` leaves weaker models with
+    // no argument shape, and they answer in prose instead of calling the tool (observed live with
+    // opencode-go/longcat-2.5-preview-free), so the pass recorded nothing.
+    parameters: {
+      type: "object",
+      properties: {
+        content: {
+          type: "string",
+          description: "One self-contained observation, source-backed and free of secrets.",
+        },
+        sourceEntryIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Ids of the source entries this observation came from (required).",
+        },
+        relevance: { type: "string", enum: ["low", "medium", "high", "critical"] },
+      },
+      required: ["content", "sourceEntryIds"],
+    },
     execute(args, context) {
       const content = typeof args.content === "string" ? args.content.replace(/\s+/g, " ").trim() : "";
       const sourceEntryIds = Array.isArray(args.sourceEntryIds)

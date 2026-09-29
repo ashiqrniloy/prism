@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import type { PersistencePage, SessionEntry, SessionEntryQuery } from "../contracts.js";
 
@@ -1016,6 +1017,68 @@ export async function assertPersistenceQueryPaginationConforms(
     seen.add(row.id);
   }
   if (seen.size < 3) throw new Error("Pagination did not advance past the first page");
+}
+
+/** Assert branch entry queries use the same filters and keyset cursor as ordinary entry queries. */
+export async function assertPersistenceBranchQueryConforms(
+  fixture: PersistenceQueryConformanceFixture,
+  sessionId = "branch-query-conformance",
+): Promise<void> {
+  const t0 = "2026-01-01T00:00:00.000Z";
+  const t1 = "2026-01-01T00:00:01.000Z";
+  await fixture.seedEntries([
+    { id: "branch-a", sessionId, timestamp: t0, kind: "label", runId: "run-1" },
+    { id: "branch-b", sessionId, parentId: "branch-a", timestamp: t0, kind: "message", runId: "run-2" },
+    { id: "branch-c", sessionId, parentId: "branch-b", timestamp: t0, kind: "message", runId: "run-1" },
+    { id: "branch-d", sessionId, parentId: "branch-c", timestamp: t1, kind: "label", runId: "run-2" },
+    { id: "branch-e", sessionId, parentId: "branch-d", timestamp: t1, kind: "message", runId: "run-2" },
+    { id: "branch-f", sessionId, parentId: "branch-a", timestamp: t1, kind: "message", runId: "run-1" },
+    { id: "foreign-child", sessionId: `${sessionId}-other`, parentId: "branch-a", timestamp: t1, kind: "message" },
+  ]);
+  const branch = { sessionId, leafId: "branch-e" };
+  const ids = async (query: SessionEntryQuery) => (await fixture.queryEntries(query)).items.map((entry) => entry.id);
+  assert.deepEqual(await ids({ ...branch, kind: "message" }), ["branch-b", "branch-c", "branch-e"]);
+  assert.deepEqual(await ids({ ...branch, kind: ["message", "label"], runId: "run-1" }), ["branch-a", "branch-c"]);
+  assert.deepEqual(await ids({ ...branch, kind: [] }), []);
+  assert.deepEqual(await ids({ ...branch, parentId: "branch-b" }), ["branch-c"]);
+  assert.deepEqual(await ids({ ...branch, fromTimestamp: t1 }), ["branch-d", "branch-e"]);
+  assert.deepEqual(await ids({ ...branch, toTimestamp: t0 }), ["branch-a", "branch-b", "branch-c"]);
+  assert.deepEqual(await ids({ ...branch, runId: "run-2", kind: "message", fromTimestamp: t1 }), ["branch-e"]);
+  assert.deepEqual(await ids({ sessionId, leafId: "foreign-child" }), []);
+  assert.deepEqual(await ids({ sessionId: `${sessionId}-other`, leafId: "foreign-child" }), ["foreign-child"]);
+  assert.deepEqual(await ids({ ...branch, leafId: "branch-f" }), ["branch-a", "branch-f"]);
+
+  for (const [order, expected] of [
+    ["asc", ["branch-a", "branch-b", "branch-c", "branch-d", "branch-e"]],
+    ["desc", ["branch-e", "branch-d", "branch-c", "branch-b", "branch-a"]],
+  ] as const) {
+    const found: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await fixture.queryEntries({ ...branch, order, limit: 2, ...(cursor ? { cursor } : {}) });
+      assert.ok(page.items.length <= 2);
+      found.push(...page.items.map((entry) => entry.id));
+      cursor = page.nextCursor;
+      assert.ok(found.length <= expected.length, "branch cursor must advance");
+    } while (cursor);
+    assert.deepEqual(found, expected);
+  }
+  const first = await fixture.queryEntries({ ...branch, kind: "message", limit: 1 });
+  assert.deepEqual(
+    first.items.map((entry) => entry.id),
+    ["branch-b"],
+  );
+  assert.ok(first.nextCursor);
+  assert.deepEqual(await ids({ ...branch, kind: "message", limit: 1, cursor: first.nextCursor }), ["branch-c"]);
+  const ordinary = await fixture.queryEntries({ sessionId, limit: 1 });
+  assert.deepEqual(await ids({ ...branch, cursor: ordinary.nextCursor }), ["branch-b", "branch-c", "branch-d", "branch-e"]);
+  for (const cursor of ["not-a-cursor", "", "p2", "\u0000id", "time\u0000", "time\u0000id\u0000extra"]) {
+    await assert.rejects(fixture.queryEntries({ ...branch, cursor }), /Invalid entry pagination cursor/);
+  }
+  for (const limit of [0, -1, Number.MAX_SAFE_INTEGER + 1]) {
+    await assert.rejects(fixture.queryEntries({ ...branch, limit }), /positive safe integer/);
+  }
+  await assert.rejects(fixture.queryEntries({ leafId: "branch-e" }), /leafId requires sessionId/);
 }
 
 /** Assert tenant-filtered queries do not return rows from another tenant. */

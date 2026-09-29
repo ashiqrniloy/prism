@@ -66,7 +66,7 @@ describe("multi-agent runtime coverage and baselines", () => {
     const hasChannels = names.includes("@arnilo/prism-channels");
     const hasWorkFamily = packages.has("prism-work");
     const hasProvidersFamily = packages.has("prism-providers");
-    const expectedCount = hasWorkFamily ? 12 : hasProvidersFamily ? 17 : hasCodingTools ? 34 : hasCore ? 50 : 65;
+    const expectedCount = hasWorkFamily ? 14 : hasProvidersFamily ? 17 : hasCodingTools ? 34 : hasCore ? 50 : 65;
     assert.equal(names.length, expectedCount, `expected ${expectedCount} manifests, found ${names.length}`);
     const evidence = readFileSync(evidencePath, "utf8");
     for (const name of names) {
@@ -74,7 +74,7 @@ describe("multi-agent runtime coverage and baselines", () => {
       if (hasChannels && name === "@arnilo/prism-channels") continue;
       if (hasCodingTools && (name === "@arnilo/prism-coding-tools" || name === "@arnilo/prism-core")) continue;
       if (hasCore && name === "@arnilo/prism-core") continue;
-      if (name === "@arnilo/prism-hooks") continue; // plan 106 R4: covered by its own suite, not the multi-agent evidence matrix
+      if (name === "@arnilo/prism-hooks" || name === "@arnilo/prism-agent-sdk") continue; // plan 106 R4 / plan 134: covered by their own suites, not the multi-agent evidence matrix
       assert.ok(evidence.includes(`| ${name} |`), `evidence missing ${name}`);
     }
     const classes = ["hot-path", "optional-in-run", "persistence-coordination", "setup-only"];

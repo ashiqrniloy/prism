@@ -4,12 +4,13 @@
  * git_worktree), process passthrough, and the frozen deferred-kind guard.
  * Frozen shapes mirror scripts/phase10-freeze-manifest.json lifecycle module.
  */
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
 import type { ExecutionPolicy, ToolExecutionContext } from "@arnilo/prism";
 import { SAFE_GIT_CONFIG_ARGS, SAFE_GIT_ENV } from "../git-exec.js";
 import {

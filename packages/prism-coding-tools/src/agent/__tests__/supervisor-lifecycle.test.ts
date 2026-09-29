@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import type { DelegatedAgentStep } from "@arnilo/prism";
 import type { SupervisorEvent, SupervisorRunSummary } from "@arnilo/prism-core/runtime/supervisor";
 import { type CodingLifecycleEvent, createCodingLifecycleEmitter, DEFAULT_LIFECYCLE_MAX_REASON_BYTES } from "../lifecycle.js";

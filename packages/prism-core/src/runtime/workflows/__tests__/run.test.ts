@@ -32,6 +32,7 @@ import {
   type WorkflowEvent,
   WorkflowLoopLimitError,
   WorkflowRuntimeError,
+  workflowNode,
 } from "../index.js";
 
 describe("runWorkflow", () => {
@@ -1191,6 +1192,220 @@ describe("runWorkflow", () => {
     assert.deepEqual(result.outputs.update, { value: "ok" });
   });
 
+  it("never retries effects after a post-execution checkpoint failure", async () => {
+    for (const kind of ["function", "tool", "agent"] as const) {
+      const inner = createMemoryWorkflowCheckpoints();
+      const failure = new Error(`${kind} checkpoint rejected`);
+      let saves = 0;
+      let effects = 0;
+      const checkpoints = {
+        ...inner,
+        async save(input: Parameters<typeof inner.save>[0]) {
+          if (++saves === 3) throw failure;
+          return inner.save(input);
+        },
+      };
+      const agent = createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider: createMockProvider([providerTextDelta("done"), providerDone()]),
+      });
+      const node =
+        kind === "function"
+          ? functionNode({
+              retries: 1,
+              execute: () => {
+                effects += 1;
+                return "done";
+              },
+            })
+          : kind === "tool"
+            ? toolNode({
+                retries: 1,
+                tool: {
+                  name: "effect",
+                  execute: () => {
+                    effects += 1;
+                    return { toolCallId: "effect", name: "effect", value: "done" };
+                  },
+                },
+                args: () => ({}),
+              })
+            : agentNode({ agent: "effect", retries: 1 });
+      const workflow = defineWorkflow({ revision: "1", id: `checkpoint-${kind}`, nodes: { node } });
+      const events: WorkflowEvent[] = [];
+      await assert.rejects(
+        () =>
+          runWorkflow(workflow, null, {
+            checkpoints,
+            runId: "test-run",
+            agentFactory: async () => {
+              effects += 1;
+              return agent.createSession({ id: "effect-session" });
+            },
+            onEvent: (event) => events.push(event),
+          }),
+        (error: unknown) => error === failure,
+      );
+      assert.equal(effects, 1, kind);
+      assert.equal(saves, 3, kind);
+      assert.ok(!events.some((event) => event.type === "node_finished" || event.type === "workflow_finished"));
+      const saved = await getWorkflowRun(checkpoints, { workflowId: workflow.id, runId: "test-run" });
+      assert.equal(saved?.value.nodes.node?.status, "running");
+      await assert.rejects(() => resumeWorkflow(workflow, { runId: "test-run" }, { checkpoints }), /unknown outcome/);
+    }
+  });
+
+  it("retries execution failures but not failed loop iteration or suspension saves", async () => {
+    const transient = createMemoryWorkflowCheckpoints();
+    let calls = 0;
+    const retry = defineWorkflow({
+      revision: "1",
+      id: "retry-execution",
+      nodes: {
+        node: functionNode({
+          retries: 1,
+          execute: () => {
+            if (++calls === 1) throw new Error("transient");
+            return "ok";
+          },
+        }),
+      },
+    });
+    assert.equal((await runWorkflow(retry, null, { checkpoints: transient })).outputs.node, "ok");
+    assert.equal(calls, 2);
+
+    for (const kind of ["loop", "suspend"] as const) {
+      const inner = createMemoryWorkflowCheckpoints();
+      const failure = new Error(`${kind} save rejected`);
+      let saves = 0;
+      let effects = 0;
+      const checkpoints = {
+        ...inner,
+        async save(input: Parameters<typeof inner.save>[0]) {
+          if (++saves === 3) throw failure;
+          return inner.save(input);
+        },
+      };
+      const node =
+        kind === "loop"
+          ? loopNode({
+              retries: 1,
+              maxIterations: 2,
+              execute: () => {
+                effects += 1;
+                return effects;
+              },
+              until: () => false,
+            })
+          : functionNode({
+              retries: 1,
+              execute: () => {
+                effects += 1;
+                return suspend({ reason: "review" });
+              },
+            });
+      const workflow = defineWorkflow({ revision: "1", id: `checkpoint-${kind}`, nodes: { node } });
+      const events: WorkflowEvent[] = [];
+      await assert.rejects(
+        () =>
+          runWorkflow(workflow, null, {
+            checkpoints,
+            runId: "test-run",
+            onEvent: (event) => events.push(event),
+          }),
+        (error: unknown) => error === failure,
+      );
+      assert.equal(effects, 1, kind);
+      assert.equal(saves, 3, kind);
+      assert.ok(
+        !events.some(
+          (event) => event.type === "node_iteration_finished" || event.type === "workflow_suspended" || event.type === "workflow_finished",
+        ),
+      );
+    }
+  });
+
+  it("does not retry a parent when a nested workflow checkpoint rejects", async () => {
+    const inner = createMemoryWorkflowCheckpoints();
+    const failure = new Error("child checkpoint rejected");
+    let effects = 0;
+    let childSaves = 0;
+    const child = defineWorkflow({
+      revision: "1",
+      id: "child-effect",
+      nodes: {
+        effect: functionNode({
+          execute: () => {
+            effects += 1;
+            return "done";
+          },
+        }),
+      },
+    });
+    const parent = defineWorkflow({
+      revision: "1",
+      id: "parent-effect",
+      nodes: {
+        nested: workflowNode({ workflow: child, retries: 1 }),
+      },
+    });
+    const checkpoints = {
+      ...inner,
+      async save(input: Parameters<typeof inner.save>[0]) {
+        if (input.workflowId === child.id && ++childSaves === 3) throw failure;
+        return inner.save(input);
+      },
+    };
+    await assert.rejects(
+      () => runWorkflow(parent, null, { checkpoints }),
+      (error: unknown) => error === failure,
+    );
+    assert.equal(effects, 1);
+    assert.equal(childSaves, 3);
+  });
+
+  it("does not report a superstep node finished before the wave checkpoint lands", async () => {
+    const inner = createMemoryWorkflowCheckpoints();
+    const failure = new Error("wave checkpoint rejected");
+    let saves = 0;
+    let effects = 0;
+    const checkpoints = {
+      ...inner,
+      async save(input: Parameters<typeof inner.save>[0]) {
+        if (++saves === 2) throw failure;
+        return inner.save(input);
+      },
+    };
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "checkpoint-wave",
+      limits: { maxSupersteps: 2 },
+      nodes: {
+        node: functionNode({
+          retries: 1,
+          execute: () => {
+            effects += 1;
+            return "done";
+          },
+        }),
+      },
+    });
+    const events: WorkflowEvent[] = [];
+    await assert.rejects(
+      () =>
+        runWorkflow(workflow, null, {
+          checkpoints,
+          runId: "test-run",
+          onEvent: (event) => events.push(event),
+        }),
+      (error: unknown) => error === failure,
+    );
+    assert.equal(effects, 1);
+    assert.equal(saves, 2);
+    assert.ok(!events.some((event) => event.type === "node_finished" || event.type === "workflow_finished"));
+    await assert.rejects(() => resumeWorkflow(workflow, { runId: "test-run" }, { checkpoints }), /unknown outcome/);
+  });
+
   it("recovers checkpoint saves after an injected rejection", async () => {
     const inner = createMemoryWorkflowCheckpoints();
     let saves = 0;
@@ -1209,8 +1424,8 @@ describe("runWorkflow", () => {
     });
     await assert.rejects(() => runWorkflow(workflow, null, { checkpoints, runId: "r-recover" }), /injected checkpoint failure/);
     const saved = await getWorkflowRun(checkpoints, { workflowId: "recover-checkpoint", runId: "r-recover" });
-    assert.equal(saved?.value.status, "failed");
-    assert.ok(saves >= 3, `terminal save must run after rejection (saves=${saves})`);
+    assert.equal(saved?.value.status, "running");
+    assert.equal(saves, 2, "failed write must not be replaced by a false terminal checkpoint");
   });
 
   it("rejects resume across tenants", async () => {

@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import type { AIProvider, Message, ProviderEvent, ProviderRequest, SessionEntry, ToolDefinition } from "@arnilo/prism";
 import { providerDone, providerTextDelta, providerThinkingDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { MemoryError, MemoryLimitError } from "../../../errors.js";
@@ -43,6 +43,28 @@ describe("observational memory workers", () => {
     });
     assert.equal(observations.length, 1);
     assert.deepEqual(observations[0]?.sourceEntryIds, ["m1"]);
+  });
+
+  it("observer_declares_the_record_observation_argument_schema", async () => {
+    // Regression (plan 140 Task 6 live run): a bare `{ type: "object" }` gave weaker models no
+    // argument shape, so they answered in prose and the observer pass recorded nothing.
+    let seen: unknown;
+    const observer = await runObserver({
+      entries: [source],
+      provider: {
+        id: "mock",
+        async *generate(request: any) {
+          seen = request.tools?.[0]?.parameters;
+          yield providerDone();
+        },
+      },
+      model,
+      maxTurns: 1,
+    });
+    assert.deepEqual(observer, []);
+    const parameters = seen as { properties?: Record<string, unknown>; required?: string[] } | undefined;
+    assert.deepEqual(Object.keys(parameters?.properties ?? {}).sort(), ["content", "relevance", "sourceEntryIds"]);
+    assert.deepEqual(parameters?.required, ["content", "sourceEntryIds"]);
   });
 
   it("reflector_records_reflections_with_valid_support_ids_and_coverage_context", async () => {

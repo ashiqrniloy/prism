@@ -1182,6 +1182,31 @@
         ],
         "mode": ""
       }
+    },
+    "@arnilo/prism-agent-sdk": {
+      ".": {
+        "suites": [
+          "packages/agent-sdk/src/__tests__/define-agent.test.ts",
+          "packages/agent-sdk/src/__tests__/presets.test.ts",
+          "packages/agent-sdk/src/__tests__/config.test.ts",
+          "packages/agent-sdk/src/__tests__/tool-plane.test.ts",
+          "packages/agent-sdk/src/__tests__/capabilities.test.ts",
+          "packages/agent-sdk/src/__tests__/planes.test.ts",
+          "examples/agent-sdk-coding.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-code": {
+      ".": {
+        "suites": [
+          "packages/prism-code/src/__tests__/integration.test.ts",
+          "packages/prism-code/src/__tests__/tui-commands.test.ts",
+          "examples/prism-code-headless.ts"
+        ],
+        "mode": ""
+      }
     }
   }
 }

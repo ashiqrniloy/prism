@@ -1,6 +1,6 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { describe, it } from "bun:test";
 import { assertAdapterSchemaMatchesModel, createPersistenceSchemaModel } from "@arnilo/prism/testing/persistence-schema";
 import {
   ADAPTER_INDEX_NAMES,

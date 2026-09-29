@@ -124,6 +124,8 @@ export type SessionHost = {
   redact<T>(value: T): T;
   appendMessage(message: Message, runId: string): Promise<void>;
   autoCompact(runId: string, options: RunOptions, signal: AbortSignal, inputMessages: readonly Message[]): Promise<void>;
+  autoCompactTurn(runId: string, options: RunOptions, signal: AbortSignal, turn: number): Promise<void>;
+  activeLoopHistory?: Message[];
   applyPendingSteers(runId: string, metadata: Readonly<Record<string, unknown>>, signal: AbortSignal): Promise<boolean>;
   applyProviderRequestPolicies(
     request: ProviderRequest,

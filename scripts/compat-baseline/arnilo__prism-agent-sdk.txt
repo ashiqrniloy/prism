@@ -1,0 +1,47 @@
+AMBIGUOUS_PATH_PATTERN	export declare const AMBIGUOUS_PATH_PATTERN: RegExp
+AgentSdkConfig	export type { AgentSdkConfig, AgentSdkDefinition, AgentSdkMcpPlane, } from "./define-agent.js"
+AgentSdkConfigError	export declare class AgentSdkConfigError extends Error
+AgentSdkDefinition	export type { AgentSdkConfig, AgentSdkDefinition, AgentSdkMcpPlane, } from "./define-agent.js"
+AgentSdkJsonConfig	export type { AgentSdkJsonConfig, JsonHooksConfig, JsonInstructionsConfig, JsonMcpConfig, JsonPlanesConfig, JsonSkillsConfig, JsonToolsConfig, } from "./config.js"
+AgentSdkMcpPlane	export type { AgentSdkConfig, AgentSdkDefinition, AgentSdkMcpPlane, } from "./define-agent.js"
+AssembledHooksPlane	export type { AssembledHooksPlane, HooksPlaneConfig, } from "./planes/hooks.js"
+AssembledInstructionsPlane	export type { AssembledInstructionsPlane, InstructionsPlaneConfig, } from "./planes/instructions.js"
+AssembledMcpPlane	export type { AssembledMcpPlane, McpCustomTransportServerSpec, McpHttpServerSpec, McpPlaneConfig, McpServerSpec, McpServerStatus, McpStdioServerSpec, } from "./planes/mcp.js"
+AssembledSkillsPlane	export type { AssembledSkillsPlane, SkillsPlaneConfig, } from "./planes/skills.js"
+CodingPresetOptions	export type { CodingPresetOptions } from "./presets.js"
+DEFAULT_MCP_CONNECT_TIMEOUT_MS	export declare const DEFAULT_MCP_CONNECT_TIMEOUT_MS = 15000
+HooksPlaneConfig	export type { AssembledHooksPlane, HooksPlaneConfig, } from "./planes/hooks.js"
+InstructionsPlaneConfig	export type { AssembledInstructionsPlane, InstructionsPlaneConfig, } from "./planes/instructions.js"
+JsonHooksConfig	export type { AgentSdkJsonConfig, JsonHooksConfig, JsonInstructionsConfig, JsonMcpConfig, JsonPlanesConfig, JsonSkillsConfig, JsonToolsConfig, } from "./config.js"
+JsonInstructionsConfig	export type { AgentSdkJsonConfig, JsonHooksConfig, JsonInstructionsConfig, JsonMcpConfig, JsonPlanesConfig, JsonSkillsConfig, JsonToolsConfig, } from "./config.js"
+JsonMcpConfig	export type { AgentSdkJsonConfig, JsonHooksConfig, JsonInstructionsConfig, JsonMcpConfig, JsonPlanesConfig, JsonSkillsConfig, JsonToolsConfig, } from "./config.js"
+JsonPlanesConfig	export type { AgentSdkJsonConfig, JsonHooksConfig, JsonInstructionsConfig, JsonMcpConfig, JsonPlanesConfig, JsonSkillsConfig, JsonToolsConfig, } from "./config.js"
+JsonSkillsConfig	export type { AgentSdkJsonConfig, JsonHooksConfig, JsonInstructionsConfig, JsonMcpConfig, JsonPlanesConfig, JsonSkillsConfig, JsonToolsConfig, } from "./config.js"
+JsonToolsConfig	export type { AgentSdkJsonConfig, JsonHooksConfig, JsonInstructionsConfig, JsonMcpConfig, JsonPlanesConfig, JsonSkillsConfig, JsonToolsConfig, } from "./config.js"
+MAX_URL_LENGTH	export declare const MAX_URL_LENGTH = 2048
+McpConnectError	export declare class McpConnectError extends Error
+McpCustomTransportServerSpec	export type { AssembledMcpPlane, McpCustomTransportServerSpec, McpHttpServerSpec, McpPlaneConfig, McpServerSpec, McpServerStatus, McpStdioServerSpec, } from "./planes/mcp.js"
+McpHttpServerSpec	export type { AssembledMcpPlane, McpCustomTransportServerSpec, McpHttpServerSpec, McpPlaneConfig, McpServerSpec, McpServerStatus, McpStdioServerSpec, } from "./planes/mcp.js"
+McpPlaneConfig	export type { AssembledMcpPlane, McpCustomTransportServerSpec, McpHttpServerSpec, McpPlaneConfig, McpServerSpec, McpServerStatus, McpStdioServerSpec, } from "./planes/mcp.js"
+McpServerSpec	export type { AssembledMcpPlane, McpCustomTransportServerSpec, McpHttpServerSpec, McpPlaneConfig, McpServerSpec, McpServerStatus, McpStdioServerSpec, } from "./planes/mcp.js"
+McpServerStatus	export type { AssembledMcpPlane, McpCustomTransportServerSpec, McpHttpServerSpec, McpPlaneConfig, McpServerSpec, McpServerStatus, McpStdioServerSpec, } from "./planes/mcp.js"
+McpStdioServerSpec	export type { AssembledMcpPlane, McpCustomTransportServerSpec, McpHttpServerSpec, McpPlaneConfig, McpServerSpec, McpServerStatus, McpStdioServerSpec, } from "./planes/mcp.js"
+ResolveToolPlaneOptions	export type { ResolveToolPlaneOptions, ToolPlaneValue, } from "./tool-plane.js"
+SkillsPlaneConfig	export type { AssembledSkillsPlane, SkillsPlaneConfig, } from "./planes/skills.js"
+ToolPlaneValue	export type { ResolveToolPlaneOptions, ToolPlaneValue, } from "./tool-plane.js"
+applyMcpApprovalPolicy	export declare function applyMcpApprovalPolicy(tool: ToolDefinition, policy: ExecutionPolicy | undefined): ToolDefinition
+assembleHooksPlane	export declare function assembleHooksPlane(options?: AssembleHooksOptions): Promise<AssembledHooksPlane>
+assembleInstructionsPlane	export declare function assembleInstructionsPlane(options?: AssembleInstructionsOptions): Promise<AssembledInstructionsPlane>
+assembleMcpPlane	export declare function assembleMcpPlane(config?: McpPlaneConfig): Promise<AssembledMcpPlane>
+assembleSkillsPlane	export declare function assembleSkillsPlane(config?: SkillsPlaneConfig): Promise<AssembledSkillsPlane>
+assertServerAllowed	export declare function assertServerAllowed(server: McpServerSpec): void
+barePreset	export declare function barePreset(): Partial<AgentSdkConfig>
+buildConnectOptions	export declare function buildConnectOptions(server: McpServerSpec): ConnectMcpToolsOptions
+codingPreset	export declare function codingPreset(options: CodingPresetOptions): Partial<AgentSdkConfig>
+defineAgent	export declare function defineAgent(config: AgentSdkConfig): Promise<AgentSdkDefinition>
+mergeAgentConfig	export declare function mergeAgentConfig(base: Partial<AgentSdkConfig>, override: Partial<AgentSdkConfig>): Partial<AgentSdkConfig>
+parseAgentSdkConfig	export declare function parseAgentSdkConfig(json: unknown): AgentSdkJsonConfig
+parseAllowDestination	export declare function parseAllowDestination(entry: string): ParsedAllowDestination | null
+redactMcpError	export declare function redactMcpError(server: McpServerSpec, error: unknown): string
+resolveJsonConfig	export declare function resolveJsonConfig(json: AgentSdkJsonConfig, context:
+resolveToolPlane	export declare function resolveToolPlane(options?: ResolveToolPlaneOptions): readonly ToolDefinition[]

@@ -1,6 +1,6 @@
 import { createDelegatedAgentStep, type DelegatedAgentStep } from "@arnilo/prism";
 import type { Supervisor, SupervisorEvent } from "@arnilo/prism-core/runtime/supervisor";
-import { DEFAULT_LIFECYCLE_MAX_REASON_BYTES, type CodingLifecycleEvent, type SubagentFailure, type SubagentRecovery } from "./lifecycle.js";
+import { type CodingLifecycleEvent, DEFAULT_LIFECYCLE_MAX_REASON_BYTES, type SubagentFailure, type SubagentRecovery } from "./lifecycle.js";
 
 /** Pending `child_failed` entries kept until the matching stop; oldest dropped at the bound. */
 const MAX_PENDING_FAILURES = 64;

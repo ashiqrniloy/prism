@@ -1014,6 +1014,110 @@ describe("retrieveContext multi-scope", () => {
     assert.ok(queries.every((query) => query.topK === 20));
   });
 
+  it("bounds delayed vector, lexical, and tombstone reads without changing fusion order", async () => {
+    const embedder = createHashEmbedder({ dimensions: 8 });
+    const scopes = Array.from({ length: 8 }, (_, index) => ({ ...org, corpusId: `c${index}` }));
+    let active = 0;
+    let peak = 0;
+    const calls: string[] = [];
+    async function delayed(leg: string, threadId: string) {
+      active += 1;
+      peak = Math.max(peak, active);
+      calls.push(`${leg}:${threadId}`);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, (4 - (Number(threadId.slice(1)) % 4)) * 3));
+      } finally {
+        active -= 1;
+      }
+    }
+    const store: VectorStore = {
+      ...scopedStore({}).store,
+      lineage: "invalidation",
+      lexicalModes: ["fts"],
+      async query({ threadId }) {
+        await delayed("vector", threadId);
+        return [scopedHit({ ...org, corpusId: threadId }, "src#0001")];
+      },
+      async lexicalQuery({ threadId }) {
+        await delayed("lexical", threadId);
+        return [scopedHit({ ...org, corpusId: threadId }, "src#0001")];
+      },
+      async listInvalidated({ threadId }) {
+        assert.equal(this, store, "store methods retain their receiver");
+        await delayed("tombstone", threadId);
+        return [];
+      },
+    };
+    const result = await retrieveContext("policy", { embedder, store, scopes, lexical: "fts", topK: 8 });
+    assert.equal(active, 0);
+    assert.ok(peak > 1 && peak <= 4, `peak in-flight reads: ${peak}`);
+    assert.equal(calls.length, 24);
+    assert.deepEqual(
+      calls.filter((call) => call.startsWith("vector:")),
+      scopes.map((scope) => `vector:${scope.corpusId}`),
+    );
+    assert.deepEqual(
+      result.hits.map((hit) => [hit.provenance.corpusId, hit.provenance.retrieval]),
+      scopes.map((scope) => [scope.corpusId, "hybrid"]),
+    );
+    assert.deepEqual(
+      result.citations.map((citation) => citation.provenance.corpusId),
+      scopes.map((scope) => scope.corpusId),
+    );
+    for (let count = 1; count < scopes.length; count += 1) {
+      const subset = scopes.slice(0, count);
+      const page = await retrieveContext("policy", { embedder, store, scopes: subset, lexical: "fts", topK: 8 });
+      assert.deepEqual(
+        page.hits.map((hit) => hit.provenance.corpusId),
+        subset.map((scope) => scope.corpusId),
+      );
+      assert.ok(page.hits.every((hit) => hit.provenance.retrieval === "hybrid"));
+    }
+  });
+
+  it("drains a failed batch before rejecting and stops later scope batches on abort", async () => {
+    const embedder = createHashEmbedder({ dimensions: 8 });
+    const scopes = Array.from({ length: 8 }, (_, index) => ({ ...org, corpusId: `c${index}` }));
+    let active = 0;
+    const seen: string[] = [];
+    const failure = new Error("vector leg rejected");
+    const store: VectorStore = {
+      ...scopedStore({}).store,
+      async query({ threadId }) {
+        active += 1;
+        seen.push(threadId);
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          if (threadId === "c1") throw failure;
+          return [];
+        } finally {
+          active -= 1;
+        }
+      },
+    };
+    await assert.rejects(retrieveContext("policy", { embedder, store, scopes, lexical: "off" }), (error) => error === failure);
+    assert.equal(active, 0, "audit/finally runs after in-flight reads settle");
+    assert.deepEqual(seen, ["c0", "c1", "c2", "c3"]);
+
+    const controller = new AbortController();
+    seen.length = 0;
+    const aborting: VectorStore = {
+      ...store,
+      async query({ threadId, signal }) {
+        seen.push(threadId);
+        if (threadId === "c0") controller.abort();
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        assert.equal(signal, controller.signal);
+        return [];
+      },
+    };
+    await assert.rejects(
+      retrieveContext("policy", { embedder, store: aborting, scopes, lexical: "off", signal: controller.signal }),
+      RagAbortError,
+    );
+    assert.ok(seen.length <= 4, `abort started ${seen.length} reads`);
+  });
+
   it("returns empty without embed/search/rerank when scopes is empty", async () => {
     let embeds = 0;
     let queries = 0;

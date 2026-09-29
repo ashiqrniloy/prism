@@ -3,10 +3,11 @@
  * exports of core/server/ag-ui, never core internals, and validates its own
  * release posture (peer range, umbrella omission).
  */
+
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createPrismDevInspector, inspectDevInspector } from "../index.js";

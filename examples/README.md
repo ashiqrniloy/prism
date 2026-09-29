@@ -27,6 +27,8 @@ once (`npm run build:core`) you can run any demo directly:
 
 ```bash
 npm run build:core
+node examples/agent-sdk-coding.ts
+node examples/prism-code-headless.ts
 node examples/compaction.ts
 node examples/coding-compaction.ts
 node examples/cli.ts
@@ -106,6 +108,8 @@ Each demo prints a single JSON line with its result.
 
 ## Files
 
+- `agent-sdk-coding.ts` — **demo**: `@arnilo/prism-agent-sdk` assembly with `codingPreset`, mock provider, and session execution.
+- `prism-code-headless.ts` — **demo**: `@arnilo/prism-code` headless run with the mock provider, assembled tool inventory, and web mode.
 - `sdk-basics.ts` — createAgent / createAgentSession / mock provider.
 - `secure-agent.ts` — opt-in fail-closed agent composition with validation, trust/permission, redaction, limits, ownership, and durable approval.
 - `enterprise-identity.ts` — **demo**: verified `AgentIdentity`, `narrowIdentity`, and propagation guards (network-free).

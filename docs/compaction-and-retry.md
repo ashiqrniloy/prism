@@ -46,7 +46,7 @@ createDefaultCompactionStrategy(options?: DefaultCompactionStrategyOptions): Com
 | --- | --- |
 | `strategy` | Optional `CompactionStrategy`; defaults to `createDefaultCompactionStrategy()`. |
 | `thresholdEntries` | Enables auto-compaction when current branch entries exceed this count. Omit it for no auto-compaction. Ignored when `trigger` is set. |
-| `trigger` | Replaces `thresholdEntries`: `{ type: "threshold_entries", entries }`, `{ type: "input_ratio", ratio }` (compact when the estimated input is at least `ratio` of the compiler's resolved input cap), or `{ type: "custom", shouldCompact(context) }`. |
+| `trigger` | Replaces `thresholdEntries`: `{ type: "each_turn" }` (compact after each turn), `{ type: "threshold_tokens", tokens }` (compact when estimated input crosses token threshold), `{ type: "threshold_entries", entries }`, `{ type: "input_ratio", ratio }` (compact when estimated input is at least `ratio` of resolved input cap), or `{ type: "custom", shouldCompact(context) }`. |
 | `keepRecentEntries` | Number of recent message entries kept in provider context. |
 | `maxSummaryChars` | Maximum default summary length. |
 | `secrets` | Exact known secret strings to redact from summaries/events/store text. |
@@ -92,19 +92,26 @@ createDefaultRetryPolicy(options?: DefaultRetryPolicyOptions): RetryPolicy
 - `summary`: a conservative text summary of older user/assistant text, summary entries, model changes, labels, and tool-call/result labels.
 - `entries`: one `kind: "compaction"` session entry whose parent is the current branch leaf.
 
-`session.compact(options?)` emits `compaction_started`, runs the strategy on the current branch, runs `middleware.run("compaction", { context, result })` when middleware is configured, appends one standard `kind: "compaction"` entry under the current leaf, emits `compaction_finished`, and returns the appended result. Manual compaction rejects while a run is active.
+`session.compact(options?)` emits `compaction_started`, runs the strategy on the current branch, runs `middleware.run("compaction", { context, result })` when middleware is configured, appends one standard `kind: "compaction"` entry under the current leaf, emits `compaction_finished` (including `entriesCompacted`), and returns the appended result. Manual compaction rejects while a run is active.
 
-> **Contract — compact at the task boundary.** `session.compact()` throws `Error("Agent session already has an active run")` while `run()`/`stream()` is in flight. Intended model: one `run()` per task, then compact. Do not design mid-run compaction. Auto-compaction (when `thresholdEntries` is set) already runs **before** provider input, not during the turn. Live demo: [`examples/autonomous-coding-loop.ts`](../examples/autonomous-coding-loop.ts) (`compact` node after execute/validate/gate).
+### Between-turn auto-compaction (mid-run)
 
-Auto-compaction checks at most once per `run()`, after input/model-change entries are appended and before provider input assembly. It runs only when `AgentConfig.compaction` or `RunOptions.compaction` supplies `thresholdEntries` or `trigger`, and it is skipped by `RunOptions.compaction: false`.
+During multi-turn execution (e.g., iterative tool loops), auto-compaction evaluates before assembling each provider turn after the first (`turnIndex > 1`):
 
-`trigger` replaces the legacy gates and is asked once per run, with the would-be input already appended. All three forms are resolved by one helper (`resolveShouldCompact`), so `session`, observational memory, and host code share the same decision:
+- **Turn boundaries only:** Compaction executes after all tool results for a turn have been appended to the session store. It never runs between a tool call and its corresponding tool result, guaranteeing that assistant tool calls and their results are never split or orphaned.
+- **Trigger evaluation:** Triggers (`input_ratio`, `each_turn`, `threshold_tokens`, `threshold_entries`, or `custom`) are checked against the current branch state and token estimates.
+- **Store-backed history sync:** When compaction succeeds, the session updates its branch leaf and syncs the active loop history so the subsequent turn consumes the compacted history carrying summaries. Durable checkpoints seamlessly continue from the compacted branch.
+- **Resilience and fallback:** If mid-run compaction throws (e.g. summarizer provider rate limit or timeout), the engine catches the error, emits `compaction_failed` with the `ErrorInfo`, and continues the run uncompacted without crashing.
+
+`trigger` replaces the legacy gates and is resolved by `resolveShouldCompact`:
 
 | Trigger | Decides with | Notes |
 | --- | --- | --- |
+| `each_turn` | `turn !== undefined && entryCount > 0` | Fires after each provider turn in a multi-turn run; never fires at run start before turn 1. |
+| `threshold_tokens` | `estimatedInputTokens >= tokens` | Compacts when estimated input exceeds the specified token count. |
 | `threshold_entries` | `entryCount > entries` | Pure count, no token estimate. |
 | `input_ratio` | `estimatedInputTokens >= ratio * inputCapTokens` | The cap comes from `resolveInputCap` — the same helper `attentionCompiler` uses, which needs `maxInputTokens` or `model.limits.contextWindow`. An unresolvable cap is a config error and fails the run loudly. |
-| `custom` | `shouldCompact(context)` | Async-ok. `context` carries `sessionId`, `entryCount`, `estimatedInputTokens`, `inputCapTokens`, `metadata`, and `signal`; the two token numbers are resolved lazily, so a callback that only reads counts never needs a model cap. A callback that throws — including one that reads a cap that cannot resolve — decides **false** and never compacts on a guess. |
+| `custom` | `shouldCompact(context)` | Async-ok. `context` carries `sessionId`, `entryCount`, `turn`, `estimatedInputTokens`, `inputCapTokens`, `metadata`, and `signal`; the two token numbers are resolved lazily, so a callback that only reads counts never needs a model cap. A callback that throws — including one that reads a cap that cannot resolve — decides **false** and never compacts on a guess. |
 
 An unknown trigger `type` throws at first use (`assertCompactionTrigger`), so a typo never silently disables compaction. A branch whose last entry is already `kind: "compaction"` is skipped, so a fresh summary is never compacted again.
 

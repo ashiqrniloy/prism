@@ -64,6 +64,12 @@ export interface SessionStore {
 /** Host-written `SessionRecord.metadata` / session metadata key for workspace filtering. */
 export const SESSION_SEARCH_WORKSPACE_METADATA_KEY = "workspaceRoot" as const;
 
+/** Host-written session metadata key for the human-readable session title (first prompt or `/rename`). */
+export const SESSION_TITLE_METADATA_KEY = "title" as const;
+
+/** Maximum title length in characters a host should store under `SESSION_TITLE_METADATA_KEY`. */
+export const SESSION_TITLE_MAX_LENGTH = 80;
+
 export const DEFAULT_SESSION_SEARCH_LIMIT = 20;
 export const HARD_MAX_SESSION_SEARCH_LIMIT = 100;
 export const DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES = 4 * 1024;
@@ -120,6 +126,8 @@ export interface SessionSearchHit {
   /** Matched-entry relevance from the store's full-text index; higher is better (0 is a valid score). */
   readonly score?: number;
   readonly updatedAt?: string;
+  /** Count of message entries in the session; display-only, never the full transcript. */
+  readonly messageCount?: number;
   readonly label?: string;
   readonly summary?: string;
   readonly snippet?: string;

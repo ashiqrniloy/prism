@@ -4,25 +4,24 @@
 bring their tools, providers, credentials, storage, and UI; Prism supplies the
 common contracts, registries, agent/session runtime, replaceable input/prompt
 and compaction strategies, CLI/RPC adapters, and first-party provider/compaction
-packages. The current 0.4 line publishes the generated package inventory (see
-[Packages](#packages)) with explicit family subpaths and independent package versioning. Prism defines contracts, not apps.
+packages. The current 0.12.0 line publishes the manifest-derived package inventory (see
+[Packages](#packages)); family subpaths are imports, not packages to install. Prism defines contracts, not apps.
 
 ## Current scope
 
 - **Agent/session runtime**: `createAgent`/`createAgentSession`, run prompts,
   dispatch host tools, subscribe to normalized `AgentEvent` streams, abort runs,
   compact, and navigate branches.
-- **Field-level classification (0.2.7)**: `applyFieldPolicy` + the fail-closed protected default walk JSON-like values across prompt/tool/artifact/audit/telemetry/persistence/export boundaries with `allow`/`redact`/`tokenize`/`deny` decisions, explicit per-boundary `labelFor` hints, bounded traversal, and sparse-copy allocation; seams at the egress redaction functions, the audit-export redactor hook, and the OpenTelemetry attribute policy. See [docs/data-classification.md](docs/data-classification.md).
+- **Field-level classification**: `applyFieldPolicy` + the fail-closed protected default walk JSON-like values across prompt/tool/artifact/audit/telemetry/persistence/export boundaries with `allow`/`redact`/`tokenize`/`deny` decisions, explicit per-boundary `labelFor` hints, bounded traversal, and sparse-copy allocation; seams at the egress redaction functions, the audit-export redactor hook, and the OpenTelemetry attribute policy. See [docs/data-classification.md](docs/data-classification.md).
 - **Providers and models**: provider/model registries, provider event helpers,
   credential redaction helpers, mock provider, and an optional
   OpenAI-compatible provider subpath. Cache support is provider-specific:
   OpenAI/OpenRouter use best-effort explicit cache hints, NeuralWatt uses
   best-effort implicit prefix caching, and other providers have route/model-specific
   or no cache-control support; see [docs/provider-caching.md](docs/provider-caching.md).
-- **First-party packages**: nineteen provider adapter subpaths, two compaction strategies,
+- **First-party packages**: 22 provider adapter subpaths, two compaction strategies,
   coding tools/security, JSON Schema validation, MCP, workflows, OpenTelemetry,
-  encrypted credentials, SQLite/PostgreSQL persistence, Linux desktop control,
-  and manifest-only install profiles.
+  encrypted credentials, SQLite/PostgreSQL persistence, and Linux desktop control.
 - **Tools, context, skills**: host-owned tool registry with allow/deny filtering
   and dispatch, context providers, and a skill registry with progressive
   disclosure.
@@ -37,10 +36,10 @@ packages. The current 0.4 line publishes the generated package inventory (see
 - **Config, settings, security**: layered config merge, settings providers,
   credential resolvers, trust/permission policies, and secret redaction.
 - **CLI/RPC/server**: `prism --mode print|json|rpc`, `prism init`, optional framework-free authorized Web agent/workflow routes, and explicit MCP server exposure.
-- **Ecosystem parity (0.0.15)**: OpenAI hosted-tool attribution, bounded Responses
+- **Ecosystem parity**: OpenAI hosted-tool attribution, bounded Responses
   continuation/Realtime, exact AI SDK V4 mapping, bounded RAG lifecycle/reranking/trust,
   and consent-bound memory export/rebuild; provider, RAG, and memory packages remain optional.
-- **Co-work contracts (0.0.14)**: conversation/artifact review types, deny-by-default device
+- **Co-work contracts**: conversation/artifact review types, deny-by-default device
   contracts, and OAuth refresh/revoke helpers; services stay in optional packages.
 
 ## Install
@@ -49,19 +48,23 @@ packages. The current 0.4 line publishes the generated package inventory (see
 bun add @arnilo/prism
 ```
 
-First-party code packages are separate imports and require `@arnilo/prism` as
-a non-optional peer. Install atomic packages directly or choose a manifest-only
-family/profile; profiles install packages but expose no alias exports and activate nothing:
+First-party code packages require `@arnilo/prism` as a non-optional peer.
+Install the package that owns each capability; importing a subpath activates
+nothing until the host configures it:
 
 ```bash
-bun add @arnilo/prism @arnilo/prism-providers            # core + all provider adapters
-bun add @arnilo/prism @arnilo/prism-core @arnilo/prism-memory   # replaces prism-base
-bun add @arnilo/prism @arnilo/prism-coding-tools @arnilo/prism-mcp @arnilo/prism-providers  # replaces prism-code
-bun add @arnilo/prism @arnilo/prism-core @arnilo/prism-mcp @arnilo/prism-providers          # replaces prism-sdk
-bun add @arnilo/prism @arnilo/prism-core @arnilo/prism-providers  # pick families explicitly (no umbrella)
-bun add @arnilo/prism-core/runtime/server @arnilo/prism-core/runtime/workflows    # optional Web API boundary
-bun add @arnilo/prism-core/runtime/supervisor                         # optional local delegation + A2A 1.0
-bun add @arnilo/prism-web-tools                          # unified web tools family (root search + /browser + /obscura subpaths)
+bun add @arnilo/prism @arnilo/prism-providers                 # provider adapters
+bun add @arnilo/prism @arnilo/prism-core @arnilo/prism-memory # persistence and memory
+bun add @arnilo/prism @arnilo/prism-agent-sdk                 # configurable agent SDK
+bun add @arnilo/prism @arnilo/prism-core @arnilo/prism-coding-tools @arnilo/prism-mcp
+bun add @arnilo/prism @arnilo/prism-web-tools                 # web research and browser subpaths
+```
+
+Use subpaths only in imports, after installing their owning package:
+
+```ts
+import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
+import { createOpenAIProviderPackage } from "@arnilo/prism-providers/openai";
 ```
 
 See [docs/release-and-install.md](docs/release-and-install.md) for install
@@ -158,7 +161,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 ## Packages
 
 <!-- generated:package-truth:inventory begin -->
-**12 publishable manifests** — root `@arnilo/prism` plus 11 workspace packages (4 `prism-*` family packages, 7 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
+**14 publishable manifests** — root `@arnilo/prism` plus 13 workspace packages (4 `prism-*` family packages, 9 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
 
 | package | version | notes |
 | --- | --- | --- |
@@ -169,6 +172,8 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-providers` | 0.12.0 | family — all provider adapters as `/<adapter>` subpaths |
 | `@arnilo/prism-acp-agent` | 0.12.0 | capability — ACP adapter |
 | `@arnilo/prism-ag-ui` | 0.12.0 | capability — AG-UI/A2A/A2UI adapter |
+| `@arnilo/prism-agent-sdk` | 0.1.0 | capability — configurable agent runtime assembly over tool planes, skills, instructions, MCP, and hooks |
+| `@arnilo/prism-code` | 0.4.0 | capability — terminal coding agent app: TUI, headless print/json, and ACP surfaces with bundled coding tools, repo sessions, observational memory, and optional web/wiki planes |
 | `@arnilo/prism-hooks` | 0.12.0 | capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams |
 | `@arnilo/prism-mcp` | 0.12.0 | capability — MCP client/server/OAuth interop |
 | `@arnilo/prism-memory` | 0.12.0 | capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths |
@@ -184,7 +189,6 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `bun run build` | Compile TypeScript to `dist/` (core + workspaces) |
 | `bun run typecheck` | Type-check without emitting |
 | `bun run test` | Build + run network-free tests (`npm test` still works) |
-| `bun run test:coverage` | Coverage gate: `bun test --coverage` over the core suite and every gated workspace, with Bun-measured floors (`scripts/coverage-thresholds.json`) |
 | `bun run test:coverage` | Coverage gate: `bun test --coverage` over the core suite and every gated workspace, with Bun-measured floors (`scripts/coverage-thresholds.json`) |
 | `bun run test:live` | Run live suites whose credentials are present (skip the rest) |
 | `prism --help` | CLI help |

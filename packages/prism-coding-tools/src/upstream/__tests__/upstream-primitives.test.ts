@@ -5,11 +5,12 @@
  * Caveman and Ponytail were removed (plan 107 Task 2); the surviving heavyweight
  * persona suite is `impeccable/__tests__/`. These cases cover the shared module directly.
  */
+
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "bun:test";
 
 import { redactPaths as impeccableRedactPaths, UpstreamResolveError as impeccableUpstreamResolveError } from "../../impeccable/upstream.js";
 import { MAX_SKILL_FILE_BYTES, readBoundedFile, redactPaths, UpstreamResolveError } from "../index.js";

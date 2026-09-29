@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { test } from "bun:test";
+import assert from "node:assert/strict";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, truncateHead, truncateLine, truncateTail } from "../truncate.js";
 
 test("formatSize: B / KB / MB boundaries", () => {

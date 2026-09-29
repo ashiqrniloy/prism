@@ -153,4 +153,48 @@ describe("skill load", () => {
     );
     assert.equal(text, "Skill brief:\nLong body.");
   });
+
+  it("load_skill success text includes directory when path is present and stays <= 512 bytes", async () => {
+    const registry = createSkillRegistry([
+      { name: "with-path", description: "Has path.", instructions: "Body.", path: "/repo/skills/with-path/SKILL.md" },
+    ]);
+    const loaded = createLoadedSkillSet();
+    const loadSkill = createLoadSkillTool({ registry, loaded, tools: [] });
+    const result = await dispatchToolCall({
+      call: toolCallContent("call_p", "load_skill", { name: "with-path" }),
+      registry: createToolRegistry([loadSkill]),
+      context: {
+        sessionId: "s1",
+        runId: "r1",
+        toolCallId: "call_p",
+        metadata: { loadedSkills: loaded, activeSkillNames: ["with-path"], activeTools: [] },
+      },
+    });
+    const val = result.value as { ok: boolean; name: string; text: string };
+    assert.equal(val.ok, true);
+    assert.equal(val.text, "Loaded skill with-path for this session. Skill directory: /repo/skills/with-path");
+    assert.ok(Buffer.byteLength(val.text, "utf8") <= 512);
+
+    // Also test with a very long path that gets capped at 512 bytes
+    const longDir = "/very/long/".repeat(60);
+    const registryLong = createSkillRegistry([
+      { name: "long-path", description: "Long.", instructions: "Body.", path: `${longDir}SKILL.md` },
+    ]);
+    const loadedLong = createLoadedSkillSet();
+    const loadSkillLong = createLoadSkillTool({ registry: registryLong, loaded: loadedLong, tools: [] });
+    const resultLong = await dispatchToolCall({
+      call: toolCallContent("call_long", "load_skill", { name: "long-path" }),
+      registry: createToolRegistry([loadSkillLong]),
+      context: {
+        sessionId: "s1",
+        runId: "r1",
+        toolCallId: "call_long",
+        metadata: { loadedSkills: loadedLong, activeSkillNames: ["long-path"], activeTools: [] },
+      },
+    });
+    const valLong = resultLong.value as { ok: boolean; name: string; text: string };
+    assert.equal(valLong.ok, true);
+    assert.ok(valLong.text.includes("Skill directory:"));
+    assert.ok(Buffer.byteLength(valLong.text, "utf8") <= 512);
+  });
 });

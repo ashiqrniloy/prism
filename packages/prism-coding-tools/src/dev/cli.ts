@@ -142,9 +142,11 @@ export async function runDevCli(argv: ReadonlyArray<string>, runtime: Partial<De
   });
 }
 
-/** Direct-bin entry point (the `prism-dev` command). */
-const invokedDirectly = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (invokedDirectly) {
+/**
+ * Direct-bin entry point (the `prism-dev` command). `import.meta.main` rather than comparing
+ * `import.meta.url` with argv[1]: a `bun build --compile` bundle gives every module the binary's URL.
+ */
+if (import.meta.main) {
   runDevCli(process.argv.slice(2)).then(
     (code) => {
       process.exitCode = code;

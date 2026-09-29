@@ -18,8 +18,20 @@ scripts/unused-report.json
 scripts/live.env
 *.local.env
 
+# operator-supplied local secrets (plan 140 Task 6); never commit
+/.local/
+
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
 
 # binary lockfile — never commit if saveTextLockfile is flipped (plan 113)
 bun.lockb
+
+# plan 140 Task 3: prism-code standalone binaries
+dist-bin/
+
+# local runtime state and agent config (never part of a release)
+/.prism/
+/.claude/
+/laya-amd-setup.md
+/163-prism-feature-request.md

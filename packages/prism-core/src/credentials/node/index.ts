@@ -16,6 +16,8 @@ export {
   isCredentialStoreUnavailableError,
   WeakKdfParametersError,
 } from "./errors.js";
+export type { FileCredentialStore, FileCredentialStoreLimits, FileCredentialStoreOptions } from "./file-store.js";
+export { createFileCredentialStore } from "./file-store.js";
 export {
   createGoogleWorkspaceOAuthProvider,
   GOOGLE_WORKSPACE_BASE_SCOPES,
@@ -24,8 +26,8 @@ export {
   type GoogleWorkspaceOAuthOptions,
   resolveGoogleWorkspaceScopes,
 } from "./google-workspace-oauth.js";
-export type { KeychainCredentialStore } from "./keychain-store.js";
-export { createKeychainCredentialStore } from "./keychain-store.js";
+export type { KeychainCredentialStore, KeychainProbeOptions, KeychainProbeResult } from "./keychain-store.js";
+export { createKeychainCredentialStore, KEYCHAIN_PROBE_ACCOUNT, probeKeychainAvailability } from "./keychain-store.js";
 export type { HostKms, HostKmsCryptoOptions, KmsEnvelope } from "./kms.js";
 export {
   createMemoryHostKms,

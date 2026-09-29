@@ -75,6 +75,15 @@
       "@arnilo/prism-ag-ui": [
         "./packages/ag-ui/src/index.ts"
       ],
+      "@arnilo/prism-ag-ui/acp": [
+        "./packages/ag-ui/src/acp/index.ts"
+      ],
+      "@arnilo/prism-code": [
+        "./packages/prism-code/src/index.ts"
+      ],
+      "@arnilo/prism-core/sessions/sqlite": [
+        "./packages/prism-core/src/sessions/sqlite/index.ts"
+      ],
       "@arnilo/prism-supervisor": [
         "./packages/supervisor/src/index.ts"
       ],
@@ -125,6 +134,9 @@
       ],
       "@arnilo/prism-hooks": [
         "./packages/hooks/src/index.ts"
+      ],
+      "@arnilo/prism-agent-sdk": [
+        "./packages/agent-sdk/src/index.ts"
       ]
     }
   },

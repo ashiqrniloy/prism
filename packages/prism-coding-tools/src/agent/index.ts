@@ -384,6 +384,38 @@ export { createWorktreeChildFactory } from "./spawn-worktree.js";
 export type { ObserveSupervisorLifecycleOptions } from "./supervisor-lifecycle.js";
 export { observeSupervisorLifecycle } from "./supervisor-lifecycle.js";
 export type {
+  TodoContinuationStopHook,
+  TodoContinuationStopHookOptions,
+  TodoItem,
+  TodoListMetadata,
+  TodoNoProgressStopInfo,
+  TodoStatus,
+  TodoWriteToolOptions,
+} from "./todo.js";
+export {
+  createTodoContinuationStopHook,
+  createTodoWriteTool,
+  DEFAULT_MAX_TODO_CONTENT_BYTES,
+  DEFAULT_MAX_TODO_ID_BYTES,
+  DEFAULT_MAX_TODO_ITEMS,
+  DEFAULT_MAX_TODO_NO_PROGRESS,
+  DEFAULT_MAX_TODO_STEER_BYTES,
+  DEFAULT_MAX_TODO_STEER_ITEMS,
+  formatTodoList,
+  HARD_MAX_TODO_CONTENT_BYTES,
+  HARD_MAX_TODO_ID_BYTES,
+  HARD_MAX_TODO_ITEMS,
+  HARD_MAX_TODO_NO_PROGRESS,
+  HARD_MAX_TODO_STEER_BYTES,
+  HARD_MAX_TODO_STEER_ITEMS,
+  latestTodoList,
+  parseTodoListMetadata,
+  parseTodoWriteArgs,
+  TODO_STATUSES,
+  TODO_WRITE_TOOL_NAME,
+  todoPinnedEntryIds,
+} from "./todo.js";
+export type {
   CodingWorkspaceLifecycle,
   CodingWorkspaceRecord,
   CreateCodingWorkspaceLifecycleOptions,

@@ -313,6 +313,8 @@ export {
   SESSION_METADATA_CONFLICT_CODE,
   SESSION_SEARCH_UNSUPPORTED_CODE,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
+  SESSION_TITLE_MAX_LENGTH,
+  SESSION_TITLE_METADATA_KEY,
   SessionAppendConflictError,
   SessionMetadataConflictError,
   SessionSearchUnsupportedError,
@@ -757,6 +759,7 @@ export type {
   ToolResultFoldOptions,
 } from "./tool-result-fold.js";
 export {
+  capToolResultSummary,
   DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES,
   DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS,
   DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES,

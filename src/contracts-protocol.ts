@@ -373,7 +373,19 @@ type AgentEventPayload =
       readonly overflow: SubscriberOverflowPolicy;
     }
   | { readonly type: "compaction_started"; readonly sessionId: string; readonly runId?: string }
-  | { readonly type: "compaction_finished"; readonly sessionId: string; readonly runId?: string; readonly summary: string }
+  | {
+      readonly type: "compaction_finished";
+      readonly sessionId: string;
+      readonly runId?: string;
+      readonly summary: string;
+      readonly entriesCompacted?: number;
+    }
+  | {
+      readonly type: "compaction_failed";
+      readonly sessionId: string;
+      readonly runId?: string;
+      readonly error: ErrorInfo;
+    }
   | {
       /** One attention-compiler mutation (plan 074 R15/T6): measured counts only, never message text. */
       readonly type: "attention_compiled";
@@ -496,6 +508,8 @@ export interface ToolRegistry {
   get(name: string): ToolDefinition | undefined;
   resolve(name: string): ToolDefinition;
   list(): readonly ToolDefinition[];
+  /** Removes a tool by name. Optional for host-supplied registries; returns whether it existed. */
+  unregister?(name: string): boolean;
 }
 
 export interface ToolExecutionContext {

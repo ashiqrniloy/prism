@@ -3,8 +3,8 @@
 // across a real re-open. Gated by test:postgres (skips without
 // PRISM_TEST_POSTGRES_URL).
 
-import { randomUUID } from "node:crypto";
 import { afterAll as after, describe, it } from "bun:test";
+import { randomUUID } from "node:crypto";
 import { assertStateConcurrencyConforms } from "@arnilo/prism/testing/state-concurrency-conformance";
 import { Pool } from "pg";
 import { createPostgresPersistence } from "../persistence.js";

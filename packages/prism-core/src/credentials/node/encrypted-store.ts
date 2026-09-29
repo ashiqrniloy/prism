@@ -42,9 +42,12 @@ export interface EncryptedCredentialStore extends StoredCredentialStore {
 async function resolvePassphrase(getPassphrase: () => string | Promise<string>): Promise<string> {
   try {
     const passphrase = await getPassphrase();
-    if (typeof passphrase !== "string") throw new Error();
+    if (typeof passphrase !== "string")
+      throw new CredentialStoreError("credential_passphrase_failed", "Credential passphrase retrieval failed");
     return passphrase;
-  } catch {
+  } catch (error) {
+    // Our own errors carry actionable, secret-free messages (e.g. the missing env var name).
+    if (error instanceof CredentialStoreError) throw error;
     throw new CredentialStoreError("credential_passphrase_failed", "Credential passphrase retrieval failed");
   }
 }

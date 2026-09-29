@@ -58,6 +58,30 @@ export async function runKeychainOperation<T>(operation: (signal: AbortSignal) =
   }
 }
 
+export interface KeychainProbeOptions {
+  readonly service: string;
+  readonly timeoutMs?: number;
+}
+
+export type KeychainProbeResult = { readonly status: "available" } | { readonly status: "unavailable"; readonly message: string };
+
+/** Sentinel account read by the probe; never written to. */
+export const KEYCHAIN_PROBE_ACCOUNT = "__prism_keychain_probe__";
+
+/**
+ * One read of a sentinel entry: proves the backend accepts lookups without writing a secret.
+ * Never throws; a locked/unavailable/timing-out backend reports `unavailable`.
+ */
+export async function probeKeychainAvailability(options: KeychainProbeOptions): Promise<KeychainProbeResult> {
+  const timeoutMs = validateCredentialLimit("timeoutMs", options.timeoutMs ?? DEFAULT_KEYCHAIN_TIMEOUT_MS, HARD_KEYCHAIN_TIMEOUT_MS);
+  try {
+    await runKeychainOperation((signal) => new AsyncEntry(options.service, KEYCHAIN_PROBE_ACCOUNT).getSecret(signal), timeoutMs);
+    return { status: "available" };
+  } catch (error) {
+    return { status: "unavailable", message: error instanceof Error ? error.message : "keychain probe failed" };
+  }
+}
+
 export interface KeychainCredentialStore extends StoredCredentialStore {
   readonly service: string;
   readonly namespace?: string;

@@ -1,0 +1,333 @@
+AMBIGUOUS_PATH_PATTERN	export declare const AMBIGUOUS_PATH_PATTERN: RegExp
+ATTACHMENT_MARKER	export declare const ATTACHMENT_MARKER = "[attached file: "
+ApprovalPromptComponent	export declare class ApprovalPromptComponent
+BUNDLED_CODING_TOOLS	export declare const BUNDLED_CODING_TOOLS: readonly BundledToolDescriptor[]
+CODING_SYSTEM_PROMPT	export declare const CODING_SYSTEM_PROMPT = "You are Prism Code, an expert autonomous software engineering agent. You help users design, build, refactor, and debug software systems.\n\n## Tool-Use Conventions\n- Read before edit: Always inspect relevant files, types, and dependencies before modifying code. Never guess existing structure or APIs.\n- Prefer edit over write: Use `edit` for targeted modifications to existing files. Only use `write` when creating new files or completely replacing fil
+COMPLETION_LIMIT	export declare const COMPLETION_LIMIT = 8
+CONTEXT_DANGER_COLOR	export declare const CONTEXT_DANGER_COLOR = "#f87171"
+CONTEXT_DANGER_RATIO	export declare const CONTEXT_DANGER_RATIO = 0.9
+CONTEXT_WARN_COLOR	export declare const CONTEXT_WARN_COLOR = "#fbbf24"
+CONTEXT_WARN_RATIO	export declare const CONTEXT_WARN_RATIO = 0.7
+CORE_CODING_TOOL_NAMES	export declare const CORE_CODING_TOOL_NAMES: Set<string>
+CORE_SLASH_COMMANDS	export declare const CORE_SLASH_COMMANDS: readonly SlashCommandInfo[]
+DEFAULT_EFFORT_LEVELS	export declare const DEFAULT_EFFORT_LEVELS: readonly ["none", "low", "medium", "high", "max"]
+DEFAULT_MAX_ENTRIES	export declare const DEFAULT_MAX_ENTRIES = 500
+GIT_TOOL_NAMES	export declare const GIT_TOOL_NAMES: Set<string>
+InputEditorComponent	export declare class InputEditorComponent
+KNOWN_LIMITS_KEYS	export declare const KNOWN_LIMITS_KEYS: Set<string>
+MAX_ATTACHMENT_BYTES	export declare const MAX_ATTACHMENT_BYTES: number
+MAX_EXPANDED_OUTPUT_LINES	export declare const MAX_EXPANDED_OUTPUT_LINES = 2000
+MAX_MCP_SERVERS	export declare const MAX_MCP_SERVERS = 128
+MAX_TOOL_OUTPUT_BYTES	export declare const MAX_TOOL_OUTPUT_BYTES: number
+MAX_TOOL_PATCH_BYTES	export declare const MAX_TOOL_PATCH_BYTES: number
+MAX_URL_LENGTH	export declare const MAX_URL_LENGTH = 2048
+MCP_OAUTH_REDIRECT_URI	export declare const MCP_OAUTH_REDIRECT_URI = "http://127.0.0.1:1456/oauth/callback"
+MCP_OAUTH_REDIRECT_URI_ENV	export declare const MCP_OAUTH_REDIRECT_URI_ENV = "PRISM_MCP_OAUTH_REDIRECT_URI"
+MarkdownMessageComponent	export declare class MarkdownMessageComponent
+MemoryStoredCredentialStore	export declare class MemoryStoredCredentialStore implements StoredCredentialStore
+MessageStreamComponent	export declare class MessageStreamComponent
+NO_INTERACTIVE_ASK_USER_MESSAGE	export declare const NO_INTERACTIVE_ASK_USER_MESSAGE = "no interactive user available
+OAUTH_REFRESH_SKEW_MS	export declare const OAUTH_REFRESH_SKEW_MS = 60000
+ObservationalMemoryCoordinator	export declare class ObservationalMemoryCoordinator
+PERMISSIONS_FILE_NAME	export declare const PERMISSIONS_FILE_NAME = "permissions.json"
+PRISM_CODE_APPROVAL_MODES	export declare const PRISM_CODE_APPROVAL_MODES: readonly PrismCodeApprovalMode[]
+PRISM_CODE_DEFAULT_COMPACTION_RATIO	export declare const PRISM_CODE_DEFAULT_COMPACTION_RATIO = 0.8
+PRISM_CODE_DEFAULT_COMPACTION_TOKENS	export declare const PRISM_CODE_DEFAULT_COMPACTION_TOKENS = 20000
+PRISM_CODE_DEFAULT_KEEP_RECENT_ENTRIES	export declare const PRISM_CODE_DEFAULT_KEEP_RECENT_ENTRIES = 8
+PRISM_CODE_DEFAULT_KEEP_RECENT_TOKENS	export declare const PRISM_CODE_DEFAULT_KEEP_RECENT_TOKENS = 20000
+PRISM_CODE_DEFAULT_LIMITS	export declare const PRISM_CODE_DEFAULT_LIMITS: RunLimits
+PRISM_CODE_DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const PRISM_CODE_DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 512
+PRISM_CODE_DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS	export declare const PRISM_CODE_DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS = 2
+PRISM_CODE_DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES	export declare const PRISM_CODE_DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES = 4096
+PRISM_CODE_KEYCHAIN_SERVICE	export declare const PRISM_CODE_KEYCHAIN_SERVICE = "prism-code"
+PRISM_CREDENTIALS_PASSPHRASE_ENV	export declare const PRISM_CREDENTIALS_PASSPHRASE_ENV = "PRISM_CREDENTIALS_PASSPHRASE"
+PROMPT_HISTORY_LIMIT	export declare const PROMPT_HISTORY_LIMIT = 500
+PROVIDER_ENV_VARS	export declare const PROVIDER_ENV_VARS: Readonly<Record<string, readonly string[]>>
+PickerComponent	export declare class PickerComponent
+PrismCodeConfigError	export declare class PrismCodeConfigError extends Error
+PrismCodeCredentialManager	export declare class PrismCodeCredentialManager
+PrismCodeExecutionError	export declare class PrismCodeExecutionError extends Error
+PrismCodeModuleError	export declare class PrismCodeModuleError extends Error
+PrismCodeTui	export declare class PrismCodeTui implements CodeUi
+SHIPPED_PROVIDERS	export declare const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[]
+SecretInputComponent	export declare class SecretInputComponent
+StatusFooterComponent	export declare class StatusFooterComponent
+TUI_KEYBINDINGS	export declare const TUI_KEYBINDINGS: readonly TuiKeyBinding[]
+TodoPanelComponent	export declare class TodoPanelComponent
+ToolCardComponent	export declare class ToolCardComponent
+UNKNOWN_MODEL_LIMITS	export declare const UNKNOWN_MODEL_LIMITS: Readonly<
+UiFooterStatus	export type { UiFooterStatus, UiStreamEntry } from "./reducer.js"
+UiStreamEntry	export type { UiFooterStatus, UiStreamEntry } from "./reducer.js"
+UnavailableStoredCredentialStore	export declare class UnavailableStoredCredentialStore implements StoredCredentialStore
+appendPromptHistory	export declare function appendPromptHistory(cwd: string, text: string, options?:
+applyFlagOverlay	export declare function applyFlagOverlay(config: PrismCodeConfig, flags: CliFlags): PrismCodeConfig
+assembleAppAgent	export declare function assembleAppAgent(config: PrismCodeConfig, overrideProvider?: AIProvider, executionPolicy?: ExecutionPolicy, omCoordinator?: ObservationalMemoryCoordinator, credentialManager?: PrismCodeCredentialManager, providerCache?: ProviderCache, trust?: TrustPolicy, hostBindings?: AppHostBindings): Promise<AgentSdkDefinition>
+autoDetectProvider	export declare function autoDetectProvider(credentialManager: PrismCodeCredentialManager): Promise<ModelConfig | undefined>
+boundToolOutput	export declare function boundToolOutput(output: string): string
+buildFileIndex	export declare function buildFileIndex(paths: readonly string[]): FileIndexEntry[]
+buildPromptInput	export declare function buildPromptInput(text: string, cwd: string): PromptInputResult
+collapsedOutputText	export declare function collapsedOutputText(output: string): string
+collapsedThinkingText	export declare function collapsedThinkingText(text: string): string
+commandPrefix	export declare function commandPrefix(command: string): string
+compactSession	export declare function compactSession(options: CompactSessionOptions): Promise<CompactionResult>
+completionContext	export declare function completionContext(text: string, cursor: number): CompletionContext | undefined
+createCostTurnPolicy	export declare function createCostTurnPolicy(maxCost?:
+createDiffRenderable	export declare function createDiffRenderable(renderer: RenderContext, patch: string, syntaxStyle?: SyntaxStyle): DiffRenderable
+createEnvironmentContextProvider	export declare function createEnvironmentContextProvider(options: EnvironmentContextProviderOptions): ContextProvider
+createInitialTuiState	export declare function createInitialTuiState(initial?:
+createMcpAuthOptions	export declare function createMcpAuthOptions(server: Pick<PrismCodeMcpServer, "serverId" | "url">, options:
+createMcpAuthState	export declare function createMcpAuthState(credentials: PrismCodeCredentialManager, serverId: string): McpClientAuthState
+createOAuthTokenSource	export declare function createOAuthTokenSource(providerId: string, oauthProvider: OAuthProvider, credentials: PrismCodeCredentialManager, options?:
+createPrismCodeAcpAgent	export declare function createPrismCodeAcpAgent(options: CreatePrismCodeAcpAgentOptions): Promise<AgentApp>
+createPrismCodeApprovalPolicy	export declare function createPrismCodeApprovalPolicy(options: PrismCodeApprovalOptions): PrismCodeApprovalController
+createPrismCodeTui	export declare function createPrismCodeTui(options?: PrismCodeTuiOptions): PrismCodeTui
+createPrismSyntaxStyle	export declare function createPrismSyntaxStyle(): SyntaxStyle
+createProviderCache	export declare function createProviderCache(options?: ProviderResolutionOptions): ProviderCache
+createSkillCommands	export declare function createSkillCommands(config: PrismCodeConfig): readonly CommandDefinition[]
+createWikiFetchHook	export declare function createWikiFetchHook(webTools: readonly ToolDefinition[]): ((input: WikiIngestUrlHookInput) => Promise<WikiIngestFetch | null>) | undefined
+cycleThinkingLevel	export declare function cycleThinkingLevel(model: Pick<ModelConfig, "capabilities">, currentEffort: string): string
+defaultModelForProvider	export declare function defaultModelForProvider(providerId: string): Promise<ModelConfig | undefined>
+deriveSessionTitle	export declare function deriveSessionTitle(prompt: string): string | undefined
+describeProviderCredentialStatus	export declare function describeProviderCredentialStatus(descriptor: ShippedProviderDescriptor, credentials: PrismCodeCredentialManager, env?: NodeJS.ProcessEnv): Promise<ProviderCredentialStatus>
+detectGitBranch	export declare function detectGitBranch(cwd: string): string | undefined
+detectGitDirty	export declare function detectGitDirty(repoRoot: string): boolean
+doctorReportToJson	export declare function doctorReportToJson(report: DoctorReport): string
+effortForRun	export declare function effortForRun(effort: string): string | undefined
+enrichModelConfig	export declare function enrichModelConfig(model: ModelConfig): Promise<ModelEnrichment>
+ensureDurableSessionRecord	export declare function ensureDurableSessionRecord(store: SessionStore, sessionId: string, workspaceRoot: string, options?:
+ensureHomeDir	export declare function ensureHomeDir(home?: string): string
+entriesToUiEntries	export declare function entriesToUiEntries(entries: readonly SessionEntry[], maxEntries?: number): readonly UiStreamEntry[]
+executeClearCommand	export declare function executeClearCommand(context: CommandContext): Promise<SlashCommandResult>
+executeCompactCommand	export declare function executeCompactCommand(context: CommandContext): Promise<SlashCommandResult>
+executeExitCommand	export declare function executeExitCommand(context: CommandContext): SlashCommandResult
+executeExportCommand	export declare function executeExportCommand(context: CommandContext, rawPath: string | undefined): Promise<SlashCommandResult>
+executeLogoutCommand	export declare function executeLogoutCommand(context: CommandContext, providerArg?: string): Promise<SlashCommandResult>
+executeMcpCommand	export declare function executeMcpCommand(context: CommandContext, args: readonly string[]): Promise<SlashCommandResult>
+executeModelCommand	export declare function executeModelCommand(context: CommandContext): Promise<SlashCommandResult>
+executeNewSessionCommand	export declare function executeNewSessionCommand(context: CommandContext): Promise<SlashCommandResult>
+executeOmModelCommand	export declare function executeOmModelCommand(context: CommandContext): Promise<SlashCommandResult>
+executeOmStatusCommand	export declare function executeOmStatusCommand(context: CommandContext): Promise<SlashCommandResult>
+executeOmToggleCommand	export declare function executeOmToggleCommand(context: CommandContext): Promise<SlashCommandResult>
+executeOmViewCommand	export declare function executeOmViewCommand(context: CommandContext, mode?: string): Promise<SlashCommandResult>
+executeProviderCommand	export declare function executeProviderCommand(context: CommandContext): Promise<SlashCommandResult>
+executeRenameCommand	export declare function executeRenameCommand(context: CommandContext, rawTitle: string | undefined): Promise<SlashCommandResult>
+executeResumeSessionCommand	export declare function executeResumeSessionCommand(context: CommandContext): Promise<SlashCommandResult>
+executeToolsCommand	export declare function executeToolsCommand(context: CommandContext): SlashCommandResult
+expandedOutputText	export declare function expandedOutputText(output: string): string
+expandedThinkingText	export declare function expandedThinkingText(text: string): string
+filterCompletionItems	export declare function filterCompletionItems<T extends CompletionItem>(items: readonly T[], query: string, limit?: number): T[]
+filterFileIndex	export declare function filterFileIndex(entries: readonly FileIndexEntry[], query: string, limit?: number): FileIndexEntry[]
+findRepoRoot	export declare function findRepoRoot(cwd: string): string
+footerDetailSegments	export declare function footerDetailSegments(mcp: McpFooterStatus, meter?: FooterUsageMeter, omStatus?: string, modelNotice?: string, width?: number): FooterDetailSegment[]
+formatDoctorTable	export declare function formatDoctorTable(report: DoctorReport): string
+formatFooterDetails	export declare function formatFooterDetails(mcp: McpFooterStatus, meter?: FooterUsageMeter, omStatus?: string, modelNotice?: string, width?: number): string
+formatFooterLeft	export declare function formatFooterLeft(repoPath?: string, branch?: string, width?: number): string
+formatFooterRight	export declare function formatFooterRight(model: string, effort: string, approval?: PrismCodeApprovalMode, width?: number): string
+formatHelpText	export declare function formatHelpText(extensionCommands: readonly SlashCommandInfo[]): string
+formatMcpStatus	export declare function formatMcpStatus(mcp: McpFooterStatus): string
+formatProviderCredentialStatus	export declare function formatProviderCredentialStatus(status: ProviderCredentialStatus): string
+formatRelativeTime	export declare function formatRelativeTime(value: string | undefined, now?: number): string
+formatSessionMarkdown	export declare function formatSessionMarkdown(sessionId: string, cwd: string, entries: readonly SessionEntry[]): string
+formatSessionOption	export declare function formatSessionOption(hit: SessionSearchHit, currentSessionId?: string, secrets?: readonly string[]):
+formatSkillsList	export declare function formatSkillsList(skills: readonly SkillDetail[]): string
+formatTodoPanel	export declare function formatTodoPanel(todos: readonly TodoItem[], width?: number): string
+formatTokenCount	export declare function formatTokenCount(value: number): string
+formatTokenTotals	export declare function formatTokenTotals(usage?: Usage): string | undefined
+formatToolInventory	export declare function formatToolInventory(context: CommandContext): string
+formatUsageCost	export declare function formatUsageCost(usage?: Usage): string | undefined
+fuzzyScore	export declare function fuzzyScore(query: string, target: string): number | null
+getCanonicalWorkspaceRoot	export declare function getCanonicalWorkspaceRoot(cwd: string): string
+getModelThinkingLevels	export declare function getModelThinkingLevels(model: Pick<ModelConfig, "capabilities">): readonly string[] | undefined
+getShippedProvider	export declare function getShippedProvider(id: string): ShippedProviderDescriptor | undefined
+getStaticModelsForProvider	export declare function getStaticModelsForProvider(providerId: string): Promise<readonly ModelConfig[]>
+handleSlashCommand	export declare function handleSlashCommand(commandText: string, context: CommandContext): Promise<SlashCommandResult>
+hasUsableProvider	export declare function hasUsableProvider(config:
+importToolModule	export declare function importToolModule(specifier: string, baseDir: string, options?: ToolModuleLoadOptions): Promise<ToolDefinition[]>
+inspectSkills	export declare function inspectSkills(config: PrismCodeConfig, options?: InspectSkillsOptions): Promise<readonly SkillDetail[]>
+isMcpServerTrusted	export declare function isMcpServerTrusted(trust: McpTrustFile, workspaceRoot: string, server: PrismCodeMcpServer): boolean
+isUserOwned	export declare function isUserOwned(dir: string): boolean
+legacySessionDbNotice	export declare function legacySessionDbNotice(config: PrismCodeConfig, home?: string): string | undefined
+listModelsForProvider	export declare function listModelsForProvider(providerId: string, options: ListModelsOptions): Promise<readonly DiscoveredModelInfo[]>
+loadPermissionRules	export declare function loadPermissionRules(home: string, repo: string): readonly PrismCodePermissionRule[]
+loadPrismCodeConfig	export declare function loadPrismCodeConfig(path: string): PrismCodeConfig
+loadPrismCodeConfigLayer	export declare function loadPrismCodeConfigLayer(path: string): PrismCodeConfigLayer
+loadPromptHistory	export declare function loadPromptHistory(cwd: string, options?:
+loadReplacementToolModules	export declare function loadReplacementToolModules(replacements: Readonly<Record<string, string>>, baseDir: string, options?: ToolModuleLoadOptions): Promise<Record<string, ToolDefinition>>
+loadRepoFileIndex	export declare function loadRepoFileIndex(cwd: string): FileIndexEntry[]
+loadToolModules	export declare function loadToolModules(specifiers: readonly string[], baseDir: string, options?: ToolModuleLoadOptions): Promise<ToolDefinition[]>
+logoutProvider	export declare function logoutProvider(providerId: string, credentials: PrismCodeCredentialManager, oauthProvider?: OAuthProvider): Promise<LogoutResult>
+mcpOAuthRedirectUri	export declare function mcpOAuthRedirectUri(env?: NodeJS.ProcessEnv): string
+mcpServerFingerprint	export declare function mcpServerFingerprint(server: PrismCodeMcpServer): string
+mcpServerOrigins	export declare function mcpServerOrigins(layers: readonly
+mcpTrustPath	export declare function mcpTrustPath(home?: string): string
+mergePrismCodeConfigLayers	export declare function mergePrismCodeConfigLayers(layers: readonly PrismCodeConfigLayer[], defaultCwd?: string): PrismCodeConfig
+parseAllowDestination	export declare function parseAllowDestination(entry: string): ParsedAllowDestination | null
+parseAtMentions	export declare function parseAtMentions(text: string): string[]
+parseCommandArgs	export declare function parseCommandArgs(parts: readonly string[]): JsonObject
+parseFlags	export declare function parseFlags(argv: readonly string[]): CliFlags
+parseMcpHeaderReference	export declare function parseMcpHeaderReference(value: string): McpHeaderReference
+parseOAuthExpiry	export declare function parseOAuthExpiry(expires: string | number | undefined): number | undefined
+parsePrismCodeConfig	export declare function parsePrismCodeConfig(text: string, baseDir?: string, source?: string): PrismCodeConfig
+parsePrismCodeConfigLayer	export declare function parsePrismCodeConfigLayer(text: string, baseDir?: string, source?: string, allowAutoApproval?: boolean): PrismCodeConfigLayer
+permissionRulesPath	export declare function permissionRulesPath(home: string): string
+prepareSessionDbPath	export declare function prepareSessionDbPath(config: PrismCodeConfig, home?: string): string
+promptHistoryPath	export declare function promptHistoryPath(home?: string): string
+providerSourceFor	export declare function providerSourceFor(cache?: ProviderCache): ProviderResolver | undefined
+readGlobalConfig	export declare function readGlobalConfig(home?: string): PrismCodeGlobalConfig | undefined
+readMcpTrust	export declare function readMcpTrust(home?: string):
+readState	export declare function readState(home?: string): PrismCodeStateReadResult
+registerToolRenderer	export declare function registerToolRenderer(toolName: string, renderer: ToolCardRenderer): void
+resolveCodingToolSet	export declare function resolveCodingToolSet(options: ResolveCodingToolsOptions): ToolDefinition[]
+resolveContinueOnOpenTodos	export declare function resolveContinueOnOpenTodos(loopConfig?: PrismCodeLoopConfig): boolean
+resolveContinueSessionId	export declare function resolveContinueSessionId(store: SessionStore, workspaceRoot: string): Promise<string | undefined>
+resolveCredential	export declare function resolveCredential(provider: string, options?: ProviderResolutionOptions): Promise<string | undefined>
+resolveExecutablePath	export declare function resolveExecutablePath(command: string): string | undefined
+resolveInstalledCommand	export declare function resolveInstalledCommand(name: string): string | undefined
+resolveMcpHeaderValue	export declare function resolveMcpHeaderValue(value: string, resolve: (kind: "env" | "credential", name: string) => string | undefined):
+resolveMcpServers	export declare function resolveMcpServers(options: ResolveMcpServersOptions): Promise<ResolvedMcpServers>
+resolveOAuthProvider	export declare function resolveOAuthProvider(providerId: string): Promise<OAuthProvider | undefined>
+resolvePrismCodeApprovalMode	export declare function resolvePrismCodeApprovalMode(config?: PrismCodeApprovalConfig): PrismCodeApprovalMode
+resolvePrismCodeChecks	export declare function resolvePrismCodeChecks(checks?: PrismCodeChecksConfig): Record<string, NamedCheckDefinition>
+resolvePrismCodeCompaction	export declare function resolvePrismCodeCompaction(config: PrismCodeCompactionConfig | undefined, sessionModel: ModelConfig, cache: ProviderCache): false | CompactionOptions
+resolvePrismCodeContextBudget	export declare function resolvePrismCodeContextBudget(sessionModel: ModelConfig): ContextBudget
+resolvePrismCodeInstructions	export declare function resolvePrismCodeInstructions(options: ResolvePrismCodeInstructionsOptions): InstructionsPlaneConfig
+resolvePrismCodeLimits	export declare function resolvePrismCodeLimits(configLimits?: PrismCodeLimitsConfig): RunLimits
+resolvePrismCodeLoop	export declare function resolvePrismCodeLoop(loopConfig?: PrismCodeLoopConfig): AgentLoopStrategy | AgentLoopOptions | undefined
+resolvePrismCodeToolResultFold	export declare function resolvePrismCodeToolResultFold(): ToolResultFoldOptions
+resolvePrismCodeVersion	export declare function resolvePrismCodeVersion(): string
+resolvePrismHome	export declare function resolvePrismHome(env?: NodeJS.ProcessEnv): string
+resolveProvider	export declare function resolveProvider(model: ModelConfig, options?: ProviderResolutionOptions): Promise<AIProvider>
+resolveSessionDbPath	export declare function resolveSessionDbPath(config: PrismCodeConfig, home?: string): string
+resolveSessionStore	export declare function resolveSessionStore(config: PrismCodeConfig, home?: string): SessionStore
+resolveSkillRoots	export declare function resolveSkillRoots(config: PrismCodeConfig, home?: string, repoRoot?: string, agentsHome?: string): readonly DiscoveryRoot[]
+resolveToolRenderer	export declare function resolveToolRenderer(toolName: string): ToolCardRenderer
+resolveWebMode	export declare function resolveWebMode(web: PrismCodeWebConfig | undefined): WebBackendMode
+resolveWebTools	export declare function resolveWebTools(config: PrismCodeConfig, credentials: PrismCodeCredentialManager): Promise<WebToolResolution>
+resolveWikiContributions	export declare function resolveWikiContributions(config: PrismCodeConfig, options?:
+resolveWikiSettings	export declare function resolveWikiSettings(wiki: PrismCodeWikiConfig | undefined): WikiSettings
+runDoctor	export declare function runDoctor(options: DoctorOptions): Promise<DoctorReport>
+runHeadless	export declare function runHeadless(options: HeadlessOptions): Promise<number>
+sanitizeTerminalText	export declare function sanitizeTerminalText(text: string): string
+savePermissionRules	export declare function savePermissionRules(home: string, repo: string, rules: readonly PrismCodePermissionRule[]): void
+searchRepoSessions	export declare function searchRepoSessions(store: SessionStore, options: SearchRepoSessionsOptions): Promise<SearchRepoSessionsResult>
+selectCredentialStore	export declare function selectCredentialStore(options: SelectCredentialStoreOptions): Promise<CredentialStoreSelection>
+selectMcpServers	export declare function selectMcpServers(allow: readonly string[], servers: readonly McpServer[]): boolean
+selectionRunOptions	export declare function selectionRunOptions(selection: ActiveSelection, cache?: ProviderCache, base?: RunOptions): RunOptions
+serveAcp	export declare function serveAcp(options: ServeAcpOptions): Promise<void>
+sessionEntryToUiActions	export declare function sessionEntryToUiActions(entry: SessionEntry): TuiAction[]
+sessionRecordExists	export declare function sessionRecordExists(store: SessionStore, sessionId: string): Promise<boolean>
+setSessionTitle	export declare function setSessionTitle(store: SessionStore, sessionId: string, title: string, options?:
+stubGlobalFetch	export declare function stubGlobalFetch(impl: typeof fetch): () => void
+tuiReducer	export declare function tuiReducer(state: TuiState, action: TuiAction): TuiState
+type ActiveSelection	export { type ActiveSelection, selectionRunOptions } from "./tui/selection.js"
+type AppHostBindings	export { type AppHostBindings, assembleAppAgent, type HeadlessOptions, runHeadless, type WritableSink, } from "./headless.js"
+type AttachedInstanceRecord	export { type AttachedInstanceRecord, ObservationalMemoryCoordinator, type ObservationalMemoryCoordinatorOptions, type SessionOmState, } from "./observational-memory.js"
+type BundledToolDescriptor	export { BUNDLED_CODING_TOOLS, type BundledToolDescriptor, CORE_CODING_TOOL_NAMES, GIT_TOOL_NAMES, NO_INTERACTIVE_ASK_USER_MESSAGE, type ResolveCodingToolsOptions, resolveCodingToolSet, resolvePrismCodeChecks, type ToolCategory, } from "./tools.js"
+type CliFlags	export { applyFlagOverlay, type CliFlags, parseFlags, } from "./flags.js"
+type CodeUi	export { type CodeUi, createPrismCodeTui, detectGitBranch, type PrismCodeTuiOptions, } from "./tui/index.js"
+type CommandContext	export { type CommandContext, executeCompactCommand, executeLogoutCommand, executeModelCommand, executeNewSessionCommand, executeOmModelCommand, executeOmStatusCommand, executeOmToggleCommand, executeOmViewCommand, executeProviderCommand, executeResumeSessionCommand, handleSlashCommand, parseCommandArgs, type SlashCommandResult, } from "./tui/commands.js"
+type CompactSessionOptions	export { type CompactSessionOptions, compactSession, deriveSessionTitle, ensureDurableSessionRecord, formatRelativeTime, formatSessionOption, getCanonicalWorkspaceRoot, legacySessionDbNotice, prepareSessionDbPath, resolveContinueSessionId, resolveSessionDbPath, resolveSessionStore, type SearchRepoSessionsOptions, type SearchRepoSessionsResult, searchRepoSessions, sessionRecordExists, setSessionTitle, } from "./sessions.js"
+type CreatePrismCodeAcpAgentOptions	export { type CreatePrismCodeAcpAgentOptions, createPrismCodeAcpAgent, type ServeAcpOptions, selectMcpServers, serveAcp, } from "./acp.js"
+type CredentialResolver	export { autoDetectProvider, type CredentialResolver, createProviderCache, cycleThinkingLevel, type DiscoveredModelInfo, defaultModelForProvider, enrichModelConfig, getModelThinkingLevels, getShippedProvider, getStaticModelsForProvider, hasUsableProvider, type ListModelsOptions, listModelsForProvider, type ModelEnrichment, type ProviderAuthKind, type ProviderCache, type ProviderFactoryContext, type ProviderKeyValidation, type ProviderResolutionOptions, resolveCredential, resolveProvider, SHIPPED
+type CredentialStoreSelection	export { type CredentialStoreSelection, MemoryStoredCredentialStore, PRISM_CODE_KEYCHAIN_SERVICE, PRISM_CREDENTIALS_PASSPHRASE_ENV, PROVIDER_ENV_VARS, PrismCodeCredentialManager, type PrismCodeCredentialManagerOptions, type SelectCredentialStoreOptions, selectCredentialStore, UnavailableStoredCredentialStore, } from "./credentials.js"
+type DiscoveredModelInfo	export { autoDetectProvider, type CredentialResolver, createProviderCache, cycleThinkingLevel, type DiscoveredModelInfo, defaultModelForProvider, enrichModelConfig, getModelThinkingLevels, getShippedProvider, getStaticModelsForProvider, hasUsableProvider, type ListModelsOptions, listModelsForProvider, type ModelEnrichment, type ProviderAuthKind, type ProviderCache, type ProviderFactoryContext, type ProviderKeyValidation, type ProviderResolutionOptions, resolveCredential, resolveProvider, SHIPPED
+type DoctorCheck	export { doctorReportToJson, type DoctorCheck, type DoctorOptions, type DoctorReport, type DoctorStatus, formatDoctorTable, runDoctor, } from "./doctor.js"
+type DoctorOptions	export { doctorReportToJson, type DoctorCheck, type DoctorOptions, type DoctorReport, type DoctorStatus, formatDoctorTable, runDoctor, } from "./doctor.js"
+type DoctorReport	export { doctorReportToJson, type DoctorCheck, type DoctorOptions, type DoctorReport, type DoctorStatus, formatDoctorTable, runDoctor, } from "./doctor.js"
+type DoctorStatus	export { doctorReportToJson, type DoctorCheck, type DoctorOptions, type DoctorReport, type DoctorStatus, formatDoctorTable, runDoctor, } from "./doctor.js"
+type EnvironmentContextProviderOptions	export { CODING_SYSTEM_PROMPT, createEnvironmentContextProvider, type EnvironmentContextProviderOptions, type ResolvePrismCodeInstructionsOptions, resolvePrismCodeInstructions, } from "./prompt.js"
+type HeadlessOptions	export { type AppHostBindings, assembleAppAgent, type HeadlessOptions, runHeadless, type WritableSink, } from "./headless.js"
+type InspectSkillsOptions	export { createSkillCommands, findRepoRoot, formatSkillsList, type InspectSkillsOptions, inspectSkills, isUserOwned, resolveSkillRoots, type SkillDetail, type SkillOrigin, } from "./skills.js"
+type ListModelsOptions	export { autoDetectProvider, type CredentialResolver, createProviderCache, cycleThinkingLevel, type DiscoveredModelInfo, defaultModelForProvider, enrichModelConfig, getModelThinkingLevels, getShippedProvider, getStaticModelsForProvider, hasUsableProvider, type ListModelsOptions, listModelsForProvider, type ModelEnrichment, type ProviderAuthKind, type ProviderCache, type ProviderFactoryContext, type ProviderKeyValidation, type ProviderResolutionOptions, resolveCredential, resolveProvider, SHIPPED
+type LogoutResult	export { createOAuthTokenSource, describeProviderCredentialStatus, formatProviderCredentialStatus, type LogoutResult, logoutProvider, OAUTH_REFRESH_SKEW_MS, type ProviderCredentialStatus, parseOAuthExpiry, resolveOAuthProvider, } from "./oauth.js"
+type McpHeaderReference	export { createMcpAuthOptions, createMcpAuthState, isMcpServerTrusted, MCP_OAUTH_REDIRECT_URI, MCP_OAUTH_REDIRECT_URI_ENV, type McpHeaderReference, type McpProjectTrustMode, type McpServerOrigin, type McpTrustContext, type McpTrustFile, mcpOAuthRedirectUri, mcpServerFingerprint, mcpTrustPath, parseMcpHeaderReference, type ResolvedMcpServers, type ResolveMcpServersOptions, readMcpTrust, resolveMcpHeaderValue, resolveMcpServers, writeMcpTrustDecision, } from "./mcp.js"
+type McpProjectTrustMode	export { createMcpAuthOptions, createMcpAuthState, isMcpServerTrusted, MCP_OAUTH_REDIRECT_URI, MCP_OAUTH_REDIRECT_URI_ENV, type McpHeaderReference, type McpProjectTrustMode, type McpServerOrigin, type McpTrustContext, type McpTrustFile, mcpOAuthRedirectUri, mcpServerFingerprint, mcpTrustPath, parseMcpHeaderReference, type ResolvedMcpServers, type ResolveMcpServersOptions, readMcpTrust, resolveMcpHeaderValue, resolveMcpServers, writeMcpTrustDecision, } from "./mcp.js"
+type McpServerOrigin	export { createMcpAuthOptions, createMcpAuthState, isMcpServerTrusted, MCP_OAUTH_REDIRECT_URI, MCP_OAUTH_REDIRECT_URI_ENV, type McpHeaderReference, type McpProjectTrustMode, type McpServerOrigin, type McpTrustContext, type McpTrustFile, mcpOAuthRedirectUri, mcpServerFingerprint, mcpTrustPath, parseMcpHeaderReference, type ResolvedMcpServers, type ResolveMcpServersOptions, readMcpTrust, resolveMcpHeaderValue, resolveMcpServers, writeMcpTrustDecision, } from "./mcp.js"
+type McpTrustContext	export { createMcpAuthOptions, createMcpAuthState, isMcpServerTrusted, MCP_OAUTH_REDIRECT_URI, MCP_OAUTH_REDIRECT_URI_ENV, type McpHeaderReference, type McpProjectTrustMode, type McpServerOrigin, type McpTrustContext, type McpTrustFile, mcpOAuthRedirectUri, mcpServerFingerprint, mcpTrustPath, parseMcpHeaderReference, type ResolvedMcpServers, type ResolveMcpServersOptions, readMcpTrust, resolveMcpHeaderValue, resolveMcpServers, writeMcpTrustDecision, } from "./mcp.js"
+type McpTrustFile	export { createMcpAuthOptions, createMcpAuthState, isMcpServerTrusted, MCP_OAUTH_REDIRECT_URI, MCP_OAUTH_REDIRECT_URI_ENV, type McpHeaderReference, type McpProjectTrustMode, type McpServerOrigin, type McpTrustContext, type McpTrustFile, mcpOAuthRedirectUri, mcpServerFingerprint, mcpTrustPath, parseMcpHeaderReference, type ResolvedMcpServers, type ResolveMcpServersOptions, readMcpTrust, resolveMcpHeaderValue, resolveMcpServers, writeMcpTrustDecision, } from "./mcp.js"
+type ModelEnrichment	export { autoDetectProvider, type CredentialResolver, createProviderCache, cycleThinkingLevel, type DiscoveredModelInfo, defaultModelForProvider, enrichModelConfig, getModelThinkingLevels, getShippedProvider, getStaticModelsForProvider, hasUsableProvider, type ListModelsOptions, listModelsForProvider, type ModelEnrichment, type ProviderAuthKind, type ProviderCache, type ProviderFactoryContext, type ProviderKeyValidation, type ProviderResolutionOptions, resolveCredential, resolveProvider, SHIPPED
+type ObservationalMemoryCoordinatorOptions	export { type AttachedInstanceRecord, ObservationalMemoryCoordinator, type ObservationalMemoryCoordinatorOptions, type SessionOmState, } from "./observational-memory.js"
+type PrismCodeApprovalConfig	export { commandPrefix, createPrismCodeApprovalPolicy, loadPermissionRules, PERMISSIONS_FILE_NAME, PRISM_CODE_APPROVAL_MODES, type PrismCodeApprovalConfig, type PrismCodeApprovalController, type PrismCodeApprovalDecision, type PrismCodeApprovalMode, type PrismCodeApprovalOptions, type PrismCodeApprovalPrompt, type PrismCodeApprovalRequest, type PrismCodePermissionRule, permissionRulesPath, resolvePrismCodeApprovalMode, savePermissionRules, validatePrismCodeApproval, } from "./approval.js"
+type PrismCodeApprovalController	export { commandPrefix, createPrismCodeApprovalPolicy, loadPermissionRules, PERMISSIONS_FILE_NAME, PRISM_CODE_APPROVAL_MODES, type PrismCodeApprovalConfig, type PrismCodeApprovalController, type PrismCodeApprovalDecision, type PrismCodeApprovalMode, type PrismCodeApprovalOptions, type PrismCodeApprovalPrompt, type PrismCodeApprovalRequest, type PrismCodePermissionRule, permissionRulesPath, resolvePrismCodeApprovalMode, savePermissionRules, validatePrismCodeApproval, } from "./approval.js"
+type PrismCodeApprovalDecision	export { commandPrefix, createPrismCodeApprovalPolicy, loadPermissionRules, PERMISSIONS_FILE_NAME, PRISM_CODE_APPROVAL_MODES, type PrismCodeApprovalConfig, type PrismCodeApprovalController, type PrismCodeApprovalDecision, type PrismCodeApprovalMode, type PrismCodeApprovalOptions, type PrismCodeApprovalPrompt, type PrismCodeApprovalRequest, type PrismCodePermissionRule, permissionRulesPath, resolvePrismCodeApprovalMode, savePermissionRules, validatePrismCodeApproval, } from "./approval.js"
+type PrismCodeApprovalMode	export { commandPrefix, createPrismCodeApprovalPolicy, loadPermissionRules, PERMISSIONS_FILE_NAME, PRISM_CODE_APPROVAL_MODES, type PrismCodeApprovalConfig, type PrismCodeApprovalController, type PrismCodeApprovalDecision, type PrismCodeApprovalMode, type PrismCodeApprovalOptions, type PrismCodeApprovalPrompt, type PrismCodeApprovalRequest, type PrismCodePermissionRule, permissionRulesPath, resolvePrismCodeApprovalMode, savePermissionRules, validatePrismCodeApproval, } from "./approval.js"
+type PrismCodeApprovalOptions	export { commandPrefix, createPrismCodeApprovalPolicy, loadPermissionRules, PERMISSIONS_FILE_NAME, PRISM_CODE_APPROVAL_MODES, type PrismCodeApprovalConfig, type PrismCodeApprovalController, type PrismCodeApprovalDecision, type PrismCodeApprovalMode, type PrismCodeApprovalOptions, type PrismCodeApprovalPrompt, type PrismCodeApprovalRequest, type PrismCodePermissionRule, permissionRulesPath, resolvePrismCodeApprovalMode, savePermissionRules, validatePrismCodeApproval, } from "./approval.js"
+type PrismCodeApprovalPrompt	export { commandPrefix, createPrismCodeApprovalPolicy, loadPermissionRules, PERMISSIONS_FILE_NAME, PRISM_CODE_APPROVAL_MODES, type PrismCodeApprovalConfig, type PrismCodeApprovalController, type PrismCodeApprovalDecision, type PrismCodeApprovalMode, type PrismCodeApprovalOptions, type PrismCodeApprovalPrompt, type PrismCodeApprovalRequest, type PrismCodePermissionRule, permissionRulesPath, resolvePrismCodeApprovalMode, savePermissionRules, validatePrismCodeApproval, } from "./approval.js"
+type PrismCodeApprovalRequest	export { commandPrefix, createPrismCodeApprovalPolicy, loadPermissionRules, PERMISSIONS_FILE_NAME, PRISM_CODE_APPROVAL_MODES, type PrismCodeApprovalConfig, type PrismCodeApprovalController, type PrismCodeApprovalDecision, type PrismCodeApprovalMode, type PrismCodeApprovalOptions, type PrismCodeApprovalPrompt, type PrismCodeApprovalRequest, type PrismCodePermissionRule, permissionRulesPath, resolvePrismCodeApprovalMode, savePermissionRules, validatePrismCodeApproval, } from "./approval.js"
+type PrismCodeCheckConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeChecksConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeCompactionConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeCompactionOptionsConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeCompactionStrategyKind	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeCompactionTriggerKind	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeConfigLayer	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeConfigOption	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeConfigOptionChoice	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeConfigOptionsConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeCredentialManagerOptions	export { type CredentialStoreSelection, MemoryStoredCredentialStore, PRISM_CODE_KEYCHAIN_SERVICE, PRISM_CREDENTIALS_PASSPHRASE_ENV, PROVIDER_ENV_VARS, PrismCodeCredentialManager, type PrismCodeCredentialManagerOptions, type SelectCredentialStoreOptions, selectCredentialStore, UnavailableStoredCredentialStore, } from "./credentials.js"
+type PrismCodeCredentialStoreChoice	export { ensureHomeDir, type PrismCodeCredentialStoreChoice, type PrismCodeGlobalConfig, type PrismCodeState, type PrismCodeStateReadResult, readGlobalConfig, readState, resolvePrismHome, writeState, } from "./home.js"
+type PrismCodeCredentialStoreConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeCredentialsConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeGlobalConfig	export { ensureHomeDir, type PrismCodeCredentialStoreChoice, type PrismCodeGlobalConfig, type PrismCodeState, type PrismCodeStateReadResult, readGlobalConfig, readState, resolvePrismHome, writeState, } from "./home.js"
+type PrismCodeHooksConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeInstructionsConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeLimitsConfig	export { createCostTurnPolicy, PRISM_CODE_DEFAULT_LIMITS, type PrismCodeLimitsConfig, type PrismCodeLoopConfig, type PrismCodeMaxCostConfig, resolvePrismCodeLimits, resolvePrismCodeLoop, validatePrismCodeLimits, validatePrismCodeLoop, } from "./limits.js"
+type PrismCodeLoopConfig	export { createCostTurnPolicy, PRISM_CODE_DEFAULT_LIMITS, type PrismCodeLimitsConfig, type PrismCodeLoopConfig, type PrismCodeMaxCostConfig, resolvePrismCodeLimits, resolvePrismCodeLoop, validatePrismCodeLimits, validatePrismCodeLoop, } from "./limits.js"
+type PrismCodeMaxCostConfig	export { createCostTurnPolicy, PRISM_CODE_DEFAULT_LIMITS, type PrismCodeLimitsConfig, type PrismCodeLoopConfig, type PrismCodeMaxCostConfig, resolvePrismCodeLimits, resolvePrismCodeLoop, validatePrismCodeLimits, validatePrismCodeLoop, } from "./limits.js"
+type PrismCodeMcpConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeMcpServer	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeModeConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeModesConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeOmConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeOmConfigObject	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodePermissionRule	export { commandPrefix, createPrismCodeApprovalPolicy, loadPermissionRules, PERMISSIONS_FILE_NAME, PRISM_CODE_APPROVAL_MODES, type PrismCodeApprovalConfig, type PrismCodeApprovalController, type PrismCodeApprovalDecision, type PrismCodeApprovalMode, type PrismCodeApprovalOptions, type PrismCodeApprovalPrompt, type PrismCodeApprovalRequest, type PrismCodePermissionRule, permissionRulesPath, resolvePrismCodeApprovalMode, savePermissionRules, validatePrismCodeApproval, } from "./approval.js"
+type PrismCodePlanesConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeSkillsConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeState	export { ensureHomeDir, type PrismCodeCredentialStoreChoice, type PrismCodeGlobalConfig, type PrismCodeState, type PrismCodeStateReadResult, readGlobalConfig, readState, resolvePrismHome, writeState, } from "./home.js"
+type PrismCodeStateReadResult	export { ensureHomeDir, type PrismCodeCredentialStoreChoice, type PrismCodeGlobalConfig, type PrismCodeState, type PrismCodeStateReadResult, readGlobalConfig, readState, resolvePrismHome, writeState, } from "./home.js"
+type PrismCodeStoreConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeSystemMdConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeToolsConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeTuiOptions	export { type CodeUi, createPrismCodeTui, detectGitBranch, type PrismCodeTuiOptions, } from "./tui/index.js"
+type PrismCodeWebConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeWebConfigObject	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeWikiConfig	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type PrismCodeWikiConfigObject	export { loadPrismCodeConfig, loadPrismCodeConfigLayer, mcpServerOrigins, mergePrismCodeConfigLayers, type PrismCodeCheckConfig, type PrismCodeChecksConfig, type PrismCodeCompactionConfig, type PrismCodeCompactionOptionsConfig, type PrismCodeCompactionStrategyKind, type PrismCodeCompactionTriggerKind, type PrismCodeConfig, type PrismCodeConfigLayer, type PrismCodeConfigOption, type PrismCodeConfigOptionChoice, type PrismCodeConfigOptionsConfig, type PrismCodeCredentialStoreConfig, type PrismCode
+type ProviderAuthKind	export { autoDetectProvider, type CredentialResolver, createProviderCache, cycleThinkingLevel, type DiscoveredModelInfo, defaultModelForProvider, enrichModelConfig, getModelThinkingLevels, getShippedProvider, getStaticModelsForProvider, hasUsableProvider, type ListModelsOptions, listModelsForProvider, type ModelEnrichment, type ProviderAuthKind, type ProviderCache, type ProviderFactoryContext, type ProviderKeyValidation, type ProviderResolutionOptions, resolveCredential, resolveProvider, SHIPPED
+type ProviderCache	export { autoDetectProvider, type CredentialResolver, createProviderCache, cycleThinkingLevel, type DiscoveredModelInfo, defaultModelForProvider, enrichModelConfig, getModelThinkingLevels, getShippedProvider, getStaticModelsForProvider, hasUsableProvider, type ListModelsOptions, listModelsForProvider, type ModelEnrichment, type ProviderAuthKind, type ProviderCache, type ProviderFactoryContext, type ProviderKeyValidation, type ProviderResolutionOptions, resolveCredential, resolveProvider, SHIPPED
+type ProviderCredentialStatus	export { createOAuthTokenSource, describeProviderCredentialStatus, formatProviderCredentialStatus, type LogoutResult, logoutProvider, OAUTH_REFRESH_SKEW_MS, type ProviderCredentialStatus, parseOAuthExpiry, resolveOAuthProvider, } from "./oauth.js"
+type ProviderFactoryContext	export { autoDetectProvider, type CredentialResolver, createProviderCache, cycleThinkingLevel, type DiscoveredModelInfo, defaultModelForProvider, enrichModelConfig, getModelThinkingLevels, getShippedProvider, getStaticModelsForProvider, hasUsableProvider, type ListModelsOptions, listModelsForProvider, type ModelEnrichment, type ProviderAuthKind, type ProviderCache, type ProviderFactoryContext, type ProviderKeyValidation, type ProviderResolutionOptions, resolveCredential, resolveProvider, SHIPPED
+type ProviderKeyValidation	export { autoDetectProvider, type CredentialResolver, createProviderCache, cycleThinkingLevel, type DiscoveredModelInfo, defaultModelForProvider, enrichModelConfig, getModelThinkingLevels, getShippedProvider, getStaticModelsForProvider, hasUsableProvider, type ListModelsOptions, listModelsForProvider, type ModelEnrichment, type ProviderAuthKind, type ProviderCache, type ProviderFactoryContext, type ProviderKeyValidation, type ProviderResolutionOptions, resolveCredential, resolveProvider, SHIPPED
+type ProviderResolutionOptions	export { autoDetectProvider, type CredentialResolver, createProviderCache, cycleThinkingLevel, type DiscoveredModelInfo, defaultModelForProvider, enrichModelConfig, getModelThinkingLevels, getShippedProvider, getStaticModelsForProvider, hasUsableProvider, type ListModelsOptions, listModelsForProvider, type ModelEnrichment, type ProviderAuthKind, type ProviderCache, type ProviderFactoryContext, type ProviderKeyValidation, type ProviderResolutionOptions, resolveCredential, resolveProvider, SHIPPED
+type ResolveCodingToolsOptions	export { BUNDLED_CODING_TOOLS, type BundledToolDescriptor, CORE_CODING_TOOL_NAMES, GIT_TOOL_NAMES, NO_INTERACTIVE_ASK_USER_MESSAGE, type ResolveCodingToolsOptions, resolveCodingToolSet, resolvePrismCodeChecks, type ToolCategory, } from "./tools.js"
+type ResolveMcpServersOptions	export { createMcpAuthOptions, createMcpAuthState, isMcpServerTrusted, MCP_OAUTH_REDIRECT_URI, MCP_OAUTH_REDIRECT_URI_ENV, type McpHeaderReference, type McpProjectTrustMode, type McpServerOrigin, type McpTrustContext, type McpTrustFile, mcpOAuthRedirectUri, mcpServerFingerprint, mcpTrustPath, parseMcpHeaderReference, type ResolvedMcpServers, type ResolveMcpServersOptions, readMcpTrust, resolveMcpHeaderValue, resolveMcpServers, writeMcpTrustDecision, } from "./mcp.js"
+type ResolvePrismCodeInstructionsOptions	export { CODING_SYSTEM_PROMPT, createEnvironmentContextProvider, type EnvironmentContextProviderOptions, type ResolvePrismCodeInstructionsOptions, resolvePrismCodeInstructions, } from "./prompt.js"
+type ResolvedMcpServers	export { createMcpAuthOptions, createMcpAuthState, isMcpServerTrusted, MCP_OAUTH_REDIRECT_URI, MCP_OAUTH_REDIRECT_URI_ENV, type McpHeaderReference, type McpProjectTrustMode, type McpServerOrigin, type McpTrustContext, type McpTrustFile, mcpOAuthRedirectUri, mcpServerFingerprint, mcpTrustPath, parseMcpHeaderReference, type ResolvedMcpServers, type ResolveMcpServersOptions, readMcpTrust, resolveMcpHeaderValue, resolveMcpServers, writeMcpTrustDecision, } from "./mcp.js"
+type SearchRepoSessionsOptions	export { type CompactSessionOptions, compactSession, deriveSessionTitle, ensureDurableSessionRecord, formatRelativeTime, formatSessionOption, getCanonicalWorkspaceRoot, legacySessionDbNotice, prepareSessionDbPath, resolveContinueSessionId, resolveSessionDbPath, resolveSessionStore, type SearchRepoSessionsOptions, type SearchRepoSessionsResult, searchRepoSessions, sessionRecordExists, setSessionTitle, } from "./sessions.js"
+type SearchRepoSessionsResult	export { type CompactSessionOptions, compactSession, deriveSessionTitle, ensureDurableSessionRecord, formatRelativeTime, formatSessionOption, getCanonicalWorkspaceRoot, legacySessionDbNotice, prepareSessionDbPath, resolveContinueSessionId, resolveSessionDbPath, resolveSessionStore, type SearchRepoSessionsOptions, type SearchRepoSessionsResult, searchRepoSessions, sessionRecordExists, setSessionTitle, } from "./sessions.js"
+type SelectCredentialStoreOptions	export { type CredentialStoreSelection, MemoryStoredCredentialStore, PRISM_CODE_KEYCHAIN_SERVICE, PRISM_CREDENTIALS_PASSPHRASE_ENV, PROVIDER_ENV_VARS, PrismCodeCredentialManager, type PrismCodeCredentialManagerOptions, type SelectCredentialStoreOptions, selectCredentialStore, UnavailableStoredCredentialStore, } from "./credentials.js"
+type ServeAcpOptions	export { type CreatePrismCodeAcpAgentOptions, createPrismCodeAcpAgent, type ServeAcpOptions, selectMcpServers, serveAcp, } from "./acp.js"
+type SessionOmState	export { type AttachedInstanceRecord, ObservationalMemoryCoordinator, type ObservationalMemoryCoordinatorOptions, type SessionOmState, } from "./observational-memory.js"
+type ShippedProviderDescriptor	export { autoDetectProvider, type CredentialResolver, createProviderCache, cycleThinkingLevel, type DiscoveredModelInfo, defaultModelForProvider, enrichModelConfig, getModelThinkingLevels, getShippedProvider, getStaticModelsForProvider, hasUsableProvider, type ListModelsOptions, listModelsForProvider, type ModelEnrichment, type ProviderAuthKind, type ProviderCache, type ProviderFactoryContext, type ProviderKeyValidation, type ProviderResolutionOptions, resolveCredential, resolveProvider, SHIPPED
+type SkillDetail	export { createSkillCommands, findRepoRoot, formatSkillsList, type InspectSkillsOptions, inspectSkills, isUserOwned, resolveSkillRoots, type SkillDetail, type SkillOrigin, } from "./skills.js"
+type SkillOrigin	export { createSkillCommands, findRepoRoot, formatSkillsList, type InspectSkillsOptions, inspectSkills, isUserOwned, resolveSkillRoots, type SkillDetail, type SkillOrigin, } from "./skills.js"
+type SlashCommandResult	export { type CommandContext, executeCompactCommand, executeLogoutCommand, executeModelCommand, executeNewSessionCommand, executeOmModelCommand, executeOmStatusCommand, executeOmToggleCommand, executeOmViewCommand, executeProviderCommand, executeResumeSessionCommand, handleSlashCommand, parseCommandArgs, type SlashCommandResult, } from "./tui/commands.js"
+type ToolCategory	export { BUNDLED_CODING_TOOLS, type BundledToolDescriptor, CORE_CODING_TOOL_NAMES, GIT_TOOL_NAMES, NO_INTERACTIVE_ASK_USER_MESSAGE, type ResolveCodingToolsOptions, resolveCodingToolSet, resolvePrismCodeChecks, type ToolCategory, } from "./tools.js"
+type ToolModuleLoadOptions	export { importToolModule, loadReplacementToolModules, loadToolModules, type ToolModuleLoadOptions, } from "./tool-modules.js"
+type WebBackendMode	export { resolveExecutablePath, resolveInstalledCommand, resolveWebMode, resolveWebTools, type WebBackendMode, type WebToolResolution, } from "./web.js"
+type WebToolResolution	export { resolveExecutablePath, resolveInstalledCommand, resolveWebMode, resolveWebTools, type WebBackendMode, type WebToolResolution, } from "./web.js"
+type WikiContributions	export { createWikiFetchHook, resolveWikiContributions, resolveWikiSettings, type WikiContributions, type WikiSettings, } from "./wiki.js"
+type WikiSettings	export { createWikiFetchHook, resolveWikiContributions, resolveWikiSettings, type WikiContributions, type WikiSettings, } from "./wiki.js"
+type WritableSink	export { type AppHostBindings, assembleAppAgent, type HeadlessOptions, runHeadless, type WritableSink, } from "./headless.js"
+updateDiffRenderable	export declare function updateDiffRenderable(renderable: DiffRenderable, patch: string): void
+validateGlobalPrismCodeConfigLayer	export declare function validateGlobalPrismCodeConfigLayer(raw: unknown, baseDir?: string, source?: string): PrismCodeConfigLayer
+validatePrismCodeApproval	export declare function validatePrismCodeApproval(raw: unknown, source: string, allowAuto?: boolean): PrismCodeApprovalConfig
+validatePrismCodeConfig	export declare function validatePrismCodeConfig(raw: unknown, baseDir?: string, source?: string): PrismCodeConfig
+validatePrismCodeConfigLayer	export declare function validatePrismCodeConfigLayer(raw: unknown, baseDir?: string, source?: string, allowAutoApproval?: boolean): PrismCodeConfigLayer
+validatePrismCodeLimits	export declare function validatePrismCodeLimits(raw: unknown, source?: string): PrismCodeLimitsConfig
+validatePrismCodeLoop	export declare function validatePrismCodeLoop(raw: unknown, source?: string): PrismCodeLoopConfig | undefined
+validateProviderKey	export declare function validateProviderKey(providerId: string, apiKey: string, options?:
+validateThinkingLevel	export declare function validateThinkingLevel(model: Pick<ModelConfig, "capabilities">, currentEffort: string): string
+writeMcpTrustDecision	export declare function writeMcpTrustDecision(home: string, workspaceRoot: string, server: PrismCodeMcpServer):
+writeState	export declare function writeState(home: string, patch: PrismCodeState): PrismCodeState

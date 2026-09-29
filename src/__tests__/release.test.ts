@@ -50,8 +50,8 @@ const missing = async () => new Response("not found", { status: 404 });
 
 test("0.3.0 release graph is independent, publishable, and documented", () => {
   const release = loadRelease(process.cwd());
-  // 12 = root + 11 workspace packages, including the extracted channels family and prism-hooks.
-  assert.equal(release.packages.length, 12);
+  // 14 = root + 13 workspace packages, including channels, prism-hooks, agent-sdk, and prism-code.
+  assert.equal(release.packages.length, 14);
   assert.doesNotThrow(() =>
     validateReleaseIndependent(release, {
       baseline: "HEAD",
@@ -64,6 +64,9 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
     const changelog = readFileSync(join(process.cwd(), pkg.path, "CHANGELOG.md"), "utf8");
     if (pkg.manifest.name === "@arnilo/prism-channels") {
       assert.ok(changelog.includes("## [Unreleased] (plan 079 Task 4)"), "channels package missing extraction changelog");
+    } else if (pkg.manifest.name === "@arnilo/prism-code" || pkg.manifest.name === "@arnilo/prism-agent-sdk") {
+      // Plan 140 Task 1: own version lines, no lockstep anchor sections.
+      assert.ok(changelog.includes(`## [${pkg.manifest.version}]`), `${pkg.manifest.name} missing ${pkg.manifest.version} changelog`);
     } else {
       assert.ok(changelog.includes("## [0.1.0] - 2026-08-09"), `${pkg.manifest.name} missing 0.1.0 changelog`);
     }

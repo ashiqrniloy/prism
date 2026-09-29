@@ -3,11 +3,11 @@
  * Network-free memory DisposableSandbox + host temp dirs only.
  */
 
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, posix } from "node:path";
-import { test } from "bun:test";
 import type { ToolExecutionContext } from "@arnilo/prism";
 import {
   createSandboxCodingComposition,

@@ -171,6 +171,15 @@ function capLoadSkillText(text: string): string {
   return new TextDecoder().decode(encoded.slice(0, end)) + suffix;
 }
 
+function skillDirname(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, "/");
+  const idx = normalized.lastIndexOf("/");
+  if (idx === -1) return ".";
+  if (idx === 0) return "/";
+  if (idx === 2 && normalized[1] === ":") return normalized.slice(0, 3);
+  return normalized.slice(0, idx);
+}
+
 export function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDefinition {
   const toolName = options.name ?? DEFAULT_LOAD_SKILL_TOOL_NAME;
   return {
@@ -208,7 +217,8 @@ export function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDe
           activeSkillNames: metadata?.activeSkillNames,
         });
         loaded.add(skill.name);
-        const text = capLoadSkillText(`Loaded skill ${skill.name} for this session.`);
+        const dirSuffix = skill.path ? ` Skill directory: ${skillDirname(skill.path)}` : "";
+        const text = capLoadSkillText(`Loaded skill ${skill.name} for this session.${dirSuffix}`);
         return {
           toolCallId: context.toolCallId,
           name: toolName,

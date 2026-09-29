@@ -4,11 +4,12 @@
  * Threat T2: malicious or stale index — cross-root results, bad scores,
  * prompt-injection snippets, silent downgrade, unbounded query/update.
  */
+
+import { beforeAll as before, test } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeAll as before, test } from "bun:test";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import type {
   IndexFileChange,

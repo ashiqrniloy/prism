@@ -6,7 +6,7 @@ import { createWorkflowEventBus } from "../events.js";
 import { DEFAULT_MAX_CONCURRENCY, DEFAULT_MAX_NESTED_DEPTH, DEFAULT_MAX_NODES } from "../limits.js";
 import type { RunWorkflowOptions, WorkflowEvent, WorkflowEventInput, WorkflowRunResult } from "../types.js";
 import { combineSignals, errorCode, errorMessage, isAbortError, nowIso } from "../util.js";
-import { cloneState, persistCheckpoint } from "./checkpoint.js";
+import { cloneState, isCheckpointFailure, persistCheckpoint } from "./checkpoint.js";
 import type { SchedulerState } from "./main.js";
 import { runNode } from "./node-execution.js";
 import { markRemaining, skipNode } from "./skip.js";
@@ -140,8 +140,8 @@ async function executeSchedulerBody(state: SchedulerState, options: RunWorkflowO
         state.running.add(nodeId);
         void runNode(state, nodeId, options, bus, emit, activeSessions)
           .catch((error) => {
-            fatalError = error;
-            state.status = isAbortError(error) || options.signal?.aborted ? "aborted" : "failed";
+            if (!fatalError || isCheckpointFailure(error)) fatalError = error;
+            state.status = isAbortError(fatalError) || options.signal?.aborted ? "aborted" : "failed";
             abortAllSessions();
           })
           .finally(() => {
@@ -163,6 +163,8 @@ async function executeSchedulerBody(state: SchedulerState, options: RunWorkflowO
     while (state.running.size > 0) {
       await waitForProgress();
     }
+
+    if (isCheckpointFailure(fatalError)) throw fatalError;
 
     if (options.signal?.aborted || state.status === "aborted") {
       state.status = "aborted";

@@ -3,8 +3,9 @@
  * Last-Event-ID reconnect, paged replay without re-execution, and fail-closed
  * HITL decision resume through the composed server seams.
  */
-import assert from "node:assert/strict";
+
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import {
   type AgentEventRecord,
   createAgent,

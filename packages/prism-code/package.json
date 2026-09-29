@@ -1,0 +1,82 @@
+{
+  "name": "@arnilo/prism-code",
+  "version": "0.4.0",
+  "description": "Terminal coding agent built on @arnilo/prism-agent-sdk with OpenTUI renderer, headless modes, and ACP server.",
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "bin": {
+    "prism-code": "dist/bin/prism-code.js"
+  },
+  "files": [
+    "dist",
+    "!dist/**/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "bun ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 dist/src/__tests__/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "1.4.0",
+    "@arnilo/prism": "^0.12.0",
+    "@arnilo/prism-ag-ui": "^0.12.0",
+    "@arnilo/prism-agent-sdk": "^0.1.0",
+    "@arnilo/prism-coding-tools": "^0.12.0",
+    "@arnilo/prism-core": "^0.12.0",
+    "@arnilo/prism-hooks": "^0.12.0",
+    "@arnilo/prism-mcp": "^0.12.0",
+    "@arnilo/prism-memory": "^0.12.0",
+    "@arnilo/prism-providers": "^0.12.0",
+    "@arnilo/prism-web-tools": "^0.12.0",
+    "@opentui/core": "^0.5.12"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../..",
+    "@arnilo/prism-ag-ui": "file:../ag-ui",
+    "@arnilo/prism-agent-sdk": "file:../agent-sdk",
+    "@arnilo/prism-coding-tools": "file:../prism-coding-tools",
+    "@arnilo/prism-core": "file:../prism-core",
+    "@arnilo/prism-hooks": "file:../hooks",
+    "@arnilo/prism-mcp": "file:../mcp",
+    "@arnilo/prism-memory": "file:../memory",
+    "@arnilo/prism-providers": "file:../prism-providers",
+    "@arnilo/prism-web-tools": "file:../web-tools",
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/prism-code"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism#readme",
+  "keywords": [
+    "prism",
+    "agent",
+    "tui",
+    "coding-agent",
+    "opentui"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

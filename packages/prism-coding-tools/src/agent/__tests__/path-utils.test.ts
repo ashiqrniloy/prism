@@ -1,8 +1,8 @@
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
-import { test } from "bun:test";
 import { expandPath, pathExists, resolveReadPath, resolveToCwd } from "../path-utils.js";
 
 test("expandPath: ~ expands to homedir, @ stripped", () => {

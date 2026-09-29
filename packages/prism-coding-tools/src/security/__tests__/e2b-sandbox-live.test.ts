@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 
 const apiKey = process.env.PRISM_TEST_E2B_API_KEY;
 

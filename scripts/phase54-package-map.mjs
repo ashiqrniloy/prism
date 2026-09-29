@@ -704,13 +704,17 @@ export function buildPackageMap(rootDir = DEFAULT_ROOT) {
 
   // Process all retired packages with symbol analysis
   const retiredWithDetails = CONSOLIDATION_SPEC.retiredPackages.map((item) => {
+    // Retired rows are frozen 0.3.3 history. A current manifest that reuses a
+    // retired name (for example @arnilo/prism-code) must not rewrite the 0.3.3
+    // record or donate its symbols/baseline to the legacy registry plan.
+    const collidesWithCurrent = manifestMap.has(item.name);
     const m = manifestMap.get(item.name);
-    const distDir = m ? join(m.dir, "dist") : null;
+    const distDir = !collidesWithCurrent && m ? join(m.dir, "dist") : null;
     let symbols = [];
     if (distDir && existsSync(distDir)) {
       const surface = extractDeclaredSurface(distDir);
       symbols = [...surface.keys()].sort();
-    } else {
+    } else if (!collidesWithCurrent) {
       const bFile = join(baselineDir, baselineName(item.name));
       if (existsSync(bFile)) {
         symbols = readFileSync(bFile, "utf8")
@@ -721,19 +725,20 @@ export function buildPackageMap(rootDir = DEFAULT_ROOT) {
       }
     }
 
-    const bins = m ? Object.keys(m.pkg.bin ?? {}) : [];
-    const optionalPeers = m
-      ? Object.entries(m.pkg.peerDependenciesMeta ?? {})
-          .filter(([, v]) => v?.optional)
-          .map(([k]) => k)
-      : [];
+    const bins = !collidesWithCurrent && m ? Object.keys(m.pkg.bin ?? {}) : [];
+    const optionalPeers =
+      !collidesWithCurrent && m
+        ? Object.entries(m.pkg.peerDependenciesMeta ?? {})
+            .filter(([, v]) => v?.optional)
+            .map(([k]) => k)
+        : [];
 
     const fullSuccessor = item.targetSubpath
       ? `${item.targetPackage}${item.targetSubpath.startsWith("/") ? item.targetSubpath : `/${item.targetSubpath}`}`
       : item.targetPackage;
 
-    const version = m ? m.pkg.version : "0.3.3";
-    const directory = m ? m.relDir : `packages/${item.name.replace("@arnilo/prism-", "")}`;
+    const version = !collidesWithCurrent && m ? m.pkg.version : "0.3.3";
+    const directory = !collidesWithCurrent && m ? m.relDir : `packages/${item.name.replace("@arnilo/prism-", "")}`;
 
     return {
       ...item,

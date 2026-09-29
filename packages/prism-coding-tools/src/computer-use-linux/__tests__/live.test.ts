@@ -9,8 +9,9 @@
  * 30 s ceiling. The suite performs no network I/O, so no screenshot bytes can
  * leave the process (security criterion, asserted structurally below).
  */
-import assert from "node:assert/strict";
+
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 
 import { createComputerUseLinuxTools } from "../create.js";
 

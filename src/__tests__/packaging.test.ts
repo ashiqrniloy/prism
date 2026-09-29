@@ -35,6 +35,8 @@ const packages: Array<{
   { dir: "packages/prism-core", name: "@arnilo/prism-core" },
   { dir: "packages/prism-channels", name: "@arnilo/prism-channels" },
   { dir: "packages/hooks", name: "@arnilo/prism-hooks" },
+  { dir: "packages/agent-sdk", name: "@arnilo/prism-agent-sdk" },
+  { dir: "packages/prism-code", name: "@arnilo/prism-code" },
   // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
   { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isSubpaths: true },
   { dir: "packages/prism-work", name: "@arnilo/prism-work", isSubpaths: true },
@@ -157,7 +159,15 @@ describe("packaging guard", () => {
         );
       });
 
-      if (!pkg.isCore && !pkg.isMeta) {
+      if (pkg.name === "@arnilo/prism-code") {
+        // Plan 140 Task 1: the terminal app owns its runtime graph for a global install.
+        it("depends on @arnilo/prism and declares no peers", () => {
+          const manifest = readPkg(pkg.dir);
+          const deps = manifest.dependencies as Record<string, string> | undefined;
+          assert.equal(deps?.["@arnilo/prism"], `^${releaseVersion()}`);
+          assert.equal(manifest.peerDependencies, undefined);
+        });
+      } else if (!pkg.isCore && !pkg.isMeta) {
         it("makes @arnilo/prism a required (non-optional) peer dependency", () => {
           const manifest = readPkg(pkg.dir);
           const peers = manifest.peerDependencies as Record<string, string> | undefined;
@@ -521,23 +531,24 @@ describe("packaging guard", () => {
       assert.ok(guide.includes(spec), `migration guide missing ${spec}`);
     }
     const truth = JSON.parse(readFileSync(join(repoRoot, "scripts/package-truth.json"), "utf8")) as { counts: { publishable: number } };
-    assert.equal(truth.counts.publishable, 12, "package truth must report 12 active packages");
+    assert.equal(truth.counts.publishable, packages.length, "package truth must report every packaged manifest");
   });
 
-  it("0.4 package set — 12 manifests in lockstep, no shims, family roots stay inert", () => {
+  it("0.4 package set — 14 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 12, "12 active packages including root");
+    assert.equal(names.length, 14, "14 active packages including root");
     assert.ok(names.includes("@arnilo/prism-work"), "work package must be present");
     assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
-    for (const pkg of packages) {
+    // Plan 140 Task 1: the app and the SDK are on their own version lines (0.4.x / 0.1.x).
+    const independentLines = new Set(["@arnilo/prism-code", "@arnilo/prism-agent-sdk"]);
+    for (const pkg of packages.filter((p) => !independentLines.has(p.name))) {
       // Plan 055/066/070 cut history lives in CHANGELOG.md; here the invariant is the
       // lockstep itself: every active manifest at the root version (plan 071 Task 1).
       assert.equal(readPkg(pkg.dir).version, root.version, `${pkg.name} must be at the root lockstep version ${root.version}`);
     }
     const retired = [
       "@arnilo/prism-base",
-      "@arnilo/prism-code",
       "@arnilo/prism-sdk",
       "@arnilo/prism-all",
       "@arnilo/prism-browser",

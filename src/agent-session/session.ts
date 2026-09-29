@@ -70,7 +70,14 @@ import {
   normalizeProviderRequestPolicyResult,
 } from "../provider-request-policy.js";
 import type { SecretRedactor } from "../redaction.js";
-import { redactAgentEvent, redactProviderRequest, redactRunLedgerRecord, redactSecrets, redactSessionEntry } from "../redaction.js";
+import {
+  errorToErrorInfo,
+  redactAgentEvent,
+  redactProviderRequest,
+  redactRunLedgerRecord,
+  redactSecrets,
+  redactSessionEntry,
+} from "../redaction.js";
 import type { RunLimitTracker } from "../run-limits.js";
 import type { SessionContextSnapshot } from "../session-stores.js";
 import { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, rebuildSessionContext } from "../session-stores.js";
@@ -142,6 +149,7 @@ export class RuntimeAgentSession implements AgentSession {
   activeLimitOutputBuffer = false;
   activeDurable?: ActiveDurableRun;
   activeLoop?: import("../contracts.js").AgentLoopStrategy;
+  activeLoopHistory?: Message[];
   /** Gated calls of the current tool round awaiting one collected suspension. */
   activeGatedRound?: Map<string, { entry: PendingToolCall; decision: PendingDecision }>;
   activeLoopTurn = 1;
@@ -205,6 +213,11 @@ export class RuntimeAgentSession implements AgentSession {
   /** Plan 015 Task 4: re-add persisted loaded-skill names (names only; bodies re-resolve on demand). */
   restoreLoadedSkills(names: readonly string[]): void {
     for (const name of names) this.loadedSkills.add(name);
+  }
+
+  /** Plan 137 Task 3: loaded skill names currently active in this session. */
+  getLoadedSkillNames(): readonly string[] {
+    return this.loadedSkills.list();
   }
 
   /** Plan 041: re-add persisted activated-tool names (names only; inert for absent tools). */
@@ -787,9 +800,52 @@ export class RuntimeAgentSession implements AgentSession {
       },
     );
     if (!shouldCompact) return;
-    await this.compactBranch(compaction, runId, signal, "auto");
+    await this.compactBranchResilient(compaction, runId, signal, "auto");
     const compacted = await this.snapshot();
-    this.history = withoutTrailingInput(compacted.messages, inputMessages);
+    this.replaceHistory(withoutTrailingInput(compacted.messages, inputMessages));
+  }
+
+  async autoCompactTurn(runId: string, options: RunOptions, signal: AbortSignal, turn: number): Promise<void> {
+    const compaction = mergeCompaction(this.agent.config.compaction, options.compaction);
+    if (!compaction || (compaction.trigger === undefined && compaction.thresholdEntries === undefined)) return;
+    const snapshot = await this.snapshot();
+    // A branch that just compacted keeps its fresh summary: no second pass over the same entries.
+    if (snapshot.entries.at(-1)?.kind === "compaction") return;
+    const shouldCompact = await resolveShouldCompact(
+      { trigger: compaction.trigger, thresholdEntries: compaction.thresholdEntries },
+      {
+        sessionId: this.id,
+        entryCount: snapshot.entries.length,
+        turn,
+        // Estimates of the branch the run is about to send: messages plus carried summaries.
+        estimateInputTokens: () =>
+          estimateAssemblyTokens(snapshot.messages) + snapshot.summaries.reduce((sum, summary) => sum + estimateTextTokens(summary), 0),
+        // Same cap helper the attention compiler resolves its `inputCap` with.
+        resolveInputCapTokens: () => resolveInputCap(undefined, options.model ?? this.agent.config.model),
+        metadata: compaction.metadata,
+        signal,
+      },
+    );
+    if (!shouldCompact) return;
+    await this.compactBranchResilient(compaction, runId, signal, "auto");
+  }
+
+  /**
+   * Compact, falling back to continuing uncompacted with a `compaction_failed` event. The trigger
+   * decision stays outside this seam: an unresolvable input cap is a host config error and must
+   * fail loudly, while a summarizer/strategy failure is a runtime hiccup the run survives.
+   */
+  private async compactBranchResilient(
+    options: CompactionOptions,
+    runId: string | undefined,
+    signal: AbortSignal | undefined,
+    trigger: "manual" | "auto",
+  ): Promise<void> {
+    try {
+      await this.compactBranch(options, runId, signal, trigger);
+    } catch (error) {
+      this.emit({ type: "compaction_failed", sessionId: this.id, runId, error: errorToErrorInfo(error) });
+    }
   }
 
   private async compactBranch(
@@ -838,7 +894,9 @@ export class RuntimeAgentSession implements AgentSession {
     });
     await this.appendEntry(entry);
     const finalResult = { ...result, entries: [entry] };
-    this.emit({ type: "compaction_finished", sessionId: this.id, runId, summary: finalResult.summary });
+    const throughIndex = data?.throughEntryId ? entries.findIndex((e) => e.id === data.throughEntryId) : -1;
+    const entriesCompacted = throughIndex >= 0 ? throughIndex + 1 : Math.max(0, entries.length - (options.keepRecentEntries ?? 8));
+    this.emit({ type: "compaction_finished", sessionId: this.id, runId, summary: finalResult.summary, entriesCompacted });
     await this.rebuildHistory();
     return finalResult;
   }
@@ -867,7 +925,22 @@ export class RuntimeAgentSession implements AgentSession {
   }
 
   async rebuildHistory(): Promise<void> {
-    this.history = (await this.snapshot()).messages.slice();
+    this.replaceHistory((await this.snapshot()).messages);
+  }
+
+  /**
+   * Replace the live history in place. A mid-run compaction must never reassign `history`: the
+   * active loop holds that array (`activeLoopHistory`), so a fresh array would silently drop every
+   * later turn from the session view (run result text/content, tool narrowing) while the loop kept
+   * appending to its own copy.
+   */
+  private replaceHistory(messages: readonly Message[]): void {
+    this.history.length = 0;
+    this.history.push(...messages);
+    if (this.activeLoopHistory && this.activeLoopHistory !== this.history) {
+      this.activeLoopHistory.length = 0;
+      this.activeLoopHistory.push(...this.history);
+    }
   }
 
   async snapshot(): Promise<SessionContextSnapshot> {

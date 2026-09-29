@@ -19,14 +19,20 @@ export function createDefaultCompactionStrategy(options: DefaultCompactionStrate
       const messages = context.entries.filter((entry) => entry.kind === "message" && entry.message);
       const keepEntryIds = keepRecentEntries === 0 ? [] : messages.slice(-keepRecentEntries).map((entry) => entry.id);
       const firstKept = keepEntryIds[0];
-      const firstKeptIndex = firstKept ? context.entries.findIndex((entry) => entry.id === firstKept) : context.entries.length;
+      let firstKeptIndex = firstKept ? context.entries.findIndex((entry) => entry.id === firstKept) : context.entries.length;
+      // Never split a tool result from its preceding assistant tool call
+      while (firstKeptIndex > 0 && context.entries[firstKeptIndex]?.message?.role === "tool") {
+        firstKeptIndex -= 1;
+      }
       const oldEntries = context.entries.slice(0, firstKeptIndex < 0 ? context.entries.length : firstKeptIndex);
+      const keptEntries = context.entries.slice(firstKeptIndex < 0 ? context.entries.length : firstKeptIndex);
+      const adjustedKeepEntryIds = keptEntries.map((entry) => entry.id);
       const throughEntryId = oldEntries.at(-1)?.id;
       const summary = truncate(
         redactSecrets(summarize(oldEntries), [...(options.secrets ?? []), ...(context.secrets ?? [])]),
         maxSummaryChars,
       );
-      const data: CompactionEntryData = { throughEntryId, keepEntryIds, strategy: name, trigger: context.trigger };
+      const data: CompactionEntryData = { throughEntryId, keepEntryIds: adjustedKeepEntryIds, strategy: name, trigger: context.trigger };
       const parentId = context.entries.at(-1)?.id;
 
       return {

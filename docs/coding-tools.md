@@ -45,6 +45,28 @@ const tools = createCodingTools({
 });
 ```
 
+### Task Completion: `todo_write` and the Continuation Stop Hook
+
+`createTodoWriteTool()` is a stateless planning tool: each call replaces the full list
+(`{ todos: [{ id, content, status }] }` with `pending | in_progress | completed | cancelled`) and
+returns the rendered list, with the structured items on the result metadata.
+`createTodoContinuationStopHook({ maxNoProgress })` reads the latest successful `todo_write` result
+from the transcript at a natural loop end: open items return `continue` with a steer listing them,
+closed or absent lists return `stop`, and `maxNoProgress` (default 2) consecutive continuations with
+no new tool call and no list change stop the run. Both are stateless and resume-safe because the
+canonical list lives in history; hosts that compact must pin that history entry out of the cut
+(`todoPinnedEntryIds(entries)`) so the hook keeps seeing the plan — Prism Code does.
+
+```ts
+import { createTodoContinuationStopHook, createTodoWriteTool } from "@arnilo/prism-coding-tools/agent";
+
+const tools = [createTodoWriteTool()];
+const stopHooks = [createTodoContinuationStopHook({ maxNoProgress: 2 })];
+// tools add to the agent registry; stopHooks go to AgentConfig.stopHooks or RunOptions.stopHooks.
+```
+
+Prism Code registers both by default; `loop.continueOnOpenTodos: false` disables them.
+
 ### Sandboxed Execution
 ```ts
 import { createDockerSandbox, createSandboxCodingComposition } from "@arnilo/prism-coding-tools/security";

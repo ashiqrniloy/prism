@@ -202,6 +202,16 @@ export async function resumeWorkflow(
     }
     return resultFromRecord(workflow.id, record);
   }
+  if (
+    Object.entries(record.value.nodes).some(
+      ([nodeId, node]) =>
+        node.status === "running" &&
+        !(workflow.nodes[nodeId]?.kind === "loop" && node.iterations?.at(-1)?.done && node.iteration === node.iterations.length),
+    ) ||
+    (record.value.status === "running" && record.value.execution?.mode === "supersteps" && record.value.readyNodeIds.length > 0)
+  ) {
+    throw new WorkflowCheckpointError("Interrupted workflow node has an unknown outcome; reconcile before resume");
+  }
 
   let resumeRecord: WorkflowResumeRecord | undefined;
   if (record.value.status === "suspended") {

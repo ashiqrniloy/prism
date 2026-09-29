@@ -1,4 +1,9 @@
-import { DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES, SESSION_SEARCH_WORKSPACE_METADATA_KEY, type SessionEntry } from "@arnilo/prism";
+import {
+  DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
+  SESSION_SEARCH_WORKSPACE_METADATA_KEY,
+  SESSION_TITLE_METADATA_KEY,
+  type SessionEntry,
+} from "@arnilo/prism";
 
 export function entrySearchFields(entry: SessionEntry): { label: string; summary: string; body: string } {
   const texts: string[] = [];
@@ -33,6 +38,9 @@ export function parseSessionMetadata(raw: string | null): Readonly<Record<string
 export function safeSearchMetadata(metadata: Readonly<Record<string, unknown>> | undefined): Readonly<Record<string, unknown>> | undefined {
   if (!metadata) return undefined;
   const workspaceRoot = metadata[SESSION_SEARCH_WORKSPACE_METADATA_KEY];
-  if (typeof workspaceRoot !== "string") return undefined;
-  return { [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: workspaceRoot };
+  const title = metadata[SESSION_TITLE_METADATA_KEY];
+  const safe: Record<string, unknown> = {};
+  if (typeof workspaceRoot === "string") safe[SESSION_SEARCH_WORKSPACE_METADATA_KEY] = workspaceRoot;
+  if (typeof title === "string") safe[SESSION_TITLE_METADATA_KEY] = title;
+  return Object.keys(safe).length > 0 ? safe : undefined;
 }

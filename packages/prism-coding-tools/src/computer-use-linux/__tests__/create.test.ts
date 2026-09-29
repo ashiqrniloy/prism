@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { test } from "bun:test";
+import assert from "node:assert/strict";
 import { setTimeout as delay } from "node:timers/promises";
 import {
   DevicePolicyError,

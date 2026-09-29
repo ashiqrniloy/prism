@@ -1,6 +1,6 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { describe, it } from "bun:test";
 import { assertAgentEventSourceConforms } from "@arnilo/prism";
 import { assertStateConcurrencyConforms } from "@arnilo/prism/testing/state-concurrency-conformance";
 import { jetstreamManager } from "@nats-io/jetstream";

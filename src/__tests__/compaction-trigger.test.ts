@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import { compileAttention, createAttentionCompiler } from "../attention-compiler.js";
 import type { ContextBudgetMessageGroups } from "../context-budget.js";
 import {
@@ -373,6 +373,13 @@ describe("compiler after compaction", () => {
       true,
       "the kept tail still holds the tool round",
     );
+    // The keep cut moves back to the assistant tool call that owns the first kept tool result,
+    // so the tail never starts with an orphaned result and the summary covers only old entries.
+    assert.equal(
+      snapshot.messages.some((message) => message.content.some((block) => block.type === "tool_call" && block.name === "big")),
+      true,
+      "the kept tail keeps the call that owns the kept result",
+    );
     const summaries: Message[] = snapshot.summaries.map((summary) => ({
       role: "system",
       content: [{ type: "text", text: `Summary:\n${summary}` }],
@@ -393,7 +400,11 @@ describe("compiler after compaction", () => {
     });
 
     assert.deepEqual(compiled.groups.summaries, summaries, "the compiler never rewrites the summary");
-    assert.equal(JSON.stringify(compiled.groups.summaries).includes("[tool_call big]"), true, "the summary text is passed through");
+    assert.equal(
+      JSON.stringify(compiled.groups.summaries).includes(snapshot.summaries[0] ?? "\u0000"),
+      true,
+      "the summary text is passed through",
+    );
     assert.deepEqual(compiled.groups.instructions, groups.instructions, "the frozen prefix is untouched");
     assert.deepEqual(compiled.groups.input, groups.input);
     assert.equal(compiled.report.stubbedToolResults, 1, "the kept tail is still subject to stubbing");

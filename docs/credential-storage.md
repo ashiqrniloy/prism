@@ -5,6 +5,7 @@
 The optional `@arnilo/prism-core/credentials/node` package ships host-owned credential persistence for Node.js CLI and desktop apps:
 
 - **Encrypted file store** — AES-256-GCM envelope with scrypt KDF, atomic rename writes, versioned on-disk format
+- **Owner-only file store** — plaintext `auth.json`, `0600`, atomic rename writes; for hosts that explicitly choose an owner-only file over the keychain (plaintext at rest)
 - **System keychain store** — cross-platform secret service via `@napi-rs/keyring@^1.3.0`
 - **Stored credential resolver** — `createStoredCredentialResolver(store)` for explicit resolver chains
 - **OAuth adapter** — extends the core `OAuthCredentialStore` seam with `get`/`delete` for refresh flows
@@ -12,6 +13,8 @@ The optional `@arnilo/prism-core/credentials/node` package ships host-owned cred
 Factories:
 
 - `openEncryptedCredentialStore(options)` / `createEncryptedCredentialStore(options)`
+- `createFileCredentialStore(options)`
+- `probeKeychainAvailability({ service })` — one sentinel read; never writes
 - `createKeychainCredentialStore(options)`
 - `createStoredCredentialResolver(store)`
 - `createOAuthCredentialStoreAdapter(store)`
@@ -28,6 +31,7 @@ Use this package when a host needs durable credentials beyond `createMemoryCrede
 - local CLI tools storing API keys or OAuth tokens between runs
 - desktop hosts integrating with macOS Keychain, Windows Credential Manager, or Linux Secret Service
 - integration tests that need encrypted reopen semantics without a live keychain
+- hosts whose keychain probe reports unavailable and whose user explicitly chose an owner-only `auth.json` (plaintext at rest, `0600`)
 
 Do **not** use it when credentials should live in a remote vault, HSM, or cloud secret manager — implement `CredentialResolver` against that service instead.
 
@@ -51,6 +55,17 @@ import {
 | `limits.maxFileBytes` | `number` | Encrypted envelope file: 4 MiB default, 16 MiB hard cap. |
 | `limits.maxVaultBytes` | `number` | Decrypted vault/plaintext: 3 MiB default, 12 MiB hard cap. |
 | `limits.maxScryptMemoryBytes` | `number` | `128*N*r` memory estimate: 256 MiB default and hard cap. |
+
+### Owner-only file (`auth.json`)
+
+| Field | Type | Purpose |
+| --- | --- | --- |
+| `path` | `string` | Vault file path. Parent directories created here are `0700`; an existing directory is never chmod'ed. |
+| `fileMode` | `number` | Unix mode for the file. Defaults to `0o600`; group/other permissions are rejected on write and on read (with a `chmod 600` hint). |
+| `limits.maxFileBytes` | `number` | File size: 4 MiB default, 16 MiB hard cap. |
+| `limits.maxVaultBytes` | `number` | Parsed vault: 3 MiB default, 12 MiB hard cap. |
+
+The owner-only file is plaintext at rest by design: it is the documented alternative when the OS keychain is unavailable and the user explicitly chooses it. It is never picked silently, and it is not used by `createEncryptedCredentialStore` or the keychain backend.
 
 ### System keychain
 
@@ -76,6 +91,8 @@ Encrypted file stores also expose:
 
 - `reload()` — re-read and decrypt from disk
 - `flush()` — force rewrite of the encrypted envelope
+
+The owner-only file store (`createFileCredentialStore`) implements `StoredCredentialStore` synchronously with the same `(provider, name)` and OAuth rows and also exposes `reload()` / `flush()`. `probeKeychainAvailability({ service })` returns `{ status: "available" }` or `{ status: "unavailable", message }` from one read of a sentinel account; it never writes and never throws.
 
 `encryptBytes()` and `decryptBytes()` are Promise-based because they use asynchronous `node:crypto.scrypt`.
 
@@ -245,7 +262,7 @@ const providers = createOpenAIProviderPackage({ apiKey });
 
 - Authenticated encryption uses Node built-in `aes-256-gcm` and asynchronous `scrypt`; no extra crypto dependency is added for the file backend.
 - Envelope parsing rejects unknown shape, non-canonical/oversized base64, wrong salt/IV/tag size, unsupported algorithms/version, and excessive KDF work before scrypt. `N` must be a power of two from 16,384–262,144; `r≤32`, `p≤16`, `keyLength=32`, `N*r*p≤2,097,152`, and `128*N*r` must fit `maxScryptMemoryBytes`.
-- Existing Unix vaults are checked before content read and must deny group/other access. Atomic writes create a random exclusive temp file at the requested restrictive mode, then rename; Windows skips Unix mode checks.
+- Existing Unix vaults are checked before content read and must deny group/other access. Atomic writes create a random exclusive temp file at the requested restrictive mode, then rename; Windows skips Unix mode checks. The same check applies to the owner-only `auth.json` store.
 - Derived keys and package-owned plaintext buffers are zeroed after use. JavaScript passphrase strings and returned credentials remain host-owned.
 - Keychain operations use `@napi-rs/keyring`'s abort-aware `AsyncEntry`, so native work runs outside the JavaScript event loop. A main-loop timer aborts and rejects at `timeoutMs`; native cancellation remains OS/backend-dependent and may briefly retain one libuv worker after rejection.
 - Keychain payloads are bytes rather than password strings and are zeroed after parse/write. Unknown native errors are mapped to sanitized typed errors; no native message or secret value is echoed.

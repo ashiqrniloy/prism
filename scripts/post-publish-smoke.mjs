@@ -6,12 +6,19 @@ import { spawnSync } from "node:child_process";
 //   bun scripts/post-publish-smoke.mjs                    # from the registry (after publish)
 //   bun scripts/post-publish-smoke.mjs --local            # from local tarballs (pre-publish parity)
 //   bun scripts/post-publish-smoke.mjs --version 0.11.0   # pin the version
+//   bun scripts/post-publish-smoke.mjs --prism-code       # also smoke the Prism Code app install
+//   bun scripts/post-publish-smoke.mjs --prism-code --prism-code-version 0.4.0
 //
 // Registry mode is the post-publish gate: it proves the published artifacts (not the working
 // tree) resolve `./fabric`, `./scoped`, the hooks adapter, and the work `./document-extraction`
 // subpath with and without its optional `@firecrawl/anydoc` peer. `--local` runs the same checks
 // against `npm pack` output, so a broken `files` entry or subpath export fails before the tag
 // is pushed. Network-free after install; exit code 1 on any failed check.
+//
+// Plan 140 Task 2: `--prism-code` appends the app surface — a global `bun add -g` of
+// `@arnilo/prism-code` (independently versioned, so it has its own `--prism-code-version`, default
+// its manifest version) checked by scripts/prism-code-install-smoke.mjs: version, headless mock
+// run, doctor, PTY launch/exit, a single `@arnilo/prism`, and `bunx` in registry mode.
 //
 // Plan 125 Task 2: tarballs still come from `npm pack` (the release-host registry toolchain) and
 // the registry specs are still npm's names, but the consumer installs and runs on Bun.
@@ -26,6 +33,11 @@ const local = argv.includes("--local");
 const versionIndex = argv.indexOf("--version");
 const version = versionIndex === -1 ? null : argv[versionIndex + 1];
 if (versionIndex !== -1 && !version) throw new Error("--version requires a value");
+const prismCode = argv.includes("--prism-code");
+const prismCodeVersionIndex = argv.indexOf("--prism-code-version");
+const prismCodeVersion = prismCodeVersionIndex === -1 ? null : argv[prismCodeVersionIndex + 1];
+if (prismCodeVersionIndex !== -1 && !prismCodeVersion) throw new Error("--prism-code-version requires a value");
+if (prismCodeVersion && !prismCode) throw new Error("--prism-code-version requires --prism-code");
 
 const PACKAGES = ["@arnilo/prism", "@arnilo/prism-memory", "@arnilo/prism-hooks", "@arnilo/prism-work"];
 const resolvedVersion = version ?? JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
@@ -75,6 +87,11 @@ run("bun", ["smoke-work.mjs"], { cwd: consumer });
 run("bun", ["add", `@firecrawl/anydoc@${anydocPin}`, "--prefer-offline", "--no-audit", "--no-fund"], { cwd: consumer });
 writeFileSync(join(consumer, "smoke-anydoc.mjs"), anydocSmokeSource({ odt: odtFixture, anydocPin }));
 run("bun", ["smoke-anydoc.mjs"], { cwd: consumer });
+
+if (prismCode) {
+  const appArgs = local ? [] : ["--registry", ...(prismCodeVersion ? ["--version", prismCodeVersion] : [])];
+  run("bun", [join(root, "scripts", "prism-code-install-smoke.mjs"), ...appArgs], { cwd: root });
+}
 
 console.log(`post-publish smoke: PASS (${local ? "local tarballs" : `registry @${resolvedVersion}`})`);
 

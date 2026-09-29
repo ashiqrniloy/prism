@@ -1,5 +1,5 @@
-import { type CheckpointQuery, type CheckpointRecord, type CheckpointStore } from "@arnilo/prism";
 import type { Database } from "bun:sqlite";
+import { type CheckpointQuery, type CheckpointRecord, type CheckpointStore } from "@arnilo/prism";
 import {
   assertCheckpointInput,
   decodeCheckpointCursor,

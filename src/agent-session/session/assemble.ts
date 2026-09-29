@@ -480,6 +480,8 @@ async function assembleRoundContext(params: {
   const toolNarrowing = options.toolNarrowing ?? session.agent.config.toolNarrowing;
   let narrowedForTurn: { turn: number; tools: typeof tools } | undefined;
 
+  session.activeLoopHistory = session.history;
+
   const loopCtx: LoopContext = {
     sessionId: session.id,
     runId,
@@ -494,6 +496,9 @@ async function assembleRoundContext(params: {
     assemble: async (nextInput, toolResults, turn) => {
       limits.charge("maxTurns");
       const turnIndex = turn ?? 1;
+      if (turnIndex > 1) {
+        await session.autoCompactTurn(runId, options, controller.signal, turnIndex);
+      }
       let turnTools = tools;
       if (toolNarrowing) {
         if (typeof toolNarrowing !== "function") throw new TypeError("toolNarrowing must be a function");

@@ -3,9 +3,10 @@
 // retained as terminal job-table entries by design (re-readable output), so
 // the leak assertion is terminal-only residue plus post-dispose empty —
 // deterministic, no sleeps. Skips on tiny heaps.
+
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { tmpdir } from "node:os";
-import { describe, it } from "bun:test";
 import { getHeapStatistics } from "node:v8";
 import { createSessionsHost } from "../process/sessions-host.js";
 import { startSession } from "../process/sessions-spawn.js";

@@ -9,7 +9,7 @@ import { createWorkflowEventBus } from "../events.js";
 import { DEFAULT_MAX_CONCURRENCY, DEFAULT_MAX_NESTED_DEPTH, DEFAULT_MAX_NODES } from "../limits.js";
 import type { RunWorkflowOptions, WorkflowEvent, WorkflowEventInput, WorkflowRunResult, WorkflowRunStatus } from "../types.js";
 import { errorCode, errorMessage, isAbortError, nowIso } from "../util.js";
-import { cloneState, persistCheckpoint } from "./checkpoint.js";
+import { cloneState, isCheckpointFailure, persistCheckpoint } from "./checkpoint.js";
 import type { SchedulerState } from "./main.js";
 import { runNode } from "./node-execution.js";
 import { markRemaining, skipNode } from "./skip.js";
@@ -152,7 +152,7 @@ export async function executeSuperstepScheduler(state: SchedulerState, options: 
           try {
             await runNode(state, nodeId, options, bus, emit, activeSessions);
           } catch (error) {
-            if (!fatalError) {
+            if (!fatalError || isCheckpointFailure(error)) {
               fatalError = error;
               state.status = isAbortError(error) || options.signal?.aborted ? "aborted" : "failed";
               abortAllSessions();
@@ -167,6 +167,7 @@ export async function executeSuperstepScheduler(state: SchedulerState, options: 
         workers.push(worker());
       }
       await Promise.all(workers);
+      if (isCheckpointFailure(fatalError)) throw fatalError;
 
       // Check if suspended or denied
       const currentStatus = state.status as WorkflowRunStatus;
@@ -192,8 +193,21 @@ export async function executeSuperstepScheduler(state: SchedulerState, options: 
       // Resolve pending activations for next wave
       resolvePendingActivations(state);
 
-      // Wave barrier: persist checkpoint
+      // Wave barrier: persist checkpoint before reporting node completion.
       await persistCheckpoint(state, options, emit);
+      for (const nodeId of currentWave) {
+        const node = state.nodes.get(nodeId);
+        if (node?.status === "succeeded") {
+          emit({
+            type: "node_finished",
+            workflowId: state.workflow.id,
+            runId: state.runId,
+            nodeId,
+            iteration: state.workflow.nodes[nodeId]?.kind === "loop" ? (node.iteration ?? 0) : (node.iteration ?? 1) - 1,
+            timestamp: nowIso(),
+          });
+        }
+      }
     }
 
     if (options.signal?.aborted || state.status === "aborted") {

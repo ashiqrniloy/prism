@@ -173,8 +173,10 @@ export async function runCli(argv: readonly string[]): Promise<number> {
   }
 }
 
-// If invoked directly from terminal
-if (import.meta.url === `file://${process.argv[1]}`) {
+// If invoked directly from terminal. `import.meta.main`, not a URL-vs-argv[1] comparison: inside a
+// `bun build --compile` binary every bundled module shares the binary's URL, so the comparison would
+// run this CLI from any app that bundles it (plan 140 Task 3).
+if (import.meta.main) {
   runCli(process.argv).then((code) => {
     process.exit(code);
   });

@@ -136,6 +136,69 @@ describe("session store helpers", () => {
     assert.throws(() => createMemorySessionStore([entry("a"), entry("a")]), /Duplicate session entry id: a/);
   });
 
+  it("memory session store snapshots initial and appended entries before indexing", async () => {
+    const initial = createSessionEntry({
+      id: "initial",
+      sessionId: "s1",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      kind: "message",
+      message: { role: "user", content: [{ type: "text", text: "initial original" }] },
+      metadata: { workspaceRoot: "/repo" },
+    });
+    const appended = createSessionEntry({
+      id: "appended",
+      parentId: "initial",
+      sessionId: "s1",
+      timestamp: "2026-01-02T00:00:00.000Z",
+      kind: "message",
+      message: { role: "assistant", content: [{ type: "text", text: "appended original" }] },
+      metadata: { workspaceRoot: "/repo" },
+    });
+    const store = createMemorySessionStore([initial]);
+    await store.append(appended, { expectedParentId: "initial", idempotencyKey: "request" });
+
+    (initial as Mutable<SessionEntry>).id = "changed";
+    (initial as Mutable<SessionEntry>).sessionId = "other";
+    (appended as Mutable<SessionEntry>).parentId = "missing";
+    for (const input of [initial, appended]) {
+      const block = input.message?.content[0];
+      if (block?.type === "text") (block as { text: string }).text = "changed";
+      (input.metadata as { workspaceRoot: string }).workspaceRoot = "/other";
+    }
+
+    assert.deepEqual(
+      (await store.list("s1")).map(({ id, parentId, message }) => [id, parentId, message?.content[0]]),
+      [
+        ["initial", undefined, { type: "text", text: "initial original" }],
+        ["appended", "initial", { type: "text", text: "appended original" }],
+      ],
+    );
+    assert.equal((await store.get?.("initial"))?.id, "initial");
+    assert.equal((await store.list("other")).length, 0);
+    assert.deepEqual(
+      (await store.readBranchPath?.({ sessionId: "s1", leafId: "appended" }))?.items.map((item) => item.id),
+      ["initial", "appended"],
+    );
+    for (const [query, entryId] of [
+      ["initial original", "initial"],
+      ["appended original", "appended"],
+    ]) {
+      const result = await store.searchSessions?.({ workspaceRoot: "/repo", query, kind: "message" });
+      assert.equal(result?.items[0]?.entryId, entryId);
+      assert.match(result?.items[0]?.snippet ?? "", /original/);
+    }
+    await assert.rejects(store.append(createSessionEntry({ id: "initial", sessionId: "s1", kind: "label" })), /Duplicate session entry id/);
+    await assert.rejects(
+      store.append(createSessionEntry({ id: "uncloneable", sessionId: "s1", kind: "custom", data: { fn: () => 1 } }), {
+        idempotencyKey: "clone-failure",
+      }),
+    );
+    assert.equal(await store.get?.("uncloneable"), undefined);
+    await store.append(createSessionEntry({ id: "after-failure", sessionId: "s1", kind: "label", label: "ok" }), {
+      idempotencyKey: "clone-failure",
+    });
+  });
+
   it("memory session store list and get return defensive copies", async () => {
     const original = createSessionEntry({
       id: "a",

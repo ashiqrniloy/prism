@@ -7,6 +7,7 @@ describe("parseSkillFile", () => {
     const skill = parseSkillFile("---\nname: x\ndescription: d\ntoolNames:\n  - a\n  - b\n---\ninstr", "/p/x/SKILL.md");
     assert.equal(skill.name, "x");
     assert.equal(skill.description, "d");
+    assert.equal(skill.path, "/p/x/SKILL.md");
     assert.deepEqual([...(skill.toolNames ?? [])], ["a", "b"]);
     assert.equal(skill.instructions, "instr");
   });

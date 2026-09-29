@@ -256,6 +256,27 @@ test("prism-core's split runs every dist test file exactly once", () => {
   assert.ok(nodeSide.length > 0 && sqlite.length > 0, "both sides of the split must be non-empty (build first)");
 });
 
+test("ownership, checkpoint, snapshot, and timestamp regressions stay in mandatory offline stages", () => {
+  const regressions = [
+    ["dist/__tests__/session-stores.test.js", "memory session store snapshots initial and appended entries before indexing"],
+    ["packages/prism-core/dist/runtime/workflows/__tests__/run.test.js", "never retries effects after a post-execution checkpoint failure"],
+    [
+      "packages/prism-core/dist/sessions/sqlite/__tests__/sqlite-persistence.test.js",
+      "scopes ordinary and leaf entry queries to the owning session",
+    ],
+    ["packages/prism-core/dist/sessions/sqlite/__tests__/sqlite-persistence.test.js", "filters and keyset-paginates branch entry queries"],
+    [
+      "packages/prism-core/dist/sessions/sqlite/__tests__/sqlite-persistence.test.js",
+      "keeps session activity monotonic across run, usage, and event writes",
+    ],
+  ];
+  for (const [file, name] of regressions) {
+    assert.ok(existsSync(join(ROOT, file)), `${file}: build first`);
+    assert.ok(readFileSync(join(ROOT, file), "utf8").includes(`"${name}"`), `${file}: missing regression ${name}`);
+  }
+  // The partition test below proves every named file is owned by exactly one mandatory stage.
+});
+
 test("every workspace test file runs exactly once: default suite, sqlite stage, or an opt-in leg", () => {
   // Plan 124 Task 2's partition rule. The default suite's declared sets must cover every built
   // workspace test file except the files a package owns through `test:postgres`/`test:live`

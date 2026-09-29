@@ -1,3 +1,4 @@
+import type { Database } from "bun:sqlite";
 import { randomUUID } from "node:crypto";
 import {
   type ApplyRetentionInput,
@@ -6,7 +7,6 @@ import {
   PersistenceLifecycleError,
   type PersistenceLifecycleStore,
 } from "@arnilo/prism";
-import type { Database } from "bun:sqlite";
 import {
   assertLifecycleOwnership as assertOwnership,
   assertOwnershipScope,

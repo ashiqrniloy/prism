@@ -257,6 +257,7 @@ export async function cleanupRun(input: {
   if (session.activeRun === controller) session.activeRun = undefined;
   session.activeRunId = undefined;
   session.activeLoop = undefined;
+  session.activeLoopHistory = undefined;
   session.activeGatedRound = undefined;
   session.activeProviderTurnAbort = undefined;
   session.pendingSoftInterrupt = false;

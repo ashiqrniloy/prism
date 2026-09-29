@@ -1048,6 +1048,53 @@
       "scope": "Existing private signal-cli v0.14.8 Unix socket and account you already operate. Never registers or links. Send only to PRISM_LIVE_SIGNAL_RECIPIENT_UUID.",
       "cost": "1 subscribeReceive + health (+ optional 1 send).",
       "plan": "079 (task 8)"
+    },
+    {
+      "id": "code/live-smoke",
+      "package": "@arnilo/prism-code",
+      "status": "active",
+      "source": "scripts/e2e-prism-code-live.test.mjs",
+      "command": "bun test --timeout=0 scripts/e2e-prism-code-live.test.mjs",
+      "cwd": ".",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS"
+      ],
+      "requiresAny": [
+        "ANTHROPIC_API_KEY",
+        "OPENAI_API_KEY",
+        "PRISM_LIVE_CODEX_REFRESH_TOKEN"
+      ],
+      "optional": [
+        "PRISM_LIVE_CODEX_MODEL",
+        "PRISM_LIVE_PRISM_CODE_PROVIDER",
+        "PRISM_LIVE_PRISM_CODE_TASK",
+        "PRISM_LIVE_PRISM_CODE_JOURNEY",
+        "PRISM_LIVE_PRISM_CODE_JOURNEY_PROVIDER",
+        "PRISM_LIVE_PRISM_CODE_JOURNEY_TASK_TIMEOUT_MS",
+        "PRISM_LIVE_PRISM_CODE_JOURNEY_MCP_TIMEOUT_MS",
+        "PRISM_LIVE_JOURNEY_REPORT"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_ANTHROPIC_MODEL",
+          "default": "claude-haiku-4-5",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_OPENAI_MODEL",
+          "default": "gpt-5.1",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_CODEX_MODEL",
+          "default": "gpt-5.1-codex",
+          "wired": true
+        }
+      ],
+      "scope": "Stored-key path: a real prism-code turn whose only credential is an API key in the owner-only file store (provider env vars are stripped from the child). OAuth leg: an openai-codex entry with an expired access token must be refreshed against the real token endpoint and persisted. Task leg (opt-in via PRISM_LIVE_PRISM_CODE_TASK=1): the agent creates a source file, writes its test, and must finish with a green named `coding_check` run. Journey leg (opt-in via PRISM_LIVE_PRISM_CODE_JOURNEY=1): one full release-acceptance run per channel (bun + the built linux-x64 binary, when present): /provider login, an ask-mode task with todo_write, quit, --continue replay, /om:status observations, the stdio MCP echo tool, and doctor; PRISM_LIVE_JOURNEY_REPORT writes the per-step timings.",
+      "cost": "1-2 provider requests on haiku/gpt-5.1-class models; the OAuth leg adds one token-refresh round-trip; the opt-in task leg adds a full create-file/write-test/run-check run (bounded by --approve all). The journey leg adds ~4-6 provider requests per channel plus the OM observer pass after the large-file read.",
+      "plan": "plans/136-Prism-Code-Home-Providers-Credentials.md",
+      "notes": "Task 8 (plan 136) smoke plus plan 137 Task 9 task leg. Provider-side 401/403 skips the leg (skip-not-fail). All transcripts are secret-scanned; the OAuth leg needs PRISM_LIVE_CODEX_REFRESH_TOKEN, the task leg needs PRISM_LIVE_PRISM_CODE_TASK=1. The plan 140 Task 6 journey needs PRISM_LIVE_PRISM_CODE_JOURNEY=1 and an API-key provider (anthropic/openai); build the linux-x64 binary first (bun scripts/build-prism-code-binaries.mjs --target linux-x64) or that channel skips."
     }
   ]
 }

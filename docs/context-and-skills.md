@@ -184,7 +184,7 @@ const request = await assembleProviderInput({
 
 ### On-demand skill load (`load_skill`)
 
-Hosts opt in by registering `createLoadSkillTool({ registry, loaded })` on the active tool set. The model calls `load_skill { name }` with an exact registry name; success adds the name to the session `LoadedSkillSet` so later turns include `instructions` under progressive mode. The tool does **not** activate tools, widen permissions, or load skills that were not active for the run.
+Hosts opt in by registering `createLoadSkillTool({ registry, loaded })` on the active tool set. The model calls `load_skill { name }` with an exact registry name; success adds the name to the session `LoadedSkillSet` so later turns include `instructions` under progressive mode. When the skill defines `path` (the absolute path to its source `SKILL.md`), the tool appends `Skill directory: <dirname(path)>` to its success text (clamped within `MAX_LOAD_SKILL_RESULT_BYTES` = 512 bytes), allowing the model to locate and read bundled `references/`, `scripts/`, and `assets/` on disk. The tool does **not** activate tools, widen permissions, or load skills that were not active for the run.
 
 Fail-closed cases: unknown name, inactive skill for the run, inactive required `toolNames`, oversize body, duplicate load, missing session loaded-set wiring. Tool output and errors are size-capped; skill text is untrusted host/extension data.
 
@@ -195,8 +195,31 @@ const registry = createSkillRegistry([ponytail, brief]);
 const loadSkill = createLoadSkillTool({ registry }); // session injects loadedSkills at dispatch
 const agent = createAgent({ model, provider, skills: registry, tools: [loadSkill, /* host */] });
 await agent.createSession().run("…", { activeSkills: ["ponytail"] });
-// Turn 1: catalog only. After load_skill({ name: "ponytail" }), later turns include instructions.
+// Turn 1: catalog only. After load_skill({ name: "ponytail" }), later turns include instructions and skill directory.
 ```
+
+### Multi-root discovery and `Skill.path`
+
+`discoverContributions` (`@arnilo/prism/node/contribution-discovery`) supports multi-root discovery across user-global and project layers via `DiscoveryOptions.roots`:
+
+```ts
+import { discoverContributions } from "@arnilo/prism/node/contribution-discovery";
+
+const discovered = await discoverContributions({
+  kinds: ["skill"],
+  roots: [
+    { dir: "/home/user/.agents/agent/skills", origin: "global", layout: "flat" },
+    { dir: "/home/user/.prism/agent/skills", origin: "global", layout: "flat" },
+    { dir: "/repo/.agents/agent/skills", origin: "workspace", layout: "flat" },
+  ],
+  workspaceRoot: "/repo", // optional backward-compatible layer; appended last
+  trust,
+});
+```
+
+- **Layouts**: `layout: "flat"` scans `<dir>/<name>/SKILL.md` directly; `layout: "kind-dir"` (default) scans `<dir>/<kind>s/<name>/SKILL.md`.
+- **Precedence**: Later roots override earlier ones by `kind/name` key; `workspaceRoot` keeps its conventional `.agents/<kind>s/` scanning and is appended last.
+- **Skill.path**: Discovered skills retain their absolute `path` to `SKILL.md`, which is also populated by `loadSkillDirectory` and `parseSkillFile`.
 
 ### Third-party behavior packages (Impeccable, host-owned personas)
 

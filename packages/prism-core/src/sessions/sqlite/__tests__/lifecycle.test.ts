@@ -1,10 +1,10 @@
+import { Database } from "bun:sqlite";
+import { afterEach, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, it } from "bun:test";
 import { PersistenceLifecycleError } from "@arnilo/prism";
-import { Database } from "bun:sqlite";
 import { createSqlitePersistence } from "../index.js";
 
 const dirs: string[] = [];

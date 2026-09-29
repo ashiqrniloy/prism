@@ -4,11 +4,12 @@
  * prints the loopback URL, stays start-to-listen under 1s, refuses
  * non-loopback hosts (fail-closed), and closes on abort/SIGINT.
  */
+
+import { afterAll as after, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { Writable } from "node:stream";
-import { afterAll as after, describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { runDevCli } from "../cli.js";
 

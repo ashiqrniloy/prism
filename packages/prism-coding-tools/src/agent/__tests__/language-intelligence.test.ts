@@ -1,8 +1,8 @@
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { LspClient } from "../language/client.js";
 import { encodeLspFrame, LspFrameError, LspFrameReader } from "../language/framing.js";

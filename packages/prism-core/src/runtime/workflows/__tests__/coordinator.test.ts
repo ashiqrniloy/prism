@@ -126,7 +126,7 @@ describe("distributed workflow coordinator", () => {
     await waitFor(async () => (await getWorkflowRun(checkpoints, queued))?.value.status === "aborted");
   });
 
-  it("takes over expired work and fences the stale worker", async () => {
+  it("fences expired work without replaying a node whose effect is uncertain", async () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const sharedLeases = createMemoryLeaseStore();
     const losingLeases: LeaseStore = { ...sharedLeases, renewLease: async () => null };
@@ -147,6 +147,7 @@ describe("distributed workflow coordinator", () => {
       renewalIntervalMs: 5,
       onError: (error) => staleErrors.push(error),
     });
+    const replacementErrors: unknown[] = [];
     const replacement = createWorkflowCoordinator({
       coordinatorId: "replacement",
       workflows: { [definition.id]: definition },
@@ -154,16 +155,18 @@ describe("distributed workflow coordinator", () => {
       leases: sharedLeases,
       leaseTtlMs: 100,
       renewalIntervalMs: 20,
+      onError: (error) => replacementErrors.push(error),
     });
 
     assert.equal(await stale.pollOnce(), 1);
     // In-process registry rejects duplicate exact runs; wait for stale local execution to unwind.
     await waitFor(() => stale.activeRuns === 0);
     assert.equal(await replacement.pollOnce(), 1);
-    await waitFor(async () => (await getWorkflowRun(checkpoints, queued))?.value.status === "succeeded");
+    await waitFor(() => replacementErrors.length > 0);
     await waitFor(() => staleErrors.length > 0);
+    assert.match(String(replacementErrors[0]), /unknown outcome/);
     const record = await getWorkflowRun(checkpoints, queued);
-    assert.equal(record?.fencingToken, 2);
-    assert.equal(executions, 2);
+    assert.equal(record?.value.status, "running");
+    assert.equal(executions, 1);
   });
 });

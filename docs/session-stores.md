@@ -42,7 +42,7 @@ Public helpers:
 
 ## Outputs / response / events
 
-A `SessionStore` returns `SessionEntry` arrays. Branch helpers return deep copies. `rebuildSessionContext()` returns `{ leafId, entries, messages, summaries }` where `entries` is the raw branch, `messages` is the provider context, and `summaries` includes compaction summaries.
+A `SessionStore` returns `SessionEntry` arrays. The memory store snapshots each initial or appended entry on ingestion; `get`, `list`, and `readBranchPath` return defensive copies, while search reads the stored snapshot. Mutating a caller-owned entry after ingestion cannot change any of these results. Branch helpers return deep copies. `rebuildSessionContext()` returns `{ leafId, entries, messages, summaries }` where `entries` is the raw branch, `messages` is the provider context, and `summaries` includes compaction summaries.
 
 ## Request/response example
 
@@ -152,9 +152,9 @@ Sizing (plan 095): SQLite FTS5 and the Postgres `tsvector` column are maintained
 
 - Do not store provider credentials, credential resolvers, provider instances, or unredacted secrets in session entries, append options, idempotency keys, or branch records.
 - Use `AgentConfig.redactor` or `RunOptions.redactor` to redact secrets before entries reach durable stores. Stores receive already-redacted `SessionEntry` values.
-- `createMemorySessionStore()` keeps O(1) duplicate/idempotency/parent checks in process-local maps; it is not durable. Idempotency dedup remembers the latest 4,096 keys; an older replay appends as a new entry.
+- `createMemorySessionStore()` keeps O(1) duplicate/idempotency/parent checks in process-local maps; it is not durable. It clones each entry once after validation, so inputs must support `structuredClone` (a clone failure rejects the append without indexing it). Idempotency dedup remembers the latest 4,096 keys; an older replay appends as a new entry.
 - The JSONL adapter serializes appends per store instance, has no cross-process lock, and is not suitable for production multi-writer storage.
-- Database-backed stores should follow the indexes and retention guidance in [Database persistence](database-persistence.md). Implement `readBranchPath` as a single branch-path query (for example a recursive CTE) and avoid loading entire large sessions into memory when only one branch is needed.
+- Database-backed stores should follow the indexes and retention guidance in [Database persistence](database-persistence.md). SQLite/PostgreSQL `readBranchPath` returns root-to-leaf pages: with a positive `limit`, SQL fetches at most `limit + 1` entries (one extra to detect a next page), using a canonical nonnegative numeric offset cursor. Missing or mismatched session/leaf pairs return an empty page; this unscoped API still needs host authorization. Omit `limit` to keep the prior full-branch read; supply it to bound result materialization. Recursive CTE traversal still visits ancestors on each page, so deep offset pages are not constant-time and repeated small pages cost more than one larger page. The reader helper follows cursors, with its existing 64-page safety cap.
 
 ## Related APIs
 

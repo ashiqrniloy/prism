@@ -1,8 +1,8 @@
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
 import { atomicWriteUtf8File } from "../atomic-write.js";
 
 async function tmp(): Promise<string> {

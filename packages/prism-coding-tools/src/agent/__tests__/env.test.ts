@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { test } from "bun:test";
+import assert from "node:assert/strict";
 import { buildChildEnv, DEFAULT_CHILD_ENV_INHERIT } from "../env.js";
 
 test("buildChildEnv copies only explicitly inherited names, never the whole process.env", () => {

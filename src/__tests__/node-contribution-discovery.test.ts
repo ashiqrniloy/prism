@@ -165,6 +165,83 @@ describe("discoverContributions", () => {
     );
   });
 
+  it("three roots with a colliding skill name: later root wins and reports origin", async () => {
+    const root1 = await makeRoot("root1");
+    const root2 = await makeRoot("root2");
+    const root3 = await makeRoot("root3");
+
+    // root1: global flat
+    await writeFileDeep(`${root1}/collide/SKILL.md`, "---\nname: collide\ndescription: from-root-1\n---\nbody 1");
+    // root2: global flat
+    await writeFileDeep(`${root2}/collide/SKILL.md`, "---\nname: collide\ndescription: from-root-2\n---\nbody 2");
+    // root3: workspace root (.agents/skills/collide/SKILL.md)
+    await writeFileDeep(`${root3}/.agents/skills/collide/SKILL.md`, "---\nname: collide\ndescription: from-workspace\n---\nbody ws");
+
+    const found = await discoverContributions({
+      kinds: ["skill"],
+      roots: [
+        { dir: root1, origin: "global", layout: "flat" },
+        { dir: root2, origin: "global", layout: "flat" },
+      ],
+      workspaceRoot: root3,
+    });
+
+    assert.equal(found.length, 1);
+    assert.equal(found[0].name, "collide");
+    assert.equal(found[0].origin, "workspace");
+    assert.equal(found[0].skill?.description, "from-workspace");
+    assert.equal(found[0].skill?.path, `${root3}/.agents/skills/collide/SKILL.md`);
+
+    // Now test without workspaceRoot so root2 wins over root1
+    const foundRootsOnly = await discoverContributions({
+      kinds: ["skill"],
+      roots: [
+        { dir: root1, origin: "global", layout: "flat" },
+        { dir: root2, origin: "global", layout: "flat" },
+      ],
+    });
+
+    assert.equal(foundRootsOnly.length, 1);
+    assert.equal(foundRootsOnly[0].name, "collide");
+    assert.equal(foundRootsOnly[0].origin, "global");
+    assert.equal(foundRootsOnly[0].skill?.description, "from-root-2");
+    assert.equal(foundRootsOnly[0].skill?.path, `${root2}/collide/SKILL.md`);
+  });
+
+  it("flat vs kind-dir layouts: kind-dir scans <dir>/skills/<name>/SKILL.md", async () => {
+    const kindDirRoot = await makeRoot("kind-dir-root");
+    const flatRoot = await makeRoot("flat-root");
+
+    await writeFileDeep(`${kindDirRoot}/skills/kd-skill/SKILL.md`, "---\nname: kd-skill\n---\nkd");
+    await writeFileDeep(`${flatRoot}/flat-skill/SKILL.md`, "---\nname: flat-skill\n---\nflat");
+
+    const found = await discoverContributions({
+      kinds: ["skill"],
+      roots: [
+        { dir: kindDirRoot, origin: "global", layout: "kind-dir" },
+        { dir: flatRoot, origin: "global", layout: "flat" },
+      ],
+    });
+
+    assert.equal(found.length, 2);
+    const names = found.map((f) => f.name).sort();
+    assert.deepEqual(names, ["flat-skill", "kd-skill"]);
+  });
+
+  it("skips a symlink escaping a root in roots option", async () => {
+    const root = await makeRoot("roots-symlink");
+    const outside = await mkdtemp(join(tmpdir(), "prism-outside-roots-"));
+    await writeFileDeep(`${outside}/SKILL.md`, "---\nname: escaped\n---\nescaped\n");
+    await symlink(outside, `${root}/escaped`, "dir");
+
+    const found = await discoverContributions({
+      kinds: ["skill"],
+      roots: [{ dir: root, origin: "global", layout: "flat" }],
+    });
+
+    assert.equal(found.length, 0);
+  });
+
   it("contribution-discovery subpath is declared in package exports", async () => {
     const packageJson = JSON.parse(await readFile("package.json", "utf8")) as { exports: Record<string, unknown> };
     assert.deepEqual(packageJson.exports["./node/contribution-discovery"], {
@@ -189,6 +266,7 @@ describe("loadSkillDirectory", () => {
       ["alpha", "zeta"],
     );
     assert.equal(skills[0].description, "a");
+    assert.equal(skills[0].path, `${dir}/alpha/SKILL.md`);
     assert.match(skills[0].instructions ?? "", /^alpha body/);
   });
 

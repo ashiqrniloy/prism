@@ -478,4 +478,8 @@ export interface AgentSession {
   contextMeter(): ContextMeter;
   fork(options?: AgentSessionForkOptions): AgentSession;
   clone(options?: AgentSessionCloneOptions): Promise<AgentSession>;
+  /** Plan 137 Task 3: loaded skill names currently active in this session. */
+  getLoadedSkillNames?(): readonly string[];
+  /** Plan 015 / Plan 137 Task 3: re-add loaded skill names to session. */
+  restoreLoadedSkills?(names: readonly string[]): void;
 }

@@ -1,9 +1,9 @@
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { createTempArtifactWriter } from "../artifacts.js";
 import { createCodingCheckTool } from "../checks.js";

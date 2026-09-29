@@ -92,8 +92,15 @@ export function resolveRunLimits(agent?: RunLimits, run?: RunLimits): Readonly<R
     resolved[name] = narrowed !== undefined ? narrowed : DEFAULT_RUN_LIMITS[name];
   }
   for (const name of ["maxRequestBytes", "maxResponseBytes"] as const) {
-    if (base?.[name] !== undefined) resolved[name] = Math.min(resolved[name] as number, base[name]!);
-    if (override?.[name] !== undefined) resolved[name] = Math.min(resolved[name] as number, override[name]!);
+    const baseVal = base?.[name];
+    const overrideVal = override?.[name];
+    if (baseVal !== undefined && overrideVal !== undefined) {
+      resolved[name] = Math.min(baseVal, overrideVal);
+    } else if (baseVal !== undefined) {
+      resolved[name] = baseVal;
+    } else if (overrideVal !== undefined) {
+      resolved[name] = overrideVal;
+    }
   }
   // A raised/disabled maxTurns must not be silently undercut by the attempts default:
   // generate-then-tool-loop needs at least one attempt per turn (plus retries).

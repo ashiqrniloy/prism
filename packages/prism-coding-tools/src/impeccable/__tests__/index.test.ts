@@ -1,6 +1,6 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { describe, it } from "bun:test";
 
 describe("impeccable package scaffold", () => {
   it("impeccable_package_metadata_is_minimal", () => {

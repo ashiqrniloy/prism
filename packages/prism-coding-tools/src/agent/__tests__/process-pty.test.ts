@@ -8,11 +8,12 @@
  * backends; the real host adapter is covered by the protected leg
  * (scripts/phase26-pty-protected.test.mjs).
  */
+
+import { afterAll as after, beforeAll as before, test } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll as after, beforeAll as before, test } from "bun:test";
 import type { ExecutionPolicy } from "@arnilo/prism";
 import {
   type CodingProcessEvent,

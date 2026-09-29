@@ -6,7 +6,7 @@
 
 The optional `@arnilo/prism-core/sessions/sqlite` package ships a production-oriented SQLite adapter that implements:
 
-- `SessionStore` — atomic `append` / `list` / `get` / `readBranchPath` / bounded `searchSessions` / bounded `searchSessions`
+- `SessionStore` — atomic `append` / `list` / `get` / `readBranchPath` / bounded `searchSessions`
 - `RunLedger` — durable run, event, tool-call, and usage rows
 - `ProductionPersistenceStore` — cursor-paginated `query*` reads plus generic `checkpoints` and atomic `leases` capabilities
 
@@ -53,12 +53,12 @@ import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
 | `SessionStore.list` / `get` | Indexed reads by `session_id` and primary key. |
 | `SessionStore.readBranchPath` | Recursive ancestor query from `leafId` (or latest leaf) in root→leaf order. |
 | `RunLedger.append*` | Inserts run/event/tool/usage rows; events receive monotonic per-run `sequence` values. |
-| `ProductionPersistenceStore.query*` | Parameterized cursor pagination on indexed columns. |
+| `ProductionPersistenceStore.query*` | Parameterized cursor pagination on indexed columns; `queryEntries` filters `leafId` ancestors by kind/run/parent/time and owning-session scope, then orders/paginates them with the ordinary `(timestamp, id)` entry cursor. |
 | `checkpoints` | Generic versioned `CheckpointStore` backed by `prism_checkpoints`; ownership, CAS/fencing checks, bounded pagination, and workflow suspended/denied/schedule/state/replay values without a schema migration. A load or delete under a non-matching ownership scope reads as absent and a cross-scope write fails as a generic `ERR_PRISM_CHECKPOINT_CONFLICT` (plan 080 Task 3) — no ownership-shaped existence oracle. |
 | `leases` | Atomic `LeaseStore` backed by `prism_leases`; database-clock expiry, opaque renew/release token, monotonic takeover fence. |
 | `close()` | Closes the underlying database when the adapter opened it. |
 
-Migrations run automatically on open and are idempotent across reopen. Under the SQLite migration transaction, startup checks ordered contract name/version/SHA-256 rows plus full schema-v6 PRAGMA/catalog shape (all required tables, columns/types/nullability/defaults, PK/unique/FK keys, and named indexes) before any runtime write. A complete legacy 0.0.5 history with all `checksum` values `NULL` is shape-verified then backfilled transactionally once. Unknown, duplicate, out-of-order, partial-legacy, checksum, or shape drift rejects open; restore or apply reviewed DDL rather than editing migration rows.
+Migrations run automatically on open and are idempotent across reopen. Under the SQLite migration transaction, startup checks ordered contract name/version/SHA-256 rows plus full schema-v9 PRAGMA/catalog shape (all required tables, columns/types/nullability/defaults, PK/unique/FK keys, and named indexes) before any runtime write. A complete legacy 0.0.5 history with all `checksum` values `NULL` is shape-verified then backfilled transactionally once. Unknown, duplicate, out-of-order, partial-legacy, checksum, or shape drift rejects open; restore or apply reviewed DDL rather than editing migration rows.
 
 ## Request/response example
 
@@ -101,12 +101,8 @@ For resume/timeline flows, use `queryRuns`, `queryEvents`, `queryToolCalls`, and
 - The package is optional and workspace-local; `@arnilo/prism` core has no SQLite dependency.
 - Hosts choose the database path and own backup, retention enforcement, and filesystem permissions.
 - `SessionAppendOptions` idempotency rows are durable in `prism_session_append_idempotency` and survive reopen.
-- Schema version **6** applies `001_init`, `002_usage_scope`, `003_run_feedback`, `004_session_search`, `005_lifecycle_hold_quota`, and `006_agent_event_source`. Migration 006 backfills `prism_agent_event_streams` and uses it to allocate unique per-run event sequences inside the SQLite append transaction. It is sequence-compatible with PostgreSQL but remains local/file-backed; it does not expose distributed subscriptions. Migration 003 adds immutable `prism_run_feedback` rows with run FK/cascade deletion and owner/run/trace cursor indexes. Migration 004 adds session search FTS (FTS5 virtual table `prism_session_search_fts` dual-written on append) plus `prism_sessions(updated_at, id)` cursor index; existing entries are backfilled once. `persistence.feedback` validates exact run ownership, bounds/redacts through optional `feedbackRedactor`, queries bounded pages, and deletes only exact-owned IDs. Search hits never include credentials; ownership filters apply when present. PostgreSQL shares the same model with dialect-local DDL.
+- Schema version **9** applies `001_init` through `009_run_prompt_version` (including `006_agent_event_source`): `007_agent_event_retention_index` adds exact-owner event cleanup, `008_session_version` adds session metadata CAS, and `009_run_prompt_version` adds nullable run prompt provenance. Migration 006 backfills `prism_agent_event_streams` and uses it to allocate unique per-run event sequences inside the SQLite append transaction. It is sequence-compatible with PostgreSQL but remains local/file-backed; it does not expose distributed subscriptions. Migration 003 adds immutable `prism_run_feedback` rows with run FK/cascade deletion and owner/run/trace cursor indexes. Migration 004 adds session search FTS (FTS5 virtual table `prism_session_search_fts` dual-written on append) plus `prism_sessions(updated_at, id)` cursor index; existing entries are backfilled once. `persistence.feedback` validates exact run ownership, bounds/redacts through optional `feedbackRedactor`, queries bounded pages, and deletes only exact-owned IDs. Search hits never include credentials; ownership filters apply when present. PostgreSQL shares the same model with dialect-local DDL.
 - Pass an existing `bun:sqlite` `Database` via `database` when your host already manages connections.
-
-## Durable events
-
-SQLite applies migrations **006**/**007** for per-run event sequence compatibility and the owner retention index. It does **not** provide cross-process subscribe/LISTEN; use PostgreSQL for distributed reconnect.
 
 ## Durable events
 
@@ -121,7 +117,10 @@ SQLite applies migrations **006**/**007** for per-run event sequence compatibili
 - **Optional batching.** SQLite remains write-through by default. Hosts may wrap its ledger with core `createBatchedRunLedger()`; `flush_on_terminal` preserves terminal acknowledgement, while `buffered` explicitly risks crash-before-flush loss.
 - **WAL + busy timeout.** WAL is enabled by default; busy timeout defaults to 5 seconds. This meets the Plan 056 local workload target but SQLite still serializes writers — prefer PostgreSQL for high write concurrency.
 - **Indexed operations.** Append, parent validation, idempotency dedup, branch reads, and pagination use the indexes documented in [Database persistence](database-persistence.md); normal paths avoid whole-database scans. Startup validation reads SQLite catalog/PRAGMA metadata only, never application rows.
-- **Tenant isolation.** `tenant_id` / `account_id` / `user_id` columns on run and ownership tables participate in query filters; hosts must still scope writes correctly.
+- **Branch entry queries.** Supply `sessionId` with `leafId`; remaining kind/run/parent/timestamp filters and ascending/descending `(timestamp, id)` order apply before SQL `LIMIT limit + 1` (default 100). Reuse `nextCursor` with the same filters/order; malformed entry cursors reject. Unlike `readBranchPath`, this is not root-to-leaf ordering; that separate API retains its offset cursor. Recursive traversal still visits ancestors and may cost more for deep branches.
+- **Branch-path pages.** `readBranchPath({ sessionId, leafId, limit, cursor })` keeps root-to-leaf order and numeric offset cursors. With `limit`, SQL returns at most `limit + 1` rows per page; invalid limits and malformed/unsafe cursors reject. Omitting `limit` preserves the full-path read. The recursive CTE still traverses ancestors and sorts for every page (including deep offsets), so use explicit limits for bounded result memory, not constant-time page traversal.
+- **Tenant isolation.** `queryEntries` uses an indexed `prism_sessions.id = entry.session_id` lookup for every supplied tenant/account/user predicate, including the branch seed; cross-session parent links cannot cross the selected chain. Foreign or missing sessions/leaves return empty pages without a cursor; unscoped host reads are unchanged. `SessionStore.list/get/readBranchPath` remain unscoped and require host authorization. Other ownership tables filter their own columns; hosts must still scope writes correctly.
+- **Session activity time.** Run, tool, usage, and event upserts advance `updatedAt` only for newer instants in the indexed session-key write (`julianday` handles existing timezone offsets); incoming `updatedAt` normalizes to UTC milliseconds. Explicit `appendSession` metadata/CAS writes remain caller-authoritative, including backdated timestamps. See [Database persistence](database-persistence.md) for timestamp precision and ownership behavior.
 
 ## Related APIs
 

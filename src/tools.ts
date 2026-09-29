@@ -126,6 +126,9 @@ export function createToolRegistry(tools: readonly ToolDefinition[] = [], option
     list() {
       return [...byName.values()];
     },
+    unregister(name) {
+      return byName.delete(name);
+    },
   };
 
   for (const tool of tools) registry.register(tool);

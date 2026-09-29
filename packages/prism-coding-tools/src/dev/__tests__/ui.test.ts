@@ -4,8 +4,9 @@
  * projection that backs the page (fixtures per normalized AgentEvent type,
  * windowing guard for 1k-event timelines).
  */
-import assert from "node:assert/strict";
+
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import { type AgentEvent, createAgent, toolCallContent } from "@arnilo/prism";
 import { createPrismDevInspector } from "../index.js";
 import { applyAgentEvent, createRunView, type RunView, visibleItems } from "../ui/inspector.js";

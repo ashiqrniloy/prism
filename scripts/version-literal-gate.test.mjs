@@ -1,10 +1,11 @@
 #!/usr/bin/env node
+import { test } from "bun:test";
 // Plan 071 Task 1 (plan 070 FA 10): one source for the release version, and one
 // pre-flight that names every surface a half-finished cut left behind.
 //
 // `currentVersion()` (scripts/package-truth.mjs) reads the root manifest, which
 // `release.mjs bump` rewrites first. This gate then asserts that every surface
-// which CLAIMS the release version equals it: all 12 manifests, all internal
+// which CLAIMS the release version equals it: all 14 manifests, all internal
 // `@arnilo/*` caret ranges, the lockfile, the `src/index.ts` version constant,
 // the `docs/index.md` current-line banner, the release-workflow tag list, and the
 // generated package-truth artifact.
@@ -22,13 +23,20 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "bun:test";
-import { currentVersion, expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
 import { parseBunLock } from "./bun-lock.mjs";
+import { currentVersion, expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const INTERNAL_PACKAGE = "@arnilo/";
 const MANIFEST = /^(?:package\.json|packages\/[^/]+\/package\.json)$/;
+/**
+ * Packages on their own version line (plan 140 Task 1: the app `@arnilo/prism-code` continues its
+ * published 0.3.x line at 0.4.0, and `@arnilo/prism-agent-sdk` starts at 0.1.0; release.mjs
+ * independent mode publishes them). They do not claim the lockstep version, so the gate holds them
+ * to self-consistency instead: the lockfile, package-truth, and every internal range that targets
+ * them must equal their own manifest version. Same set as src/__tests__/packaging.test.ts.
+ */
+const INDEPENDENT_LINES = new Set(["@arnilo/prism-code", "@arnilo/prism-agent-sdk"]);
 
 /** Every file this gate reads, keyed by repo-relative path. */
 function claimFiles(rootDir) {
@@ -97,19 +105,26 @@ function parseLock(files, path, problems) {
  */
 export function claimViolations(files, current) {
   const problems = [];
-  const caret = `^${current}`;
   const manifests = [...files.keys()].filter((path) => MANIFEST.test(path)).sort();
-  if (manifests.length !== 12) {
-    problems.push(`expected 12 manifests (root + 11 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
+  if (manifests.length !== 14) {
+    problems.push(`expected 14 manifests (root + 13 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
   }
+  const parsed = new Map();
   for (const path of manifests) {
     const pkg = parseJson(files, path, problems);
-    if (pkg === undefined) continue;
-    if (pkg.version !== current) problems.push(`${path}: version ${pkg.version} != ${current}`);
+    if (pkg !== undefined) parsed.set(path, pkg);
+  }
+  /** The version a package claims: its own manifest for an independent line, else the lockstep version. */
+  const independentVersions = new Map(
+    [...parsed.values()].filter((pkg) => INDEPENDENT_LINES.has(pkg.name)).map((pkg) => [pkg.name, pkg.version]),
+  );
+  const expected = (name) => independentVersions.get(name) ?? current;
+  for (const [path, pkg] of parsed) {
+    if (!INDEPENDENT_LINES.has(pkg.name) && pkg.version !== current) problems.push(`${path}: version ${pkg.version} != ${current}`);
     for (const field of ["dependencies", "peerDependencies", "optionalDependencies"]) {
       for (const [name, range] of Object.entries(pkg[field] ?? {})) {
         if (!name.startsWith(INTERNAL_PACKAGE) || String(range).startsWith("file:")) continue;
-        if (range !== caret) problems.push(`${path}: ${field}.${name} is ${range}, expected ${caret}`);
+        if (range !== `^${expected(name)}`) problems.push(`${path}: ${field}.${name} is ${range}, expected ^${expected(name)}`);
       }
     }
   }
@@ -125,7 +140,7 @@ export function claimViolations(files, current) {
     for (const [path, entry] of Object.entries(lock.workspaces ?? {})) {
       if (path === "") continue;
       if (!MANIFEST.test(`${path}/package.json`)) continue;
-      if (entry.version !== current) problems.push(`bun.lock: ${path} version ${entry.version} != ${current}`);
+      if (entry.version !== expected(entry.name)) problems.push(`bun.lock: ${path} version ${entry.version} != ${expected(entry.name)}`);
     }
   }
 
@@ -152,7 +167,8 @@ export function claimViolations(files, current) {
       problems.push(`scripts/package-truth.json: root.version ${truth.root?.version} != ${current} (regenerate with --emit-docs)`);
     }
     for (const [name, version] of Object.entries(truth.versions ?? {})) {
-      if (version !== current) problems.push(`scripts/package-truth.json: ${name} version ${version} != ${current} (regenerate)`);
+      if (version !== expected(name))
+        problems.push(`scripts/package-truth.json: ${name} version ${version} != ${expected(name)} (regenerate)`);
     }
   }
 
@@ -198,5 +214,30 @@ test("positive control: a half-finished cut is reported surface by surface", () 
   assert.ok(
     claimViolations(vacuous, next).some((problem) => problem.includes("docs/index.md: missing")),
     "a deleted surface must be reported as unverifiable",
+  );
+});
+
+test("positive control: an independent-line bump must reach the lockfile, package-truth, and dependents", () => {
+  const files = claimFiles(ROOT);
+  const current = currentVersion(ROOT);
+  const path = "packages/agent-sdk/package.json";
+  const sdk = JSON.parse(files.get(path));
+  const next = sdk.version.replace(/\.(\d+)$/, ".99");
+  const half = new Map(files);
+  half.set(path, files.get(path).replace(`"version": "${sdk.version}"`, `"version": "${next}"`));
+  const problems = claimViolations(half, current);
+  for (const fragment of [
+    `bun.lock: packages/agent-sdk version ${sdk.version} != ${next}`,
+    `scripts/package-truth.json: @arnilo/prism-agent-sdk version ${sdk.version} != ${next}`,
+    `packages/prism-code/package.json: dependencies.@arnilo/prism-agent-sdk is ^${sdk.version}, expected ^${next}`,
+  ]) {
+    assert.ok(
+      problems.some((problem) => problem.startsWith(fragment)),
+      `missing ${fragment}, got:\n${problems.join("\n")}`,
+    );
+  }
+  assert.ok(
+    !problems.some((problem) => problem.startsWith(`${path}: version`)),
+    "an independent manifest never claims the lockstep version",
   );
 });

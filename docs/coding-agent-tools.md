@@ -22,7 +22,7 @@
 | `createAllTools(cwd, options?)` | Identical to `createCodingTools` (Git tools remain opt-in via `createGitTools`). |
 | `createGitTools(cwd, options?)` | Opt-in Git tools (`git_status`/`git_diff`/`git_branch`/`git_worktree`/`git_apply`/`git_commit`/`git_pr_handoff`) plus optional `coding_check`. |
 | `createCodingCheckTool(cwd, options)` | Named host-declared checks; model selects only a name. |
-| `createAskUserDecisionTool(options)` | Opt-in user decision tool (`ask_user_decision`); host supplies `ask` callback. Not in default aggregators. |
+| `createAskUserDecisionTool(options)` | `ask_user_decision`: host supplies the `ask` callback. Not in the package default aggregators; Prism Code registers it by default (TUI picker, or a guidance result in headless). |
 | `createLocalRepositoryOperations(limits?)` | Default streaming Node filesystem backend for list/search/glob. |
 | `createGitAwareRepositoryOperations(cwd, options?)` | Optional Git `ls-files` ignore-aware enumeration with native fallback; host-only `includeIgnored`. |
 | `createLanguageIntelligence(options)` | Optional host-activated LSP language intelligence (symbols/definitions/references/diagnostics/hover/rename); see [Language intelligence](language-intelligence.md). |
@@ -109,6 +109,7 @@ const tools = createCodingTools(workspaceRoot, {
 | Targeted replace | `edit` | full `write` rewrite when a small edit works |
 | Remove file / empty dir | `delete` | `shell` `rm` |
 | Rename / relocate | `move` | `shell` `mv` |
+| Track multi-step work | `todo_write` | prose checklists in replies |
 | Arbitrary process | `shell` | dedicated tools above |
 
 ### Phase 4 non-goals (0.0.21)
@@ -405,7 +406,7 @@ const gitTools = createGitTools(workspaceRoot, {
 
 ### Ask-user decision (`createAskUserDecisionTool`)
 
-Opt-in `ask_user_decision` for ambiguous, high-impact direction choices. Model must pass a question plus 2+ options, each with **exactly 3 pros and 3 cons**. Host supplies `ask` (blocks until the user picks). Not in `createCodingTools` / `createAllTools` / `createReadOnlyTools`.
+`ask_user_decision` for ambiguous, high-impact direction choices. Model must pass a question plus 2+ options, each with **exactly 3 pros and 3 cons**. Host supplies `ask` (blocks until the user picks); Prism Code wires it to the TUI picker and returns a "no interactive user available" guidance result in headless. Not in `createCodingTools` / `createAllTools` / `createReadOnlyTools`.
 
 | Mode | How |
 | --- | --- |
@@ -450,6 +451,40 @@ return suspendAskUserDecision({
 });
 // resumeWorkflow(..., { validateResume: createAskUserDecisionResumeValidator() })
 ```
+
+### Task completion (`createTodoWriteTool` / `createTodoContinuationStopHook`)
+
+`todo_write` is a stateless planning tool: every call replaces the full list of
+`{ id, content, status }` items (`pending | in_progress | completed | cancelled`), returns the
+rendered list, and puts the structured items on the result metadata. Caps: 50 items / 512 bytes of
+content per item by default (hard 200 / 4 KiB). Duplicate ids, unknown statuses, and oversized
+items fail closed as tool errors.
+
+`createTodoContinuationStopHook({ maxNoProgress })` reads the latest successful `todo_write` result
+from the live transcript (`latestTodoList`) at a natural loop end:
+
+| Transcript state | Decision |
+| --- | --- |
+| No `todo_write` result, or every item completed/cancelled | `stop` |
+| Open items | `continue` with a steer listing them (bounded) |
+| `maxNoProgress` (default 2) continuations with no new tool call and no list change | `stop`; `onNoProgressStop` fires for hosts |
+| `AbortSignal` aborted (user Esc) | `stop` — abort always wins |
+
+The list is never stored separately: it is derived from history, so durable resume needs no extra
+state. Compaction is the one thing that can take it away, so hosts that compact should pin the
+latest plan turn with `todoPinnedEntryIds(entries)` — the ids to merge into the compaction's kept
+entries (the assistant call plus every tool result of that turn) — or the hook silently stops
+seeing the list after a cut. Prism Code does this for every compaction it runs. Steer text
+contains only model-authored todo content.
+
+```ts
+import { createTodoContinuationStopHook, createTodoWriteTool } from "@arnilo/prism-coding-tools/agent";
+
+const tools = [...createCodingTools(workspaceRoot), createTodoWriteTool()];
+const stopHooks = [createTodoContinuationStopHook({ maxNoProgress: 2 })];
+```
+
+Prism Code registers both by default (`loop.continueOnOpenTodos: false` disables them).
 
 ### Goal → verify helper (`runCodingGoalVerify`)
 

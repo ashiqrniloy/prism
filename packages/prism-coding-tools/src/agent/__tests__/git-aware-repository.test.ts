@@ -1,8 +1,8 @@
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
 import { createGitAwareRepositoryOperations, parseGitLsFilesZ } from "../git-aware-repository.js";
 import { type BoundGitRunner, createBoundGitRunner, type GitExecRequest, type GitExecResult } from "../git-exec.js";
 import { createLocalRepositoryOperations } from "../repository.js";

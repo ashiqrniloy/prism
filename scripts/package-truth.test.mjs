@@ -3,21 +3,22 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "bun:test";
-import { workspacePackageCounts } from "./package-truth.mjs";
+import { computePackageTruth, workspacePackageCounts } from "./package-truth.mjs";
 
-test("workspacePackageCounts matches the live 11 workspace packages", () => {
+test("workspacePackageCounts matches the live workspace manifests", () => {
   const counts = workspacePackageCounts();
-  assert.equal(counts.size, 11);
+  assert.equal(counts.size, computePackageTruth().counts.workspace);
   assert.equal(counts.has("prism-coding-tools"), true);
   assert.equal(counts.has("prism-core"), true);
   assert.equal(counts.has("prism-work"), true);
   assert.equal(counts.has("prism-providers"), true);
 });
 
-test("a 12th throwaway package is counted, not excluded", () => {
+test("a throwaway package is counted, not excluded", () => {
   const root = mkdtempSync(join(tmpdir(), "prism-pkg-"));
   try {
-    for (const name of workspacePackageCounts()) {
+    const live = workspacePackageCounts();
+    for (const name of live) {
       mkdirSync(join(root, "packages", name), { recursive: true });
       writeFileSync(join(root, "packages", name, "package.json"), "{}");
     }
@@ -25,7 +26,7 @@ test("a 12th throwaway package is counted, not excluded", () => {
     mkdirSync(join(root, "packages", "extra-widget"), { recursive: true });
     writeFileSync(join(root, "packages", "extra-widget", "package.json"), "{}");
     const counts = workspacePackageCounts(root);
-    assert.equal(counts.size, 12);
+    assert.equal(counts.size, live.size + 1);
     assert.equal(counts.has("extra-widget"), true);
     assert.equal(counts.has("not-a-package"), false);
   } finally {

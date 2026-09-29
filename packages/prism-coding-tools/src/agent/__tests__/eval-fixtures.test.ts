@@ -4,12 +4,13 @@
  * dirty-tree rollback, named-check failure, handoff completeness, and
  * prompt-injection containment. No provider/network/Docker required.
  */
+
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "bun:test";
 import type { AgentRunResult, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import {
   assertEvaluationThreshold,

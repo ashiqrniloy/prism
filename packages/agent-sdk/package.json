@@ -1,0 +1,68 @@
+{
+  "name": "@arnilo/prism-agent-sdk",
+  "version": "0.1.0",
+  "description": "Assembly-only agent SDK: one defineAgent(config) call wires Prism's tool planes, skills, instructions, MCP bridges, hooks, and session stores into a runnable agentic loop — every plane optional and replaceable.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/__tests__",
+    "!dist/**/*.map",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "bun ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 dist",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "^0.12.0",
+    "@arnilo/prism-coding-tools": "^0.12.0",
+    "@arnilo/prism-hooks": "^0.12.0",
+    "@arnilo/prism-mcp": "^0.12.0"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../..",
+    "@arnilo/prism-coding-tools": "file:../prism-coding-tools",
+    "@arnilo/prism-hooks": "file:../hooks",
+    "@arnilo/prism-mcp": "file:../mcp",
+    "@arnilo/prism-memory": "file:../memory",
+    "@arnilo/prism-web-tools": "file:../web-tools",
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/agent-sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/agent-sdk#readme",
+  "keywords": [
+    "prism",
+    "agent",
+    "sdk",
+    "tool-plane",
+    "assembly"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

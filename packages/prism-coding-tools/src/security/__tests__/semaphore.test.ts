@@ -3,8 +3,9 @@
  * connection cap, and the check-runner concurrency cap:
  * FIFO wake order, abort-aware waiting, and release semantics that floor at zero.
  */
-import assert from "node:assert/strict";
+
 import { test } from "bun:test";
+import assert from "node:assert/strict";
 import { Semaphore } from "../semaphore.js";
 
 async function settle(): Promise<void> {

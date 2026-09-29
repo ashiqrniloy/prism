@@ -1,6 +1,6 @@
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { readFile, rm, stat } from "node:fs/promises";
-import { test } from "bun:test";
 import { OutputAccumulator } from "../output-accumulator.js";
 
 test("small output: snapshot returns full content, not truncated", () => {

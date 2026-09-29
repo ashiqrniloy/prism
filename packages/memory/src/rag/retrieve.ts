@@ -23,6 +23,7 @@ import {
 } from "./util.js";
 
 const RETRIEVED_CONTENT_TRUST: RagContentTrust = Object.freeze({ untrusted: true, inert: true, injectionCapable: true });
+const SCOPE_QUERY_CONCURRENCY = 4;
 
 export async function retrieveContext(query: string, options: RetrieveContextOptions): Promise<RagContextResult> {
   nonEmpty(query, "query");
@@ -112,57 +113,63 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
     ) {
       throw new RagValidationError("embedder returned invalid query vector");
     }
-    const vectorLists: MemoryVectorHit[][] = [];
-    await span(telemetry, "retrieval.vector_search", undefined, root, async (leg) => {
-      let total = 0;
-      for (const scope of scopes) {
-        assertNotAborted(options.signal);
-        const found = await options.store.query({
-          tenantId: scope.tenantId,
-          resourceId: scope.resourceId,
-          threadId: scope.corpusId,
-          embedding,
-          topK: limits.queryCandidates,
-          signal: options.signal,
-          ...(authorization ? { authorization } : {}),
-          // Plan 102 Task 6: the store's own predicate reports what it withheld into the same audit
-          // path — and only when a sink wants it, so a host that never reads denials pays no statement.
-          ...(authorization && options.onAccessDenied && recheck
-            ? { onDeniedSources: (denials: readonly StoreDenial[]) => recheck.noteStoreDenials(scope, denials) }
-            : {}),
-        });
-        const sliced = found.slice(0, limits.queryCandidates);
-        vectorLists.push(sliced);
-        total += sliced.length;
-      }
-      leg?.setAttribute("rag.vector_candidates", total);
-    });
-
-    const lexicalLists: MemoryVectorHit[][] = [];
-    if (useLexical && options.store.lexicalQuery) {
-      await span(telemetry, "retrieval.lexical", undefined, root, async (leg) => {
-        let total = 0;
-        for (const scope of scopes) {
-          assertNotAborted(options.signal);
-          const found = await options.store.lexicalQuery!({
+    const vectorLists = await span(telemetry, "retrieval.vector_search", undefined, root, async (leg) => {
+      const lists = await queryScopes(
+        scopes,
+        options.signal,
+        recheck,
+        Boolean(authorization && options.onAccessDenied),
+        async (scope, onDeniedSources) => {
+          const found = await options.store.query({
             tenantId: scope.tenantId,
             resourceId: scope.resourceId,
             threadId: scope.corpusId,
-            text: safeQuery,
+            embedding,
             topK: limits.queryCandidates,
             signal: options.signal,
             ...(authorization ? { authorization } : {}),
-            ...(authorization && options.onAccessDenied && recheck
-              ? { onDeniedSources: (denials: readonly StoreDenial[]) => recheck.noteStoreDenials(scope, denials) }
-              : {}),
+            ...(onDeniedSources ? { onDeniedSources } : {}),
           });
-          const sliced = found.slice(0, limits.queryCandidates);
-          lexicalLists.push(sliced);
-          total += sliced.length;
-        }
-        leg?.setAttribute("rag.lexical_candidates", total);
-      });
-    }
+          return found.slice(0, limits.queryCandidates);
+        },
+      );
+      leg?.setAttribute(
+        "rag.vector_candidates",
+        lists.reduce((total, hits) => total + hits.length, 0),
+      );
+      return lists;
+    });
+
+    const lexicalQuery = options.store.lexicalQuery;
+    const lexicalLists =
+      useLexical && lexicalQuery
+        ? await span(telemetry, "retrieval.lexical", undefined, root, async (leg) => {
+            const lists = await queryScopes(
+              scopes,
+              options.signal,
+              recheck,
+              Boolean(authorization && options.onAccessDenied),
+              async (scope, onDeniedSources) => {
+                const found = await lexicalQuery({
+                  tenantId: scope.tenantId,
+                  resourceId: scope.resourceId,
+                  threadId: scope.corpusId,
+                  text: safeQuery,
+                  topK: limits.queryCandidates,
+                  signal: options.signal,
+                  ...(authorization ? { authorization } : {}),
+                  ...(onDeniedSources ? { onDeniedSources } : {}),
+                });
+                return found.slice(0, limits.queryCandidates);
+              },
+            );
+            leg?.setAttribute(
+              "rag.lexical_candidates",
+              lists.reduce((total, hits) => total + hits.length, 0),
+            );
+            return lists;
+          })
+        : [];
 
     // Tombstone guard: a source deleted after the query legs read rows (or a store that
     // never physically purged them) must not reach assembly. Empty for stores without
@@ -303,6 +310,50 @@ export async function retrieveContext(query: string, options: RetrieveContextOpt
   }
 }
 
+// ponytail: four in-flight store reads per leg bound pool pressure; tune only if real-store latency warrants it.
+async function mapScopes<T>(
+  scopes: readonly RagScope[],
+  signal: AbortSignal | undefined,
+  read: (scope: RagScope, index: number) => Promise<T>,
+): Promise<T[]> {
+  const values: T[] = [];
+  for (let offset = 0; offset < scopes.length; offset += SCOPE_QUERY_CONCURRENCY) {
+    assertNotAborted(signal);
+    const batch = await Promise.allSettled(
+      scopes.slice(offset, offset + SCOPE_QUERY_CONCURRENCY).map(async (scope, index) => read(scope, offset + index)),
+    );
+    assertNotAborted(signal);
+    for (const result of batch) {
+      if (result.status === "rejected") throw result.reason;
+      values.push(result.value);
+    }
+  }
+  return values;
+}
+
+async function queryScopes(
+  scopes: readonly RagScope[],
+  signal: AbortSignal | undefined,
+  recheck: ReturnType<typeof createAccessRecheck> | undefined,
+  audit: boolean,
+  read: (scope: RagScope, onDeniedSources?: (denials: readonly StoreDenial[]) => void) => Promise<MemoryVectorHit[]>,
+): Promise<MemoryVectorHit[][]> {
+  const denials: StoreDenial[][] = scopes.map(() => []);
+  try {
+    return await mapScopes(scopes, signal, (scope, index) => {
+      const bucket = denials[index];
+      return read(scope, audit && recheck && bucket ? (reported) => bucket.push(...reported) : undefined);
+    });
+  } finally {
+    if (audit && recheck) {
+      denials.forEach((reported, index) => {
+        const scope = scopes[index];
+        if (scope) recheck.noteStoreDenials(scope, reported);
+      });
+    }
+  }
+}
+
 /** Opens a child span only when telemetry is present; otherwise runs the section untouched. */
 async function span<T>(
   telemetry: RagTelemetry | undefined,
@@ -391,20 +442,14 @@ async function loadScopeInvalidations(
   signal?: AbortSignal,
 ): Promise<ReadonlyMap<string, ReadonlyMap<string, MemoryInvalidationRecord>>> {
   const out = new Map<string, ReadonlyMap<string, MemoryInvalidationRecord>>();
-  if (store.lineage !== "invalidation" || typeof store.listInvalidated !== "function") return out;
-  for (const scope of scopes) {
-    assertNotAborted(signal);
-    const entries = await store.listInvalidated(
-      { tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId },
-      { signal },
-    );
-    if (entries.length > 0) {
-      out.set(
-        invalidationScopeKey({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }),
-        indexInvalidations(entries),
-      );
-    }
-  }
+  if (store.lineage !== "invalidation" || !store.listInvalidated) return out;
+  const lists = await mapScopes(scopes, signal, (scope) =>
+    store.listInvalidated!({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }, { signal }),
+  );
+  lists.forEach((entries, index) => {
+    const scope = scopes[index];
+    if (scope && entries.length > 0) out.set(invalidationScopeKey({ ...scope, threadId: scope.corpusId }), indexInvalidations(entries));
+  });
   return out;
 }
 

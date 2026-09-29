@@ -18,7 +18,11 @@ DEFAULT_MAX_DOCUMENT_BYTES	export declare const DEFAULT_MAX_DOCUMENT_BYTES: numb
 DEFAULT_MAX_DOCUMENT_PAGES	export declare const DEFAULT_MAX_DOCUMENT_PAGES = 1000
 DEFAULT_MAX_DOCUMENT_TEXT_BYTES	export declare const DEFAULT_MAX_DOCUMENT_TEXT_BYTES: number
 DEFAULT_MAX_ELEMENTS	export declare const DEFAULT_MAX_ELEMENTS = 100000
+DEFAULT_MAX_EXTRACTION_BYTES	export declare const DEFAULT_MAX_EXTRACTION_BYTES: number
+DEFAULT_MAX_EXTRACTION_TEXT_BYTES	export declare const DEFAULT_MAX_EXTRACTION_TEXT_BYTES: number
 DEFAULT_MAX_IMAGES	export declare const DEFAULT_MAX_IMAGES = 100
+DEFAULT_MAX_OCR_PAGES	export declare const DEFAULT_MAX_OCR_PAGES = 32
+DEFAULT_MAX_OCR_STDERR_BYTES	export declare const DEFAULT_MAX_OCR_STDERR_BYTES: number
 DEFAULT_MAX_ROWS	export declare const DEFAULT_MAX_ROWS = 100000
 DEFAULT_MAX_SHEETS	export declare const DEFAULT_MAX_SHEETS = 100
 DEFAULT_MAX_SHEET_BYTES	export declare const DEFAULT_MAX_SHEET_BYTES: number
@@ -46,6 +50,7 @@ DiagramsProtocolError	export declare class DiagramsProtocolError extends Diagram
 DiagramsTimeoutError	export declare class DiagramsTimeoutError extends DiagramsError
 DiagramsXmlMalformedError	export declare class DiagramsXmlMalformedError extends DiagramsError
 DiagramsXxeError	export declare class DiagramsXxeError extends DiagramsError
+DocumentExtractionError	export declare class DocumentExtractionError extends Error
 DocumentReaderError	export declare class DocumentReaderError extends Error
 DocumentsCapError	export declare class DocumentsCapError extends DocumentsError
 DocumentsError	export declare class DocumentsError extends Error
@@ -96,7 +101,11 @@ HARD_MAX_DOCUMENT_BYTES	export declare const HARD_MAX_DOCUMENT_BYTES: number
 HARD_MAX_DOCUMENT_PAGES	export declare const HARD_MAX_DOCUMENT_PAGES = 10000
 HARD_MAX_DOCUMENT_TEXT_BYTES	export declare const HARD_MAX_DOCUMENT_TEXT_BYTES: number
 HARD_MAX_ELEMENTS	export declare const HARD_MAX_ELEMENTS = 500000
+HARD_MAX_EXTRACTION_BYTES	export declare const HARD_MAX_EXTRACTION_BYTES: number
+HARD_MAX_EXTRACTION_TEXT_BYTES	export declare const HARD_MAX_EXTRACTION_TEXT_BYTES: number
 HARD_MAX_IMAGES	export declare const HARD_MAX_IMAGES = 1000
+HARD_MAX_OCR_PAGES	export declare const HARD_MAX_OCR_PAGES = 256
+HARD_MAX_OCR_STDERR_BYTES	export declare const HARD_MAX_OCR_STDERR_BYTES: number
 HARD_MAX_ROWS	export declare const HARD_MAX_ROWS = 1000000
 HARD_MAX_SHEETS	export declare const HARD_MAX_SHEETS = 1000
 HARD_MAX_SHEET_BYTES	export declare const HARD_MAX_SHEET_BYTES: number
@@ -115,6 +124,7 @@ MAX_SKILL_FILE_BYTES	export declare const MAX_SKILL_FILE_BYTES: number
 Microsoft365Adapter	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileArt
 Microsoft365Capability	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileArt
 Microsoft365Op	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileArt
+NeedsOcrError	export declare class NeedsOcrError extends DocumentExtractionError
 OcrPageSpan	export type { CreateMistralOcrParserOptions, OcrPageSpan, OcrUsage } from "./mistral-ocr.js"
 OcrUsage	export type { CreateMistralOcrParserOptions, OcrPageSpan, OcrUsage } from "./mistral-ocr.js"
 ParseCsvOptions	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
@@ -130,6 +140,8 @@ SheetsParseError	export declare class SheetsParseError extends SheetsError
 SheetsValidationError	export declare class SheetsValidationError extends SheetsError
 SyncWorkDraftStore	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileArt
 UNSAFE_XML_DECLARATION_PATTERN	export declare const UNSAFE_XML_DECLARATION_PATTERN: RegExp
+WORKER_POOL_MAX_WORKERS	export declare const WORKER_POOL_MAX_WORKERS = 2
+WORKER_POOL_OFFLOAD_MIN_BYTES	export declare const WORKER_POOL_OFFLOAD_MIN_BYTES: number
 WORK_DRAFT_CHECKPOINT_NAMESPACE	export declare const WORK_DRAFT_CHECKPOINT_NAMESPACE = "prism.work.draft"
 WORK_SANDBOX_IMAGE	export declare const WORK_SANDBOX_IMAGE = "prism-work-sandbox@sha256:0000000000000000000000000000000000000000000000000000000000000000"
 WORK_SKILL_NAMES	export declare const WORK_SKILL_NAMES: readonly ["docx", "xlsx", "powerpoint", "pdf"]
@@ -168,6 +180,8 @@ WorkToolError	export declare class WorkToolError extends Error
 WorkToolSet	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileArt
 WorkToolsOptions	export type { ExternalRecipientPolicy, GoogleWorkspaceAdapter, GoogleWorkspaceCapability, GoogleWorkspaceOp, IdempotencyStore, Microsoft365Adapter, Microsoft365Capability, Microsoft365Op, ResolvedWorkLimits, SyncWorkDraftStore, WorkApprovalCheckInput, WorkApprovalGate, WorkCalendarEvent, WorkCitation, WorkCliExecResult, WorkCliRunner, WorkDraft, WorkDraftApproval, WorkDraftApproveInput, WorkDraftCreateInput, WorkDraftMarkInput, WorkDraftRefInput, WorkDraftStore, WorkDraftUpdateInput, WorkFileArt
 WorkbookParse	export type { CellValue, ColumnSchema, ColumnType, CsvDialect, CsvParse, DateCellValue, DateTimeCellValue, DecimalCellValue, FormulaCellValue, InferenceWarning, ParseCsvOptions, ParseWorkbookOptions, ResolvedSheetsCaps, SheetParse, SheetsCaps, WorkbookParse, } from "./types.js"
+WorkerPoolError	export declare class WorkerPoolError extends Error
+WorkerTaskError	export declare class WorkerTaskError extends WorkerPoolError
 artifactRef	export declare function artifactRef(value: unknown): ArtifactBodyRef
 assertBoundedJson	export declare function assertBoundedJson(value: unknown, maxDepth: number, maxProperties: number, maxBytes: number): void
 assertContentHash	export declare function assertContentHash(args: JsonObject, actual: string): void
@@ -186,9 +200,12 @@ buildGoogleWorkspaceArgv	export declare function buildGoogleWorkspaceArgv(op: Go
 buildMicrosoft365Argv	export declare function buildMicrosoft365Argv(op: Microsoft365Op, args: JsonObject): string[]
 canonicalJson	export declare function canonicalJson(value: unknown): unknown
 canonicalizeDrawioXml	export declare function canonicalizeDrawioXml(xml: string | Uint8Array, options?: DrawioCanonicalizeOptions): string
+closeWorkerPool	export declare function closeWorkerPool(): Promise<void>
 computePayloadDigest	export declare function computePayloadDigest(payload: JsonObject): string
 createCheckpointWorkDraftStore	export declare function createCheckpointWorkDraftStore(options: CheckpointWorkDraftStoreOptions): WorkDraftStore
 createCliRunner	export declare function createCliRunner(options:
+createDocumentExtractor	export declare function createDocumentExtractor(options?: CreateDocumentExtractorOptions): Promise<DocumentExtractor>
+createDocumentIngest	export declare function createDocumentIngest(extractor: Pick<DocumentExtractor, "extract">, options?:
 createDocumentReader	export declare function createDocumentReader(options?: CreateDocumentReaderOptions): Promise<DocumentReader>
 createDocxParser	export declare function createDocxParser(): Promise<DocumentParser>
 createDrawioEmbed	export declare function createDrawioEmbed(options: DrawioEmbedOptions): DrawioEmbed
@@ -200,6 +217,7 @@ createMicrosoft365CliAdapter	export declare function createMicrosoft365CliAdapte
 createMicrosoft365HttpAdapter	export declare function createMicrosoft365HttpAdapter(options: Microsoft365HttpAdapterOptions): Microsoft365Adapter
 createMistralOcrParser	export declare function createMistralOcrParser(options: CreateMistralOcrParserOptions): DocumentParser
 createOfficeTools	export declare function createOfficeTools(options?: OfficeToolsOptions): readonly ToolDefinition[]
+createOoxmlParser	export declare function createOoxmlParser(format: "xlsx" | "pptx", kind: DocumentKind, part: string): DocumentParser
 createPatchHistory	export declare function createPatchHistory(initialModel: DocumentModel): PatchHistory
 createPdfParser	export declare function createPdfParser(): Promise<DocumentParser>
 createWorkComposition	export declare function createWorkComposition(options: WorkCompositionOptions): WorkCompositionResult
@@ -210,6 +228,8 @@ deckModelToPptxOptions	export declare function deckModelToPptxOptions(model: Dec
 diffDocument	export declare function diffDocument(from: DocumentModel, to: DocumentModel, options?: DiffDocumentOptions): DocumentDiff
 docModelSchema	export declare const docModelSchema: JsonSchema
 docModelToDocxOptions	export declare function docModelToDocxOptions(model: DocModel): DocumentOptions
+doclingOcrArgs	export declare function doclingOcrArgs(request: OcrWorkerRequest, artifactsPath: string): string[]
+doclingOcrHelperPath	export declare const doclingOcrHelperPath: string
 documentModelSchema	export declare function documentModelSchema(kind: DocumentKind, slice?: string | readonly string[]): JsonSchema
 draftCheckpointKey	export declare function draftCheckpointKey(provider: WorkProvider, draftId: string): string
 escapeHtml	export declare function escapeHtml(input: string): string
@@ -276,10 +296,13 @@ resolveSheetsCaps	export declare function resolveSheetsCaps(caps?: SheetsCaps): 
 resolveWorkLimits	export declare function resolveWorkLimits(input?: WorkLimits): ResolvedWorkLimits
 resolveWorkSandboxCapabilities	export declare function resolveWorkSandboxCapabilities(metadata: Readonly<WorkSandboxCapabilities> | undefined): WorkSandboxCapabilities
 result	export declare function result(context: ToolExecutionContext, name: string, provider: WorkProvider, value: unknown): ToolResult
+reviveWorkerTaskError	export declare function reviveWorkerTaskError(error: unknown, classes: readonly (new (message: string) => Error)[]): Error | undefined
+runInPool	export declare function runInPool<TOut = unknown>(task: WorkerPoolTask): Promise<TOut>
 sha256	export declare function sha256(bytes: Uint8Array): string
 sha256Hex	export declare function sha256Hex(bytes: Uint8Array): string
 sheetModelSchema	export declare const sheetModelSchema: JsonSchema
 sheetModelToXlsxOptions	export declare function sheetModelToXlsxOptions(model: SheetModel): WorkbookOptions
+shouldOffloadToPool	export declare function shouldOffloadToPool(pricing:
 sourceCount	export declare function sourceCount(args: JsonObject): number
 splitAddresses	export declare function splitAddresses(value: string): string[]
 type CheckpointWorkDraftStoreOptions	export { type CheckpointWorkDraftStoreOptions, canonicalJson, computePayloadDigest, createCheckpointWorkDraftStore, createMemoryWorkDraftStore, draftCheckpointKey, extractDraftRecipients, type MemoryWorkDraftStoreOptions, validateApproval, WORK_DRAFT_CHECKPOINT_NAMESPACE, } from "./drafts.js"
@@ -326,3 +349,4 @@ validateDocumentModel	export declare function validateDocumentModel(model: unkno
 validateDrawioXml	export declare function validateDrawioXml(xml: string | Uint8Array, options?: DrawioXmlOptions): DrawioModelSummary
 validateModelCaps	export declare function validateModelCaps(model: DocumentModel, caps: ResolvedDocumentCaps): void
 validateZipSignature	export declare function validateZipSignature(bytes: Uint8Array): void
+workerPoolStats	export declare function workerPoolStats(): WorkerPoolStats

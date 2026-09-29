@@ -10,8 +10,9 @@
  * request); HTTP 4xx must map to a status-carrying untrusted result, never an
  * unclassified throw.
  */
-import assert from "node:assert/strict";
+
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 
 import type { ToolEffectDeclaration } from "@arnilo/prism";
 import { createOpenApiTools, OpenApiToolError } from "../index.js";

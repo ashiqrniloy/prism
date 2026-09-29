@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import type { SystemPromptContribution } from "../contracts.js";
 import type { PermissionPolicy, TrustPolicy } from "../security.js";
 import { assertPermission, isTrusted } from "../security.js";
@@ -14,8 +14,12 @@ export interface SystemPromptFilesOptions {
   /** Override path for `AGENTS.md` (e.g. `--agents-md-file`). Still `source: "app"`, still trust-gated;
    *  the caller builds `trust` with the file's parent in its trusted roots so the explicit opt-in is honored. */
   readonly agentsMdPath?: string;
+  /** Multiple override paths for `AGENTS.md` files in order of application. */
+  readonly agentsMdPaths?: readonly string[];
   /** Override path for `SYSTEM.md` (e.g. `--system-md-file`). Still `source: "user"`, no trust gate (user-owned). */
   readonly systemMdPath?: string;
+  /** Mode for SYSTEM.md layer. Defaults to "append". */
+  readonly systemMdMode?: "append" | "replace";
   readonly trust?: TrustPolicy;
   readonly permission?: PermissionPolicy;
 }
@@ -38,34 +42,63 @@ export async function loadSystemPromptFiles(options: SystemPromptFilesOptions): 
     options.systemMdPath ?? (options.globalRoot !== undefined ? join(options.globalRoot, ".prism", "agent", "SYSTEM.md") : undefined);
   const out: SystemPromptContribution[] = [];
   if (systemPath !== undefined) {
-    const layer = await readSystemFile(systemPath, options.permission);
+    const layer = await readSystemFile(
+      systemPath,
+      options.workspaceRoot,
+      options.trust,
+      options.permission,
+      options.systemMdMode ?? "append",
+    );
     if (layer) out.push(layer);
   }
-  if (agentsPath !== undefined) {
-    const layer = await readAgentsFile(agentsPath, options.trust, options.permission);
+  if (options.agentsMdPaths !== undefined) {
+    for (const [idx, path] of options.agentsMdPaths.entries()) {
+      const layer = await readAgentsFile(path, options.workspaceRoot, options.trust, options.permission, `agents-md-${idx}`);
+      if (layer) out.push(layer);
+    }
+  } else if (agentsPath !== undefined) {
+    const layer = await readAgentsFile(agentsPath, options.workspaceRoot, options.trust, options.permission);
     if (layer) out.push(layer);
   }
   return out;
 }
 
-async function readSystemFile(path: string, permission: PermissionPolicy | undefined): Promise<SystemPromptContribution | undefined> {
+function isInside(target: string, parent: string): boolean {
+  const rel = relative(resolve(parent), resolve(target));
+  return !rel.startsWith("..") && !isAbsolute(rel);
+}
+
+async function readSystemFile(
+  path: string,
+  workspaceRoot: string | undefined,
+  trust: TrustPolicy | undefined,
+  permission: PermissionPolicy | undefined,
+  mode: "append" | "replace" = "append",
+): Promise<SystemPromptContribution | undefined> {
+  if (workspaceRoot !== undefined && isInside(path, workspaceRoot)) {
+    if (!(await isTrusted(trust, { kind: "project", target: path }))) return undefined;
+  }
   await assertPermission(permission, { kind: "resource", action: "load", target: path });
   const text = await readOptionalFile(path);
   if (text === undefined) return undefined;
-  return { id: "system-md", source: "user", mode: "append", text };
+  return { id: "system-md", source: "user", mode, text };
 }
 
 async function readAgentsFile(
   path: string,
+  workspaceRoot: string | undefined,
   trust: TrustPolicy | undefined,
   permission: PermissionPolicy | undefined,
+  id = "agents-md",
 ): Promise<SystemPromptContribution | undefined> {
   // ponytail: trust gate mirrors discoverContributions — untrusted AGENTS.md is skipped silently
   // (fail-closed, no throw). createPathTrustPolicy resolves symlinks internally, so a symlinked
   // AGENTS.md escaping the trusted root fails containment inside the policy.
-  if (!(await isTrusted(trust, { kind: "project", target: path }))) return undefined;
+  if (workspaceRoot === undefined || isInside(path, workspaceRoot)) {
+    if (!(await isTrusted(trust, { kind: "project", target: path }))) return undefined;
+  }
   await assertPermission(permission, { kind: "resource", action: "load", target: path });
   const text = await readOptionalFile(path);
   if (text === undefined) return undefined;
-  return { id: "agents-md", source: "app", mode: "append", text };
+  return { id, source: "app", mode: "append", text };
 }

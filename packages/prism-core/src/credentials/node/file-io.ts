@@ -6,7 +6,9 @@ import { DEFAULT_FILE_MODE } from "./types.js";
 function assertRestrictiveMode(mode: number, path: string): void {
   if (process.platform === "win32") return;
   const perms = mode & 0o777;
-  if ((perms & 0o077) !== 0) throw new Error(`Credential file permissions are too permissive: ${path}`);
+  if ((perms & 0o077) !== 0) {
+    throw new Error(`Credential file permissions are too permissive: ${path} (fix: chmod 600 ${path})`);
+  }
 }
 
 export function assertCredentialFileMode(mode: number): void {

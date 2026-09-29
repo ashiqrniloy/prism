@@ -132,7 +132,7 @@ test("real repo: manifest covers every exports surface in baseline mode", () => 
   assert.equal(coverage.mode, "baseline", "flip to full after plans/064 Tasks 4-9 land");
   const { errors, summary } = computeCoverage(REPO_ROOT, coverage, { mode: coverage.mode });
   assert.deepEqual(errors, [], errors.join("\n"));
-  assert.equal(summary.total, 111); // 107 post-plan-107 + @arnilo/prism-providers/laya + /typesafe (plan 121) + /decisions (plan 122 Task 3) + @arnilo/prism-work/document-extraction (plan 132 Task 4)
+  assert.equal(summary.total, 113); // 107 post-plan-107 + @arnilo/prism-providers/laya + /typesafe (plan 121) + /decisions (plan 122 Task 3) + @arnilo/prism-work/document-extraction (plan 132 Task 4) + @arnilo/prism-agent-sdk (plan 134) + @arnilo/prism-code (plan 135)
   assert.equal(summary.pending, 0, "Tasks 4-9 will re-introduce pending entries as planned suites register");
 });
 

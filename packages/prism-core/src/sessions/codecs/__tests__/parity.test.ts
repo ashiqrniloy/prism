@@ -1,7 +1,8 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import type { AgentEventRecord, RunRecord, SessionEntry, ToolCallRecord, UsageRecord } from "@arnilo/prism";
 import { CheckpointConflictError, LeaseConflictError } from "@arnilo/prism";
+import { ownershipColumns } from "../../query-semantics.js";
 import { assertCheckpointInput, assertLeaseInput, createSessionRowMappers, encodeCheckpointJson } from "../index.js";
 
 const sqlite = createSessionRowMappers<number>({
@@ -158,6 +159,14 @@ const usage: UsageRecord[] = [
 ];
 
 describe("session codec parity (sqlite INTEGER vs postgres BOOLEAN redacted)", () => {
+  it("keeps query ownership columns and values paired in binding order", () => {
+    assert.deepEqual(ownershipColumns({}), []);
+    assert.deepEqual(ownershipColumns({ userId: "u", tenantId: "", accountId: "a' OR 1=1" }), [
+      ["tenant_id", ""],
+      ["account_id", "a' OR 1=1"],
+      ["user_id", "u"],
+    ]);
+  });
   it("round-trips session entries identically on both paths", () => {
     for (const entry of entries) {
       const sqliteRow = sqlite.sessionEntryToRow(entry);

@@ -1,5 +1,5 @@
-import { LeaseConflictError, type LeaseRecord, type LeaseStore } from "@arnilo/prism";
 import type { Database } from "bun:sqlite";
+import { LeaseConflictError, type LeaseRecord, type LeaseStore } from "@arnilo/prism";
 import { assertLeaseInput, assertOwnershipScope } from "../codecs/index.js";
 
 interface Row {

@@ -1,3 +1,4 @@
+import type { Database } from "bun:sqlite";
 import { mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname } from "node:path";
@@ -11,6 +12,7 @@ import {
   DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
   type LeaseStore,
   type MigrationQuery,
+  type OwnershipScope,
   type PersistencePage,
   type ProductionPersistenceStore,
   prepareRunFeedback,
@@ -42,8 +44,8 @@ import {
   type UsageQuery,
   type UsageRecord,
 } from "@arnilo/prism";
-import type { Database } from "bun:sqlite";
 import {
+  canonicalSessionTimestamp,
   clipSearchSnippet,
   createSessionRowMappers,
   decodeBranchCursor,
@@ -54,6 +56,7 @@ import {
   type SessionEntryRow,
   safeSearchMetadata,
 } from "../codecs/index.js";
+import { ownershipColumns } from "../query-semantics.js";
 import {
   applySqliteMigrations,
   assertSqliteSchemaReady,
@@ -118,6 +121,17 @@ export interface SqlitePersistence extends SessionStore, RunLedger, ProductionPe
     readonly multiProcess: true;
     readonly driver: "bun:sqlite";
   }>;
+  /**
+   * Merge `patch` into the stored session metadata and bump `version`; never rewrites
+   * keys outside `patch`, and never touches `updated_at` (last activity stays entry-driven).
+   * `options.onlyIfMissing` skips the write when any named key is already present.
+   * Returns `undefined` when the session row does not exist.
+   */
+  mergeSessionMetadata(
+    id: string,
+    patch: Readonly<Record<string, unknown>>,
+    options?: { readonly onlyIfMissing?: readonly string[] },
+  ): { readonly version: number } | undefined;
   close(): void;
 }
 
@@ -131,10 +145,12 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     verifyMigrationIdempotency(db);
   }
 
+  // ponytail: julianday compares legacy offsets at millisecond precision; migrate legacy sub-ms rows if finer ordering is needed.
   const ensureSession = db.prepare(
     `INSERT INTO prism_sessions (id, created_at, updated_at)
      VALUES (?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET updated_at = excluded.updated_at`,
+     ON CONFLICT(id) DO UPDATE SET updated_at = excluded.updated_at
+     WHERE julianday(excluded.updated_at) > julianday(prism_sessions.updated_at)`,
   );
   const upsertSessionRecord = db.prepare(
     `INSERT INTO prism_sessions (
@@ -213,7 +229,8 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const appendEventRecord = db.transaction((record: AgentEventRecord) => {
-    ensureSession.run(record.sessionId, record.timestamp, record.timestamp);
+    const timestamp = canonicalSessionTimestamp(record.timestamp);
+    ensureSession.run(record.sessionId, timestamp, timestamp);
     const sequence = Number(
       (nextEventSequence.get(record.sessionId, record.runId ?? "", record.timestamp) as { sequence: number } | undefined)?.sequence ?? 1,
     );
@@ -356,6 +373,51 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     },
   };
 
+  async function readEntryBranch(query: SessionBranchRead, scope?: OwnershipScope): Promise<PersistencePage<SessionEntry>> {
+    const start = query.cursor === undefined ? 0 : decodeBranchCursor(query.cursor);
+    if (query.limit !== undefined && (!Number.isSafeInteger(query.limit) || query.limit < 1 || query.limit >= Number.MAX_SAFE_INTEGER)) {
+      throw new RangeError("Invalid branch pagination limit");
+    }
+    const leafId = query.leafId ?? findLatestLeafId(db, query.sessionId);
+    if (!leafId) return { items: [] };
+    const ownerFilters = scope ? buildOwnershipFilters(scope).map((filter) => `s.${filter}`) : [];
+    const ownerClause = ownerFilters.length
+      ? `AND EXISTS (SELECT 1 FROM prism_sessions s WHERE s.id = seed.session_id AND ${ownerFilters.join(" AND ")})`
+      : "";
+
+    // ponytail: no limit preserves full-chain reads; default paging needs the reader's 64-page cap revisited first.
+    const rows = db
+      .prepare(
+        `WITH RECURSIVE branch_path(id, depth) AS (
+           SELECT seed.id, 0 FROM prism_session_entries seed
+           WHERE seed.id = ? AND seed.session_id = ? ${ownerClause}
+           UNION ALL
+           SELECT parent.id, bp.depth + 1
+           FROM branch_path bp
+           INNER JOIN prism_session_entries current ON current.id = bp.id
+           INNER JOIN prism_session_entries parent ON parent.id = current.parent_id AND parent.session_id = current.session_id
+           WHERE current.session_id = ?
+         )
+         SELECT e.* FROM prism_session_entries e
+         INNER JOIN branch_path bp ON e.id = bp.id
+         ORDER BY bp.depth DESC, e.timestamp ASC, e.id ASC
+         LIMIT ? OFFSET ?`,
+      )
+      .all(
+        leafId,
+        query.sessionId,
+        ...(scope ? ownershipParams(scope) : []),
+        query.sessionId,
+        query.limit === undefined ? -1 : query.limit + 1,
+        start,
+      ) as SessionEntryRow[];
+
+    return {
+      items: (query.limit === undefined ? rows : rows.slice(0, query.limit)).map(rowToSessionEntry),
+      nextCursor: query.limit !== undefined && rows.length > query.limit ? encodeBranchCursor(start + query.limit) : undefined,
+    };
+  }
+
   const persistence: SqlitePersistence = {
     name: "sqlite",
     checkpoints: createSqliteCheckpointStore(db),
@@ -435,39 +497,11 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
       return row ? rowToSessionEntry(row) : undefined;
     },
 
-    async readBranchPath(query: SessionBranchRead): Promise<PersistencePage<SessionEntry>> {
-      const leafId = query.leafId ?? findLatestLeafId(db, query.sessionId);
-      if (!leafId) return { items: [] };
-
-      const rows = db
-        .prepare(
-          `WITH RECURSIVE branch_path(id, depth) AS (
-             SELECT id, 0 FROM prism_session_entries WHERE id = ? AND session_id = ?
-             UNION ALL
-             SELECT parent.id, bp.depth + 1
-             FROM branch_path bp
-             INNER JOIN prism_session_entries current ON current.id = bp.id
-             INNER JOIN prism_session_entries parent ON parent.id = current.parent_id
-             WHERE current.session_id = ?
-           )
-           SELECT e.* FROM prism_session_entries e
-           INNER JOIN branch_path bp ON e.id = bp.id
-           ORDER BY bp.depth DESC, e.timestamp ASC, e.id ASC`,
-        )
-        .all(leafId, query.sessionId, query.sessionId) as SessionEntryRow[];
-
-      const limit = query.limit ?? rows.length;
-      const start = query.cursor ? decodeBranchCursor(query.cursor) : 0;
-      const slice = rows.slice(start, start + limit);
-      const nextStart = start + slice.length;
-      return {
-        items: slice.map(rowToSessionEntry),
-        nextCursor: nextStart < rows.length ? encodeBranchCursor(nextStart) : undefined,
-      };
-    },
+    readBranchPath: readEntryBranch,
 
     appendRun(record: RunRecord): void {
-      ensureSession.run(record.sessionId, record.startedAt, record.startedAt);
+      const timestamp = canonicalSessionTimestamp(record.startedAt);
+      ensureSession.run(record.sessionId, timestamp, timestamp);
       const row = runRecordToRow(record);
       upsertRun.run(
         row.id,
@@ -496,7 +530,8 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     },
 
     appendToolCall(record: ToolCallRecord): void {
-      ensureSession.run(record.sessionId, record.startedAt, record.startedAt);
+      const timestamp = canonicalSessionTimestamp(record.startedAt);
+      ensureSession.run(record.sessionId, timestamp, timestamp);
       const row = toolCallRecordToRow(record);
       insertToolCall.run(
         row.id,
@@ -523,7 +558,8 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     },
 
     appendUsage(record: UsageRecord): void {
-      ensureSession.run(record.sessionId, record.recordedAt, record.recordedAt);
+      const timestamp = canonicalSessionTimestamp(record.recordedAt);
+      ensureSession.run(record.sessionId, timestamp, timestamp);
       const row = usageRecordToRow(record);
       insertUsage.run(
         row.id,
@@ -566,7 +602,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
         record.agentDefinitionId ?? null,
         record.agentDefinitionVersion ?? null,
         record.createdAt,
-        record.updatedAt,
+        canonicalSessionTimestamp(record.updatedAt),
         record.expiresAt ?? null,
         record.retentionPolicyId ?? null,
         record.metadata === undefined ? null : JSON.stringify(record.metadata),
@@ -590,6 +626,31 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
         });
       }
       return { version: Number(row.version) };
+    },
+
+    mergeSessionMetadata(id, patch, options) {
+      const keys = Object.keys(patch);
+      if (keys.length === 0) throw new TypeError("mergeSessionMetadata requires at least one metadata key");
+      const assignments: string[] = [];
+      const params: unknown[] = [];
+      for (const key of keys) {
+        const safeKey = assertSessionMetadataKey(key);
+        const value = JSON.stringify(patch[key]);
+        if (value === undefined) throw new TypeError(`mergeSessionMetadata value for "${safeKey}" is not JSON-serializable`);
+        assignments.push(`'$."${safeKey}"', json(?)`);
+        params.push(value);
+      }
+      const missing = (options?.onlyIfMissing ?? []).map((key) => `json_extract(metadata, '$."${assertSessionMetadataKey(key)}"') IS NULL`);
+      const where = missing.length > 0 ? `id = ? AND ${missing.join(" AND ")}` : "id = ?";
+      const row = db
+        .prepare(
+          `UPDATE prism_sessions
+           SET metadata = json_set(COALESCE(metadata, '{}'), ${assignments.join(", ")}), version = version + 1
+           WHERE ${where}
+           RETURNING version`,
+        )
+        .get(...params, id) as { version: number } | undefined;
+      return row ? { version: Number(row.version) } : undefined;
     },
 
     async searchSessions(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>> {
@@ -617,49 +678,71 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     },
 
     async queryEntries(query: SessionEntryQuery): Promise<PersistencePage<SessionEntry>> {
+      if (query.leafId !== undefined && !query.sessionId) throw new TypeError("leafId requires sessionId");
+      if (query.limit !== undefined && (!Number.isSafeInteger(query.limit) || query.limit < 1)) {
+        throw new RangeError("Entry query limit must be a positive safe integer");
+      }
       const filters: string[] = [];
       const params: unknown[] = [];
+      const ownerFilters = buildOwnershipFilters(query);
+      let branchSql = "";
+      if (query.leafId !== undefined) {
+        const ownerClause = ownerFilters.length
+          ? `AND EXISTS (SELECT 1 FROM prism_sessions s WHERE s.id = seed.session_id AND ${ownerFilters.map((filter) => `s.${filter}`).join(" AND ")})`
+          : "";
+        branchSql = `WITH RECURSIVE branch_path(id) AS (
+          SELECT seed.id FROM prism_session_entries seed WHERE seed.id = ? AND seed.session_id = ? ${ownerClause}
+          UNION ALL
+          SELECT parent.id FROM branch_path bp
+          JOIN prism_session_entries current ON current.id = bp.id
+          JOIN prism_session_entries parent ON parent.id = current.parent_id AND parent.session_id = current.session_id
+          WHERE current.session_id = ?
+        )`;
+        params.push(query.leafId, query.sessionId, ...ownershipParams(query), query.sessionId);
+      }
       if (query.sessionId) {
-        filters.push("session_id = ?");
+        filters.push("e.session_id = ?");
         params.push(query.sessionId);
       }
       if (query.runId) {
-        filters.push("run_id = ?");
+        filters.push("e.run_id = ?");
         params.push(query.runId);
       }
       if (query.parentId) {
-        filters.push("parent_id = ?");
+        filters.push("e.parent_id = ?");
         params.push(query.parentId);
       }
-      if (query.leafId) {
-        const chain = await persistence.readBranchPath!({ sessionId: query.sessionId ?? "", leafId: query.leafId });
-        return { items: chain.items.slice(0, query.limit ?? chain.items.length) };
+      if (query.leafId === undefined && ownerFilters.length) {
+        filters.push(
+          `EXISTS (SELECT 1 FROM prism_sessions s WHERE s.id = e.session_id AND ${ownerFilters.map((filter) => `s.${filter}`).join(" AND ")})`,
+        );
+        params.push(...ownershipParams(query));
       }
       if (query.kind) {
         if (Array.isArray(query.kind)) {
-          filters.push(`kind IN (${query.kind.map(() => "?").join(", ")})`);
+          filters.push(query.kind.length ? `e.kind IN (${query.kind.map(() => "?").join(", ")})` : "1 = 0");
           params.push(...query.kind);
         } else {
-          filters.push("kind = ?");
+          filters.push("e.kind = ?");
           params.push(query.kind);
         }
       }
       if (query.fromTimestamp) {
-        filters.push("timestamp >= ?");
+        filters.push("e.timestamp >= ?");
         params.push(query.fromTimestamp);
       }
       if (query.toTimestamp) {
-        filters.push("timestamp <= ?");
+        filters.push("e.timestamp <= ?");
         params.push(query.toTimestamp);
       }
       const order = query.order === "desc" ? "DESC" : "ASC";
-      if (query.cursor) {
+      if (query.cursor !== undefined) {
         const cursor = decodeEntryCursor(query.cursor);
         if (order === "ASC") {
-          filters.push("(timestamp > ? OR (timestamp = ? AND id > ?))");
+          filters.push("(e.timestamp > ? OR (e.timestamp = ? AND e.id > ?))");
           params.push(cursor.timestamp, cursor.timestamp, cursor.id);
         } else {
-          filters.push("(timestamp < ? OR (timestamp = ? AND id < ?))");
+          filters.push("(e.timestamp < ? OR (e.timestamp = ? AND e.id < ?))");
           params.push(cursor.timestamp, cursor.timestamp, cursor.id);
         }
       }
@@ -668,8 +751,8 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
       const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
       const rows = db
         .prepare(
-          `SELECT * FROM prism_session_entries ${where}
-           ORDER BY timestamp ${order}, id ${order}
+          `${branchSql} SELECT e.* FROM prism_session_entries e ${query.leafId !== undefined ? "JOIN branch_path bp ON bp.id = e.id" : ""} ${where}
+           ORDER BY e.timestamp ${order}, e.id ${order}
            LIMIT ?`,
         )
         .all(...params, limit + 1) as SessionEntryRow[];
@@ -950,14 +1033,20 @@ function searchSqliteSessions(db: Database, query: SessionSearchQuery): Persiste
          ORDER BY e.timestamp DESC, e.id DESC LIMIT 1) AS label,
        (SELECT e.summary FROM prism_session_entries e
          WHERE e.session_id = ? AND e.summary IS NOT NULL
-         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1) AS summary`,
+         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1) AS summary,
+       (SELECT COUNT(*) FROM prism_session_entries e
+         WHERE e.session_id = ? AND e.kind = 'message') AS message_count`,
   );
   const selectTurn = db.prepare(
     `SELECT COUNT(*) AS turn FROM prism_session_entries
       WHERE session_id = ? AND (timestamp < ? OR (timestamp = ? AND id <= ?))`,
   );
   const items: SessionSearchHit[] = pageRows.map((row) => {
-    const display = selectDisplay.get(row.session_id, row.session_id) as { label: string | null; summary: string | null };
+    const display = selectDisplay.get(row.session_id, row.session_id, row.session_id) as {
+      label: string | null;
+      summary: string | null;
+      message_count: number;
+    };
     const turn =
       row.match_timestamp === undefined || row.match_timestamp === null
         ? undefined
@@ -966,6 +1055,7 @@ function searchSqliteSessions(db: Database, query: SessionSearchQuery): Persiste
       sessionId: row.session_id,
       leafId: findLatestLeafId(db, row.session_id),
       updatedAt: row.updated_at,
+      messageCount: Number(display.message_count),
       label: display.label ?? undefined,
       summary: display.summary ?? undefined,
       snippet: clipSearchSnippet(row.match_snippet ?? display.label ?? display.summary ?? undefined),
@@ -1028,20 +1118,12 @@ function matchParams(q: ResolvedSessionSearchQuery): unknown[] {
   return [fts5Phrase(q.query), ...(q.kind ?? [])];
 }
 
-function buildOwnershipFilters(scope: { tenantId?: string; accountId?: string; userId?: string }): string[] {
-  const filters: string[] = [];
-  if (scope.tenantId) filters.push("tenant_id = ?");
-  if (scope.accountId) filters.push("account_id = ?");
-  if (scope.userId) filters.push("user_id = ?");
-  return filters;
+function buildOwnershipFilters(scope: OwnershipScope): string[] {
+  return ownershipColumns(scope).map(([column]) => `${column} = ?`);
 }
 
-function ownershipParams(scope: { tenantId?: string; accountId?: string; userId?: string }): unknown[] {
-  const params: unknown[] = [];
-  if (scope.tenantId) params.push(scope.tenantId);
-  if (scope.accountId) params.push(scope.accountId);
-  if (scope.userId) params.push(scope.userId);
-  return params;
+function ownershipParams(scope: OwnershipScope): string[] {
+  return ownershipColumns(scope).map(([, value]) => value);
 }
 
 function queryTable<T>(

@@ -138,6 +138,7 @@ describe("AgentEventSource", () => {
       retry_scheduled: false,
       compaction_started: false,
       compaction_finished: false,
+      compaction_failed: false,
       attention_compiled: false,
       tool_narrowing_clamped: false,
       tool_execution_started: false,

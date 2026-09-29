@@ -104,6 +104,7 @@ export function parseSkillFile(text: string, path: string): Skill {
     name: name.replace(/\s+/g, "-"),
     description,
     instructions: body.replace(/^\n+/, ""),
+    ...(path ? { path } : {}),
     ...(toolNames ? { toolNames } : {}),
     ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
   };

@@ -4,13 +4,14 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 
 ## Current line (0.12.0)
 
+- **Resilient MCP plane**: `assembleMcpPlane` connects every allowed server in parallel with a per-server `connectTimeoutMs` (default 15 s), returns per-server `connected`/`failed`/`disabled` status instead of aborting startup on the first failure, enforces the host `mcp.allow` list, redacts header values from status errors, and exposes `reconnect(serverId)` plus `close()` while keeping the agent's tool registry in sync. HTTP specs accept `headers` and OAuth `auth`.
 - **Memory-store branch reads**: the built-in memory session store implements `readBranchPath`. A snapshot walks the branch once and clones each kept entry once.
 - **JSONL parse cache**: a read after an in-process append reuses the parsed file when size and mtime match. A same-size write inside one filesystem timestamp tick can still look unchanged.
 - **Idempotency window**: memory and JSONL stores remember the latest 4,096 dedup keys. Replaying an older key appends a new entry instead of rejecting the write.
 - **In-memory lease sweep**: expired lease rows are deleted once the map reaches 1,024. A swept key starts its next fence at 1. A released key still in the map keeps `fencingToken + 1`. SQLite and Postgres adapters still keep the counter on the row.
 - **Shared text token estimate**: plain-text estimates use one `ceil(length/4)` helper. Message and entry estimates are unchanged.
 - **System One decision models**: `@arnilo/prism-providers/typesafe` (hosted Jev) and `@arnilo/prism-providers/laya` (self-hosted `laya-serve`) answer only `options.structuredOutput` requests, one `POST /v1/systemone` round trip, no tools or streaming; `@arnilo/prism-providers/decisions` adds a typed host call that preserves raw probabilities, confidence, the responding checkpoint, usage, and timing.
-- **12 publishable packages** at current **0.12.0** lockstep, with the migration guide reachable from the release section below — inventory below.
+- **14 publishable packages** at current **0.12.0** lockstep, with the migration guide reachable from the release section below — inventory below.
 
 ### Carried from the 0.10.0 line
 
@@ -79,6 +80,7 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 
 ## Agent/session runtime
 
+- [Agent SDK](agent-sdk.md): assembles a configurable agentic runtime (tool planes, skills, instructions, a resilient MCP plane with per-server status/reconnect, hooks) over the harness with every plane optional or replaceable.
 - [Agent/session runtime](agent-session-runtime.md): create agents/sessions, `run`/`prompt`/`steer`/`stream`, durable resume, batch approvals, per-run `toolNames` narrowing.
 - [Durable runs](durable-runs.md): turn-boundary `checkpointPolicy: "every-turn"` checkpoints and `decision: "continue"` crash recovery for long runs.
 - [Agent definitions](agent-definitions.md): declarative `AgentDefinition` resolution and `AGENT.md` bundle discovery, fail-closed activation.
@@ -105,13 +107,13 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 - [Memory fabric](memory-fabric.md): opt-in typed notes (fact/procedure/file/working/episode) with validity windows over the existing vector and working stores.
 - [Scoped memory](scoped-memory.md): workspace-scope guard, gated writes, promotion ladder, decay reads, audit mirror (`@arnilo/prism-memory/scoped`).
 - [Scoped agent memory design concept](scoped-agent-memory.md): workspace-scoped persistent memory — gated writes, promotion ladder, decay-based reads; case study and research basis.
-- [Session stores](session-stores.md): `SessionStore` contract, append options, branches, bounded search — start here for persistence.
+- [Session stores](session-stores.md): `SessionStore` contract, memory snapshots, bounded SQL branch-path pages, and session search — start here for persistence.
 - [Conversations](conversations.md): durable user-scoped threads with versioned metadata and legal-hold-aware deletion.
 - [Work artifacts and review](work-artifacts-and-review.md): artifact attach, revision compare, evidence-bound citations, approve/reject, expiring delivery links.
 - [Session stores and branching](session-stores-and-branching.md): branch-semantics helper reference (compatibility stub for session-stores.md).
-- [Database persistence](database-persistence.md): production persistence contracts, migrations, retention, and adapter conformance harnesses.
-- [SQLite persistence](sqlite-persistence.md): built-in `bun:sqlite` adapter with FTS search and verified migrations.
-- [PostgreSQL persistence](postgres-persistence.md): optional pooled `pg` adapter with advisory-locked migrations and live conformance.
+- [Database persistence](database-persistence.md): production persistence contracts, ownership-scoped entry reads/branch cursors, monotonic session activity, migrations, retention, and conformance harnesses.
+- [SQLite persistence](sqlite-persistence.md): built-in `bun:sqlite` adapter with filtered/paginated entry queries, bounded branch-path pages, monotonic session activity, FTS search, and verified migrations.
+- [PostgreSQL persistence](postgres-persistence.md): optional pooled `pg` adapter with filtered/paginated entry queries, bounded branch-path pages, monotonic session activity, advisory-locked migrations, and live conformance.
 - [Enterprise PostgreSQL state](enterprise-postgres-state.md): durable governance/router/ERP state, outbox/inbox messaging, approval records.
 - [Migration guide](migration.md): the era index of migration cuts with replacement tables and rollback notes.
 - [Node JSONL session store](node-jsonl-session-store.md): development-only JSONL adapter, single-process, no cross-process safety.
@@ -147,9 +149,9 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 - [System prompts](system-prompts.md): layered system prompts plus trust-gated `AGENTS.md`/`SYSTEM.md` file auto-load.
 - [Versioned prompt registry](prompt-registry.md): immutable content-hashed prompt assets with durable stores and bounded diff.
 - [Instruction injection](instruction-injection.md): package injectors layer redacted instructions without granting capabilities.
-- [Context and skills](context-and-skills.md): ordered context providers, progressive skill disclosure, fail-closed activation. `@arnilo/prism-work` ships `docx`, `xlsx`, `powerpoint`, `pdf`.
+- [Context and skills](context-and-skills.md): ordered context providers, multi-root discovery, progressive skill disclosure, fail-closed activation. `@arnilo/prism-work` ships `docx`, `xlsx`, `powerpoint`, `pdf`.
 - [LLM Wiki](wiki.md): optional knowledge compiler emitting OKF bundles, with `/wiki-ingest` raw staging (text, file, image, or URL via a host `fetchUrl` hook). A set `extractDocument` hook owns PDF and CSV; image OCR is opt-in.
-- [Retrieval-augmented generation](rag.md): bounded source lifecycle, hybrid retrieval, permission-trimmed query legs, reranking, evidence-backed citations, inert injection. Host parsers may convert documents; failed OCR is not indexed.
+- [Retrieval-augmented generation](rag.md): bounded source lifecycle, concurrent exact-scope hybrid retrieval with permission rechecks, reranking, evidence-backed citations, and inert injection; host parsers may convert documents without indexing failed OCR.
 - [Knowledge synchronization](knowledge-sync.md): paged enterprise-source import with a Drive connector, checkpointed change cursors, and host-owned ACL mapping.
 
 ## Tools
@@ -169,7 +171,7 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 - [Device adapters](device-adapters.md): deny-by-default realtime voice/desktop-control contract with consent and sandbox gating.
 - [Linux desktop control](computer-use-linux.md): optional `computer-use-linux` MCP wrapper — doctor-first, approval-gated mutators.
 - [Obscura browser engine](obscura.md): optional host-binary browser engine adapter with fail-closed lifecycle and CDP composition.
-- [Coding agent tools](coding-agent-tools.md): shell/read/write/edit/search toolset with caps, document reader, and optional Git awareness.
+- [Coding agent tools](coding-agent-tools.md): shell/read/write/edit/search toolset with caps, document reader, `todo_write` task tracking with a completion stop hook, and optional Git awareness.
 - [Document reader](document-reader.md): bounded PDF/DOCX/XLSX/PPTX text extraction behind `createReadTool({ documentReader })`; optional host-selected Mistral OCR parser (not default).
 - [Indexed code search](indexed-code-search.md): host-owned incremental index seam; results labeled `untrusted_index`.
 - [Coding workspaces](coding-workspaces.md): worktree lifecycle with CheckpointStore CAS records, LeaseStore fencing, and opt-in per-child spawn isolation.
@@ -220,16 +222,17 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 
 ## CLI/RPC
 
+- [Prism Code](prism-code.md): terminal coding agent app — TUI, headless print/json, and ACP surfaces over the Agent SDK with a layered `~/.prism` user home (global config, remembered selection), layered skills with progressive disclosure, an explicit durable credential store (keychain / owner-only file / encrypted file / session-only), provider/model setup, repo sessions, observational memory, and optional web/wiki planes; install with `bun add -g` or the native curl installer.
 - [Dev inspector](dev-inspector.md): loopback-only local playground over a configured agent; composition inspection via `GET /inspect`; quality/cost/latency compare from timeline summaries; `prism dev` composition.
 - [CLI/RPC](cli-rpc.md): print/json modes, LF-delimited RPC, `prism init` scaffold (`personal-assistant`, `business-worker`, `deep-research` templates), provider scaffolding, allow-listed `--extension` activation.
-- [Workflows](workflows.md): typed DAG orchestration plus serializable graph/Mermaid overlay for host UIs.
+- [Workflows](workflows.md): typed DAG orchestration with execution-only retries, fail-closed checkpoint recovery, and serializable graph/Mermaid overlay for host UIs.
 
 ## Security and credentials
 
 - [Host security guide](host-security.md): fail-closed checklist across supply chain, boundaries, redaction, trust, persistence.
 - [Security/auth/trust](settings-auth-trust-security.md): settings providers, trust/permission policies, host-owned wiring.
 - [Credentials and redaction](credentials-and-redaction.md): resolver order, env/OAuth helpers, provider-edge resolution, secret redaction.
-- [Credential storage](credential-storage.md): bounded AES-GCM adapter, system keychain, host-KMS wrap, work/OIDC subpaths.
+- [Credential storage](credential-storage.md): bounded AES-GCM adapter, owner-only plaintext file (`auth.json`), system keychain with a read-only availability probe, host-KMS wrap, work/OIDC subpaths.
 
 ## Testing and examples
 
@@ -257,7 +260,7 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 
 ## Release and install
 
-- [Release and install](release-and-install.md): Bun install rules and the runtime matrix, the package graph, and deterministic resumable publication.
+- [Release and install](release-and-install.md): Bun install rules and the runtime matrix, the package graph, deterministic resumable publication, and the Prism Code standalone binary channel (six `bun build --compile` targets, `SHA256SUMS`, provenance).
 - [Migrate 0.11 → 0.12](history/migrate-to-0.12.0.md): Bun `>=1.4.2`, `bun:sqlite`, and optional local document extraction.
 - [Migrate 0.10 → 0.11](migrate-to-0.11.md): idempotency window, in-memory lease fence reset, and the persona/graft subpath removals.
 - [Migrate 0.8 → 0.9](migrate-to-0.9.md): the four behavior deltas inside existing surfaces (limit-death stream order, turn-trace metadata, cache-stable disclosure, labeled usage estimates), every new option with its sizing line, and 0.9.0 host migration steps.
@@ -273,7 +276,7 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 The generated inventory below derives from [`scripts/package-truth.json`](../scripts/package-truth.json) — regenerate with `bun scripts/package-truth.mjs --emit-docs`, never hand-edit.
 
 <!-- generated:package-truth:inventory begin -->
-**12 publishable manifests** — root `@arnilo/prism` plus 11 workspace packages (4 `prism-*` family packages, 7 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
+**14 publishable manifests** — root `@arnilo/prism` plus 13 workspace packages (4 `prism-*` family packages, 9 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
 
 | package | version | notes |
 | --- | --- | --- |
@@ -284,6 +287,8 @@ The generated inventory below derives from [`scripts/package-truth.json`](../scr
 | `@arnilo/prism-providers` | 0.12.0 | family — all provider adapters as `/<adapter>` subpaths |
 | `@arnilo/prism-acp-agent` | 0.12.0 | capability — ACP adapter |
 | `@arnilo/prism-ag-ui` | 0.12.0 | capability — AG-UI/A2A/A2UI adapter |
+| `@arnilo/prism-agent-sdk` | 0.1.0 | capability — configurable agent runtime assembly over tool planes, skills, instructions, MCP, and hooks |
+| `@arnilo/prism-code` | 0.4.0 | capability — terminal coding agent app: TUI, headless print/json, and ACP surfaces with bundled coding tools, repo sessions, observational memory, and optional web/wiki planes |
 | `@arnilo/prism-hooks` | 0.12.0 | capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams |
 | `@arnilo/prism-mcp` | 0.12.0 | capability — MCP client/server/OAuth interop |
 | `@arnilo/prism-memory` | 0.12.0 | capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths |

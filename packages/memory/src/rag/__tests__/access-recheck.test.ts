@@ -116,6 +116,118 @@ describe("mid-turn source-grant recheck", () => {
     assert.equal(denials[0]!.scope.threadId, scope.corpusId);
   });
 
+  it("keeps multi-scope denial order and drops revoked or tombstoned stale hits", async () => {
+    const { embedder, store } = await seeded();
+    const other = { ...scope, corpusId: "private" };
+    const otherThread = { ...thread, threadId: other.corpusId };
+    await indexChunks({
+      chunks: [
+        ...chunkText("private revoked policy", { sourceId: "doc:c" }),
+        ...chunkText("private deleted policy", { sourceId: "doc:d" }),
+      ],
+      embedder,
+      store,
+      scope: other,
+    });
+    await store.setSourceAccess(otherThread, [
+      { sourceId: "doc:c", principalIds: ["alice"], accessVersion: 1 },
+      { sourceId: "doc:d", principalIds: ["alice"], accessVersion: 1 },
+    ]);
+    const [embedding] = await embedder.embed(["policy"]);
+    assert.ok(embedding, "embedding must be present");
+    const snapshots = new Map(
+      await Promise.all(
+        [scope, other].map(
+          async (item) =>
+            [
+              item.corpusId,
+              await store.query({ tenantId: item.tenantId, resourceId: item.resourceId, threadId: item.corpusId, embedding, topK: 20 }),
+            ] as const,
+        ),
+      ),
+    );
+    let revoked = false;
+    const seen: AccessDenial[] = [];
+    const stale: VectorStore = {
+      ...store,
+      async query(input) {
+        if (input.threadId === other.corpusId && !revoked) {
+          revoked = true;
+          await store.setSourceAccess(thread, [
+            { sourceId: "doc:a", principalIds: ["alice"], accessVersion: 2 },
+            { sourceId: "doc:b", principalIds: [], accessVersion: 2 },
+          ]);
+          await store.setSourceAccess(otherThread, [
+            { sourceId: "doc:c", principalIds: [], accessVersion: 2 },
+            { sourceId: "doc:d", principalIds: ["alice"], accessVersion: 2 },
+          ]);
+          await store.invalidate?.(otherThread, [{ id: "doc:d", reason: "forgotten", at: new Date().toISOString() }]);
+        }
+        if (input.threadId === scope.corpusId) await new Promise((resolve) => setTimeout(resolve, 8));
+        input.onDeniedSources?.([{ sourceId: input.threadId === scope.corpusId ? "doc:b" : "doc:c", reason: "no_grant" }]);
+        return snapshots.get(input.threadId) ?? [];
+      },
+      async lexicalQuery(input) {
+        return snapshots.get(input.threadId) ?? [];
+      },
+    };
+    const result = await retrieveContext("policy", {
+      embedder,
+      store: stale,
+      scopes: [scope, other],
+      lexical: "fts",
+      authorization: alice,
+      onAccessDenied: (denial) => seen.push(denial),
+    });
+    assert.equal(revoked, true);
+    assert.deepEqual(
+      result.hits.map((hit) => hit.sourceId),
+      ["doc:a"],
+    );
+    assert.deepEqual(
+      result.citations.map((citation) => citation.sourceId),
+      ["doc:a"],
+    );
+    assert.deepEqual(
+      seen.map((denial) => [denial.scope.threadId, denial.sourceId]),
+      [
+        [scope.corpusId, "doc:b"],
+        [other.corpusId, "doc:c"],
+      ],
+    );
+  });
+
+  it("flushes ordered store denials even when another concurrent scope rejects", async () => {
+    const { embedder, store } = await seeded();
+    const scopes = Array.from({ length: 4 }, (_, index) => ({ ...scope, corpusId: `c${index}` }));
+    const failure = new Error("query failed");
+    const denials: AccessDenial[] = [];
+    const failing: VectorStore = {
+      ...store,
+      async query(input) {
+        await new Promise((resolve) => setTimeout(resolve, input.threadId === "c0" ? 8 : 2));
+        if (input.threadId === "c1") throw failure;
+        input.onDeniedSources?.([{ sourceId: `doc:${input.threadId}`, reason: "no_grant" }]);
+        return [];
+      },
+    };
+    await assert.rejects(
+      retrieveContext("policy", {
+        embedder,
+        store: failing,
+        scopes,
+        lexical: "off",
+        authorization: alice,
+        onAccessDenied: (denial) => denials.push(denial),
+      }),
+      (error) => error === failure,
+    );
+    assert.deepEqual(
+      denials.map((denial) => denial.scope.threadId),
+      ["c0", "c2", "c3"],
+    );
+  });
+
   it("raises the boundary's own denial event for a source the store's predicate withheld", async () => {
     const embedder = createHashEmbedder({ dimensions: 8 });
     const store = createMemoryVectorStore();

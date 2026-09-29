@@ -1,5 +1,5 @@
 import { readdir, readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { isJsonObject } from "../config.js";
 import type { ContributionFileKind, DiscoveredContribution, JsonObject, Skill } from "../contracts.js";
 import { parseSkillFile } from "../contribution-parsing.js";
@@ -10,26 +10,45 @@ import { HARD_MAX_SKILL_INSTRUCTION_BYTES } from "../skill-disclosure.js";
 import { isNodeErrorCode } from "./config.js";
 import { isPathInsideReal } from "./trust.js";
 
+export interface DiscoveryRoot {
+  readonly dir: string;
+  readonly origin: "global" | "workspace";
+  readonly layout?: "kind-dir" | "flat";
+}
+
 export interface DiscoveryOptions {
   readonly kinds: readonly ContributionFileKind[];
-  /** Workspace root. Scans `<root>/.agents/<kind>s/<name>/`. Gated by `trust`. */
+  /** Workspace root. Scans `<root>/.agents/<kind>s/<name>/`. Gated by `trust`. Appended after any `roots`. */
   readonly workspaceRoot?: string;
+  /** Explicit roots with origin and layout. Evaluated in order; later entries override earlier by `kind/name`. */
+  readonly roots?: readonly DiscoveryRoot[];
   readonly permission?: PermissionPolicy;
   readonly trust?: TrustPolicy;
 }
 
 /**
- * Discover contributions on disk. Scans the workspace `.agents/` tree only;
- * no global root. One `readdir` per kind-root; no `import()`. Inert output —
+ * Discover contributions on disk. Scans configured roots and/or the workspace `.agents/` tree.
+ * One `readdir` per kind-root; no `import()`. Inert output —
  * executable behavior is host-owned.
  */
 export async function discoverContributions(options: DiscoveryOptions): Promise<readonly DiscoveredContribution[]> {
   const kinds = options.kinds;
   const merged = new Map<string, DiscoveredContribution>();
 
+  if (options.roots) {
+    for (const root of options.roots) {
+      for (const kind of kinds) {
+        const scanDir = root.layout === "flat" ? root.dir : join(root.dir, kindDirName(kind));
+        const entries = await scanDirectoryEntries(scanDir, kind, root.origin, options);
+        for (const c of entries) merged.set(`${c.kind}/${c.name}`, c);
+      }
+    }
+  }
+
   if (options.workspaceRoot) {
     for (const kind of kinds) {
-      const entries = await scanKindRoot(options.workspaceRoot, kind, options);
+      const scanDir = join(options.workspaceRoot, ".agents", kindDirName(kind));
+      const entries = await scanDirectoryEntries(scanDir, kind, "workspace", options);
       for (const c of entries) merged.set(`${c.kind}/${c.name}`, c);
     }
   }
@@ -38,21 +57,20 @@ export async function discoverContributions(options: DiscoveryOptions): Promise<
 }
 
 // ponytail: single-level named-subdir scan; nested layouts would need a recursive walk if added later.
-async function scanKindRoot(
-  root: string,
+async function scanDirectoryEntries(
+  scanDir: string,
   kind: ContributionFileKind,
+  origin: "global" | "workspace",
   options: DiscoveryOptions,
 ): Promise<readonly DiscoveredContribution[]> {
-  const kindDir = join(root, ".agents", kindDirName(kind));
-
   if (options.trust) {
-    const decision = await options.trust.check({ kind: "project", target: kindDir });
-    if (!decision.trusted) return []; // untrusted workspace root: skip, no throw
+    const decision = await options.trust.check({ kind: "project", target: scanDir });
+    if (!decision.trusted) return []; // untrusted root: skip, no throw
   }
 
   let names: readonly string[];
   try {
-    names = await readdir(kindDir);
+    names = await readdir(scanDir);
   } catch (error) {
     if (isNodeErrorCode(error, "ENOENT")) return []; // missing kind root is normal
     throw error;
@@ -60,7 +78,7 @@ async function scanKindRoot(
 
   const out: DiscoveredContribution[] = [];
   for (const name of names) {
-    const dir = join(kindDir, name);
+    const dir = resolve(scanDir, name);
     let isDir: boolean;
     try {
       isDir = (await stat(dir)).isDirectory();
@@ -70,10 +88,10 @@ async function scanKindRoot(
     }
     if (!isDir) continue;
     // Symlinks escaping the kind root are excluded via realpath containment.
-    if (!(await isPathInsideReal(kindDir, dir))) continue;
+    if (!(await isPathInsideReal(scanDir, dir))) continue;
 
     await assertPermission(options.permission, { kind: "resource", action: "load", target: dir });
-    const entry = await readEntry(dir, name, kind, "workspace");
+    const entry = await readEntry(dir, name, kind, origin);
     if (entry) out.push(entry);
   }
   return out;
@@ -99,7 +117,7 @@ async function readSkillEntry(
   _fallbackName: string,
   origin: "global" | "workspace",
 ): Promise<DiscoveredContribution | undefined> {
-  const path = join(dir, "SKILL.md");
+  const path = resolve(dir, "SKILL.md");
   if (!(await isPathInsideReal(dir, path))) return undefined;
   const text = await readOptionalFile(path);
   if (text === undefined) return undefined;
@@ -113,7 +131,7 @@ async function readManifestEntry(
   kind: ContributionFileKind,
   origin: "global" | "workspace",
 ): Promise<DiscoveredContribution | undefined> {
-  const path = join(dir, "manifest.json");
+  const path = resolve(dir, "manifest.json");
   if (!(await isPathInsideReal(dir, path))) return undefined;
   const text = await readOptionalFile(path);
   if (text === undefined) return undefined;
@@ -148,16 +166,17 @@ export interface LoadSkillDirectoryOptions {
  */
 export async function loadSkillDirectory(directory: string, options: LoadSkillDirectoryOptions = {}): Promise<readonly Skill[]> {
   const maxBytes = options.maxSkillBytes ?? HARD_MAX_SKILL_INSTRUCTION_BYTES;
+  const resolvedDir = resolve(directory);
   let names: readonly string[];
   try {
-    names = await readdir(directory);
+    names = await readdir(resolvedDir);
   } catch (error) {
     throw new Error(`No readable skill directory at ${directory}: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   const skills: Skill[] = [];
   for (const name of [...names].sort()) {
-    const dir = join(directory, name);
+    const dir = resolve(resolvedDir, name);
     let isDir: boolean;
     try {
       isDir = (await stat(dir)).isDirectory();
@@ -165,10 +184,10 @@ export async function loadSkillDirectory(directory: string, options: LoadSkillDi
       if (isNodeErrorCode(error, "ENOENT")) continue;
       throw error;
     }
-    if (!isDir || !(await isPathInsideReal(directory, dir))) continue;
+    if (!isDir || !(await isPathInsideReal(resolvedDir, dir))) continue;
 
-    const path = join(dir, "SKILL.md");
-    if (!(await isPathInsideReal(directory, path))) continue;
+    const path = resolve(dir, "SKILL.md");
+    if (!(await isPathInsideReal(resolvedDir, path))) continue;
     const text = await readOptionalFile(path);
     if (text === undefined) continue;
     if (Buffer.byteLength(text, "utf8") > maxBytes) {

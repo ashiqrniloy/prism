@@ -276,7 +276,15 @@ async function flush(
       }
     }
 
-    options.debug?.("observational-memory:flush", { observations: observationCount, reflections: reflectionCount, dropped: dropCount });
+    options.debug?.("observational-memory:flush", {
+      observations: observationCount,
+      reflections: reflectionCount,
+      dropped: dropCount,
+      eligibleTokens,
+      threshold: settings.observation.messageTokens,
+      eligibleSources: eligibleSources.length,
+      pending: pending.length,
+    });
     return { observations: observationCount, reflections: reflectionCount, dropped: dropCount };
   } finally {
     await bindNewRefs();

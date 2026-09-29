@@ -379,6 +379,8 @@ export interface Skill {
   readonly name: string;
   readonly description?: string;
   readonly instructions?: string;
+  /** Absolute path to the source `SKILL.md` when loaded from disk. */
+  readonly path?: string;
   readonly context?: readonly ContextProvider[];
   readonly toolNames?: readonly string[];
   readonly metadata?: Readonly<Record<string, unknown>>;

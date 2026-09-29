@@ -1,9 +1,9 @@
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { realpathSync } from "node:fs";
 import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
 import type { ExecutionAction } from "@arnilo/prism";
 import { createCodingApprovalPolicy } from "../approval.js";
 import { evaluateCommandRules, hasShellMetacharacters } from "../command-rules.js";

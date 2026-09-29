@@ -294,6 +294,9 @@ ExtendedOAuthCredentialStore	export type { ExtendedOAuthCredentialStore } from "
 FailureInjectionOptions	export type { FailureInjectionOptions, RunScenarioOptions, ScenarioResult, ScenarioTurn, } from "./scenarios.js"
 FakeJetStream	export declare class FakeJetStream implements NatsJetStream
 FanOutNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RouteNodeConfig, RouteNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, W
+FileCredentialStore	export type { FileCredentialStore, FileCredentialStoreLimits, FileCredentialStoreOptions } from "./file-store.js"
+FileCredentialStoreLimits	export type { FileCredentialStore, FileCredentialStoreLimits, FileCredentialStoreOptions } from "./file-store.js"
+FileCredentialStoreOptions	export type { FileCredentialStore, FileCredentialStoreLimits, FileCredentialStoreOptions } from "./file-store.js"
 FilePolicyDecisionStoreOptions	export type { FilePolicyDecisionStoreOptions, MemoryPolicyDecisionStoreOptions } from "./store.js"
 FunctionNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RouteNodeConfig, RouteNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, W
 GOOGLE_WORKSPACE_BASE_SCOPES	export declare const GOOGLE_WORKSPACE_BASE_SCOPES: readonly ["openid", "email", "profile"]
@@ -417,9 +420,12 @@ InMemoryTelemetry	export type { DelegationTelemetry, EvaluationTelemetry, InMemo
 JSON_HEADERS	export declare const JSON_HEADERS:
 JoinNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RouteNodeConfig, RouteNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, W
 JsonSchemaToolValidatorOptions	export type { JsonSchemaToolValidatorOptions } from "./json-schema.js"
+KEYCHAIN_PROBE_ACCOUNT	export declare const KEYCHAIN_PROBE_ACCOUNT = "__prism_keychain_probe__"
 KMS_ENVELOPE_VERSION	export declare const KMS_ENVELOPE_VERSION: 1
-KeychainCredentialStore	export type { KeychainCredentialStore } from "./keychain-store.js"
+KeychainCredentialStore	export type { KeychainCredentialStore, KeychainProbeOptions, KeychainProbeResult } from "./keychain-store.js"
 KeychainCredentialStoreOptions	export type { EncryptedCredentialStoreLimits, EncryptedCredentialStoreOptions, EncryptedEnvelope, KeychainCredentialStoreOptions, RotateEncryptedCredentialStoreOptions, ScryptParameters, } from "./types.js"
+KeychainProbeOptions	export type { KeychainCredentialStore, KeychainProbeOptions, KeychainProbeResult } from "./keychain-store.js"
+KeychainProbeResult	export type { KeychainCredentialStore, KeychainProbeOptions, KeychainProbeResult } from "./keychain-store.js"
 KmsEnvelope	export type { HostKms, HostKmsCryptoOptions, KmsEnvelope } from "./kms.js"
 LiveScoreOptions	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
 LoopNodeConfig	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RouteNodeConfig, RouteNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, W
@@ -735,6 +741,7 @@ assertOwnershipForLoad	export declare function assertOwnershipForLoad(expected: 
 assertOwnershipForSave	export declare function assertOwnershipForSave(existing: WorkflowCheckpointRecord | null | undefined, input: WorkflowCheckpointSaveInput): void
 assertOwnershipRequired	export declare function assertOwnershipRequired(input: OwnershipScope, makeError: () => Error): void
 assertOwnershipScope	export declare function assertOwnershipScope(expected: OwnershipScope, actual: OwnershipScope, makeError: () => Error): void
+assertPersistenceSearchQueryParity	export declare function assertPersistenceSearchQueryParity(store: SessionStore & ProductionPersistenceStore): Promise<void>
 assertPostgresPromptSchemaReady	export declare function assertPostgresPromptSchemaReady(client: Pick<PoolClient, "query">, schema?: string): Promise<void>
 assertPostgresSchemaReady	export declare function assertPostgresSchemaReady(source: Queryable, schema: string): Promise<void>
 assertPromptPromotion	export declare function assertPromptPromotion<TInput = unknown, TExpected = unknown>(options: AssertPromptPromotionOptions<TInput, TExpected>): Promise<PromptPromotionVerdict>
@@ -788,6 +795,7 @@ canonicalHeaders	export declare function canonicalHeaders(headers: Readonly<Reco
 canonicalJson	export declare function canonicalJson(value: unknown): string
 canonicalJsonBytes	export declare function canonicalJsonBytes(value: unknown): Buffer
 canonicalQueryString	export declare function canonicalQueryString(query: Readonly<Record<string, string>>): string
+canonicalSessionTimestamp	export declare function canonicalSessionTimestamp(value: string): string
 canonicalizeA2AAgentCard	export declare function canonicalizeA2AAgentCard(card: A2AAgentCard): string
 capToolCounts	export declare function capToolCounts(rawCounts: Readonly<Record<string, number>>, maxDistinct?: number): Readonly<Record<string, number>>
 checkpointKey	export declare function checkpointKey(tenantId: string, sagaId: string, runId: string): string
@@ -828,6 +836,7 @@ createEncryptedCredentialStore	export declare function createEncryptedCredential
 createEnterpriseStateCleanup	export declare function createEnterpriseStateCleanup(pool: Pool, schema: string): (input: EnterpriseStateCleanupInput) => Promise<EnterpriseStateCleanupResult>
 createErpInvariantScorers	export declare function createErpInvariantScorers(): readonly Scorer<unknown, unknown>[]
 createErrorClassScorer	export declare function createErrorClassScorer<TInput = unknown, TExpected = unknown>(options?: ErrorClassScorerOptions): Scorer<TInput, TExpected>
+createFileCredentialStore	export declare function createFileCredentialStore(options: FileCredentialStoreOptions): FileCredentialStore
 createFilePolicyDecisionStore	export declare function createFilePolicyDecisionStore(options: FilePolicyDecisionStoreOptions): PolicyDecisionStore
 createGoogleWorkspaceOAuthProvider	export declare function createGoogleWorkspaceOAuthProvider(options?: GoogleWorkspaceOAuthOptions): OAuthProvider
 createGovernedProvider	export declare function createGovernedProvider(options: GovernedProviderOptions): GovernedProvider
@@ -983,6 +992,7 @@ insertCircuit	export declare function insertCircuit(client: PoolClient, table: s
 integer	export declare function integer(value: unknown, label: string, min: number, max: number): number
 isAbortError	export declare function isAbortError(error: unknown): boolean
 isAdmitOperation	export declare function isAdmitOperation(operation: string): boolean
+isCheckpointFailure	export declare function isCheckpointFailure(error: unknown): boolean
 isCredentialDecryptError	export declare function isCredentialDecryptError(error: unknown): error is CredentialDecryptError
 isCredentialStoreError	export declare function isCredentialStoreError(error: unknown): error is CredentialStoreError
 isCredentialStoreUnavailableError	export declare function isCredentialStoreUnavailableError(error: unknown): error is CredentialStoreUnavailableError
@@ -1034,6 +1044,7 @@ optionalText	export declare function optionalText(value: unknown, label: string)
 outputs	export declare function outputs(state: SagaCheckpointValue): Readonly<Record<string, unknown>>
 ownedSignal	export declare function ownedSignal(request: Request, timeoutMs: number, disconnectAborts: boolean):
 ownerParams	export declare function ownerParams(owner: StoreOwner): [string, string, string]
+ownershipColumns	export declare function ownershipColumns(scope: OwnershipScope): [string, string][]
 ownershipExactlyMatches	export declare function ownershipExactlyMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean
 ownershipMatches	export declare function ownershipMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean
 ownershipScope	export declare function ownershipScope(input: OwnershipScope): OwnershipScope
@@ -1062,6 +1073,7 @@ prepareCheckpointRecord	export declare function prepareCheckpointRecord(input: W
 preparePolicyDecision	export declare function preparePolicyDecision(input: AppendPolicyDecisionInput, options?: PreparePolicyDecisionOptions): PolicyDecisionRecord
 preparePrompt	export declare function preparePrompt(input: PutPromptInput, version: number, scope: NormalizedOwnership, limits: PromptLimits, now: () => number): PromptRecord
 presignV4	export declare function presignV4(input: SigV4PresignInput): Promise<string>
+probeKeychainAvailability	export declare function probeKeychainAvailability(options: KeychainProbeOptions): Promise<KeychainProbeResult>
 projectAgentTimeline	export declare function projectAgentTimeline(events: readonly AgentEvent[], options?: TimelineProjectionOptions): ExecutionTimeline
 projectTraceTimeline	export declare function projectTraceTimeline(trace: EvaluationTrace, options?: TimelineProjectionOptions): ExecutionTimeline
 projectWorkflowGraphRun	export declare function projectWorkflowGraphRun(view: WorkflowGraphView, source: WorkflowCheckpointValue | WorkflowRunTimelineSource): WorkflowGraphRunView
