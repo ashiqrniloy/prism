@@ -61,6 +61,7 @@ UiStreamEntry	export type { UiFooterStatus, UiStreamEntry } from "./reducer.js"
 UnavailableStoredCredentialStore	export declare class UnavailableStoredCredentialStore implements StoredCredentialStore
 appendPromptHistory	export declare function appendPromptHistory(cwd: string, text: string, options?:
 applyFlagOverlay	export declare function applyFlagOverlay(config: PrismCodeConfig, flags: CliFlags): PrismCodeConfig
+applyOpenTuiLibc	export declare function applyOpenTuiLibc(env?: NodeJS.ProcessEnv, platform?: NodeJS.Platform, readReport?: () => LibcReport | undefined): string | undefined
 assembleAppAgent	export declare function assembleAppAgent(config: PrismCodeConfig, overrideProvider?: AIProvider, executionPolicy?: ExecutionPolicy, omCoordinator?: ObservationalMemoryCoordinator, credentialManager?: PrismCodeCredentialManager, providerCache?: ProviderCache, trust?: TrustPolicy, hostBindings?: AppHostBindings): Promise<AgentSdkDefinition>
 autoDetectProvider	export declare function autoDetectProvider(credentialManager: PrismCodeCredentialManager): Promise<ModelConfig | undefined>
 boundToolOutput	export declare function boundToolOutput(output: string): string
@@ -91,6 +92,7 @@ deriveSessionTitle	export declare function deriveSessionTitle(prompt: string): s
 describeProviderCredentialStatus	export declare function describeProviderCredentialStatus(descriptor: ShippedProviderDescriptor, credentials: PrismCodeCredentialManager, env?: NodeJS.ProcessEnv): Promise<ProviderCredentialStatus>
 detectGitBranch	export declare function detectGitBranch(cwd: string): string | undefined
 detectGitDirty	export declare function detectGitDirty(repoRoot: string): boolean
+detectLinuxLibc	export declare function detectLinuxLibc(report: LibcReport | undefined): "glibc" | "musl"
 doctorReportToJson	export declare function doctorReportToJson(report: DoctorReport): string
 effortForRun	export declare function effortForRun(effort: string): string | undefined
 enrichModelConfig	export declare function enrichModelConfig(model: ModelConfig): Promise<ModelEnrichment>
@@ -187,6 +189,7 @@ resolveMcpHeaderValue	export declare function resolveMcpHeaderValue(value: strin
 resolveMcpServers	export declare function resolveMcpServers(options: ResolveMcpServersOptions): Promise<ResolvedMcpServers>
 resolveOAuthProvider	export declare function resolveOAuthProvider(providerId: string): Promise<OAuthProvider | undefined>
 resolvePrismCodeApprovalMode	export declare function resolvePrismCodeApprovalMode(config?: PrismCodeApprovalConfig): PrismCodeApprovalMode
+resolvePrismCodeChannel	export declare function resolvePrismCodeChannel(): "binary" | "bun"
 resolvePrismCodeChecks	export declare function resolvePrismCodeChecks(checks?: PrismCodeChecksConfig): Record<string, NamedCheckDefinition>
 resolvePrismCodeCompaction	export declare function resolvePrismCodeCompaction(config: PrismCodeCompactionConfig | undefined, sessionModel: ModelConfig, cache: ProviderCache): false | CompactionOptions
 resolvePrismCodeContextBudget	export declare function resolvePrismCodeContextBudget(sessionModel: ModelConfig): ContextBudget
@@ -231,10 +234,10 @@ type CreatePrismCodeAcpAgentOptions	export { type CreatePrismCodeAcpAgentOptions
 type CredentialResolver	export { autoDetectProvider, type CredentialResolver, createProviderCache, cycleThinkingLevel, type DiscoveredModelInfo, defaultModelForProvider, enrichModelConfig, getModelThinkingLevels, getShippedProvider, getStaticModelsForProvider, hasUsableProvider, type ListModelsOptions, listModelsForProvider, type ModelEnrichment, type ProviderAuthKind, type ProviderCache, type ProviderFactoryContext, type ProviderKeyValidation, type ProviderResolutionOptions, resolveCredential, resolveProvider, SHIPPED
 type CredentialStoreSelection	export { type CredentialStoreSelection, MemoryStoredCredentialStore, PRISM_CODE_KEYCHAIN_SERVICE, PRISM_CREDENTIALS_PASSPHRASE_ENV, PROVIDER_ENV_VARS, PrismCodeCredentialManager, type PrismCodeCredentialManagerOptions, type SelectCredentialStoreOptions, selectCredentialStore, UnavailableStoredCredentialStore, } from "./credentials.js"
 type DiscoveredModelInfo	export { autoDetectProvider, type CredentialResolver, createProviderCache, cycleThinkingLevel, type DiscoveredModelInfo, defaultModelForProvider, enrichModelConfig, getModelThinkingLevels, getShippedProvider, getStaticModelsForProvider, hasUsableProvider, type ListModelsOptions, listModelsForProvider, type ModelEnrichment, type ProviderAuthKind, type ProviderCache, type ProviderFactoryContext, type ProviderKeyValidation, type ProviderResolutionOptions, resolveCredential, resolveProvider, SHIPPED
-type DoctorCheck	export { doctorReportToJson, type DoctorCheck, type DoctorOptions, type DoctorReport, type DoctorStatus, formatDoctorTable, runDoctor, } from "./doctor.js"
-type DoctorOptions	export { doctorReportToJson, type DoctorCheck, type DoctorOptions, type DoctorReport, type DoctorStatus, formatDoctorTable, runDoctor, } from "./doctor.js"
-type DoctorReport	export { doctorReportToJson, type DoctorCheck, type DoctorOptions, type DoctorReport, type DoctorStatus, formatDoctorTable, runDoctor, } from "./doctor.js"
-type DoctorStatus	export { doctorReportToJson, type DoctorCheck, type DoctorOptions, type DoctorReport, type DoctorStatus, formatDoctorTable, runDoctor, } from "./doctor.js"
+type DoctorCheck	export { type DoctorCheck, type DoctorOptions, type DoctorReport, type DoctorStatus, doctorReportToJson, formatDoctorTable, runDoctor, } from "./doctor.js"
+type DoctorOptions	export { type DoctorCheck, type DoctorOptions, type DoctorReport, type DoctorStatus, doctorReportToJson, formatDoctorTable, runDoctor, } from "./doctor.js"
+type DoctorReport	export { type DoctorCheck, type DoctorOptions, type DoctorReport, type DoctorStatus, doctorReportToJson, formatDoctorTable, runDoctor, } from "./doctor.js"
+type DoctorStatus	export { type DoctorCheck, type DoctorOptions, type DoctorReport, type DoctorStatus, doctorReportToJson, formatDoctorTable, runDoctor, } from "./doctor.js"
 type EnvironmentContextProviderOptions	export { CODING_SYSTEM_PROMPT, createEnvironmentContextProvider, type EnvironmentContextProviderOptions, type ResolvePrismCodeInstructionsOptions, resolvePrismCodeInstructions, } from "./prompt.js"
 type HeadlessOptions	export { type AppHostBindings, assembleAppAgent, type HeadlessOptions, runHeadless, type WritableSink, } from "./headless.js"
 type InspectSkillsOptions	export { createSkillCommands, findRepoRoot, formatSkillsList, type InspectSkillsOptions, inspectSkills, isUserOwned, resolveSkillRoots, type SkillDetail, type SkillOrigin, } from "./skills.js"

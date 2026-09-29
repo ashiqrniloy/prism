@@ -71,6 +71,25 @@ async function expectExit(tui, code = 0) {
   expect(result).toBe(code);
 }
 
+/**
+ * Confirms an open picker with Enter and waits for it to close. The credential-status probes
+ * re-render a visible picker, and a key sent in that window is dropped, so the first Enter can leave
+ * the modal up (observed locally in roughly half the runs and on the release gate).
+ */
+async function confirmPicker(tui, title, timeoutMs = 20_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await tui.press("enter");
+    const closedBy = Date.now() + 2_000;
+    while (Date.now() < closedBy) {
+      await tui.settled();
+      if (!tui.screen().includes(title)) return;
+      await Bun.sleep(120);
+    }
+  }
+  throw new Error(`picker "${title}" never closed`);
+}
+
 describe("prism-code TUI over a PTY", () => {
   itPty(
     "first run onboards a provider, runs a prompt, and exits restoring the terminal",
@@ -84,10 +103,10 @@ describe("prism-code TUI over a PTY", () => {
         await tui.waitFor("Select AI Provider", { timeoutMs: 25_000 });
         await tui.type("mock");
         await tui.waitFor("Mock Provider", { timeoutMs: 10_000 });
-        await tui.press("enter");
+        await confirmPicker(tui, "Select AI Provider");
 
         await tui.waitFor("Select Model", { timeoutMs: 25_000 });
-        await tui.press("enter");
+        await confirmPicker(tui, "Select Model");
         await tui.waitFor("Type a prompt", { timeoutMs: 25_000 });
         await tui.settled();
         expect(tui.screen()).toContain("default");

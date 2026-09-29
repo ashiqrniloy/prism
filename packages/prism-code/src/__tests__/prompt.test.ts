@@ -44,7 +44,12 @@ describe("coding agent prompt and instructions layering", () => {
     assert.ok(baseBytes > 500, `base prompt is too small: ${baseBytes} bytes`);
     assert.ok(baseBytes < 1600, `base prompt exceeds budget: ${baseBytes} bytes`);
 
-    expect(CODING_SYSTEM_PROMPT).toMatchSnapshot();
+    // A hash, not `toMatchSnapshot()`: the gate runs the compiled test, and a snapshot file named
+    // after the compiled test cannot be committed (dist/ is generated), so in CI bun refused to
+    // create one. Update this constant deliberately when the prompt changes on purpose.
+    expect(createHash("sha256").update(CODING_SYSTEM_PROMPT, "utf8").digest("hex")).toBe(
+      "c2b5acc5058a317c54c4fffdcadd9d6f489e268e2d94bcf7140f754a839dab62",
+    );
 
     // Verify required sections
     assert.ok(CODING_SYSTEM_PROMPT.includes("Tool-Use Conventions"));
