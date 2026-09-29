@@ -6,6 +6,7 @@ import {
   assertBranchFloor,
   BRANCH_FLOOR,
   isKnownFlake,
+  isUnattributableRun,
   lcovHasBranchRecords,
   parseBranchCoverage,
   probeBunBranchRecords,
@@ -16,6 +17,15 @@ const SAMPLE = [
   "ℹ all files                            |  93.00 |    86.49 |   93.62 | ",
   "ℹ end of coverage report",
 ].join("\n");
+
+test("a non-zero exit with no output is unattributable, a real failure is not", () => {
+  // Observed on the release runner: the instrumented Node run exited 1 with zero bytes, so the audit
+  // could not attribute it to any test and the release gate turned red for no stated reason.
+  assert.equal(isUnattributableRun({ status: 1, stdout: "", stderr: "" }), true);
+  assert.equal(isUnattributableRun({ status: 1, stdout: "(fail) x", stderr: "" }), false);
+  assert.equal(isUnattributableRun({ status: 0, stdout: "", stderr: "" }), false);
+  assert.equal(isUnattributableRun({ status: 1, error: new Error("spawn ENOENT"), stdout: "", stderr: "" }), false);
+});
 
 test("parser reads the Node all-files branch column", () => {
   assert.equal(parseBranchCoverage(SAMPLE)?.branches, 86.49);

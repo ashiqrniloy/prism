@@ -29,6 +29,14 @@ export function parseBranchCoverage(output) {
 const TIMING_ASSERT = /(?:took|was) [\d.]+ ?ms|exceeds frozen \d+% cap|exceeds \d+ ?ms ceiling/;
 
 /** True only when every recorded failure is an instrumented timing assert. */
+/**
+ * A non-zero exit with no output is the instrumented runner dying, not a test failing: it cannot be
+ * attributed to the code, so the audit retries once and then names it as a runner failure.
+ */
+export function isUnattributableRun(result) {
+  return (result.status ?? 1) !== 0 && !result.error && `${result.stdout ?? ""}${result.stderr ?? ""}`.trim() === "";
+}
+
 export function isKnownFlake(output, exitCode) {
   if (exitCode === 0) return false;
   const fails = [...output.matchAll(/^ℹ fail (\d+)\s*$/gm)];
@@ -148,58 +156,69 @@ export function auditBranchCoverage() {
   const started = Date.now();
   const shimDir = mkdtempSync(join(tmpdir(), "prism-node-bun-shim-"));
   let result;
-  try {
-    const shimPath = join(shimDir, "shim.mjs");
-    const loaderPath = join(shimDir, "loader.mjs");
-    writeFileSync(
-      shimPath,
-      [
-        `import * as nodeTest from ${JSON.stringify("node:test")};`,
-        "export const describe = nodeTest.describe;",
-        "export const it = nodeTest.it;",
-        "export const test = nodeTest.test;",
-        "export const before = nodeTest.before;",
-        "export const after = nodeTest.after;",
-        "export const beforeAll = nodeTest.before;",
-        "export const afterAll = nodeTest.after;",
-        "export const beforeEach = nodeTest.beforeEach;",
-        "export const afterEach = nodeTest.afterEach;",
-        "function skipIf(condition) { return condition ? this.skip : this; }",
-        "if (!describe.skipIf) describe.skipIf = skipIf.bind(describe);",
-        "if (!it.skipIf) it.skipIf = skipIf.bind(it);",
-        "if (!test.skipIf) test.skipIf = skipIf.bind(test);",
-        "export default nodeTest;",
-      ].join("\n"),
-    );
-    writeFileSync(
-      loaderPath,
-      [
-        'import { registerHooks } from "node:module";',
-        "registerHooks({",
-        "  resolve(specifier, context, nextResolve) {",
-        '    if (specifier === "bun:test") {',
-        '      return { format: "module", shortCircuit: true, url: new URL("./shim.mjs", import.meta.url).href };',
-        "    }",
-        "    return nextResolve(specifier, context);",
-        "  }",
-        "});",
-      ].join("\n"),
-    );
-    result = spawnSync(
-      "node",
-      [
-        "--import",
+  // The instrumented Node run has no failure output of its own when the runner kills it (observed on
+  // the release runner: exit 1, zero bytes, no TAP), so one unattributable attempt is retried before
+  // it is reported. A real test failure still fails on the first attempt: it prints, and the flake
+  // check below only tolerates instrumented timing asserts.
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      const shimPath = join(shimDir, "shim.mjs");
+      const loaderPath = join(shimDir, "loader.mjs");
+      writeFileSync(
+        shimPath,
+        [
+          `import * as nodeTest from ${JSON.stringify("node:test")};`,
+          "export const describe = nodeTest.describe;",
+          "export const it = nodeTest.it;",
+          "export const test = nodeTest.test;",
+          "export const before = nodeTest.before;",
+          "export const after = nodeTest.after;",
+          "export const beforeAll = nodeTest.before;",
+          "export const afterAll = nodeTest.after;",
+          "export const beforeEach = nodeTest.beforeEach;",
+          "export const afterEach = nodeTest.afterEach;",
+          "function skipIf(condition) { return condition ? this.skip : this; }",
+          "if (!describe.skipIf) describe.skipIf = skipIf.bind(describe);",
+          "if (!it.skipIf) it.skipIf = skipIf.bind(it);",
+          "if (!test.skipIf) test.skipIf = skipIf.bind(test);",
+          "export default nodeTest;",
+        ].join("\n"),
+      );
+      writeFileSync(
         loaderPath,
-        "--test",
-        "--experimental-test-coverage",
-        "--test-coverage-include=dist/**",
-        "--test-coverage-exclude=dist/__tests__/**",
-        ...files,
-      ],
-      { cwd: root, encoding: "utf8", env, maxBuffer: 64 * 1024 * 1024, timeout: 180_000 },
-    );
-  } finally {
-    rmSync(shimDir, { recursive: true, force: true });
+        [
+          'import { registerHooks } from "node:module";',
+          "registerHooks({",
+          "  resolve(specifier, context, nextResolve) {",
+          '    if (specifier === "bun:test") {',
+          '      return { format: "module", shortCircuit: true, url: new URL("./shim.mjs", import.meta.url).href };',
+          "    }",
+          "    return nextResolve(specifier, context);",
+          "  }",
+          "});",
+        ].join("\n"),
+      );
+      result = spawnSync(
+        "node",
+        [
+          "--import",
+          loaderPath,
+          "--test",
+          "--experimental-test-coverage",
+          "--test-coverage-include=dist/**",
+          "--test-coverage-exclude=dist/__tests__/**",
+          ...files,
+        ],
+        { cwd: root, encoding: "utf8", env, maxBuffer: 64 * 1024 * 1024, timeout: 180_000 },
+      );
+    } finally {
+      rmSync(shimDir, { recursive: true, force: true });
+    }
+    if (isUnattributableRun(result) && attempt < 2) {
+      console.warn(`branch-coverage: attempt ${attempt} exited ${result.status} with no output; retrying once`);
+      continue;
+    }
+    break;
   }
   const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
   if (result.error) {
@@ -227,7 +246,9 @@ export function auditBranchCoverage() {
     return 1;
   }
   if ((result.status ?? 1) !== 0 && !flake) {
-    console.error("branch-coverage: suite failed for a reason other than an instrumented timing assertion");
+    console.error(
+      `${output.trim() === "" ? "branch-coverage: the instrumented run exited with no output at all (runner or instrumentation failure, not a test failure)" : "branch-coverage: suite failed for a reason other than an instrumented timing assertion"}`,
+    );
     console.error(failureDigest(output));
     console.error(tail(output));
     return 1;
