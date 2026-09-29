@@ -54,7 +54,8 @@ jobs:
         run: bun scripts/with-build-lock.mjs bun test --timeout=0 "packages/prism-providers/dist/${{ matrix.provider }}/__tests__/live.test.js"
       - name: record job summary (status only, no responses)
         if: always()
-        run: echo "- ${{ matrix.provider }}: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "- ${{ matrix.provider }}: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
 
   report:
     name: report (issue on failure)

@@ -171,7 +171,10 @@ jobs:
           # release-host registry toolchain — runner images ship Node; contributors never invoke npm
           # npm is the registry toolchain here (pack/sbom, plan 125 Task 5): it runs on the
           # runner image's preinstalled Node — no setup-node step.
-          npm sbom --sbom-format spdx > security-artifacts/sbom.spdx.json
+          # The repo builds with TypeScript 7 while @opentui/core's bun-ffi-structs peer-requires ^5;
+          # npm's tree validation rejects that peer edge (ESBOMPROBLEMS) even though bun installed a
+          # working tree, so the SBOM is read with peer resolution relaxed. Nothing ships from here.
+          npm sbom --sbom-format spdx --legacy-peer-deps > security-artifacts/sbom.spdx.json
           bun scripts/verify-sbom.mjs security-artifacts/sbom.spdx.json security/license-policy.json
           git ls-files -z | xargs -0 bun scripts/scan-secrets.mjs
 

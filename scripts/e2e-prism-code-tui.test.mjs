@@ -244,10 +244,10 @@ describe("prism-code TUI over a PTY", () => {
       let second;
       try {
         second = await startTui({ cwd: env.cwd, home: env.home, args: ["--model", "mock/default", "--continue"] });
-        const frame = await second.waitFor(
-          (text) => text.includes("remember this marker") && text.includes("Mock response"),
-          { timeoutMs: 30_000, label: "replayed transcript" },
-        );
+        const frame = await second.waitFor((text) => text.includes("remember this marker") && text.includes("Mock response"), {
+          timeoutMs: 30_000,
+          label: "replayed transcript",
+        });
         expect(frame).toContain("You: remember this marker");
         await second.press("ctrl+d");
         await expectExit(second, 0);
