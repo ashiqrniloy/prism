@@ -67,7 +67,8 @@ jobs:
       issues: write
     steps:
       - name: write aggregate summary
-        run: echo "canary-providers nightly: ${{ needs.smoke.result }} (run ${{ github.run_id }})" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "canary-providers nightly: ${{ needs.smoke.result }} (run ${{ github.run_id }})" >> "$GITHUB_STEP_SUMMARY"
       - name: open issue on failure
         if: needs.smoke.result != 'success' && needs.smoke.result != 'skipped'
         env:
