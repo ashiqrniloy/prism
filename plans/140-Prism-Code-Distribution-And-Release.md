@@ -419,6 +419,12 @@
       published artifact is 12/12 (`bunx @arnilo/prism-code@0.4.0 --version` → `0.4.0 (bun)`, resolving
       `@arnilo/prism@0.12.1`), and the real `install.sh` against the release installed and printed
       `0.4.0 (binary)` with `doctor ok: true` and a clean `--uninstall`.
+    - CI evidence (release.yml run `36587837855`, tag `@arnilo/prism-code@0.4.0`, all seven jobs green): the
+      `post-publish-smoke` job installed the published package (`bun add -g` 15.9 s, cold `--version` median
+      **7 ms**, first TUI frame 292 ms, one `@arnilo/prism@0.12.1` on disk) and then ran the published `install.sh`
+      against the release, which installed 0.4.0 and printed `0.4.0 (binary)`. The `prism-code-binaries.yml` run for
+      the same tag built and self-tested all six targets and published the release assets. Locally the same
+      installer leg was also run against the live release and uninstalled cleanly.
     - The publish needed a `@arnilo/prism` **0.12.1** patch line: the published app declares `@arnilo/prism@^0.12.0`
       and imports `capToolResultSummary`, which the published 0.12.0 tarball does not contain, so a fresh install
       failed to load. `^0.12.0` accepts 0.12.1, so the fix needed no republish. Getting there exposed three release
