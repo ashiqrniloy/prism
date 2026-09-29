@@ -1,6 +1,6 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { importToolModule, loadReplacementToolModules, loadToolModules, PrismCodeModuleError } from "../index.js";
@@ -177,6 +177,26 @@ test("importToolModule fails closed when absolute path or package is not in allo
     assert.equal(tools[0]?.name, "abs");
   } finally {
     rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("importToolModule honours an allow-listed directory reached through a symlink", async () => {
+  // Regression (plan 140 Task 6 release run): the macOS binary self-test configured the allowed
+  // prefix as /var/folders/... while the module resolved to /private/var/folders/..., and raw prefix
+  // matching rejected the operator's own directory.
+  const root = join(tmpdir(), `prism-code-tools-link-${Date.now()}`);
+  const realDir = join(root, "real");
+  const linkDir = join(root, "link");
+  mkdirSync(realDir, { recursive: true });
+  symlinkSync(realDir, linkDir);
+  const toolFile = join(realDir, "linked-tool.mjs");
+  writeFileSync(toolFile, `export default { name: "linked", description: "linked", execute: async () => "ok" };`, "utf8");
+
+  try {
+    const tools = await importToolModule(toolFile, root, { workspaceRoot: root, allowList: [`${linkDir}/`] });
+    assert.equal(tools[0]?.name, "linked");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });
 

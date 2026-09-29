@@ -99,7 +99,11 @@ jobs:
         with:
           bun-version: "1.4.2"
       - name: install.sh against the HTTPS fixture server
-        run: bun test --timeout=0 scripts/install-sh.test.mjs
+        # `bun ci`: the fixture test imports the build script for its tar/target tables, which
+        # reaches the PTY harness and @xterm/headless.
+        run: |
+          bun ci
+          bun test --timeout=0 scripts/install-sh.test.mjs
 
   checksums:
     name: SHA256SUMS + provenance

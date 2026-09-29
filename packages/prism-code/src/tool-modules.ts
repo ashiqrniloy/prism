@@ -90,23 +90,39 @@ export async function importToolModule(specifier: string, baseDir: string, optio
     importUrl = pathToFileURL(realTarget).href;
   } else {
     // Absolute path or bare package specifier
+    let realFilePart = filePart;
+    if (isAbsolute(filePart)) {
+      try {
+        realFilePart = await realpath(filePart);
+      } catch {
+        throw new PrismCodeModuleError(`module "${specifier}" does not exist at ${filePart}`);
+      }
+    }
+
+    // Allow-list entries are canonicalized too: a configured prefix is often a symlinked path
+    // (macOS /var → /private/var, a linked home, /tmp on some hosts) while the module resolves to its
+    // real path, and raw string prefix matching rejected the very directory the operator named.
+    const canonicalPrefixes = await Promise.all(
+      allowList.map(async (prefix) => {
+        if (!isAbsolute(prefix)) return prefix;
+        try {
+          return await realpath(prefix);
+        } catch {
+          return prefix;
+        }
+      }),
+    );
+    const coveredByPrefix = (prefix: string): boolean =>
+      realFilePart === prefix || realFilePart.startsWith(prefix.endsWith(sep) ? prefix : prefix + sep);
     const allowed =
-      allowList.includes(specifier) ||
-      allowList.includes(filePart) ||
-      (isAbsolute(filePart) && allowList.some((prefix) => filePart.startsWith(prefix)));
+      allowList.includes(specifier) || allowList.includes(filePart) || (isAbsolute(filePart) && canonicalPrefixes.some(coveredByPrefix));
 
     if (!allowed) {
       throw new PrismCodeModuleError(`module "${specifier}" is not in allowedModules or PRISM_TOOL_ALLOWLIST`);
     }
 
     if (isAbsolute(filePart)) {
-      let realTarget: string;
-      try {
-        realTarget = await realpath(filePart);
-      } catch {
-        throw new PrismCodeModuleError(`module "${specifier}" does not exist at ${filePart}`);
-      }
-      importUrl = pathToFileURL(realTarget).href;
+      importUrl = pathToFileURL(realFilePart).href;
     } else {
       importUrl = filePart;
     }
